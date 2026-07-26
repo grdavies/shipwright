@@ -104,6 +104,10 @@ Per the `checks-gate` skill:
 - `red` — any check failed → `/sw-stabilize`
 - `yellow` — any check pending **or** CodeRabbit review still in-flight → keep waiting (re-watch; under `/ship` the loop continues automatically within `checks.watch.maxWaitMinutes` — `yellow` is **not** a terminal state)
 - `blocked` — unconfigured/neutral-blocking checks, or unresolved actionable threads → `/sw-stabilize`
+- `blocked` + `reasonCode: host-auth-required` — emit the canonical remediation from
+  `core/providers/host/remediation-checks.md` and **halt immediately**; do not poll CI, attempt
+  stabilization, or retry. The host token cannot read check status — this is a non-retryable
+  operator-configuration halt, not a transient CI state (R10/R22).
 
 **Communication intensity:** ultra
 

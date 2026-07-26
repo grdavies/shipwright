@@ -227,6 +227,65 @@ def reason_code_is_retryable(reason_code: str) -> bool:
     return reason_code in _RETRYABLE_REASON_CODES
 
 
+CHECKS_READ_SCOPE_STRING = "checks:read"
+
+_PROHIBITIVE_CHECKS_READ_MARKERS = (
+    "must not",
+    "invalid scope",
+    "non-existent",
+    "forbidden",
+    "prohibited",
+)
+
+
+def remediation_surface_violates_checks_read(text: str) -> bool:
+    """True when remediation copy improperly presents ``checks:read`` as valid scope (R13/TR8)."""
+    if CHECKS_READ_SCOPE_STRING not in text:
+        return False
+    lowered = text.lower()
+    return not any(marker in lowered for marker in _PROHIBITIVE_CHECKS_READ_MARKERS)
+
+
+def gate_reason_code(gate: dict[str, Any]) -> str | None:
+    code = gate.get("reasonCode")
+    return str(code) if code else None
+
+
+def is_checks_gate_non_retryable_halt(gate: dict[str, Any]) -> bool:
+    """Stabilize/deliver treat these gate outcomes as non-retryable halts (R10/TR6)."""
+    if gate.get("verdict") != "blocked":
+        return False
+    code = gate_reason_code(gate)
+    if code:
+        return not reason_code_is_retryable(code)
+    return gate.get("retryable") is False
+
+
+def should_halt_ci_watch_without_poll(gate: dict[str, Any]) -> bool:
+    """Watch-ci must halt immediately — no poll loop or stabilize attempt (R10/R22)."""
+    return gate.get("verdict") == "blocked" and gate_reason_code(gate) == REASON_HOST_AUTH_REQUIRED
+
+
+def checks_gate_halt_remediation(
+    gate: dict[str, Any],
+    *,
+    plugin_root: Path,
+    provider: str,
+) -> str:
+    """Canonical remediation for a checks gate halt — fragment only, never host bodies (R9/R14)."""
+    code = gate_reason_code(gate)
+    if code in (REASON_HOST_AUTH_REQUIRED, REASON_CHECKS_NOT_FOUND):
+        return load_checks_remediation(plugin_root, provider)
+    reason = str(gate.get("reason") or "")
+    if reason:
+        return reason
+    return human_reason_for_invalid_checks_evidence(
+        code or REASON_CHECKS_UNAVAILABLE,
+        plugin_root=plugin_root,
+        provider=provider,
+    )
+
+
 def load_checks_remediation(plugin_root: Path, provider: str) -> str:
     """Load provider-section remediation from the canonical fragment (PRD 079 R9, R13–R14)."""
     path = plugin_root / "providers" / "host" / "remediation-checks.md"
