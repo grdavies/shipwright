@@ -140,11 +140,29 @@ def parse_transport_body(transport: dict[str, Any]) -> str:
     return json.dumps(body)
 
 
+def transport_status_code(transport: dict[str, Any]) -> int | None:
+    """Return HTTP status from a transport payload (PRD 079 R3).
+
+    Prefers ``statusCode``; accepts legacy ``status`` as a one-release alias.
+    Missing or invalid values return ``None`` — never default to 200.
+    """
+    raw = transport.get("statusCode")
+    if raw is None:
+        raw = transport.get("status")
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 def transport_ok(transport: dict[str, Any]) -> bool:
     verdict = transport.get("verdict")
-    return verdict in ("ok", "degraded") and transport.get("status", 200) < 400 or (
-        verdict == "ok" and "body" in transport
-    )
+    status = transport_status_code(transport)
+    if verdict in ("ok", "degraded") and status is not None and status < 400:
+        return True
+    return verdict == "ok" and "body" in transport
 
 
 def remote_ref_exists_from_transport(
@@ -164,12 +182,15 @@ def remote_ref_exists_from_transport(
             "reason": "rate-limited",
             "retryable": True,
         }
-        if transport.get("statusCode") is not None:
-            payload["statusCode"] = transport.get("statusCode")
+        status_code = transport_status_code(transport)
+        if status_code is not None:
+            payload["statusCode"] = status_code
         return payload, 37
     if "body" not in transport and verdict not in ("ok",):
         return fail_json(verb, provider, "probe-inconclusive"), 30
-    status = int(transport.get("status", 200))
+    status = transport_status_code(transport)
+    if status is None:
+        return fail_json(verb, provider, "probe-inconclusive"), 30
     if status == 404:
         return emit_verb_ok(verb, provider, {"exists": False, "branch": branch}), 0
     if 200 <= status < 300:
