@@ -6,8 +6,9 @@ messages and host provider docs — do not duplicate prose elsewhere.
 ## github
 
 Host token cannot read CI check status for this repository. Grant a fine-grained PAT with
-**Checks** repository permission at read access (repository-scoped, expiring). Classic PAT
-`repo` grants far broader access than required and is a legacy fallback only.
+**Checks** repository permission at read access (repository-scoped, expiring) — this is the
+primary remediation path. Classic PAT `repo` grants far broader access than required and is
+a legacy fallback only; prefer fine-grained Checks: Read over classic `repo`.
 
 ## gitlab
 

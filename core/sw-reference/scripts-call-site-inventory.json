@@ -3043,10 +3043,10 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-watch-ci.md:110:sw_bootstrap.py",
+      "id": "core/commands/sw-watch-ci.md:114:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-watch-ci.md",
-      "line": 110,
+      "line": 114,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -9289,10 +9289,10 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-watch-ci.md:110:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-watch-ci.md:114:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-watch-ci.md",
-      "line": 110,
+      "line": 114,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -14473,10 +14473,10 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-watch-ci.md:110:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-watch-ci.md:114:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-watch-ci.md",
-      "line": 110,
+      "line": 114,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"

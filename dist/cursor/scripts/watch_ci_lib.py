@@ -16,6 +16,40 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from host_lib import phase_mode_active, resolve_provider
 
+from check_gate_lib import (
+    checks_gate_halt_remediation,
+    resolve_plugin_root,
+    should_halt_ci_watch_without_poll,
+)
+
+
+def _host_auth_halt_watch_result(
+    root: Path,
+    gate_ec: int,
+    gate: dict[str, Any],
+    *,
+    mode: str,
+) -> dict[str, Any]:
+    resolved = resolve_provider(root)
+    provider = str(resolved.get("provider") or "default")
+    remediation = checks_gate_halt_remediation(
+        gate,
+        plugin_root=resolve_plugin_root(SCRIPT_DIR),
+        provider=provider,
+    )
+    return {
+        "verdict": "blocked",
+        "mode": mode,
+        "source": gate.get("source", "host"),
+        "gateExitCode": gate_ec,
+        "gate": gate,
+        "ciWatch": False,
+        "haltReasonCode": gate.get("reasonCode"),
+        "remediation": remediation,
+        "pr": gate.get("pr"),
+        "note": "host-auth-required — halt without CI poll (R10/R22)",
+    }
+
 
 def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
     script = SCRIPT_DIR / "check-gate.py"
@@ -49,6 +83,8 @@ def poll_check_gate_settled(root: Path, pr: str | None = None) -> dict[str, Any]
     def settled() -> bool:
         nonlocal last_ec, last_gate
         last_ec, last_gate = run_check_gate(root, pr)
+        if should_halt_ci_watch_without_poll(last_gate):
+            return True
         return last_gate.get("verdict") in ("green", "red", "blocked")
 
     try:
@@ -66,6 +102,10 @@ def poll_check_gate_settled(root: Path, pr: str | None = None) -> dict[str, Any]
             "elapsedSeconds": exc.elapsed_seconds,
             "note": "Phase-mode poll exhausted — check-gate still yellow (R12)",
         }
+    if should_halt_ci_watch_without_poll(last_gate):
+        return _host_auth_halt_watch_result(
+            root, last_ec, last_gate, mode="phase-gate-poll"
+        )
     return {
         "verdict": last_gate.get("verdict", "blocked"),
         "mode": "phase-gate-poll",
@@ -94,6 +134,8 @@ def watch_ci(root: Path, pr: str | None = None) -> dict[str, Any]:
         polled["ciWatch"] = False
         return polled
     gate_ec, gate = run_check_gate(root, pr)
+    if should_halt_ci_watch_without_poll(gate):
+        return _host_auth_halt_watch_result(root, gate_ec, gate, mode="host-auth-halt")
     return {
         "verdict": gate.get("verdict", "blocked"),
         "mode": "host-ci",
