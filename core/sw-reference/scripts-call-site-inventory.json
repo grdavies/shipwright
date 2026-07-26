@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-26T09:04:25Z",
+  "generatedAt": "2026-07-26T21:07:14Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3043,10 +3043,10 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-watch-ci.md:114:sw_bootstrap.py",
+      "id": "core/commands/sw-watch-ci.md:115:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-watch-ci.md",
-      "line": 114,
+      "line": 115,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -9289,10 +9289,10 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-watch-ci.md:114:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-watch-ci.md:115:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-watch-ci.md",
-      "line": 114,
+      "line": 115,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -14473,10 +14473,10 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-watch-ci.md:114:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-watch-ci.md:115:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-watch-ci.md",
-      "line": 114,
+      "line": 115,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -16966,28 +16966,28 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/commands.md:236:gap-check-gate.py",
+      "id": "docs/guides/commands.md:238:gap-check-gate.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 236,
+      "line": 238,
       "column": 37,
       "script": "gap-check-gate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:291:test/run_dispatch_foundation_fixtures.py",
+      "id": "docs/guides/commands.md:293:test/run_dispatch_foundation_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 291,
+      "line": 293,
       "column": 78,
       "script": "test/run_dispatch_foundation_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:291:test/run_fanout_fixtures.py",
+      "id": "docs/guides/commands.md:293:test/run_fanout_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 291,
+      "line": 293,
       "column": 19,
       "script": "test/run_fanout_fixtures.py",
       "classification": "self-repo-only"
