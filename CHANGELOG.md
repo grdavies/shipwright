@@ -627,6 +627,7 @@
 * merge phase shared-transport-classifier into feat/host-check-evidence-validity (0dc12e0) <!-- sw-deliver:shared-transport-classifier -->
 * merge phase fixture-realism-and-secret-patterns into feat/host-check-evidence-validity (359b39a) <!-- sw-deliver:fixture-realism-and-secret-patterns -->
 * merge phase checks-verb-migration-github-gitlab-bitbucket into feat/host-check-evidence-validity (955ae60) <!-- sw-deliver:checks-verb-migration-github-gitlab-bitbucket -->
+* merge phase github-non-checks-verb-audit into feat/host-check-evidence-validity (ae49e2a) <!-- sw-deliver:github-non-checks-verb-audit -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
