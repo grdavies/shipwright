@@ -1,0 +1,7 @@
+{
+  "/commits/abc123/check-runs": {
+    "verdict": "ok",
+    "statusCode": 402,
+    "body": "{\"message\":\"Payment Required\"}"
+  }
+}
