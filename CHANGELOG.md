@@ -634,6 +634,7 @@
 * merge phase no-secondary-evidence-fallback-on-denied-checks into feat/host-check-evidence-validity (4849d87) <!-- sw-deliver:no-secondary-evidence-fallback-on-denied-checks -->
 * merge phase remediation-fragment-and-consumer-halt into feat/host-check-evidence-validity (dbe766a) <!-- sw-deliver:remediation-fragment-and-consumer-halt -->
 * merge phase emit-time-redaction-and-build-chain into feat/host-check-evidence-validity (4ace223) <!-- sw-deliver:emit-time-redaction-and-build-chain -->
+* merge phase documentation-surfaces into feat/host-check-evidence-validity (53ccb0d) <!-- sw-deliver:documentation-surfaces -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
