@@ -169,6 +169,19 @@ class ChecksEvidenceEnvelope(TypedDict, total=False):
 EVIDENCE_VALID = "valid"
 EVIDENCE_INVALID = "invalid"
 
+PRIMARY_CHECKS_EVIDENCE_SOURCE = "checks-verb"
+
+# PRD 079 R17 — known secondary CI-status sources; must not authorize merge when primary is denied.
+SECONDARY_CHECKS_EVIDENCE_SOURCES: frozenset[str] = frozenset(
+    {
+        "github-actions-runs",
+        "github-statusCheckRollup",
+        "gitlab-commit-statuses",
+        "gitlab-pipelines",
+        "bitbucket-commit-status",
+    }
+)
+
 REASON_CHECKS_OK = "checks-ok"
 REASON_HOST_AUTH_REQUIRED = "host-auth-required"
 REASON_CHECKS_NOT_FOUND = "checks-not-found"
@@ -283,6 +296,52 @@ def checks_evidence_from_host_verb(payload: dict[str, Any]) -> ChecksEvidenceEnv
 
 def host_checks_evidence(root: Path, *args: str) -> ChecksEvidenceEnvelope:
     return checks_evidence_from_host_verb(host_verb(root, *args))
+
+
+def may_consult_secondary_checks_evidence(primary: ChecksEvidenceEnvelope) -> bool:
+    """Return whether secondary CI-status sources may be consulted (PRD 079 R17)."""
+    if primary.get("evidenceValidity") != EVIDENCE_VALID:
+        return False
+    # Policy pinned: no secondary fallback until a separate decision record exists.
+    return False
+
+
+def checks_evidence_from_secondary_sources(
+    root: Path,
+    *,
+    provider: str,
+    head_sha: str,
+    pr: str | None = None,
+) -> ChecksEvidenceEnvelope | None:
+    """Optional secondary checks evidence — disabled under R17 until policy record."""
+    _ = (root, provider, head_sha, pr)
+    return None
+
+
+def resolve_checks_evidence_for_gate(
+    root: Path,
+    *,
+    pr: str | None = None,
+    sha: str | None = None,
+) -> ChecksEvidenceEnvelope:
+    """Resolve primary checks evidence; never fall back when primary is invalid (R17)."""
+    args: list[str] = []
+    if pr:
+        args.extend(["--number", str(pr)])
+    if sha:
+        args.extend(["--sha", str(sha)])
+    primary = host_checks_evidence(root, "checks", *args)
+    if not may_consult_secondary_checks_evidence(primary):
+        return primary
+    secondary = checks_evidence_from_secondary_sources(
+        root,
+        provider="",
+        head_sha=sha or "",
+        pr=pr,
+    )
+    if secondary is not None and secondary.get("evidenceValidity") == EVIDENCE_VALID:
+        return secondary
+    return primary
 
 
 def blocked_reason_code_for_verdict(
@@ -963,7 +1022,7 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
 
     repo_meta = host_data(root, "repo-meta") or {}
     owner_repo = str(repo_meta.get("nameWithOwner") or "local/repo")
-    checks_envelope = host_checks_evidence(root, "checks", "--sha", head_sha)
+    checks_envelope = resolve_checks_evidence_for_gate(root, sha=head_sha)
     if checks_envelope.get("evidenceValidity") != EVIDENCE_VALID:
         return gate_blocked_for_invalid_checks_evidence(
             checks_envelope,
@@ -1115,7 +1174,7 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     owner = owner_repo.split("/", 1)[0] if "/" in owner_repo else owner_repo
     repo = owner_repo.split("/", 1)[1] if "/" in owner_repo else owner_repo
 
-    checks_envelope = host_checks_evidence(root, "checks", "--number", pr, "--sha", head_sha)
+    checks_envelope = resolve_checks_evidence_for_gate(root, pr=pr, sha=head_sha)
     if checks_envelope.get("evidenceValidity") != EVIDENCE_VALID:
         return gate_blocked_for_invalid_checks_evidence(
             checks_envelope,
