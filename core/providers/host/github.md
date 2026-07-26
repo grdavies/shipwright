@@ -63,7 +63,14 @@ Markdown companion to `scripts/host.py` (Phase 2). Selected when `workflow.confi
 
 ## Auth
 
-Token from `host.tokenEnv` (default `GITHUB_TOKEN`). Classic or fine-grained PAT with repo read + PR write.
+Token from `host.tokenEnv` (default `GITHUB_TOKEN`). For CI check visibility grant **Checks** read
+access — prefer a fine-grained PAT with repository **Checks: Read** permission (primary remediation
+path). Classic PAT `repo` grants far broader access than required and is a **legacy** fallback only;
+do not grant invalid OAuth scope strings for check reads.
+
+Remediation when check status cannot be read:
+`core/providers/host/remediation-checks.md` (github section).
+
 Never stored in config.
 
 ## Rate limits

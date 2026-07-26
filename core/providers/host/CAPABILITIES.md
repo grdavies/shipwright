@@ -54,6 +54,33 @@ Each adapter declares per-verb capability flags. Unsupported verbs return a type
 The local (`none`) adapter sets `pullRequests: false` and routes the gate to local-evidence equivalents
 (Phase 3).
 
+## Checks evidence contract (PRD 079 R24)
+
+Host `checks` verb payloads are classified before gate consumption. Transport responses prefer
+`statusCode` (legacy `status` is a one-release alias); missing status does not default to `200`.
+
+Classifier outcomes from `classify_transport` (rate-limit before auth-denied on `403` throttle):
+
+| Outcome | Typical meaning |
+| --- | --- |
+| `ok` | Successful check-status read |
+| `auth-denied` | Token cannot read checks (401/403, not throttle) |
+| `not-found` | Known SHA or resource not found (404) |
+| `rate-limited` | Host rate limit or throttle (429, throttle-403) |
+| `inconclusive` | Unclassified failure (e.g. 402) |
+
+Gate envelope (`ChecksEvidenceEnvelope`) fields:
+
+| Field | Meaning |
+| --- | --- |
+| `evidenceValidity` | `valid` when checks list is authoritative; `invalid` otherwise |
+| `transportClass` | Classifier outcome when evidence is invalid |
+| `reasonCode` | Stable gate reason (`checks-ok`, `host-auth-required`, `checks-not-found`, `checks-rate-limited`, `checks-unavailable`, …) |
+
+Auth-denied checks fetch yields `evidenceValidity: invalid`, `transportClass: auth-denied`,
+`reasonCode: host-auth-required` — the gate short-circuits before empty-check-set or yellow paths.
+Secondary CI-status sources cannot authorize merge when primary checks evidence is invalid (R17).
+
 ## Executable JSON shape (stdout)
 
 ```json
