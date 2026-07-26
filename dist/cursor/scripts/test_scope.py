@@ -141,8 +141,16 @@ def fallback_pytest_paths(changed_paths: list[str]) -> list[str]:
         unit_guess = f"scripts/unit_tests/{Path(norm).stem.replace('run_', '').replace('_fixtures', '')}"
         if norm.startswith("scripts/unit_tests/"):
             paths.append(norm)
-        else:
+            continue
+        name = Path(norm).name
+        if name.startswith("test_") or name.endswith("_test.py"):
             paths.append(norm)
+            continue
+        # Never collect implementation modules as pytest targets (import mismatch
+        # with core/scripts mirrors). Prefer paired core test module when present.
+        stem = Path(norm).stem
+        paired = f"core/scripts/test/test_{stem}.py"
+        paths.append(paired)
     return sorted(set(paths))
 
 
