@@ -1,0 +1,7 @@
+{
+  "/commit/abc123/statuses": {
+    "verdict": "ok",
+    "statusCode": 404,
+    "body": "{\"error\":{\"message\":\"Commit not found\"}}"
+  }
+}

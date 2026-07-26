@@ -1,0 +1,7 @@
+{
+  "/commit/abc123/statuses": {
+    "verdict": "ok",
+    "statusCode": 200,
+    "body": "{\"values\":[{\"name\":\"ci\",\"state\":\"SUCCESSFUL\",\"url\":\"https://bitbucket.org/owner/repo/addon/pipelines/home\"}]}"
+  }
+}

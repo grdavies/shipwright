@@ -1,0 +1,12 @@
+{
+  "/repository/commits/abc123/statuses": {
+    "verdict": "fail",
+    "statusCode": 403,
+    "body": "{\"message\":\"403 Forbidden\"}"
+  },
+  "/pipelines?sha=abc123": {
+    "verdict": "fail",
+    "statusCode": 403,
+    "body": "{\"message\":\"403 Forbidden\"}"
+  }
+}

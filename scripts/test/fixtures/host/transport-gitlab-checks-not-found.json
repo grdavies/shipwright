@@ -1,0 +1,12 @@
+{
+  "/repository/commits/abc123/statuses": {
+    "verdict": "ok",
+    "statusCode": 404,
+    "body": "{\"message\":\"404 Project Not Found\"}"
+  },
+  "/pipelines?sha=abc123": {
+    "verdict": "ok",
+    "statusCode": 404,
+    "body": "{\"message\":\"404 Project Not Found\"}"
+  }
+}

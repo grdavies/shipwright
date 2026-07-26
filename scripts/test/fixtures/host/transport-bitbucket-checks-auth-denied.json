@@ -1,0 +1,7 @@
+{
+  "/commit/abc123/statuses": {
+    "verdict": "fail",
+    "statusCode": 401,
+    "body": "{\"error\":{\"message\":\"Unauthorized\"}}"
+  }
+}

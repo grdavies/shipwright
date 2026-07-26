@@ -179,12 +179,13 @@ def _checks(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[str,
     project = ctx["project"]
     url = f"{ctx['apiBase']}/projects/{project}/repository/commits/{sha}/statuses?per_page=100"
     transport = common.http_request(root=root, provider=PROVIDER, method="GET", url=url, token_env=ctx["tokenEnv"])
-    if "body" not in transport:
-        url2 = f"{ctx['apiBase']}/projects/{project}/pipelines?sha={sha}&per_page=100"
-        transport = common.http_request(root=root, provider=PROVIDER, method="GET", url=url2, token_env=ctx["tokenEnv"])
-    if "body" not in transport:
-        return common.fail_json("checks", PROVIDER, "transport-failed"), 30
-    return common.emit_verb_ok("checks", PROVIDER, common.map_gitlab_checks(common.parse_transport_body(transport))), 0
+    url2 = f"{ctx['apiBase']}/projects/{project}/pipelines?sha={sha}&per_page=100"
+    transport2 = common.http_request(root=root, provider=PROVIDER, method="GET", url=url2, token_env=ctx["tokenEnv"])
+    return common.checks_from_transport_fallback(
+        provider=PROVIDER,
+        transports=[transport, transport2],
+        map_checks=common.map_gitlab_checks,
+    )
 
 
 def _review_threads(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[str, Any], int]:
