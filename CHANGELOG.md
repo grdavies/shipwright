@@ -625,6 +625,7 @@
 * merge phase integration-smokes-suite-green-medium into feat/consumer-scripts-facade-placement (be8d09e) <!-- sw-deliver:integration-smokes-suite-green-medium -->
 * merge phase statuscode-normalizer into feat/host-check-evidence-validity (6af0107) <!-- sw-deliver:statuscode-normalizer -->
 * merge phase shared-transport-classifier into feat/host-check-evidence-validity (0dc12e0) <!-- sw-deliver:shared-transport-classifier -->
+* merge phase fixture-realism-and-secret-patterns into feat/host-check-evidence-validity (359b39a) <!-- sw-deliver:fixture-realism-and-secret-patterns -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
