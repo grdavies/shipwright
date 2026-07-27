@@ -28,7 +28,7 @@ COMMAND_DOC_CURRENCY_ARTIFACTS: tuple[dict[str, object], ...] = (
         "needles": (
             "sw-doc-runs",
             "Durable doc-run driver",
-            "publication path",
+            "Publication path by store mode",
             "UNREACHABLE_PUBLICATION_STAGES",
             "docs_pr.py",
         ),
@@ -61,8 +61,8 @@ COMMAND_DOC_CURRENCY_ARTIFACTS: tuple[dict[str, object], ...] = (
         ),
         "needles": (
             "list, resume, finalize",
-            "resume cardinality",
-            "drain-budget",
+            "Resume cardinality",
+            "Drain-budget",
             "Run finalization vs",
             "finalize:merge-unverified",
         ),
