@@ -77,7 +77,7 @@ def test_drain_mechanical_false_from_config(tmp_path: Path) -> None:
 
 
 def test_drain_step_budget_halt_constant() -> None:
-    """R15(f) — max-steps while still mechanical maps to blocked halt cause."""
+    """R22 — max-steps while still mechanical maps to continuation cause."""
     assert DRAIN_STEP_BUDGET_HALT == "conductor:drain-step-budget-exceeded"
 
 

@@ -150,7 +150,6 @@ BUDGET_HALT_CAUSES = frozenset(
         "conductor:no-progress",
         "conductor:plan-rejection-breaker",
         "plan-rejection-breaker",
-        DRAIN_STEP_BUDGET_HALT,
     }
 )
 
@@ -876,7 +875,13 @@ def check_budget_halt(root: Path, state: dict[str, Any]) -> str | None:
 
 
 def is_budget_halt(cause: str) -> bool:
-    return cause in BUDGET_HALT_CAUSES or cause.startswith("conductor:")
+    return cause in BUDGET_HALT_CAUSES or (
+        cause.startswith("conductor:") and cause != DRAIN_STEP_BUDGET_HALT
+    )
+
+
+def is_drain_step_budget_exhaustion(cause: str) -> bool:
+    return cause == DRAIN_STEP_BUDGET_HALT
 
 
 def preserve_merge_queue_on_halt(state: dict[str, Any]) -> None:
@@ -2460,13 +2465,22 @@ def execute_mechanical(
 ) -> dict[str, Any]:
     global _MECH_TIMER_START
     _MECH_TIMER_START = time.perf_counter()
+    action = str(step.get("action") or "")
     try:
-        result = _execute_mechanical_inner(root, state, plan, step, loop_args=loop_args)
+        from wave_transition_receipt import IncompleteReceiptError, mechanical_transition
+
+        if action in MECHANICAL_ACTIONS and action != "halt-blocked" and state.get("runId"):
+            with mechanical_transition(root, state, plan, action):
+                result = _execute_mechanical_inner(root, state, plan, step, loop_args=loop_args)
+        else:
+            result = _execute_mechanical_inner(root, state, plan, step, loop_args=loop_args)
         elapsed_ms = int((time.perf_counter() - _MECH_TIMER_START) * 1000)
         if isinstance(result, dict):
             result = dict(result)
             result["elapsedMs"] = elapsed_ms
         return result
+    except IncompleteReceiptError as exc:
+        fail(str(exc), exit_code=20, halt=True, cause="transition-receipt:incomplete")
     finally:
         _MECH_TIMER_START = None
 
@@ -3589,16 +3603,15 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     ):
         emit(
             {
-                "verdict": "blocked",
+                "verdict": "continue",
                 "action": "deliver-loop",
                 "resumed": resumed,
-                "halt": True,
+                "halt": False,
                 "cause": DRAIN_STEP_BUDGET_HALT,
                 "note": f"step budget ({max_steps}) reached while next action is still mechanical",
                 "stepsTaken": steps_taken,
                 "next": next_after,
             },
-            20,
         )
     emit(
         {
