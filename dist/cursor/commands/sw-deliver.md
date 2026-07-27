@@ -9,6 +9,54 @@ Orchestrator above `/sw-ship` for frozen task lists and multi-item rounds. Auto-
 path) vs **multi-feature mode** (explicit item set / plan). Sequences independent leaves in parallel, stacks
 dependents on green unmerged branches, and halts at the human merge gate.
 
+## Operator surface: list, resume, finalize (PRD 081 R21/R24)
+
+Run-scoped deliver state exposes operator primitives via `scripts/wave_deliver.py` (also
+`python3 scripts/wave.py deliver …` where wired):
+
+| Command | Entry | Purpose |
+| --- | --- | --- |
+| **List** | `python3 scripts/wave_deliver.py <repo> list` | Enumerate runs: `runId`, target branch, unit, stage, lock state, terminal status; legacy runs flagged `requiresAdoption` |
+| **Resume locate** | `python3 scripts/wave_deliver.py <repo> resume-locate [--run-id <id>]` | Cardinality guard before `/sw-deliver run` |
+| **Run** | `/sw-deliver run [--run-id <id>] [--task-list <path>]` | Resume or start; no-arg resume only when exactly one nonterminal run exists |
+| **Finalize** | `python3 scripts/wave_deliver.py <repo> finalize --run-id <id>` | Post-merge lifecycle closure (R24) |
+
+### Resume cardinality (R21)
+
+| Nonterminal runs | No `--run-id` | With `--run-id` |
+| --- | --- | --- |
+| 0 | `resume:none` halt + enumeration | `resume:run-not-found` |
+| 1 | Auto-select sole run | Must match located run |
+| 2+ | `resume:ambiguous` halt + full enumeration | Resolves explicit id |
+
+Legacy global-plan runs surface as `requiresAdoption: true` — adopt via `scripts/wave_run_adopt.py`
+before resume (single legacy plan read, hash-verified, copied run-scoped).
+
+### Target-lock ordering
+
+Persistent mutations (state writes, merge enqueue, finalize) require the **target lock** for
+`target.branch` to be held by the active run (`wave_target_lock.py`). Lock acquire precedes run
+directory creation; finalize releases lock + run-local lease after verified terminal merge.
+
+### Drain-budget continuation (R22)
+
+When `deliver.loop.drainMechanical: true` (default), the conductor drains mechanical `deliver-loop`
+steps in-process until `awaitAgent`, `awaitInFlight`, or a **legitimate** halt. Step-budget exhaustion
+(`conductor:drain-step-budget-exceeded`) is **not** a legitimate halt — re-invoke `deliver-loop` in the
+same turn (see `skills/conductor/SKILL.md`).
+
+### Run finalization vs other closures (R24)
+
+| Action | When | What it does | What it is **not** |
+| --- | --- | --- | --- |
+| **`finalize`** | After verified terminal merge to integration/default | Verifies merge via host broker; writes terminal receipt; releases locks, leases, worktrees; marks run `immutable` | Completion cleanup, gap absorption, planning-unit closure |
+| **`finalize-completion`** | All phases `green-merged` (pre-terminal-gate) | Living-docs projection, optional auto-cleanup dry-run | Run finalization — run remains resumable until merge + finalize |
+| **Gap-check / gap absorption** | Per-phase ship chain | Captures follow-up gaps; does not close the deliver run | Run or unit lifecycle closure |
+| **Planning-unit closure** | Issue-store / graph reconciler | Unit status → `complete` in planning graph | Deliver run immutability (separate concern) |
+
+Unverifiable terminal merge leaves the run **nonterminal** — finalize returns `finalize:merge-unverified`
+and does not release resources.
+
 ## Subcommands
 
 | Subcommand | Scope |
