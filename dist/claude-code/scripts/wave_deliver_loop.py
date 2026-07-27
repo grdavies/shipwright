@@ -77,9 +77,17 @@ from wave_state import (
     ensure_canonical_state_synced,
     sync_canonical_state_read,
 )
+import wave_run_plan as run_plan
+from wave_run_paths import GLOBAL_PLAN_REL
+from wave_action_precedence import (
+    ACTION_PRECEDENCE_CLASS,
+    assert_action_classified,
+    assert_monotonic_sequence,
+    record_action_precedence,
+)
+from wave_json_io import write_json as write_json_file
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-PLAN_PATH = Path(".cursor/sw-deliver-plan.json")
 BLOCKER_PATH = Path(".cursor/sw-deliver-runs/blockers.json")
 
 MECHANICAL_ACTIONS = frozenset(
@@ -142,7 +150,6 @@ BUDGET_HALT_CAUSES = frozenset(
         "conductor:no-progress",
         "conductor:plan-rejection-breaker",
         "plan-rejection-breaker",
-        DRAIN_STEP_BUDGET_HALT,
     }
 )
 
@@ -868,7 +875,13 @@ def check_budget_halt(root: Path, state: dict[str, Any]) -> str | None:
 
 
 def is_budget_halt(cause: str) -> bool:
-    return cause in BUDGET_HALT_CAUSES or cause.startswith("conductor:")
+    return cause in BUDGET_HALT_CAUSES or (
+        cause.startswith("conductor:") and cause != DRAIN_STEP_BUDGET_HALT
+    )
+
+
+def is_drain_step_budget_exhaustion(cause: str) -> bool:
+    return cause == DRAIN_STEP_BUDGET_HALT
 
 
 def preserve_merge_queue_on_halt(state: dict[str, Any]) -> None:
@@ -971,11 +984,56 @@ def append_log(root: Path, entry: dict[str, Any], state: dict[str, Any] | None =
     state_append_log(root, entry, target=target)
 
 
-def load_plan(root: Path) -> dict[str, Any]:
-    path = root / PLAN_PATH
-    if not path.is_file():
+def load_plan(root: Path, state: dict[str, Any] | None = None) -> dict[str, Any]:
+    if state is None:
         return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    if state.get("planHash") or state.get("adoptedPlanHash"):
+        if state.get("planHash"):
+            return run_plan.load_plan_for_state(root, state)
+        run_id = state.get("runId")
+        if run_id:
+            try:
+                return run_plan.load_plan_for_state(root, state)
+            except Exception:
+                return {}
+        return {}
+    return {}
+
+
+def resolve_plan_with_adoption(
+    root: Path, state: dict[str, Any], task_list: str | None = None
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Load run-scoped plan, adopting legacy layout once when resuming (R18/R21)."""
+    plan = load_plan(root, state)
+    if plan:
+        return plan, state
+    if state.get("phases") and state.get("verdict") == "running":
+        from wave_run_adopt import (
+            locate_legacy_source,
+            maybe_adopt_on_deliver_loop,
+            read_legacy_global_plan_once,
+        )
+        from wave_run_paths import global_plan_path
+
+        adoption = maybe_adopt_on_deliver_loop(root, state)
+        if adoption.get("adopted"):
+            state = load_state(root, task_list)
+            return load_plan(root, state), state
+        target = target_branch_from_state(state)
+        slug = target.split("/", 1)[1] if target and "/" in target else None
+        source = locate_legacy_source(root, slug=slug)
+        if (
+            source
+            and source.get("layout") == "scoped"
+            and global_plan_path(root).is_file()
+        ):
+            return read_legacy_global_plan_once(root), state
+    return {}, state
+
+
+def plan_rel_for_state(root: Path, state: dict[str, Any]) -> str:
+    run_id = run_plan.resolve_run_id(state)
+    return run_plan.relative_plan_path(root, run_id)
 
 
 def load_state(root: Path, task_list: str | None = None) -> dict[str, Any]:
@@ -1914,8 +1972,20 @@ def compute_next_action(
     if plan.get("mode") != "phase":
         fail("deliver-loop requires phase-mode plan", exit_code=2)
 
+    target = (plan.get("target") or {}).get("branch") or (state.get("target") or {}).get(
+        "branch"
+    )
+
+    if not state.get("targetLock") and not state.get("orchestratorWorktree"):
+        if not target:
+            fail("plan/state missing target branch")
+        return {"action": "lock-acquire", "target": target, "resume": True}
+
     if not state.get("phases"):
         return {"action": "state-init", "resume": False}
+
+    if not target:
+        fail("plan/state missing target branch")
 
     if not trunk_base_persisted(root) and not state.get("baseCapture"):
         return {"action": "base-capture", "resume": True}
@@ -1930,12 +2000,6 @@ def compute_next_action(
             "taskList": task_list_from(state, plan),
             "resume": True,
         }
-
-    target = (plan.get("target") or {}).get("branch") or (state.get("target") or {}).get(
-        "branch"
-    )
-    if not target:
-        fail("plan/state missing target branch")
 
     if all_phases_merged(state):
         completion = state.get("completion") or {}
@@ -1982,8 +2046,6 @@ def compute_next_action(
         return {"action": "wave-plan-persist", "resume": True}
 
     if not state.get("orchestratorWorktree"):
-        if state.get("nextAction") in (None, "plan", "state-init"):
-            return {"action": "lock-acquire", "target": target, "resume": True}
         return {"action": "orchestrator-provision", "target": target, "resume": True}
 
     statuses = phase_status_map(state)
@@ -2347,6 +2409,11 @@ def apply_merge_enqueue_result(state: dict[str, Any], data: dict[str, Any]) -> N
 
 
 def persist_cursor(root: Path, state: dict[str, Any], action: str, **extra: Any) -> None:
+    prior = str(state.get("nextAction") or "")
+    if action in ACTION_PRECEDENCE_CLASS:
+        assert_action_classified(action)
+        if prior in ACTION_PRECEDENCE_CLASS:
+            assert_monotonic_sequence([prior, action])
     state["nextAction"] = action
     state["driverHeartbeatAt"] = utc_now()
     for key, val in extra.items():
@@ -2432,13 +2499,22 @@ def execute_mechanical(
 ) -> dict[str, Any]:
     global _MECH_TIMER_START
     _MECH_TIMER_START = time.perf_counter()
+    action = str(step.get("action") or "")
     try:
-        result = _execute_mechanical_inner(root, state, plan, step, loop_args=loop_args)
+        from wave_transition_receipt import IncompleteReceiptError, mechanical_transition
+
+        if action in MECHANICAL_ACTIONS and action != "halt-blocked" and state.get("runId"):
+            with mechanical_transition(root, state, plan, action):
+                result = _execute_mechanical_inner(root, state, plan, step, loop_args=loop_args)
+        else:
+            result = _execute_mechanical_inner(root, state, plan, step, loop_args=loop_args)
         elapsed_ms = int((time.perf_counter() - _MECH_TIMER_START) * 1000)
         if isinstance(result, dict):
             result = dict(result)
             result["elapsedMs"] = elapsed_ms
         return result
+    except IncompleteReceiptError as exc:
+        fail(str(exc), exit_code=20, halt=True, cause="transition-receipt:incomplete")
     finally:
         _MECH_TIMER_START = None
 
@@ -2470,12 +2546,93 @@ def _execute_mechanical_inner(
         ec, data = run_wave(root, *plan_args)
         if ec != 0:
             fail_payload(data, "plan failed", ec)
-        plan = load_plan(root)
+        plan = data if isinstance(data, dict) and data.get("mode") else {}
+        if not plan:
+            fail("plan action returned no plan payload")
+        run_id = run_plan.ensure_run_id(root, state)
+        transient_path = root / GLOBAL_PLAN_REL
+        transient_path.parent.mkdir(parents=True, exist_ok=True)
+        write_json_file(transient_path, plan)
+        save_state(root, state)
+        persist_cursor(root, state, "lock-acquire")
+        return {"executed": "plan", "plan": plan.get("target"), "runId": run_id}
+
+    if action == "lock-acquire":
+        target = step.get("target") or (plan.get("target") or {}).get("branch")
+        if not target:
+            fail("lock-acquire requires target branch")
+        run_id = run_plan.ensure_run_id(root, state)
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "wave_target_lock.py"),
+                str(root),
+                "acquire",
+                "--target",
+                str(target),
+                "--run-id",
+                run_id,
+            ],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            env={**os.environ, "SW_DELIVER_RUN_ID": run_id},
+        )
+        data: dict[str, Any] = {}
+        if proc.stdout.strip():
+            try:
+                parsed = json.loads(proc.stdout)
+                if isinstance(parsed, dict):
+                    data = parsed
+            except json.JSONDecodeError:
+                data = {"raw": proc.stdout.strip()}
+        if proc.returncode != 0:
+            fail_payload(data, data.get("error") or "target lock acquire failed", proc.returncode)
+        state["targetLock"] = {
+            "targetBranch": target,
+            "runId": run_id,
+            "lockKeyDigest": data.get("lockKeyDigest"),
+            "lockPath": data.get("lockPath"),
+            "acquiredAt": utc_now(),
+            "reclaimed": bool(data.get("reclaimed")),
+        }
+        save_state(root, state)
         persist_cursor(root, state, "state-init")
-        return {"executed": "plan", "plan": plan.get("target")}
+        return {"executed": "lock-acquire", "target": target, **data}
 
     if action == "state-init":
-        ec, data = run_wave(root, "state", "init", "--plan", str(PLAN_PATH))
+        run_id = run_plan.ensure_run_id(root, state)
+        if not state.get("planHash"):
+            from wave_run_adopt import maybe_adopt_on_deliver_loop
+
+            adoption = maybe_adopt_on_deliver_loop(root, state)
+            if adoption.get("adopted"):
+                state.update(load_state(root))
+            pending_plan = load_plan(root, state)
+            if not pending_plan:
+                transient_path = root / GLOBAL_PLAN_REL
+                if transient_path.is_file() and state.get("phases"):
+                    fail(
+                        "legacy global plan present but adoption required",
+                        exit_code=20,
+                        halt="adopt:required",
+                        remediation="python3 scripts/wave_run_adopt.py <root> preview --run-id <id>",
+                    )
+                if transient_path.is_file():
+                    pending_plan = read_json(transient_path, absent_ok=False)
+                else:
+                    fail("state-init requires validated plan")
+            run_plan.persist_plan(root, run_id, pending_plan, state)
+            save_state(root, state)
+        target_branch = (plan.get("target") or {}).get("branch") or (
+            (state.get("target") or {}).get("branch")
+        )
+        if target_branch:
+            from wave_state import write_run_local_lease
+
+            write_run_local_lease(root, run_id, str(target_branch))
+        plan_rel = plan_rel_for_state(root, state)
+        ec, data = run_wave(root, "state", "init", "--plan", plan_rel)
         if ec != 0:
             fail_payload(data, "state init failed", ec)
         state.update(load_state(root))
@@ -2505,7 +2662,15 @@ def _execute_mechanical_inner(
         tl = step.get("taskList") or task_list
         if not tl:
             fail("spec-seed requires task list")
-        ec, data = run_wave(root, "spec-seed", "--task-list", str(tl))
+        run_id = run_plan.resolve_run_id(state)
+        ec, data = run_wave(
+            root,
+            "spec-seed",
+            "--task-list",
+            str(tl),
+            "--run-id",
+            run_id,
+        )
         if ec != 0:
             fail_payload(data, "spec-seed failed", ec)
         state.update(load_state(root))
@@ -2516,18 +2681,8 @@ def _execute_mechanical_inner(
             "at": utc_now(),
         }
         save_state(root, state)
-        persist_cursor(root, state, "lock-acquire")
-        return {"executed": "spec-seed", **data}
-
-    if action == "lock-acquire":
-        target = step.get("target") or (plan.get("target") or {}).get("branch")
-        ec, data = run_wave(root, "lock", "acquire", "--target", str(target), "--nonblock")
-        if ec not in (0, 20):
-            fail_payload(data, "lock acquire failed", ec)
-        if ec == 20:
-            fail("orchestrator lock held", exit_code=20, holder=data.get("holder"))
         persist_cursor(root, state, "inflight-signal-write")
-        return {"executed": "lock-acquire", "target": target}
+        return {"executed": "spec-seed", **data}
 
     if action == "inflight-signal-write":
         target = step.get("target") or (plan.get("target") or {}).get("branch")
@@ -2558,7 +2713,7 @@ def _execute_mechanical_inner(
 
     if action == "orchestrator-provision":
         ec, data = run_wave(
-            root, "orchestrator", "provision", "--plan", str(PLAN_PATH)
+            root, "orchestrator", "provision", "--plan", plan_rel_for_state(root, state)
         )
         if ec != 0:
             fail_payload(data, "orchestrator provision failed", ec)
@@ -2577,7 +2732,7 @@ def _execute_mechanical_inner(
             "--phase-id",
             pid,
             "--plan",
-            str(PLAN_PATH),
+            plan_rel_for_state(root, state),
         )
         if ec != 0:
             fail_payload(data, "phase provision failed", ec)
@@ -2633,7 +2788,7 @@ def _execute_mechanical_inner(
             "--phase-id",
             pid,
             "--plan",
-            str(PLAN_PATH),
+            plan_rel_for_state(root, state),
         )
         if ec != 0:
             fail_payload(data, "phase teardown failed", ec)
@@ -3273,14 +3428,16 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     task_list = resolve_task_list_arg(root, args) or parse_kv(args, "--task-list")
 
     state = load_state(root, task_list)
-    plan = load_plan(root)
+    plan, state = resolve_plan_with_adoption(root, state, task_list)
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
     if task_list and resumed:
         entry = apply_resume_entry(root, state, plan, args)
         if entry.get("orchestratorAdopt", {}).get("adopted"):
             state = load_state(root, task_list)
-            plan = load_plan(root)
+            plan, state = resolve_plan_with_adoption(root, state, task_list)
             resumed = bool(state.get("verdict") == "running" and state.get("phases"))
+    if resumed and state.get("phases") and not state.get("planHash"):
+        plan, state = resolve_plan_with_adoption(root, state, task_list)
 
     assert_run_identity(root, state, task_list, args)
     assert_driver_adopt_gate(state, args)
@@ -3296,7 +3453,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     steps_taken: list[dict[str, Any]] = []
     for _ in range(max_steps):
         state = load_state(root, task_list)
-        plan = load_plan(root)
+        plan, state = resolve_plan_with_adoption(root, state, task_list)
         if task_list:
             state["source_task_list"] = task_list
         init_budget_counters(state)
@@ -3428,7 +3585,9 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
             fail(f"unhandled action: {step['action']}", step=step)
 
         result = execute_mechanical(root, state, plan, step, loop_args=args)
-        steps_taken.append(result)
+        executed = str(result.get("executed") or step["action"])
+        record_action_precedence(steps_taken, executed)
+        steps_taken[-1].update(result)
         resumed = True
         if step["action"] == "dispatch-ship" and result.get("awaitAgent"):
             ship_next = {
@@ -3476,7 +3635,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
             load_state(root, task_list),
         )
         if not drain_mechanical_enabled(root):
-            next_after = compute_next_action(root, load_state(root, task_list), load_plan(root))
+            next_after = compute_next_action(root, load_state(root, task_list), load_plan(root, state))
             emit(
                 {
                     "verdict": "pass",
@@ -3489,23 +3648,22 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                 }
             )
 
-    next_after = compute_next_action(root, load_state(root, task_list), load_plan(root))
+    next_after = compute_next_action(root, load_state(root, task_list), load_plan(root, state))
     if (
         drain_mechanical_enabled(root)
         and next_after.get("action") in MECHANICAL_ACTIONS
     ):
         emit(
             {
-                "verdict": "blocked",
+                "verdict": "continue",
                 "action": "deliver-loop",
                 "resumed": resumed,
-                "halt": True,
+                "halt": False,
                 "cause": DRAIN_STEP_BUDGET_HALT,
                 "note": f"step budget ({max_steps}) reached while next action is still mechanical",
                 "stepsTaken": steps_taken,
                 "next": next_after,
             },
-            20,
         )
     emit(
         {
@@ -3531,7 +3689,7 @@ def cmd_remediation_default(root: Path, _args: list[str]) -> None:
 
 def cmd_budget_tick(root: Path, args: list[str]) -> None:
     state = load_state(root)
-    plan = load_plan(root)
+    plan = load_plan(root, state)
     next_action = parse_kv(args, "--next-action")
     if not next_action:
         next_action = compute_next_action(root, state, plan)["action"]
@@ -3583,7 +3741,7 @@ def main() -> None:
         cmd_budget_check(root, args)
     elif cmd == "compute-next":
         state = load_state(root)
-        plan = load_plan(root)
+        plan, state = resolve_plan_with_adoption(root, state)
         emit(
             {
                 "verdict": "pass",

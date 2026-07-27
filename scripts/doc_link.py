@@ -62,12 +62,57 @@ def is_truthy_frozen(fm: dict[str, str]) -> bool:
     return str(fm.get("frozen", "")).lower() in ("true", "yes", "1")
 
 
-def link_target_resolves(root: Path, rel: str) -> bool:
+def brainstorm_ref_unit_id(ref: str) -> str:
+    """Derive a planning-store unit id from a brainstorm path or unit-id reference."""
+    ref = ref.strip().strip("'\"")
+    stem = Path(ref).stem
+    if stem.startswith("brainstorm"):
+        return stem
+    return f"brainstorm-{stem}"
+
+
+def _linked_brainstorm_unit_id(root: Path, prd_unit_id: str | None) -> str | None:
+    if not prd_unit_id or not pah.issue_store_is_effective(root):
+        return None
+    from planning_store import get_backend
+
+    backend = get_backend(root)
+    finder = getattr(backend, "_find_linked_brainstorm", None)
+    if not callable(finder):
+        return None
+    linked = finder(prd_unit_id)
+    if linked is None:
+        return None
+    uid = str(getattr(linked, "unit_id", "") or "").strip()
+    return uid or None
+
+
+def link_target_resolves(
+    root: Path,
+    rel: str,
+    *,
+    unit_id: str | None = None,
+    prd_unit_id: str | None = None,
+) -> bool:
     rel = rel.strip().strip("'\"")
     if not rel or rel.startswith("http"):
         return False
     if pah.resolve_repo_file(root, rel) is not None:
         return True
+    candidates: list[str | None] = [unit_id]
+    if "/" not in rel and not rel.endswith(".md"):
+        candidates.append(rel)
+    candidates.append(brainstorm_ref_unit_id(rel))
+    linked = _linked_brainstorm_unit_id(root, prd_unit_id)
+    if linked:
+        candidates.append(linked)
+    seen: set[str | None] = set()
+    for uid in candidates:
+        if uid in seen:
+            continue
+        seen.add(uid)
+        if pah.artifact_handle_resolves(root, rel, unit_id=uid):
+            return True
     return pah.artifact_handle_resolves(root, rel)
 
 
@@ -91,22 +136,40 @@ def infer_tier_from_rel(rel: str, tier: str | None) -> str:
     return "full"
 
 
-def check_prd_content(root: Path, rel: str, text: str, tier: str) -> dict[str, Any]:
+def check_prd_content(
+    root: Path,
+    rel: str,
+    text: str,
+    tier: str,
+    *,
+    unit_id: str | None = None,
+) -> dict[str, Any]:
     fm, _ = split_frontmatter(text)
     findings: list[dict[str, str]] = []
+    frozen = is_truthy_frozen(fm)
+    prd_unit_id = unit_id or fm.get("id") or fm.get("unit-id")
 
     back = brainstorm_backref(fm)
-    if tier == "full":
+    requires_brainstorm = tier == "full" or frozen
+    if requires_brainstorm:
         if not back:
             findings.append(
                 {
                     "code": "missing-brainstorm-backref",
-                    "message": "Full-tier PRD requires brainstorm: (or legacy source_brainstorm:) in frontmatter",
+                    "message": (
+                        "Full-tier or frozen PRD requires brainstorm: "
+                        "(or legacy source_brainstorm:) in frontmatter"
+                    ),
                 }
             )
         else:
             for target in parse_link_paths(back):
-                if not link_target_resolves(root, target):
+                if not link_target_resolves(
+                    root,
+                    target,
+                    unit_id=brainstorm_ref_unit_id(target),
+                    prd_unit_id=prd_unit_id,
+                ):
                     findings.append(
                         {
                             "code": "dangling-brainstorm-backref",
@@ -119,7 +182,7 @@ def check_prd_content(root: Path, rel: str, text: str, tier: str) -> dict[str, A
         t = target.strip().strip("'\"")
         if "/" not in t and not t.endswith(".md"):
             continue
-        if not link_target_resolves(root, target):
+        if not link_target_resolves(root, target, prd_unit_id=prd_unit_id):
             findings.append(
                 {
                     "code": "dangling-prd-forwardref",
@@ -128,15 +191,29 @@ def check_prd_content(root: Path, rel: str, text: str, tier: str) -> dict[str, A
             )
 
     verdict = "pass" if not findings else "fail"
-    return {"verdict": verdict, "artifact": "prd", "path": rel, "tier": tier, "findings": findings}
+    return {
+        "verdict": verdict,
+        "artifact": "prd",
+        "path": rel,
+        "tier": tier,
+        "frozen": frozen,
+        "findings": findings,
+    }
 
 
-def check_brainstorm_content(root: Path, rel: str, text: str) -> dict[str, Any]:
+def check_brainstorm_content(
+    root: Path,
+    rel: str,
+    text: str,
+    *,
+    unit_id: str | None = None,
+) -> dict[str, Any]:
     fm, _ = split_frontmatter(text)
     findings: list[dict[str, str]] = []
+    brainstorm_unit_id = unit_id or fm.get("id") or brainstorm_ref_unit_id(rel)
 
     for target in prd_forward_refs(fm):
-        if not link_target_resolves(root, target):
+        if not link_target_resolves(root, target, prd_unit_id=Path(target).stem):
             findings.append(
                 {
                     "code": "dangling-prd-forwardref",
@@ -145,7 +222,12 @@ def check_brainstorm_content(root: Path, rel: str, text: str) -> dict[str, Any]:
             )
 
     back = brainstorm_backref(fm)
-    if back and not link_target_resolves(root, back):
+    if back and not link_target_resolves(
+        root,
+        back,
+        unit_id=brainstorm_ref_unit_id(back),
+        prd_unit_id=brainstorm_unit_id,
+    ):
         findings.append(
             {
                 "code": "dangling-brainstorm-selfref",
@@ -169,13 +251,26 @@ def check_artifact(
     if text is None:
         return {"verdict": "fail", "path": rel, "error": f"artifact not found: {rel}"}
     norm = rel.replace("\\", "/")
+    resolved_unit_id = unit_id or pah.default_unit_id_from_body_path(rel)
     if "docs/brainstorms/" in norm:
-        return check_brainstorm_content(root, rel, text)
+        return check_brainstorm_content(root, rel, text, unit_id=resolved_unit_id)
     name = Path(norm).name
     if "/prd-" in name or norm.endswith("-prd.md"):
-        return check_prd_content(root, rel, text, infer_tier_from_rel(rel, tier))
+        return check_prd_content(
+            root,
+            rel,
+            text,
+            infer_tier_from_rel(rel, tier),
+            unit_id=resolved_unit_id,
+        )
     if "docs/prds/" in norm and "prd" in name:
-        return check_prd_content(root, rel, text, infer_tier_from_rel(rel, tier))
+        return check_prd_content(
+            root,
+            rel,
+            text,
+            infer_tier_from_rel(rel, tier),
+            unit_id=resolved_unit_id,
+        )
     return {"verdict": "pass", "path": rel, "note": "not a PRD/brainstorm — skipped"}
 
 

@@ -51,10 +51,14 @@ def dispatch(argv: list[str]) -> int:
         return _python("wave_spec_seed.py", root, ["spec-seed", *rest])
     if cmd == "deliver-loop":
         return _python("wave_deliver_loop.py", root, ["deliver-loop", *rest])
+    if cmd == "doc-loop":
+        return _python("doc_loop.py", root, ["doc-loop", *rest])
     if cmd == "watchdog":
         return _python("wave_deliver_loop.py", root, ["watchdog", *rest])
     if cmd == "ship-lease":
         return _python("wave_lock.py", root, rest)
+    if cmd == "target-lock":
+        return _python("wave_target_lock.py", root, rest)
     if cmd in ("state", "lock", "journal", "log", "ledger"):
         return _python("wave_state.py", root, argv)
     if cmd == "tasks-currency":
@@ -105,7 +109,7 @@ def dispatch(argv: list[str]) -> int:
         if rest and rest[0] == "prework":
             return _python("wave_memory_prework.py", root, rest[1:])
         return _python("wave_memory.py", root, argv)
-    if cmd in ("resume", "ack"):
+    if cmd in ("resume", "ack", "finalize"):
         return _python("wave_terminal.py", root, argv)
     if cmd in ("verify", "blast-radius", "revert", "stabilize"):
         return _python("wave_failure.py", root, argv)

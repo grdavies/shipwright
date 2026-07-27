@@ -1,15 +1,25 @@
 #!/usr/bin/env python3
 """Per-task execute status writer (TDD + refactor rollup, PRD 039 R2)."""
 from __future__ import annotations
-import argparse, json, os, re, sys
+
+import argparse
+import json
+import os
+import re
+import sys
 from pathlib import Path
+
 from _sw.cli import run_module_main
+from frozen_spec_ledger import record_ledger_subtask, reject_hashed_body_write
+
 
 def sanitize_ref(task_ref: str) -> str:
     return re.sub(r"[^a-zA-Z0-9._-]+", "-", task_ref).strip("-") or "unknown"
 
+
 def status_path(root: Path, task_ref: str) -> Path:
     return root / ".cursor" / "sw-execute-runs" / sanitize_ref(task_ref) / "status.json"
+
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser()
@@ -36,23 +46,30 @@ def main(argv: list[str] | None = None) -> int:
     task_list = os.environ.get("SW_TASK_LIST", "")
     phase_slug = os.environ.get("SW_PHASE_SLUG", "")
     if verdict in ("green", "pass") and task_list and phase_slug:
-        import importlib.util
-        gate = Path(__file__).resolve().parent / "phase_acceptance_gate.py"
-        spec = importlib.util.spec_from_file_location("phase_acceptance_gate", gate)
-        if spec is not None and spec.loader is not None:
-            mod = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(mod)
-            completion = mod.record_ref_completion(root, ns.task_ref, task_list, phase_slug)
-            if completion.get("verdict") != "pass":
-                print(json.dumps(completion))
+        tasks_path = Path(task_list)
+        if not tasks_path.is_absolute():
+            tasks_path = (root / task_list).resolve()
+        if tasks_path.is_file():
+            old_text = tasks_path.read_text(encoding="utf-8")
+            rejected = reject_hashed_body_write(old_text, old_text)
+            if rejected:
+                print(json.dumps(rejected))
                 return 1
-            status_out = {"verdict": "pass", "path": str(path)}
-            if completion.get("issueSync"):
-                status_out["issueSync"] = completion["issueSync"]
-            print(json.dumps(status_out))
-            return 0
+        ledger_out = record_ledger_subtask(root, ns.task_ref, phase_slug, done=True)
+        if ledger_out.get("verdict") not in ("pass", "ok"):
+            print(json.dumps(ledger_out))
+            return 1
+        from planning_progress import propagate_checkbox_to_issue_store
+
+        issue_sync = propagate_checkbox_to_issue_store(root, ns.task_ref, task_list, phase_slug)
+        status_out = {"verdict": "pass", "path": str(path), "ledger": ledger_out}
+        if issue_sync.get("synced") or issue_sync.get("degraded"):
+            status_out["issueSync"] = issue_sync
+        print(json.dumps(status_out))
+        return 0
     print(json.dumps({"verdict": "pass", "path": str(path)}))
     return 0
+
 
 if __name__ == "__main__":
     run_module_main(main)

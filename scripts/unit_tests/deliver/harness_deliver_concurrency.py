@@ -144,13 +144,45 @@ WT4="$REPO4/.sw-worktrees/orphan-phase-demo-phase-alpha"
 mkdir -p "$(dirname "$WT4")"
 git -C "$REPO4" worktree add -q "$WT4" feat/orphan-phase-alpha
 mkdir -p "$REPO4/.cursor"
-cat >"$REPO4/.cursor/sw-deliver-plan.json" <<JSON
-{"mode":"phase","target":{"branch":"$TARGET"},"source_task_list":"docs/prds/050-fixture/tasks-050-fixture.md","items":[{"id":"1","slug":"demo-phase-alpha","branch":"feat/orphan-phase-alpha"}],"waves":[["1"]],"edges":[]}
-JSON
-cat >"$REPO4/.cursor/sw-deliver-state.orphan.json" <<JSON
-{"verdict":"running","target":{"branch":"$TARGET"},"phases":{"1":{"id":"1","slug":"demo-phase-alpha","status":"pending","branch":"feat/orphan-phase-alpha"}},"nextAction":"provision-phase"}
-JSON
-if OUT=$(python3 "$ROOT/scripts/wave_lifecycle.py" "$REPO4" phase provision --phase-id 1 --plan .cursor/sw-deliver-plan.json --base main 2>&1) && \
+PLAN_REL=$(python3 - "$REPO4" "$TARGET" "$ROOT" <<'PY'
+import sys
+from pathlib import Path
+root = Path(sys.argv[1]).resolve()
+target = sys.argv[2]
+scripts = Path(sys.argv[3]) / "scripts"
+sys.path.insert(0, str(scripts))
+from wave_run_plan import ensure_run_id, persist_plan, relative_plan_path
+from wave_state import save_deliver_state
+
+plan = {
+    "mode": "phase",
+    "target": {"branch": target},
+    "source_task_list": "docs/prds/050-fixture/tasks-050-fixture.md",
+    "items": [{"id": "1", "slug": "demo-phase-alpha", "branch": "feat/orphan-phase-alpha"}],
+    "waves": [["1"]],
+    "edges": [],
+}
+state = {
+    "verdict": "running",
+    "target": {"branch": target},
+    "source_task_list": plan["source_task_list"],
+    "phases": {
+        "1": {
+            "id": "1",
+            "slug": "demo-phase-alpha",
+            "status": "pending",
+            "branch": "feat/orphan-phase-alpha",
+        }
+    },
+    "nextAction": "provision-phase",
+}
+run_id = ensure_run_id(root, state)
+persist_plan(root, run_id, plan, state)
+save_deliver_state(root, state, target=target)
+print(relative_plan_path(root, run_id))
+PY
+)
+if OUT=$(python3 "$ROOT/scripts/wave_lifecycle.py" "$REPO4" phase provision --phase-id 1 --plan "$PLAN_REL" --base main 2>&1) && \
    echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('adopted') is True; assert d.get('action')=='phase-provision'" && \
    python3 - <<'PY' "$REPO4"
 import json, sys

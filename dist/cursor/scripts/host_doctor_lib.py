@@ -93,7 +93,7 @@ def probe_ci_status_capability(root: Path) -> dict[str, Any]:
             "cacheAdvisoryTtlSeconds": CI_STATUS_PROBE_CACHE_TTL_SECONDS,
         }
 
-    envelope = host_checks_evidence(root, "checks", "--sha", head_sha)
+    envelope = host_checks_evidence(root, "checks", sha=head_sha)
     capability = capability_from_checks_envelope(envelope, provider=provider)
     return {
         "capability": capability,

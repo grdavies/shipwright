@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Terminal acceptance record builder + validator for deliver runs (PRD 065 R14, R24, R30)."""
+"""Terminal acceptance record builder + validator for deliver runs (PRD 065 R14, R24, R30; PRD 081 R20)."""
 from __future__ import annotations
 
+import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -12,9 +13,9 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from halt_resume import resolve_run_id
-from wave_json_io import write_json
+from wave_json_io import StateCorruptError, read_json, write_json
+from wave_run_paths import blocker_path, phase_blocker_path, terminal_acceptance_path
 
-ACCEPTANCE_FILENAME = "terminal-acceptance.json"
 TERMINAL_MERGED_STATUSES = frozenset(
     {"green-merged", "teardown-pending", "teardown-complete"}
 )
@@ -24,8 +25,56 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def acceptance_record_path(root: Path) -> Path:
-    return root / ".cursor" / "sw-deliver-runs" / ACCEPTANCE_FILENAME
+def acceptance_record_path(root: Path, state: dict[str, Any] | None = None) -> Path:
+    return terminal_acceptance_path(root, resolve_run_id(state))
+
+
+def blocker_record_path(root: Path, state: dict[str, Any] | None = None) -> Path:
+    return blocker_path(root, resolve_run_id(state))
+
+
+def phase_blocker_record_path(
+    root: Path, state: dict[str, Any], phase_slug: str
+) -> Path:
+    run_id = resolve_run_id(state)
+    for pid, meta in (state.get("phases") or {}).items():
+        if isinstance(meta, dict) and meta.get("slug") == phase_slug:
+            return phase_blocker_path(root, run_id, str(pid))
+    return phase_blocker_path(root, run_id, phase_slug)
+
+
+def read_acceptance_record(
+    root: Path, state: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    path = acceptance_record_path(root, state)
+    if not path.is_file():
+        return None
+    try:
+        data = read_json(path)
+    except (StateCorruptError, json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    expected_run = resolve_run_id(state)
+    if str(data.get("runId") or "") != expected_run:
+        return None
+    return data
+
+
+def read_blocker_record(root: Path, state: dict[str, Any] | None) -> dict[str, Any] | None:
+    path = blocker_record_path(root, state)
+    if not path.is_file():
+        return None
+    try:
+        data = read_json(path)
+    except (StateCorruptError, json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    halt = data.get("haltResume") or {}
+    if isinstance(halt, dict) and halt.get("runId") and halt.get("runId") != resolve_run_id(state):
+        return None
+    return data
 
 
 def is_deliver_run(state: dict[str, Any]) -> bool:
@@ -112,6 +161,9 @@ def validate_acceptance_record(
     if not is_deliver_run(state):
         return {"verdict": "skip", "reason": "not-a-deliver-run", "errors": []}
 
+    if str(record.get("runId") or "") != resolve_run_id(state):
+        errors.append("acceptance:run-id-mismatch")
+
     phases = state.get("phases") or {}
     for pid, meta in phases.items():
         if not isinstance(meta, dict):
@@ -157,7 +209,23 @@ def write_acceptance_record(
         terminal_gate=terminal_gate,
         gate_exit_code=gate_exit_code,
     )
-    path = acceptance_record_path(root)
+    path = acceptance_record_path(root, state)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(path, record)
+    return path
+
+
+def write_blocker_record(root: Path, state: dict[str, Any], record: dict[str, Any]) -> Path:
+    path = blocker_record_path(root, state)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(path, record)
+    return path
+
+
+def write_phase_blocker_record(
+    root: Path, state: dict[str, Any], phase_slug: str, record: dict[str, Any]
+) -> Path:
+    path = phase_blocker_record_path(root, state, phase_slug)
     path.parent.mkdir(parents=True, exist_ok=True)
     write_json(path, record)
     return path
@@ -182,7 +250,7 @@ def embed_validated_acceptance(
     )
     validation = validate_acceptance_record(root, record, state)
     report["terminalAcceptance"] = {"record": record, "validation": validation}
-    path = acceptance_record_path(root)
+    path = acceptance_record_path(root, state)
     path.parent.mkdir(parents=True, exist_ok=True)
     write_json(path, record)
     report["terminalAcceptancePath"] = str(path)

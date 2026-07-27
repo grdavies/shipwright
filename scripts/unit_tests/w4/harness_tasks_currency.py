@@ -74,13 +74,18 @@ git commit -q -m "add frozen tasks"
 mkdir -p .cursor
 
 TASKS=docs/prds/099-test/tasks-099-test.md
+PHASE=alpha
 
-# --- tasks-checkbox-currency ---
-if bash "$PROGRESS" toggle --file "$TASKS" --ref 1.1 --done true >/dev/null && \
-   grep -q '\[x\] 1.1' "$TASKS"; then
-  ok "tasks-checkbox-currency: toggle marks task done"
+# --- tasks-checkbox-currency (R23: ledger records progress; frozen body unchanged) ---
+echo '{"verdict":"running","source_task_list":"docs/prds/099-test/tasks-099-test.md","phases":{},"taskLedger":{"tasks":{},"phases":{}}}' \
+  > .cursor/sw-deliver-state.json
+TOGGLE_OUT=$(bash "$PROGRESS" toggle --file "$TASKS" --ref 1.1 --done true --phase "$PHASE" 2>/dev/null || true)
+if echo "$TOGGLE_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('action')=='ledger-toggle' and d.get('verdict')=='pass'" && \
+   grep -q '\[ \] 1.1' "$TASKS" && \
+   echo "$TOGGLE_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert '- [x] 1.1' in d.get('projected','')"; then
+  ok "tasks-checkbox-currency: ledger toggle projects done without mutating frozen body"
 else
-  bad "tasks-checkbox-currency: toggle marks task done"
+  bad "tasks-checkbox-currency: ledger toggle projects done without mutating frozen body"
 fi
 
 # --- tasks-progress-nonckbox-reject ---
@@ -98,14 +103,11 @@ else
 fi
 git checkout -q -- "$TASKS" 2>/dev/null || cp /tmp/tasks-before.md "$TASKS"
 
-# --- frozen-guard-allows-checkbox ---
-bash "$PROGRESS" toggle --file "$TASKS" --ref 1.1 --done true >/dev/null
-git add "$TASKS"
-git commit -q -m "checkbox progress"
-if bash "$CHECK_FROZEN" HEAD~1 >/dev/null 2>&1; then
-  ok "frozen-guard-allows-checkbox: checkbox-only diff permitted by check-frozen"
+# --- frozen-guard-allows-checkbox (R23: progress does not rewrite hashed body) ---
+if bash "$CHECK_FROZEN" HEAD >/dev/null 2>&1; then
+  ok "frozen-guard-allows-checkbox: ledger progress leaves frozen body unchanged for check-frozen"
 else
-  bad "frozen-guard-allows-checkbox: checkbox-only diff permitted by check-frozen"
+  bad "frozen-guard-allows-checkbox: ledger progress leaves frozen body unchanged for check-frozen"
 fi
 
 # Tampered frozen file should still fail
@@ -123,21 +125,17 @@ else
   bad "frozen-guard-allows-checkbox: non-checkbox frozen edit rejected (ec=$EC_TAMPER)"
 fi
 
-# --- ledger + currency gate ---
+# --- ledger + currency gate (R23: frozen checkboxes read from ledger) ---
 echo '{"verdict":"running","source_task_list":"docs/prds/099-test/tasks-099-test.md","phases":{},"taskLedger":{"tasks":{},"phases":{}}}' \
   > .cursor/sw-deliver-state.json
 
-set +e
-bash "$GATE" --tasks-file "$TASKS" --state-root "$FIX" >/dev/null 2>&1
-EC_DIVERGE=$?
-set -e
-if [[ "$EC_DIVERGE" -eq 1 ]]; then
-  ok "tasks-currency-gate-block: checked box without ledger blocks"
+if bash "$GATE" --tasks-file "$TASKS" --state-root "$FIX" >/dev/null 2>&1; then
+  ok "tasks-currency-gate-block: unchecked ledger and body aligned passes"
 else
-  bad "tasks-currency-gate-block: expected divergence ec=1 got $EC_DIVERGE"
+  bad "tasks-currency-gate-block: unchecked ledger and body aligned should pass"
 fi
 
-python3 "$STATE_PY" "$FIX" ledger record --task 1.1 --phase alpha --done true >/dev/null
+python3 "$STATE_PY" "$FIX" ledger record --task 1.1 --phase "$PHASE" --done true >/dev/null
 if bash "$GATE" --tasks-file "$TASKS" --state-root "$FIX" >/dev/null 2>&1; then
   ok "tasks-currency-gate-block: ledger aligned passes gate"
 else
@@ -154,11 +152,10 @@ fi
 # --- currency-gate-vs-ledger (R49): partial phase tolerated ---
 echo '{"verdict":"running","source_task_list":"docs/prds/099-test/tasks-099-test.md","phases":{},"taskLedger":{"tasks":{"1.1":{"done":true,"phase":"alpha"}},"phases":{}}}' \
   > .cursor/sw-deliver-state.json
-bash "$PROGRESS" toggle --file "$TASKS" --ref 1.1 --done true >/dev/null
 if bash "$GATE" --tasks-file "$TASKS" --state-root "$FIX" >/dev/null 2>&1; then
-  ok "currency-gate-vs-ledger: ledger aligned with partial checkboxes passes"
+  ok "currency-gate-vs-ledger: ledger aligned with unchecked frozen body passes"
 else
-  bad "currency-gate-vs-ledger: partial aligned ledger should pass"
+  bad "currency-gate-vs-ledger: ledger aligned with unchecked frozen body should pass"
 fi
 
 if [[ "$FAIL" -eq 0 ]]; then

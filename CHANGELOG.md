@@ -635,6 +635,27 @@
 * merge phase remediation-fragment-and-consumer-halt into feat/host-check-evidence-validity (dbe766a) <!-- sw-deliver:remediation-fragment-and-consumer-halt -->
 * merge phase emit-time-redaction-and-build-chain into feat/host-check-evidence-validity (4ace223) <!-- sw-deliver:emit-time-redaction-and-build-chain -->
 * merge phase documentation-surfaces into feat/host-check-evidence-validity (53ccb0d) <!-- sw-deliver:documentation-surfaces -->
+* merge phase target-lock-primitive-heartbeat-and-takeover-medium into feat/workflow-state-machine-hardening (58b9634) <!-- sw-deliver:target-lock-primitive-heartbeat-and-takeover-medium -->
+* merge phase deliver-run-identity-and-run-scoped-layout-helper-medium into feat/workflow-state-machine-hardening (178036c) <!-- sw-deliver:deliver-run-identity-and-run-scoped-layout-helper-medium -->
+* merge phase run-scoped-plan-persistence-and-hash-verification-medium into feat/workflow-state-machine-hardening (27dbde5) <!-- sw-deliver:run-scoped-plan-persistence-and-hash-verification-medium -->
+* merge phase run-namespaced-status-discovery-and-glob-removal-small into feat/workflow-state-machine-hardening (6e08797) <!-- sw-deliver:run-namespaced-status-discovery-and-glob-removal-small -->
+* merge phase reader-migration-deliver-core-readers-medium into feat/workflow-state-machine-hardening (fa58093) <!-- sw-deliver:reader-migration-deliver-core-readers-medium -->
+* merge phase reader-migration-auxiliary-readers-medium into feat/workflow-state-machine-hardening (4463a5d) <!-- sw-deliver:reader-migration-auxiliary-readers-medium -->
+* merge phase precedence-classes-and-lock-before-mutation-ordering-medium into feat/workflow-state-machine-hardening (7a0a3d6) <!-- sw-deliver:precedence-classes-and-lock-before-mutation-ordering-medium -->
+* merge phase global-plan-literal-lint-and-currency-gate-reader-small into feat/workflow-state-machine-hardening (e22a28a) <!-- sw-deliver:global-plan-literal-lint-and-currency-gate-reader-small -->
+* merge phase drain-budget-continuation-and-transition-receipts-medium into feat/workflow-state-machine-hardening (24cfa80) <!-- sw-deliver:drain-budget-continuation-and-transition-receipts-medium -->
+* merge phase global-plan-literal-lint-and-currency-gate-reader-small into feat/workflow-state-machine-hardening (8a0fd79) <!-- sw-deliver:global-plan-literal-lint-and-currency-gate-reader-small -->
+* merge phase doc-driver-state-machine-and-doc-run-lock-medium into feat/workflow-state-machine-hardening (03f625e) <!-- sw-deliver:doc-driver-state-machine-and-doc-run-lock-medium -->
+* merge phase freeze-ownership-durability-and-related-work-stage-medium into feat/workflow-state-machine-hardening (e2c211a) <!-- sw-deliver:freeze-ownership-durability-and-related-work-stage-medium -->
+* merge phase brainstorm-reference-resolution-and-publication-cutover-medium into feat/workflow-state-machine-hardening (e4b5b53) <!-- sw-deliver:brainstorm-reference-resolution-and-publication-cutover-medium -->
+* merge phase number-reservation-and-final-triage-rescore-medium into feat/workflow-state-machine-hardening (9cbdbaa) <!-- sw-deliver:number-reservation-and-final-triage-rescore-medium -->
+* merge phase frozen-specification-versus-progress-ledger-medium into feat/workflow-state-machine-hardening (6c337a7) <!-- sw-deliver:frozen-specification-versus-progress-ledger-medium -->
+* merge phase operator-surface-list-resume-and-legacy-adoption-medium into feat/workflow-state-machine-hardening (fb51db5) <!-- sw-deliver:operator-surface-list-resume-and-legacy-adoption-medium -->
+* merge phase run-finalization-and-terminal-receipt-medium into feat/workflow-state-machine-hardening (5ab9e40) <!-- sw-deliver:run-finalization-and-terminal-receipt-medium -->
+* merge phase command-documentation-currency-medium into feat/workflow-state-machine-hardening (79d6e1d) <!-- sw-deliver:command-documentation-currency-medium -->
+* merge phase command-documentation-currency-medium into feat/workflow-state-machine-hardening (deae4c0) <!-- sw-deliver:command-documentation-currency-medium -->
+* merge phase layout-and-operator-guide-currency-medium into feat/workflow-state-machine-hardening (ed65f1b) <!-- sw-deliver:layout-and-operator-guide-currency-medium -->
+* merge phase conductor-contract-and-generated-surfaces-medium into feat/workflow-state-machine-hardening (43093aa) <!-- sw-deliver:conductor-contract-and-generated-surfaces-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

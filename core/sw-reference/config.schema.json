@@ -49,6 +49,24 @@
           ],
           "default": "confirm",
           "description": "Doc\u2192implementation boundary after /sw-tasks freeze: stop halts; confirm prompts before dispatch; auto dispatches the implementation loop."
+        },
+        "loop": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Doc-loop driver tuning (PRD 081 R11).",
+          "properties": {
+            "drainMechanical": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true (default), doc-loop drains mechanical stages in-process until awaitAgent, awaitHuman, or halt."
+            },
+            "maxStepsPerInvocation": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 8,
+              "description": "Mechanical step budget per doc-loop invocation before continuation re-invoke."
+            }
+          }
         }
       }
     },
@@ -213,6 +231,25 @@
               "type": "boolean",
               "default": true,
               "description": "When true (default), deliver-loop drains mechanical actions in-process until awaitAgent, awaitInFlight, or halt. When false, one mechanical step per invocation."
+            },
+            "maxStepsPerInvocation": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 12,
+              "description": "Mechanical drain step budget per deliver-loop invocation; exhaustion emits verdict continue, not halt (PRD 081 R22)."
+            }
+          }
+        },
+        "targetLock": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Target-branch exclusion lock staleness (PRD 081 R19).",
+          "properties": {
+            "staleSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 300,
+              "description": "Heartbeat age after which a target-lock holder is stale (ship-lease predicate)."
             }
           }
         }

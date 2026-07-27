@@ -213,11 +213,14 @@ def save_state(root: Path, state: dict[str, Any]) -> None:
     save_deliver_state(root, state)
 
 
-def load_plan(root: Path) -> dict[str, Any]:
-    plan_path = root / ".cursor" / "sw-deliver-plan.json"
-    if not plan_path.is_file():
-        fail("deliver plan missing: .cursor/sw-deliver-plan.json")
-    return json.loads(plan_path.read_text(encoding="utf-8"))
+def load_plan(root: Path, state: dict[str, Any] | None = None) -> dict[str, Any]:
+    import wave_run_plan as run_plan
+
+    if state is None:
+        state = load_state(root)
+    if not state.get("planHash"):
+        fail("deliver plan missing: run state lacks planHash (run-scoped plan required)")
+    return run_plan.load_plan_for_state(root, state)
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
@@ -231,8 +234,8 @@ def load_workflow_config(root: Path) -> dict[str, Any]:
     return {}
 
 
-def plan_edges(root: Path) -> list[dict[str, str]]:
-    plan = load_plan(root)
+def plan_edges(root: Path, state: dict[str, Any] | None = None) -> list[dict[str, str]]:
+    plan = load_plan(root, state)
     return [dict(e) for e in plan.get("edges") or []]
 
 
@@ -284,8 +287,14 @@ def resolve_orchestrator_worktree(root: Path, args: list[str]) -> Path:
     return Path(path).resolve()
 
 
-def append_log(root: Path, entry: dict[str, Any]) -> None:
-    log_path = root / ".cursor" / "sw-deliver-runs" / "run.log"
+def append_log(root: Path, entry: dict[str, Any], state: dict[str, Any] | None = None) -> None:
+    import wave_run_plan as run_plan
+    from wave_run_paths import events_path
+
+    if state is None:
+        state = load_state(root)
+    run_id = run_plan.resolve_run_id(state)
+    log_path = events_path(root, run_id)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps({**entry, "at": utc_now()}, ensure_ascii=False) + "\n"
     with open(log_path, "a", encoding="utf-8") as f:
@@ -547,7 +556,7 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
 def cmd_blast_radius_dependents(root: Path, args: list[str]) -> None:
     state = load_state(root)
     pid, meta = find_phase(state, parse_kv(args, "--phase-id"), parse_kv(args, "--phase-slug"))
-    deps = transitive_dependent_ids(pid, plan_edges(root))
+    deps = transitive_dependent_ids(pid, plan_edges(root, state))
     phases = state.get("phases") or {}
     slugs = [phases[d].get("slug", d) for d in deps if d in phases]
     emit(
@@ -567,7 +576,7 @@ def cmd_blast_radius_apply(root: Path, args: list[str]) -> None:
     pid, meta = find_phase(state, parse_kv(args, "--phase-id"), parse_kv(args, "--phase-slug"))
     cause = parse_kv(args, "--cause") or meta.get("cause") or "blocked"
     upstream_slug = meta.get("slug", pid)
-    deps = transitive_dependent_ids(pid, plan_edges(root))
+    deps = transitive_dependent_ids(pid, plan_edges(root, state))
     phases = state.get("phases") or {}
     blocked: list[dict[str, str]] = []
     for dep_id in deps:
@@ -592,6 +601,7 @@ def cmd_blast_radius_apply(root: Path, args: list[str]) -> None:
             "blockedDependents": blocked,
             "cause": cause,
         },
+        state,
     )
     emit(
         {
@@ -732,7 +742,7 @@ def cmd_report_blockers(root: Path, _args: list[str]) -> None:
     if handoff:
         report["handoff"] = handoff
     attach_plan_surfacing_to_report(root, state, report, report_kind=REPORT_KIND_HALT)
-    append_log(root, {"event": "blocker-report", "blockerCount": len(blockers)})
+    append_log(root, {"event": "blocker-report", "blockerCount": len(blockers)}, state)
     emit({"verdict": "pass", "action": "report-blockers", "report": report})
 
 
@@ -845,6 +855,7 @@ def cmd_revert_phase(root: Path, args: list[str]) -> None:
             "revertCommit": revert_sha,
             "cause": cause,
         },
+        state,
     )
     emit(
         {
@@ -904,7 +915,7 @@ def cmd_terminal_deny(root: Path, args: list[str]) -> None:
         else f"/sw-amend  # per-phase deny on {phase_slug}"
     )
     save_state(root, state)
-    append_log(root, {"event": "terminal-deny", "scope": scope, "reason": reason})
+    append_log(root, {"event": "terminal-deny", "scope": scope, "reason": reason}, state)
     emit(
         {
             "verdict": "pass",

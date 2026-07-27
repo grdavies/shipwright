@@ -1094,13 +1094,7 @@ def run_tasks_currency_gate(root: Path, state: dict[str, Any]) -> None:
     """
     from wave_deliver_loop import load_plan, tasks_currency_ok
 
-    plan: dict[str, Any] = {}
-    plan_path = root / ".cursor" / "sw-deliver-plan.json"
-    if plan_path.is_file():
-        try:
-            plan = json.loads(plan_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            plan = {}
+    plan = load_plan(root, state)
     ok, cause = tasks_currency_ok(root, state, plan)
     if not ok:
         fail(
@@ -1155,11 +1149,13 @@ def run_tasks_currency_gate(root: Path, state: dict[str, Any]) -> None:
 
 
 def resolve_docs_currency_paths(root: Path) -> tuple[Path, Path, Path, Path]:
+    from wave_run_paths import plan_path as run_plan_path
+    from wave_run_plan import resolve_run_id
     from wave_state import load_deliver_state, resolve_state_path
 
     state = load_deliver_state(root)
     state_path = resolve_state_path(root, state_hint=state if state else None)
-    plan_path = root / ".cursor" / "sw-deliver-plan.json"
+    plan_path = run_plan_path(root, resolve_run_id(state))
     return root, root, state_path, plan_path
 
 
@@ -1860,6 +1856,226 @@ def cmd_ack_complete(root: Path, _args: list[str]) -> None:
     emit({"verdict": "pass", "action": "ack-complete", "note": "Resume phase dispatch"})
 
 
+def verify_terminal_merge_via_host(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """Verify terminal merge commit through the published host broker path (R24)."""
+    from wave_compound import terminal_pr_merged_via_host
+
+    info = terminal_pr_merged_via_host(root, state)
+    if not info or not info.get("merged"):
+        return {
+            "verdict": "fail",
+            "merged": False,
+            "reason": "terminal-merge-unverified",
+        }
+    merge_commit = info.get("mergeCommit")
+    if not merge_commit:
+        return {
+            "verdict": "fail",
+            "merged": False,
+            "reason": "terminal-merge-commit-missing",
+            **info,
+        }
+    return {"verdict": "pass", "merged": True, **info}
+
+
+def close_run_projections(root: Path, run_id: str, state: dict[str, Any]) -> dict[str, Any]:
+    """Close run-scoped outward projections after terminal merge (R24)."""
+    closed: list[str] = []
+    task_list = state.get("source_task_list")
+    if isinstance(task_list, str) and task_list.strip():
+        rel = task_list.lstrip("./")
+        projection = root / ".cursor" / "sw-deliver-runs" / "_progress-projections" / rel
+        if projection.is_file():
+            projection.unlink()
+            closed.append(str(projection))
+    from planning_projection_ledger import (
+        load_projection_ledger,
+        projection_ledger_path,
+        save_projection_ledger,
+    )
+
+    scope = f"deliver-{run_id}"
+    ledger_file = projection_ledger_path(root, scope=scope)
+    if ledger_file.is_file():
+        ledger = load_projection_ledger(root, scope=scope)
+        ledger["closedAt"] = utc_now()
+        ledger["closedByRunId"] = run_id
+        save_projection_ledger(root, ledger, scope=scope)
+        closed.append(str(ledger_file))
+    return {"verdict": "pass", "closed": closed}
+
+
+def _remove_worktree(top: Path, wt_path: str) -> dict[str, Any]:
+    path = Path(wt_path)
+    if not path.is_dir():
+        return {"path": wt_path, "removed": False, "reason": "missing"}
+    proc = subprocess.run(
+        ["git", "-C", str(top), "worktree", "remove", str(path), "--force"],
+        text=True,
+        capture_output=True,
+    )
+    return {
+        "path": wt_path,
+        "removed": proc.returncode == 0,
+        "stderr": proc.stderr.strip() or None,
+    }
+
+
+def release_run_resources(root: Path, run_id: str, state: dict[str, Any]) -> dict[str, Any]:
+    """Release target lock, leases, and retained worktrees for a finalized run (R24)."""
+    from wave_run_paths import lease_path as run_lease_path
+    from wave_state import read_lock_meta, scoped_paths, target_branch_from_state
+    from wave_target_lock import release_target_lock
+
+    released: dict[str, Any] = {}
+    target = target_branch_from_state(state)
+    if target:
+        released["targetLock"] = release_target_lock(
+            root, target, run_id, finalize=True
+        )
+        lock_path = scoped_paths(root, target)["lock"]
+        if lock_path.is_file():
+            meta = read_lock_meta(lock_path)
+            holder_run = meta.get("runId")
+            if not holder_run or holder_run == run_id:
+                lock_path.unlink(missing_ok=True)
+                released["scopedDeliverLock"] = {
+                    "verdict": "pass",
+                    "path": str(lock_path),
+                }
+            else:
+                released["scopedDeliverLock"] = {
+                    "verdict": "fail",
+                    "error": "scoped-lock-run-mismatch",
+                    "holder": meta,
+                }
+    lease_file = run_lease_path(root, run_id)
+    if lease_file.is_file():
+        lease_file.unlink(missing_ok=True)
+        released["runLocalLease"] = {"verdict": "pass", "path": str(lease_file)}
+
+    top = git_top(root)
+    worktrees: list[dict[str, Any]] = []
+    orch = state.get("orchestratorWorktree")
+    if isinstance(orch, dict) and orch.get("path"):
+        worktrees.append(_remove_worktree(top, str(orch["path"])))
+    for entry in (state.get("phaseWorktrees") or {}).values():
+        if isinstance(entry, dict) and entry.get("path"):
+            worktrees.append(_remove_worktree(top, str(entry["path"])))
+    released["worktrees"] = worktrees
+    return released
+
+
+def finalize_run(
+    root: Path,
+    run_id: str,
+    state: dict[str, Any],
+    *,
+    dry_run: bool = False,
+    actor: str | None = None,
+) -> dict[str, Any]:
+    """Finalize deliver run lifecycle after verified terminal merge (PRD 081 R24)."""
+    from wave_state import run_finalize_authorization, save_run_scoped_state
+    from wave_transition_receipt import (
+        build_terminal_receipt,
+        default_actor,
+        persist_terminal_receipt,
+        read_terminal_receipt,
+    )
+
+    if state.get("immutable"):
+        existing = read_terminal_receipt(root, run_id)
+        return {
+            "verdict": "pass",
+            "action": "run-finalize",
+            "immutable": True,
+            "terminalReceipt": existing,
+            "note": "already finalized",
+        }
+
+    merge_info = verify_terminal_merge_via_host(root, state)
+    if merge_info.get("verdict") != "pass":
+        return {
+            "verdict": "fail",
+            "action": "run-finalize",
+            "error": merge_info.get("reason", "terminal-merge-unverified"),
+            "merge": merge_info,
+            "note": "run remains nonterminal (R24)",
+        }
+
+    merge_commit = str(merge_info.get("mergeCommit") or "")
+    if dry_run:
+        return {
+            "verdict": "pass",
+            "action": "run-finalize",
+            "dry_run": True,
+            "wouldVerifyMergeCommit": merge_commit,
+        }
+
+    released = release_run_resources(root, run_id, state)
+    projections = close_run_projections(root, run_id, state)
+    receipt = build_terminal_receipt(
+        merge_commit=merge_commit,
+        released_resources={**released, "projections": projections},
+        actor=actor or default_actor(),
+        merge_detail={
+            key: merge_info[key]
+            for key in ("prNumber", "mergedAt", "detail")
+            if key in merge_info
+        },
+    )
+    persist_terminal_receipt(root, run_id, receipt)
+
+    work_state = dict(state)
+    work_state["immutable"] = True
+    work_state["verdict"] = "finalized"
+    work_state["finalizedAt"] = utc_now()
+    work_state["terminalMerge"] = {
+        "mergeCommit": merge_commit,
+        "prNumber": merge_info.get("prNumber"),
+        "mergedAt": merge_info.get("mergedAt"),
+        "verifiedAt": utc_now(),
+    }
+    work_state.pop("orchestratorWorktree", None)
+    work_state["phaseWorktrees"] = {}
+    with run_finalize_authorization():
+        save_run_scoped_state(root, run_id, work_state)
+
+    return {
+        "verdict": "pass",
+        "action": "run-finalize",
+        "immutable": True,
+        "terminalReceipt": receipt,
+        "releasedResources": released,
+        "projections": projections,
+    }
+
+
+def cmd_finalize_run(root: Path, args: list[str]) -> None:
+    from wave_state import load_run_scoped_state
+
+    run_id = parse_kv(args, "--run-id") or os.environ.get("SW_RUN_ID") or os.environ.get(
+        "SW_DELIVER_RUN_ID", ""
+    )
+    if not run_id:
+        fail("--run-id or SW_RUN_ID required")
+    state = load_run_scoped_state(root, run_id)
+    if not state:
+        fail(f"run state not found: {run_id}", exit_code=20, halt="finalize:run-not-found")
+    if state.get("immutable"):
+        fail("run already finalized", exit_code=20, halt="finalize:already-finalized")
+    dry_run = has_flag(args, "--dry-run")
+    payload = finalize_run(root, run_id, state, dry_run=dry_run)
+    if payload.get("verdict") == "fail":
+        fail(
+            payload.get("error", "terminal merge unverified"),
+            exit_code=10,
+            halt="finalize:merge-unverified",
+            **{k: v for k, v in payload.items() if k not in ("verdict", "error")},
+        )
+    emit(payload)
+
+
 def main() -> None:
     if len(sys.argv) < 3:
         fail("usage: wave_terminal.py <root> <domain> <subcommand> [args...]")
@@ -1928,6 +2144,13 @@ def main() -> None:
             emit({"verdict": "pass", "action": "ack-record-merge", **record_merge_for_ack(root)})
         else:
             fail("ack subcommand required: status|check|complete|record-merge")
+    elif domain == "finalize":
+        sub = args[0] if args else ""
+        rest = args[1:]
+        if sub == "run":
+            cmd_finalize_run(root, rest)
+        else:
+            fail("finalize subcommand required: run")
     else:
         fail(f"unknown domain: {domain}")
 

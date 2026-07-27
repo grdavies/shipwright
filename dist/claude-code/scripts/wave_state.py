@@ -32,9 +32,10 @@ VALID_PHASE_STATUSES = frozenset(
 )
 # Terminal completeness: phase counts as done for retrospective/compound/driver gates (R1/D6).
 TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
-TERMINAL_VERDICTS = frozenset({"running", "complete", "blocked", "rejected"})
+TERMINAL_VERDICTS = frozenset({"running", "complete", "blocked", "rejected", "finalized"})
 
 _COMPLETION_FINALIZE_DEPTH = 0
+_RUN_FINALIZE_DEPTH = 0
 
 
 @contextlib.contextmanager
@@ -46,6 +47,17 @@ def completion_finalize_authorization():
         yield
     finally:
         _COMPLETION_FINALIZE_DEPTH -= 1
+
+
+@contextlib.contextmanager
+def run_finalize_authorization():
+    """Authorize immutable run writes from run finalize only (PRD 081 R24)."""
+    global _RUN_FINALIZE_DEPTH
+    _RUN_FINALIZE_DEPTH += 1
+    try:
+        yield
+    finally:
+        _RUN_FINALIZE_DEPTH -= 1
 
 
 def _assert_completion_finalize_allowed(root: Path, state: dict[str, Any], prior: dict[str, Any] | None) -> None:
@@ -210,6 +222,21 @@ def _is_migration_breadcrumb(data: dict[str, Any]) -> bool:
     return data.get("migrated") is True
 
 
+def _run_scoped_path_from_breadcrumb(root: Path, data: dict[str, Any]) -> Path | None:
+    rel = data.get("runScopedPath")
+    if isinstance(rel, str):
+        path = root / rel
+        if path.is_file():
+            return path
+    run_id = data.get("runId")
+    if isinstance(run_id, str) and run_id:
+        from wave_run_paths import state_path as run_state_path
+
+        path = run_state_path(root, run_id)
+        return path if path.is_file() else None
+    return None
+
+
 def _scoped_path_from_breadcrumb(root: Path, data: dict[str, Any]) -> Path | None:
     rel = data.get("scopedPath")
     if isinstance(rel, str):
@@ -348,6 +375,9 @@ def resolve_state_path(
                 assert leg_target is not None
                 scoped = scoped_paths(root, leg_target)["state"]
                 if scoped.is_file():
+                    # Full repo-root state wins over a stale scoped mirror (R21 resume).
+                    if leg_data.get("phases") and leg_data.get("verdict") == "running":
+                        return legacy
                     return scoped
         return legacy
     matches = sorted((root / ".cursor").glob("sw-deliver-state.*.json"))
@@ -832,14 +862,21 @@ def load_deliver_state(
         fail_corrupt(path, exc)
         return {}
     if _is_migration_breadcrumb(data):
-        scoped = _scoped_path_from_breadcrumb(root, data)
-        if scoped is not None:
+        adopted = _run_scoped_path_from_breadcrumb(root, data)
+        if adopted is not None:
             try:
-                data = read_json(scoped)
+                data = read_json(adopted)
             except StateCorruptError:
                 return {}
         else:
-            return {}
+            scoped = _scoped_path_from_breadcrumb(root, data)
+            if scoped is not None:
+                try:
+                    data = read_json(scoped)
+                except StateCorruptError:
+                    return {}
+            else:
+                return {}
     anchor = _path_normalize_anchor(root)
     try:
         return normalize_deliver_state_paths(data, anchor=anchor)
@@ -899,14 +936,216 @@ def cmd_resolve_lock_path(root: Path, args: list[str]) -> None:
     )
 
 
+def load_run_scoped_state(root: Path, run_id: str) -> dict[str, Any]:
+    """Load deliver run state from the run directory (PRD 081 R20)."""
+    from wave_run_paths import RunIdRequiredError, state_path as run_state_path
+
+    try:
+        path = run_state_path(root, run_id)
+    except RunIdRequiredError as exc:
+        fail(str(exc), exit_code=2)
+    if not path.is_file():
+        return {}
+    try:
+        data = read_json(path)
+    except StateCorruptError as exc:
+        fail_corrupt(path, exc)
+        return {}
+    anchor = _path_normalize_anchor(root)
+    try:
+        return normalize_deliver_state_paths(data, anchor=anchor)
+    except WorktreePathError as exc:
+        fail(
+            str(exc),
+            exit_code=20,
+            halt="blocked",
+            cause="state:path-escape",
+            path=str(path),
+        )
+        return {}
+
+
+def _assert_run_finalize_allowed(state: dict[str, Any], prior: dict[str, Any] | None) -> None:
+    if not state.get("immutable"):
+        return
+    if prior and prior.get("immutable"):
+        return
+    if os.environ.get("SW_FIXTURE_RUN_FINALIZE") == "1":
+        return
+    if _RUN_FINALIZE_DEPTH > 0:
+        return
+    fail(
+        "run immutable; finalize-only mutation allowed (R24)",
+        exit_code=20,
+        remediation="python3 scripts/wave.py finalize --run-id <run-id>",
+    )
+
+
+def save_run_scoped_state(root: Path, run_id: str, state: dict[str, Any]) -> Path:
+    """Persist deliver run state inside the run directory (PRD 081 R20)."""
+    from wave_run_paths import RunIdRequiredError, state_path as run_state_path
+
+    try:
+        path = run_state_path(root, run_id)
+    except RunIdRequiredError as exc:
+        fail(str(exc), exit_code=2)
+    prior = _read_state_optional(path)
+    _assert_run_finalize_allowed(state, prior or None)
+    payload = dict(state)
+    payload["runId"] = run_id
+    payload["updatedAt"] = utc_now()
+    write_json(path, payload)
+    upsert_run_index_discovery(root, run_id, payload)
+    return path
+
+
+def write_run_local_lease(
+    root: Path,
+    run_id: str,
+    target_branch: str,
+    *,
+    extra: dict[str, Any] | None = None,
+) -> Path:
+    """Record run-local lease with target-lock digest for orphan tracing (R20)."""
+    from wave_lock import target_lock_key_digest
+    from wave_run_paths import RunIdRequiredError, lease_path as run_lease_path
+
+    try:
+        path = run_lease_path(root, run_id)
+    except RunIdRequiredError as exc:
+        fail(str(exc), exit_code=2)
+    digest = target_lock_key_digest(root, target_branch)
+    lease: dict[str, Any] = {
+        "runId": run_id,
+        "targetBranch": target_branch,
+        "lockKeyDigest": digest,
+        "recordedAt": utc_now(),
+    }
+    if extra:
+        lease.update(extra)
+    write_json(path, lease)
+    return path
+
+
+def read_run_local_lease(root: Path, run_id: str) -> dict[str, Any]:
+    from wave_run_paths import lease_path as run_lease_path
+
+    path = run_lease_path(root, run_id)
+    if not path.is_file():
+        return {}
+    return read_json(path)
+
+
+def discovery_entry_for_run(
+    root: Path,
+    run_id: str,
+    state: dict[str, Any],
+    *,
+    lock_key_digest: str | None = None,
+) -> dict[str, Any]:
+    from wave_run_paths import sanitize_index_entry, state_path as run_state_path
+
+    entry: dict[str, Any] = {
+        "runId": run_id,
+        "target": target_branch_from_state(state),
+        "taskList": state.get("source_task_list"),
+        "verdict": state.get("verdict"),
+        "statePath": str(run_state_path(root, run_id).relative_to(root)),
+        "updatedAt": state.get("updatedAt") or utc_now(),
+    }
+    if lock_key_digest:
+        entry["lockKeyDigest"] = lock_key_digest
+    else:
+        lease = read_run_local_lease(root, run_id)
+        digest = lease.get("lockKeyDigest")
+        if digest:
+            entry["lockKeyDigest"] = digest
+    return sanitize_index_entry(entry)
+
+
+def upsert_run_index_discovery(root: Path, run_id: str, state: dict[str, Any]) -> None:
+    """Update root runs index with discovery fields only (R20)."""
+    from wave_run_paths import runs_index_path, sanitize_index_entry
+
+    index_path = runs_index_path(root)
+    prior: dict[str, Any] = {}
+    if index_path.is_file():
+        try:
+            prior = read_json(index_path)
+        except StateCorruptError:
+            prior = {}
+    runs_list = prior.get("runs")
+    if not isinstance(runs_list, list):
+        runs_list = []
+    entry = discovery_entry_for_run(root, run_id, state)
+    replaced = False
+    for idx, item in enumerate(runs_list):
+        if isinstance(item, dict) and item.get("runId") == run_id:
+            runs_list[idx] = entry
+            replaced = True
+            break
+    if not replaced:
+        runs_list.append(entry)
+    sanitized = [
+        sanitize_index_entry(item) if isinstance(item, dict) else item for item in runs_list
+    ]
+    write_json(index_path, {"updatedAt": utc_now(), "runs": sanitized})
+
+
+def enumerate_run_scoped_dirs(root: Path) -> list[dict[str, Any]]:
+    from wave_run_paths import runs_root, state_path as run_state_path
+
+    base = runs_root(root)
+    if not base.is_dir():
+        return []
+    entries: list[dict[str, Any]] = []
+    for child in sorted(base.iterdir()):
+        if not child.is_dir():
+            continue
+        run_id = child.name
+        state_file = run_state_path(root, run_id)
+        state = _read_state_optional(state_file) if state_file.is_file() else {}
+        if state:
+            entries.append(discovery_entry_for_run(root, run_id, state))
+            continue
+        lease = read_run_local_lease(root, run_id)
+        if lease:
+            entries.append(
+                discovery_entry_for_run(
+                    root,
+                    run_id,
+                    {"verdict": "unknown"},
+                    lock_key_digest=str(lease.get("lockKeyDigest") or ""),
+                )
+            )
+    return entries
+
+
 def cmd_runs_index(root: Path, _args: list[str]) -> None:
-    runs = enumerate_scoped_runs(root)
-    index_path = root / ".cursor" / "sw-deliver-runs" / "index.json"
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"updatedAt": utc_now(), "runs": runs}
-    index_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    os.chmod(index_path, 0o600)
-    emit({"verdict": "pass", "action": "runs-index", "runs": runs, "path": str(index_path)})
+    from wave_run_paths import runs_index_path
+
+    run_scoped = enumerate_run_scoped_dirs(root)
+    legacy = enumerate_scoped_runs(root)
+    seen = {str(entry.get("runId") or "") for entry in run_scoped if entry.get("runId")}
+    merged = list(run_scoped)
+    for entry in legacy:
+        slug = str(entry.get("slug") or "")
+        if slug and f"legacy-{slug}" not in seen:
+            merged.append(
+                {
+                    "runId": f"legacy-{slug}",
+                    "slug": slug,
+                    "target": entry.get("target"),
+                    "taskList": entry.get("taskList"),
+                    "verdict": entry.get("verdict"),
+                    "statePath": entry.get("statePath"),
+                    "updatedAt": utc_now(),
+                }
+            )
+    index_path = runs_index_path(root)
+    payload = {"updatedAt": utc_now(), "runs": merged}
+    write_json(index_path, payload)
+    emit({"verdict": "pass", "action": "runs-index", "runs": merged, "path": str(index_path)})
 
 
 def lock_host() -> str:
@@ -1007,7 +1246,7 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
         "mergeJournal": None,
         "completedMerges": [],
         "currentWave": 1,
-        "nextAction": "lock-acquire",
+        "nextAction": "base-capture",
         "remediationAttempts": {},
         "phaseWorktrees": {},
         "driverHeartbeatAt": utc_now(),
@@ -1440,13 +1679,22 @@ def cmd_ledger_check(root: Path, args: list[str]) -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import doc_format
     from checkbox_diff import parse_task_checkboxes
+    from frozen_spec_ledger import effective_task_checkboxes, is_frozen_task_list
 
     tasks_text = path.read_text(encoding="utf-8")
+    frozen = is_frozen_task_list(tasks_text)
     phase_id = parse_kv(args, "--phase-id")
     merge_ready = "--merge-ready" in args
     if merge_ready and phase_id:
         phase_refs = parse_task_checkboxes(doc_format.phase_section_text(tasks_text, phase_id))
         if phase_refs:
+            if frozen:
+                phase_refs = {
+                    ref: bool(
+                        isinstance(ledger_tasks.get(ref), dict) and ledger_tasks[ref].get("done")
+                    )
+                    for ref in phase_refs
+                }
             all_unchecked = all(not checked for checked in phase_refs.values())
             any_ledger_done = any(
                 isinstance(ledger_tasks.get(ref), dict) and ledger_tasks[ref].get("done")
@@ -1463,7 +1711,11 @@ def cmd_ledger_check(root: Path, args: list[str]) -> None:
                     exit_code=1,
                 )
 
-    checkboxes = parse_task_checkboxes(tasks_text)
+    checkboxes = (
+        effective_task_checkboxes(tasks_text, ledger_tasks)
+        if frozen
+        else parse_task_checkboxes(tasks_text)
+    )
     divergences: list[dict[str, Any]] = []
 
     for ref, checked in checkboxes.items():

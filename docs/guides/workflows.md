@@ -137,6 +137,62 @@ Feature: new billing portal — explore pricing models, 8+ files, auth + Stripe
 
 ---
 
+## Workflow sequencing invariants
+
+These invariants apply to the durable doc driver (`scripts/doc_loop.py`) and the planning helpers it
+calls. They are ordering contracts — violating them fails closed rather than silently skipping work.
+
+### Number reservation transaction
+
+Concurrent doc runs must not allocate the same PRD number. Reservation is transactional:
+
+| Backend | Mechanism | Lock path |
+| --- | --- | --- |
+| File-store | Exclusive `.cursor/sw-planning-reservations/<nnn>.lock` until PRD body exists or stale reclaim | `planning_reserve.py` |
+| Issue-store | Provider duplicate-open guard + store mint | `planning_store.py` |
+
+`/sw-prd` and `/sw-tasks` call `planning_reserve.py reserve` before writing numbered artifacts. A second
+run receives a distinct number or a fail-closed `reservation-held` halt — never a silent collision.
+Stale reservations are reclaimable when heartbeat + PID predicates match the ship-lease staleness model.
+
+```bash
+python3 scripts/planning_reserve.py . reserve --unit-id <unit-id> --slug <slug>
+python3 scripts/planning_reserve.py . release --number <nnn> --unit-id <unit-id>
+```
+
+### Pre-freeze rescore
+
+After related-work acknowledgement and before PRD freeze, `/sw-doc` runs `final-triage-rescore`
+(`doc_rescore.py`):
+
+| Direction | Policy | Operator gate |
+| --- | --- | --- |
+| Escalation (tier bump) | Automatic — recorded on the doc-run receipt | None |
+| Downgrade (tier drop) | Refused without explicit human-attributed justification | Human halt |
+| Post-freeze signal | Recorded as amendment input only — frozen unit stays closed | `/sw-amend` path |
+
+Escalation never reopens a frozen artifact. Downgrade without justification fails closed with a
+machine-readable `halt` and the current/proposed tier in the payload.
+
+### Publication sequencing invariants
+
+Publication mode is store-conditioned — the doc driver never reaches standalone `docs-commit` /
+`docs-pr` stages (`UNREACHABLE_PUBLICATION_STAGES` in `doc_loop.py`):
+
+| Store mode | Publication path | In-driver behaviour |
+| --- | --- | --- |
+| File-store | `wave_spec_seed.py` feature-seed onto `<type>/<slug>` at freeze/afterTasks | Mechanical seed only — no nested docs-PR |
+| Issue-store | Issue bodies authoritative; materialize at deliver run-entry | `planning_materialize.py` verifies frozen hash |
+
+Standalone `scripts/docs_worktree.py` / `scripts/docs_pr.py` remain **operator tools** for pre-existing
+docs branches — the durable doc driver does not invoke them. `publication_mode(root)` selects the path;
+attempting an unreachable stage raises `publication-stage-unreachable`.
+
+Target-lock ordering: doc-run exclusion (`sw-doc-run-locks/`) is acquired before persistent doc-run
+state mutation, matching deliver target-lock precedence.
+
+---
+
 ## Documentation workstream — spec before code
 
 Use when tier is **Standard** or **Full** and you need a reviewed plan before implementation.
@@ -206,6 +262,21 @@ Context: 3–4 files, no auth changes. Skip brainstorm.
 | `/sw-freeze` | Lock artifact; no further edits without `/sw-amend` |
 | `/sw-tasks` | Generate task list from frozen PRD |
 | `/sw-amend` | Post-freeze correction via amendment file |
+
+### Planning publication sequencing
+
+Doc authoring follows strict **Publication sequencing invariants**: substantive edits route through
+`docs-edit-route` onto a `docs/<topic>` worktree and PR; mechanical INDEX/COMPLETION-LOG projections
+batch separately. Never commit substantive planning bodies on the protected default branch.
+
+Before `/sw-freeze`, `/sw-doc` may run a **Pre-freeze rescore** (`scripts/doc_rescore.py`): tier
+escalations apply automatically; downgrades require explicit human-attributed justification. A rescore
+signal after freeze is amendment input only — it does not reopen the frozen unit.
+
+New planning units receive a PRD number through **Number reservation transaction**
+(`scripts/planning_reserve.py`): under issue-store the store mints via duplicate-open-tasks guard; under
+file-store a git-common-dir lock reserves the number until completion or staleness reclaim. Same-process
+threads serialize through an allocator lock in addition to `flock(2)`.
 
 ---
 
