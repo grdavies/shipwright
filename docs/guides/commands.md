@@ -71,6 +71,42 @@ terminal merge on drift.
 See [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) and
 [`core/skills/deliver/SKILL.md`](../../core/skills/deliver/SKILL.md).
 
+### Deliver operator surface
+
+Mechanical list / resume / finalize commands report run identity, target branch, stage, lock holder,
+and `requiresAdoption` **before** any mutation. Operators invoke them via `wave_deliver.py` (or
+`python3 scripts/wave.py` when routed).
+
+| Command | Reports (read-only) | Mutates when |
+| --- | --- | --- |
+| `list` | Every known run: `runId`, `targetBranch`, `unit`, `stage`, `terminalStatus`, `lock`, `requiresAdoption`, `statePath`, `taskList` | Never |
+| `resume-locate` | Resolved `runId` + full `run` envelope; on ambiguity/zero runs emits enumerated `runs` + `halt` | Never — use `/sw-deliver run` to continue |
+| `finalize` | Terminal merge verification outcome, `terminalReceipt`, released resources | After verified default-branch merge only |
+
+```bash
+# Enumerate all deliver runs (run-scoped + legacy slug-scoped awaiting adoption)
+python3 scripts/wave_deliver.py . list
+
+# Resolve resume cardinality (0 → halt resume:none; >1 nonterminal → halt resume:ambiguous)
+python3 scripts/wave_deliver.py . resume-locate
+python3 scripts/wave_deliver.py . resume-locate --run-id deliver-<uuid>
+
+# Finalize after human merge to main (distinct from cleanup / planning-unit closure)
+python3 scripts/wave.py finalize --run-id <runId>
+```
+
+**Resume cardinality:** with no `--run-id`, exactly one nonterminal run must exist. Legacy
+slug-scoped state appears as `legacy-<slug>` with `requiresAdoption: true` until `wave_run_adopt.py`
+migrates it into `.cursor/sw-deliver-runs/<runId>/`.
+
+**Legacy adoption recovery:** when global plan/state was reset but slug-scoped files remain, adoption
+replays a single global-plan read and writes run-scoped `plan.json` + `state.json`. Failed adoption
+surfaces in `list` output — never silent fallback to repository-global plan paths.
+
+**Finalize vs cleanup:** `finalize` (`run-finalize`) verifies the merge commit, writes the terminal receipt,
+marks the run `immutable`, and releases target-lock resources. It does **not** close planning units, absorb
+gaps, or delete worktrees — those are separate hygiene steps after merge detection.
+
 **Plan validation:** mechanical gate for agent-proposed phase/wave plans — not hand-authored in
 chat. Default `orchestration.planPolicy: canonical` preserves today's behavior; `proposed` is opt-in on
 the `/sw-deliver` pilot (TR0 gate, per-run acknowledgement, non-`main` target).

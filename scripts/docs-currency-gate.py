@@ -344,6 +344,12 @@ def main(argv: list[str] | None = None) -> int:
                 payload = {"error": gb.stderr or gb.stdout}
             drift.append({"kind": "gap-backlog-integrity", "detail": payload})
 
+    from docs_currency_081 import check_release_guide_artifacts
+
+    guide_drift = check_release_guide_artifacts(root)
+    if guide_drift:
+        drift.extend(guide_drift)
+
     if drift:
         print(json.dumps({"verdict": "fail", "action": "docs-currency-gate", "prd": prd, "drift": drift}))
         sys.exit(1)

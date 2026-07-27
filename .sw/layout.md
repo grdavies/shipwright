@@ -31,26 +31,90 @@ docs/decisions/
     └── A<k>-<short>.md
 
 .cursor/
-├── sw-deliver-plan.json    # deliver plan artifact (living, written by /sw-deliver plan)
-├── sw-deliver-state.<slug>.json   # per-run scoped state — single canonical path at repo root (PRD 013 R6/R28)
-├── sw-deliver-<slug>.lock         # per-run scoped orchestrator lock
-├── sw-living-docs.lock            # repo-wide living-doc write serialization (PRD 013 R12)
-├── sw-deliver-state.json          # legacy repo-wide state (migration breadcrumb after adopt)
-├── sw-deliver.lock                # legacy repo-wide lock (superseded by scoped locks)
+├── sw-deliver-plan.json             # transient global plan (legacy; prefer run-scoped plan.json)
+├── sw-living-docs.lock              # repo-wide living-doc write serialization (PRD 013 R12)
+├── sw-deliver-state.json            # legacy repo-wide state (migration breadcrumb)
+├── sw-deliver.lock                  # legacy repo-wide lock (superseded)
+├── sw-deliver-state.<slug>.json     # legacy slug-scoped state (migration; adopt → run-scoped)
+├── sw-deliver-<slug>.lock           # legacy slug-scoped orchestrator lock (migration)
 ├── sw-deliver-runs/
-│   ├── index.json                 # concurrent-run index (live scoped runs)
-│   └── <phase-slug>/              # per-phase status (living)
-│       ├── status.json
-│       ├── ship-steps.json
-│       ├── phase-step-plan.json
-│       ├── execute-step-plan.json
-│       ├── integrate-journal.json
-│       ├── execute-supervised-confirmed.json
-│       ├── gap-check.status.json
-│       ├── gate-evidence/              # per-gate binding-valid records (PRD 065 R7/R9)
-│       │   └── <gateId>.status.json
-│       └── dispatch-decisions.json
+│   ├── index.json                   # discovery-only run index (R20 — no run payload)
+│   └── <runId>/                     # per-run deliver namespace (R18/R20)
+│       ├── plan.json                # immutable run plan + planHash in state
+│       ├── state.json               # authoritative deliver run-state
+│       ├── events.jsonl             # append-only run events
+│       ├── lease.json               # run-local lease → target-lock digest (orphan trace)
+│       ├── blocker.json             # active blocker snapshot (when set)
+│       ├── terminal-acceptance.json # validated terminal acceptance record
+│       ├── receipts/                # transition / mutation receipts (R25)
+│       └── phases/
+│           └── <phaseId>/           # stable phase id (not slug) — per-phase ship artifacts
+│               ├── status.json
+│               ├── ship-steps.json
+│               ├── phase-step-plan.json
+│               ├── execute-step-plan.json
+│               ├── integrate-journal.json
+│               ├── execute-supervised-confirmed.json
+│               ├── gap-check.status.json
+│               ├── gate-evidence/   # per-gate binding-valid records (PRD 065 R7/R9)
+│               │   └── <gateId>.status.json
+│               └── dispatch-decisions.json
+├── sw-doc-runs/                     # durable /sw-doc driver state (R11)
+│   ├── index.json
+│   └── <runId>/
+│       ├── state.json
+│       └── receipts/
+├── sw-deliver-locks/                # per-phase-head ship lease (integration+phase branch digest)
+├── sw-target-locks/                 # target-branch exclusion locks (git-common-dir anchored, R19)
+│   └── reclaim-journal.jsonl
+├── sw-doc-run-locks/                # doc-run exclusion locks (topic digest, R19)
+│   └── reclaim-journal.jsonl
+└── sw-planning-reservations/        # transactional PRD number reservation locks (R16)
+    └── <nnn>.lock
 ```
+
+### Per-run deliver layout (PRD 081 R18, R20)
+
+Run identity is minted once at run creation (`scripts/wave_run_paths.py mint_run_id`) and every
+run-scoped accessor requires a non-empty `runId`. Two concurrent deliveries — even when they share a
+human-readable phase slug on different feature branches — remain fully isolated under distinct
+`<runId>/` directories.
+
+| Concern | Path | Writer | Notes |
+| --- | --- | --- | --- |
+| Run directory | `.cursor/sw-deliver-runs/<runId>/` | deliver lifecycle | Sole namespace for plan/state/events |
+| Run plan | `plan.json` | `wave_run_plan.py` | Content hash verified on every read |
+| Run state | `state.json` | `wave_state.save_run_scoped_state` | Cursor, phases map, merge queue |
+| Run-local lease | `lease.json` | `wave_state.write_run_local_lease` | Records `lockKeyDigest` for orphan tracing |
+| Phase status | `phases/<phaseId>/status.json` | `ship-phase-status.py` | Stable numeric/string phase id |
+| Discovery index | `.cursor/sw-deliver-runs/index.json` | `wave_state` index helpers | `INDEX_DISCOVERY_FIELDS` only — never exclusion primitive |
+
+**Legacy adoption (R21):** slug-scoped `.cursor/sw-deliver-state.<slug>.json` entries are enumerated for
+`list` / `resume` and may be adopted into the run-scoped layout via `wave_run_adopt.py` (single global-plan
+read). After adoption, `legacyAdopted` / `adoptedPlanHash` on run-scoped `state.json` is authoritative.
+
+### Doc-run layout (PRD 081 R11)
+
+| Path | Role |
+| --- | --- |
+| `.cursor/sw-doc-runs/<runId>/state.json` | Durable doc driver cursor (`doc_loop.py`) |
+| `.cursor/sw-doc-runs/<runId>/receipts/` | Stage transition receipts (idempotent keys) |
+| `.cursor/sw-doc-runs/index.json` | Discovery index for concurrent doc runs |
+| `.cursor/sw-doc-runs/amendment-inputs/` | Post-freeze rescore signals recorded as amendment input (R17) |
+
+Doc-run exclusion uses `.cursor/sw-doc-run-locks/` (`wave_target_lock.acquire_doc_run_lock`).
+
+### Target-lock and run-local lease paths (PRD 081 R19, R20)
+
+| Lock kind | Directory | Resolver | Journal |
+| --- | --- | --- | --- |
+| Target-branch exclusion | `.cursor/sw-target-locks/` | `wave_lock.target_lock_path_for` | `reclaim-journal.jsonl` |
+| Doc-run exclusion | `.cursor/sw-doc-run-locks/` | `wave_lock.doc_run_lock_path_for` | `reclaim-journal.jsonl` |
+| Phase-head ship lease | `.cursor/sw-deliver-locks/` | `wave_lock.lock_path_for` | — |
+| Run-local lease record | `<runId>/lease.json` | `wave_run_paths.lease_path` | points at target-lock digest |
+
+Target locks are git-common-dir anchored and symlink-checked (`wave_lock.py`). Takeover appends a journal
+entry before reclaim; a live heartbeat is never reclaimed without explicit cross-host acknowledgement.
 
 ### Gate manifest and evidence (PRD 065)
 
@@ -58,16 +122,16 @@ docs/decisions/
 | --- | --- | --- |
 | Declarative gate manifest | `core/sw-reference/gate-manifest.json` | Stable gate ids, class, binding mode, failure routing |
 | Evidence record schema | `core/sw-reference/gate-evidence.schema.json` | Required fields + atomic-write contract |
-| Per-phase evidence dir | `.cursor/sw-deliver-runs/<phaseSlug>/gate-evidence/` | Sole-writer path for mechanical gate records |
+| Per-phase evidence dir | `.cursor/sw-deliver-runs/<runId>/phases/<phaseId>/gate-evidence/` | Sole-writer path for mechanical gate records |
 | Terminal acceptance | `.cursor/sw-deliver-runs/terminal-acceptance.json` | Validated acceptance before `report terminal` |
 | Kernel lineage | `core/sw-reference/kernel-classification.json` | Manifest-to-lineage binding; kernel floor non-demotable |
 
 
 ### Deliver run-state ledger (PRD 059 R9–R11)
 
-`taskLedger` on `.cursor/sw-deliver-state.<slug>.json` records per-subtask `done` state used by
-`planning_store.py materialize --resync`. Pre-resync backups land beside the materialized destination as
-`*.pre-resync.bak`. Planning query cache state: `.cursor/hooks/state/planning-query-cache.json`.
+`taskLedger` on run-scoped `state.json` (`.cursor/sw-deliver-runs/<runId>/state.json`) records per-subtask
+`done` state used by `planning_store.py materialize --resync`. Legacy slug-scoped
+`.cursor/sw-deliver-state.<slug>.json` mirrors remain readable during adoption only.
 
 ### Slim gate manifest + request budget (PRD 062 R8, R12, R19)
 
@@ -336,13 +400,20 @@ Amendment body is **delta-only** — parent file is never edited.
 | `/sw-tasks` | frozen PRD + union | `docs/prds/<n>-<slug>/tasks-<n>-<slug>.md`, `INDEX.md` |
 | `/sw-doc` | tier from triage | delegates to above |
 
-### Deliver state canonicalization (R28)
+### Deliver state canonicalization (R28, R20)
 
-The live deliver run-state file exists **once** at the repo-root scoped path
-(`.cursor/sw-deliver-state.<slug>.json`). Orchestrator and phase worktrees read and write through
-`wave_state.scoped_paths()` / `resolve_state_path()` at the git toplevel — never a second authoritative
+Authoritative deliver run-state lives under `.cursor/sw-deliver-runs/<runId>/state.json`
+(`wave_run_paths.state_path`). The root `index.json` carries discovery fields only (`runId`, `target`,
+`taskList`, `verdict`, `statePath`, `lockKeyDigest`) — never the exclusion primitive.
+
+Legacy slug-scoped files (`.cursor/sw-deliver-state.<slug>.json`, `.cursor/sw-deliver-<slug>.lock`) remain
+enumerable for `list` / `resume` until adopted. Orchestrator and phase worktrees read and write through
+`wave_state.resolve_state_path()` / `scoped_paths()` at the git toplevel — never a second authoritative
 copy under `.sw-worktrees/**/.cursor/`. `wave_compound.py record-premerge` and
 `cleanup_lib.resolve_deliver_state()` use the same resolver.
+
+Pre-resync backups land beside the materialized destination as `*.pre-resync.bak`. Planning query cache
+state: `.cursor/hooks/state/planning-query-cache.json`.
 
 ## Operator worktree contract (PRD 049 R1)
 
@@ -358,9 +429,11 @@ Single authority for which checkout owns implementation versus conductor runtime
 ```text
 repo-root/                          primary checkout (defaultBaseBranch)
 ├── .cursor/                        conductor runtime (canonical; gitignored)
-│   ├── sw-deliver-state.<slug>.json
-│   ├── sw-deliver-runs/<phase>/status.json   ← mirrored from phase worktree
-│   └── …
+│   ├── sw-deliver-runs/<runId>/    per-run deliver namespace (authoritative)
+│   │   ├── state.json
+│   │   ├── lease.json              ← run-local lease / target-lock digest
+│   │   └── phases/<phaseId>/status.json
+│   └── sw-target-locks/            ← target-branch exclusion (R19)
 └── .sw-worktrees/
     ├── <slug>-orchestrator/        conductor-loop cwd (<type>/<slug>)
     └── <slug>-phase-<phase>/       ship/execute cwd (phase branch)
@@ -546,8 +619,8 @@ via probe-gated `memory:offline` — never blocks work.
 | --- | --- | --- | --- |
 | Kernel classification | `core/sw-reference/kernel-classification.{json,md}` | docs/emitter | read-only at runtime |
 | Guidelines | `core/sw-reference/guidelines.{schema.json,md,json}` | docs/emitter | read-only at runtime |
-| Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` | phase executor (`ship_phase_steps.py` / `plan_persist.py`) | per-phase run dir |
-| Wave batching plan | `waveBatchingPlan` on `.cursor/sw-deliver-state.<slug>.json` | conductor only (`plan_persist.py`; `SW_CALLER_ROLE=conductor`) | shared run-state |
+| Phase step plan | `.cursor/sw-deliver-runs/<runId>/phases/<phaseId>/phase-step-plan.json` | phase executor (`ship_phase_steps.py` / `plan_persist.py`) | per-phase run dir |
+| Wave batching plan | `waveBatchingPlan` on run-scoped `state.json` | conductor only (`plan_persist.py`; `SW_CALLER_ROLE=conductor`) | shared run-state |
 | Two-tier lifecycle | `twoTierLifecycle` on shared run-state | conductor | `wave-validated` → `phase-plan-pending` → `phase-plan-validated` |
 | Plan validation | `python3 scripts/wave.py plan validate` → `scripts/wave_plan_validate.py` | mechanical gate | proposals only |
 
@@ -575,10 +648,10 @@ Phase entry lifecycle (ordered): `phase-step-plan` validate → `execute-step-pl
 
 | Artifact | Path | Writer | Role |
 | --- | --- | --- | --- |
-| Execute step plan | `.cursor/sw-deliver-runs/<phase-slug>/execute-step-plan.json` | `execute_plan.py` / `wave_plan_validate.py` | Closed-world DAG of sub-task refs, batches, edges |
-| Integrate journal | `.cursor/sw-deliver-runs/<phase-slug>/integrate-journal.json` | `execute_integrate.py` | Append-only per-ref merge audit (separate from conductor `mergeQueue` / `mergeJournal`) |
+| Execute step plan | `.cursor/sw-deliver-runs/<runId>/phases/<phaseId>/execute-step-plan.json` | `execute_plan.py` / `wave_plan_validate.py` | Closed-world DAG of sub-task refs, batches, edges |
+| Integrate journal | `.cursor/sw-deliver-runs/<runId>/phases/<phaseId>/integrate-journal.json` | `execute_integrate.py` | Append-only per-ref merge audit (separate from conductor `mergeQueue` / `mergeJournal`) |
 | Per-ref execute status | `.cursor/sw-execute-runs/<sanitized-ref>/status.json` | `execute_task_status.py` | TDD + refactor rollup per sub-task ref |
-| Supervised plan confirm | `.cursor/sw-deliver-runs/<phase-slug>/execute-supervised-confirmed.json` | `execute_ship.py` | One halt marker per phase under `deliver.autonomy.mode: supervised` |
+| Supervised plan confirm | `.cursor/sw-deliver-runs/<runId>/phases/<phaseId>/execute-supervised-confirmed.json` | `execute_ship.py` | One halt marker per phase under `deliver.autonomy.mode: supervised` |
 
 **Sub-branch naming:** `feat/<slug>-phase-<phase-slug>--task-<ref>` (sanitized ref; `countsTowardCeiling: false`).
 Provisioned by `execute_plan.py provision-sub-branch`; torn down after successful integrate.
@@ -601,10 +674,10 @@ unchanged — execute integrate never enqueues on the conductor merge queue.
 
 | Artifact | Path / field | Writer | Role |
 | --- | --- | --- | --- |
-| Per-phase dispatch decisions | `.cursor/sw-deliver-runs/<phase-slug>/dispatch-decisions.json` | phase executor | intra-phase fan-out audit (R17) |
+| Per-phase dispatch decisions | `.cursor/sw-deliver-runs/<runId>/phases/<phaseId>/dispatch-decisions.json` | phase executor | intra-phase fan-out audit (R17) |
 | Intra-phase fan-out snapshot | `intraPhaseFanOut` on phase status / `phases.<id>` | phase executor | latest partition + worker count + cap state (R15–R17) |
 | Per-phase benefit metric | `benefitMetric` on phase status / shared run-state `phases.<id>` | phase executor at terminal | R31 capture (numeric/enumerated only) |
-| Run-level benefit rollup | `benefitMetric` on `.cursor/sw-deliver-state.<slug>.json` | conductor at terminal | paired-run aggregation input |
+| Run-level benefit rollup | `benefitMetric` on run-scoped `state.json` | conductor at terminal | paired-run aggregation input |
 | Benefit report | `python3 scripts/wave.py plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py` | operator / soak protocol | R31 decision rule (fail-closed to `canonical`) |
 
 ### `benefitMetric` object (R31 — numeric/enumerated only)
