@@ -140,7 +140,7 @@ fi
 # when sibling fixtures in the same CI job leave .sw-worktrees entries behind.
 CEIL=$(bash "$ROOT/scripts/worktree.sh" ceiling-check 2>/dev/null || true)
 CEIL_CHECK=$(ROOT="$ROOT" CEIL_JSON="$CEIL" python3 <<'PY'
-import json, os, subprocess, sys
+import json, os, sys
 from pathlib import Path
 
 root = Path(os.environ["ROOT"]).resolve()
@@ -149,43 +149,13 @@ try:
 except json.JSONDecodeError:
     payload = {}
 sw_count = payload.get("swWorktrees", -1)
-try:
-    out = subprocess.check_output(
-        ["git", "-C", str(root), "worktree", "list", "--porcelain"], text=True
-    )
-except subprocess.CalledProcessError:
-    print(f"FAIL worktree ceiling: git worktree list failed ({payload})")
-    sys.exit(2)
-
-blocks: list[dict[str, str]] = []
-block: dict[str, str] = {}
-for line in out.splitlines():
-    if not line.strip():
-        if block:
-            blocks.append(block)
-            block = {}
-        continue
-    key, _, val = line.partition(" ")
-    block[key] = val
-if block:
-    blocks.append(block)
-
-primary_counted = False
-sw_paths = []
-for b in blocks:
-    wt = b.get("worktree", "")
-    if not wt:
-        continue
-    path = Path(wt).resolve()
-    if path == root and "/.sw-worktrees/" not in wt:
-        primary_counted = True
-    if "/.sw-worktrees/" in wt:
-        sw_paths.append(wt)
-
 is_linked = (root / ".git").is_file() and (root / ".git").read_text(encoding="utf-8", errors="replace").startswith("gitdir:")
-if primary_counted:
-    print(f"FAIL worktree ceiling counted primary checkout ({payload})")
+if int(sw_count) < 0:
+    print(f"FAIL worktree ceiling invalid swWorktrees ({payload})")
     sys.exit(1)
+# Primary checkout always appears in `git worktree list`; ceiling-check must count only
+# paths under .sw-worktrees/ (see worktree.active_worktree_count). Sibling fixtures may
+# leave entries behind in CI — do not require swWorktrees=0 on the main checkout.
 if is_linked and int(sw_count) < 1:
     print(f"FAIL worktree ceiling expected swWorktrees>=1 in worktree got: {sw_count} ({payload})")
     sys.exit(1)
