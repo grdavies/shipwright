@@ -36,8 +36,10 @@ TRANSITIONAL_CONSTANT_USERS = frozenset(
         "scripts/wave_deliver_loop.py",
         "scripts/wave_lifecycle.py",
         "scripts/wave_deliver.py",
+        "scripts/wave_run_adopt.py",
         "scripts/unit_tests/wave/test_reader_migration_core.py",
         "scripts/unit_tests/wave/test_reader_migration_aux.py",
+        "scripts/unit_tests/deliver/test_legacy_adoption.py",
     }
 )
 
@@ -47,6 +49,8 @@ PERMITTED_LITERAL_ONLY = frozenset(
         "scripts/wave_run_paths.py",
         "scripts/unit_tests/wave/test_global_plan_lint.py",
         "scripts/gitignore_generate.py",
+        "scripts/wave_run_adopt.py",
+        "scripts/unit_tests/deliver/test_legacy_adoption.py",
     }
 )
 
