@@ -35,6 +35,7 @@ DOC_STAGE_SEQUENCE: tuple[str, ...] = (
     "prd",
     "doc-review",
     "related-work",
+    "final-triage-rescore",
     "freeze-prd",
     "tasks",
     "freeze-tasks",
@@ -43,7 +44,7 @@ DOC_STAGE_SEQUENCE: tuple[str, ...] = (
     "complete",
 )
 
-AGENT_STAGES = frozenset({"triage", "brainstorm", "prd", "doc-review", "tasks"})
+AGENT_STAGES = frozenset({"triage", "brainstorm", "prd", "doc-review", "final-triage-rescore", "tasks"})
 MECHANICAL_STAGES = frozenset({"related-work", "freeze-prd", "freeze-tasks", "feature-seed"})
 HUMAN_STAGES = frozenset({"related-work-checkpoint", "afterTasks-checkpoint"})
 TERMINAL_STAGES = frozenset({"complete"})
@@ -123,6 +124,8 @@ def input_content_hash(state: dict[str, Any]) -> str:
         "pendingCheckpoint": state.get("pendingCheckpoint"),
         "pendingRelatedWork": state.get("pendingRelatedWork"),
         "relatedWorkScan": state.get("relatedWorkScan"),
+        "rescoreReceipt": state.get("rescoreReceipt"),
+        "proposedTier": state.get("proposedTier"),
     }
     return hash_json(payload)
 
@@ -272,9 +275,50 @@ def apply_recorded_outcome(state: dict[str, Any], outcome: dict[str, Any]) -> di
         "haltError",
         "haltReceipt",
         "featureSeedReceipt",
+        "rescoreReceipt",
+        "proposedTier",
+        "tier",
     ):
         if key in outcome:
             updated[key] = outcome[key]
+    return updated
+
+
+def apply_final_triage_rescore(root: Path, state: dict[str, Any], outcome: dict[str, Any] | None) -> dict[str, Any]:
+    from doc_rescore import evaluate_rescore
+
+    payload = outcome or {}
+    proposed_tier = payload.get("proposedTier") or payload.get("tier") or state.get("proposedTier")
+    if not proposed_tier:
+        return {
+            "verdict": "fail",
+            "error": "missing-proposed-tier",
+            "halt": "doc-loop:rescore-input",
+        }
+    prd_frozen = bool((state.get("artifactRevisions") or {}).get("prd", {}).get("lifecycleState") == "frozen")
+    result = evaluate_rescore(
+        current_tier=str(state.get("tier") or "Standard"),
+        proposed_tier=str(proposed_tier),
+        frozen=prd_frozen,
+        justification=payload.get("justification"),
+        actor=payload.get("actor"),
+        unit_id=str((state.get("unitIds") or {}).get("prd") or ""),
+        signals=payload.get("signals") if isinstance(payload.get("signals"), dict) else None,
+        root=root,
+    )
+    if result.get("verdict") != "pass":
+        return result
+    updated: dict[str, Any] = {
+        "verdict": "pass",
+        "rescoreReceipt": result.get("receipt"),
+        "proposedTier": proposed_tier,
+    }
+    applied = str(result.get("appliedTier") or state.get("tier") or "Standard")
+    updated["tier"] = applied
+    if result.get("requiresBrainstorm"):
+        updated["stage"] = "brainstorm"
+        updated["nextAction"] = "brainstorm"
+        return updated
     return updated
 
 
@@ -610,9 +654,26 @@ def consume_agent_stage(
     def apply_fn(current: dict[str, Any]) -> dict[str, Any]:
         updated = dict(current)
         if outcome:
-            for key in ("unitIds", "artifactRevisions", "tier"):
+            for key in ("unitIds", "artifactRevisions", "tier", "proposedTier", "artifactPaths"):
                 if key in outcome:
                     updated[key] = outcome[key]
+        if stage == "final-triage-rescore":
+            rescore = apply_final_triage_rescore(root, updated, outcome)
+            if rescore.get("verdict") != "pass":
+                updated["verdict"] = "halted"
+                updated["halt"] = rescore.get("halt") or "doc-loop:rescore-policy"
+                updated["haltError"] = rescore.get("error")
+                updated["haltReceipt"] = rescore.get("receipt")
+                return updated
+            updated.update(
+                {
+                    key: value
+                    for key, value in rescore.items()
+                    if key in {"rescoreReceipt", "proposedTier", "tier", "stage", "nextAction"}
+                }
+            )
+            if updated.get("stage") == "brainstorm":
+                return updated
         return advance_stage(updated, stage)
 
     new_state, receipt, replayed = apply_transition_idempotent(
@@ -620,12 +681,16 @@ def consume_agent_stage(
     )
     if not replayed:
         save_doc_state(root, new_state)
-    return {
+    result = {
         "executed": stage,
         "stage": new_state.get("stage"),
         "replayed": replayed,
         "idempotencyKey": receipt.get("idempotencyKey"),
     }
+    if new_state.get("verdict") == "halted":
+        result["halted"] = True
+        result["halt"] = new_state.get("halt")
+    return result
 
 
 def set_pending_checkpoint(root: Path, state: dict[str, Any]) -> dict[str, Any]:
