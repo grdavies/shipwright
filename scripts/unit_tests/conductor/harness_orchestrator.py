@@ -124,7 +124,25 @@ EOF
   git add docs/prds/099-demo/
   git commit -q -m 'add frozen tasks on main'
 
-  if OUT=$(python3 "$SEED" "$SEED_FIX" spec-seed --task-list docs/prds/099-demo/tasks-099-demo.md 2>/dev/null) && \
+  RUN_ID="deliver-spec-seed-fixture"
+  if ! python3 "$ROOT/scripts/wave_target_lock.py" "$SEED_FIX" acquire --target feat/demo --run-id "$RUN_ID" >/dev/null 2>&1; then
+    echo "FAIL deliver-spec-seed-feature-branch: target lock acquire"
+    exit 1
+  fi
+  SEED_FIX="$SEED_FIX" RUN_ID="$RUN_ID" ROOT_SCRIPTS="$ROOT/scripts" python3 - <<'PY'
+from pathlib import Path
+import os
+import sys
+sys.path.insert(0, os.environ["ROOT_SCRIPTS"])
+import wave_run_paths
+import wave_state
+root = Path(os.environ["SEED_FIX"])
+run_id = os.environ["RUN_ID"]
+wave_run_paths.run_directory(root, run_id).mkdir(parents=True, exist_ok=True)
+wave_state.write_run_local_lease(root, run_id, "feat/demo")
+PY
+
+  if OUT=$(python3 "$SEED" "$SEED_FIX" spec-seed --task-list docs/prds/099-demo/tasks-099-demo.md --run-id "$RUN_ID" 2>/dev/null) && \
      echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
@@ -137,7 +155,7 @@ assert d.get('commit') or d.get('skipped') is True
     exit 1
   fi
 
-  OUT=$(python3 "$SEED" "$SEED_FIX" spec-seed --task-list docs/prds/099-demo/tasks-099-demo.md 2>&1 || true)
+  OUT=$(python3 "$SEED" "$SEED_FIX" spec-seed --task-list docs/prds/099-demo/tasks-099-demo.md --run-id "$RUN_ID" 2>&1 || true)
   if echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
