@@ -49,17 +49,17 @@ def resolve_phase_worktree(
 def resolve_run_and_phase_id(
     state: dict[str, Any], phase_slug: str
 ) -> tuple[str, str] | None:
-    """Resolve run id + stable phase id; slug is display-only lookup (R20)."""
-    from halt_resume import resolve_run_id
+    """Resolve explicit run id + stable phase id; slug is display-only lookup (R20).
 
+    Synthetic run ids (branch-derived) must not drive discovery — they invent
+    empty run-scoped paths while fixtures still write slug-keyed artifacts.
+    """
     run_id = state.get("runId") or state.get("scopedRunId")
-    if not run_id:
-        run_id = resolve_run_id(state)
-    if not run_id:
+    if not run_id or not str(run_id).strip():
         return None
     for pid, meta in (state.get("phases") or {}).items():
         if isinstance(meta, dict) and meta.get("slug") == phase_slug:
-            return str(run_id), str(pid)
+            return str(run_id).strip(), str(pid)
     return None
 
 
@@ -76,6 +76,28 @@ def worktree_mirror_path(root: Path, worktree: Path, canonical: Path) -> Path:
     return (worktree / rel).resolve()
 
 
+def _legacy_slug_candidate_paths(
+    root: Path,
+    phase_slug: str,
+    status_filename: str,
+    *,
+    worktree: Path | None,
+    state: dict[str, Any],
+) -> list[Path]:
+    """Pre-run / non-run-scoped discovery: slug paths only — never glob (R20)."""
+    paths: list[Path] = [
+        root / ".cursor" / "sw-deliver-runs" / phase_slug / status_filename
+    ]
+    wt = worktree
+    if wt is None:
+        wt = resolve_phase_worktree(root, phase_slug, state)
+    if wt is not None:
+        paths.append(
+            wt / ".cursor" / "sw-deliver-runs" / phase_slug / status_filename
+        )
+    return paths
+
+
 def collect_status_candidate_paths(
     root: Path,
     phase_slug: str,
@@ -84,11 +106,13 @@ def collect_status_candidate_paths(
     worktree: Path | None = None,
     state: dict[str, Any] | None = None,
 ) -> list[Path]:
-    """Discovery chain: run-scoped canonical → phase worktree mirror (PRD 081 R20)."""
+    """Discovery: run-scoped paths when runId is set; else legacy slug paths (no glob)."""
     loaded = _load_deliver_state(root, state)
     resolved = resolve_run_and_phase_id(loaded, phase_slug)
     if resolved is None:
-        return []
+        return _legacy_slug_candidate_paths(
+            root, phase_slug, status_filename, worktree=worktree, state=loaded
+        )
     run_id, phase_id = resolved
     canonical = canonical_phase_artifact_path(root, run_id, phase_id, status_filename)
     paths: list[Path] = [canonical]

@@ -37,7 +37,7 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def test_gap_check_worktree_only_discovery(tmp_git_repo: Path, repo_root: Path) -> None:
-    """Worktree-only gap-check status is discovered without canonical sync (R5)."""
+    """Worktree-only gap-check status is discovered via registered phase worktree (R5/R20)."""
     phase_slug = "phase-gap-discovery"
     head = subprocess.run(
         ["git", "-C", str(tmp_git_repo), "rev-parse", "HEAD"],
@@ -60,12 +60,24 @@ def test_gap_check_worktree_only_discovery(tmp_git_repo: Path, repo_root: Path) 
         ),
         encoding="utf-8",
     )
+    state_dir = tmp_git_repo / ".cursor"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    (state_dir / "sw-deliver-state.json").write_text(
+        json.dumps(
+            {
+                "target": {"branch": "feat/demo"},
+                "phases": {"1": {"id": "1", "slug": phase_slug, "status": "in-flight"}},
+                "phaseWorktrees": {"1": {"path": str(wt_root), "name": wt_name}},
+            }
+        ),
+        encoding="utf-8",
+    )
     gap_gate = _load_gap_gate(repo_root)
     ok, cause = gap_gate.deliver_gap_check_ok(tmp_git_repo, phase_slug, require_status=True)
     assert ok, cause
 
 def test_gap_check_halt_dominant_over_stale_pass(tmp_git_repo: Path, repo_root: Path) -> None:
-    """Fresh halt wins over stale worktree pass via HEAD disambiguation (R6)."""
+    """Fresh halt wins over stale canonical pass via registered worktree (R6/R20)."""
     phase_slug = "phase-halt-precedence"
     head = subprocess.run(
         ["git", "-C", str(tmp_git_repo), "rev-parse", "HEAD"],
@@ -97,6 +109,16 @@ def test_gap_check_halt_dominant_over_stale_pass(tmp_git_repo: Path, repo_root: 
                 "head": head,
                 "cause": "scope-fidelity",
                 "updatedAt": _utc_now(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_git_repo / ".cursor" / "sw-deliver-state.json").write_text(
+        json.dumps(
+            {
+                "target": {"branch": "feat/demo"},
+                "phases": {"1": {"id": "1", "slug": phase_slug, "status": "in-flight"}},
+                "phaseWorktrees": {"1": {"path": str(wt_root), "name": "halt-wt"}},
             }
         ),
         encoding="utf-8",
