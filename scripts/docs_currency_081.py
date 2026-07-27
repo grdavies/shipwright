@@ -2,6 +2,7 @@
 """PRD 081 R20/R21 — enumerated release-guide artifact currency bindings."""
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,30 @@ def _mtime(path: Path) -> float:
         return 0.0
 
 
+def _git_last_commit_epoch(root: Path, rel_path: str) -> float | None:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "log", "-1", "--format=%ct", "--", rel_path],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return None
+    line = proc.stdout.strip()
+    return float(line) if line.isdigit() else None
+
+
+def _content_age(root: Path, path: Path) -> float:
+    """Prefer last git commit time so CI mtime noise does not false-positive stale guides."""
+    try:
+        rel = path.relative_to(root).as_posix()
+    except ValueError:
+        return _mtime(path)
+    git_age = _git_last_commit_epoch(root, rel)
+    if git_age is not None:
+        return git_age
+    return _mtime(path)
+
+
 def check_release_guide_artifacts(root: Path) -> list[dict[str, Any]]:
     """Return drift rows when a listed guide is missing, marker-incomplete, or stale."""
     drift: list[dict[str, Any]] = []
@@ -96,9 +121,9 @@ def check_release_guide_artifacts(root: Path) -> list[dict[str, Any]]:
             )
             continue
 
-        doc_mtime = _mtime(doc_path)
-        newest_source = max(source_paths, key=_mtime)
-        newest_mtime = _mtime(newest_source)
+        doc_mtime = _content_age(root, doc_path)
+        newest_source = max(source_paths, key=lambda p: _content_age(root, p))
+        newest_mtime = _content_age(root, newest_source)
         if doc_mtime + 1e-6 < newest_mtime:
             drift.append(
                 {
