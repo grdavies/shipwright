@@ -8,15 +8,18 @@ file reserves the number until completion or staleness reclaim.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import hashlib
 import json
 import os
 import re
 import socket
 import sys
+import threading
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterator, Iterable
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -28,6 +31,8 @@ from wave_state import canonical_repo_root, emit, fail, lock_is_stale, lock_owne
 RESERVATIONS_DIR_NAME = "sw-planning-reservations"
 RESERVATION_STALE_SECONDS = int(os.environ.get("SW_PLANNING_RESERVE_STALE_SECONDS", "300"))
 _PRD_DIR_RE = re.compile(r"^(\d{3})-")
+# flock(2) is process-scoped; serialize same-process threads separately.
+_ALLOCATOR_THREAD_LOCK = threading.Lock()
 
 
 def reservation_host() -> str:
@@ -191,19 +196,47 @@ def _reservation_payload(
 
 
 def _write_reservation_lock(lock_path: Path, payload: dict[str, Any]) -> None:
+    """Create number lock exclusively, then write payload before releasing the fd.
+
+    Callers must hold `_allocator_lock` so concurrent reclaim cannot unlink a
+    half-written lock between O_EXCL create and content flush (TOCTOU).
+    """
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
     try:
         fd = os.open(lock_path, flags, 0o600)
     except FileExistsError:
         raise
-    with os.fdopen(fd, "w", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=False, indent=2))
-        handle.write("\n")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(json.dumps(payload, ensure_ascii=False, indent=2))
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+    except Exception:
+        lock_path.unlink(missing_ok=True)
+        raise
+
+
+@contextmanager
+def _allocator_lock(root: Path) -> Iterator[None]:
+    """Serialize number allocation across threads and processes in one repo."""
+    with _ALLOCATOR_THREAD_LOCK:
+        locks = reservations_dir(root)
+        path = locks / ".allocator.lock"
+        fd = os.open(path, os.O_CREAT | os.O_RDWR, 0o600)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX)
+            yield
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
 
 
 def find_reservation_lock(root: Path, unit_id: str) -> Path | None:
     for lock_path in reservations_dir(root).glob("*.lock"):
+        if lock_path.name.startswith("."):
+            continue
         meta = read_reservation_meta(lock_path)
         if meta.get("unitId") == unit_id:
             return lock_path
@@ -218,11 +251,50 @@ def reserve_number_file_store(
     holder_id: str,
     extra_unit_ids: Iterable[str] | None = None,
 ) -> dict[str, Any]:
-    existing = find_reservation_lock(root, unit_id)
-    if existing and existing.is_file():
-        meta = read_reservation_meta(existing)
-        if meta.get("status") == "reserved" and reservation_owner_live(meta):
-            number = int(meta["number"])
+    with _allocator_lock(root):
+        existing = find_reservation_lock(root, unit_id)
+        if existing and existing.is_file():
+            meta = read_reservation_meta(existing)
+            if meta.get("status") == "reserved" and reservation_owner_live(meta):
+                number = int(meta["number"])
+                return {
+                    "verdict": "pass",
+                    "action": "reserve-number",
+                    "backend": "file-store",
+                    "number": number,
+                    "unitId": unit_id,
+                    "slug": slug,
+                    "formattedUnitId": format_prd_unit_id(number, slug),
+                    "lockPath": str(existing),
+                    "replayed": True,
+                }
+            reclaim_stale_reservation(existing)
+
+        occupied = occupied_numbers_file_store(root, extra_unit_ids=extra_unit_ids)
+        for _ in range(128):
+            number = next_free_prd_number(occupied)
+            lock_path = reservation_lock_path(root, number, unit_id)
+            if lock_path.is_file():
+                reclaim_stale_reservation(lock_path)
+                if lock_path.is_file():
+                    occupied.add(number)
+                    continue
+            payload = _reservation_payload(
+                number=number,
+                unit_id=unit_id,
+                slug=slug,
+                holder_id=holder_id,
+                backend="file-store",
+            )
+            try:
+                _write_reservation_lock(lock_path, payload)
+            except FileExistsError:
+                occupied.add(number)
+                continue
+            owned = read_reservation_meta(lock_path)
+            if owned.get("unitId") != unit_id or int(owned.get("number") or -1) != number:
+                occupied.add(number)
+                continue
             return {
                 "verdict": "pass",
                 "action": "reserve-number",
@@ -231,45 +303,14 @@ def reserve_number_file_store(
                 "unitId": unit_id,
                 "slug": slug,
                 "formattedUnitId": format_prd_unit_id(number, slug),
-                "lockPath": str(existing),
-                "replayed": True,
+                "lockPath": str(lock_path),
+                "replayed": False,
             }
-        reclaim_stale_reservation(existing)
-
-    occupied = occupied_numbers_file_store(root, extra_unit_ids=extra_unit_ids)
-    for _ in range(128):
-        number = next_free_prd_number(occupied)
-        lock_path = reservation_lock_path(root, number, unit_id)
-        if lock_path.is_file():
-            reclaim_stale_reservation(lock_path)
-        payload = _reservation_payload(
-            number=number,
-            unit_id=unit_id,
-            slug=slug,
-            holder_id=holder_id,
-            backend="file-store",
-        )
-        try:
-            _write_reservation_lock(lock_path, payload)
-        except FileExistsError:
-            occupied.add(number)
-            continue
         return {
-            "verdict": "pass",
-            "action": "reserve-number",
-            "backend": "file-store",
-            "number": number,
+            "verdict": "fail",
+            "error": "reservation-exhausted",
             "unitId": unit_id,
-            "slug": slug,
-            "formattedUnitId": format_prd_unit_id(number, slug),
-            "lockPath": str(lock_path),
-            "replayed": False,
         }
-    return {
-        "verdict": "fail",
-        "error": "reservation-exhausted",
-        "unitId": unit_id,
-    }
 
 
 def _list_issue_store_unit_ids(root: Path, cfg: dict[str, Any]) -> list[str]:
@@ -306,59 +347,60 @@ def reserve_number_issue_store(
             "unitId": unit_id,
         }
 
-    existing = find_reservation_lock(root, unit_id)
-    if existing and existing.is_file():
-        meta = read_reservation_meta(existing)
-        if meta.get("status") == "reserved" and reservation_owner_live(meta):
-            number = int(meta["number"])
-            return {
-                "verdict": "pass",
-                "action": "reserve-number",
-                "backend": "issue-store",
-                "number": number,
-                "unitId": unit_id,
-                "slug": slug,
-                "formattedUnitId": format_prd_unit_id(number, slug),
-                "lockPath": str(existing),
-                "replayed": True,
-            }
-        reclaim_stale_reservation(existing)
-
-    unit_ids = _list_issue_store_unit_ids(root, cfg)
-    occupied = collect_occupied_prd_numbers(unit_ids)
-    occupied |= active_reserved_numbers(root)
-    number = next_free_prd_number(occupied)
-    lock_path = reservation_lock_path(root, number, unit_id)
-    payload = _reservation_payload(
-        number=number,
-        unit_id=unit_id,
-        slug=slug,
-        holder_id=holder_id,
-        backend="issue-store",
-    )
-    try:
-        _write_reservation_lock(lock_path, payload)
-    except FileExistsError:
-        reclaim_stale_reservation(lock_path)
-        if lock_path.is_file():
-            meta = read_reservation_meta(lock_path)
-            if meta.get("unitId") == unit_id and meta.get("status") == "reserved":
+    with _allocator_lock(root):
+        existing = find_reservation_lock(root, unit_id)
+        if existing and existing.is_file():
+            meta = read_reservation_meta(existing)
+            if meta.get("status") == "reserved" and reservation_owner_live(meta):
+                number = int(meta["number"])
                 return {
                     "verdict": "pass",
                     "action": "reserve-number",
                     "backend": "issue-store",
-                    "number": int(meta["number"]),
+                    "number": number,
                     "unitId": unit_id,
                     "slug": slug,
-                    "formattedUnitId": format_prd_unit_id(int(meta["number"]), slug),
-                    "lockPath": str(lock_path),
+                    "formattedUnitId": format_prd_unit_id(number, slug),
+                    "lockPath": str(existing),
                     "replayed": True,
                 }
-        return {
-            "verdict": "fail",
-            "error": "reservation-contention",
-            "unitId": unit_id,
-        }
+            reclaim_stale_reservation(existing)
+
+        unit_ids = _list_issue_store_unit_ids(root, cfg)
+        occupied = collect_occupied_prd_numbers(unit_ids)
+        occupied |= active_reserved_numbers(root)
+        number = next_free_prd_number(occupied)
+        lock_path = reservation_lock_path(root, number, unit_id)
+        payload = _reservation_payload(
+            number=number,
+            unit_id=unit_id,
+            slug=slug,
+            holder_id=holder_id,
+            backend="issue-store",
+        )
+        try:
+            _write_reservation_lock(lock_path, payload)
+        except FileExistsError:
+            reclaim_stale_reservation(lock_path)
+            if lock_path.is_file():
+                meta = read_reservation_meta(lock_path)
+                if meta.get("unitId") == unit_id and meta.get("status") == "reserved":
+                    return {
+                        "verdict": "pass",
+                        "action": "reserve-number",
+                        "backend": "issue-store",
+                        "number": int(meta["number"]),
+                        "unitId": unit_id,
+                        "slug": slug,
+                        "formattedUnitId": format_prd_unit_id(int(meta["number"]), slug),
+                        "lockPath": str(lock_path),
+                        "replayed": True,
+                    }
+            return {
+                "verdict": "fail",
+                "error": "reservation-contention",
+                "unitId": unit_id,
+            }
 
     backend = ps.get_backend(root, cfg, override="issue-store")
     formatted = format_prd_unit_id(number, slug)
