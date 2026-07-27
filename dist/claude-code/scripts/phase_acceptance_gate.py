@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -13,7 +12,13 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import doc_format
-from checkbox_diff import parse_task_checkboxes, toggle_checkbox
+from checkbox_diff import parse_task_checkboxes
+from frozen_spec_ledger import (
+    is_frozen_task_list,
+    record_ledger_subtask,
+    reject_hashed_body_write,
+    task_done_in_ledger,
+)
 
 GAP_CAUSE_OPEN_REFS = "phase-acceptance:open-subtasks"
 GAP_CAUSE_ALL_OPEN = "phase-acceptance:all-open-silent-partial"
@@ -57,11 +62,14 @@ def phase_id_for_slug(text: str, phase_slug: str) -> str | None:
     return None
 
 
-def phase_refs_checked(text: str, phase_id: str) -> dict[str, bool]:
+def phase_refs_checked(text: str, phase_id: str, ledger_tasks: dict[str, Any] | None = None) -> dict[str, bool]:
     chunk = doc_format.phase_section_text(text, phase_id)
     if not chunk:
         return {}
-    return parse_task_checkboxes(chunk)
+    refs = parse_task_checkboxes(chunk)
+    if ledger_tasks is not None and is_frozen_task_list(text):
+        return {ref: task_done_in_ledger(ledger_tasks, ref) for ref in refs}
+    return refs
 
 
 def _phase_ledger_entry(state: dict[str, Any], phase_slug: str) -> dict[str, Any]:
@@ -92,11 +100,10 @@ def check_phase_acceptance(
         return True, None
     _check_root, tasks_path = resolved
     text = tasks_path.read_text(encoding="utf-8")
-    refs = phase_refs_checked(text, phase_id)
+    ledger_tasks = _ledger_tasks(state)
+    refs = phase_refs_checked(text, phase_id, ledger_tasks)
     if not refs:
         return True, None
-
-    ledger_tasks = _ledger_tasks(state)
     phase_entry = _phase_ledger_entry(state, phase_slug)
     declared_partial = bool(phase_entry.get("declaredPartial"))
     skipped_raw = phase_entry.get("skippedRefs") or []
@@ -132,7 +139,7 @@ def record_ref_completion(
     task_list: str,
     phase_slug: str,
 ) -> dict[str, Any]:
-    """Auto ledger record + checkbox toggle on execute ref terminal green (R14)."""
+    """Record execution-ledger progress without mutating freeze-hashed bodies (R23)."""
     tasks_path = Path(task_list)
     if not tasks_path.is_absolute():
         tasks_path = (root / task_list).resolve()
@@ -140,39 +147,26 @@ def record_ref_completion(
         return {"verdict": "fail", "error": f"task file not found: {task_list}"}
 
     text = tasks_path.read_text(encoding="utf-8")
-    try:
-        new_text = toggle_checkbox(text, task_ref, done=True)
-    except ValueError as exc:
-        return {"verdict": "fail", "error": str(exc)}
-    tasks_path.write_text(new_text, encoding="utf-8")
+    if is_frozen_task_list(text):
+        rejected = reject_hashed_body_write(text, text)
+        if rejected:
+            return {"verdict": "fail", **rejected}
+    else:
+        from checkbox_diff import toggle_checkbox
 
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT_DIR / "wave_state.py"),
-            str(root),
-            "ledger",
-            "record",
-            "--task",
-            task_ref,
-            "--phase",
-            phase_slug,
-            "--done",
-            "true",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode != 0:
         try:
-            detail = json.loads(proc.stdout or proc.stderr or "{}")
-        except json.JSONDecodeError:
-            detail = {"error": proc.stderr.strip() or proc.stdout.strip()}
-        return {"verdict": "fail", "action": "ledger-record", **detail}
+            new_text = toggle_checkbox(text, task_ref, done=True)
+        except ValueError as exc:
+            return {"verdict": "fail", "error": str(exc)}
+        tasks_path.write_text(new_text, encoding="utf-8")
+
+    ledger_out = record_ledger_subtask(root, task_ref, phase_slug, done=True)
+    if ledger_out.get("verdict") not in ("pass", "ok"):
+        return {"verdict": "fail", "action": "ledger-record", **ledger_out}
     from planning_progress import propagate_checkbox_to_issue_store
 
     issue_sync = propagate_checkbox_to_issue_store(root, task_ref, task_list, phase_slug)
-    out = {"verdict": "pass", "action": "record-ref-completion", "task": task_ref}
+    out = {"verdict": "pass", "action": "record-ref-completion", "task": task_ref, "ledger": ledger_out}
     if issue_sync.get("synced") or issue_sync.get("degraded"):
         out["issueSync"] = issue_sync
     return out

@@ -16,10 +16,19 @@ if str(SCRIPT_DIR) not in sys.path:
 import doc_format  # noqa: E402
 import planning_materialize as pm  # noqa: E402
 import planning_path_redirect  # noqa: E402
+from frozen_spec_ledger import (  # noqa: E402
+    is_frozen_task_list,
+    project_checkboxes_from_ledger,
+)
 from host_lib import load_workflow_config  # noqa: E402
 from planning_hierarchy import project_task_list_hierarchy  # noqa: E402
 from planning_store import progress_update, resolve_effective_backend  # noqa: E402
-from wave_state import load_deliver_state, load_hierarchy_map, set_hierarchy_map  # noqa: E402
+from wave_state import (  # noqa: E402
+    load_deliver_state,
+    load_hierarchy_map,
+    set_hierarchy_map,
+    task_ledger_tasks,
+)
 
 
 _PROVISION_APPLY_COUNT = 0
@@ -237,6 +246,9 @@ def sync_phase_done(root: Path, state: dict[str, Any], phase_id: str) -> dict[st
             return {"verdict": "ok", "skipped": True, "reason": "missing-parent-issue", "phaseId": phase_id}
         task_rel = state.get("source_task_list")
         task_list = str(task_rel) if isinstance(task_rel, str) else None
+        projected_list = (
+            _ledger_projected_task_list(root, state, task_list) if task_list else task_list
+        )
         out = progress_update(
             root,
             parent_issue_id=str(parent_id),
@@ -244,7 +256,7 @@ def sync_phase_done(root: Path, state: dict[str, Any], phase_id: str) -> dict[st
             action="phase-done",
             provider=str(hmap.get("provider") or "none"),
             project_key=str(hmap.get("projectKey") or ""),
-            task_list=task_list,
+            task_list=projected_list,
             checked_phase_ids=_checked_phase_ids(hmap, phase_id),
         )
         if out.get("degraded"):
@@ -276,6 +288,35 @@ def sync_phase_done(root: Path, state: dict[str, Any], phase_id: str) -> dict[st
     return out
 
 
+def _ledger_projected_task_list(
+    root: Path,
+    state: dict[str, Any],
+    task_list: str | Path,
+) -> Path | str:
+    """Return a ledger-projected task-list path for issue-store sync (PRD 081 R23)."""
+    task_path = Path(task_list)
+    if not task_path.is_absolute():
+        task_path = (root / task_list).resolve()
+    if not task_path.is_file():
+        return task_list
+    text = task_path.read_text(encoding="utf-8")
+    if not is_frozen_task_list(text):
+        return task_list
+    ledger_tasks = task_ledger_tasks(state)
+    projected = project_checkboxes_from_ledger(text, ledger_tasks)
+    if projected == text:
+        return task_list
+    rel = str(task_list)
+    try:
+        rel = str(task_path.relative_to(root.resolve()))
+    except ValueError:
+        rel = str(task_path)
+    dest = root / ".cursor" / "sw-deliver-runs" / "_progress-projections" / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(projected, encoding="utf-8")
+    return dest
+
+
 def sync_task_checkbox(
     root: Path,
     state: dict[str, Any],
@@ -284,7 +325,7 @@ def sync_task_checkbox(
     task_list: str | Path,
     task_ref: str | None = None,
 ) -> dict[str, Any]:
-    """Mirror phase task checkboxes onto the phase sub-issue body (PRD 056 R7)."""
+    """Project execution-ledger progress outward; never mutate frozen unit body (R23)."""
     if not _issue_store_effective(root):
         return {"verdict": "ok", "skipped": True, "reason": "file-store"}
 
@@ -297,6 +338,7 @@ def sync_task_checkbox(
     if not target_id:
         return {"verdict": "ok", "skipped": True, "reason": "missing-progress-target", "phaseId": phase_id}
 
+    projected_list = _ledger_projected_task_list(root, state, task_list)
     out = progress_update(
         root,
         parent_issue_id=str(target_id),
@@ -304,7 +346,7 @@ def sync_task_checkbox(
         action="task-checkbox",
         provider=str(hmap.get("provider") or "none"),
         project_key=str(hmap.get("projectKey") or ""),
-        task_list=task_list,
+        task_list=projected_list,
         task_ref=task_ref,
     )
     if out.get("degraded"):
