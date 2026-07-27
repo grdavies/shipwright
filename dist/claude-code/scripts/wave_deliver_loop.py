@@ -1008,12 +1008,26 @@ def resolve_plan_with_adoption(
     if plan:
         return plan, state
     if state.get("phases") and state.get("verdict") == "running":
-        from wave_run_adopt import maybe_adopt_on_deliver_loop
+        from wave_run_adopt import (
+            locate_legacy_source,
+            maybe_adopt_on_deliver_loop,
+            read_legacy_global_plan_once,
+        )
+        from wave_run_paths import global_plan_path
 
         adoption = maybe_adopt_on_deliver_loop(root, state)
         if adoption.get("adopted"):
             state = load_state(root, task_list)
             return load_plan(root, state), state
+        target = target_branch_from_state(state)
+        slug = target.split("/", 1)[1] if target and "/" in target else None
+        source = locate_legacy_source(root, slug=slug)
+        if (
+            source
+            and source.get("layout") == "scoped"
+            and global_plan_path(root).is_file()
+        ):
+            return read_legacy_global_plan_once(root), state
     return {}, state
 
 

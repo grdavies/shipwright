@@ -428,6 +428,8 @@ def maybe_adopt_on_deliver_loop(root: Path, state: dict[str, Any]) -> dict[str, 
         source = locate_legacy_source_from_state(root, state)
     if not source:
         return {"adopted": False, "reason": "no-legacy-source"}
+    if source.get("layout") == "scoped":
+        return {"adopted": False, "reason": "scoped-layout"}
     adopted_run_id = str(source.get("runId") or run_id or "")
     try:
         adopted_run_id = require_run_id(adopted_run_id)
