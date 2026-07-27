@@ -16,6 +16,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from phase_status_discovery import (
     discover_phase_status,
     halt_dominant_tiebreak,
+    preferred_phase_artifact_path,
     resolve_phase_worktree,
 )
 from status_integrity import remediation_for_status_cause, resolve_write_head, write_status_atomic
@@ -61,7 +62,11 @@ def status_path(root: Path, phase_slug: str) -> Path:
     path, _ = discover_gap_check_status(root, phase_slug)
     if path is not None:
         return path
-    return root / ".cursor" / "sw-deliver-runs" / phase_slug / STATUS_NAME
+    state = _load_deliver_state(root)
+    worktree = resolve_phase_worktree(root, phase_slug, state)
+    return preferred_phase_artifact_path(
+        root, phase_slug, STATUS_NAME, worktree=worktree, state=state
+    )
 
 
 def read_status(path: Path) -> dict[str, Any] | None:
@@ -135,7 +140,11 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(args.root).resolve()
     path, discovered = discover_gap_check_status(root, args.phase_slug)
     if path is None:
-        path = root / ".cursor" / "sw-deliver-runs" / args.phase_slug / STATUS_NAME
+        state = _load_deliver_state(root)
+        worktree = resolve_phase_worktree(root, args.phase_slug, state)
+        path = preferred_phase_artifact_path(
+            root, args.phase_slug, STATUS_NAME, worktree=worktree, state=state
+        )
 
     if args.command == "write":
         if not args.verdict:

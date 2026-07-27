@@ -120,9 +120,15 @@ def main(argv: list[str] | None = None) -> int:
                 canonical = str(common_p.parent)
             else: canonical = str(root)
         if canonical and Path(canonical).is_dir():
-            cout = Path(canonical)/f".cursor/sw-deliver-runs/{phase}/status.json"
+            from phase_status_discovery import preferred_phase_artifact_path
+            from wave_state import load_deliver_state
+
+            orch = Path(canonical)
+            state = load_deliver_state(orch)
+            cout = preferred_phase_artifact_path(orch, phase, "status.json", state=state)
             cout.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(out, cout); os.chmod(cout, 0o600)
+            shutil.copy2(out, cout)
+            os.chmod(cout, 0o600)
     if verdict == "blocked":
         subprocess.run(
             [
