@@ -649,6 +649,7 @@
 * merge phase freeze-ownership-durability-and-related-work-stage-medium into feat/workflow-state-machine-hardening (e2c211a) <!-- sw-deliver:freeze-ownership-durability-and-related-work-stage-medium -->
 * merge phase brainstorm-reference-resolution-and-publication-cutover-medium into feat/workflow-state-machine-hardening (e4b5b53) <!-- sw-deliver:brainstorm-reference-resolution-and-publication-cutover-medium -->
 * merge phase number-reservation-and-final-triage-rescore-medium into feat/workflow-state-machine-hardening (9cbdbaa) <!-- sw-deliver:number-reservation-and-final-triage-rescore-medium -->
+* merge phase frozen-specification-versus-progress-ledger-medium into feat/workflow-state-machine-hardening (6c337a7) <!-- sw-deliver:frozen-specification-versus-progress-ledger-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
