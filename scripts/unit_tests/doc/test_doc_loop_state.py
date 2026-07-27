@@ -59,6 +59,20 @@ def test_fresh_agent_restores_next_action_from_state(repo: Path) -> None:
     assert payload["next"]["stage"] == "triage"
 
 
+def _verified_freeze(stage: str) -> dict:
+    key = "prd" if stage == "freeze-prd" else "tasks"
+    return {
+        "verdict": "pass",
+        "artifactKey": key,
+        "receipt": {
+            "owner": "doc-loop:test",
+            "durabilityState": "verified",
+            "lifecycleState": "frozen",
+            "revision": "rev",
+        },
+    }
+
+
 def test_pending_confirm_checkpoint_re_emitted_from_durable_state(repo: Path) -> None:
     provisioned = provision_doc_run(repo, topic="checkpoint-topic", tier="Standard")
     run_id = str(provisioned["runId"])
@@ -70,11 +84,16 @@ def test_pending_confirm_checkpoint_re_emitted_from_durable_state(repo: Path) ->
     state = load_doc_state(repo, run_id)
     consume_agent_stage(repo, state, "doc-review", outcome={})
     state = load_doc_state(repo, run_id)
-    execute_mechanical_stage(repo, state, "freeze-prd")
+    with patch("doc_loop.run_related_work_scan", return_value={"verdict": "ok", "proposals": []}):
+        execute_mechanical_stage(repo, state, "related-work")
+    state = load_doc_state(repo, run_id)
+    with patch("doc_loop.freeze_stage_artifact", side_effect=lambda _r, _s, stage: _verified_freeze(stage)):
+        execute_mechanical_stage(repo, state, "freeze-prd")
     state = load_doc_state(repo, run_id)
     consume_agent_stage(repo, state, "tasks", outcome={})
     state = load_doc_state(repo, run_id)
-    execute_mechanical_stage(repo, state, "freeze-tasks")
+    with patch("doc_loop.freeze_stage_artifact", side_effect=lambda _r, _s, stage: _verified_freeze(stage)):
+        execute_mechanical_stage(repo, state, "freeze-tasks")
     state = load_doc_state(repo, run_id)
 
     set_pending_checkpoint(repo, state)

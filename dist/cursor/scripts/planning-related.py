@@ -19,5 +19,7 @@ def main(argv=None):
         print("unknown subcommand", file=sys.stderr); return 2
     os.environ["PYTHONPATH"] = str(SCRIPT_DIR) + (":"+os.environ["PYTHONPATH"] if os.environ.get("PYTHONPATH") else "")
     import planning_related
+    if args[0] == "scan" and "--driver-invoked" in args:
+        os.environ["SW_DOC_DRIVER"] = "1"
     return planning_related.main([str(git_root()), *args])
 if __name__ == "__main__": run_module_main(main)

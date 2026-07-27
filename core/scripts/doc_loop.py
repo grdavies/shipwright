@@ -34,6 +34,7 @@ DOC_STAGE_SEQUENCE: tuple[str, ...] = (
     "brainstorm",
     "prd",
     "doc-review",
+    "related-work",
     "freeze-prd",
     "tasks",
     "freeze-tasks",
@@ -42,8 +43,8 @@ DOC_STAGE_SEQUENCE: tuple[str, ...] = (
 )
 
 AGENT_STAGES = frozenset({"triage", "brainstorm", "prd", "doc-review", "tasks"})
-MECHANICAL_STAGES = frozenset({"freeze-prd", "freeze-tasks"})
-HUMAN_STAGES = frozenset({"afterTasks-checkpoint"})
+MECHANICAL_STAGES = frozenset({"related-work", "freeze-prd", "freeze-tasks"})
+HUMAN_STAGES = frozenset({"related-work-checkpoint", "afterTasks-checkpoint"})
 TERMINAL_STAGES = frozenset({"complete"})
 
 
@@ -116,7 +117,10 @@ def input_content_hash(state: dict[str, Any]) -> str:
         "topic": state.get("topic"),
         "unitIds": state.get("unitIds") or {},
         "artifactRevisions": state.get("artifactRevisions") or {},
+        "artifactPaths": state.get("artifactPaths") or {},
         "pendingCheckpoint": state.get("pendingCheckpoint"),
+        "pendingRelatedWork": state.get("pendingRelatedWork"),
+        "relatedWorkScan": state.get("relatedWorkScan"),
     }
     return hash_json(payload)
 
@@ -226,7 +230,14 @@ def build_step(state: dict[str, Any], stage: str) -> dict[str, Any]:
         "tier": state.get("tier"),
         "resume": state.get("verdict") == "running",
     }
-    if stage in HUMAN_STAGES:
+    if stage == "tasks":
+        step["noFreeze"] = True
+    if stage == "related-work-checkpoint":
+        step["checkpoint"] = state.get("pendingRelatedWork") or {
+            "kind": "related-work-checkpoint",
+            "status": "pending",
+        }
+    elif stage in HUMAN_STAGES:
         step["checkpoint"] = state.get("pendingCheckpoint") or {
             "kind": "afterTasks-checkpoint",
             "status": "pending",
@@ -245,7 +256,20 @@ def compute_next_action(state: dict[str, Any]) -> dict[str, Any]:
 
 def apply_recorded_outcome(state: dict[str, Any], outcome: dict[str, Any]) -> dict[str, Any]:
     updated = dict(state)
-    for key in ("stage", "nextAction", "unitIds", "artifactRevisions", "pendingCheckpoint", "verdict"):
+    for key in (
+        "stage",
+        "nextAction",
+        "unitIds",
+        "artifactPaths",
+        "artifactRevisions",
+        "pendingCheckpoint",
+        "pendingRelatedWork",
+        "relatedWorkScan",
+        "verdict",
+        "halt",
+        "haltError",
+        "haltReceipt",
+    ):
         if key in outcome:
             updated[key] = outcome[key]
     return updated
@@ -321,23 +345,141 @@ def advance_stage(state: dict[str, Any], completed_stage: str) -> dict[str, Any]
     return updated
 
 
+def artifact_rel_path(state: dict[str, Any], key: str) -> str | None:
+    paths = state.get("artifactPaths") or {}
+    rel = paths.get(key)
+    if isinstance(rel, str) and rel.strip():
+        return rel.strip()
+    unit_ids = state.get("unitIds") or {}
+    unit_id = unit_ids.get(key)
+    if not isinstance(unit_id, str) or not unit_id.strip():
+        return None
+    topic = str(state.get("topic") or "topic")
+    if key == "prd":
+        return f"docs/prds/{unit_id}/prd.md"
+    if key == "tasks":
+        return f"docs/prds/{unit_id}/tasks-{unit_id.split('-prd-', 1)[-1] if '-prd-' in unit_id else unit_id}.md"
+    return None
+
+
+def artifacts_are_durable(state: dict[str, Any]) -> bool:
+    revisions = state.get("artifactRevisions") or {}
+    for key in ("prd", "tasks"):
+        record = revisions.get(key) or {}
+        if record.get("durabilityState") != "verified":
+            return False
+    return True
+
+
+def deliver_handoff_reachable(state: dict[str, Any]) -> bool:
+    if state.get("verdict") == "halted":
+        return False
+    if not artifacts_are_durable(state):
+        return False
+    related = state.get("pendingRelatedWork") or {}
+    if related.get("status") == "pending":
+        return False
+    return str(state.get("stage") or "") in {"afterTasks-checkpoint", "complete"}
+
+
+def run_related_work_scan(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    import planning_related
+
+    prd_path = artifact_rel_path(state, "prd")
+    if not prd_path:
+        return {"verdict": "ok", "proposals": [], "skipped": True, "reason": "missing-prd-path"}
+    os.environ["SW_DOC_DRIVER"] = "1"
+    return planning_related.scan_related(
+        root,
+        planning_related.source_from_path(root, prd_path),
+        mode="tasks-rescan",
+    )
+
+
+def freeze_stage_artifact(root: Path, state: dict[str, Any], stage: str) -> dict[str, Any]:
+    from check_frozen_lib import freeze_artifact
+
+    key = "prd" if stage == "freeze-prd" else "tasks"
+    rel = artifact_rel_path(state, key)
+    if not rel:
+        return {
+            "verdict": "fail",
+            "error": "missing-artifact-path",
+            "artifactKey": key,
+            "halt": "doc-loop:missing-artifact",
+        }
+    unit_ids = state.get("unitIds") or {}
+    owner = f"doc-loop:{state.get('runId')}"
+    receipt = freeze_artifact(
+        root,
+        rel,
+        owner=owner,
+        driver_invoked=True,
+        unit_id=str(unit_ids.get(key) or ""),
+    )
+    if receipt.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "error": receipt.get("error") or "freeze-durability-failed",
+            "halt": "doc-loop:freeze-durability",
+            "receipt": receipt,
+        }
+    return {"verdict": "pass", "receipt": receipt, "artifactKey": key}
+
+
 def execute_mechanical_stage(root: Path, state: dict[str, Any], stage: str) -> dict[str, Any]:
     def apply_fn(current: dict[str, Any]) -> dict[str, Any]:
         updated = dict(current)
-        revisions = dict(updated.get("artifactRevisions") or {})
-        if stage == "freeze-prd":
-            revisions["prd"] = {"frozenAt": utc_now(), "revision": revisions.get("prd", {}).get("revision", "draft")}
-        elif stage == "freeze-tasks":
-            revisions["tasks"] = {
-                "frozenAt": utc_now(),
-                "revision": revisions.get("tasks", {}).get("revision", "draft"),
+        if stage == "related-work":
+            scan = run_related_work_scan(root, updated)
+            updated["relatedWorkScan"] = scan
+            proposals = scan.get("proposals") or []
+            if proposals:
+                updated["pendingRelatedWork"] = {
+                    "kind": "related-work-checkpoint",
+                    "status": "pending",
+                    "proposals": proposals,
+                    "emittedAt": utc_now(),
+                }
+                updated["stage"] = "related-work-checkpoint"
+                updated["nextAction"] = "related-work-checkpoint"
+                return updated
+            updated["pendingRelatedWork"] = {
+                "kind": "related-work-checkpoint",
+                "status": "acknowledged",
+                "proposals": [],
+                "emittedAt": utc_now(),
             }
-        updated["artifactRevisions"] = revisions
+            return advance_stage(updated, stage)
+
+        if stage in {"freeze-prd", "freeze-tasks"}:
+            outcome = freeze_stage_artifact(root, updated, stage)
+            if outcome.get("verdict") != "pass":
+                updated["verdict"] = "halted"
+                updated["halt"] = outcome.get("halt")
+                updated["haltError"] = outcome.get("error")
+                updated["haltReceipt"] = outcome.get("receipt")
+                return updated
+            revisions = dict(updated.get("artifactRevisions") or {})
+            receipt = outcome.get("receipt") or {}
+            key = str(outcome.get("artifactKey") or "")
+            revisions[key] = {
+                **receipt,
+                "frozenAt": utc_now(),
+            }
+            updated["artifactRevisions"] = revisions
+            return advance_stage(updated, stage)
+
         return advance_stage(updated, stage)
 
     new_state, _receipt, _replayed = apply_transition_idempotent(root, state, stage, apply_fn=apply_fn)
     save_doc_state(root, new_state)
-    return {"executed": stage, "stage": new_state.get("stage")}
+    result: dict[str, Any] = {"executed": stage, "stage": new_state.get("stage")}
+    if new_state.get("verdict") == "halted":
+        result["halted"] = True
+        result["halt"] = new_state.get("halt")
+        result["deliverHandoffReachable"] = deliver_handoff_reachable(new_state)
+    return result
 
 
 def consume_agent_stage(
@@ -369,6 +511,13 @@ def consume_agent_stage(
 
 
 def set_pending_checkpoint(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    if not artifacts_are_durable(state):
+        fail(
+            "checkpoint blocked until freeze durability verified for prd and tasks",
+            exit_code=20,
+            halt="doc-loop:freeze-durability-pending",
+            deliverHandoffReachable=False,
+        )
     checkpoint = {
         "kind": "afterTasks-checkpoint",
         "status": "pending",
@@ -382,6 +531,26 @@ def set_pending_checkpoint(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     updated["nextAction"] = "afterTasks-checkpoint"
     save_doc_state(root, updated)
     return checkpoint
+
+
+def acknowledge_related_work(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    def apply_fn(current: dict[str, Any]) -> dict[str, Any]:
+        updated = dict(current)
+        pending = dict(updated.get("pendingRelatedWork") or {})
+        pending["status"] = "acknowledged"
+        pending["acknowledgedAt"] = utc_now()
+        updated["pendingRelatedWork"] = pending
+        return advance_stage(updated, "related-work")
+
+    new_state, _receipt, replayed = apply_transition_idempotent(
+        root, state, "related-work-checkpoint", apply_fn=apply_fn
+    )
+    save_doc_state(root, new_state)
+    return {
+        "executed": "related-work-checkpoint",
+        "replayed": replayed,
+        "stage": new_state.get("stage"),
+    }
 
 
 def acknowledge_checkpoint(root: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -467,7 +636,9 @@ def handshake_payload(
     **extra: Any,
 ) -> dict[str, Any]:
     stage = str(step.get("stage") or step.get("action") or "")
-    if stage in HUMAN_STAGES and state.get("pendingCheckpoint"):
+    if stage == "related-work-checkpoint" and state.get("pendingRelatedWork"):
+        step = {**step, "checkpoint": state.get("pendingRelatedWork")}
+    elif stage in HUMAN_STAGES and state.get("pendingCheckpoint"):
         step = {**step, "checkpoint": state.get("pendingCheckpoint")}
     payload: dict[str, Any] = {
         "verdict": "pass",
@@ -477,8 +648,12 @@ def handshake_payload(
         "awaitHuman": stage in HUMAN_STAGES,
         "next": step,
         "stepsTaken": steps_taken or [],
+        "deliverHandoffReachable": deliver_handoff_reachable(state),
         **extra,
     }
+    if state.get("verdict") == "halted":
+        payload["halt"] = True
+        payload["haltCause"] = state.get("halt")
     if stage in TERMINAL_STAGES:
         payload["terminal"] = True
         payload["runVerdict"] = state.get("verdict")
@@ -489,6 +664,7 @@ def cmd_doc_loop(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     consume = has_flag(args, "--consume")
     ack_checkpoint = has_flag(args, "--ack-checkpoint")
+    ack_related_work = has_flag(args, "--ack-related-work")
     max_steps = int(parse_kv(args, "--max-steps", "8") or "8")
     run_id = resolve_run_id(root, args)
     state = load_doc_state(root, run_id)
@@ -497,6 +673,17 @@ def cmd_doc_loop(root: Path, args: list[str]) -> None:
 
     for _ in range(max_steps):
         state = load_doc_state(root, run_id)
+        if state.get("verdict") == "halted":
+            emit(
+                handshake_payload(
+                    state=state,
+                    step={"action": state.get("stage"), "stage": state.get("stage"), "runId": run_id},
+                    resumed=resumed,
+                    steps_taken=steps_taken,
+                    halt=True,
+                ),
+                exit_code=20,
+            )
         step = compute_next_action(state)
         stage = str(step.get("stage") or step.get("action") or "")
 
@@ -511,6 +698,23 @@ def cmd_doc_loop(root: Path, args: list[str]) -> None:
                     resumed=resumed,
                     stepsTaken=steps_taken,
                     complete=True,
+                )
+            )
+
+        if stage == "related-work-checkpoint":
+            checkpoint = state.get("pendingRelatedWork")
+            if ack_related_work:
+                result = acknowledge_related_work(root, state)
+                steps_taken.append(result)
+                resumed = True
+                continue
+            emit(
+                handshake_payload(
+                    state=state,
+                    step={**step, "checkpoint": checkpoint},
+                    resumed=resumed,
+                    stepsTaken=steps_taken,
+                    halt=False,
                 )
             )
 
