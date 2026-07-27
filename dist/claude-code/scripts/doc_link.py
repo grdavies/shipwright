@@ -114,7 +114,11 @@ def check_prd_content(root: Path, rel: str, text: str, tier: str) -> dict[str, A
                         }
                     )
 
+    # PRD bodies use `prd: <number>` as metadata; only path-like values are links.
     for target in prd_forward_refs(fm):
+        t = target.strip().strip("'\"")
+        if "/" not in t and not t.endswith(".md"):
+            continue
         if not link_target_resolves(root, target):
             findings.append(
                 {
