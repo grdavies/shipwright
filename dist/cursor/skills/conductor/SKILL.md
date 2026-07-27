@@ -30,7 +30,7 @@ existing `wave_*.py` primitives behind `scripts/wave.py` — never duplicated in
 | --- | --- |
 | Plan + waves | `scripts/wave.py plan`, `scripts/wave.py schedule` |
 | Plan validation | `scripts/wave.py plan validate` → `scripts/wave_plan_validate.py` (two-tier, closed-world) |
-| Durable driver | `scripts/wave.py deliver-loop` |
+| Durable driver | `scripts/wave.py deliver-loop`, `scripts/doc_loop.py doc-loop` |
 | Run-state R/W | `scripts/wave.py state …` |
 | Provision / teardown | `scripts/wave.py orchestrator provision`, `scripts/wave.py phase provision` |
 | Phase outcomes | `scripts/wave.py status collect` → `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
@@ -55,6 +55,15 @@ A fresh agent with no prior chat context resumes from:
 | Wave batching plan | `waveBatchingPlan` on `.cursor/sw-deliver-state.<slug>.json` (conductor-only) |
 | Two-tier lifecycle | `twoTierLifecycle` on shared run-state |
 | Append-only progress | `.cursor/sw-deliver-runs/run.log` |
+
+**Doc-run durable artifacts (PRD 081 R11):** `/sw-doc` resumes from the doc-loop driver alone — not chat
+history.
+
+| Artifact | Path |
+| --- | --- |
+| Doc run cursor | `.cursor/sw-doc-runs/<run-id>/state.json` |
+| Concurrent doc-run index | `.cursor/sw-doc-runs/index.json` |
+| Stage transition receipts | `.cursor/sw-doc-runs/<run-id>/receipts/<idempotency-key>.json` |
 
 **Per-branch scoped deliver state (PRD 013):** orthogonal feature branches each own
 `sw-deliver-state.<slug>.json` + `sw-deliver-<slug>.lock`. The conductor never treats branch B's
@@ -105,14 +114,31 @@ blocking deliver), a frozen task list runs end-to-end to the **terminal-PR human
 
 The conductor never ends its turn while `nextAction` is runnable and no legitimate halt applies.
 
-### Driver ↔ agent handshake
+### Driver ↔ agent handshake (deliver + doc-loop)
+
+Both `/sw-deliver` and `/sw-doc` share the same conductor interpretation — only the driver entrypoint
+differs.
+
+| Orchestrator | Driver entry | Resume |
+| --- | --- | --- |
+| `/sw-deliver` | `python3 scripts/wave.py deliver-loop` | `/sw-deliver run <frozen-task-list>` |
+| `/sw-doc` | `python3 scripts/doc_loop.py <repo> doc-loop --run-id <id>` | Re-invoke `doc-loop` with the same run id |
+
+**Deliver loop:**
 
 1. Invoke `python3 scripts/wave.py deliver-loop` (or `--dry-run` to inspect only).
 2. Parse JSON:
    - **`awaitAgent: false`** — driver advanced mechanically; immediately re-invoke `deliver-loop` (same turn).
    - **`awaitAgent: true`** — perform the agent step for `next.action` (see table), then re-invoke
      `deliver-loop` without asking the user to continue.
+   - **`verdict: continue`** with `cause: conductor:drain-step-budget-exceeded` — mechanical drain step
+     budget exhausted while the next action is still mechanical; **re-invoke `deliver-loop` in the same
+     turn** — this is not a legitimate halt and must not surface as an operator interruption (R22).
 3. Repeat until `terminal: true`, `halt: true`, or a legitimate halt in **Legitimate-halt set**.
+
+**Doc-loop handshake (PRD 081 R11):** same response vocabulary — `awaitAgent`, `awaitHuman`, `halt`,
+`terminal`, and mechanical step budgets. On doc-loop step-budget exhaustion while the next stage is still
+mechanical, re-invoke `doc-loop` in the same turn rather than ending the turn or emitting a blocker report.
 
 | `next.action` | Agent work (then re-invoke `deliver-loop`) |
 | --- | --- |
@@ -270,6 +296,8 @@ The conductor **must not** pause or ask the user to continue for:
 - Release bookkeeping (`bookkeeping record`)
 - Living-doc reconcile (`living-docs reconcile` — INDEX, COMPLETION-LOG, GAP-BACKLOG on feature branch, R47–R51)
 - Mechanical `deliver-loop` steps with `awaitAgent: false`
+- Drain-budget continuation (`verdict: continue`, `cause: conductor:drain-step-budget-exceeded`) and doc-loop
+  step-budget continuation — re-invoke the driver in the same turn (R22)
 
 These advance in-turn via `deliver-loop` re-invocation. User-facing text like "continue deliver?" is
 forbidden when the driver can proceed.
@@ -332,6 +360,10 @@ Read from `.cursor/workflow.config.json`:
 | `deliver.phaseAckCadence` | `0` | Pause every K phase merges (checkpoint) |
 | `deliver.remediation.maxAttempts` | `2` | Per-phase stabilize budget |
 | `deliver.loop.drainMechanical` | `true` | Drain mechanical steps in-process until agent wait or halt (PRD 062 R7) |
+| `deliver.loop.maxStepsPerInvocation` | `12` | Mechanical drain step budget per `deliver-loop` invocation; exhaustion → `verdict: continue` (R22) |
+| `deliver.targetLock.staleSeconds` | `300` | Target-lock heartbeat staleness window (ship-lease predicate; PRD 081 R19) |
+| `doc.loop.maxStepsPerInvocation` | `8` | Mechanical step budget per `doc-loop` invocation (PRD 081 R11) |
+| `doc.loop.drainMechanical` | `true` | Drain mechanical doc stages in-process until agent/human wait or halt (PRD 081 R11) |
 | `worktree.parallelCeiling` | `4` | Max concurrent phase worktrees |
 
 ## Deliver-loop mechanical drain + timing (PRD 062 R7, R9, R19)

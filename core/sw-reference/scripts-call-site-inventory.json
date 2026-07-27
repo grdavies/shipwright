@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-27T19:40:43Z",
+  "generatedAt": "2026-07-27T20:14:49Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -4114,82 +4114,100 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:69:wave.py",
+      "id": "core/skills/conductor/SKILL.md:78:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 69,
+      "line": 78,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:110:wave.py",
+      "id": "core/skills/conductor/SKILL.md:124:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 110,
+      "line": 124,
+      "column": 27,
+      "script": "wave.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/conductor/SKILL.md:125:doc_loop.py",
+      "tree": "core/skills",
+      "file": "core/skills/conductor/SKILL.md",
+      "line": 125,
+      "column": 23,
+      "script": "doc_loop.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/conductor/SKILL.md:129:wave.py",
+      "tree": "core/skills",
+      "file": "core/skills/conductor/SKILL.md",
+      "line": 129,
       "column": 19,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:130:wave.py",
+      "id": "core/skills/conductor/SKILL.md:156:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 130,
+      "line": 156,
       "column": 72,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:134:dispatch-check.py",
+      "id": "core/skills/conductor/SKILL.md:160:dispatch-check.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 134,
+      "line": 160,
       "column": 11,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:218:wave.py",
+      "id": "core/skills/conductor/SKILL.md:244:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 218,
+      "line": 244,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:283:wave.py",
+      "id": "core/skills/conductor/SKILL.md:311:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 283,
+      "line": 311,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:287:wave.py",
+      "id": "core/skills/conductor/SKILL.md:315:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 287,
+      "line": 315,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:304:wave.py",
+      "id": "core/skills/conductor/SKILL.md:332:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 304,
+      "line": 332,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:305:wave.py",
+      "id": "core/skills/conductor/SKILL.md:333:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 305,
+      "line": 333,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -9685,82 +9703,100 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:71:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:80:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 71,
+      "line": 80,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:112:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:126:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 112,
+      "line": 126,
+      "column": 27,
+      "script": "wave.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/conductor/SKILL.md:127:doc_loop.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/conductor/SKILL.md",
+      "line": 127,
+      "column": 23,
+      "script": "doc_loop.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/conductor/SKILL.md:131:wave.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/conductor/SKILL.md",
+      "line": 131,
       "column": 19,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:132:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:158:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 132,
+      "line": 158,
       "column": 72,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:136:dispatch-check.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:162:dispatch-check.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 136,
+      "line": 162,
       "column": 11,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:220:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:246:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 220,
+      "line": 246,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:285:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:313:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 285,
+      "line": 313,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:289:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:317:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 289,
+      "line": 317,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:306:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:334:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 306,
+      "line": 334,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:307:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:335:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 307,
+      "line": 335,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -14941,82 +14977,100 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:69:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:78:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 69,
+      "line": 78,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:110:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:124:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 110,
+      "line": 124,
+      "column": 27,
+      "script": "wave.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/conductor/SKILL.md:125:doc_loop.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/conductor/SKILL.md",
+      "line": 125,
+      "column": 23,
+      "script": "doc_loop.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/conductor/SKILL.md:129:wave.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/conductor/SKILL.md",
+      "line": 129,
       "column": 19,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:130:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:156:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 130,
+      "line": 156,
       "column": 72,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:134:dispatch-check.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:160:dispatch-check.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 134,
+      "line": 160,
       "column": 11,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:218:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:244:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 218,
+      "line": 244,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:283:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:311:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 283,
+      "line": 311,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:287:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:315:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 287,
+      "line": 315,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:304:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:332:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 304,
+      "line": 332,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:305:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:333:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 305,
+      "line": 333,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
