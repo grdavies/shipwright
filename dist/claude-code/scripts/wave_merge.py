@@ -46,7 +46,6 @@ from status_integrity import (
     validate_terminal_status_shape,
 )
 
-PLAN_PATH = Path(".cursor/sw-deliver-plan.json")
 FORWARD_MERGE_REBASE_RETRIES = 1
 DEFAULT_MERGE_RUN_NEXT_TIMEOUT_SECONDS = int(
     os.environ.get("SW_MERGE_RUN_NEXT_TIMEOUT_SECONDS", "600")
@@ -80,15 +79,10 @@ def mark_post_merge_verify_pending(
     meta["updatedAt"] = utc_now()
 
 
-def load_deliver_plan(root: Path) -> dict[str, Any]:
-    path = root / PLAN_PATH
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except (OSError, json.JSONDecodeError):
-        return {}
+def load_deliver_plan(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    from wave_deliver_loop import load_plan
+
+    return load_plan(root, state)
 
 
 def phase_id_for_slug(state: dict[str, Any], slug: str) -> str | None:
@@ -165,7 +159,7 @@ def select_next_merge_entry(
     queue = list(state.get("mergeQueue") or [])
     if not queue:
         return None, queue
-    plan = load_deliver_plan(root)
+    plan = load_deliver_plan(root, state)
     edges = plan.get("edges") or []
     merged = merged_phase_slugs(state)
     for entry in queue:
@@ -200,7 +194,7 @@ def forward_merge_dependency_branches(
     pid = phase_id_for_slug(state, phase_slug)
     if not pid:
         return []
-    plan = load_deliver_plan(root)
+    plan = load_deliver_plan(root, state)
     edges = plan.get("edges") or []
     phases = state.get("phases") or {}
     host_remote = remote_name(load_workflow_config(root))
@@ -540,7 +534,7 @@ def attempt_deterministic_conflict_resolve(
     if not paths_within_allowlist(conflict_paths, allowlist):
         detail["reason"] = "semantic-conflict"
         return False, detail
-    plan = load_deliver_plan(root)
+    plan = load_deliver_plan(root, state)
     if not conflict_single_preimage(root, state, plan, conflict_paths, phase_slug):
         detail["reason"] = "multi-preimage"
         return False, detail
