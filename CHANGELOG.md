@@ -645,6 +645,7 @@
 * merge phase global-plan-literal-lint-and-currency-gate-reader-small into feat/workflow-state-machine-hardening (e22a28a) <!-- sw-deliver:global-plan-literal-lint-and-currency-gate-reader-small -->
 * merge phase drain-budget-continuation-and-transition-receipts-medium into feat/workflow-state-machine-hardening (24cfa80) <!-- sw-deliver:drain-budget-continuation-and-transition-receipts-medium -->
 * merge phase global-plan-literal-lint-and-currency-gate-reader-small into feat/workflow-state-machine-hardening (8a0fd79) <!-- sw-deliver:global-plan-literal-lint-and-currency-gate-reader-small -->
+* merge phase doc-driver-state-machine-and-doc-run-lock-medium into feat/workflow-state-machine-hardening (03f625e) <!-- sw-deliver:doc-driver-state-machine-and-doc-run-lock-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
