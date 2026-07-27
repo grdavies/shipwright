@@ -157,7 +157,14 @@ def lock_state_for_target(root: Path, target: str | None) -> dict[str, Any]:
         return {"held": False}
     lock_path = scoped_paths(root, target)["lock"]
     meta = read_lock_meta(lock_path) if lock_path.is_file() else {}
-    return {"held": bool(meta), "holder": meta or None, "path": str(lock_path.relative_to(root))}
+    return {"held": bool(meta), "holder": meta or None, "path": _rel_path(root, lock_path)}
+
+
+def _rel_path(root: Path, path: Path) -> str:
+    try:
+        return str(path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        return str(path)
 
 
 def preview_adoption(root: Path, source: dict[str, Any]) -> dict[str, Any]:
@@ -189,18 +196,18 @@ def preview_adoption(root: Path, source: dict[str, Any]) -> dict[str, Any]:
         "taskList": source.get("taskList"),
         "stage": state.get("nextAction"),
         "terminalStatus": state.get("verdict"),
-        "globalPlanPath": str(global_plan.relative_to(root)),
+        "globalPlanPath": _rel_path(root, global_plan),
         "globalPlanPresent": plan_exists,
         "recordedPlanHash": recorded_hash,
         "globalPlanHash": plan_hash,
         "planHashMismatch": hash_mismatch,
         "runScopedStateExists": _run_scoped_state_exists(root, run_id),
-        "runScopedStatePath": str(run_state_path.relative_to(root)),
+        "runScopedStatePath": _rel_path(root, run_state_path),
         "lock": lock_state_for_target(root, target),
         "recoveryPaths": recovery,
         "willAdopt": {
-            "state": str(run_state_path.relative_to(root)),
-            "plan": str(plan_path(root, run_id).relative_to(root)),
+            "state": _rel_path(root, run_state_path),
+            "plan": _rel_path(root, plan_path(root, run_id)),
             "breadcrumb": source.get("statePath"),
         },
     }
@@ -268,7 +275,7 @@ def adopt_legacy_run(
     state["adoptedAt"] = utc_now()
     state["adoptedPlanHash"] = plan_hash
     state["legacyStatePath"] = source.get("statePath")
-    state["legacyPlanPath"] = str(legacy_global_plan_path(root).relative_to(root))
+    state["legacyPlanPath"] = _rel_path(root, legacy_global_plan_path(root))
 
     tmp_state = run_state.with_name(run_state.name + ".adopt-tmp")
     write_json(tmp_state, state)
@@ -282,7 +289,7 @@ def adopt_legacy_run(
         "adopted": True,
         "adoptedAt": state["adoptedAt"],
         "runId": run_id,
-        "runScopedPath": str(run_state.relative_to(root)),
+        "runScopedPath": _rel_path(root, run_state),
         "target": source.get("target"),
         "source_task_list": source.get("taskList"),
     }
@@ -294,9 +301,9 @@ def adopt_legacy_run(
         "action": "adopt",
         "runId": run_id,
         "adoptedPlanHash": plan_hash,
-        "statePath": str(run_state.relative_to(root)),
-        "planPath": str(plan_path(root, run_id).relative_to(root)),
-        "legacyBreadcrumb": str(legacy_state.relative_to(root)),
+        "statePath": _rel_path(root, run_state),
+        "planPath": _rel_path(root, plan_path(root, run_id)),
+        "legacyBreadcrumb": _rel_path(root, legacy_state),
     }
 
 
@@ -340,18 +347,16 @@ def maybe_adopt_on_deliver_loop(root: Path, state: dict[str, Any]) -> dict[str, 
         return {"adopted": False, "reason": "already-adopted"}
     if state.get("planHash"):
         return {"adopted": False, "reason": "run-scoped-plan-present"}
-    run_id = state.get("runId")
-    if not isinstance(run_id, str) or not run_id.strip():
-        run_id = mint_run_id(root)
-        state["runId"] = run_id
     target = target_branch_from_state(state)
-    slug = None
-    if target and "/" in target:
-        slug = target.split("/", 1)[1]
+    slug = target.split("/", 1)[1] if target and "/" in target else None
+    run_id = state.get("runId") if isinstance(state.get("runId"), str) else None
     source = locate_legacy_source(root, slug=slug, run_id=run_id)
     if not source:
         return {"adopted": False, "reason": "no-legacy-source"}
-    if _run_scoped_state_exists(root, str(run_id)) and _is_adopted_run_state(state):
+    adopted_run_id = str(source.get("runId") or run_id or "")
+    if _run_scoped_state_exists(root, adopted_run_id) and _is_adopted_run_state(
+        _read_state_optional(state_path(root, adopted_run_id))
+    ):
         return {"adopted": False, "reason": "run-scoped-exists"}
     result = adopt_legacy_run(root, source, abandon=False)
     return {"adopted": True, **result}

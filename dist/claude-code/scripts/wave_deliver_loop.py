@@ -1000,6 +1000,25 @@ def load_plan(root: Path, state: dict[str, Any] | None = None) -> dict[str, Any]
     return {}
 
 
+def resolve_plan_with_adoption(
+    root: Path, state: dict[str, Any], task_list: str | None = None
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Load run-scoped plan, adopting legacy layout once when resuming (R18/R21)."""
+    plan = load_plan(root, state)
+    if plan:
+        return plan, state
+    if state.get("phases") and state.get("verdict") == "running":
+        from wave_run_adopt import maybe_adopt_on_deliver_loop
+
+        adoption = maybe_adopt_on_deliver_loop(root, state)
+        if adoption.get("adopted"):
+            from wave_state import load_run_scoped_state
+
+            state = load_run_scoped_state(root, str(adoption.get("runId")))
+            return load_plan(root, state), state
+    return {}, state
+
+
 def plan_rel_for_state(root: Path, state: dict[str, Any]) -> str:
     run_id = run_plan.resolve_run_id(state)
     return run_plan.relative_plan_path(root, run_id)
@@ -1936,7 +1955,14 @@ def compute_next_action(
         return {"action": "terminal", "verdict": verdict, "resume": True}
 
     if not plan:
-        return {"action": "plan", "resume": bool(state.get("phases"))}
+        if state.get("phases"):
+            return {
+                "action": "halt-blocked",
+                "cause": "adopt:required",
+                "resume": True,
+                "remediation": "python3 scripts/wave_run_adopt.py <root> preview --slug <slug>",
+            }
+        return {"action": "plan", "resume": False}
 
     if plan.get("mode") != "phase":
         fail("deliver-loop requires phase-mode plan", exit_code=2)
@@ -3397,21 +3423,16 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     task_list = resolve_task_list_arg(root, args) or parse_kv(args, "--task-list")
 
     state = load_state(root, task_list)
-    plan = load_plan(root, state)
+    plan, state = resolve_plan_with_adoption(root, state, task_list)
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
     if task_list and resumed:
         entry = apply_resume_entry(root, state, plan, args)
         if entry.get("orchestratorAdopt", {}).get("adopted"):
             state = load_state(root, task_list)
-            plan = load_plan(root, state)
+            plan, state = resolve_plan_with_adoption(root, state, task_list)
             resumed = bool(state.get("verdict") == "running" and state.get("phases"))
     if resumed and state.get("phases") and not state.get("planHash"):
-        from wave_run_adopt import maybe_adopt_on_deliver_loop
-
-        adoption = maybe_adopt_on_deliver_loop(root, state)
-        if adoption.get("adopted"):
-            state = load_state(root, task_list)
-            plan = load_plan(root, state)
+        plan, state = resolve_plan_with_adoption(root, state, task_list)
 
     assert_run_identity(root, state, task_list, args)
     assert_driver_adopt_gate(state, args)
@@ -3427,7 +3448,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     steps_taken: list[dict[str, Any]] = []
     for _ in range(max_steps):
         state = load_state(root, task_list)
-        plan = load_plan(root, state)
+        plan, state = resolve_plan_with_adoption(root, state, task_list)
         if task_list:
             state["source_task_list"] = task_list
         init_budget_counters(state)
@@ -3715,7 +3736,7 @@ def main() -> None:
         cmd_budget_check(root, args)
     elif cmd == "compute-next":
         state = load_state(root)
-        plan = load_plan(root, state)
+        plan, state = resolve_plan_with_adoption(root, state)
         emit(
             {
                 "verdict": "pass",
