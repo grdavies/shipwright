@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+import subprocess
+import sys
+from pathlib import Path
+
+root = Path(__file__).resolve().parent.parent.parent
+proc = subprocess.run(
+    [sys.executable, str(root / "scripts/global_plan_lint.py"), "--check"],
+    cwd=str(root),
+    shell=False,
+)
+if proc.returncode != 0:
+    raise SystemExit(proc.returncode)
+print("OK  global-plan-lint")

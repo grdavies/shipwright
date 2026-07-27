@@ -1,42 +1,97 @@
 #!/usr/bin/env python3
 """Hard-block when living-doc ledger drifts from durable deliver state for the current run (R50). """
 from __future__ import annotations
+
+import json
+import re
 import sys
 from pathlib import Path
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+
 from _sw.cli import run_module_main
+
+
+def _parse_run_id(argv: list[str]) -> tuple[str | None, list[str]]:
+    cleaned: list[str] = []
+    run_id: str | None = None
+    idx = 0
+    while idx < len(argv):
+        token = argv[idx]
+        if token == "--run-id" and idx + 1 < len(argv):
+            run_id = argv[idx + 1]
+            idx += 2
+            continue
+        cleaned.append(token)
+        idx += 1
+    return run_id, cleaned
+
+
+def resolve_plan_path(
+    root: Path,
+    state: dict[str, object],
+    explicit_plan: Path | None = None,
+    *,
+    run_id: str | None = None,
+) -> Path:
+    """Resolve the deliver plan through the run helper when a run id is available (R18)."""
+    from wave_run_paths import global_plan_path, is_repository_global_plan_path, plan_path as run_plan_path
+    from wave_run_plan import resolve_run_id
+
+    active_run_id = run_id or state.get("runId")
+    if active_run_id:
+        return run_plan_path(root, resolve_run_id({**state, "runId": active_run_id}))
+
+    if state.get("planHash") and state.get("runId"):
+        return run_plan_path(root, resolve_run_id(state))
+
+    if explicit_plan is not None:
+        resolved = explicit_plan.resolve()
+        if is_repository_global_plan_path(root, resolved):
+            return resolved
+        return resolved
+
+    return global_plan_path(root)
+
 
 def _resolve_argv(argv: list[str]) -> list[str]:
     if len(argv) >= 3 and argv[1] == "--state-root":
         import sys as _sys
+
         _sys.stderr.write(
             "DEPRECATION: docs-currency-gate.py --state-root is deprecated; "
-            "use four positional args (repo_root state_root state.json plan.json)\n"
+            "use four positional args (repo_root state_root state.json plan.json) or --run-id\n"
         )
         state_root = Path(argv[2])
         state_path = state_root / ".cursor" / "sw-deliver-state.json"
         if not state_path.is_file():
             matches = sorted((state_root / ".cursor").glob("sw-deliver-state.*.json"))
             state_path = matches[0] if len(matches) == 1 else state_path
-        plan_path = state_root / ".cursor" / "sw-deliver-plan.json"
+        state: dict[str, object] = {}
+        if state_path.is_file():
+            try:
+                loaded = json.loads(state_path.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    state = loaded
+            except json.JSONDecodeError:
+                state = {}
+        plan_path = resolve_plan_path(state_root, state)
         return [argv[0], str(state_root), str(state_root), str(state_path), str(plan_path)]
     return argv
 
 
 def main(argv: list[str] | None = None) -> int:
-    import json
-    import re
-    import sys
-    from pathlib import Path
-
     raw_argv = list(argv if argv is not None else sys.argv)
-    resolved = _resolve_argv(raw_argv)
+    run_id, stripped = _parse_run_id(raw_argv)
+    resolved = _resolve_argv(stripped)
     root = Path(resolved[1])
     state_root = Path(resolved[2])
     state = json.loads(Path(resolved[3]).read_text())
-    plan = json.loads(Path(resolved[4]).read_text()) if Path(resolved[4]).is_file() else {}
+    explicit_plan = Path(resolved[4]) if len(resolved) > 4 else None
+    plan_file = resolve_plan_path(root, state, explicit_plan, run_id=run_id)
+    plan = json.loads(plan_file.read_text(encoding="utf-8")) if plan_file.is_file() else {}
 
     prd = str(state.get("prd_number") or plan.get("prd_number") or "").zfill(3)
     if not prd or prd == "000":
@@ -56,6 +111,7 @@ def main(argv: list[str] | None = None) -> int:
     merged_main = False
     try:
         import subprocess
+
         proc = subprocess.run(
             [sys.executable, str(root / "scripts" / "wave_compound.py"), str(state_root), "completion", "check-merge"],
             cwd=str(state_root),
@@ -176,8 +232,20 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"verdict": "fail", "action": "docs-currency-gate", "prd": prd, "drift": drift}))
         sys.exit(1)
 
-    print(json.dumps({"verdict": "pass", "action": "docs-currency-gate", "prd": prd, "indexStatus": index_status, "expected": expected}))
+    print(
+        json.dumps(
+            {
+                "verdict": "pass",
+                "action": "docs-currency-gate",
+                "prd": prd,
+                "indexStatus": index_status,
+                "expected": expected,
+                "planPath": str(plan_file),
+            }
+        )
+    )
     return 0
+
 
 if __name__ == "__main__":
     run_module_main(main)

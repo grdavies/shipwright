@@ -125,3 +125,15 @@ INDEX_DISCOVERY_FIELDS = frozenset(
 def sanitize_index_entry(entry: dict[str, object]) -> dict[str, object]:
     """Keep only discovery fields on the root runs index (R20)."""
     return {key: value for key, value in entry.items() if key in INDEX_DISCOVERY_FIELDS}
+
+
+def global_plan_path(root: Path) -> Path:
+    """Repository-global transient plan path (legacy; prefer run-scoped plan_path)."""
+    return (root / GLOBAL_PLAN_REL).resolve()
+
+
+def is_repository_global_plan_path(root: Path, candidate: Path) -> bool:
+    try:
+        return candidate.resolve() == global_plan_path(root)
+    except OSError:
+        return False
