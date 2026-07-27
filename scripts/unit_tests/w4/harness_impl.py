@@ -136,24 +136,69 @@ else
 fi
 
 # --- worktree: ceiling excludes main checkout ---
+# Intent: primary checkout never counts toward swWorktrees. Absolute zero is wrong
+# when sibling fixtures in the same CI job leave .sw-worktrees entries behind.
 CEIL=$(bash "$ROOT/scripts/worktree.sh" ceiling-check 2>/dev/null || true)
-SW_COUNT=$(echo "$CEIL" | python3 -c "import json,sys; print(json.load(sys.stdin).get('swWorktrees', -1))" 2>/dev/null || echo "-1")
-IS_LINKED_WT=false
-if [[ -f "$ROOT/.git" ]] && head -1 "$ROOT/.git" 2>/dev/null | grep -q '^gitdir:'; then
-  IS_LINKED_WT=true
-fi
-if [[ "$IS_LINKED_WT" == true ]]; then
-  if [[ "$SW_COUNT" -ge 1 ]]; then
-    echo "OK  worktree ceiling inside linked worktree (swWorktrees=$SW_COUNT)"
-  else
-    echo "FAIL worktree ceiling expected swWorktrees>=1 in worktree got: $SW_COUNT ($CEIL)"
-    FAIL=1
-  fi
-elif [[ "$SW_COUNT" == "0" ]]; then
-  echo "OK  worktree ceiling swWorktrees=0 (main excluded)"
-else
-  echo "FAIL worktree ceiling expected swWorktrees=0 got: $SW_COUNT ($CEIL)"
+CEIL_CHECK=$(ROOT="$ROOT" CEIL_JSON="$CEIL" python3 <<'PY'
+import json, os, subprocess, sys
+from pathlib import Path
+
+root = Path(os.environ["ROOT"]).resolve()
+try:
+    payload = json.loads(os.environ.get("CEIL_JSON") or "")
+except json.JSONDecodeError:
+    payload = {}
+sw_count = payload.get("swWorktrees", -1)
+try:
+    out = subprocess.check_output(
+        ["git", "-C", str(root), "worktree", "list", "--porcelain"], text=True
+    )
+except subprocess.CalledProcessError:
+    print(f"FAIL worktree ceiling: git worktree list failed ({payload})")
+    sys.exit(2)
+
+blocks: list[dict[str, str]] = []
+block: dict[str, str] = {}
+for line in out.splitlines():
+    if not line.strip():
+        if block:
+            blocks.append(block)
+            block = {}
+        continue
+    key, _, val = line.partition(" ")
+    block[key] = val
+if block:
+    blocks.append(block)
+
+primary_counted = False
+sw_paths = []
+for b in blocks:
+    wt = b.get("worktree", "")
+    if not wt:
+        continue
+    path = Path(wt).resolve()
+    if path == root and "/.sw-worktrees/" not in wt:
+        primary_counted = True
+    if "/.sw-worktrees/" in wt:
+        sw_paths.append(wt)
+
+is_linked = (root / ".git").is_file() and (root / ".git").read_text(encoding="utf-8", errors="replace").startswith("gitdir:")
+if primary_counted:
+    print(f"FAIL worktree ceiling counted primary checkout ({payload})")
+    sys.exit(1)
+if is_linked and int(sw_count) < 1:
+    print(f"FAIL worktree ceiling expected swWorktrees>=1 in worktree got: {sw_count} ({payload})")
+    sys.exit(1)
+print(f"OK  worktree ceiling excludes primary (swWorktrees={sw_count}, linked={is_linked})")
+sys.exit(0)
+PY
+)
+CEIL_EC=$?
+if [[ "$CEIL_EC" -ne 0 ]]; then
+  echo "$CEIL_CHECK"
   FAIL=1
+else
+  echo "$CEIL_CHECK"
 fi
 
 # --- reconcile-status: anchored PR slug matching ---
