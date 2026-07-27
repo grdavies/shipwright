@@ -77,9 +77,10 @@ from wave_state import (
     ensure_canonical_state_synced,
     sync_canonical_state_read,
 )
+import wave_run_plan as run_plan
+from wave_run_paths import GLOBAL_PLAN_REL
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-PLAN_PATH = Path(".cursor/sw-deliver-plan.json")
 BLOCKER_PATH = Path(".cursor/sw-deliver-runs/blockers.json")
 
 MECHANICAL_ACTIONS = frozenset(
@@ -971,11 +972,22 @@ def append_log(root: Path, entry: dict[str, Any], state: dict[str, Any] | None =
     state_append_log(root, entry, target=target)
 
 
-def load_plan(root: Path) -> dict[str, Any]:
-    path = root / PLAN_PATH
-    if not path.is_file():
+def load_plan(root: Path, state: dict[str, Any] | None = None) -> dict[str, Any]:
+    if state is None:
         return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    if state.get("planHash") or state.get("runId"):
+        if state.get("planHash"):
+            return run_plan.load_plan_for_state(root, state)
+        return {}
+    transient = root / GLOBAL_PLAN_REL
+    if transient.is_file():
+        return json.loads(transient.read_text(encoding="utf-8"))
+    return {}
+
+
+def plan_rel_for_state(root: Path, state: dict[str, Any]) -> str:
+    run_id = run_plan.resolve_run_id(state)
+    return run_plan.relative_plan_path(root, run_id)
 
 
 def load_state(root: Path, task_list: str | None = None) -> dict[str, Any]:
@@ -2470,12 +2482,18 @@ def _execute_mechanical_inner(
         ec, data = run_wave(root, *plan_args)
         if ec != 0:
             fail_payload(data, "plan failed", ec)
-        plan = load_plan(root)
+        plan = data if isinstance(data, dict) and data.get("mode") else {}
+        if not plan:
+            fail("plan action returned no plan payload")
+        run_id = run_plan.ensure_run_id(root, state)
+        run_plan.persist_plan(root, run_id, plan, state)
+        save_state(root, state)
         persist_cursor(root, state, "state-init")
-        return {"executed": "plan", "plan": plan.get("target")}
+        return {"executed": "plan", "plan": plan.get("target"), "runId": run_id}
 
     if action == "state-init":
-        ec, data = run_wave(root, "state", "init", "--plan", str(PLAN_PATH))
+        plan_rel = plan_rel_for_state(root, state)
+        ec, data = run_wave(root, "state", "init", "--plan", plan_rel)
         if ec != 0:
             fail_payload(data, "state init failed", ec)
         state.update(load_state(root))
@@ -2558,7 +2576,7 @@ def _execute_mechanical_inner(
 
     if action == "orchestrator-provision":
         ec, data = run_wave(
-            root, "orchestrator", "provision", "--plan", str(PLAN_PATH)
+            root, "orchestrator", "provision", "--plan", plan_rel_for_state(root, state)
         )
         if ec != 0:
             fail_payload(data, "orchestrator provision failed", ec)
@@ -2577,7 +2595,7 @@ def _execute_mechanical_inner(
             "--phase-id",
             pid,
             "--plan",
-            str(PLAN_PATH),
+            plan_rel_for_state(root, state),
         )
         if ec != 0:
             fail_payload(data, "phase provision failed", ec)
@@ -2633,7 +2651,7 @@ def _execute_mechanical_inner(
             "--phase-id",
             pid,
             "--plan",
-            str(PLAN_PATH),
+            plan_rel_for_state(root, state),
         )
         if ec != 0:
             fail_payload(data, "phase teardown failed", ec)
@@ -3273,13 +3291,13 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     task_list = resolve_task_list_arg(root, args) or parse_kv(args, "--task-list")
 
     state = load_state(root, task_list)
-    plan = load_plan(root)
+    plan = load_plan(root, state)
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
     if task_list and resumed:
         entry = apply_resume_entry(root, state, plan, args)
         if entry.get("orchestratorAdopt", {}).get("adopted"):
             state = load_state(root, task_list)
-            plan = load_plan(root)
+            plan = load_plan(root, state)
             resumed = bool(state.get("verdict") == "running" and state.get("phases"))
 
     assert_run_identity(root, state, task_list, args)
@@ -3296,7 +3314,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     steps_taken: list[dict[str, Any]] = []
     for _ in range(max_steps):
         state = load_state(root, task_list)
-        plan = load_plan(root)
+        plan = load_plan(root, state)
         if task_list:
             state["source_task_list"] = task_list
         init_budget_counters(state)
@@ -3476,7 +3494,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
             load_state(root, task_list),
         )
         if not drain_mechanical_enabled(root):
-            next_after = compute_next_action(root, load_state(root, task_list), load_plan(root))
+            next_after = compute_next_action(root, load_state(root, task_list), load_plan(root, state))
             emit(
                 {
                     "verdict": "pass",
@@ -3489,7 +3507,7 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                 }
             )
 
-    next_after = compute_next_action(root, load_state(root, task_list), load_plan(root))
+    next_after = compute_next_action(root, load_state(root, task_list), load_plan(root, state))
     if (
         drain_mechanical_enabled(root)
         and next_after.get("action") in MECHANICAL_ACTIONS
@@ -3531,7 +3549,7 @@ def cmd_remediation_default(root: Path, _args: list[str]) -> None:
 
 def cmd_budget_tick(root: Path, args: list[str]) -> None:
     state = load_state(root)
-    plan = load_plan(root)
+    plan = load_plan(root, state)
     next_action = parse_kv(args, "--next-action")
     if not next_action:
         next_action = compute_next_action(root, state, plan)["action"]
@@ -3583,7 +3601,7 @@ def main() -> None:
         cmd_budget_check(root, args)
     elif cmd == "compute-next":
         state = load_state(root)
-        plan = load_plan(root)
+        plan = load_plan(root, state)
         emit(
             {
                 "verdict": "pass",
