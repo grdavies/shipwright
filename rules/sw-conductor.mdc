@@ -65,6 +65,13 @@ legitimate set in `skills/conductor/SKILL.md` and emit `scripts/wave.py report b
 `report terminal` — never a bare continuation prompt. Every halt must include `resumeCommand`
 (`/sw-deliver run <source_task_list>` when present).
 
+## Drain-budget continuation is not a halt (R22)
+
+`verdict: continue` with `cause: conductor:drain-step-budget-exceeded` (deliver-loop mechanical drain
+budget) and the doc-loop step-budget continuation signal are **excluded** from the legitimate-halt set.
+Re-invoke the driver (`deliver-loop` or `doc-loop`) in the **same turn** — never surface budget exhaustion
+as an operator interruption, blocker report, or scope-confirmation prompt.
+
 ## No status-pause / silent dispatch (R14–R16, R28)
 
 While `verdict: running`:

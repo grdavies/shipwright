@@ -9,8 +9,9 @@
 
 **Termination / halt surfaces:**
 
-- **`--max-steps` budget** (default 12 per invocation) — when still mechanical after the budget,
-  `conductor:drain-step-budget-exceeded` halts fail-closed (not an unqualified pass).
+- **`--max-steps` budget** (default from `deliver.loop.maxStepsPerInvocation`, **12**) — when still mechanical
+  after the budget, `conductor:drain-step-budget-exceeded` returns **`verdict: continue`** — re-invoke
+  `deliver-loop` in the same turn; **not** a legitimate halt (PRD 081 R22).
 - **No-progress circuit breaker** — identical `nextAction` + state signature 3× → `conductor:no-progress`.
 - **Identical mechanical signature N×** without state advance → stall halt (not pass).
 
