@@ -1094,13 +1094,7 @@ def run_tasks_currency_gate(root: Path, state: dict[str, Any]) -> None:
     """
     from wave_deliver_loop import load_plan, tasks_currency_ok
 
-    plan: dict[str, Any] = {}
-    plan_path = root / ".cursor" / "sw-deliver-plan.json"
-    if plan_path.is_file():
-        try:
-            plan = json.loads(plan_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            plan = {}
+    plan = load_plan(root, state)
     ok, cause = tasks_currency_ok(root, state, plan)
     if not ok:
         fail(
@@ -1155,11 +1149,13 @@ def run_tasks_currency_gate(root: Path, state: dict[str, Any]) -> None:
 
 
 def resolve_docs_currency_paths(root: Path) -> tuple[Path, Path, Path, Path]:
+    from wave_run_paths import plan_path as run_plan_path
+    from wave_run_plan import resolve_run_id
     from wave_state import load_deliver_state, resolve_state_path
 
     state = load_deliver_state(root)
     state_path = resolve_state_path(root, state_hint=state if state else None)
-    plan_path = root / ".cursor" / "sw-deliver-plan.json"
+    plan_path = run_plan_path(root, resolve_run_id(state))
     return root, root, state_path, plan_path
 
 

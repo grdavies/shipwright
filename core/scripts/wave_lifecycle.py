@@ -162,15 +162,32 @@ def write_shipwright_state(worktree_path: Path, payload: dict[str, Any]) -> None
     os.chmod(state_path, 0o600)
 
 
-def load_plan(root: Path, plan_rel: str | None) -> dict[str, Any]:
-    rel = plan_rel or ".cursor/sw-deliver-plan.json"
-    plan_path = (root / rel).resolve()
-    if not plan_path.is_file():
-        fail(f"plan not found: {rel}")
-    try:
-        return json.loads(plan_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        fail(f"invalid plan JSON: {exc}")
+def load_plan(
+    root: Path,
+    plan_rel: str | None,
+    *,
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    from wave_run_paths import GLOBAL_PLAN_REL
+    import wave_run_plan as run_plan
+
+    if plan_rel:
+        rel = plan_rel.strip()
+        if rel == GLOBAL_PLAN_REL:
+            fail(f"repository-global plan path not allowed: {rel}")
+        path = (root / rel).resolve()
+        if not path.is_file():
+            fail(f"plan not found: {rel}")
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            fail(f"invalid plan JSON: {exc}")
+    active = state if state is not None else load_deliver_state(root)
+    if not active.get("runId"):
+        fail("run id required for plan load")
+    if not active.get("planHash"):
+        fail("plan not persisted for run")
+    return run_plan.load_plan_for_state(root, active)
 
 
 def load_deliver_state(root: Path) -> dict[str, Any]:
@@ -233,9 +250,14 @@ def cmd_assert_entry(root: Path, args: list[str]) -> None:
         elif plan_rel:
             provision_args.extend(["--plan", plan_rel])
         else:
-            default_plan = root / ".cursor" / "sw-deliver-plan.json"
-            if default_plan.is_file():
-                provision_args.extend(["--plan", ".cursor/sw-deliver-plan.json"])
+            state = load_deliver_state(root)
+            if state.get("planHash") and state.get("runId"):
+                import wave_run_plan as run_plan
+
+                plan_rel = run_plan.relative_plan_path(
+                    root, run_plan.resolve_run_id(state)
+                )
+                provision_args.extend(["--plan", plan_rel])
         if not provision_args:
             fail(
                 proc.stderr.strip() or "implementation entry blocked on bare default branch",
@@ -373,8 +395,10 @@ def adopt_orchestrator_worktree(
 
 def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
     target = parse_kv(args, "--target")
+    plan_rel = parse_kv(args, "--plan")
+    state = load_deliver_state(root)
     if not target:
-        plan = load_plan(root, parse_kv(args, "--plan"))
+        plan = load_plan(root, plan_rel, state=state)
         target = (plan.get("target") or {}).get("branch")
     if not target:
         fail("--target or --plan with target.branch required")
@@ -589,8 +613,8 @@ def cmd_phase_teardown_run(root: Path, args: list[str]) -> None:
     phase_id = parse_kv(args, "--phase-id")
     if not phase_id:
         fail("--phase-id required")
-    plan = load_plan(root, parse_kv(args, "--plan"))
     state = load_deliver_state(root)
+    plan = load_plan(root, parse_kv(args, "--plan"), state=state)
     phases = state.get("phases") or {}
     meta = phases.get(phase_id)
     if not isinstance(meta, dict):
@@ -830,7 +854,8 @@ def cmd_phase_provision(root: Path, args: list[str]) -> None:
     phase_id = parse_kv(args, "--phase-id")
     if not phase_id:
         fail("--phase-id required")
-    plan = load_plan(root, parse_kv(args, "--plan"))
+    state = load_deliver_state(root)
+    plan = load_plan(root, parse_kv(args, "--plan"), state=state)
     items = plan.get("items") or []
     item = next((i for i in items if str(i.get("id")) == phase_id), None)
     if not item:
