@@ -78,6 +78,7 @@ from wave_state import (
     sync_canonical_state_read,
 )
 import wave_run_plan as run_plan
+from wave_run_paths import GLOBAL_PLAN_REL
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 BLOCKER_PATH = Path(".cursor/sw-deliver-runs/blockers.json")
@@ -974,7 +975,14 @@ def append_log(root: Path, entry: dict[str, Any], state: dict[str, Any] | None =
 def load_plan(root: Path, state: dict[str, Any] | None = None) -> dict[str, Any]:
     if state is None:
         return {}
-    return run_plan.load_plan_for_state(root, state)
+    if state.get("planHash") or state.get("runId"):
+        if state.get("planHash"):
+            return run_plan.load_plan_for_state(root, state)
+        return {}
+    transient = root / GLOBAL_PLAN_REL
+    if transient.is_file():
+        return json.loads(transient.read_text(encoding="utf-8"))
+    return {}
 
 
 def plan_rel_for_state(root: Path, state: dict[str, Any]) -> str:
