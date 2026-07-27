@@ -1,0 +1,12 @@
+{
+  "/repository/commits/abc123/statuses": {
+    "verdict": "ok",
+    "statusCode": 200,
+    "body": "[{\"name\":\"ci\",\"status\":\"success\",\"target_url\":\"https://gitlab.com/owner/repo/-/jobs/1\"}]"
+  },
+  "/pipelines?sha=abc123": {
+    "verdict": "ok",
+    "statusCode": 200,
+    "body": "[]"
+  }
+}

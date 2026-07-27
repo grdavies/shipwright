@@ -1,0 +1,8 @@
+{
+  "_legacyStatus": true,
+  "/repos/owner/repo": {
+    "verdict": "ok",
+    "status": 200,
+    "body": "{\"full_name\":\"owner/repo\"}"
+  }
+}

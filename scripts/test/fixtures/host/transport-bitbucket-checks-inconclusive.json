@@ -1,0 +1,7 @@
+{
+  "/commit/abc123/statuses": {
+    "verdict": "ok",
+    "statusCode": 502,
+    "body": "{\"error\":{\"message\":\"Bad Gateway\"}}"
+  }
+}

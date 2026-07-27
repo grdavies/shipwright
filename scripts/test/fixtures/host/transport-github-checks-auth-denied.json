@@ -1,0 +1,8 @@
+{
+  "/commits/abc123/check-runs": {
+    "verdict": "fail",
+    "statusCode": 401,
+    "headers": {"x-github-media-type": "github.v3"},
+    "body": "{\"message\":\"Bad credentials\"}"
+  }
+}

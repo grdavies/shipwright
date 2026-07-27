@@ -1,0 +1,8 @@
+{
+  "/commits/abc123/check-runs": {
+    "verdict": "ok",
+    "statusCode": 403,
+    "headers": {"x-ratelimit-remaining": "0", "x-ratelimit-reset": "9999999999"},
+    "body": "{\"message\":\"API rate limit exceeded\"}"
+  }
+}

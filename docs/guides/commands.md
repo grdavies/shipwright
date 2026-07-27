@@ -228,9 +228,11 @@ debugging one phase, or when you deliberately skip the orchestrator.
 | [`/sw-review`](../../core/commands/sw-review.md) | Local then provider code review (`review.provider`; default **`none`**) |
 | [`/sw-commit`](../../core/commands/sw-commit.md) | Commit after verify + review |
 | [`/sw-pr`](../../core/commands/sw-pr.md) | Push and open/update PR |
-| [`/sw-watch-ci`](../../core/commands/sw-watch-ci.md) | Poll PR checks via `check-gate.py` |
+| [`/sw-watch-ci`](../../core/commands/sw-watch-ci.md) | Poll PR checks via `check-gate.py`; **halt** (not poll) on unavailable Checks capability |
 | [`/sw-stabilize`](../../core/commands/sw-stabilize.md) | Clear CI + review blockers |
 | [`/sw-ready`](../../core/commands/sw-ready.md) | Terminal readiness report; echoes `review: off` or `review: not configured` from gate JSON |
+
+**Unavailable Checks capability (`host-auth-required`):** when `check-gate.py` reports `blocked` with `reasonCode: host-auth-required`, the host token cannot read CI check status. This is a **remediation halt** — emit guidance from `core/providers/host/remediation-checks.md` and stop. Do not poll CI, attempt stabilization, or treat the state as retryable yellow/pending.
 
 **Gap-check write (required):** before `merge-ready-green`, the ship chain must persist a binding
 `gap-check.status.json` via `python3 scripts/gap-check-gate.py write pass --phase-slug <slug>`.

@@ -127,6 +127,14 @@ def fallback_pytest_paths(changed_paths: list[str]) -> list[str]:
     paths: list[str] = []
     for raw in changed_paths:
         norm = normalize_repo_path(raw)
+        if norm.startswith("core/scripts/test/") and norm.endswith(".py"):
+            paths.append(norm)
+            continue
+        if norm.startswith("core/scripts/_sw/host/") or norm.startswith(
+            "scripts/_sw/host/"
+        ):
+            paths.append("core/scripts/test")
+            continue
         if not norm.startswith("scripts/") or not norm.endswith(".py"):
             continue
         if "/test/" in f"/{norm}/" and not norm.startswith("scripts/unit_tests/"):
@@ -135,8 +143,18 @@ def fallback_pytest_paths(changed_paths: list[str]) -> list[str]:
         unit_guess = f"scripts/unit_tests/{Path(norm).stem.replace('run_', '').replace('_fixtures', '')}"
         if norm.startswith("scripts/unit_tests/"):
             paths.append(norm)
-        else:
+            continue
+        name = Path(norm).name
+        if name.startswith("test_") or name.endswith("_test.py"):
             paths.append(norm)
+            continue
+        # Never collect implementation modules as pytest targets (import mismatch
+        # with core/scripts mirrors). Prefer paired core test module when present.
+        stem = Path(norm).stem
+        paired = f"core/scripts/test/test_{stem}.py"
+        # Skip phantom pairs (e.g. `_common.py` → `test__common.py`).
+        if Path(paired).is_file() or (Path.cwd() / paired).is_file():
+            paths.append(paired)
     return sorted(set(paths))
 
 
@@ -208,8 +226,7 @@ def build_plan(
 
     if not suite_ids and normalized:
         paths = fallback_pytest_paths(normalized)
-        if paths:
-            advisories.append("no-registry-match: using touched scripts/**/*.py fallback")
+        advisories.append("no-registry-match: using touched scripts/**/*.py fallback")
 
     pytest_args: list[str] = []
     if markers:

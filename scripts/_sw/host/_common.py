@@ -11,7 +11,8 @@ import sys
 import tempfile
 from contextlib import redirect_stdout
 from pathlib import Path
-from typing import Any
+from collections.abc import Callable
+from typing import Any, Literal
 from urllib.parse import quote
 
 _SCRIPTS_DIR = Path(__file__).resolve().parent.parent.parent
@@ -20,6 +21,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
 
 from _sw import jsonio  # noqa: E402
 from _sw.host_transport import urllib_request  # noqa: E402
+from host_ratelimit import is_throttled, normalize_headers  # noqa: E402
 from host_lib import (  # noqa: E402
     bitbucket_api_base,
     github_api_base,
@@ -55,6 +57,48 @@ def fixture_dir(root: Path) -> Path:
     return root / "scripts" / "test" / "fixtures" / "host"
 
 
+class HostFixtureError(RuntimeError):
+    """Raised when SW_HOST_FIXTURE is set but no matching fixture exists (PRD 079 R16)."""
+
+
+def tag_simulated(payload: dict[str, Any]) -> dict[str, Any]:
+    """Mark fixture-sourced evidence so merge paths can reject it outside tests (R16)."""
+    out = dict(payload)
+    out["simulated"] = True
+    return out
+
+
+def is_simulated_evidence(payload: dict[str, Any]) -> bool:
+    return bool(payload.get("simulated"))
+
+
+def reject_simulated_for_merge(payload: dict[str, Any]) -> None:
+    """Fail closed when simulated fixture evidence would authorize merge (PRD 079 R16)."""
+    if not is_simulated_evidence(payload):
+        return
+    if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("SW_HOST_FIXTURE"):
+        return
+    raise HostFixtureError("simulated evidence cannot authorize merge outside tests")
+
+
+def _transport_envelope_from_fixture(entry: Any) -> dict[str, Any]:
+    """Normalize a transport fixture map entry to a production-shaped transport payload."""
+    if isinstance(entry, dict) and (
+        "statusCode" in entry or "status" in entry or "verdict" in entry or "body" in entry
+    ):
+        envelope = dict(entry)
+        if "statusCode" not in envelope and "status" in envelope:
+            envelope["statusCode"] = envelope["status"]
+        if "verdict" not in envelope:
+            envelope["verdict"] = "ok"
+        body = envelope.get("body")
+        if body is not None and not isinstance(body, str):
+            envelope["body"] = json.dumps(body)
+        return envelope
+    body_text = entry if isinstance(entry, str) else json.dumps(entry)
+    return {"verdict": "ok", "statusCode": 200, "body": body_text}
+
+
 def mock_fixture(root: Path, name: str) -> dict[str, Any] | None:
     """Load a canned verb response when SW_HOST_FIXTURE is set."""
     fix = fixture_name()
@@ -77,8 +121,6 @@ def mock_fixture(root: Path, name: str) -> dict[str, Any] | None:
     elif name.startswith("pr-close-"):
         candidates.append(fdir / f"pr-close-{fix}.json")
         candidates.append(fdir / "pr-close-green.json")
-    elif name.startswith("checks-"):
-        candidates.append(fdir / "checks-green.json")
     elif name.startswith("review-threads-"):
         candidates.append(fdir / f"review-threads-{fix}.json")
         if "blocked" in fix:
@@ -87,8 +129,8 @@ def mock_fixture(root: Path, name: str) -> dict[str, Any] | None:
         candidates.append(fdir / f"merge-{fix}.json")
     for path in candidates:
         if path.is_file():
-            return json.loads(path.read_text(encoding="utf-8"))
-    return None
+            return tag_simulated(json.loads(path.read_text(encoding="utf-8")))
+    raise HostFixtureError(f"unresolved host fixture: {name} (SW_HOST_FIXTURE={fix})")
 
 
 def mock_transport(root: Path, url: str) -> dict[str, Any] | None:
@@ -98,13 +140,14 @@ def mock_transport(root: Path, url: str) -> dict[str, Any] | None:
         return None
     map_file = fixture_dir(root) / f"transport-{fix}.json"
     if not map_file.is_file():
-        return None
+        raise HostFixtureError(f"unresolved transport fixture: transport-{fix}.json")
     mapping = json.loads(map_file.read_text(encoding="utf-8"))
     for pattern, body in mapping.items():
+        if pattern.startswith("_"):
+            continue
         if pattern in url or url.endswith(pattern):
-            body_text = body if isinstance(body, str) else json.dumps(body)
-            return {"verdict": "ok", "status": 200, "body": body_text}
-    return None
+            return tag_simulated(_transport_envelope_from_fixture(body))
+    raise HostFixtureError(f"no transport mapping for url in transport-{fix}.json: {url}")
 
 
 def http_request(
@@ -140,11 +183,96 @@ def parse_transport_body(transport: dict[str, Any]) -> str:
     return json.dumps(body)
 
 
+def transport_status_code(transport: dict[str, Any]) -> int | None:
+    """Return HTTP status from a transport payload (PRD 079 R3).
+
+    Prefers ``statusCode``; accepts legacy ``status`` as a one-release alias.
+    Missing or invalid values return ``None`` — never default to 200.
+    """
+    raw = transport.get("statusCode")
+    if raw is None:
+        raw = transport.get("status")
+    if raw is None:
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
 def transport_ok(transport: dict[str, Any]) -> bool:
     verdict = transport.get("verdict")
-    return verdict in ("ok", "degraded") and transport.get("status", 200) < 400 or (
-        verdict == "ok" and "body" in transport
-    )
+    status = transport_status_code(transport)
+    if verdict in ("ok", "degraded") and status is not None and status < 400:
+        return True
+    return verdict == "ok" and "body" in transport
+
+
+TransportClass = Literal["ok", "auth-denied", "not-found", "rate-limited", "inconclusive"]
+
+
+def classify_transport(
+    transport: dict[str, Any],
+    *,
+    provider: str,
+) -> TransportClass:
+    """Classify a host HTTP transport payload (PRD 079 R2, R4).
+
+    Rate-limit signals take precedence over auth-denied (403 throttle ≠ auth remediation).
+    """
+    if transport.get("verdict") == "rate-limited":
+        return "rate-limited"
+
+    status = transport_status_code(transport)
+    headers_raw = transport.get("headers")
+    headers = normalize_headers(headers_raw if isinstance(headers_raw, dict) else None)
+    body = parse_transport_body(transport)
+
+    if status is None:
+        if transport.get("verdict") == "ok" and "body" in transport:
+            return "ok"
+        return "inconclusive"
+
+    if status == 429:
+        return "rate-limited"
+    if status == 404:
+        return "not-found"
+    if status == 402:
+        return "inconclusive"
+    if status == 403 and is_throttled(status, headers, provider, body=body):
+        return "rate-limited"
+    if status in (401, 403):
+        return "auth-denied"
+    if 200 <= status < 300:
+        return "ok"
+    return "inconclusive"
+
+
+def classified_transport_guard(
+    *,
+    verb: str,
+    provider: str,
+    transport: dict[str, Any],
+) -> tuple[dict[str, Any], int] | None:
+    """Classify transport and return verb fail payload when not ok (PRD 079 R5)."""
+    transport_class = classify_transport(transport, provider=provider)
+    if transport_class == "ok":
+        return None
+    reason_by_class: dict[TransportClass, str] = {
+        "auth-denied": "auth-denied",
+        "not-found": "not-found",
+        "rate-limited": "rate-limited",
+        "inconclusive": "transport-failed",
+    }
+    payload = fail_json(verb, provider, reason_by_class[transport_class])
+    payload["transportClass"] = transport_class
+    status_code = transport_status_code(transport)
+    if status_code is not None:
+        payload["statusCode"] = status_code
+    if transport_class == "rate-limited":
+        payload["retryable"] = True
+        return payload, 37
+    return payload, 30
 
 
 def remote_ref_exists_from_transport(
@@ -164,12 +292,15 @@ def remote_ref_exists_from_transport(
             "reason": "rate-limited",
             "retryable": True,
         }
-        if transport.get("statusCode") is not None:
-            payload["statusCode"] = transport.get("statusCode")
+        status_code = transport_status_code(transport)
+        if status_code is not None:
+            payload["statusCode"] = status_code
         return payload, 37
     if "body" not in transport and verdict not in ("ok",):
         return fail_json(verb, provider, "probe-inconclusive"), 30
-    status = int(transport.get("status", 200))
+    status = transport_status_code(transport)
+    if status is None:
+        return fail_json(verb, provider, "probe-inconclusive"), 30
     if status == 404:
         return emit_verb_ok(verb, provider, {"exists": False, "branch": branch}), 0
     if 200 <= status < 300:
@@ -179,8 +310,84 @@ def remote_ref_exists_from_transport(
     return fail_json(verb, provider, "probe-inconclusive"), 30
 
 
+def checks_fail_payload(
+    provider: str,
+    transport_class: TransportClass,
+    transport: dict[str, Any],
+) -> tuple[dict[str, Any], int]:
+    """Map a non-ok transport class to a classified checks verb failure (PRD 079 R1, R2)."""
+    payload: dict[str, Any] = {
+        "verdict": "fail",
+        "verb": "checks",
+        "provider": provider,
+        "transportClass": transport_class,
+    }
+    status_code = transport_status_code(transport)
+    if status_code is not None:
+        payload["statusCode"] = status_code
+    if transport_class == "rate-limited":
+        payload["reason"] = "rate-limited"
+        payload["retryable"] = True
+        return payload, 37
+    if transport_class in ("auth-denied", "not-found"):
+        payload["reason"] = "auth-denied"
+        payload["retryable"] = False
+        return payload, 30
+    payload["reason"] = "inconclusive"
+    payload["retryable"] = True
+    return payload, 30
+
+
+def checks_from_transport(
+    *,
+    provider: str,
+    transport: dict[str, Any],
+    map_checks: Callable[[str], list[dict[str, Any]]],
+) -> tuple[dict[str, Any], int]:
+    """Classify transport before mapping checks; never pass error bodies to mappers (PRD 079 R1)."""
+    transport_class = classify_transport(transport, provider=provider)
+    if transport_class != "ok":
+        return checks_fail_payload(provider, transport_class, transport)
+    checks = map_checks(parse_transport_body(transport))
+    return emit_verb_ok("checks", provider, checks), 0
+
+
+def checks_from_transport_fallback(
+    *,
+    provider: str,
+    transports: list[dict[str, Any]],
+    map_checks: Callable[[str], list[dict[str, Any]]],
+) -> tuple[dict[str, Any], int]:
+    """Try transports in order; abort on definitive non-ok classes (GitLab statuses→pipelines)."""
+    last_inconclusive: tuple[dict[str, Any], int] | None = None
+    for transport in transports:
+        transport_class = classify_transport(transport, provider=provider)
+        if transport_class == "ok":
+            return checks_from_transport(
+                provider=provider,
+                transport=transport,
+                map_checks=map_checks,
+            )
+        if transport_class in ("auth-denied", "not-found", "rate-limited"):
+            return checks_fail_payload(provider, transport_class, transport)
+        last_inconclusive = checks_fail_payload(provider, transport_class, transport)
+    if last_inconclusive is not None:
+        return last_inconclusive
+    return fail_json("checks", provider, "transport-failed"), 30
+
+
+from _sw.host._emit_redact import (  # noqa: E402
+    EMIT_HEADER_ALLOWLIST,
+    filter_emit_headers,
+    redact_emit_payload,
+    redact_emit_text,
+    redact_emit_value,
+    redact_transport_payload,
+)
+
+
 def emit(payload: dict[str, Any]) -> None:
-    jsonio.emit(payload, indent=2)
+    jsonio.emit(redact_emit_payload(payload), indent=2)
 
 
 def emit_verb_ok(verb: str, provider: str, data: Any) -> dict[str, Any]:
