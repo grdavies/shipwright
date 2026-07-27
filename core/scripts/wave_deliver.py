@@ -507,6 +507,7 @@ def feature_slug(frontmatter: dict[str, str], task_path: Path) -> str:
 
 
 RESUME_TERMINAL_VERDICTS = frozenset({"complete", "blocked", "rejected"})
+NONTERMINAL_VERDICTS = frozenset({"running"})
 
 
 def canonical_task_list_rel(root: Path, raw: str) -> str:
@@ -1171,13 +1172,210 @@ def run_capability_index_preflight(root: Path) -> dict[str, Any]:
     return payload
 
 
+def derive_run_stage(state: dict[str, Any]) -> str | None:
+    stage = state.get("nextAction")
+    if isinstance(stage, str) and stage.strip():
+        return stage.strip()
+    phases = state.get("phases")
+    if isinstance(phases, dict):
+        for meta in phases.values():
+            if isinstance(meta, dict) and meta.get("status") == "in-flight":
+                return "phase-in-flight"
+    return None
+
+
+def derive_unit_id(state: dict[str, Any]) -> str | None:
+    task_list = state.get("source_task_list")
+    if not isinstance(task_list, str) or not task_list.strip():
+        return None
+    try:
+        import planning_materialize as pm
+
+        return pm.unit_id_from_task_list_rel(task_list)
+    except Exception:
+        stem = Path(task_list).stem
+        return stem if stem else None
+
+
+def is_nonterminal_verdict(verdict: str | None) -> bool:
+    return verdict in NONTERMINAL_VERDICTS
+
+
+def requires_legacy_adoption(root: Path, entry: dict[str, Any]) -> bool:
+    from wave_run_paths import state_path as run_state_path
+
+    run_id = entry.get("runId")
+    if not isinstance(run_id, str) or not run_id:
+        return bool(entry.get("legacy"))
+    path = run_state_path(root, run_id)
+    if not path.is_file():
+        return True
+    try:
+        from wave_json_io import read_json
+        from wave_state import _is_migration_breadcrumb
+
+        data = read_json(path)
+        if _is_migration_breadcrumb(data):
+            return True
+        return not bool(data.get("legacyAdopted") or data.get("adoptedPlanHash"))
+    except Exception:
+        return True
+
+
+def enrich_run_entry(root: Path, entry: dict[str, Any]) -> dict[str, Any]:
+    from wave_state import read_lock_meta, scoped_paths, target_branch_from_state
+
+    state = entry.get("state") if isinstance(entry.get("state"), dict) else {}
+    target = entry.get("target") or target_branch_from_state(state)
+    unit = entry.get("unit") or derive_unit_id(state) or entry.get("taskList")
+    stage = entry.get("stage") or derive_run_stage(state)
+    verdict = entry.get("verdict") or state.get("verdict")
+    legacy = bool(entry.get("legacy")) or requires_legacy_adoption(root, entry)
+    lock = entry.get("lock") or {}
+    if not lock and isinstance(target, str) and "/" in target:
+        lock_path = scoped_paths(root, target)["lock"]
+        meta = read_lock_meta(lock_path) if lock_path.is_file() else {}
+        lock = {"held": bool(meta), "holder": meta or None}
+    return {
+        "runId": entry.get("runId"),
+        "targetBranch": target,
+        "unit": unit,
+        "stage": stage,
+        "lock": lock,
+        "terminalStatus": verdict,
+        "requiresAdoption": legacy,
+        "statePath": entry.get("statePath"),
+        "taskList": entry.get("taskList") or state.get("source_task_list"),
+    }
+
+
+def list_deliver_runs(root: Path) -> list[dict[str, Any]]:
+    from wave_json_io import read_json
+    from wave_state import _is_migration_breadcrumb, enumerate_run_scoped_dirs, enumerate_scoped_runs
+
+    runs: list[dict[str, Any]] = []
+    for entry in enumerate_run_scoped_dirs(root):
+        state_path = root / str(entry.get("statePath") or "")
+        state = read_json(state_path) if state_path.is_file() else {}
+        payload = {
+            **entry,
+            "state": state,
+            "legacy": requires_legacy_adoption(root, entry),
+        }
+        runs.append(enrich_run_entry(root, payload))
+    seen = {str(r.get("runId") or "") for r in runs if r.get("runId")}
+    for entry in enumerate_scoped_runs(root):
+        slug = str(entry.get("slug") or "")
+        legacy_key = f"legacy-{slug}" if slug else "legacy-global"
+        if legacy_key in seen:
+            continue
+        state_path = root / str(entry.get("statePath") or "")
+        state = read_json(state_path) if state_path.is_file() else {}
+        if _is_migration_breadcrumb(state):
+            continue
+        payload = {
+            "runId": legacy_key,
+            "slug": slug,
+            "statePath": entry.get("statePath"),
+            "taskList": entry.get("taskList"),
+            "verdict": entry.get("verdict"),
+            "target": entry.get("target"),
+            "state": state,
+            "legacy": True,
+            "lock": {
+                "held": bool(entry.get("lockHeld")),
+                "holder": entry.get("lockHolder"),
+            },
+        }
+        runs.append(enrich_run_entry(root, payload))
+        seen.add(legacy_key)
+    return runs
+
+
+def nonterminal_deliver_runs(root: Path) -> list[dict[str, Any]]:
+    return [r for r in list_deliver_runs(root) if is_nonterminal_verdict(r.get("terminalStatus"))]
+
+
+def locate_run(root: Path, run_id: str) -> dict[str, Any] | None:
+    rid = run_id.strip()
+    for entry in list_deliver_runs(root):
+        if entry.get("runId") == rid:
+            return entry
+    return None
+
+
+def resolve_resume_cardinality(root: Path, args: list[str]) -> dict[str, Any]:
+    """Resume locator with explicit run id or single nonterminal cardinality (R21)."""
+    explicit = parse_kv(args, "--run-id")
+    if explicit:
+        located = locate_run(root, explicit)
+        if not located:
+            fail(
+                f"run not found: {explicit}",
+                exit_code=20,
+                halt="resume:run-not-found",
+                runId=explicit,
+                runs=list_deliver_runs(root),
+            )
+        if not is_nonterminal_verdict(located.get("terminalStatus")):
+            fail(
+                "resume refused: run is terminal",
+                exit_code=20,
+                halt="resume:terminal-run",
+                run=located,
+            )
+        return {"verdict": "pass", "run": located, "runId": explicit}
+
+    candidates = nonterminal_deliver_runs(root)
+    if not candidates:
+        fail(
+            "no nonterminal deliver runs to resume",
+            exit_code=20,
+            halt="resume:none",
+            runs=list_deliver_runs(root),
+        )
+    if len(candidates) > 1:
+        fail(
+            "multiple nonterminal deliver runs; pass --run-id",
+            exit_code=20,
+            halt="resume:ambiguous",
+            runs=candidates,
+        )
+    only = candidates[0]
+    return {
+        "verdict": "pass",
+        "run": only,
+        "runId": only.get("runId"),
+        "taskList": only.get("taskList"),
+    }
+
+
+def cmd_list(root: Path, args: list[str]) -> None:
+    runs = list_deliver_runs(root)
+    emit({"verdict": "pass", "action": "list", "runs": runs, "count": len(runs)})
+
+
+def cmd_resume_locate(root: Path, args: list[str]) -> None:
+    emit(resolve_resume_cardinality(root, args))
+
+
 def cmd_run(root: Path, args: list[str]) -> None:
     """Resolve deliver entry reference and materialize frozen task list (PRD 059 R1)."""
     import planning_materialize as pm
 
     task_list = resolve_task_list_arg(root, args)
+    run_id = parse_kv(args, "--run-id")
+    if not task_list and not run_id:
+        resolved = resolve_resume_cardinality(root, args)
+        task_list = str(resolved.get("taskList") or "")
+        run_id = str(resolved.get("runId") or "") or None
+    elif run_id and not task_list:
+        located = locate_run(root, run_id)
+        if not located:
+            fail(f"run not found: {run_id}", exit_code=20, halt="resume:run-not-found")
+        task_list = str(located.get("taskList") or "")
     if not task_list:
-        fail("provide --task-list, --unit-id, or --issue", exit_code=2, halt="disambiguation")
+        fail("provide --task-list, --unit-id, --issue, or --run-id", exit_code=2, halt="disambiguation")
     resume = evaluate_resume_short_circuit(root, args)
     if resume.get("halt"):
         fail(
@@ -1653,6 +1851,10 @@ def main() -> None:
         cmd_dependency_gate(root, args)
     elif cmd == "closure-close-phases":
         cmd_closure_close_phases(root, args)
+    elif cmd == "list":
+        cmd_list(root, args)
+    elif cmd == "resume-locate":
+        cmd_resume_locate(root, args)
     else:
         fail(f"unknown command: {cmd}")
 
