@@ -137,12 +137,12 @@ Feature: new billing portal — explore pricing models, 8+ files, auth + Stripe
 
 ---
 
-## PRD 081 workflow sequencing invariants (R16, R17, R15)
+## Workflow sequencing invariants
 
 These invariants apply to the durable doc driver (`scripts/doc_loop.py`) and the planning helpers it
 calls. They are ordering contracts — violating them fails closed rather than silently skipping work.
 
-### Number reservation transaction (R16)
+### Number reservation transaction
 
 Concurrent doc runs must not allocate the same PRD number. Reservation is transactional:
 
@@ -160,7 +160,7 @@ python3 scripts/planning_reserve.py . reserve --unit-id <unit-id> --slug <slug>
 python3 scripts/planning_reserve.py . release --number <nnn> --unit-id <unit-id>
 ```
 
-### Pre-freeze rescore (R17)
+### Pre-freeze rescore
 
 After related-work acknowledgement and before PRD freeze, `/sw-doc` runs `final-triage-rescore`
 (`doc_rescore.py`):
@@ -174,7 +174,7 @@ After related-work acknowledgement and before PRD freeze, `/sw-doc` runs `final-
 Escalation never reopens a frozen artifact. Downgrade without justification fails closed with a
 machine-readable `halt` and the current/proposed tier in the payload.
 
-### Publication sequencing invariants (R15)
+### Publication sequencing invariants
 
 Publication mode is store-conditioned — the doc driver never reaches standalone `docs-commit` /
 `docs-pr` stages (`UNREACHABLE_PUBLICATION_STAGES` in `doc_loop.py`):
@@ -189,7 +189,7 @@ docs branches — the durable doc driver does not invoke them. `publication_mode
 attempting an unreachable stage raises `publication-stage-unreachable`.
 
 Target-lock ordering: doc-run exclusion (`sw-doc-run-locks/`) is acquired before persistent doc-run
-state mutation, matching deliver target-lock precedence (R19).
+state mutation, matching deliver target-lock precedence.
 
 ---
 

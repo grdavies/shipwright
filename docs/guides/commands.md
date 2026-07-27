@@ -71,7 +71,7 @@ terminal merge on drift.
 See [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) and
 [`core/skills/deliver/SKILL.md`](../../core/skills/deliver/SKILL.md).
 
-### Deliver operator surface (PRD 081 R21)
+### Deliver operator surface
 
 Mechanical list / resume / finalize commands report run identity, target branch, stage, lock holder,
 and `requiresAdoption` **before** any mutation. Operators invoke them via `wave_deliver.py` (or
@@ -95,7 +95,7 @@ python3 scripts/wave_deliver.py . resume-locate --run-id deliver-<uuid>
 python3 scripts/wave.py finalize --run-id <runId>
 ```
 
-**Resume cardinality (R21):** with no `--run-id`, exactly one nonterminal run must exist. Legacy
+**Resume cardinality:** with no `--run-id`, exactly one nonterminal run must exist. Legacy
 slug-scoped state appears as `legacy-<slug>` with `requiresAdoption: true` until `wave_run_adopt.py`
 migrates it into `.cursor/sw-deliver-runs/<runId>/`.
 
