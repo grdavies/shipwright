@@ -249,20 +249,20 @@ def _collect_terminal_run_state(
     state_root: Path,
     tag: str,
 ) -> None:
+    from wave_run_paths import runs_root
+
+    runs_base = runs_root(state_root)
+    if runs_base.is_dir():
+        for child in sorted(runs_base.iterdir()):
+            if child.is_dir() and child.name.startswith("deliver-"):
+                report.would_remove.append(
+                    Item("run-state", rel_to_repo(repo_root, child), tag, "terminal deliver run")
+                )
+
     cursor = state_root / ".cursor"
     for state_file in sorted(cursor.glob("sw-deliver-state*.json")):
         report.would_remove.append(
             Item("run-state", rel_to_repo(repo_root, state_file), tag, "terminal deliver run")
-        )
-    plan_file = cursor / "sw-deliver-plan.json"
-    if plan_file.is_file():
-        report.would_remove.append(
-            Item("run-state", rel_to_repo(repo_root, plan_file), tag, "terminal deliver run")
-        )
-    runs_dir = cursor / "sw-deliver-runs"
-    if runs_dir.is_dir():
-        report.would_remove.append(
-            Item("run-state", rel_to_repo(repo_root, runs_dir), tag, "terminal deliver run")
         )
 
 
@@ -277,6 +277,18 @@ def _stale_state_rel_paths(view: DeliverStateView, repo_root: Path) -> set[str]:
     return rels
 
 
+def _all_deliver_runs(repo_root: Path) -> list[dict[str, Any]]:
+    from wave_state import enumerate_run_scoped_dirs, enumerate_scoped_runs
+
+    runs = list(enumerate_run_scoped_dirs(repo_root))
+    seen_paths = {str(entry.get("statePath") or "") for entry in runs}
+    for entry in enumerate_scoped_runs(repo_root):
+        state_path = str(entry.get("statePath") or "")
+        if state_path and state_path not in seen_paths:
+            runs.append(entry)
+    return runs
+
+
 def _scoped_run_inflight(repo_root: Path, run: dict[str, Any]) -> tuple[bool, str]:
     from wave_state import _is_migration_breadcrumb, _read_state_optional
 
@@ -284,13 +296,14 @@ def _scoped_run_inflight(repo_root: Path, run: dict[str, Any]) -> tuple[bool, st
     state = _read_state_optional(state_path)
     if _is_migration_breadcrumb(state):
         return False, ""
+    label = str(run.get("slug") or run.get("runId") or "unknown")
     if run.get("lockHeld"):
-        return True, f"deliver lock present ({run.get('slug')})"
+        return True, f"deliver lock present ({label})"
     verdict = str(state.get("verdict") or run.get("verdict") or "")
     if state.get("mergeJournal"):
-        return True, f"open merge journal ({run.get('slug')})"
+        return True, f"open merge journal ({label})"
     if verdict in RESUMABLE_DELIVER_VERDICTS:
-        return True, f"deliver run verdict={verdict} ({run.get('slug')})"
+        return True, f"deliver run verdict={verdict} ({label})"
     return False, ""
 
 
@@ -325,6 +338,9 @@ def _run_slug(run: dict[str, Any]) -> str | None:
     slug = str(run.get("slug") or "").strip()
     if slug and slug != "(legacy)":
         return slug
+    run_id = str(run.get("runId") or "").strip()
+    if run_id.startswith("legacy-"):
+        return run_id.removeprefix("legacy-")
     target = str(run.get("target") or "").strip()
     return _slug_from_target(target)
 
@@ -337,12 +353,10 @@ def _run_in_active_scope(run: dict[str, Any], active_slugs: set[str]) -> bool:
 
 
 def deliver_inflight(repo_root: Path) -> tuple[bool, str]:
-    from wave_state import enumerate_scoped_runs
-
     view = resolve_deliver_state(repo_root)
     stale = _stale_state_rel_paths(view, repo_root)
     active_slugs = _active_scope_slugs(repo_root, view)
-    for run in enumerate_scoped_runs(repo_root):
+    for run in _all_deliver_runs(repo_root):
         if run.get("statePath") in stale:
             continue
         if not _run_in_active_scope(run, active_slugs):
@@ -354,13 +368,13 @@ def deliver_inflight(repo_root: Path) -> tuple[bool, str]:
 
 
 def _run_state_item_protected(repo_root: Path, rel_path: str) -> tuple[bool, str]:
-    from wave_state import enumerate_scoped_runs, _read_state_optional
+    from wave_state import _read_state_optional
 
     view = resolve_deliver_state(repo_root)
     stale = _stale_state_rel_paths(view, repo_root)
     if rel_path in stale:
         return False, ""
-    for run in enumerate_scoped_runs(repo_root):
+    for run in _all_deliver_runs(repo_root):
         if run.get("statePath") != rel_path:
             continue
         return _scoped_run_inflight(repo_root, run)
@@ -376,11 +390,9 @@ def _run_state_item_protected(repo_root: Path, rel_path: str) -> tuple[bool, str
     return False, ""
 
 def _protect_inflight_scoped_runs(report: Report, repo_root: Path) -> None:
-    from wave_state import enumerate_scoped_runs
-
     view = resolve_deliver_state(repo_root)
     stale = _stale_state_rel_paths(view, repo_root)
-    for run in enumerate_scoped_runs(repo_root):
+    for run in _all_deliver_runs(repo_root):
         if run.get("statePath") in stale:
             continue
         inflight, reason = _scoped_run_inflight(repo_root, run)

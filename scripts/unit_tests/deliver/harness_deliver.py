@@ -810,6 +810,25 @@ fi
 
 # --- verify, blast-radius, revert, deny (R25–R27, R39, R45–R46) ---
 WF="$ROOT/scripts/wave_failure.py"
+bootstrap_run_scoped_plan() {
+  local fix="$1"
+  python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+from wave_run_plan import ensure_run_id, persist_plan
+from wave_json_io import write_json, read_json
+
+root = Path(sys.argv[1])
+plan_path = root / '.cursor/sw-deliver-plan.json'
+state_path = root / '.cursor/sw-deliver-state.json'
+plan = json.loads(plan_path.read_text(encoding='utf-8'))
+state = read_json(state_path)
+run_id = ensure_run_id(root, state)
+persist_plan(root, run_id, plan, state)
+write_json(state_path, state)
+" "$fix"
+}
 BR_FIX=$(mktemp -d)
 mkdir -p "$BR_FIX/.cursor"
 cat >"$BR_FIX/.cursor/sw-deliver-plan.json" <<'JSON'
@@ -818,6 +837,7 @@ JSON
 cat >"$BR_FIX/.cursor/sw-deliver-state.json" <<'JSON'
 {"target":{"branch":"feat/demo"},"phases":{"1":{"id":"1","slug":"alpha","status":"blocked","cause":"verify:failed"},"2":{"id":"2","slug":"beta","status":"pending"},"3":{"id":"3","slug":"gamma","status":"pending"}}}
 JSON
+bootstrap_run_scoped_plan "$BR_FIX"
 if OUT=$(python3 "$WF" "$BR_FIX" blast-radius apply --phase-slug alpha 2>/dev/null) && \
    echo "$OUT" | python3 -c "
 import json,sys
@@ -884,6 +904,7 @@ JSON
   cat >.cursor/sw-deliver-state.json <<JSON
 {"target":{"branch":"feat/demo"},"phases":{"1":{"id":"1","slug":"alpha","status":"green-merged","branch":"feat/demo-phase-alpha","mergeCommit":"$MERGE_SHA"},"2":{"id":"2","slug":"beta","status":"pending"}},"mergedPhases":[{"phaseSlug":"alpha","mergeCommit":"$MERGE_SHA"}],"orchestratorWorktree":{"path":"$REVERT_FIX"}}
 JSON
+  bootstrap_run_scoped_plan "$REVERT_FIX"
   if OUT=$(python3 "$WF" "$REVERT_FIX" revert phase --phase-slug alpha --worktree "$REVERT_FIX" 2>/dev/null) && \
      echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['action']=='revert-phase'" && \
      python3 -c "
@@ -906,8 +927,11 @@ rm -rf "$REVERT_FIX"
 
 DENY_FIX=$(mktemp -d)
 mkdir -p "$DENY_FIX/.cursor"
+echo '{"mode":"phase","target":{"branch":"feat/demo"},"items":[{"id":"1","slug":"alpha"}],"waves":[["1"]],"edges":[]}' \
+  >"$DENY_FIX/.cursor/sw-deliver-plan.json"
 echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","status":"green-merged"}},"verdict":"running"}' \
   >"$DENY_FIX/.cursor/sw-deliver-state.json"
+bootstrap_run_scoped_plan "$DENY_FIX"
 if python3 "$WF" "$DENY_FIX" terminal deny --scope whole-feature --reason smoke 2>/dev/null | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
@@ -1113,12 +1137,27 @@ fi
 
 MEM_FIX=$(mktemp -d)
 mkdir -p "$MEM_FIX/.cursor/sw-deliver-runs"
-echo '{"mode":"phase","target":{"branch":"feat/demo"},"notices":["contention: phases 1 and 2 serialized (shared)"],"contention":{"injectedEdges":[{"from":"1","to":"2","kind":"contention"}]}}' \
+echo '{"mode":"phase","target":{"branch":"feat/demo"},"notices":["contention: phases 1 and 2 serialized (shared)"],"contention":{"injectedEdges":[{"from":"1","to":"2","kind":"contention"}]},"items":[{"id":"1","slug":"alpha"},{"id":"2","slug":"beta"}],"waves":[["1"],["2"]],"edges":[]}' \
   >"$MEM_FIX/.cursor/sw-deliver-plan.json"
 echo '{"target":{"branch":"feat/demo"},"phases":{"1":{"slug":"alpha","status":"blocked","cause":"verify:failed"}}}' \
   >"$MEM_FIX/.cursor/sw-deliver-state.json"
-echo '{"event":"blast-radius","sourcePhaseSlug":"alpha","blockedDependents":[{"phaseSlug":"beta"}]}' \
-  >>"$MEM_FIX/.cursor/sw-deliver-runs/run.log"
+bootstrap_run_scoped_plan "$MEM_FIX"
+python3 -c "
+import json, sys
+from pathlib import Path
+sys.path.insert(0, '$ROOT/scripts')
+from wave_run_plan import resolve_run_id
+from wave_run_paths import events_path
+from wave_json_io import read_json
+
+root = Path('$MEM_FIX')
+state = read_json(root / '.cursor/sw-deliver-state.json')
+run_id = resolve_run_id(state)
+event_path = events_path(root, run_id)
+event_path.parent.mkdir(parents=True, exist_ok=True)
+line = json.dumps({'event':'blast-radius','sourcePhaseSlug':'alpha','blockedDependents':[{'phaseSlug':'beta'}]}) + '\n'
+event_path.write_text(line, encoding='utf-8')
+"
 if python3 "$WM" "$MEM_FIX" learnings distill 2>/dev/null | python3 -c "
 import json,sys
 d=json.load(sys.stdin)

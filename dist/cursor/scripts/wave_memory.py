@@ -37,8 +37,12 @@ def read_json(path: Path) -> dict[str, Any]:
         return {}
 
 
-def read_run_log(root: Path, limit: int = 200) -> list[dict[str, Any]]:
-    log_path = root / ".cursor" / "sw-deliver-runs" / "run.log"
+def read_run_log(root: Path, state: dict[str, Any], limit: int = 200) -> list[dict[str, Any]]:
+    import wave_run_plan as run_plan
+    from wave_run_paths import events_path
+
+    run_id = run_plan.resolve_run_id(state)
+    log_path = events_path(root, run_id)
     if not log_path.is_file():
         return []
     entries: list[dict[str, Any]] = []
@@ -52,9 +56,10 @@ def read_run_log(root: Path, limit: int = 200) -> list[dict[str, Any]]:
 
 def distill_learnings(root: Path) -> dict[str, Any]:
     from wave_state import load_deliver_state
+    import wave_run_plan as run_plan
 
     state = load_deliver_state(root)
-    plan = read_json(root / ".cursor" / "sw-deliver-plan.json")
+    plan = run_plan.load_plan_for_state(root, state) if state.get("planHash") else {}
     target = state.get("target") or plan.get("target") or {}
     patterns: list[dict[str, str]] = []
 
@@ -72,7 +77,7 @@ def distill_learnings(root: Path) -> dict[str, Any]:
             }
         )
 
-    for entry in read_run_log(root):
+    for entry in read_run_log(root, state):
         event = entry.get("event")
         if event == "blast-radius":
             patterns.append(

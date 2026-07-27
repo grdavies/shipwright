@@ -56,15 +56,14 @@ def load_state(root: Path) -> dict[str, Any]:
         return {}
 
 
-def load_plan(root: Path) -> dict[str, Any]:
-    path = root / ".cursor" / "sw-deliver-plan.json"
-    if not path.is_file():
+def load_plan(root: Path, state: dict[str, Any] | None = None) -> dict[str, Any]:
+    if state is None:
+        state = load_state(root)
+    if not state.get("planHash"):
         return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except json.JSONDecodeError:
-        return {}
+    import wave_run_plan as run_plan
+
+    return run_plan.load_plan_for_state(root, state)
 
 
 def prd_number_from_state(state: dict[str, Any], plan: dict[str, Any]) -> str | None:
@@ -434,7 +433,7 @@ def cmd_reconcile(root: Path, args: list[str]) -> None:
     from wave_living_doc_lock import living_doc_write_lock
 
     state = load_state(root)
-    plan = load_plan(root)
+    plan = load_plan(root, state)
     prd = prd_number_from_state(state, plan)
     if not prd:
         fail("prd_number missing from deliver state/plan")
@@ -551,7 +550,7 @@ def cmd_append_terminal(root: Path, args: list[str]) -> None:
 
 
 def _cmd_append_terminal_locked(root: Path, args: list[str], state: dict[str, Any]) -> None:
-    plan = load_plan(root)
+    plan = load_plan(root, state)
     prd = prd_number_from_state(state, plan)
     if not prd:
         fail("prd_number missing from deliver state/plan")
