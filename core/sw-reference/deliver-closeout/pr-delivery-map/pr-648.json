@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "prNumber": 648,
+  "prUrl": "https://github.com/grdavies/shipwright/pull/648",
+  "prdUnitId": "prd-081-workflow-state-machine-hardening",
+  "prdNumber": "081",
+  "deliverySlug": "workflow-state-machine-hardening",
+  "targetBranch": "feat/workflow-state-machine-hardening",
+  "headSha": "fb7948ed5ee531bd95f999faa7a03a79de99548d",
+  "runSlug": "workflow-state-machine-hardening",
+  "recordedAt": "2026-07-27T20:54:46Z"
+}
