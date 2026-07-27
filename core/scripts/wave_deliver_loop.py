@@ -1012,9 +1012,7 @@ def resolve_plan_with_adoption(
 
         adoption = maybe_adopt_on_deliver_loop(root, state)
         if adoption.get("adopted"):
-            from wave_state import load_run_scoped_state
-
-            state = load_run_scoped_state(root, str(adoption.get("runId")))
+            state = load_state(root, task_list)
             return load_plan(root, state), state
     return {}, state
 
@@ -1955,14 +1953,7 @@ def compute_next_action(
         return {"action": "terminal", "verdict": verdict, "resume": True}
 
     if not plan:
-        if state.get("phases"):
-            return {
-                "action": "halt-blocked",
-                "cause": "adopt:required",
-                "resume": True,
-                "remediation": "python3 scripts/wave_run_adopt.py <root> preview --slug <slug>",
-            }
-        return {"action": "plan", "resume": False}
+        return {"action": "plan", "resume": bool(state.get("phases"))}
 
     if plan.get("mode") != "phase":
         fail("deliver-loop requires phase-mode plan", exit_code=2)

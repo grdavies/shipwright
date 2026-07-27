@@ -74,25 +74,53 @@ def locate_legacy_source(
     root: Path, *, slug: str | None = None, run_id: str | None = None
 ) -> dict[str, Any] | None:
     """Find legacy/scoped state that still requires adoption."""
-    cursor = root / ".cursor"
-    candidates: list[dict[str, Any]] = []
-
+    candidates = _legacy_candidates(root)
     if run_id:
-        for entry in _legacy_candidates(root):
-            if entry.get("runId") == run_id or entry.get("legacyKey") == run_id:
-                candidates.append(entry)
+        candidates = [
+            e
+            for e in candidates
+            if e.get("runId") == run_id or e.get("legacyKey") == run_id
+        ]
     elif slug:
-        for entry in _legacy_candidates(root):
-            if entry.get("slug") == slug or entry.get("legacyKey") == f"legacy-{slug}":
-                candidates.append(entry)
-    else:
-        candidates = _legacy_candidates(root)
-
+        candidates = [
+            e
+            for e in candidates
+            if e.get("slug") == slug or e.get("legacyKey") == f"legacy-{slug}"
+        ]
     if not candidates:
         return None
     if len(candidates) > 1 and not (slug or run_id):
         return None
     return candidates[0]
+
+
+def locate_legacy_source_from_state(root: Path, state: dict[str, Any]) -> dict[str, Any] | None:
+    """Resolve an adoption source from the active deliver state payload."""
+    if not state.get("phases") or state.get("verdict") != "running":
+        return None
+    if state.get("legacyAdopted") or state.get("planHash"):
+        return None
+    target = target_branch_from_state(state)
+    slug = target.split("/", 1)[1] if target and "/" in target else None
+    run_id = str(state.get("runId") or (f"deliver-{slug}" if slug else "deliver-legacy"))
+    from wave_state import resolve_state_path
+
+    state_path = resolve_state_path(root, target=target, state_hint=state)
+    try:
+        rel = str(state_path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        rel = str(state_path)
+    return {
+        "layout": "active",
+        "slug": slug or "(legacy)",
+        "runId": run_id,
+        "legacyKey": f"legacy-{slug}" if slug else "legacy-global",
+        "statePath": rel,
+        "state": state,
+        "target": target,
+        "taskList": state.get("source_task_list"),
+        "verdict": state.get("verdict"),
+    }
 
 
 def _legacy_candidates(root: Path) -> list[dict[str, Any]]:
@@ -351,6 +379,8 @@ def maybe_adopt_on_deliver_loop(root: Path, state: dict[str, Any]) -> dict[str, 
     slug = target.split("/", 1)[1] if target and "/" in target else None
     run_id = state.get("runId") if isinstance(state.get("runId"), str) else None
     source = locate_legacy_source(root, slug=slug, run_id=run_id)
+    if not source and legacy_global_plan_path(root).is_file():
+        source = locate_legacy_source_from_state(root, state)
     if not source:
         return {"adopted": False, "reason": "no-legacy-source"}
     adopted_run_id = str(source.get("runId") or run_id or "")

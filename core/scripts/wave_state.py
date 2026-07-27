@@ -210,6 +210,21 @@ def _is_migration_breadcrumb(data: dict[str, Any]) -> bool:
     return data.get("migrated") is True
 
 
+def _run_scoped_path_from_breadcrumb(root: Path, data: dict[str, Any]) -> Path | None:
+    rel = data.get("runScopedPath")
+    if isinstance(rel, str):
+        path = root / rel
+        if path.is_file():
+            return path
+    run_id = data.get("runId")
+    if isinstance(run_id, str) and run_id:
+        from wave_run_paths import state_path as run_state_path
+
+        path = run_state_path(root, run_id)
+        return path if path.is_file() else None
+    return None
+
+
 def _scoped_path_from_breadcrumb(root: Path, data: dict[str, Any]) -> Path | None:
     rel = data.get("scopedPath")
     if isinstance(rel, str):
@@ -832,14 +847,21 @@ def load_deliver_state(
         fail_corrupt(path, exc)
         return {}
     if _is_migration_breadcrumb(data):
-        scoped = _scoped_path_from_breadcrumb(root, data)
-        if scoped is not None:
+        adopted = _run_scoped_path_from_breadcrumb(root, data)
+        if adopted is not None:
             try:
-                data = read_json(scoped)
+                data = read_json(adopted)
             except StateCorruptError:
                 return {}
         else:
-            return {}
+            scoped = _scoped_path_from_breadcrumb(root, data)
+            if scoped is not None:
+                try:
+                    data = read_json(scoped)
+                except StateCorruptError:
+                    return {}
+            else:
+                return {}
     anchor = _path_normalize_anchor(root)
     try:
         return normalize_deliver_state_paths(data, anchor=anchor)
