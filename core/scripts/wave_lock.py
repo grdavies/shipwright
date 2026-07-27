@@ -27,7 +27,9 @@ from wave_state import append_log, emit, fail, parse_kv, read_lock_meta, utc_now
 SHIP_LEASE_STALE_SECONDS = int(os.environ.get("SW_SHIP_LEASE_STALE_SECONDS", "300"))
 LOCKS_DIR_NAME = "sw-deliver-locks"
 TARGET_LOCKS_DIR_NAME = "sw-target-locks"
+DOC_RUN_LOCKS_DIR_NAME = "sw-doc-run-locks"
 TARGET_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
+DOC_RUN_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
 SAFE_SLUG_RE = re.compile(r"[^a-zA-Z0-9._-]+")
 
 
@@ -123,6 +125,63 @@ def repository_identity(root: Path) -> str:
 def target_lock_key_digest(root: Path, target_branch: str) -> str:
     raw = f"{repository_identity(root)}\0{target_branch}".encode("utf-8")
     return hashlib.sha256(raw).hexdigest()[:32]
+
+
+def doc_run_locks_dir(root: Path) -> Path:
+    """Git-common-dir anchored doc-run lock directory outside run directories (R11)."""
+    repo_root = _canonical_repo_root_for_locks(root)
+    base_raw = repo_root / ".cursor" / DOC_RUN_LOCKS_DIR_NAME
+    parent_raw = repo_root / ".cursor"
+    if parent_raw.is_symlink():
+        fail("doc-run-lock parent is symlinked", exit_code=20, halt="lock-path-unsafe")
+    if base_raw.is_symlink():
+        fail("doc-run-lock directory is symlinked", exit_code=20, halt="lock-path-unsafe")
+    base = base_raw.resolve()
+    parent = base.parent.resolve()
+    if parent.is_symlink():
+        fail("doc-run-lock parent is symlinked", exit_code=20, halt="lock-path-unsafe")
+    base.mkdir(parents=True, exist_ok=True)
+    return base
+
+
+def doc_run_lock_path_for(root: Path, topic: str) -> Path:
+    locks = doc_run_locks_dir(root)
+    digest = doc_run_lock_key_digest(root, topic)
+    safe_topic = sanitize_lock_component(topic)
+    filename = f"{digest}-{safe_topic}.lock"
+    path = (locks / filename).resolve()
+    if path.parent != locks:
+        fail("doc-run lock path escapes locks directory", exit_code=20, halt="lock-path-unsafe")
+    locks_raw = _canonical_repo_root_for_locks(root) / ".cursor" / DOC_RUN_LOCKS_DIR_NAME
+    if locks_raw.is_symlink():
+        fail("doc-run locks directory is symlinked", exit_code=20, halt="lock-path-unsafe")
+    return path
+
+
+def doc_run_lock_key_digest(root: Path, topic: str) -> str:
+    raw = f"{repository_identity(root)}\0doc-topic\0{topic}".encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()[:32]
+
+
+def doc_run_lock_journal_path(root: Path) -> Path:
+    return doc_run_locks_dir(root) / DOC_RUN_LOCK_JOURNAL_NAME
+
+
+def append_doc_run_lock_journal(root: Path, entry: dict[str, Any]) -> None:
+    """Append reclaim journal entry; write failure fails takeover closed (R11)."""
+    journal = doc_run_lock_journal_path(root)
+    line = json.dumps({**entry, "at": utc_now()}, ensure_ascii=False) + "\n"
+    try:
+        with open(journal, "a", encoding="utf-8") as handle:
+            handle.write(line)
+        os.chmod(journal, 0o600)
+    except OSError as exc:
+        fail(
+            "doc-run-lock journal write failed",
+            exit_code=20,
+            halt="doc-run-lock-journal-write-failed",
+            error=str(exc),
+        )
 
 
 def target_lock_journal_path(root: Path) -> Path:

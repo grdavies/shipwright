@@ -51,6 +51,8 @@ def dispatch(argv: list[str]) -> int:
         return _python("wave_spec_seed.py", root, ["spec-seed", *rest])
     if cmd == "deliver-loop":
         return _python("wave_deliver_loop.py", root, ["deliver-loop", *rest])
+    if cmd == "doc-loop":
+        return _python("doc_loop.py", root, ["doc-loop", *rest])
     if cmd == "watchdog":
         return _python("wave_deliver_loop.py", root, ["watchdog", *rest])
     if cmd == "ship-lease":
