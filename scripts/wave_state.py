@@ -32,9 +32,10 @@ VALID_PHASE_STATUSES = frozenset(
 )
 # Terminal completeness: phase counts as done for retrospective/compound/driver gates (R1/D6).
 TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
-TERMINAL_VERDICTS = frozenset({"running", "complete", "blocked", "rejected"})
+TERMINAL_VERDICTS = frozenset({"running", "complete", "blocked", "rejected", "finalized"})
 
 _COMPLETION_FINALIZE_DEPTH = 0
+_RUN_FINALIZE_DEPTH = 0
 
 
 @contextlib.contextmanager
@@ -46,6 +47,17 @@ def completion_finalize_authorization():
         yield
     finally:
         _COMPLETION_FINALIZE_DEPTH -= 1
+
+
+@contextlib.contextmanager
+def run_finalize_authorization():
+    """Authorize immutable run writes from run finalize only (PRD 081 R24)."""
+    global _RUN_FINALIZE_DEPTH
+    _RUN_FINALIZE_DEPTH += 1
+    try:
+        yield
+    finally:
+        _RUN_FINALIZE_DEPTH -= 1
 
 
 def _assert_completion_finalize_allowed(root: Path, state: dict[str, Any], prior: dict[str, Any] | None) -> None:
@@ -953,6 +965,22 @@ def load_run_scoped_state(root: Path, run_id: str) -> dict[str, Any]:
         return {}
 
 
+def _assert_run_finalize_allowed(state: dict[str, Any], prior: dict[str, Any] | None) -> None:
+    if not state.get("immutable"):
+        return
+    if prior and prior.get("immutable"):
+        return
+    if os.environ.get("SW_FIXTURE_RUN_FINALIZE") == "1":
+        return
+    if _RUN_FINALIZE_DEPTH > 0:
+        return
+    fail(
+        "run immutable; finalize-only mutation allowed (R24)",
+        exit_code=20,
+        remediation="python3 scripts/wave.py finalize --run-id <run-id>",
+    )
+
+
 def save_run_scoped_state(root: Path, run_id: str, state: dict[str, Any]) -> Path:
     """Persist deliver run state inside the run directory (PRD 081 R20)."""
     from wave_run_paths import RunIdRequiredError, state_path as run_state_path
@@ -961,6 +989,8 @@ def save_run_scoped_state(root: Path, run_id: str, state: dict[str, Any]) -> Pat
         path = run_state_path(root, run_id)
     except RunIdRequiredError as exc:
         fail(str(exc), exit_code=2)
+    prior = _read_state_optional(path)
+    _assert_run_finalize_allowed(state, prior or None)
     payload = dict(state)
     payload["runId"] = run_id
     payload["updatedAt"] = utc_now()

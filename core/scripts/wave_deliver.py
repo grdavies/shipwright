@@ -12,6 +12,7 @@ same wave without a dependency path continue.
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -1359,6 +1360,36 @@ def cmd_resume_locate(root: Path, args: list[str]) -> None:
     emit(resolve_resume_cardinality(root, args))
 
 
+def cmd_finalize(root: Path, args: list[str]) -> None:
+    """Finalize a deliver run after verified terminal merge (PRD 081 R24)."""
+    import wave_terminal as wt
+
+    run_id = parse_kv(args, "--run-id") or os.environ.get("SW_RUN_ID") or os.environ.get(
+        "SW_DELIVER_RUN_ID", ""
+    )
+    if not run_id:
+        fail("--run-id or SW_RUN_ID required", exit_code=2, halt="finalize:missing-run-id")
+    from wave_state import load_run_scoped_state
+
+    state = load_run_scoped_state(root, run_id)
+    if not state:
+        fail(f"run state not found: {run_id}", exit_code=20, halt="finalize:run-not-found")
+    payload = wt.finalize_run(
+        root,
+        run_id,
+        state,
+        dry_run=has_flag(args, "--dry-run"),
+    )
+    if payload.get("verdict") == "fail":
+        fail(
+            payload.get("error", "terminal merge unverified"),
+            exit_code=10,
+            halt="finalize:merge-unverified",
+            **{k: v for k, v in payload.items() if k not in ("verdict", "error")},
+        )
+    emit(payload)
+
+
 def cmd_run(root: Path, args: list[str]) -> None:
     """Resolve deliver entry reference and materialize frozen task list (PRD 059 R1)."""
     import planning_materialize as pm
@@ -1855,6 +1886,8 @@ def main() -> None:
         cmd_list(root, args)
     elif cmd == "resume-locate":
         cmd_resume_locate(root, args)
+    elif cmd == "finalize":
+        cmd_finalize(root, args)
     else:
         fail(f"unknown command: {cmd}")
 

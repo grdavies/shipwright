@@ -109,7 +109,7 @@ def dispatch(argv: list[str]) -> int:
         if rest and rest[0] == "prework":
             return _python("wave_memory_prework.py", root, rest[1:])
         return _python("wave_memory.py", root, argv)
-    if cmd in ("resume", "ack"):
+    if cmd in ("resume", "ack", "finalize"):
         return _python("wave_terminal.py", root, argv)
     if cmd in ("verify", "blast-radius", "revert", "stabilize"):
         return _python("wave_failure.py", root, argv)

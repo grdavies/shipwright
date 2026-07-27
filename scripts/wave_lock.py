@@ -395,14 +395,18 @@ def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
     }
 
 
-def release_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
+def release_ship_lease(root: Path, args: list[str], *, finalize: bool = False) -> dict[str, Any]:
     integration, phase_branch = resolve_branches(root, args)
     lock_path = lock_path_for(root, integration, phase_branch)
     if not lock_path.is_file():
         return {"verdict": "pass", "action": "ship-lease-release", "note": "no lock file"}
     meta = read_lock_meta(lock_path)
     holder_pid = meta.get("pid")
-    if isinstance(holder_pid, int) and holder_pid != os.getpid():
+    if (
+        not finalize
+        and isinstance(holder_pid, int)
+        and holder_pid != os.getpid()
+    ):
         return {"verdict": "fail", "error": "ship-lease-other-pid", "holder": meta}
     lock_path.unlink(missing_ok=True)
     append_log(
