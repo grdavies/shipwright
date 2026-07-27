@@ -112,10 +112,17 @@ def test_assert_entry_auto_provisions_from_bare_main(git_repo: Path) -> None:
         "target": {"type": "feat", "slug": "demo", "branch": "feat/demo"},
         "items": [{"id": "1", "slug": "alpha", "title": "A", "branch": "feat/demo-phase-alpha"}],
     }
-    (git_repo / ".cursor/sw-deliver-plan.json").write_text(json.dumps(plan), encoding="utf-8")
+    sys.path.insert(0, str(_ROOT))
+    from wave_run_plan import ensure_run_id, persist_plan
+    from wave_state import save_deliver_state
+
+    state: dict = {"target": plan["target"]}
+    run_id = ensure_run_id(git_repo, state)
+    persist_plan(git_repo, run_id, plan, state)
+    save_deliver_state(git_repo, state, target="feat/demo")
 
     with pytest.raises(SystemExit) as exc:
-        wave_lifecycle.cmd_assert_entry(git_repo, ["--plan", ".cursor/sw-deliver-plan.json"])
+        wave_lifecycle.cmd_assert_entry(git_repo, [])
     assert exc.value.code == 0
     assert (git_repo / ".sw-worktrees/demo-orchestrator").is_dir()
 
