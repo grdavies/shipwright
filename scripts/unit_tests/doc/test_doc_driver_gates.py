@@ -134,7 +134,7 @@ def test_related_work_stage_gates_progression(repo: Path) -> None:
     acknowledge_related_work(repo, state)
     state = load_doc_state(repo, run_id)
     assert state["pendingRelatedWork"]["status"] == "acknowledged"
-    assert state["stage"] == "freeze-prd"
+    assert state["stage"] == "final-triage-rescore"
 
 
 def test_checkpoint_blocked_without_durable_artifacts(repo: Path) -> None:
