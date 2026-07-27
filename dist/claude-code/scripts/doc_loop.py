@@ -39,13 +39,15 @@ DOC_STAGE_SEQUENCE: tuple[str, ...] = (
     "tasks",
     "freeze-tasks",
     "afterTasks-checkpoint",
+    "feature-seed",
     "complete",
 )
 
 AGENT_STAGES = frozenset({"triage", "brainstorm", "prd", "doc-review", "tasks"})
-MECHANICAL_STAGES = frozenset({"related-work", "freeze-prd", "freeze-tasks"})
+MECHANICAL_STAGES = frozenset({"related-work", "freeze-prd", "freeze-tasks", "feature-seed"})
 HUMAN_STAGES = frozenset({"related-work-checkpoint", "afterTasks-checkpoint"})
 TERMINAL_STAGES = frozenset({"complete"})
+UNREACHABLE_PUBLICATION_STAGES = frozenset({"docs-commit", "docs-pr"})
 
 
 def utc_now() -> str:
@@ -269,6 +271,7 @@ def apply_recorded_outcome(state: dict[str, Any], outcome: dict[str, Any]) -> di
         "halt",
         "haltError",
         "haltReceipt",
+        "featureSeedReceipt",
     ):
         if key in outcome:
             updated[key] = outcome[key]
@@ -379,7 +382,111 @@ def deliver_handoff_reachable(state: dict[str, Any]) -> bool:
     related = state.get("pendingRelatedWork") or {}
     if related.get("status") == "pending":
         return False
-    return str(state.get("stage") or "") in {"afterTasks-checkpoint", "complete"}
+    if not state.get("featureSeedReceipt") and str(state.get("stage") or "") != "complete":
+        return False
+    return str(state.get("stage") or "") in {"complete"}
+
+
+def assert_publication_stage_reachable(stage: str) -> None:
+    if stage in UNREACHABLE_PUBLICATION_STAGES:
+        fail(
+            f"publication stage {stage!r} is unreachable from doc-loop driver",
+            exit_code=20,
+            halt="doc-loop:publication-cutover",
+            stage=stage,
+        )
+
+
+def publication_mode(root: Path) -> str:
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    if issue_store_separate_project_effective(root):
+        return "separate-project-store-only"
+    return "file-store-feature-seed"
+
+
+def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    mode = publication_mode(root)
+    tasks_rel = artifact_rel_path(state, "tasks")
+    if not tasks_rel:
+        return {
+            "verdict": "fail",
+            "error": "missing-tasks-path",
+            "halt": "doc-loop:missing-artifact",
+        }
+
+    if mode == "separate-project-store-only":
+        return {
+            "verdict": "pass",
+            "action": "feature-seed",
+            "skipped": True,
+            "reason": "separate-project-store-only",
+            "publicationMode": mode,
+            "note": "no local publication; deliver run-entry materialize supplies content",
+        }
+
+    prd_rel = artifact_rel_path(state, "prd")
+    if prd_rel:
+        import doc_link
+
+        check = doc_link.check_artifact(root, prd_rel, tier="full")
+        if check.get("verdict") != "pass":
+            return {
+                "verdict": "fail",
+                "error": "brainstorm-reference-unresolved",
+                "halt": "doc-loop:brainstorm-reference",
+                "check": check,
+            }
+
+    import subprocess
+
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "wave_spec_seed.py"),
+            str(root),
+            "spec-seed",
+            "--task-list",
+            tasks_rel,
+            "--run-id",
+            f"doc-loop:{state.get('runId')}",
+            "--dry-run",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(root),
+    )
+    remote_state = {"branch": None, "commit": None, "dryRun": True}
+    try:
+        seed_payload = json.loads(proc.stdout or "{}")
+    except json.JSONDecodeError:
+        seed_payload = {"verdict": "fail", "detail": proc.stdout or proc.stderr}
+    exit_status = proc.returncode
+    if exit_status != 0:
+        return {
+            "verdict": "fail",
+            "error": seed_payload.get("error") or "feature-seed-failed",
+            "halt": "doc-loop:feature-seed",
+            "exitStatus": exit_status,
+            "seed": seed_payload,
+        }
+
+    receipt = {
+        "transitionName": "feature-seed",
+        "publicationMode": mode,
+        "exitStatus": exit_status,
+        "remoteState": remote_state,
+        "seed": seed_payload,
+        "timestamp": utc_now(),
+        "status": "complete",
+    }
+    return {
+        "verdict": "pass",
+        "action": "feature-seed",
+        "publicationMode": mode,
+        "receipt": receipt,
+        "seed": seed_payload,
+    }
 
 
 def run_related_work_scan(root: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -468,6 +575,17 @@ def execute_mechanical_stage(root: Path, state: dict[str, Any], stage: str) -> d
                 "frozenAt": utc_now(),
             }
             updated["artifactRevisions"] = revisions
+            return advance_stage(updated, stage)
+
+        if stage == "feature-seed":
+            outcome = run_feature_seed(root, updated)
+            if outcome.get("verdict") != "pass":
+                updated["verdict"] = "halted"
+                updated["halt"] = outcome.get("halt")
+                updated["haltError"] = outcome.get("error")
+                updated["haltReceipt"] = outcome.get("receipt")
+                return updated
+            updated["featureSeedReceipt"] = outcome.get("receipt") or outcome
             return advance_stage(updated, stage)
 
         return advance_stage(updated, stage)
@@ -666,6 +784,9 @@ def cmd_doc_loop(root: Path, args: list[str]) -> None:
     ack_checkpoint = has_flag(args, "--ack-checkpoint")
     ack_related_work = has_flag(args, "--ack-related-work")
     max_steps = int(parse_kv(args, "--max-steps", "8") or "8")
+    publication_stage = parse_kv(args, "--publication-stage")
+    if publication_stage:
+        assert_publication_stage_reachable(publication_stage)
     run_id = resolve_run_id(root, args)
     state = load_doc_state(root, run_id)
     resumed = bool(state.get("verdict") == "running" and state.get("stage") != "triage")

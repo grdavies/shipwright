@@ -22,7 +22,7 @@ import planning_path_redirect
 import planning_index_gen as planning_index
 import planning_visibility as planning_vis
 from host_lib import load_workflow_config
-from planning_artifact_handle import issue_store_separate_project_effective
+from planning_artifact_handle import issue_store_separate_project_effective, resolve_repo_file
 
 _VALID_TYPES = frozenset(
     {"feat", "fix", "perf", "revert", "docs", "chore", "refactor", "test"}
@@ -197,6 +197,59 @@ def docs_paths(docs_dir: Path, root: Path, *, single: Path | None = None) -> lis
         for p in sorted(docs_dir.rglob("*")):
             if p.is_file() and "brainstorms" not in p.parts:
                 paths.append(p)
+    return paths
+
+
+def _parse_brainstorm_link_paths(raw: str | None) -> list[str]:
+    if not raw:
+        return []
+    raw = raw.strip()
+    if raw.startswith("[") and raw.endswith("]"):
+        inner = raw[1:-1].strip()
+        if not inner:
+            return []
+        return [p.strip().strip("'\"") for p in inner.split(",") if p.strip()]
+    return [raw]
+
+
+def referenced_brainstorm_paths(root: Path, docs_dir: Path) -> list[Path]:
+    """Collect brainstorm files referenced by PRDs in docs_dir (PRD 081 R14)."""
+    from doc_link import brainstorm_ref_unit_id
+    from planning_artifact_handle import materialize_artifact_file, normalize_body_path
+
+    paths: list[Path] = []
+    seen: set[str] = set()
+    if not docs_dir.is_dir():
+        return paths
+    for prd_path in sorted(docs_dir.rglob("*.md")):
+        name = prd_path.name.lower()
+        if "prd" not in name and not name.endswith("-prd.md"):
+            continue
+        fm = parse_frontmatter(prd_path.read_text(encoding="utf-8"))
+        back = fm.get("brainstorm") or fm.get("source_brainstorm")
+        if not back:
+            continue
+        for target in _parse_brainstorm_link_paths(back):
+            rel = normalize_body_path(target.strip().strip("'\""))
+            resolved = resolve_repo_file(root, rel)
+            if resolved is not None and resolved.is_file():
+                key = str(resolved.resolve())
+                if key not in seen:
+                    seen.add(key)
+                    paths.append(resolved)
+                continue
+            uid = brainstorm_ref_unit_id(rel)
+            materialized = materialize_artifact_file(root, rel, unit_id=uid)
+            if materialized is None or not materialized.is_file():
+                continue
+            dest = (root / rel).resolve()
+            if not dest.is_file():
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                dest.write_text(materialized.read_text(encoding="utf-8"), encoding="utf-8")
+            key = str(dest.resolve())
+            if key not in seen:
+                seen.add(key)
+                paths.append(dest)
     return paths
 
 
@@ -489,8 +542,9 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
     enforce_guard(top, branch)
 
     candidate_files = docs_paths(docs_dir, top, single=single)
-    assert_no_tracked_private_bodies(top, candidate_files, feature_branch=branch)
-    public_files, skipped_private = filter_public_docs(top, candidate_files)
+    brainstorm_files = referenced_brainstorm_paths(top, docs_dir)
+    assert_no_tracked_private_bodies(top, candidate_files + brainstorm_files, feature_branch=branch)
+    public_files, skipped_private = filter_public_docs(top, candidate_files + brainstorm_files)
     doc_files = tracked_paths(top, public_files)
     doc_rels = rel_paths(top, doc_files)
     index_rel = ensure_redacted_index(top)
