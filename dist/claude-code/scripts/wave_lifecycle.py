@@ -449,6 +449,7 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
 
     git_run(["fetch", "origin", target], cwd=top, check=False)
     ref = target
+    created_from_default = False
     show = git_run(["show-ref", "--verify", f"refs/heads/{target}"], cwd=top, check=False)
     if show.returncode != 0:
         remote = git_run(
@@ -459,7 +460,29 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
         if remote.returncode == 0:
             ref = f"origin/{target}"
         else:
-            fail(f"base branch not found locally or on origin: {target}")
+            # Separate-project issue-store skips spec-seed, so the feature branch
+            # may not exist yet. Mint it from the trunk default base.
+            from wave_spec_seed import load_trunk_base
+
+            default = load_trunk_base(top) or "main"
+            git_run(["fetch", "origin", default], cwd=top, check=False)
+            origin_default = git_run(
+                ["show-ref", "--verify", f"refs/remotes/origin/{default}"],
+                cwd=top,
+                check=False,
+            )
+            local_default = git_run(
+                ["show-ref", "--verify", f"refs/heads/{default}"],
+                cwd=top,
+                check=False,
+            )
+            if origin_default.returncode == 0:
+                ref = f"origin/{default}"
+            elif local_default.returncode == 0:
+                ref = default
+            else:
+                fail(f"base branch not found locally or on origin: {target}")
+            created_from_default = True
 
     tip = git_run(["rev-parse", ref], cwd=top).stdout.strip()
     git_run(["worktree", "add", "-B", target, str(path), ref], cwd=top)
@@ -476,6 +499,7 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
             "path": str(path),
             "branch": target,
             "countsTowardCeiling": False,
+            **({"createdFromDefaultBase": True, "defaultBaseRef": ref} if created_from_default else {}),
         }
     )
 

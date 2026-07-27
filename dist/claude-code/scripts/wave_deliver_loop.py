@@ -1007,6 +1007,18 @@ def resolve_plan_with_adoption(
     plan = load_plan(root, state)
     if plan:
         return plan, state
+    # Pre-state-init window: `plan` writes GLOBAL_PLAN_REL before planHash persist
+    # (target-lock must precede run-scoped plan). Without this read, compute_next
+    # sees an empty plan and re-runs `plan` forever → conductor:no-progress.
+    if not state.get("planHash") and not state.get("adoptedPlanHash"):
+        transient_path = root / GLOBAL_PLAN_REL
+        if transient_path.is_file():
+            try:
+                pending = read_json(transient_path, absent_ok=False)
+            except (StateCorruptError, json.JSONDecodeError, OSError):
+                pending = None
+            if isinstance(pending, dict) and pending.get("mode"):
+                return pending, state
     if state.get("phases") and state.get("verdict") == "running":
         from wave_run_adopt import (
             locate_legacy_source,
@@ -2598,7 +2610,8 @@ def _execute_mechanical_inner(
         }
         save_state(root, state)
         persist_cursor(root, state, "state-init")
-        return {"executed": "lock-acquire", "target": target, **data}
+        # Keep executed/action after **data so target-lock payload cannot overwrite them.
+        return {**data, "target": target, "executed": "lock-acquire", "action": "lock-acquire"}
 
     if action == "state-init":
         run_id = run_plan.ensure_run_id(root, state)
@@ -3587,7 +3600,10 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
         result = execute_mechanical(root, state, plan, step, loop_args=args)
         executed = str(result.get("executed") or step["action"])
         record_action_precedence(steps_taken, executed)
+        # Subprocess payloads often include their own "action" key (e.g. target-lock-acquire);
+        # preserve the mechanical action identity used for precedence classification.
         steps_taken[-1].update(result)
+        steps_taken[-1]["action"] = executed
         resumed = True
         if step["action"] == "dispatch-ship" and result.get("awaitAgent"):
             ship_next = {
@@ -3635,7 +3651,9 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
             load_state(root, task_list),
         )
         if not drain_mechanical_enabled(root):
-            next_after = compute_next_action(root, load_state(root, task_list), load_plan(root, state))
+            st = load_state(root, task_list)
+            pl, st = resolve_plan_with_adoption(root, st, task_list)
+            next_after = compute_next_action(root, st, pl)
             emit(
                 {
                     "verdict": "pass",
@@ -3648,7 +3666,9 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
                 }
             )
 
-    next_after = compute_next_action(root, load_state(root, task_list), load_plan(root, state))
+    st = load_state(root, task_list)
+    pl, st = resolve_plan_with_adoption(root, st, task_list)
+    next_after = compute_next_action(root, st, pl)
     if (
         drain_mechanical_enabled(root)
         and next_after.get("action") in MECHANICAL_ACTIONS
