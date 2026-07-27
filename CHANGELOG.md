@@ -653,6 +653,7 @@
 * merge phase operator-surface-list-resume-and-legacy-adoption-medium into feat/workflow-state-machine-hardening (fb51db5) <!-- sw-deliver:operator-surface-list-resume-and-legacy-adoption-medium -->
 * merge phase run-finalization-and-terminal-receipt-medium into feat/workflow-state-machine-hardening (5ab9e40) <!-- sw-deliver:run-finalization-and-terminal-receipt-medium -->
 * merge phase command-documentation-currency-medium into feat/workflow-state-machine-hardening (79d6e1d) <!-- sw-deliver:command-documentation-currency-medium -->
+* merge phase command-documentation-currency-medium into feat/workflow-state-machine-hardening (deae4c0) <!-- sw-deliver:command-documentation-currency-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
