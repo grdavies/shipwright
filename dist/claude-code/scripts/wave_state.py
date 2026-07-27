@@ -1624,13 +1624,22 @@ def cmd_ledger_check(root: Path, args: list[str]) -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import doc_format
     from checkbox_diff import parse_task_checkboxes
+    from frozen_spec_ledger import effective_task_checkboxes, is_frozen_task_list
 
     tasks_text = path.read_text(encoding="utf-8")
+    frozen = is_frozen_task_list(tasks_text)
     phase_id = parse_kv(args, "--phase-id")
     merge_ready = "--merge-ready" in args
     if merge_ready and phase_id:
         phase_refs = parse_task_checkboxes(doc_format.phase_section_text(tasks_text, phase_id))
         if phase_refs:
+            if frozen:
+                phase_refs = {
+                    ref: bool(
+                        isinstance(ledger_tasks.get(ref), dict) and ledger_tasks[ref].get("done")
+                    )
+                    for ref in phase_refs
+                }
             all_unchecked = all(not checked for checked in phase_refs.values())
             any_ledger_done = any(
                 isinstance(ledger_tasks.get(ref), dict) and ledger_tasks[ref].get("done")
@@ -1647,7 +1656,11 @@ def cmd_ledger_check(root: Path, args: list[str]) -> None:
                     exit_code=1,
                 )
 
-    checkboxes = parse_task_checkboxes(tasks_text)
+    checkboxes = (
+        effective_task_checkboxes(tasks_text, ledger_tasks)
+        if frozen
+        else parse_task_checkboxes(tasks_text)
+    )
     divergences: list[dict[str, Any]] = []
 
     for ref, checked in checkboxes.items():
