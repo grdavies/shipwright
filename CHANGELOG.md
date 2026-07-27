@@ -644,6 +644,7 @@
 * merge phase precedence-classes-and-lock-before-mutation-ordering-medium into feat/workflow-state-machine-hardening (7a0a3d6) <!-- sw-deliver:precedence-classes-and-lock-before-mutation-ordering-medium -->
 * merge phase global-plan-literal-lint-and-currency-gate-reader-small into feat/workflow-state-machine-hardening (e22a28a) <!-- sw-deliver:global-plan-literal-lint-and-currency-gate-reader-small -->
 * merge phase drain-budget-continuation-and-transition-receipts-medium into feat/workflow-state-machine-hardening (24cfa80) <!-- sw-deliver:drain-budget-continuation-and-transition-receipts-medium -->
+* merge phase global-plan-literal-lint-and-currency-gate-reader-small into feat/workflow-state-machine-hardening (8a0fd79) <!-- sw-deliver:global-plan-literal-lint-and-currency-gate-reader-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
