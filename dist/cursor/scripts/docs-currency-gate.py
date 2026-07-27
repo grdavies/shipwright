@@ -13,6 +13,122 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from _sw.cli import run_module_main
 
+# Documentation artifacts that must ship in the same release as the code they describe (PRD 081 R21/R24).
+# Consumed by phase-18 fixtures (`scripts/unit_tests/docs/test_docs_currency_081.py`).
+COMMAND_DOC_CURRENCY_ARTIFACTS: tuple[dict[str, object], ...] = (
+    {
+        "id": "sw-doc",
+        "doc": "core/commands/sw-doc.md",
+        "code": (
+            "scripts/doc_loop.py",
+            "scripts/wave_spec_seed.py",
+            "scripts/docs_worktree.py",
+            "scripts/docs_pr.py",
+        ),
+        "needles": (
+            "sw-doc-runs",
+            "Durable doc-run driver",
+            "Publication path by store mode",
+            "UNREACHABLE_PUBLICATION_STAGES",
+            "docs_pr.py",
+        ),
+    },
+    {
+        "id": "sw-tasks",
+        "doc": "core/commands/sw-tasks.md",
+        "code": ("scripts/doc_loop.py", "scripts/check_frozen_lib.py"),
+        "needles": ("noFreeze", "Freeze ownership", "related-work", "doc-loop"),
+    },
+    {
+        "id": "sw-freeze",
+        "doc": "core/commands/sw-freeze.md",
+        "code": ("scripts/check_frozen_lib.py", "scripts/check-frozen.py", "scripts/planning_store.py"),
+        "needles": (
+            "Freeze receipt",
+            "durabilityState",
+            "driverInvoked",
+            "durability-not-verified",
+        ),
+    },
+    {
+        "id": "sw-deliver",
+        "doc": "core/commands/sw-deliver.md",
+        "code": (
+            "scripts/wave_deliver.py",
+            "scripts/wave_terminal.py",
+            "scripts/wave_run_adopt.py",
+            "scripts/wave_deliver_loop.py",
+        ),
+        "needles": (
+            "list, resume, finalize",
+            "Resume cardinality",
+            "Drain-budget",
+            "Run finalization vs",
+            "finalize:merge-unverified",
+        ),
+    },
+)
+
+
+def enumerate_command_doc_currency_artifacts() -> tuple[dict[str, object], ...]:
+    """Return the canonical command-documentation currency artifact set."""
+    return COMMAND_DOC_CURRENCY_ARTIFACTS
+
+
+def _git_last_commit_epoch(root: Path, rel: str) -> int | None:
+    import subprocess
+
+    proc = subprocess.run(
+        ["git", "log", "-1", "--format=%ct", "--", rel],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return None
+    try:
+        return int(proc.stdout.strip())
+    except ValueError:
+        return None
+
+
+def check_command_documentation_currency(root: Path) -> list[dict[str, object]]:
+    """Fail when a listed command doc is missing, needle-incomplete, or older than its code surface."""
+    drift: list[dict[str, object]] = []
+    for entry in COMMAND_DOC_CURRENCY_ARTIFACTS:
+        doc_rel = str(entry["doc"])
+        doc_path = root / doc_rel
+        artifact_id = str(entry.get("id") or doc_rel)
+        if not doc_path.is_file():
+            drift.append({"kind": "command-doc-missing", "artifact": artifact_id, "doc": doc_rel})
+            continue
+        text = doc_path.read_text(encoding="utf-8")
+        for needle in entry.get("needles") or ():
+            if str(needle) not in text:
+                drift.append(
+                    {
+                        "kind": "command-doc-needle-missing",
+                        "artifact": artifact_id,
+                        "doc": doc_rel,
+                        "needle": needle,
+                    }
+                )
+        doc_epoch = _git_last_commit_epoch(root, doc_rel)
+        code_paths = [str(p) for p in entry.get("code") or () if (root / str(p)).is_file()]
+        code_epochs = [e for p in code_paths if (e := _git_last_commit_epoch(root, p)) is not None]
+        if doc_epoch is not None and code_epochs and doc_epoch < max(code_epochs):
+            drift.append(
+                {
+                    "kind": "command-doc-stale",
+                    "artifact": artifact_id,
+                    "doc": doc_rel,
+                    "docCommitEpoch": doc_epoch,
+                    "codePaths": code_paths,
+                    "maxCodeCommitEpoch": max(code_epochs),
+                }
+            )
+    return drift
+
 
 def _parse_run_id(argv: list[str]) -> tuple[str | None, list[str]]:
     cleaned: list[str] = []
@@ -238,6 +354,21 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"verdict": "fail", "action": "docs-currency-gate", "prd": prd, "drift": drift}))
         sys.exit(1)
 
+    command_doc_drift = check_command_documentation_currency(root)
+    if command_doc_drift:
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "action": "docs-currency-gate",
+                    "prd": prd,
+                    "drift": command_doc_drift,
+                    "artifactSet": [str(e.get("id") or e.get("doc")) for e in COMMAND_DOC_CURRENCY_ARTIFACTS],
+                }
+            )
+        )
+        sys.exit(1)
+
     print(
         json.dumps(
             {
@@ -247,6 +378,7 @@ def main(argv: list[str] | None = None) -> int:
                 "indexStatus": index_status,
                 "expected": expected,
                 "planPath": str(plan_file),
+                "artifactSet": [str(e.get("id") or e.get("doc")) for e in COMMAND_DOC_CURRENCY_ARTIFACTS],
             }
         )
     )
