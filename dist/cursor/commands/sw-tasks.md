@@ -13,32 +13,6 @@ Task list from frozen PRD + amendment union.
 - Output: `docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` (frozen via `/sw-freeze`).
 - Does **not** start implementation or reconcile git-derived index status.
 
-## Freeze ownership under doc-loop (PRD 081 R10)
-
-| Context | Freeze behaviour |
-| --- | --- |
-| **Standalone** `/sw-tasks` | **Freeze-by-default** — step 10 always invokes `/sw-freeze` on the task list before stopping |
-| **Doc-loop driver** (`scripts/doc_loop.py`) | Task generation runs with **`noFreeze: true`** on the `tasks` step; the driver's `freeze-tasks` mechanical stage owns the single orchestrated freeze |
-| **Related-work scan** | Moved to parent — `related-work` is a **doc-loop** stage before `freeze-prd`, not a gate inside `/sw-tasks` |
-
-The orchestrated path records freeze **owner** (`doc-loop:<run-id>`) and receipt fields in durable
-`artifactRevisions` — one freeze per artifact, no duplicate owner stamps.
-
-### Migration note (callers of the old second-freeze path)
-
-Callers that previously assumed `/sw-tasks` always froze the list **and** the doc orchestrator froze again
-must not invoke `/sw-freeze` on the task list after a doc-loop `tasks` step:
-
-- **`/sw-doc` doc-loop path** — rely on `freeze-tasks` only; a direct `/sw-freeze` after driver `tasks`
-  duplicates ownership and may fail spec-rigor on already-frozen artifacts.
-- **`/sw-ship --after-tasks`** entering implementation without `/sw-doc` — unchanged: standalone
-  `/sw-tasks` still freezes at step 10.
-- **Issue-store materialize** — `planning_store.verify-frozen-hash` remains authoritative; missing driver
-  freeze receipts fail deliver entry closed.
-
-Environment: `SW_DOC_DRIVER=1` / `SW_DOC_ORCHESTRATOR=1` sets `driverInvoked` on freeze receipts
-(`scripts/check_frozen_lib.py`).
-
 ## Procedure
 
 0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `python3 scripts/authoring-guard.py preflight --path <unit-artifact> --command sw-tasks`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).

@@ -13,41 +13,6 @@ Irreversible handoff freeze. Local hooks warn early; CI `check-frozen.py` is aut
 - Output: `frozen: true` + `frozen_at` frontmatter; `docs/prds/INDEX.md` or `docs/decisions/INDEX.md` entry.
 - Does **not** unfreeze, edit parents, or generate tasks (decision records never generate tasks).
 
-## Freeze receipt and durability (PRD 081 R10/R12)
-
-`/sw-freeze` and `scripts/check_frozen_lib.py freeze_artifact` emit a structured **receipt** alongside
-`frozen: true` frontmatter. Orchestrated doc-loop freezes record owner `doc-loop:<run-id>`; standalone
-operator freezes record owner `operator` (or explicit `--owner` when wired).
-
-### Receipt fields
-
-| Field | Meaning |
-| --- | --- |
-| `artifact` | Repo-relative path frozen |
-| `owner` | Exclusive freeze owner (`doc-loop:<run-id>`, deliver driver, or `operator`) |
-| `lifecycleState` | `frozen` when stamp succeeded |
-| `durabilityState` | `verified` \| `failed` — file-store commit or issue-store hash verification |
-| `revision` | Content hash at freeze time |
-| `freezeRecordDigest` | Canonical digest for tamper detection |
-| `commitSha` | File-store seed commit (when durability verified) |
-| `storeRevision` | Issue-store revision (when applicable) |
-| `driverInvoked` | `true` when `SW_DOC_DRIVER` / `SW_DOC_ORCHESTRATOR` or explicit driver path |
-
-### Durability per store mode
-
-| Store | Durability check | Driver-invoked failure |
-| --- | --- | --- |
-| **File-store** | `check-frozen.py freeze-commit` onto `<type>/<slug>` (non-switching plumbing) | **`verdict: fail`**, `error: durability-not-verified` — doc-loop halts |
-| **Issue-store** | `planning_store.py freeze` + `verify-frozen-hash` at deliver entry | Distillation / hash failure → `sw:freeze-incomplete`; deliver blocked |
-| **Direct operator** | Same durability helpers | **`verdict: warn`** on durability failure — stamp not rolled back; operator decides |
-
-Driver-invoked freezes **fail closed** on durability failure; direct operator invocation **warns** and
-logs — the receipt `verdict` distinguishes the paths (`finalize_durability_verdict` in
-`check_frozen_lib.py`).
-
-Transition receipts for doc-loop mechanical freezes persist under
-`.cursor/sw-doc-runs/<run-id>/receipts/` with idempotency keys — resume replays completed transitions only.
-
 ## Procedure
 
 1. Verify artifact exists and does **not** already have `frozen: true`.
