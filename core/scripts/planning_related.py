@@ -307,7 +307,7 @@ def format_confirm_list(proposals, redacted_context):
     return "\n".join(lines)
 
 
-def scan_related(root, source, *, mode, refresh_stale=False):
+def scan_related(root, source, *, mode, refresh_stale=False, driver_invoked: bool | None = None):
     cfg = load_workflow_config(pp.git_root(root))
     pull_cfg = pull_in_config(cfg)
     state = load_state(root)
@@ -343,14 +343,21 @@ def scan_related(root, source, *, mode, refresh_stale=False):
     state["staleFlagged"] = sorted(set((state.get("staleFlagged") or []) + [p.candidate_id for p in proposals if p.stale]))
     state["lastScan"] = {"at": utc_now(), "source": source.unit_id, "mode": mode, "proposalCount": len(proposals)}
     save_state(root, state)
-    context_payload = json.dumps({"mode": mode, "source": source.unit_id,
-        "proposals": [{"id": p.candidate_id, "score": p.score, "reasons": p.reasons, "metadata": p.metadata} for p in proposals]}, ensure_ascii=False)
-    confirm_md = format_confirm_list(proposals, redact_untrusted_payload(root, context_payload))
-    return {"verdict": "ok", "mode": mode, "emissionPoint": EMISSION_POINT, "autoAbsorb": False, "appliedEdges": [],
+    serialized = [{"id": p.candidate_id, "score": p.score, "reasons": p.reasons, "metadata": p.metadata} for p in proposals]
+    driver = driver_invoked if driver_invoked is not None else os.environ.get("SW_DOC_DRIVER", "").strip().lower() in {"1", "true", "yes"}
+    result = {"verdict": "ok", "mode": mode, "emissionPoint": EMISSION_POINT, "autoAbsorb": False, "appliedEdges": [],
             "source": source.unit_id, "rankThreshold": pull_cfg["rankThreshold"], "semanticMatching": pull_cfg["semanticMatching"],
             "proposals": [{"id": p.candidate_id, "type": p.candidate_type, "title": p.title, "status": p.status, "visibility": p.visibility,
                            "score": round(p.score, 4), "stale": p.stale, "route": p.route, "reasons": p.reasons, "metadata": p.metadata} for p in proposals],
-            "suppressedRepeat": suppressed, "confirmList": confirm_md}
+            "suppressedRepeat": suppressed, "driverInvoked": driver, "serializedForParent": serialized}
+    if driver:
+        result["humanGated"] = False
+        result["deferredConfirm"] = True
+        return result
+    context_payload = json.dumps({"mode": mode, "source": source.unit_id, "proposals": serialized}, ensure_ascii=False)
+    result["confirmList"] = format_confirm_list(proposals, redact_untrusted_payload(root, context_payload))
+    result["humanGated"] = True
+    return result
 
 def apply_absorb_edge(path, candidate_id):
     text = path.read_text(encoding="utf-8")
@@ -434,7 +441,14 @@ def confirm_choices(root, source, accept_ids, *, accept_frozen_impact=False):
 def cmd_scan(root, args):
     if not args.path:
         fail("--path required for scan")
-    result = scan_related(root, source_from_path(root, args.path), mode=args.mode, refresh_stale=bool(args.refresh_stale))
+    driver_invoked = bool(getattr(args, "driver_invoked", False))
+    result = scan_related(
+        root,
+        source_from_path(root, args.path),
+        mode=args.mode,
+        refresh_stale=bool(args.refresh_stale),
+        driver_invoked=driver_invoked,
+    )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
 
@@ -458,6 +472,7 @@ def main(argv=None):
     p_scan.add_argument("--path", required=True)
     p_scan.add_argument("--mode", choices=["creation", "tasks-rescan"], default="creation")
     p_scan.add_argument("--refresh-stale", action="store_true")
+    p_scan.add_argument("--driver-invoked", action="store_true")
     p_scan.set_defaults(func=cmd_scan)
     p_confirm = sub.add_parser("confirm")
     p_confirm.add_argument("--path", required=True)
