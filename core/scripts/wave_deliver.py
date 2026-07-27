@@ -27,8 +27,9 @@ if str(SCRIPT_DIR) not in sys.path:
 import doc_format
 import planning_paths
 import planning_path_redirect
+from wave_run_paths import GLOBAL_PLAN_REL
 
-PLAN_PATH_NAME = "sw-deliver-plan.json"
+PLAN_PATH_NAME = Path(GLOBAL_PLAN_REL).name
 STATE_PATH_NAME = "sw-deliver-state.json"
 
 _FALLBACK_TYPES = frozenset(
@@ -452,7 +453,7 @@ def build_waves(items: list[str], edges: list[dict[str, str]]) -> list[list[str]
 
 
 def plan_target_type(root: Path, args: list[str]) -> str | None:
-    plan_rel = parse_kv(args, "--plan") or ".cursor/sw-deliver-plan.json"
+    plan_rel = parse_kv(args, "--plan") or GLOBAL_PLAN_REL
     plan_path = root / plan_rel
     if not plan_path.is_file():
         return None
@@ -1515,7 +1516,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
 
 
 def cmd_schedule(root: Path, args: list[str]) -> None:
-    plan_rel = parse_kv(args, "--plan", ".cursor/sw-deliver-plan.json")
+    plan_rel = parse_kv(args, "--plan", GLOBAL_PLAN_REL)
     assert plan_rel
     plan_path = (root / plan_rel).resolve()
     if not plan_path.is_file():
