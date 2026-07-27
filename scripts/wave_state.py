@@ -1079,6 +1079,7 @@ def cmd_runs_index(root: Path, _args: list[str]) -> None:
             merged.append(
                 {
                     "runId": f"legacy-{slug}",
+                    "slug": slug,
                     "target": entry.get("target"),
                     "taskList": entry.get("taskList"),
                     "verdict": entry.get("verdict"),
