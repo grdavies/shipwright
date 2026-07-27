@@ -32,7 +32,7 @@ def _sample_plan() -> dict:
 def _init_git(path: Path) -> str:
     subprocess.run(["git", "init"], cwd=path, check=True, capture_output=True)
     subprocess.run(
-        ["git", "config", "user.email", "test@example.com"],
+        ["git", "config", "user.email", "t@t.com"],
         cwd=path,
         check=True,
         capture_output=True,
