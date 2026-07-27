@@ -447,7 +447,13 @@ def heartbeat_target_lock(root: Path, target_branch: str, run_id: str) -> dict[s
     }
 
 
-def release_target_lock(root: Path, target_branch: str, run_id: str) -> dict[str, Any]:
+def release_target_lock(
+    root: Path,
+    target_branch: str,
+    run_id: str,
+    *,
+    finalize: bool = False,
+) -> dict[str, Any]:
     lock_path = target_lock_path_for(root, target_branch)
     if not lock_path.is_file():
         return {"verdict": "pass", "action": "target-lock-release", "note": "no lock file"}
@@ -455,7 +461,11 @@ def release_target_lock(root: Path, target_branch: str, run_id: str) -> dict[str
     if meta.get("runId") != run_id:
         return {"verdict": "fail", "error": "target-lock-run-mismatch", "holder": meta}
     holder_pid = meta.get("pid")
-    if isinstance(holder_pid, int) and holder_pid != os.getpid():
+    if (
+        not finalize
+        and isinstance(holder_pid, int)
+        and holder_pid != os.getpid()
+    ):
         return {"verdict": "fail", "error": "target-lock-other-pid", "holder": meta}
     lock_path.unlink(missing_ok=True)
     return {"verdict": "pass", "action": "target-lock-release", "targetBranch": target_branch}

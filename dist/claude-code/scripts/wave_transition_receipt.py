@@ -334,3 +334,57 @@ def mechanical_transition(
         key,
         output_revision=build_output_revision(state),
     )
+
+
+TERMINAL_RECEIPT_TRANSITION = "run-finalize"
+TERMINAL_RECEIPT_FILENAME = "terminal-receipt.json"
+
+
+def terminal_receipt_path(root: Path, run_id: str | None) -> Path:
+    rid = require_run_id(run_id)
+    return run_directory(root, rid) / TERMINAL_RECEIPT_FILENAME
+
+
+def build_terminal_receipt(
+    *,
+    merge_commit: str,
+    released_resources: dict[str, Any],
+    actor: str,
+    verified_at: str | None = None,
+    merge_detail: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    completed_at = verified_at or utc_now()
+    receipt: dict[str, Any] = {
+        "transitionName": TERMINAL_RECEIPT_TRANSITION,
+        "status": "complete",
+        "mergeCommit": merge_commit,
+        "releasedResources": released_resources,
+        "actor": actor,
+        "timestamp": completed_at,
+        "completedAt": completed_at,
+    }
+    if merge_detail:
+        receipt["mergeDetail"] = merge_detail
+    return receipt
+
+
+def persist_terminal_receipt(
+    root: Path,
+    run_id: str | None,
+    receipt: dict[str, Any],
+) -> dict[str, Any]:
+    rid = require_run_id(run_id)
+    path = terminal_receipt_path(root, rid)
+    if path.is_file():
+        existing = read_json(path, absent_ok=False)
+        if existing.get("status") == "complete":
+            return existing
+    write_json(path, receipt)
+    return receipt
+
+
+def read_terminal_receipt(root: Path, run_id: str | None) -> dict[str, Any] | None:
+    path = terminal_receipt_path(root, require_run_id(run_id))
+    if not path.is_file():
+        return None
+    return read_json(path, absent_ok=False)
