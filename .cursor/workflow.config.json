@@ -191,7 +191,7 @@
     },
     "privacyAck": {
       "required": true,
-      "recordedAt": null,
+      "recordedAt": "2026-07-22T21:20:37Z",
       "reason": "public-origin-remote"
     },
     "autonomy": "full-conductor",
