@@ -263,6 +263,21 @@ Context: 3–4 files, no auth changes. Skip brainstorm.
 | `/sw-tasks` | Generate task list from frozen PRD |
 | `/sw-amend` | Post-freeze correction via amendment file |
 
+### Planning publication sequencing
+
+Doc authoring follows strict **Publication sequencing invariants**: substantive edits route through
+`docs-edit-route` onto a `docs/<topic>` worktree and PR; mechanical INDEX/COMPLETION-LOG projections
+batch separately. Never commit substantive planning bodies on the protected default branch.
+
+Before `/sw-freeze`, `/sw-doc` may run a **Pre-freeze rescore** (`scripts/doc_rescore.py`): tier
+escalations apply automatically; downgrades require explicit human-attributed justification. A rescore
+signal after freeze is amendment input only — it does not reopen the frozen unit.
+
+New planning units receive a PRD number through **Number reservation transaction**
+(`scripts/planning_reserve.py`): under issue-store the store mints via duplicate-open-tasks guard; under
+file-store a git-common-dir lock reserves the number until completion or staleness reclaim. Same-process
+threads serialize through an allocator lock in addition to `flock(2)`.
+
 ---
 
 ## Implementation workstream — ship a feature from spec
