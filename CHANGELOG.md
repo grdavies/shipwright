@@ -640,6 +640,7 @@
 * merge phase run-scoped-plan-persistence-and-hash-verification-medium into feat/workflow-state-machine-hardening (27dbde5) <!-- sw-deliver:run-scoped-plan-persistence-and-hash-verification-medium -->
 * merge phase run-namespaced-status-discovery-and-glob-removal-small into feat/workflow-state-machine-hardening (6e08797) <!-- sw-deliver:run-namespaced-status-discovery-and-glob-removal-small -->
 * merge phase reader-migration-deliver-core-readers-medium into feat/workflow-state-machine-hardening (fa58093) <!-- sw-deliver:reader-migration-deliver-core-readers-medium -->
+* merge phase reader-migration-auxiliary-readers-medium into feat/workflow-state-machine-hardening (4463a5d) <!-- sw-deliver:reader-migration-auxiliary-readers-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
