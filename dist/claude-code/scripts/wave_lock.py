@@ -26,6 +26,8 @@ from wave_state import append_log, emit, fail, parse_kv, read_lock_meta, utc_now
 
 SHIP_LEASE_STALE_SECONDS = int(os.environ.get("SW_SHIP_LEASE_STALE_SECONDS", "300"))
 LOCKS_DIR_NAME = "sw-deliver-locks"
+TARGET_LOCKS_DIR_NAME = "sw-target-locks"
+TARGET_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
 SAFE_SLUG_RE = re.compile(r"[^a-zA-Z0-9._-]+")
 
 
@@ -74,6 +76,74 @@ def lock_path_for(root: Path, integration_branch: str, phase_branch: str) -> Pat
     if path.parent.is_symlink():
         fail("locks directory is symlinked", exit_code=20, halt="lock-path-unsafe")
     return path
+
+
+def _canonical_repo_root_for_locks(start: Path) -> Path:
+    from wave_state import canonical_repo_root
+
+    return canonical_repo_root(start)
+
+
+def target_locks_dir(root: Path) -> Path:
+    """Git-common-dir anchored target-lock directory outside run directories (R19)."""
+    repo_root = _canonical_repo_root_for_locks(root)
+    base_raw = repo_root / ".cursor" / TARGET_LOCKS_DIR_NAME
+    parent_raw = repo_root / ".cursor"
+    if parent_raw.is_symlink():
+        fail("target-lock parent is symlinked", exit_code=20, halt="lock-path-unsafe")
+    if base_raw.is_symlink():
+        fail("target-lock directory is symlinked", exit_code=20, halt="lock-path-unsafe")
+    base = base_raw.resolve()
+    parent = base.parent.resolve()
+    if parent.is_symlink():
+        fail("target-lock parent is symlinked", exit_code=20, halt="lock-path-unsafe")
+    base.mkdir(parents=True, exist_ok=True)
+    return base
+
+
+def target_lock_path_for(root: Path, target_branch: str) -> Path:
+    locks = target_locks_dir(root)
+    digest = target_lock_key_digest(root, target_branch)
+    safe_target = sanitize_lock_component(target_branch.rsplit("/", 1)[-1])
+    filename = f"{digest}-{safe_target}.lock"
+    path = (locks / filename).resolve()
+    if path.parent != locks:
+        fail("target lock path escapes locks directory", exit_code=20, halt="lock-path-unsafe")
+    locks_raw = _canonical_repo_root_for_locks(root) / ".cursor" / TARGET_LOCKS_DIR_NAME
+    if locks_raw.is_symlink():
+        fail("target locks directory is symlinked", exit_code=20, halt="lock-path-unsafe")
+    return path
+
+
+def repository_identity(root: Path) -> str:
+    repo = _canonical_repo_root_for_locks(root)
+    return hashlib.sha256(str(repo.resolve()).encode("utf-8")).hexdigest()[:32]
+
+
+def target_lock_key_digest(root: Path, target_branch: str) -> str:
+    raw = f"{repository_identity(root)}\0{target_branch}".encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()[:32]
+
+
+def target_lock_journal_path(root: Path) -> Path:
+    return target_locks_dir(root) / TARGET_LOCK_JOURNAL_NAME
+
+
+def append_target_lock_journal(root: Path, entry: dict[str, Any]) -> None:
+    """Append reclaim journal entry; write failure fails takeover closed (R19)."""
+    journal = target_lock_journal_path(root)
+    line = json.dumps({**entry, "at": utc_now()}, ensure_ascii=False) + "\n"
+    try:
+        with open(journal, "a", encoding="utf-8") as handle:
+            handle.write(line)
+        os.chmod(journal, 0o600)
+    except OSError as exc:
+        fail(
+            "target-lock journal write failed",
+            exit_code=20,
+            halt="target-lock-journal-write-failed",
+            error=str(exc),
+        )
 
 
 def ship_steps_in_progress(meta: dict[str, Any]) -> bool:
