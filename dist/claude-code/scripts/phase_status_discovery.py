@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared phase status discovery chain (PRD 059 R5/R6)."""
+"""Shared phase status discovery chain (PRD 059 R5/R6, PRD 081 R20)."""
 from __future__ import annotations
 
 import json
@@ -10,6 +10,17 @@ from status_integrity import resolve_status_candidates
 from wave_json_io import StateCorruptError, read_json
 
 TiebreakFn = Callable[[list[tuple[Path, dict[str, Any]]]], tuple[Path, dict[str, Any]] | None]
+
+
+def _load_deliver_state(root: Path, state: dict[str, Any] | None) -> dict[str, Any]:
+    if state is not None:
+        return state
+    try:
+        from wave_state import load_deliver_state
+
+        return load_deliver_state(root)
+    except Exception:
+        return {}
 
 
 def resolve_phase_worktree(
@@ -35,11 +46,34 @@ def resolve_phase_worktree(
     return path if path.is_dir() else None
 
 
-def glob_phase_status_paths(root: Path, phase_slug: str, status_filename: str) -> list[Path]:
-    wt_root = root / ".sw-worktrees"
-    if not wt_root.is_dir():
-        return []
-    return sorted(wt_root.glob(f"*/.cursor/sw-deliver-runs/{phase_slug}/{status_filename}"))
+def resolve_run_and_phase_id(
+    state: dict[str, Any], phase_slug: str
+) -> tuple[str, str] | None:
+    """Resolve run id + stable phase id; slug is display-only lookup (R20)."""
+    from halt_resume import resolve_run_id
+
+    run_id = state.get("runId") or state.get("scopedRunId")
+    if not run_id:
+        run_id = resolve_run_id(state)
+    if not run_id:
+        return None
+    for pid, meta in (state.get("phases") or {}).items():
+        if isinstance(meta, dict) and meta.get("slug") == phase_slug:
+            return str(run_id), str(pid)
+    return None
+
+
+def canonical_phase_artifact_path(
+    root: Path, run_id: str, phase_id: str, status_filename: str
+) -> Path:
+    from wave_run_paths import phase_directory
+
+    return phase_directory(root, run_id, phase_id) / status_filename
+
+
+def worktree_mirror_path(root: Path, worktree: Path, canonical: Path) -> Path:
+    rel = canonical.resolve().relative_to(root.resolve())
+    return (worktree / rel).resolve()
 
 
 def collect_status_candidate_paths(
@@ -48,14 +82,21 @@ def collect_status_candidate_paths(
     status_filename: str,
     *,
     worktree: Path | None = None,
+    state: dict[str, Any] | None = None,
 ) -> list[Path]:
-    """Discovery chain: canonical → worktree-local → glob (PRD 059 R5)."""
-    paths: list[Path] = []
-    canonical = root / ".cursor" / "sw-deliver-runs" / phase_slug / status_filename
-    paths.append(canonical)
-    if worktree is not None:
-        paths.append(worktree / ".cursor" / "sw-deliver-runs" / phase_slug / status_filename)
-    paths.extend(glob_phase_status_paths(root, phase_slug, status_filename))
+    """Discovery chain: run-scoped canonical → phase worktree mirror (PRD 081 R20)."""
+    loaded = _load_deliver_state(root, state)
+    resolved = resolve_run_and_phase_id(loaded, phase_slug)
+    if resolved is None:
+        return []
+    run_id, phase_id = resolved
+    canonical = canonical_phase_artifact_path(root, run_id, phase_id, status_filename)
+    paths: list[Path] = [canonical]
+    wt = worktree
+    if wt is None:
+        wt = resolve_phase_worktree(root, phase_slug, loaded)
+    if wt is not None:
+        paths.append(worktree_mirror_path(root, wt, canonical))
     return paths
 
 
@@ -86,9 +127,12 @@ def discover_phase_status(
     worktree: Path | None = None,
     expected_head: str | None = None,
     tiebreak: TiebreakFn | None = None,
+    state: dict[str, Any] | None = None,
 ) -> tuple[Path | None, dict[str, Any] | None]:
     candidates = load_status_candidates(
-        collect_status_candidate_paths(root, phase_slug, status_filename, worktree=worktree)
+        collect_status_candidate_paths(
+            root, phase_slug, status_filename, worktree=worktree, state=state
+        )
     )
     if not candidates:
         return None, None
@@ -99,27 +143,48 @@ def discover_phase_status(
     return resolve_status_candidates(candidates, expected_head)
 
 
+def preferred_phase_artifact_path(
+    root: Path,
+    phase_slug: str,
+    status_filename: str,
+    *,
+    worktree: Path | None = None,
+    state: dict[str, Any] | None = None,
+) -> Path:
+    """Preferred write path: worktree mirror when present, else run-scoped canonical."""
+    loaded = _load_deliver_state(root, state)
+    resolved = resolve_run_and_phase_id(loaded, phase_slug)
+    if resolved is None:
+        return root / ".cursor" / "sw-deliver-runs" / phase_slug / status_filename
+    run_id, phase_id = resolved
+    canonical = canonical_phase_artifact_path(root, run_id, phase_id, status_filename)
+    wt = worktree
+    if wt is None:
+        wt = resolve_phase_worktree(root, phase_slug, loaded)
+    if wt is not None:
+        mirror = worktree_mirror_path(root, wt, canonical)
+        if mirror.is_file():
+            return mirror
+    return canonical
+
+
 def first_existing_status_path(
     root: Path,
     phase_slug: str,
     status_filename: str,
     *,
     worktree: Path | None = None,
+    state: dict[str, Any] | None = None,
 ) -> Path:
     """Return the preferred on-disk path for a phase status artifact."""
-    canonical = root / ".cursor" / "sw-deliver-runs" / phase_slug / status_filename
-    if worktree is not None:
-        wt_path = worktree / ".cursor" / "sw-deliver-runs" / phase_slug / status_filename
-        if wt_path.is_file():
-            return wt_path
-    if canonical.is_file():
-        return canonical
-    for candidate in glob_phase_status_paths(root, phase_slug, status_filename):
+    for candidate in collect_status_candidate_paths(
+        root, phase_slug, status_filename, worktree=worktree, state=state
+    ):
         if candidate.is_file():
             return candidate
-    if worktree is not None:
-        return wt_path
-    return canonical
+    return preferred_phase_artifact_path(
+        root, phase_slug, status_filename, worktree=worktree, state=state
+    )
 
 
 def halt_dominant_tiebreak(
