@@ -79,6 +79,13 @@ from wave_state import (
 )
 import wave_run_plan as run_plan
 from wave_run_paths import GLOBAL_PLAN_REL
+from wave_action_precedence import (
+    ACTION_PRECEDENCE_CLASS,
+    assert_action_classified,
+    assert_monotonic_sequence,
+    record_action_precedence,
+)
+from wave_json_io import write_json as write_json_file
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 BLOCKER_PATH = Path(".cursor/sw-deliver-runs/blockers.json")
@@ -1926,8 +1933,20 @@ def compute_next_action(
     if plan.get("mode") != "phase":
         fail("deliver-loop requires phase-mode plan", exit_code=2)
 
+    target = (plan.get("target") or {}).get("branch") or (state.get("target") or {}).get(
+        "branch"
+    )
+
+    if not state.get("targetLock") and not state.get("orchestratorWorktree"):
+        if not target:
+            fail("plan/state missing target branch")
+        return {"action": "lock-acquire", "target": target, "resume": True}
+
     if not state.get("phases"):
         return {"action": "state-init", "resume": False}
+
+    if not target:
+        fail("plan/state missing target branch")
 
     if not trunk_base_persisted(root) and not state.get("baseCapture"):
         return {"action": "base-capture", "resume": True}
@@ -1942,12 +1961,6 @@ def compute_next_action(
             "taskList": task_list_from(state, plan),
             "resume": True,
         }
-
-    target = (plan.get("target") or {}).get("branch") or (state.get("target") or {}).get(
-        "branch"
-    )
-    if not target:
-        fail("plan/state missing target branch")
 
     if all_phases_merged(state):
         completion = state.get("completion") or {}
@@ -1994,8 +2007,6 @@ def compute_next_action(
         return {"action": "wave-plan-persist", "resume": True}
 
     if not state.get("orchestratorWorktree"):
-        if state.get("nextAction") in (None, "plan", "state-init"):
-            return {"action": "lock-acquire", "target": target, "resume": True}
         return {"action": "orchestrator-provision", "target": target, "resume": True}
 
     statuses = phase_status_map(state)
@@ -2359,6 +2370,11 @@ def apply_merge_enqueue_result(state: dict[str, Any], data: dict[str, Any]) -> N
 
 
 def persist_cursor(root: Path, state: dict[str, Any], action: str, **extra: Any) -> None:
+    prior = str(state.get("nextAction") or "")
+    if action in ACTION_PRECEDENCE_CLASS:
+        assert_action_classified(action)
+        if prior in ACTION_PRECEDENCE_CLASS:
+            assert_monotonic_sequence([prior, action])
     state["nextAction"] = action
     state["driverHeartbeatAt"] = utc_now()
     for key, val in extra.items():
@@ -2486,12 +2502,71 @@ def _execute_mechanical_inner(
         if not plan:
             fail("plan action returned no plan payload")
         run_id = run_plan.ensure_run_id(root, state)
-        run_plan.persist_plan(root, run_id, plan, state)
+        transient_path = root / GLOBAL_PLAN_REL
+        transient_path.parent.mkdir(parents=True, exist_ok=True)
+        write_json_file(transient_path, plan)
         save_state(root, state)
-        persist_cursor(root, state, "state-init")
+        persist_cursor(root, state, "lock-acquire")
         return {"executed": "plan", "plan": plan.get("target"), "runId": run_id}
 
+    if action == "lock-acquire":
+        target = step.get("target") or (plan.get("target") or {}).get("branch")
+        if not target:
+            fail("lock-acquire requires target branch")
+        run_id = run_plan.ensure_run_id(root, state)
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "wave_target_lock.py"),
+                str(root),
+                "acquire",
+                "--target",
+                str(target),
+                "--run-id",
+                run_id,
+            ],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            env={**os.environ, "SW_DELIVER_RUN_ID": run_id},
+        )
+        data: dict[str, Any] = {}
+        if proc.stdout.strip():
+            try:
+                parsed = json.loads(proc.stdout)
+                if isinstance(parsed, dict):
+                    data = parsed
+            except json.JSONDecodeError:
+                data = {"raw": proc.stdout.strip()}
+        if proc.returncode != 0:
+            fail_payload(data, data.get("error") or "target lock acquire failed", proc.returncode)
+        state["targetLock"] = {
+            "targetBranch": target,
+            "runId": run_id,
+            "lockKeyDigest": data.get("lockKeyDigest"),
+            "lockPath": data.get("lockPath"),
+            "acquiredAt": utc_now(),
+            "reclaimed": bool(data.get("reclaimed")),
+        }
+        save_state(root, state)
+        persist_cursor(root, state, "state-init")
+        return {"executed": "lock-acquire", "target": target, **data}
+
     if action == "state-init":
+        run_id = run_plan.ensure_run_id(root, state)
+        if not state.get("planHash"):
+            pending_plan = load_plan(root, state)
+            if not pending_plan:
+                fail("state-init requires validated plan")
+            run_plan.persist_plan(root, run_id, pending_plan, state)
+            save_state(root, state)
+        target_branch = (plan.get("target") or {}).get("branch") or (
+            (state.get("target") or {}).get("branch")
+        )
+        if target_branch:
+            from wave_state import write_run_local_lease
+
+            write_run_local_lease(root, run_id, str(target_branch))
         plan_rel = plan_rel_for_state(root, state)
         ec, data = run_wave(root, "state", "init", "--plan", plan_rel)
         if ec != 0:
@@ -2523,7 +2598,15 @@ def _execute_mechanical_inner(
         tl = step.get("taskList") or task_list
         if not tl:
             fail("spec-seed requires task list")
-        ec, data = run_wave(root, "spec-seed", "--task-list", str(tl))
+        run_id = run_plan.resolve_run_id(state)
+        ec, data = run_wave(
+            root,
+            "spec-seed",
+            "--task-list",
+            str(tl),
+            "--run-id",
+            run_id,
+        )
         if ec != 0:
             fail_payload(data, "spec-seed failed", ec)
         state.update(load_state(root))
@@ -2534,18 +2617,8 @@ def _execute_mechanical_inner(
             "at": utc_now(),
         }
         save_state(root, state)
-        persist_cursor(root, state, "lock-acquire")
-        return {"executed": "spec-seed", **data}
-
-    if action == "lock-acquire":
-        target = step.get("target") or (plan.get("target") or {}).get("branch")
-        ec, data = run_wave(root, "lock", "acquire", "--target", str(target), "--nonblock")
-        if ec not in (0, 20):
-            fail_payload(data, "lock acquire failed", ec)
-        if ec == 20:
-            fail("orchestrator lock held", exit_code=20, holder=data.get("holder"))
         persist_cursor(root, state, "inflight-signal-write")
-        return {"executed": "lock-acquire", "target": target}
+        return {"executed": "spec-seed", **data}
 
     if action == "inflight-signal-write":
         target = step.get("target") or (plan.get("target") or {}).get("branch")
@@ -3446,7 +3519,9 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
             fail(f"unhandled action: {step['action']}", step=step)
 
         result = execute_mechanical(root, state, plan, step, loop_args=args)
-        steps_taken.append(result)
+        executed = str(result.get("executed") or step["action"])
+        record_action_precedence(steps_taken, executed)
+        steps_taken[-1].update(result)
         resumed = True
         if step["action"] == "dispatch-ship" and result.get("awaitAgent"):
             ship_next = {
