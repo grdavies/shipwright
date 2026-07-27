@@ -647,6 +647,7 @@
 * merge phase global-plan-literal-lint-and-currency-gate-reader-small into feat/workflow-state-machine-hardening (8a0fd79) <!-- sw-deliver:global-plan-literal-lint-and-currency-gate-reader-small -->
 * merge phase doc-driver-state-machine-and-doc-run-lock-medium into feat/workflow-state-machine-hardening (03f625e) <!-- sw-deliver:doc-driver-state-machine-and-doc-run-lock-medium -->
 * merge phase freeze-ownership-durability-and-related-work-stage-medium into feat/workflow-state-machine-hardening (e2c211a) <!-- sw-deliver:freeze-ownership-durability-and-related-work-stage-medium -->
+* merge phase brainstorm-reference-resolution-and-publication-cutover-medium into feat/workflow-state-machine-hardening (e4b5b53) <!-- sw-deliver:brainstorm-reference-resolution-and-publication-cutover-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
