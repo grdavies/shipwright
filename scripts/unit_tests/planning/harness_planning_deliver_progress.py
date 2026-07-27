@@ -259,14 +259,14 @@ os.environ["SW_ISSUES_FIXTURE"] = "1"
 fixture_path = tmp / ".cursor/hooks/state/issue-store-fixture.json"
 if fixture_path.is_file():
     fixture_path.unlink()
-state = {"source_task_list": task_rel, "phases": {"1": {"slug": "alpha-phase"}}}
+state = {
+    "source_task_list": task_rel,
+    "phases": {"1": {"slug": "alpha-phase"}},
+    "taskLedger": {"tasks": {"1.1": {"done": True, "phase": "alpha"}}, "phases": {}},
+}
 pp.provision_deliver_hierarchy(tmp, state)
 hmap = load_hierarchy_map(state)
 phase1 = (hmap.get("phases") or {}).get("1")
-task_path = tmp / task_rel
-text = task_path.read_text(encoding="utf-8")
-text = text.replace("- [ ] 1.1", "- [x] 1.1", 1)
-task_path.write_text(text, encoding="utf-8")
 sync = pp.sync_task_checkbox(tmp, state, phase_id="1", task_list=task_rel, task_ref="1.1")
 assert sync.get("synced"), sync
 store = FixtureIssuesStore(fixture_path)
