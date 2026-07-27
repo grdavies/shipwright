@@ -638,6 +638,7 @@
 * merge phase target-lock-primitive-heartbeat-and-takeover-medium into feat/workflow-state-machine-hardening (58b9634) <!-- sw-deliver:target-lock-primitive-heartbeat-and-takeover-medium -->
 * merge phase deliver-run-identity-and-run-scoped-layout-helper-medium into feat/workflow-state-machine-hardening (178036c) <!-- sw-deliver:deliver-run-identity-and-run-scoped-layout-helper-medium -->
 * merge phase run-scoped-plan-persistence-and-hash-verification-medium into feat/workflow-state-machine-hardening (27dbde5) <!-- sw-deliver:run-scoped-plan-persistence-and-hash-verification-medium -->
+* merge phase run-namespaced-status-discovery-and-glob-removal-small into feat/workflow-state-machine-hardening (6e08797) <!-- sw-deliver:run-namespaced-status-discovery-and-glob-removal-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
