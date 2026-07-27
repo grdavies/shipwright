@@ -363,6 +363,9 @@ def resolve_state_path(
                 assert leg_target is not None
                 scoped = scoped_paths(root, leg_target)["state"]
                 if scoped.is_file():
+                    # Full repo-root state wins over a stale scoped mirror (R21 resume).
+                    if leg_data.get("phases") and leg_data.get("verdict") == "running":
+                        return legacy
                     return scoped
         return legacy
     matches = sorted((root / ".cursor").glob("sw-deliver-state.*.json"))

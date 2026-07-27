@@ -121,6 +121,12 @@ def collect_status_candidate_paths(
         wt = resolve_phase_worktree(root, phase_slug, loaded)
     if wt is not None:
         paths.append(worktree_mirror_path(root, wt, canonical))
+    # Slug-keyed artifacts coexist until run-scoped paths are populated (R20/R21).
+    for legacy in _legacy_slug_candidate_paths(
+        root, phase_slug, status_filename, worktree=wt, state=loaded
+    ):
+        if legacy not in paths:
+            paths.append(legacy)
     return paths
 
 

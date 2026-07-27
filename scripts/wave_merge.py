@@ -911,8 +911,9 @@ def authorize_merge(
 
 
 def reconcile_next_action_after_collect(root: Path, state: dict[str, Any]) -> str | None:
-    from wave_deliver_loop import compute_next_action, load_plan
-    plan = load_plan(root, state)
+    from wave_deliver_loop import compute_next_action, resolve_plan_with_adoption
+
+    plan, state = resolve_plan_with_adoption(root, state)
     if not plan:
         return None
     next_step = compute_next_action(root, state, plan)

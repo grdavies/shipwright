@@ -8,7 +8,15 @@ from pathlib import Path
 from typing import Any
 
 from wave_json_io import StateCorruptError, read_json, write_json
-from wave_run_paths import GLOBAL_PLAN_REL, global_plan_path, mint_run_id, plan_path, state_path
+from wave_run_paths import (
+    GLOBAL_PLAN_REL,
+    RunIdRequiredError,
+    global_plan_path,
+    mint_run_id,
+    plan_path,
+    require_run_id,
+    state_path,
+)
 from wave_run_plan import compute_plan_hash, persist_plan
 from wave_state import (
     _is_migration_breadcrumb,
@@ -60,8 +68,40 @@ def _is_adopted_run_state(state: dict[str, Any]) -> bool:
     return bool(state.get("legacyAdopted") or state.get("adoptedAt"))
 
 
+def _derive_legacy_run_id(
+    root: Path, state: dict[str, Any], target: str | None
+) -> str:
+    existing = state.get("runId")
+    if existing:
+        try:
+            return require_run_id(str(existing))
+        except RunIdRequiredError:
+            pass
+    slug = slug_from_target(target) if target else None
+    if slug:
+        try:
+            return require_run_id(f"deliver-{slug}")
+        except RunIdRequiredError:
+            pass
+    return mint_run_id(root)
+
+
+def _global_is_full_running_state(root: Path) -> bool:
+    legacy = legacy_paths(root)["state"]
+    data = _read_state_optional(legacy)
+    return bool(
+        data
+        and not _is_migration_breadcrumb(data)
+        and data.get("phases")
+        and data.get("verdict") == "running"
+    )
+
+
 def _run_scoped_state_exists(root: Path, run_id: str) -> bool:
-    path = state_path(root, run_id)
+    try:
+        path = state_path(root, run_id)
+    except RunIdRequiredError:
+        return False
     if not path.is_file():
         return False
     data = _read_state_optional(path)
@@ -89,7 +129,11 @@ def locate_legacy_source(
         ]
     if not candidates:
         return None
-    if len(candidates) > 1 and not (slug or run_id):
+    if len(candidates) > 1:
+        if slug or run_id:
+            global_layout = [c for c in candidates if c.get("layout") == "global"]
+            if len(global_layout) == 1:
+                return global_layout[0]
         return None
     return candidates[0]
 
@@ -102,7 +146,7 @@ def locate_legacy_source_from_state(root: Path, state: dict[str, Any]) -> dict[s
         return None
     target = target_branch_from_state(state)
     slug = target.split("/", 1)[1] if target and "/" in target else None
-    run_id = str(state.get("runId") or (f"deliver-{slug}" if slug else "deliver-legacy"))
+    run_id = _derive_legacy_run_id(root, state, target)
     from wave_state import resolve_state_path
 
     state_path = resolve_state_path(root, target=target, state_hint=state)
@@ -127,24 +171,25 @@ def _legacy_candidates(root: Path) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     cursor = root / ".cursor"
     for path in sorted(cursor.glob("sw-deliver-state.*.json")):
-        slug = path.name.removeprefix("sw-deliver-state.").removesuffix(".json")
+        scoped_slug = path.name.removeprefix("sw-deliver-state.").removesuffix(".json")
         state = _read_state_optional(path)
         if not state or _is_migration_breadcrumb(state):
             continue
         if not (state.get("phases") or state.get("verdict") == "running"):
             continue
         target = target_branch_from_state(state)
-        run_id = str(state.get("runId") or f"deliver-{slug}")
-        if _run_scoped_state_exists(root, run_id) and _is_adopted_run_state(
+        run_id = _derive_legacy_run_id(root, state, target)
+        run_scoped_adopted = _run_scoped_state_exists(root, run_id) and _is_adopted_run_state(
             _read_state_optional(state_path(root, run_id))
-        ):
+        )
+        if run_scoped_adopted and not _global_is_full_running_state(root):
             continue
         out.append(
             {
                 "layout": "scoped",
-                "slug": slug,
+                "slug": scoped_slug,
                 "runId": run_id,
-                "legacyKey": f"legacy-{slug}",
+                "legacyKey": f"legacy-{scoped_slug}",
                 "statePath": str(path.relative_to(root)),
                 "state": state,
                 "target": target,
@@ -159,11 +204,11 @@ def _legacy_candidates(root: Path) -> list[dict[str, Any]]:
     ):
         target = target_branch_from_state(state)
         slug = slug_from_target(target) if target else "(legacy)"
-        run_id = str(state.get("runId") or f"deliver-{slug}")
-        if not (
-            _run_scoped_state_exists(root, run_id)
-            and _is_adopted_run_state(_read_state_optional(state_path(root, run_id)))
-        ):
+        run_id = _derive_legacy_run_id(root, state, target)
+        run_scoped_adopted = _run_scoped_state_exists(root, run_id) and _is_adopted_run_state(
+            _read_state_optional(state_path(root, run_id))
+        )
+        if not (run_scoped_adopted and not _global_is_full_running_state(root)):
             out.append(
                 {
                     "layout": "global",
@@ -384,10 +429,19 @@ def maybe_adopt_on_deliver_loop(root: Path, state: dict[str, Any]) -> dict[str, 
     if not source:
         return {"adopted": False, "reason": "no-legacy-source"}
     adopted_run_id = str(source.get("runId") or run_id or "")
-    if _run_scoped_state_exists(root, adopted_run_id) and _is_adopted_run_state(
-        _read_state_optional(state_path(root, adopted_run_id))
-    ):
-        return {"adopted": False, "reason": "run-scoped-exists"}
+    try:
+        adopted_run_id = require_run_id(adopted_run_id)
+    except RunIdRequiredError:
+        adopted_run_id = _derive_legacy_run_id(
+            root, dict(source.get("state") or {}), source.get("target")
+        )
+        source["runId"] = adopted_run_id
+    if _run_scoped_state_exists(root, adopted_run_id):
+        if _global_is_full_running_state(root):
+            result = adopt_legacy_run(root, source, abandon=True)
+            return {"adopted": True, **result}
+        if _is_adopted_run_state(_read_state_optional(state_path(root, adopted_run_id))):
+            return {"adopted": False, "reason": "run-scoped-exists"}
     result = adopt_legacy_run(root, source, abandon=False)
     return {"adopted": True, **result}
 
