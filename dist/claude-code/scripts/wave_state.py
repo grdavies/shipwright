@@ -1191,7 +1191,7 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
         "mergeJournal": None,
         "completedMerges": [],
         "currentWave": 1,
-        "nextAction": "lock-acquire",
+        "nextAction": "base-capture",
         "remediationAttempts": {},
         "phaseWorktrees": {},
         "driverHeartbeatAt": utc_now(),

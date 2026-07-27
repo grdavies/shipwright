@@ -327,6 +327,7 @@ def commit_docs_seed(
     dry_run: bool,
     scope: str,
     skipped_private: list[str] | None = None,
+    target_lock: dict[str, Any] | None = None,
 ) -> None:
     current = git_run(["branch", "--show-current"], top, check=False).stdout.strip()
     status = git_run(["status", "--porcelain"], top, check=False).stdout
@@ -408,8 +409,16 @@ def commit_docs_seed(
             "scope": scope,
             "files": doc_rels,
             "skippedPrivate": skipped_private or [],
+            **({"targetLock": target_lock} if target_lock else {}),
         }
     )
+
+
+def _resolve_run_id(args: list[str]) -> str | None:
+    import os
+
+    run_id = parse_kv(args, "--run-id") or os.environ.get("SW_DELIVER_RUN_ID")
+    return run_id.strip() if run_id else None
 
 
 def cmd_spec_seed(root: Path, args: list[str]) -> None:
@@ -418,6 +427,7 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
     if bool(task_list) == bool(artifact):
         fail("exactly one of --task-list or --artifact required")
     dry_run = has_flag(args, "--dry-run")
+    run_id = _resolve_run_id(args)
     top = Path.cwd().resolve()
     default = load_trunk_base(top)
     scope = "artifact" if artifact else "task-list"
@@ -456,6 +466,25 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
     if branch == default:
         fail(f"refused: spec-seed never targets default branch {default!r}")
 
+    if not run_id:
+        fail(
+            "spec-seed requires --run-id or SW_DELIVER_RUN_ID",
+            exit_code=20,
+            halt="target-lock-required",
+        )
+    from wave_spec_seed_guard import assert_target_lock_for_seed
+
+    try:
+        lock_guard = assert_target_lock_for_seed(top, branch, run_id)
+    except PermissionError as exc:
+        fail(
+            str(exc),
+            exit_code=20,
+            halt="target-lock-required",
+            targetBranch=branch,
+            runId=run_id,
+        )
+
     from primary_checkout_guard import enforce_guard
     enforce_guard(top, branch)
 
@@ -480,6 +509,7 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
         dry_run=dry_run,
         scope=scope,
         skipped_private=skipped_private,
+        target_lock=lock_guard,
     )
 
 
