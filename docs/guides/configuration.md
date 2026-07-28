@@ -126,7 +126,7 @@ selector at `.sw/credential-ci-selector.json` (same entry schema; `skip_integrit
 | Backend | macOS | Windows | Linux | Containers | Secret material source |
 | --- | --- | --- | --- | --- | --- |
 | `environment` | yes | yes | yes | yes (with CI declaration) | Explicitly declared env var only (`host.tokenEnv` names presence during alias window) |
-| `github_cli` | yes | yes | yes | when `gh` is available | Isolated `GH_CONFIG_DIR` subprocess auth |
+| `github_cli` | yes | yes | yes | when GitHub CLI is available | Isolated `GH_CONFIG_DIR` subprocess auth |
 | `git_credential` | yes | yes | yes | when helper is available | Git credential helper for scoped hostname |
 | `keystore` | yes (Keychain) | yes (Credential Manager) | **no** | **no** | Native OS secret store (`shipwright.credential/<ref>` service namespace) |
 

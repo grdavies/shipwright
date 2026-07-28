@@ -207,7 +207,7 @@ control changes fail closed — finish or abort the run first.
    - **`environment`:** rotate the declared env var in your profile or CI secret store.
    - **`keystore`:** update the native Keychain / Credential Manager item for service
      `shipwright.credential/<ref>` (macOS/Windows workstations only).
-   - **`github_cli`:** re-authenticate with `gh auth login` under the isolated config dir.
+   - **`github_cli`:** re-authenticate with GitHub CLI (`gh auth login`) under the isolated config dir.
    - **`git_credential`:** update the credential helper store for the scoped hostname.
 3. Re-run `python3 scripts/credentials-doctor.py --root .` and confirm `lastSuccessfulResolution` updates
    for the rotated ref.
