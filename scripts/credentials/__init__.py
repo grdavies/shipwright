@@ -12,7 +12,7 @@ from credentials.model import (
     Secret,
     redact_secret_value,
 )
-from credentials.resolver import resolve
+from credentials.resolver import RepositoryContext, resolve, resolve_lookup
 
 __all__ = [
     "BACKEND_NAMES",
@@ -26,5 +26,7 @@ __all__ = [
     "list_backends",
     "load_backend",
     "redact_secret_value",
+    "RepositoryContext",
     "resolve",
+    "resolve_lookup",
 ]
