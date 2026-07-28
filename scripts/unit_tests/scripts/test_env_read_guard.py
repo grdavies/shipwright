@@ -135,7 +135,37 @@ def test_broker_path_is_exempt(tmp_path: Path, repo_root: Path) -> None:
 def test_warn_mode_returns_zero_despite_findings(repo_root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     guard = _load_guard(repo_root)
     monkeypatch.delenv("SW_ENV_READ_MODE", raising=False)
+    monkeypatch.setattr(
+        "credentials.migration_release_gate.env_read_enforcement_mode",
+        lambda _root=None: "warn",
+    )
     assert guard.main(["--mode", "warn"]) == 0
+
+
+def test_default_mode_flips_to_fail_when_migration_gate_open(
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    guard = _load_guard(repo_root)
+    monkeypatch.delenv("SW_ENV_READ_MODE", raising=False)
+    monkeypatch.setattr(
+        "credentials.migration_release_gate.env_read_enforcement_mode",
+        lambda _root=None: "fail",
+    )
+    assert guard.mode() == "fail"
+
+
+def test_default_mode_stays_warn_when_migration_gate_closed(
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    guard = _load_guard(repo_root)
+    monkeypatch.delenv("SW_ENV_READ_MODE", raising=False)
+    monkeypatch.setattr(
+        "credentials.migration_release_gate.env_read_enforcement_mode",
+        lambda _root=None: "warn",
+    )
+    assert guard.mode() == "warn"
 
 
 def test_manifest_is_single_anchored_source(repo_root: Path) -> None:
