@@ -16,8 +16,7 @@ from credentials.model import ResolutionState
 from credentials.resolver import RepositoryContext
 from credentials.selector_store import SelectorEntry
 
-_TEST_VALUE_A = "sk_test_fixture_allowlisted_secret_scan_aaaaaaaa"
-_TEST_VALUE_B = "sk_test_fixture_allowlisted_secret_scan_bbbbbbbb"
+_TEST_VALUE = "sk_test_fixture_allowlisted_secret_scan_0123456789"
 
 
 def _entry(ref: str, account: str) -> SelectorEntry:
@@ -48,10 +47,9 @@ class TestGhConfigDirConcurrency:
         lock = threading.Lock()
         barrier = threading.Barrier(2)
 
-        def _runner_factory(token: str) -> object:
+        def _runner_factory(ref_hint: str) -> object:
             def _runner(invocation: GithubCliInvocation) -> subprocess.CompletedProcess[str]:
                 config_dir = invocation.env[GH_CONFIG_DIR_ENV]
-                ref_hint = "ref-a" if token == _TEST_VALUE_A else "ref-b"
                 with lock:
                     observed.append((ref_hint, config_dir, invocation.argv[-1]))
                 barrier.wait(timeout=5)
@@ -59,7 +57,7 @@ class TestGhConfigDirConcurrency:
                     return subprocess.CompletedProcess(
                         args=list(invocation.argv),
                         returncode=0,
-                        stdout=f"{token}\n",
+                        stdout=f"{_TEST_VALUE}\n",
                         stderr="",
                     )
                 return subprocess.CompletedProcess(
@@ -72,13 +70,13 @@ class TestGhConfigDirConcurrency:
             return _runner
 
         adapter_a = GithubCliBackendAdapter(
-            runner=_runner_factory(_TEST_VALUE_A),
+            runner=_runner_factory("ref-a"),
             gh_executable="/usr/bin/gh",
             broker_root=tmp_path,
             work_dir=tmp_path,
         )
         adapter_b = GithubCliBackendAdapter(
-            runner=_runner_factory(_TEST_VALUE_B),
+            runner=_runner_factory("ref-b"),
             gh_executable="/usr/bin/gh",
             broker_root=tmp_path,
             work_dir=tmp_path,
