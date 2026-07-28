@@ -682,6 +682,7 @@
 * merge phase operator-documentation-currency-medium into feat/credential-repository-isolation (3bf234b) <!-- sw-deliver:operator-documentation-currency-medium -->
 * merge phase provider-and-workflow-documentation-currency-medium into feat/credential-repository-isolation (a3e1b05) <!-- sw-deliver:provider-and-workflow-documentation-currency-medium -->
 * merge phase rollout-alias-removal-preflight-dist-regeneration-medium into feat/credential-repository-isolation (ab6cf39) <!-- sw-deliver:rollout-alias-removal-preflight-dist-regeneration-medium -->
+* merge phase transaction-coordinator-durable-journal-medium into feat/planning-authority-memory-integrity (993ac25) <!-- sw-deliver:transaction-coordinator-durable-journal-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
