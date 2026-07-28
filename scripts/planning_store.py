@@ -2645,7 +2645,8 @@ class LocalSyncedBackend(PlanningStoreBackend):
         from planning_paths import atomic_write_text
 
         path = self._unit_path(unit_id)
-        atomic_write_text(path, content, root=self.root, store_id=FILE_BACKED_STORE_TXN_ID)
+        store_root = self.synced_root()
+        atomic_write_text(path, content, root=store_root, store_id=FILE_BACKED_STORE_TXN_ID)
         log_operation("put", unit_id, body_path, content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=content_hash(content))
 
