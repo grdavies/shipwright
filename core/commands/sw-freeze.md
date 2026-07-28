@@ -155,6 +155,13 @@ Bootstrap local hook: `python3 scripts/install-hooks.py`.
 
 **Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-freeze`.
 
+## Currency (PRD 080)
+
+Issue-store freezes continue to route durability through `planning_store.py` (`freeze` /
+`verify-frozen-hash`). Credential material for store access resolves by **credential reference** via the
+broker — freeze receipts and CI output still must never print secret values. `durabilityState`,
+`driverInvoked`, and `durability-not-verified` semantics are unchanged.
+
 ## Guardrails
 
 - No unfreeze path exists.
