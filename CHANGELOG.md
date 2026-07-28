@@ -679,6 +679,7 @@
 * merge phase memory-adapters-and-hook-spawned-providers-small into feat/credential-repository-isolation (8f5ca30) <!-- sw-deliver:memory-adapters-and-hook-spawned-providers-small -->
 * merge phase identity-aware-authentication-doctor-medium into feat/credential-repository-isolation (d6c121e) <!-- sw-deliver:identity-aware-authentication-doctor-medium -->
 * merge phase init-migration-and-progressive-disclosure-medium into feat/credential-repository-isolation (3264548) <!-- sw-deliver:init-migration-and-progressive-disclosure-medium -->
+* merge phase operator-documentation-currency-medium into feat/credential-repository-isolation (3bf234b) <!-- sw-deliver:operator-documentation-currency-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
