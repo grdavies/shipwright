@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "description": "Single anchored exemption manifest for env-read-guard (PRD 080 R4).",
+  "brokerPaths": [
+    "scripts/credentials/",
+    "core/scripts/credentials/"
+  ],
+  "exemptModules": [
+    "scripts/env-read-guard.py",
+    "core/scripts/env-read-guard.py"
+  ],
+  "allowlistedControlVariables": [
+    "SW_DELIVER_DRY_RUN",
+    "SW_DETERMINISTIC_REGEN_STUB",
+    "SW_DOC_RUN_ID",
+    "SW_ENV_READ_MODE",
+    "SW_FIXTURE_COMPLETION_FINALIZE",
+    "SW_FIXTURE_RUN_FINALIZE",
+    "SW_INTEGRATION_BRANCH",
+    "SW_LOCK_STALE_SECONDS",
+    "SW_MERGE_RUN_NEXT_TIMEOUT_SECONDS",
+    "SW_PHASE_ID",
+    "SW_PHASE_MODE",
+    "SW_PHASE_SLUG",
+    "SW_RECOVERY_ACTOR",
+    "SW_RUN_DIR",
+    "SW_RUN_ID",
+    "SW_SKIP_DOCS_CURRENCY",
+    "SW_TASK_LIST",
+    "SW_TEST_ACTIVE_SUB_BRANCHES",
+    "SW_ZERO_SHELL_MODE"
+  ]
+}
