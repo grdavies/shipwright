@@ -30,7 +30,7 @@ class _HealthyBackend:
     def resolve(self, entry, **kwargs):  # noqa: ANN001
         return BackendResolveResult(
             state=ResolutionState.RESOLVED,
-            token=Secret(_TEST_VALUE),
+            token=Secret("broker-fixture-token"),
             principal=Principal(profile="work", account="work"),
             backend=entry.backend,
         )

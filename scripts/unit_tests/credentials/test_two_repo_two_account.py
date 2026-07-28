@@ -21,8 +21,6 @@ from credentials.pairing_store import approve_pairing, record_first_use
 from credentials.resolver import BackendResolveResult, RepositoryContext, register_backend_adapter, resolve_lookup
 
 SENTINEL = "sentinel-must-not-leak"
-_ALICE_TOKEN = "sk_test_fixture_allowlisted_secret_scan_alice012345"
-_BOB_TOKEN = "sk_test_fixture_allowlisted_secret_scan_bob0123456"
 
 
 class _PerAccountBackend:
