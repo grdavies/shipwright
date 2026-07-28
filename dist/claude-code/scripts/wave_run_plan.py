@@ -10,6 +10,7 @@ from typing import Any
 
 from wave_json_io import StateCorruptError, read_json, write_json
 from wave_run_paths import mint_run_id, plan_path, require_run_id
+from wave_state import canonical_repo_root
 
 
 class PlanHashMismatchError(ValueError):
@@ -105,7 +106,8 @@ def verify_plan_hash(root: Path, run_id: str, state: dict[str, Any]) -> None:
     path_rel = state.get("planPath")
     if not isinstance(path_rel, str) or not path_rel:
         raise PlanRecordMissingError("planPath missing from run state")
-    on_disk = (root / path_rel).resolve()
+    anchor = canonical_repo_root(root)
+    on_disk = (anchor / path_rel).resolve()
     expected = plan_path(root, run_id).resolve()
     if on_disk != expected:
         raise PlanHashMismatchError(f"planPath {path_rel!r} outside run namespace")
