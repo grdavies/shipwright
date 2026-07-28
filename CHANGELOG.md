@@ -663,6 +663,7 @@
 * merge phase default-deny-child-environment-constructors-medium into feat/credential-repository-isolation (20826b6) <!-- sw-deliver:default-deny-child-environment-constructors-medium -->
 * merge phase resolver-precedence-scope-tri-state-timeouts-medium into feat/credential-repository-isolation (a97f529) <!-- sw-deliver:resolver-precedence-scope-tri-state-timeouts-medium -->
 * merge phase hook-and-adapter-subprocess-adoption-medium into feat/credential-repository-isolation (494c2d2) <!-- sw-deliver:hook-and-adapter-subprocess-adoption-medium -->
+* merge phase native-keystore-backend-and-platform-matrix-medium into feat/credential-repository-isolation (e689099) <!-- sw-deliver:native-keystore-backend-and-platform-matrix-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
