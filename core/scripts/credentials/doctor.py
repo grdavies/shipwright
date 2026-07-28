@@ -22,6 +22,7 @@ from credentials.ci_declaration import (
 from credentials.config_surface import (
     DeprecationPhase,
     ResolvedCredentialSurface,
+    ConfigSurfaceError,
     resolve_config_surface,
 )
 from credentials.environment_backend import EnvironmentBackendAdapter
@@ -519,6 +520,16 @@ def diagnose_surface(
     )
 
 
+def _config_surface_failure(root: Path, exc: ConfigSurfaceError) -> DoctorFailure:
+    remediation = remediation_for_code(exc.code, root=root)
+    if exc.code not in fc.ALL_FAILURE_CODES:
+        remediation = Remediation(
+            scope=LOCAL_SCOPE,
+            command=remediation_command(scope=LOCAL_SCOPE, code=exc.code, root=root),
+        )
+    return DoctorFailure(code=exc.code, remediation=remediation)
+
+
 def diagnose_repository(
     root: Path,
     *,
@@ -532,7 +543,26 @@ def diagnose_repository(
     from host_lib import load_workflow_config
 
     cfg = load_workflow_config(root)
-    surface_result = resolve_config_surface(cfg, deprecation_phase=DeprecationPhase.DEPRECATION)
+    try:
+        surface_result = resolve_config_surface(cfg, deprecation_phase=DeprecationPhase.DEPRECATION)
+    except ConfigSurfaceError as exc:
+        failure = _config_surface_failure(root, exc)
+        return {
+            "verdict": "fail",
+            "projectId": None,
+            "surfaces": [],
+            "references": list_known_references(
+                selector_path=selector_path,
+                xdg_base=xdg_base,
+                skip_integrity=skip_integrity,
+            ),
+            "credentialDoctor": f"{CREDENTIAL_DOCTOR_CLI} --root {root.resolve()}",
+            "failure": {
+                "code": failure.code,
+                "remediationScope": failure.remediation.scope,
+                "remediationCommand": failure.remediation.command,
+            },
+        }
     surfaces = [
         diagnose_surface(
             root,
@@ -602,7 +632,22 @@ def diagnose_host_surface(
     from host_lib import load_workflow_config
 
     cfg = load_workflow_config(root)
-    surface_result = resolve_config_surface(cfg, deprecation_phase=DeprecationPhase.DEPRECATION)
+    try:
+        surface_result = resolve_config_surface(cfg, deprecation_phase=DeprecationPhase.DEPRECATION)
+    except ConfigSurfaceError as exc:
+        failure = _config_surface_failure(root, exc)
+        return {
+            "principal": None,
+            "requiredOperationVerdict": "fail",
+            "repositoryAccess": "fail",
+            "credentialRef": None,
+            "credentialDoctor": f"{CREDENTIAL_DOCTOR_CLI} --root {root.resolve()}",
+            "failure": {
+                "code": failure.code,
+                "remediationScope": failure.remediation.scope,
+                "remediationCommand": failure.remediation.command,
+            },
+        }
     diagnosis = diagnose_surface(
         root,
         cfg,

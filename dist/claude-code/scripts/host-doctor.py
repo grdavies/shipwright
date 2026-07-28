@@ -41,7 +41,7 @@ def main(argv: list[str] | None = None) -> int:
     host_identity = diagnose_host_surface(root)
     identity_status = "ok"
     if host_identity.get("requiredOperationVerdict") == "fail":
-        identity_status = "fail"
+        identity_status = "degraded"
         warnings.append("host-credential-failed")
     elif host_identity.get("requiredOperationVerdict") == "skipped":
         identity_status = "skipped"
