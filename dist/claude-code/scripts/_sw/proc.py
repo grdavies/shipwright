@@ -81,13 +81,20 @@ def materialize_child_env(
     build_hook_verify_child_env, build_host_cli_child_env = _child_env_builders()
     if child_env is None:
         # Default internal dispatch (e.g. wave.py → wave_*.py): forward SW_* harness
-        # markers so CI-status deliver gate skip still works; never inherit tokens.
+        # markers so CI-status deliver gate skip still works. Do not inherit host
+        # tokens (GITHUB_TOKEN/GH_TOKEN); hooks must pass HookVerifyEnv explicitly.
+        # Issue-store contract token is broker-injected for orchestrator children only
+        # (PRD 070 separate-project); it is blocked from declared_context_keys.
         source = dict(parent if parent is not None else os.environ)
-        return build_hook_verify_child_env(
+        env = build_hook_verify_child_env(
             source,
             declared_context_keys=_non_credential_sw_keys(source),
             pythonpath=source.get("PYTHONPATH"),
         )
+        planning_token = source.get("SW_PLANNING_ISSUES_TOKEN", "").strip()
+        if planning_token:
+            env["SW_PLANNING_ISSUES_TOKEN"] = planning_token
+        return env
     spec_parent = child_env.parent if child_env.parent is not None else parent
     source = spec_parent if spec_parent is not None else os.environ
     if isinstance(child_env, HookVerifyEnv):
