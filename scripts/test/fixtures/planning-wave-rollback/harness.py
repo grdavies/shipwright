@@ -31,6 +31,7 @@ import contextlib
 import importlib.util
 import json
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -42,6 +43,7 @@ SCRIPTS = ROOT / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
+import planning_backend_control as pbc
 import planning_store as ps
 
 UNIT_ID = "rollback-fixture"
@@ -73,6 +75,13 @@ def _synthetic_cfg_dict() -> dict:
 
 def _setup_root(tmp: str) -> Path:
     root = Path(tmp)
+    subprocess.run(["git", "init", "-b", "main"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "remote", "add", "origin", "https://github.com/acme/wave-rollback-fixture.git"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
     cfg_path = root / ".cursor" / "workflow.config.json"
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(json.dumps(_synthetic_cfg_dict(), indent=2), encoding="utf-8")
@@ -95,8 +104,15 @@ def _env_flag(name: str, active: bool):
             os.environ[name] = prior
 
 
-def kill_switch(active: bool):
-    return _env_flag(ps.KILL_SWITCH_ENV, active)
+@contextlib.contextmanager
+def kill_switch(root: Path, active: bool):
+    if active:
+        pbc.cmd_disable(root, set_by="fixture", reason="wave rollback")
+    try:
+        yield
+    finally:
+        if active:
+            pbc.cmd_enable(root)
 
 
 def fixture_issue_store():
@@ -107,9 +123,9 @@ def check_kill_switch_forces_file_store_and_restores() -> dict:
     with tempfile.TemporaryDirectory() as tmp, fixture_issue_store():
         root = _setup_root(tmp)
         cfg = ps.load_workflow_config(root)
-        with kill_switch(True):
+        with kill_switch(root, True):
             on = ps.resolve_effective_backend(root, cfg)
-        with kill_switch(False):
+        with kill_switch(root, False):
             off = ps.resolve_effective_backend(root, cfg)
     ok = (
         on.get("effective") == "in-repo-public"
@@ -126,11 +142,12 @@ def check_kill_switch_forces_file_store_and_restores() -> dict:
 
 
 def check_override_bypasses_kill_switch() -> dict:
-    with tempfile.TemporaryDirectory() as tmp, fixture_issue_store(), kill_switch(True):
+    with tempfile.TemporaryDirectory() as tmp, fixture_issue_store():
         root = _setup_root(tmp)
         cfg = ps.load_workflow_config(root)
-        effective = ps.resolve_effective_backend(root, cfg, override="issue-store")
-        backend = ps.get_backend(root, cfg, override="issue-store")
+        with kill_switch(root, True):
+            effective = ps.resolve_effective_backend(root, cfg, override="issue-store")
+            backend = ps.get_backend(root, cfg, override="issue-store")
     ok = effective.get("effective") == "issue-store" and isinstance(backend, ps.IssueStoreBackend)
     return {
         "name": "override-bypasses-kill-switch",
@@ -152,7 +169,7 @@ def check_wave_regression_detects_drift_then_clean() -> dict:
         # trivially-missing local file (which would itself be drift).
         local_backend.put(UNIT_ID, BODY_PATH, "# rollback fixture v1 (authoritative)")
 
-        with kill_switch(True):
+        with kill_switch(root, True):
             clean_baseline = ps.wave_regression_finding(root, cfg)
 
             local_backend.put(UNIT_ID, BODY_PATH, "# STALE local copy pre-rollback")
@@ -163,7 +180,7 @@ def check_wave_regression_detects_drift_then_clean() -> dict:
 
             finding_clean = ps.wave_regression_finding(root, cfg)
 
-        with kill_switch(False):
+        with kill_switch(root, False):
             finding_inert_switch_off = ps.wave_regression_finding(root, cfg)
 
     ok = (
@@ -193,7 +210,7 @@ def check_materialize_from_store_idempotent_no_data_loss() -> dict:
         issue_backend.put(UNIT_ID, BODY_PATH, "# idempotency check v1")
         units = [{"unitId": UNIT_ID, "bodyPath": BODY_PATH}]
 
-        with kill_switch(True):
+        with kill_switch(root, True):
             before = issue_backend.get(UNIT_ID, BODY_PATH)
             first = ps.materialize_from_store(root, cfg, units)
             mid = issue_backend.get(UNIT_ID, BODY_PATH)
@@ -223,7 +240,7 @@ def check_doctor_reports_wave_regression_fail_closed() -> dict:
         cfg = ps.load_workflow_config(root)
         issue_backend = ps.get_backend(root, cfg, override="issue-store")
         issue_backend.put(UNIT_ID, BODY_PATH, "# doctor drift check v1")
-        with kill_switch(True):
+        with kill_switch(root, True):
             local_backend = ps.InRepoPublicBackend(root, cfg)
             local_backend.put(UNIT_ID, BODY_PATH, "# doctor drift check STALE")
             out = doctor.doctor(root, sweep=False)

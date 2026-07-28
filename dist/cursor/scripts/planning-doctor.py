@@ -89,6 +89,16 @@ def wave_regression_check(root: Path) -> dict | None:
         return None
 
 
+def backend_disable_record_finding(root: Path) -> dict | None:
+    """Surface active durable backend-disable records (PRD 080 R8)."""
+    try:
+        import planning_backend_control as pbc
+
+        return pbc.disable_record_doctor_finding(root)
+    except Exception:  # noqa: BLE001 — doctor check is advisory / fail-open
+        return None
+
+
 def gap_resolution_partial_finding(root: Path) -> dict | None:
     """Open-issue-plus-resolved-label mismatch finding (PRD 057 R4).
 
@@ -556,6 +566,11 @@ def doctor(root: Path, *, sweep: bool) -> dict:
         if regression_finding.get("status") == "drift":
             warnings.append("wave-regression")
             verdict = "fail"
+
+    disable_record_finding = backend_disable_record_finding(root)
+    if disable_record_finding is not None:
+        checks.append(disable_record_finding)
+        warnings.append("backend-disable-record")
 
     gap_resolution_finding = gap_resolution_partial_finding(root)
     if gap_resolution_finding is not None:
