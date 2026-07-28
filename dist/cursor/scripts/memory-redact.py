@@ -34,10 +34,9 @@ def main(argv: list[str] | None = None) -> int:
     old_argv = sys.argv
     try:
         sys.argv = [str(Path(__file__).name), *args]
-        memory_redact.main()
+        return memory_redact.main()
     finally:
         sys.argv = old_argv
-    return 0
 
 
 if __name__ == "__main__":

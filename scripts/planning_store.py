@@ -325,8 +325,9 @@ def log_operation(
 
 
 def redact_content(content: str) -> str:
+    destination = planning_visibility.resolve_emission_destination("store-get")
     proc = subprocess.run(
-        [str(SCRIPT_DIR / "memory-redact.py")],
+        [str(SCRIPT_DIR / "memory-redact.py"), "--destination", destination],
         input=content,
         text=True,
         capture_output=True,

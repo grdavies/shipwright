@@ -9,6 +9,10 @@ from pathlib import Path
 from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from planning_visibility import resolve_emission_destination  # noqa: E402
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -166,8 +170,9 @@ def cmd_learnings_prepare(root: Path, args: list[str]) -> None:
     lines.append("")
     lines.append(payload["memoryGuidance"])
     raw = "\n".join(lines)
+    destination = resolve_emission_destination("issue-store-memory-pointer")
     proc = subprocess.run(
-        [str(SCRIPT_DIR / "memory-redact.py")],
+        [str(SCRIPT_DIR / "memory-redact.py"), "--destination", destination],
         input=raw,
         text=True,
         capture_output=True,

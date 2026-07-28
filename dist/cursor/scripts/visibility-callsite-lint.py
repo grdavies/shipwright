@@ -13,7 +13,13 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from planning_visibility import EMISSION_POINTS, REDACTED_BODY_MARKER  # noqa: E402
+from planning_visibility import (  # noqa: E402
+    EMISSION_POINT_REGISTRY,
+    EMISSION_POINTS,
+    REDACTED_BODY_MARKER,
+    emission_point_destinations,
+    resolve_emission_destination,
+)
 
 # Phase 2 wired consumers — must import planning_visibility or call visibility-resolve.py
 WIRED_POINT_SCRIPTS: dict[str, str] = {
@@ -34,6 +40,104 @@ BYPASS_PATTERN = re.compile(
     r"\.read_text\s*\(|open\s*\([^)]+\)\.read\s*\(",
     re.MULTILINE,
 )
+
+REDACT_INVOKE_PATTERN = re.compile(
+    r"subprocess\.(?:run|Popen)\([^)]*memory[-_]redact",
+    re.MULTILINE | re.DOTALL,
+)
+
+REDACT_SKIP_PREFIXES = (
+    "scripts/unit_tests/",
+    "scripts/test/",
+)
+
+REDACT_SKIP_FILES = frozenset(
+    {
+        "secret_patterns.py",
+        "secret_scan.py",
+        "memory_redact.py",
+        "memory-redact.py",
+        "visibility-callsite-lint.py",
+        "memory_envelope_v2.py",
+    }
+)
+
+HARDCODED_DESTINATION_PATTERN = re.compile(
+    r"""--destination\s+['\"]?(local|committed|external|cross-project|logs)['\"]?""",
+    re.MULTILINE,
+)
+
+REGISTRY_RESOLVER_MARKERS = (
+    "resolve_emission_destination",
+    "resolve-destination",
+    "emission_point_destinations",
+)
+
+
+def parse_emission_doc_destinations(doc_path: Path) -> dict[str, str]:
+    if not doc_path.is_file():
+        return {}
+    rows: dict[str, str] = {}
+    for line in doc_path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|") or line.startswith("| ---"):
+            continue
+        parts = [p.strip() for p in line.strip("|").split("|")]
+        if len(parts) < 3:
+            continue
+        point = parts[0].strip("`")
+        destination = parts[1].strip("`")
+        if point in EMISSION_POINT_REGISTRY and destination in {
+            "local",
+            "committed",
+            "external",
+            "cross-project",
+            "logs",
+        }:
+            rows[point] = destination
+    return rows
+
+
+def lint_registry_destination_alignment(doc_path: Path) -> list[str]:
+    errors: list[str] = []
+    documented = parse_emission_doc_destinations(doc_path)
+    for point_id in sorted(EMISSION_POINT_REGISTRY):
+        if point_id not in documented:
+            errors.append(f"emission-points doc missing destination row: {point_id}")
+            continue
+        expected = resolve_emission_destination(point_id)
+        if documented[point_id] != expected:
+            errors.append(
+                f"{point_id}: doc destination {documented[point_id]!r} != registry {expected!r}"
+            )
+    return errors
+
+
+def lint_redaction_callsites(repo_root: Path) -> list[str]:
+    errors: list[str] = []
+    scripts_dir = repo_root / "scripts"
+    if not scripts_dir.is_dir():
+        return errors
+    for path in sorted(scripts_dir.rglob("*.py")):
+        rel = str(path.relative_to(repo_root)).replace("\\", "/")
+        if any(rel.startswith(prefix) for prefix in REDACT_SKIP_PREFIXES):
+            continue
+        if path.name in REDACT_SKIP_FILES:
+            continue
+        text = path.read_text(encoding="utf-8")
+        if not REDACT_INVOKE_PATTERN.search(text):
+            continue
+        if not any(marker in text for marker in REGISTRY_RESOLVER_MARKERS):
+            errors.append(
+                f"redaction call site missing registry destination resolver: {path.relative_to(repo_root)}"
+            )
+        if HARDCODED_DESTINATION_PATTERN.search(text) and not any(
+            marker in text for marker in REGISTRY_RESOLVER_MARKERS
+        ):
+            errors.append(
+                f"redaction call site uses hardcoded --destination without registry resolver: "
+                f"{path.relative_to(repo_root)}"
+            )
+    return errors
 
 
 def parse_map_points(map_path: Path) -> dict[str, str]:
@@ -110,6 +214,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Visibility call-site map lint (PRD 034 R14)")
     parser.add_argument("--root", default=".", help="Repository root")
     parser.add_argument("--map", required=True, help="call-site-map.md path")
+    parser.add_argument(
+        "--emission-doc",
+        default="core/skills/visibility/references/emission-points.md",
+        help="emission-points.md path for destination alignment lint",
+    )
     parser.add_argument("--probe-bypass", default=None, help="Fixture bypass probe script")
     parser.add_argument("--scan-content", default=None, help="Scan generated artifact for golden markers")
     args = parser.parse_args(argv)
@@ -122,6 +231,11 @@ def main(argv: list[str] | None = None) -> int:
     errors: list[str] = []
     errors.extend(lint_map_exhaustiveness(map_path))
     errors.extend(lint_wired_scripts(root))
+    emission_doc = Path(args.emission_doc)
+    if not emission_doc.is_absolute():
+        emission_doc = root / emission_doc
+    errors.extend(lint_registry_destination_alignment(emission_doc))
+    errors.extend(lint_redaction_callsites(root))
 
     if args.probe_bypass:
         probe = Path(args.probe_bypass)
@@ -151,6 +265,7 @@ def main(argv: list[str] | None = None) -> int:
             {
                 "verdict": "pass",
                 "emissionPoints": len(EMISSION_POINTS),
+                "destinations": emission_point_destinations(),
                 "wiredScripts": sorted(set(WIRED_POINT_SCRIPTS.values())),
             },
             indent=2,
