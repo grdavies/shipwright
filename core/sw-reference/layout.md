@@ -906,7 +906,7 @@ Bidirectional file ⇄ issue migration records durable per-artifact state under 
 Dry-run (no `--apply`) must not create or update this file. Command surface: `/sw-migrate` /
 `scripts/planning_migrate.py` `store-files-to-issues` | `store-issues-to-files`.
 
-## Credential machine-local records (PRD 080)
+## Credential machine-local records
 
 Non-secret credential references live in committed config; secret backends and scope enforcement live in
 operator-owned stores under the trusted config directory or git common dir. No secret-valued properties in

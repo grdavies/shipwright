@@ -36,7 +36,7 @@ python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . remove --confirm
 `check-gate.py` (for example `~/.cursor/plugins/local/shipwright/scripts`). Reinstall from the Shipwright
 source repo with `python3 scripts/install.py` when the tree is missing.
 
-## Credential references and machine-local selector (PRD 080)
+## Credential references and machine-local selector
 
 Shipwright stores **non-secret credential references** in committed config and resolves secret material
 through the credential broker at runtime. Tokens never belong in config bodies, selector files, or journals.
