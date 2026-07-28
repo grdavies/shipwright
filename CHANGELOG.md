@@ -686,6 +686,7 @@
 * merge phase memory-envelope-v2-codec-and-v1-upgrader-medium into feat/planning-authority-memory-integrity (2a8f1a5) <!-- sw-deliver:memory-envelope-v2-codec-and-v1-upgrader-medium -->
 * merge phase sourceoftruth-default-flip-behind-a-fail-closed-gate-small into feat/planning-authority-memory-integrity (703da01) <!-- sw-deliver:sourceoftruth-default-flip-behind-a-fail-closed-gate-small -->
 * merge phase hermetic-memory-eval-harness-medium into feat/planning-authority-memory-integrity (66b9adc) <!-- sw-deliver:hermetic-memory-eval-harness-medium -->
+* merge phase authority-decision-object-fallback-reason-mapping-medium into feat/planning-authority-memory-integrity (c3fca5b) <!-- sw-deliver:authority-decision-object-fallback-reason-mapping-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

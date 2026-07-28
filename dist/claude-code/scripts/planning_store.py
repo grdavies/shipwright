@@ -14,6 +14,7 @@ _CANONICAL_MODULE_NAME = "_planning_store_canonical"
 _CANONICAL_REL = "scripts/planning_store.py"
 _REPO_ROOT_DEPTH = 3
 _EXPORTED_NAMES = (
+    'BITBUCKET_ISSUE_STORE_GUIDANCE',
     'DEFAULT_BACKEND',
     'DEFAULT_ISSUES_TOKEN_ENV',
     'DEFERRED_ISSUES_PROVIDERS',
@@ -22,6 +23,7 @@ _EXPORTED_NAMES = (
     'InRepoPublicBackend',
     'IssueStoreBackend',
     'KILL_SWITCH_ENV',
+    'KILL_SWITCH_NOTICE',
     'MATERIALIZE_MISSING_FROZEN_BODY',
     'MemoryLocalCacheBackend',
     'PROJECT_KEY_PATTERN',

@@ -406,6 +406,12 @@ Authoritative deliver run-state lives under `.cursor/sw-deliver-runs/<runId>/sta
 (`wave_run_paths.state_path`). The root `index.json` carries discovery fields only (`runId`, `target`,
 `taskList`, `verdict`, `statePath`, `lockKeyDigest`) — never the exclusion primitive.
 
+Run-scoped path accessors (`wave_run_paths.runs_root`, `plan_path`, `state_path`, etc.) anchor at
+`wave_state.path_normalize_anchor` — the shared primary repo root via `git-common-dir` when git is present.
+When `root` is not a git tree (unit harness fixtures only), anchoring soft-fails to `root.resolve()` so
+temp fixture trees can mint run ids without forking `.cursor/sw-deliver-runs/`. Production deliver paths
+still fail closed through `canonical_repo_root` where git presence is mandatory.
+
 Legacy slug-scoped files (`.cursor/sw-deliver-state.<slug>.json`, `.cursor/sw-deliver-<slug>.lock`) remain
 enumerable for `list` / `resume` until adopted. Orchestrator and phase worktrees read and write through
 `wave_state.resolve_state_path()` / `scoped_paths()` at the git toplevel — never a second authoritative
