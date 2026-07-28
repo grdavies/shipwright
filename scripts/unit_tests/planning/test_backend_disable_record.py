@@ -38,27 +38,24 @@ def _write_cfg(repo: Path, cfg: dict[str, Any]) -> None:
     path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
 
 
-def _init_second_repo(base: Path, remote: str, name: str) -> Path:
-    repo = base / name
-    repo.mkdir()
-    subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
-    subprocess.run(["git", "config", "user.email", "sw-test@example.com"], cwd=repo, check=True, capture_output=True)
-    subprocess.run(["git", "config", "user.name", "Shipwright Test"], cwd=repo, check=True, capture_output=True)
-    (repo / "README.md").write_text("fixture\n", encoding="utf-8")
-    subprocess.run(["git", "add", "README.md"], cwd=repo, check=True, capture_output=True)
-    subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
-    subprocess.run(["git", "remote", "add", "origin", remote], cwd=repo, check=True, capture_output=True)
-    return repo
+def test_record_scoped_to_one_repository_leaves_second_unaffected(tmp_git_repo: Path) -> None:
+    subprocess.run(
+        ["git", "remote", "add", "origin", "https://github.com/acme/repo-a.git"],
+        cwd=tmp_git_repo,
+        check=True,
+        capture_output=True,
+    )
+    _write_cfg(tmp_git_repo, _issue_store_cfg())
+    assert pbc.cmd_disable(tmp_git_repo, set_by="operator", reason="repo-a rollback")["verdict"] == "ok"
+    assert ps.resolve_effective_backend(tmp_git_repo, _issue_store_cfg()).get("killSwitch") is True
 
-
-def test_record_scoped_to_one_repository_leaves_second_unaffected(tmp_path: Path) -> None:
-    repo_a = _init_second_repo(tmp_path, "https://github.com/acme/repo-a.git", "repo-a")
-    repo_b = _init_second_repo(tmp_path, "https://github.com/acme/repo-b.git", "repo-b")
-    _write_cfg(repo_a, _issue_store_cfg())
-    _write_cfg(repo_b, _issue_store_cfg())
-    assert pbc.cmd_disable(repo_a, set_by="operator", reason="repo-a rollback")["verdict"] == "ok"
-    assert ps.resolve_effective_backend(repo_a, _issue_store_cfg()).get("killSwitch") is True
-    assert ps.resolve_effective_backend(repo_b, _issue_store_cfg()).get("killSwitch") is None
+    subprocess.run(
+        ["git", "remote", "set-url", "origin", "https://github.com/acme/repo-b.git"],
+        cwd=tmp_git_repo,
+        check=True,
+        capture_output=True,
+    )
+    assert ps.resolve_effective_backend(tmp_git_repo, _issue_store_cfg()).get("killSwitch") is None
 
 
 def test_list_records_offline(tmp_git_repo: Path) -> None:
