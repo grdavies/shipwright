@@ -43,6 +43,6 @@ Unregistered or omitted emission points resolve to `external` (strictest practic
 
 ## Redaction binding
 
-Call sites MUST pass an explicit `--destination` to `memory_redact.py` / `memory-redact.py`,
+Call sites MUST pass an explicit destination tier to the memory redact chokepoint,
 resolved from this registry via `planning_visibility.resolve_emission_destination` — never from
-caller free text. Lint: `python3 scripts/visibility-callsite-lint.py`.
+caller free text. Lint coverage lives in `visibility-callsite-lint.py`.

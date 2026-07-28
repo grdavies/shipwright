@@ -27,6 +27,9 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from planning_visibility import resolve_emission_destination  # noqa: E402
+
+
+def valid_path(path: str) -> bool:
     if not path or "{" in path or "}" in path or "`" in path or "(" in path:
         return False
     return "/" in path or path.endswith((".md", ".py", ".json", ".sh"))
