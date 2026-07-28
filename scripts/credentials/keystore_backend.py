@@ -250,9 +250,10 @@ class KeystoreBackendAdapter:
             profile=entry.account or entry.ref,
             account=entry.account,
         )
+        wrapped_token = Secret(token_payload)
         return BackendResolveResult(
             state=ResolutionState.RESOLVED,
-            token=Secret(token_payload),
+            token=wrapped_token,
             principal=principal,
             backend=entry.backend,
         )
