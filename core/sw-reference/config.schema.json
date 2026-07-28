@@ -8,6 +8,11 @@
     "$schema": {
       "type": "string"
     },
+    "projectId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Stable repository project identity slug (PRD 080 R1). Required for credential broker pairing and scope checks."
+    },
     "defaultBaseBranch": {
       "type": "string",
       "default": "main"
@@ -615,6 +620,16 @@
       "additionalProperties": false,
       "description": "Durable memory provider selection and project binding. API credentials are env-sourced only.",
       "properties": {
+        "credentialRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Non-secret credential selector reference for memory provider auth (PRD 080 R1). Preferred over tokenEnv."
+        },
+        "tokenEnv": {
+          "type": "string",
+          "deprecated": true,
+          "description": "DEPRECATED (one release): environment variable name for memory provider auth. Prefer memory.credentialRef; credentialRef wins when both are set."
+        },
         "provider": {
           "type": "string",
           "default": "in-repo",
@@ -1128,9 +1143,15 @@
           "default": "origin",
           "description": "Git remote name for host operations."
         },
+        "credentialRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Non-secret credential selector reference for host transport (PRD 080 R1). Preferred over tokenEnv."
+        },
         "tokenEnv": {
           "type": "string",
-          "description": "Environment variable name holding the API token (never the secret value)."
+          "deprecated": true,
+          "description": "DEPRECATED (one release): environment variable name holding the API token. Prefer host.credentialRef; credentialRef wins when both are set."
         },
         "baseUrl": {
           "type": "string",
@@ -1396,9 +1417,15 @@
               "additionalProperties": false,
               "description": "Issue-store credential contract. Under storeLocation.mode separate-project, operators MUST supply SW_PLANNING_ISSUES_TOKEN locally and as a GitHub Actions secret for merge-boundary close-out (scripts/closeout_ci.py, scripts/deliver_closeout.py). The default repo GITHUB_TOKEN is not used for cross-repo planning-project mutations.",
               "properties": {
+                "credentialRef": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Non-secret credential selector reference for planning-store issue mutations (PRD 080 R1). Preferred over tokenEnv."
+                },
                 "tokenEnv": {
                   "type": "string",
-                  "description": "Canonical env var name for planning-project issue mutations (default and required value: SW_PLANNING_ISSUES_TOKEN). Consumed by closeout_ci.py and issue-store adapters; distinct from host.tokenEnv (GITHUB_TOKEN)."
+                  "deprecated": true,
+                  "description": "DEPRECATED (one release): canonical env var name for planning-project issue mutations. Prefer planning.store.issues.credentialRef; credentialRef wins when both are set. Distinct from host.tokenEnv."
                 },
                 "rateLimit": {
                   "type": "object"
