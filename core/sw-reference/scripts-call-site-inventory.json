@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-28T15:18:31Z",
+  "generatedAt": "2026-07-28T18:12:34Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3376,6 +3376,15 @@
       "classification": "self-repo-only"
     },
     {
+      "id": "core/providers/host/github.md:89:credentials-doctor.py",
+      "tree": "core/providers",
+      "file": "core/providers/host/github.md",
+      "line": 89,
+      "column": 19,
+      "script": "credentials-doctor.py",
+      "classification": "self-repo-only"
+    },
+    {
       "id": "core/providers/in-repo.md:143:in-repo-memory-search.py",
       "tree": "core/providers",
       "file": "core/providers/in-repo.md",
@@ -3511,6 +3520,24 @@
       "classification": "self-repo-only"
     },
     {
+      "id": "core/providers/issues/github-issues.md:79:credentials-doctor.py",
+      "tree": "core/providers",
+      "file": "core/providers/issues/github-issues.md",
+      "line": 79,
+      "column": 19,
+      "script": "credentials-doctor.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/issues/github-issues.md:80:planning_store.py",
+      "tree": "core/providers",
+      "file": "core/providers/issues/github-issues.md",
+      "line": 80,
+      "column": 9,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
       "id": "core/providers/issues/jira.md:110:planning_jira_canonical.py",
       "tree": "core/providers",
       "file": "core/providers/issues/jira.md",
@@ -3574,15 +3601,6 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:35:planning_store.py",
-      "tree": "core/providers",
-      "file": "core/providers/planning-store/issue-store.md",
-      "line": 35,
-      "column": 8,
-      "script": "planning_store.py",
-      "classification": "self-repo-only"
-    },
-    {
       "id": "core/providers/planning-store/issue-store.md:36:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
@@ -3619,57 +3637,102 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:126:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:40:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 126,
+      "line": 40,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/planning-store/issue-store.md:48:planning_backend_control.py",
+      "tree": "core/providers",
+      "file": "core/providers/planning-store/issue-store.md",
+      "line": 48,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/planning-store/issue-store.md:49:planning_backend_control.py",
+      "tree": "core/providers",
+      "file": "core/providers/planning-store/issue-store.md",
+      "line": 49,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/planning-store/issue-store.md:50:planning_backend_control.py",
+      "tree": "core/providers",
+      "file": "core/providers/planning-store/issue-store.md",
+      "line": 50,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/planning-store/issue-store.md:144:planning_store.py",
+      "tree": "core/providers",
+      "file": "core/providers/planning-store/issue-store.md",
+      "line": 144,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:134:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:152:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 134,
+      "line": 152,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:142:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:160:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 142,
+      "line": 160,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:161:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:179:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 161,
+      "line": 179,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:231:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:249:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 231,
+      "line": 249,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:259:planning_index_issue.py",
+      "id": "core/providers/planning-store/issue-store.md:277:planning_index_issue.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 259,
+      "line": 277,
       "column": 8,
       "script": "planning_index_issue.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/recallium.md:53:credentials-doctor.py",
+      "tree": "core/providers",
+      "file": "core/providers/recallium.md",
+      "line": 53,
+      "column": 19,
+      "script": "credentials-doctor.py",
       "classification": "self-repo-only"
     },
     {
@@ -18271,181 +18334,181 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:380:wave.py",
+      "id": "docs/guides/workflows.md:391:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 380,
+      "line": 391,
       "column": 9,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:426:wave_terminal.py",
+      "id": "docs/guides/workflows.md:437:wave_terminal.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 426,
+      "line": 437,
       "column": 9,
       "script": "wave_terminal.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:436:gap-check-gate.py",
+      "id": "docs/guides/workflows.md:447:gap-check-gate.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 436,
+      "line": 447,
       "column": 9,
       "script": "gap-check-gate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:555:planning_migrate.py",
+      "id": "docs/guides/workflows.md:566:planning_migrate.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 555,
+      "line": 566,
       "column": 43,
       "script": "planning_migrate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:594:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:605:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 594,
+      "line": 605,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:595:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:606:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 595,
+      "line": 606,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:596:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:607:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 596,
+      "line": 607,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:608:planning_cross_project_recall.py",
+      "id": "docs/guides/workflows.md:619:planning_cross_project_recall.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 608,
+      "line": 619,
       "column": 8,
       "script": "planning_cross_project_recall.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:640:planning_store.py",
+      "id": "docs/guides/workflows.md:651:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 640,
+      "line": 651,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:796:planning-graph.py",
+      "id": "docs/guides/workflows.md:807:planning-graph.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 796,
+      "line": 807,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:797:planning-graph.py",
+      "id": "docs/guides/workflows.md:808:planning-graph.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 797,
+      "line": 808,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:818:planning_linear_client.py",
+      "id": "docs/guides/workflows.md:829:planning_linear_client.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 818,
+      "line": 829,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:851:planning_store.py",
+      "id": "docs/guides/workflows.md:862:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 851,
+      "line": 862,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:852:planning_store.py",
+      "id": "docs/guides/workflows.md:863:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 852,
+      "line": 863,
       "column": 53,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:863:build-chain-sync.py",
+      "id": "docs/guides/workflows.md:874:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 863,
+      "line": 874,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:884:wave.py",
+      "id": "docs/guides/workflows.md:895:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 884,
+      "line": 895,
       "column": 25,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:963:planning_store.py",
+      "id": "docs/guides/workflows.md:974:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 963,
+      "line": 974,
       "column": 12,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:964:planning_store.py",
+      "id": "docs/guides/workflows.md:975:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 964,
+      "line": 975,
       "column": 32,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:966:planning_cutover.py",
+      "id": "docs/guides/workflows.md:977:planning_cutover.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 966,
+      "line": 977,
       "column": 12,
       "script": "planning_cutover.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1036:planning_gap_capture.py",
+      "id": "docs/guides/workflows.md:1047:planning_gap_capture.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1036,
+      "line": 1047,
       "column": 173,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
