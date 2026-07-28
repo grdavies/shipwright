@@ -483,17 +483,21 @@ class IssuesClient:
     def _live_backend(self) -> FixtureIssuesStore | Any:
         if self._fixture is not None:
             return self._fixture
+        from planning_store import resolve_issues_credential
+
         if self.provider == "jira":
             if self._jira is None:
                 from planning_jira_client import JiraIssuesClient
 
-                self._jira = JiraIssuesClient(self.root)
+                cred = resolve_issues_credential(self.root, issues_provider="jira")
+                self._jira = JiraIssuesClient(self.root, credential=cred)
             return self._jira
         if self.provider == "github-issues":
             if self._github is None:
                 from planning_github_client import GitHubIssuesClient
 
-                self._github = GitHubIssuesClient(self.root)
+                cred = resolve_issues_credential(self.root, issues_provider="github-issues")
+                self._github = GitHubIssuesClient(self.root, credential=cred)
             return self._github
         if self.provider == "linear":
             from planning_store import SHIPPED_ISSUES_PROVIDERS
@@ -503,7 +507,8 @@ class IssuesClient:
             if self._linear is None:
                 from planning_linear_client import LinearIssuesClient
 
-                self._linear = LinearIssuesClient(self.root)
+                cred = resolve_issues_credential(self.root, issues_provider="linear")
+                self._linear = LinearIssuesClient(self.root, credential=cred)
             return self._linear
         if self.provider in DEFERRED_ISSUES_PROVIDERS:
             # PRD 057 R7 / D1: fail closed for deferred providers (gitlab-issues)
