@@ -652,12 +652,16 @@ def build_state_signature(state: dict[str, Any]) -> str:
     remediation = state.get("remediationAttempts") or {}
     verify_remediation = state.get("verifyRemediationAttempts") or {}
     status_reemit = state.get("statusReemitAttempts") or {}
+    merge_enqueue = state.get("mergeEnqueueAttempts") or {}
+    worktrees = state.get("phaseWorktrees") or {}
+    worktree_keys = sorted(str(k) for k in worktrees.keys()) if isinstance(worktrees, dict) else []
     payload = {
         "verdict": state.get("verdict"),
         "nextAction": state.get("nextAction"),
         "currentWave": state.get("currentWave"),
         "phaseStatuses": dict(sorted(status_map.items())),
         "phaseCauses": dict(sorted(cause_map.items())),
+        "phaseWorktreeIds": worktree_keys,
         "remediationAttempts": dict(sorted((str(k), int(v)) for k, v in remediation.items())),
         "verifyRemediationAttempts": dict(
             sorted((str(k), int(v)) for k, v in verify_remediation.items())
@@ -666,7 +670,7 @@ def build_state_signature(state: dict[str, Any]) -> str:
         "lastRemediationAt": dict(sorted(last_remediation.items())),
         "stabilizePassId": dict(sorted(stabilize_pass.items())),
         "mergeQueueLength": len(state.get("mergeQueue") or []),
-        "mergeEnqueueAttempts": dict(sorted((str(k), int(v)) for k, v in (state.get("mergeEnqueueAttempts") or {}).items())),
+        "mergeEnqueueAttempts": dict(sorted((str(k), int(v)) for k, v in merge_enqueue.items())),
         "mergeJournalPresent": state.get("mergeJournal") is not None,
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
