@@ -670,6 +670,7 @@
 * merge phase repositorycontext-factory-and-context-envelope-medium into feat/credential-repository-isolation (f14f4f2) <!-- sw-deliver:repositorycontext-factory-and-context-envelope-medium -->
 * merge phase explicit-env-backend-and-ci-declaration-path-medium into feat/credential-repository-isolation (a418e3f) <!-- sw-deliver:explicit-env-backend-and-ci-declaration-path-medium -->
 * merge phase durable-disable-record-and-backend-control-resolver-medium into feat/credential-repository-isolation (173182b) <!-- sw-deliver:durable-disable-record-and-backend-control-resolver-medium -->
+* merge phase run-bound-identity-probe-small into feat/credential-repository-isolation (48d8088) <!-- sw-deliver:run-bound-identity-probe-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
