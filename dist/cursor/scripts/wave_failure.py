@@ -7,12 +7,55 @@ import os
 import subprocess
 import sys
 from collections import defaultdict, deque
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 FLAKY_DEFAULT_RETRIES = 1
+
+# Harness-only test switches keep the SW_TEST_* prefix (PRD 080 R8 / phase 16.1).
+TEST_SCOPE_ENV = "SW_TEST_SCOPE"
+
+
+@dataclass(frozen=True)
+class HarnessHandle:
+    """Opaque token proving the caller is an in-process test harness runner.
+
+    Environment probes (``SW_HARNESS``, ``PYTEST_CURRENT_TEST``, etc.) must never
+    mint this handle — only the harness runner issues it via
+    :func:`issue_harness_handle`.
+    """
+
+    _marker: object
+
+
+def issue_harness_handle() -> HarnessHandle:
+    """Return a fresh harness handle for the in-process test runner."""
+    return HarnessHandle(_marker=object())
+
+
+def is_harness_handle(value: object) -> bool:
+    return isinstance(value, HarnessHandle)
+
+
+def apply_harness_test_switches(
+    env: dict[str, str],
+    *,
+    harness: HarnessHandle | None,
+    scope: str,
+) -> dict[str, str]:
+    """Apply ``SW_TEST_*`` switches only when an explicit harness handle is present.
+
+    Outside harness runs the switches are inert: ``SW_TEST_SCOPE`` is not set and
+    any ambient value is scrubbed so verify children cannot inherit it.
+    """
+    if harness is None or not is_harness_handle(harness):
+        env.pop(TEST_SCOPE_ENV, None)
+        return env
+    env[TEST_SCOPE_ENV] = scope
+    return env
 
 ENVIRONMENTAL_VERIFY_MARKERS = (
     "cursor-golden-vs-dist",
@@ -339,7 +382,12 @@ def post_merge_verify_scope(root: Path) -> str:
 
 
 def run_verify_suite(
-    root: Path, cwd: Path, flaky_retries: int = FLAKY_DEFAULT_RETRIES, *, scope: str = "phase"
+    root: Path,
+    cwd: Path,
+    flaky_retries: int = FLAKY_DEFAULT_RETRIES,
+    *,
+    scope: str = "phase",
+    harness: HarnessHandle | None = None,
 ) -> dict[str, Any]:
     commands = verify_commands(root, scope)
     if not commands:
@@ -372,7 +420,9 @@ def run_verify_suite(
             env.setdefault("GIT_HTTP_LOW_SPEED_LIMIT", "1000")
             env.setdefault("GIT_HTTP_LOW_SPEED_TIME", "20")
             env.setdefault("GIT_TERMINAL_PROMPT", "0")
-            env.setdefault("SW_TEST_SCOPE", scope)
+            # SW_TEST_SCOPE is a harness-only switch (PRD 080 R8) — gated by an
+            # explicit harness handle, never by an environment probe.
+            apply_harness_test_switches(env, harness=harness, scope=scope)
             if budget_minutes is not None:
                 env.setdefault("SW_VERIFY_WATCHDOG_MINUTES", str(budget_minutes))
             proc = subprocess.run(

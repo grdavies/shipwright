@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host provider resolution, remote config, and token helpers (PRD 026 Phase 1)."""
+"""Host provider resolution, remote config, and credential helpers (PRD 026 / 080)."""
 
 from __future__ import annotations
 
@@ -14,6 +14,15 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
+from credentials.model import (
+    CredentialRef,
+    Resolution,
+    ResolutionState,
+    ResolvedToken,
+    Secret,
+)
+from credentials.resolver import RepositoryContext, resolve
+
 VALID_PROVIDERS = frozenset({"github", "gitlab", "bitbucket", "none"})
 
 DEFAULT_RATE_LIMIT: dict[str, Any] = {
@@ -24,13 +33,6 @@ DEFAULT_RATE_LIMIT: dict[str, Any] = {
     "jitter": True,
     "nearLimitThreshold": 5,
     "mutatingMinDelayMs": 1000,
-}
-
-DEFAULT_TOKEN_ENV: dict[str, str] = {
-    "github": "GITHUB_TOKEN",
-    "gitlab": "GITLAB_TOKEN",
-    "bitbucket": "BITBUCKET_TOKEN",
-    "none": "",
 }
 
 HOST_VERBS = (
@@ -130,17 +132,95 @@ def resolve_rate_limit(host: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
-def resolve_token_env(host: dict[str, Any], provider: str) -> str:
+def resolve_token_env(host: dict[str, Any], provider: str = "") -> str:
+    """Return an explicitly configured tokenEnv only — no implicit provider defaults."""
+    _ = provider
     token_env = host.get("tokenEnv")
     if isinstance(token_env, str) and token_env.strip():
         return token_env.strip()
-    return DEFAULT_TOKEN_ENV.get(provider, "")
+    return ""
 
 
 def token_present(token_env: str) -> bool:
+    """Return True when an explicitly configured token env var is set in the process environment.
+
+    Empty ``token_env`` means no env alias is configured (explicit-only after DEFAULT_* removal),
+    so the token is treated as absent.
+    """
     if not token_env:
-        return True
-    return bool(os.environ.get(token_env))
+        return False
+    return bool(os.environ.get(token_env, "").strip())
+
+
+def _api_base_for_provider(host: dict[str, Any], provider: str) -> str:
+    if provider == "github":
+        return github_api_base(host)
+    if provider == "gitlab":
+        return gitlab_api_base(host)
+    if provider == "bitbucket":
+        return bitbucket_api_base(host)
+    return ""
+
+
+def _repo_slug_from_url(remote_url: str | None) -> str:
+    parsed = parse_owner_repo(remote_url)
+    if not parsed:
+        return ""
+    return f"{parsed[0]}/{parsed[1]}"
+
+
+def resolve_host_credential(
+    root: Path,
+    *,
+    destination_endpoint: str | None = None,
+    provider: str | None = None,
+) -> Resolution:
+    """Resolve the host credential through the broker into a tri-state result."""
+    cfg = load_workflow_config(root)
+    host = host_section(cfg)
+    remote = remote_name(cfg)
+    remote_url = git_remote_url(root, remote)
+    detected = detect_provider_from_url(remote_url)
+    configured = host.get("provider")
+    if isinstance(configured, str) and configured.strip():
+        resolved_provider = configured.strip()
+    else:
+        resolved_provider = detected
+    if provider:
+        resolved_provider = provider
+
+    cred_ref_raw = host.get("credentialRef")
+    token_env = resolve_token_env(host, resolved_provider)
+    api_base = destination_endpoint or _api_base_for_provider(host, resolved_provider)
+    project_id = cfg.get("projectId")
+    project_id_str = project_id.strip() if isinstance(project_id, str) and project_id.strip() else "unpaired"
+
+    if isinstance(cred_ref_raw, str) and cred_ref_raw.strip():
+        ref = CredentialRef(cred_ref_raw.strip())
+        context = RepositoryContext(
+            remote=remote_url or remote,
+            repo_slug=_repo_slug_from_url(remote_url if isinstance(remote_url, str) else None),
+            project_id=project_id_str,
+            destination_endpoint=api_base or "https://api.github.com",
+        )
+        return resolve(
+            ref,
+            provider=resolved_provider if resolved_provider != "none" else "github",
+            purpose="host",
+            context=context,
+        )
+
+    if token_env:
+        # One-release tokenEnv alias — explicit configured name only (no DEFAULT_TOKEN_ENV).
+        value = os.environ.get(token_env, "")
+        alias_ref = CredentialRef(f"tokenEnv:{token_env}")
+        if value.strip():
+            return Resolution.resolved(alias_ref, ResolvedToken(Secret(value)))
+        return Resolution.unresolved(alias_ref, reason="missing-token")
+
+    if resolved_provider == "none" or not api_base:
+        return Resolution.explicitly_no_auth(CredentialRef("host-none"), reason="no-host-credential")
+    return Resolution.explicitly_no_auth(CredentialRef("host-unauthenticated"), reason="no-host-credential")
 
 
 def resolve_provider(root: Path) -> dict[str, Any]:
@@ -164,8 +244,9 @@ def resolve_provider(root: Path) -> dict[str, Any]:
             "allowed": sorted(VALID_PROVIDERS),
         }
 
+    credential = resolve_host_credential(root, provider=provider)
     token_env = resolve_token_env(host, provider)
-    has_token = token_present(token_env)
+    has_token = credential.state is ResolutionState.RESOLVED
     base_url = host.get("baseUrl") if isinstance(host.get("baseUrl"), str) else None
     api_base_url = host.get("apiBaseUrl") if isinstance(host.get("apiBaseUrl"), str) else None
 
@@ -177,14 +258,21 @@ def resolve_provider(root: Path) -> dict[str, Any]:
         "detected": detected,
         "configured": configured,
         "tokenEnv": token_env,
-        "tokenPresent": has_token,
+        "tokenPresent": has_token or (
+            credential.state is ResolutionState.EXPLICITLY_NO_AUTH and not token_env
+        ),
+        "credential": credential.to_public_dict(),
+        "credentialState": credential.state.value,
         "baseUrl": base_url,
         "apiBaseUrl": api_base_url,
         "rateLimit": resolve_rate_limit(host),
     }
-    if provider != "none" and token_env and not has_token:
+    if provider != "none" and credential.state is ResolutionState.UNRESOLVED:
         result["degraded"] = True
-        result["degradedReason"] = "missing-token"
+        result["degradedReason"] = credential.reason or "missing-token"
+        result["tokenPresent"] = False
+    # Non-serialized broker object for in-process callers (probe / transport).
+    result["_credentialObject"] = credential
     return result
 
 
@@ -194,25 +282,33 @@ def token_status(root: Path) -> dict[str, Any]:
         return resolved
     provider = resolved["provider"]
     token_env = resolved.get("tokenEnv", "")
-    if provider == "none" or not token_env:
+    credential = resolved.get("_credentialObject")
+    if not isinstance(credential, Resolution):
+        credential = resolve_host_credential(root, provider=provider)
+    if provider == "none" or credential.state is ResolutionState.EXPLICITLY_NO_AUTH:
         return {
             "verdict": "ok",
             "provider": provider,
             "tokenEnv": token_env,
             "present": True,
             "degraded": False,
+            "credentialState": credential.state.value,
         }
-    present = token_present(token_env)
+    present = credential.state is ResolutionState.RESOLVED
     out: dict[str, Any] = {
         "verdict": "ok" if present else "degraded",
         "provider": provider,
         "tokenEnv": token_env,
         "present": present,
         "degraded": not present,
+        "credentialState": credential.state.value,
     }
     if not present:
-        out["reason"] = "missing-token"
-        out["message"] = f"Set {token_env} for host API access (value never logged)."
+        out["reason"] = credential.reason or "missing-token"
+        if token_env:
+            out["message"] = f"Set {token_env} for host API access (value never logged)."
+        else:
+            out["message"] = "Host credential unresolved (value never logged)."
     return out
 
 
@@ -355,14 +451,26 @@ def probe_github_branch_protection(root: Path, branch: str) -> dict[str, Any]:
             "route": "pr",
             "reason": f"unsupported-provider:{provider}",
         }
-    token_env = resolved.get("tokenEnv") or ""
-    if token_env and not token_present(token_env):
+
+    credential = resolved.get("_credentialObject")
+    if not isinstance(credential, Resolution):
+        host = host_section(load_workflow_config(root))
+        credential = resolve_host_credential(
+            root,
+            destination_endpoint=github_api_base(host),
+            provider="github",
+        )
+
+    # credentialRef set but unresolved (e.g. no token var / backend miss) → PR route
+    if credential.state is ResolutionState.UNRESOLVED:
         return {
             "verdict": "ambiguous",
             "protected": None,
             "route": "pr",
-            "reason": "missing-token",
+            "reason": "credential-unresolved",
+            "credentialState": credential.state.value,
         }
+
     remote_url = resolved.get("remoteUrl")
     owner_repo = parse_owner_repo(remote_url if isinstance(remote_url, str) else None)
     if not owner_repo:
@@ -376,15 +484,16 @@ def probe_github_branch_protection(root: Path, branch: str) -> dict[str, Any]:
     host = host_section(load_workflow_config(root))
     api_base = github_api_base(host)
     url = f"{api_base}/repos/{owner}/{repo}/branches/{branch}/protection"
+    authenticated = credential.state is ResolutionState.RESOLVED
     with redirect_stdout(io.StringIO()):
         transport = urllib_request(
             method="GET",
             url=url,
             root=root,
             provider="github",
-            token_env=token_env,
+            credential=credential,
         )
-    status = int(transport.get("status") or 0)
+    status = int(transport.get("status") or transport.get("statusCode") or 0)
     body = str(transport.get("body") or "")
     if transport.get("verdict") == "ok" and status == 200:
         return {
@@ -393,12 +502,27 @@ def probe_github_branch_protection(root: Path, branch: str) -> dict[str, Any]:
             "route": "pr",
             "reason": "branch-protected",
         }
-    if status == 404 or "Branch not protected" in body:
+    # Unauthenticated 404 is ambiguous for private repos — never treat as unprotected.
+    if status == 404 and not authenticated:
         return {
-            "verdict": "ok",
-            "protected": False,
-            "route": "direct",
-            "reason": "branch-unprotected",
+            "verdict": "ambiguous",
+            "protected": None,
+            "route": "pr",
+            "reason": "unauthenticated-404",
+        }
+    if status == 404 or "Branch not protected" in body:
+        if authenticated:
+            return {
+                "verdict": "ok",
+                "protected": False,
+                "route": "direct",
+                "reason": "branch-unprotected",
+            }
+        return {
+            "verdict": "ambiguous",
+            "protected": None,
+            "route": "pr",
+            "reason": "probe-404-ambiguous",
         }
     return {
         "verdict": "ambiguous",
@@ -476,7 +600,9 @@ def main() -> None:
     root = args.root.resolve()
 
     if args.cmd == "resolve":
-        print(json.dumps(resolve_provider(root), indent=2))
+        payload = resolve_provider(root)
+        payload.pop("_credentialObject", None)
+        print(json.dumps(payload, indent=2))
     elif args.cmd == "remote-name":
         cfg = load_workflow_config(root)
         print(remote_name(cfg))

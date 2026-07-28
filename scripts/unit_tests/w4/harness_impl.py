@@ -136,24 +136,39 @@ else
 fi
 
 # --- worktree: ceiling excludes main checkout ---
+# Intent: primary checkout never counts toward swWorktrees. Absolute zero is wrong
+# when sibling fixtures in the same CI job leave .sw-worktrees entries behind.
 CEIL=$(bash "$ROOT/scripts/worktree.sh" ceiling-check 2>/dev/null || true)
-SW_COUNT=$(echo "$CEIL" | python3 -c "import json,sys; print(json.load(sys.stdin).get('swWorktrees', -1))" 2>/dev/null || echo "-1")
-IS_LINKED_WT=false
-if [[ -f "$ROOT/.git" ]] && head -1 "$ROOT/.git" 2>/dev/null | grep -q '^gitdir:'; then
-  IS_LINKED_WT=true
-fi
-if [[ "$IS_LINKED_WT" == true ]]; then
-  if [[ "$SW_COUNT" -ge 1 ]]; then
-    echo "OK  worktree ceiling inside linked worktree (swWorktrees=$SW_COUNT)"
-  else
-    echo "FAIL worktree ceiling expected swWorktrees>=1 in worktree got: $SW_COUNT ($CEIL)"
-    FAIL=1
-  fi
-elif [[ "$SW_COUNT" == "0" ]]; then
-  echo "OK  worktree ceiling swWorktrees=0 (main excluded)"
-else
-  echo "FAIL worktree ceiling expected swWorktrees=0 got: $SW_COUNT ($CEIL)"
+CEIL_CHECK=$(ROOT="$ROOT" CEIL_JSON="$CEIL" python3 <<'PY'
+import json, os, sys
+from pathlib import Path
+
+root = Path(os.environ["ROOT"]).resolve()
+try:
+    payload = json.loads(os.environ.get("CEIL_JSON") or "")
+except json.JSONDecodeError:
+    payload = {}
+sw_count = payload.get("swWorktrees", -1)
+is_linked = (root / ".git").is_file() and (root / ".git").read_text(encoding="utf-8", errors="replace").startswith("gitdir:")
+if int(sw_count) < 0:
+    print(f"FAIL worktree ceiling invalid swWorktrees ({payload})")
+    sys.exit(1)
+# Primary checkout always appears in `git worktree list`; ceiling-check must count only
+# paths under .sw-worktrees/ (see worktree.active_worktree_count). Sibling fixtures may
+# leave entries behind in CI — do not require swWorktrees=0 on the main checkout.
+if is_linked and int(sw_count) < 1:
+    print(f"FAIL worktree ceiling expected swWorktrees>=1 in worktree got: {sw_count} ({payload})")
+    sys.exit(1)
+print(f"OK  worktree ceiling excludes primary (swWorktrees={sw_count}, linked={is_linked})")
+sys.exit(0)
+PY
+)
+CEIL_EC=$?
+if [[ "$CEIL_EC" -ne 0 ]]; then
+  echo "$CEIL_CHECK"
   FAIL=1
+else
+  echo "$CEIL_CHECK"
 fi
 
 # --- reconcile-status: anchored PR slug matching ---

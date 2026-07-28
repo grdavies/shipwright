@@ -656,6 +656,32 @@
 * merge phase command-documentation-currency-medium into feat/workflow-state-machine-hardening (deae4c0) <!-- sw-deliver:command-documentation-currency-medium -->
 * merge phase layout-and-operator-guide-currency-medium into feat/workflow-state-machine-hardening (ed65f1b) <!-- sw-deliver:layout-and-operator-guide-currency-medium -->
 * merge phase conductor-contract-and-generated-surfaces-medium into feat/workflow-state-machine-hardening (43093aa) <!-- sw-deliver:conductor-contract-and-generated-surfaces-medium -->
+* merge phase credential-model-secret-wrapper-tri-state-result-medium into feat/credential-repository-isolation (42e5fc4) <!-- sw-deliver:credential-model-secret-wrapper-tri-state-result-medium -->
+* merge phase machine-local-selector-file-schema-scope-integrity-medium into feat/credential-repository-isolation (9256e65) <!-- sw-deliver:machine-local-selector-file-schema-scope-integrity-medium -->
+* merge phase endpoint-guard-and-broker-owned-send-path-medium into feat/credential-repository-isolation (4b3a5c4) <!-- sw-deliver:endpoint-guard-and-broker-owned-send-path-medium -->
+* merge phase trust-on-first-use-pairing-and-provenance-journal-medium into feat/credential-repository-isolation (602fec5) <!-- sw-deliver:trust-on-first-use-pairing-and-provenance-journal-medium -->
+* merge phase default-deny-child-environment-constructors-medium into feat/credential-repository-isolation (20826b6) <!-- sw-deliver:default-deny-child-environment-constructors-medium -->
+* merge phase resolver-precedence-scope-tri-state-timeouts-medium into feat/credential-repository-isolation (a97f529) <!-- sw-deliver:resolver-precedence-scope-tri-state-timeouts-medium -->
+* merge phase hook-and-adapter-subprocess-adoption-medium into feat/credential-repository-isolation (494c2d2) <!-- sw-deliver:hook-and-adapter-subprocess-adoption-medium -->
+* merge phase native-keystore-backend-and-platform-matrix-medium into feat/credential-repository-isolation (e689099) <!-- sw-deliver:native-keystore-backend-and-platform-matrix-medium -->
+* merge phase hardened-git-credential-backend-small into feat/credential-repository-isolation (c1a52f1) <!-- sw-deliver:hardened-git-credential-backend-small -->
+* merge phase ast-environment-read-lint-and-exemption-manifest-medium into feat/credential-repository-isolation (45df208) <!-- sw-deliver:ast-environment-read-lint-and-exemption-manifest-medium -->
+* merge phase github-cli-backend-with-gh-config-dir-isolation-small into feat/credential-repository-isolation (f0a588d) <!-- sw-deliver:github-cli-backend-with-gh-config-dir-isolation-small -->
+* merge phase repositorycontext-factory-and-context-envelope-medium into feat/credential-repository-isolation (f14f4f2) <!-- sw-deliver:repositorycontext-factory-and-context-envelope-medium -->
+* merge phase explicit-env-backend-and-ci-declaration-path-medium into feat/credential-repository-isolation (a418e3f) <!-- sw-deliver:explicit-env-backend-and-ci-declaration-path-medium -->
+* merge phase durable-disable-record-and-backend-control-resolver-medium into feat/credential-repository-isolation (173182b) <!-- sw-deliver:durable-disable-record-and-backend-control-resolver-medium -->
+* merge phase run-bound-identity-probe-small into feat/credential-repository-isolation (48d8088) <!-- sw-deliver:run-bound-identity-probe-small -->
+* merge phase phase-mode-context-and-harness-predicate-medium into feat/credential-repository-isolation (3a36d7d) <!-- sw-deliver:phase-mode-context-and-harness-predicate-medium -->
+* merge phase committed-config-surface-and-deprecation-precedence-medium into feat/credential-repository-isolation (0a96f49) <!-- sw-deliver:committed-config-surface-and-deprecation-precedence-medium -->
+* merge phase host-transport-migration-medium into feat/credential-repository-isolation (f04212b) <!-- sw-deliver:host-transport-migration-medium -->
+* merge phase planning-issue-store-client-migration-medium into feat/credential-repository-isolation (c17c1d8) <!-- sw-deliver:planning-issue-store-client-migration-medium -->
+* merge phase remaining-enumerated-transports-medium into feat/credential-repository-isolation (9276bd2) <!-- sw-deliver:remaining-enumerated-transports-medium -->
+* merge phase memory-adapters-and-hook-spawned-providers-small into feat/credential-repository-isolation (8f5ca30) <!-- sw-deliver:memory-adapters-and-hook-spawned-providers-small -->
+* merge phase identity-aware-authentication-doctor-medium into feat/credential-repository-isolation (d6c121e) <!-- sw-deliver:identity-aware-authentication-doctor-medium -->
+* merge phase init-migration-and-progressive-disclosure-medium into feat/credential-repository-isolation (3264548) <!-- sw-deliver:init-migration-and-progressive-disclosure-medium -->
+* merge phase operator-documentation-currency-medium into feat/credential-repository-isolation (3bf234b) <!-- sw-deliver:operator-documentation-currency-medium -->
+* merge phase provider-and-workflow-documentation-currency-medium into feat/credential-repository-isolation (a3e1b05) <!-- sw-deliver:provider-and-workflow-documentation-currency-medium -->
+* merge phase rollout-alias-removal-preflight-dist-regeneration-medium into feat/credential-repository-isolation (ab6cf39) <!-- sw-deliver:rollout-alias-removal-preflight-dist-regeneration-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

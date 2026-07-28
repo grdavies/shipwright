@@ -463,3 +463,11 @@ Soft-priority scheduling may **provision** phases 1∥2 and 3∥4 concurrently w
 - **Resume (R47):** halt payloads and `report blockers` emit `/sw-deliver run <frozen-task-list>` — never bare `deliver-loop` as operator resume.
 - **Deferrals (R49):** cross-feature waves, rich living-status dashboard, and contention feedback into `/sw-tasks` re-run remain explicit non-goals — no silent partial ship.
 - **Cleanup autonomy (R50):** when `cleanup.autonomy: auto`, `finalize-completion` applies dry-run `wouldRemove` after deterministic merge detection.
+
+## Phase-mode context currency (PRD 080)
+
+Phase-mode ship steps bind a worktree-scoped context (`SW_PHASE_MODE`, `SW_PHASE_SLUG`, `SW_RUN_DIR`,
+integration branch) established by `phase dispatch-env` / harness predicates in `wave_deliver_loop.py`.
+Credential lookups that block or time out are legitimate conductor halts — not silent ambient-token
+fallbacks. Terminal `list, resume, finalize`, **Resume cardinality**, **Drain-budget** continuation,
+**Run finalization vs** merge verification, and `finalize:merge-unverified` remain as documented above.

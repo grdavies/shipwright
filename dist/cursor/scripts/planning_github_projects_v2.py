@@ -16,17 +16,19 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import issues_broker
 import issues_http
+from credentials.model import Resolution, ResolutionState
 from host_lib import github_api_base, host_section, load_workflow_config
 from planning_store import (
     R1_BROWSE_CONTRACT,
     assert_r1_answerability_from_metadata,
     resolve_effective_backend,
+    resolve_issues_credential,
     resolve_issues_provider,
     resolve_issues_token_env,
     resolve_store_location,
     store_section,
-    token_present,
 )
 
 GITHUB_PROJECTS_SCOPES = ("read:project", "project")
@@ -207,13 +209,14 @@ def resolve_github_projects_config(cfg: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def _token_for_probe(root: Path, cfg: dict[str, Any]) -> tuple[str, str]:
-    issues = resolve_issues_provider(cfg)
-    provider = issues.get("provider", "none")
-    token_env = resolve_issues_token_env(cfg, str(provider))
-    if not token_env or not token_present(token_env):
-        return "", token_env
-    return os.environ.get(token_env, "").strip(), token_env
+def _credential_for_probe(root: Path, cfg: dict[str, Any]) -> Resolution:
+    return resolve_issues_credential(root, issues_provider="github-issues", cfg=cfg)
+
+
+def _token_for_probe(root: Path, cfg: dict[str, Any]) -> tuple[str, Resolution]:
+    credential = _credential_for_probe(root, cfg)
+    token, _reason = issues_broker.token_from_credential(credential)
+    return token or "", credential
 
 
 def probe_projects_scope(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
@@ -225,16 +228,24 @@ def probe_projects_scope(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         return {"verdict": "ok", "skipped": True, "reason": "projection-disabled"}
     if _fixture_enabled():
         return {"verdict": "ok", "fixture": True, "scopes": list(GITHUB_PROJECTS_SCOPES), "state": "available"}
-    token, token_env = _token_for_probe(root, cfg)
+    token, credential = _token_for_probe(root, cfg)
     if not token:
-        return {
+        notice = "github-projects-token-absent"
+        if credential.state is ResolutionState.UNRESOLVED:
+            notice = credential.reason or "github-projects-credential-unresolved"
+        payload: dict[str, Any] = {
             "verdict": "ok",
             "state": "projection-unavailable",
-            "notice": "github-projects-token-absent",
-            "tokenEnv": token_env,
+            "notice": notice,
+            "credentialRef": str(credential.ref),
+            "credentialState": credential.state.value,
             "requiredScopes": list(GITHUB_PROJECTS_SCOPES),
             "degraded": True,
         }
+        token_env = resolve_issues_token_env(cfg, "github-issues")
+        if token_env:
+            payload["tokenEnv"] = token_env
+        return payload
     api_base = github_api_base(host_section(cfg))
     headers = {
         "Accept": "application/vnd.github+json",
@@ -416,13 +427,18 @@ def _live_refresh(root: Path, cfg: dict[str, Any], *, dry_run: bool, items: list
             "degraded": True,
             "skipped": len(items),
         }
-    token, _env = _token_for_probe(root, cfg)
+    token, credential = _token_for_probe(root, cfg)
     if not token:
+        notice = "github-projects-token-absent"
+        if credential.state is ResolutionState.UNRESOLVED:
+            notice = credential.reason or "github-projects-credential-unresolved"
         return {
             "verdict": "ok",
             "action": "projection-refresh",
             "state": "projection-unavailable",
-            "notice": "github-projects-token-absent",
+            "notice": notice,
+            "credentialRef": str(credential.ref),
+            "credentialState": credential.state.value,
             "degraded": True,
         }
     proj = resolve_github_projects_config(cfg)

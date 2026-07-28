@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-27T20:58:22Z",
+  "generatedAt": "2026-07-28T18:12:34Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -1747,91 +1747,145 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-init.md:289:sw-configure.py",
+      "id": "core/commands/sw-init.md:291:sw-configure.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 289,
+      "line": 291,
       "column": 8,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-init.md:316:sw_bootstrap.py",
+      "id": "core/commands/sw-init.md:292:sw-configure.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 316,
+      "line": 292,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-init.md:309:sw-configure.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-init.md",
+      "line": 309,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-init.md:310:sw-configure.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-init.md",
+      "line": 310,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-init.md:317:sw-configure.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-init.md",
+      "line": 317,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-init.md:318:sw-configure.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-init.md",
+      "line": 318,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-init.md:328:sw-configure.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-init.md",
+      "line": 328,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-init.md:355:sw_bootstrap.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-init.md",
+      "line": 355,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:332:gitignore-generate.py",
+      "id": "core/commands/sw-init.md:371:gitignore-generate.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 332,
+      "line": 371,
       "column": 8,
       "script": "gitignore-generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-init.md:342:planning-doctor.py",
+      "id": "core/commands/sw-init.md:381:planning-doctor.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 342,
+      "line": 381,
       "column": 28,
       "script": "planning-doctor.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-init.md:358:sw_bootstrap.py",
+      "id": "core/commands/sw-init.md:397:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 358,
+      "line": 397,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:359:sw_bootstrap.py",
+      "id": "core/commands/sw-init.md:398:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 359,
+      "line": 398,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:372:sw_bootstrap.py",
+      "id": "core/commands/sw-init.md:411:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 372,
+      "line": 411,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:381:sw_bootstrap.py",
+      "id": "core/commands/sw-init.md:420:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 381,
+      "line": 420,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:382:sw_bootstrap.py",
+      "id": "core/commands/sw-init.md:421:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 382,
+      "line": 421,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:396:sw_bootstrap.py",
+      "id": "core/commands/sw-init.md:435:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 396,
+      "line": 435,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -2566,181 +2620,199 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:119:ship-phase-steps.py",
+      "id": "core/commands/sw-ship.md:121:ship-phase-steps.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 119,
+      "line": 121,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:122:ship-phase-steps.py",
+      "id": "core/commands/sw-ship.md:124:ship-phase-steps.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 122,
+      "line": 124,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:125:ship-phase-steps.py",
+      "id": "core/commands/sw-ship.md:127:ship-phase-steps.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 125,
+      "line": 127,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:128:shipwright-state.py",
+      "id": "core/commands/sw-ship.md:130:shipwright-state.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 128,
+      "line": 130,
       "column": 8,
       "script": "shipwright-state.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:131:ship-phase-steps.py",
+      "id": "core/commands/sw-ship.md:133:ship-phase-steps.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 131,
+      "line": 133,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:146:wave.py",
+      "id": "core/commands/sw-ship.md:148:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 146,
+      "line": 148,
       "column": 21,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:192:sw_bootstrap.py",
+      "id": "core/commands/sw-ship.md:194:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 192,
+      "line": 194,
       "column": 65,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-ship.md:205:sw_bootstrap.py",
+      "id": "core/commands/sw-ship.md:207:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 205,
+      "line": 207,
       "column": 24,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-ship.md:206:resolve-intensity.py",
+      "id": "core/commands/sw-ship.md:208:resolve-intensity.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 206,
+      "line": 208,
       "column": 28,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:212:wave.py",
+      "id": "core/commands/sw-ship.md:214:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 212,
+      "line": 214,
       "column": 12,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:216:dispatch-check.py",
+      "id": "core/commands/sw-ship.md:218:dispatch-check.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 216,
+      "line": 218,
       "column": 12,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:224:resolve-intensity.py",
+      "id": "core/commands/sw-ship.md:226:resolve-intensity.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 224,
+      "line": 226,
       "column": 25,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:228:dispatch_prompt.py",
+      "id": "core/commands/sw-ship.md:230:dispatch_prompt.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 228,
+      "line": 230,
       "column": 8,
       "script": "dispatch_prompt.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:234:dispatch-check.py",
+      "id": "core/commands/sw-ship.md:236:dispatch-check.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 234,
+      "line": 236,
       "column": 8,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:251:sw_bootstrap.py",
+      "id": "core/commands/sw-ship.md:253:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 251,
+      "line": 253,
       "column": 36,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-ship.md:257:decision_log.py",
+      "id": "core/commands/sw-ship.md:259:decision_log.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 257,
+      "line": 259,
       "column": 167,
       "script": "decision_log.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:306:ship-phase-status.py",
+      "id": "core/commands/sw-ship.md:313:planning_backend_control.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 306,
+      "line": 313,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-ship.md:314:planning_backend_control.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-ship.md",
+      "line": 314,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-ship.md:329:ship-phase-status.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-ship.md",
+      "line": 329,
       "column": 8,
       "script": "ship-phase-status.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:311:ship-phase-status.py",
+      "id": "core/commands/sw-ship.md:334:ship-phase-status.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 311,
+      "line": 334,
       "column": 8,
       "script": "ship-phase-status.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:335:wave.py",
+      "id": "core/commands/sw-ship.md:358:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 335,
+      "line": 358,
       "column": 33,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-ship.md:341:wave.py",
+      "id": "core/commands/sw-ship.md:364:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-ship.md",
-      "line": 341,
+      "line": 364,
       "column": 26,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -3304,6 +3376,15 @@
       "classification": "self-repo-only"
     },
     {
+      "id": "core/providers/host/github.md:89:credentials-doctor.py",
+      "tree": "core/providers",
+      "file": "core/providers/host/github.md",
+      "line": 89,
+      "column": 19,
+      "script": "credentials-doctor.py",
+      "classification": "self-repo-only"
+    },
+    {
       "id": "core/providers/in-repo.md:143:in-repo-memory-search.py",
       "tree": "core/providers",
       "file": "core/providers/in-repo.md",
@@ -3439,6 +3520,24 @@
       "classification": "self-repo-only"
     },
     {
+      "id": "core/providers/issues/github-issues.md:79:credentials-doctor.py",
+      "tree": "core/providers",
+      "file": "core/providers/issues/github-issues.md",
+      "line": 79,
+      "column": 19,
+      "script": "credentials-doctor.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/issues/github-issues.md:80:planning_store.py",
+      "tree": "core/providers",
+      "file": "core/providers/issues/github-issues.md",
+      "line": 80,
+      "column": 9,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
       "id": "core/providers/issues/jira.md:110:planning_jira_canonical.py",
       "tree": "core/providers",
       "file": "core/providers/issues/jira.md",
@@ -3502,15 +3601,6 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:35:planning_store.py",
-      "tree": "core/providers",
-      "file": "core/providers/planning-store/issue-store.md",
-      "line": 35,
-      "column": 8,
-      "script": "planning_store.py",
-      "classification": "self-repo-only"
-    },
-    {
       "id": "core/providers/planning-store/issue-store.md:36:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
@@ -3547,57 +3637,102 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:126:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:40:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 126,
+      "line": 40,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/planning-store/issue-store.md:48:planning_backend_control.py",
+      "tree": "core/providers",
+      "file": "core/providers/planning-store/issue-store.md",
+      "line": 48,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/planning-store/issue-store.md:49:planning_backend_control.py",
+      "tree": "core/providers",
+      "file": "core/providers/planning-store/issue-store.md",
+      "line": 49,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/planning-store/issue-store.md:50:planning_backend_control.py",
+      "tree": "core/providers",
+      "file": "core/providers/planning-store/issue-store.md",
+      "line": 50,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/planning-store/issue-store.md:144:planning_store.py",
+      "tree": "core/providers",
+      "file": "core/providers/planning-store/issue-store.md",
+      "line": 144,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:134:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:152:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 134,
+      "line": 152,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:142:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:160:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 142,
+      "line": 160,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:161:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:179:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 161,
+      "line": 179,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:231:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:249:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 231,
+      "line": 249,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:259:planning_index_issue.py",
+      "id": "core/providers/planning-store/issue-store.md:277:planning_index_issue.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 259,
+      "line": 277,
       "column": 8,
       "script": "planning_index_issue.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/recallium.md:53:credentials-doctor.py",
+      "tree": "core/providers",
+      "file": "core/providers/recallium.md",
+      "line": 53,
+      "column": 19,
+      "script": "credentials-doctor.py",
       "classification": "self-repo-only"
     },
     {
@@ -8083,91 +8218,145 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:289:sw-configure.py",
+      "id": "dist/claude-code/commands/sw-init.md:291:sw-configure.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 289,
+      "line": 291,
       "column": 8,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:316:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-init.md:292:sw-configure.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 316,
+      "line": 292,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-init.md:309:sw-configure.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-init.md",
+      "line": 309,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-init.md:310:sw-configure.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-init.md",
+      "line": 310,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-init.md:317:sw-configure.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-init.md",
+      "line": 317,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-init.md:318:sw-configure.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-init.md",
+      "line": 318,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-init.md:328:sw-configure.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-init.md",
+      "line": 328,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-init.md:355:sw_bootstrap.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-init.md",
+      "line": 355,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:332:gitignore-generate.py",
+      "id": "dist/claude-code/commands/sw-init.md:371:gitignore-generate.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 332,
+      "line": 371,
       "column": 8,
       "script": "gitignore-generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:342:planning-doctor.py",
+      "id": "dist/claude-code/commands/sw-init.md:381:planning-doctor.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 342,
+      "line": 381,
       "column": 28,
       "script": "planning-doctor.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:358:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-init.md:397:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 358,
+      "line": 397,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:359:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-init.md:398:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 359,
+      "line": 398,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:372:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-init.md:411:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 372,
+      "line": 411,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:381:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-init.md:420:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 381,
+      "line": 420,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:382:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-init.md:421:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 382,
+      "line": 421,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:396:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-init.md:435:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 396,
+      "line": 435,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -8902,181 +9091,199 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:119:ship-phase-steps.py",
+      "id": "dist/claude-code/commands/sw-ship.md:121:ship-phase-steps.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 119,
+      "line": 121,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:122:ship-phase-steps.py",
+      "id": "dist/claude-code/commands/sw-ship.md:124:ship-phase-steps.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 122,
+      "line": 124,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:125:ship-phase-steps.py",
+      "id": "dist/claude-code/commands/sw-ship.md:127:ship-phase-steps.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 125,
+      "line": 127,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:128:shipwright-state.py",
+      "id": "dist/claude-code/commands/sw-ship.md:130:shipwright-state.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 128,
+      "line": 130,
       "column": 8,
       "script": "shipwright-state.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:131:ship-phase-steps.py",
+      "id": "dist/claude-code/commands/sw-ship.md:133:ship-phase-steps.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 131,
+      "line": 133,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:146:wave.py",
+      "id": "dist/claude-code/commands/sw-ship.md:148:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 146,
+      "line": 148,
       "column": 21,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:192:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-ship.md:194:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 192,
+      "line": 194,
       "column": 65,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:205:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-ship.md:207:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 205,
+      "line": 207,
       "column": 24,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:206:resolve-intensity.py",
+      "id": "dist/claude-code/commands/sw-ship.md:208:resolve-intensity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 206,
+      "line": 208,
       "column": 28,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:212:wave.py",
+      "id": "dist/claude-code/commands/sw-ship.md:214:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 212,
+      "line": 214,
       "column": 12,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:216:dispatch-check.py",
+      "id": "dist/claude-code/commands/sw-ship.md:218:dispatch-check.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 216,
+      "line": 218,
       "column": 12,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:224:resolve-intensity.py",
+      "id": "dist/claude-code/commands/sw-ship.md:226:resolve-intensity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 224,
+      "line": 226,
       "column": 25,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:228:dispatch_prompt.py",
+      "id": "dist/claude-code/commands/sw-ship.md:230:dispatch_prompt.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 228,
+      "line": 230,
       "column": 8,
       "script": "dispatch_prompt.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:234:dispatch-check.py",
+      "id": "dist/claude-code/commands/sw-ship.md:236:dispatch-check.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 234,
+      "line": 236,
       "column": 8,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:251:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-ship.md:253:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 251,
+      "line": 253,
       "column": 36,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:257:decision_log.py",
+      "id": "dist/claude-code/commands/sw-ship.md:259:decision_log.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 257,
+      "line": 259,
       "column": 167,
       "script": "decision_log.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:306:ship-phase-status.py",
+      "id": "dist/claude-code/commands/sw-ship.md:313:planning_backend_control.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 306,
+      "line": 313,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-ship.md:314:planning_backend_control.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-ship.md",
+      "line": 314,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-ship.md:329:ship-phase-status.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-ship.md",
+      "line": 329,
       "column": 8,
       "script": "ship-phase-status.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:311:ship-phase-status.py",
+      "id": "dist/claude-code/commands/sw-ship.md:334:ship-phase-status.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 311,
+      "line": 334,
       "column": 8,
       "script": "ship-phase-status.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:335:wave.py",
+      "id": "dist/claude-code/commands/sw-ship.md:358:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 335,
+      "line": 358,
       "column": 33,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:341:wave.py",
+      "id": "dist/claude-code/commands/sw-ship.md:364:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 341,
+      "line": 364,
       "column": 26,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -13357,91 +13564,145 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:289:sw-configure.py",
+      "id": "dist/cursor/commands/sw-init.md:291:sw-configure.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 289,
+      "line": 291,
       "column": 8,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:316:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-init.md:292:sw-configure.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 316,
+      "line": 292,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-init.md:309:sw-configure.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-init.md",
+      "line": 309,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-init.md:310:sw-configure.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-init.md",
+      "line": 310,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-init.md:317:sw-configure.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-init.md",
+      "line": 317,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-init.md:318:sw-configure.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-init.md",
+      "line": 318,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-init.md:328:sw-configure.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-init.md",
+      "line": 328,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-init.md:355:sw_bootstrap.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-init.md",
+      "line": 355,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:332:gitignore-generate.py",
+      "id": "dist/cursor/commands/sw-init.md:371:gitignore-generate.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 332,
+      "line": 371,
       "column": 8,
       "script": "gitignore-generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:342:planning-doctor.py",
+      "id": "dist/cursor/commands/sw-init.md:381:planning-doctor.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 342,
+      "line": 381,
       "column": 28,
       "script": "planning-doctor.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:358:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-init.md:397:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 358,
+      "line": 397,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:359:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-init.md:398:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 359,
+      "line": 398,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:372:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-init.md:411:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 372,
+      "line": 411,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:381:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-init.md:420:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 381,
+      "line": 420,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:382:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-init.md:421:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 382,
+      "line": 421,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:396:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-init.md:435:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 396,
+      "line": 435,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -14176,181 +14437,199 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:119:ship-phase-steps.py",
+      "id": "dist/cursor/commands/sw-ship.md:121:ship-phase-steps.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 119,
+      "line": 121,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:122:ship-phase-steps.py",
+      "id": "dist/cursor/commands/sw-ship.md:124:ship-phase-steps.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 122,
+      "line": 124,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:125:ship-phase-steps.py",
+      "id": "dist/cursor/commands/sw-ship.md:127:ship-phase-steps.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 125,
+      "line": 127,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:128:shipwright-state.py",
+      "id": "dist/cursor/commands/sw-ship.md:130:shipwright-state.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 128,
+      "line": 130,
       "column": 8,
       "script": "shipwright-state.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:131:ship-phase-steps.py",
+      "id": "dist/cursor/commands/sw-ship.md:133:ship-phase-steps.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 131,
+      "line": 133,
       "column": 8,
       "script": "ship-phase-steps.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:146:wave.py",
+      "id": "dist/cursor/commands/sw-ship.md:148:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 146,
+      "line": 148,
       "column": 21,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:192:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-ship.md:194:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 192,
+      "line": 194,
       "column": 65,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:205:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-ship.md:207:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 205,
+      "line": 207,
       "column": 24,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:206:resolve-intensity.py",
+      "id": "dist/cursor/commands/sw-ship.md:208:resolve-intensity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 206,
+      "line": 208,
       "column": 28,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:212:wave.py",
+      "id": "dist/cursor/commands/sw-ship.md:214:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 212,
+      "line": 214,
       "column": 12,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:216:dispatch-check.py",
+      "id": "dist/cursor/commands/sw-ship.md:218:dispatch-check.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 216,
+      "line": 218,
       "column": 12,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:224:resolve-intensity.py",
+      "id": "dist/cursor/commands/sw-ship.md:226:resolve-intensity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 224,
+      "line": 226,
       "column": 25,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:228:dispatch_prompt.py",
+      "id": "dist/cursor/commands/sw-ship.md:230:dispatch_prompt.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 228,
+      "line": 230,
       "column": 8,
       "script": "dispatch_prompt.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:234:dispatch-check.py",
+      "id": "dist/cursor/commands/sw-ship.md:236:dispatch-check.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 234,
+      "line": 236,
       "column": 8,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:251:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-ship.md:253:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 251,
+      "line": 253,
       "column": 36,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:257:decision_log.py",
+      "id": "dist/cursor/commands/sw-ship.md:259:decision_log.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 257,
+      "line": 259,
       "column": 167,
       "script": "decision_log.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:306:ship-phase-status.py",
+      "id": "dist/cursor/commands/sw-ship.md:313:planning_backend_control.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 306,
+      "line": 313,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-ship.md:314:planning_backend_control.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-ship.md",
+      "line": 314,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-ship.md:329:ship-phase-status.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-ship.md",
+      "line": 329,
       "column": 8,
       "script": "ship-phase-status.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:311:ship-phase-status.py",
+      "id": "dist/cursor/commands/sw-ship.md:334:ship-phase-status.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 311,
+      "line": 334,
       "column": 8,
       "script": "ship-phase-status.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:335:wave.py",
+      "id": "dist/cursor/commands/sw-ship.md:358:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 335,
+      "line": 358,
       "column": 33,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:341:wave.py",
+      "id": "dist/cursor/commands/sw-ship.md:364:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 341,
+      "line": 364,
       "column": 26,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -17263,46 +17542,136 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:209:sw_bootstrap.py",
+      "id": "docs/guides/commands.md:180:credentials-doctor.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 209,
+      "line": 180,
+      "column": 70,
+      "script": "credentials-doctor.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/commands.md:181:credentials-doctor.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 181,
+      "column": 44,
+      "script": "credentials-doctor.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/commands.md:182:sw-configure.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 182,
+      "column": 41,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/commands.md:183:sw-configure.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 183,
+      "column": 59,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/commands.md:184:sw-configure.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 184,
+      "column": 40,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/commands.md:185:sw-configure.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 185,
+      "column": 32,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/commands.md:194:planning_backend_control.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 194,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/commands.md:195:planning_backend_control.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 195,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/commands.md:196:planning_backend_control.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 196,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/commands.md:212:credentials-doctor.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 212,
+      "column": 19,
+      "script": "credentials-doctor.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/commands.md:256:sw_bootstrap.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 256,
       "column": 44,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/commands.md:216:sw_bootstrap.py",
+      "id": "docs/guides/commands.md:263:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 216,
+      "line": 263,
       "column": 24,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/commands.md:274:gap-check-gate.py",
+      "id": "docs/guides/commands.md:321:gap-check-gate.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 274,
+      "line": 321,
       "column": 37,
       "script": "gap-check-gate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:329:test/run_dispatch_foundation_fixtures.py",
+      "id": "docs/guides/commands.md:376:test/run_dispatch_foundation_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 329,
+      "line": 376,
       "column": 78,
       "script": "test/run_dispatch_foundation_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:329:test/run_fanout_fixtures.py",
+      "id": "docs/guides/commands.md:376:test/run_fanout_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 329,
+      "line": 376,
       "column": 19,
       "script": "test/run_fanout_fixtures.py",
       "classification": "self-repo-only"
@@ -17362,361 +17731,388 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:466:sw-configure.py",
+      "id": "docs/guides/configuration.md:113:sw-configure.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 466,
+      "line": 113,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:122:sw-configure.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 122,
+      "column": 9,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:147:credentials-doctor.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 147,
+      "column": 8,
+      "script": "credentials-doctor.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:594:sw-configure.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 594,
       "column": 24,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:506:sw_bootstrap.py",
+      "id": "docs/guides/configuration.md:634:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 506,
+      "line": 634,
       "column": 9,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/configuration.md:507:reviewer-dispatch-check.py",
+      "id": "docs/guides/configuration.md:635:reviewer-dispatch-check.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 507,
+      "line": 635,
       "column": 9,
       "script": "reviewer-dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:587:test/run_execute_orchestration_fixtures.py",
+      "id": "docs/guides/configuration.md:715:test/run_execute_orchestration_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 587,
+      "line": 715,
       "column": 24,
       "script": "test/run_execute_orchestration_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:608:dispatch_prompt.py",
+      "id": "docs/guides/configuration.md:736:dispatch_prompt.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 608,
+      "line": 736,
       "column": 9,
       "script": "dispatch_prompt.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:662:planning_visibility.py",
+      "id": "docs/guides/configuration.md:790:planning_visibility.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 662,
+      "line": 790,
       "column": 55,
       "script": "planning_visibility.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:708:planning_store.py",
+      "id": "docs/guides/configuration.md:841:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 708,
+      "line": 841,
       "column": 53,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:755:planning_store.py",
+      "id": "docs/guides/configuration.md:889:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 755,
+      "line": 889,
       "column": 36,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:807:planning_linear_client.py",
+      "id": "docs/guides/configuration.md:942:planning_linear_client.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 807,
+      "line": 942,
       "column": 36,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:808:planning_linear_client.py",
+      "id": "docs/guides/configuration.md:943:planning_linear_client.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 808,
+      "line": 943,
       "column": 9,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:839:test/run-planning-045-doc-impact-fixtures.sh",
+      "id": "docs/guides/configuration.md:974:test/run-planning-045-doc-impact-fixtures.sh",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 839,
+      "line": 974,
       "column": 24,
       "script": "test/run-planning-045-doc-impact-fixtures.sh",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:841:test/run_visibility_fixtures.py",
+      "id": "docs/guides/configuration.md:976:test/run_visibility_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 841,
+      "line": 976,
       "column": 24,
       "script": "test/run_visibility_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:844:gitignore-generate.py",
+      "id": "docs/guides/configuration.md:979:gitignore-generate.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 844,
+      "line": 979,
       "column": 9,
       "script": "gitignore-generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:847:test/run_planning_visibility_acceptance_fixtures.py",
+      "id": "docs/guides/configuration.md:982:test/run_planning_visibility_acceptance_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 847,
+      "line": 982,
       "column": 24,
       "script": "test/run_planning_visibility_acceptance_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:884:planning_request_budget.py",
+      "id": "docs/guides/configuration.md:1019:planning_request_budget.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 884,
+      "line": 1019,
       "column": 63,
       "script": "planning_request_budget.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:886:test/run_pytest.py",
+      "id": "docs/guides/configuration.md:1021:test/run_pytest.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 886,
+      "line": 1021,
       "column": 24,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:906:planning_cutover.py",
+      "id": "docs/guides/configuration.md:1041:planning_cutover.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 906,
+      "line": 1041,
       "column": 18,
       "script": "planning_cutover.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:927:test/run_planning_035_doc_impact_fixtures.py",
+      "id": "docs/guides/configuration.md:1062:test/run_planning_035_doc_impact_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 927,
+      "line": 1062,
       "column": 24,
       "script": "test/run_planning_035_doc_impact_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:957:test/run_fanout_fixtures.py",
+      "id": "docs/guides/configuration.md:1092:test/run_fanout_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 957,
+      "line": 1092,
       "column": 29,
       "script": "test/run_fanout_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:958:test/run_dispatch_foundation_fixtures.py",
+      "id": "docs/guides/configuration.md:1093:test/run_dispatch_foundation_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 958,
+      "line": 1093,
       "column": 39,
       "script": "test/run_dispatch_foundation_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:964:wave.py",
+      "id": "docs/guides/configuration.md:1099:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 964,
+      "line": 1099,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:965:wave.py",
+      "id": "docs/guides/configuration.md:1100:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 965,
+      "line": 1100,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:966:wave.py",
+      "id": "docs/guides/configuration.md:1101:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 966,
+      "line": 1101,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:972:cleanup.py",
+      "id": "docs/guides/configuration.md:1107:cleanup.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 972,
+      "line": 1107,
       "column": 24,
       "script": "cleanup.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1073:sw_bootstrap.py",
+      "id": "docs/guides/configuration.md:1213:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1073,
+      "line": 1213,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/configuration.md:1074:sw_bootstrap.py",
+      "id": "docs/guides/configuration.md:1214:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1074,
+      "line": 1214,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/configuration.md:1114:wave.py",
+      "id": "docs/guides/configuration.md:1254:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1114,
+      "line": 1254,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1195:generate-pr-test-plan-ci-workflow.py",
+      "id": "docs/guides/configuration.md:1341:generate-pr-test-plan-ci-workflow.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1195,
+      "line": 1341,
       "column": 8,
       "script": "generate-pr-test-plan-ci-workflow.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1211:test/run_suite_registry_fixtures.py",
+      "id": "docs/guides/configuration.md:1357:test/run_suite_registry_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1211,
+      "line": 1357,
       "column": 49,
       "script": "test/run_suite_registry_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1213:test/run_pr_test_plan_fixtures.py",
+      "id": "docs/guides/configuration.md:1359:test/run_pr_test_plan_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1213,
+      "line": 1359,
       "column": 9,
       "script": "test/run_pr_test_plan_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1227:test/run_pilot_fixtures.py",
+      "id": "docs/guides/configuration.md:1373:test/run_pilot_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1227,
+      "line": 1373,
       "column": 24,
       "script": "test/run_pilot_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1237:test/run_emitter_fixtures.py",
+      "id": "docs/guides/configuration.md:1383:test/run_emitter_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1237,
+      "line": 1383,
       "column": 8,
       "script": "test/run_emitter_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1284:phase_sizing.py",
+      "id": "docs/guides/configuration.md:1430:phase_sizing.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1284,
+      "line": 1430,
       "column": 8,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1298:phase_sizing_corpus.py",
+      "id": "docs/guides/configuration.md:1444:phase_sizing_corpus.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1298,
+      "line": 1444,
       "column": 27,
       "script": "phase_sizing_corpus.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1298:phase_sizing_corpus.py",
+      "id": "docs/guides/configuration.md:1444:phase_sizing_corpus.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1298,
+      "line": 1444,
       "column": 0,
       "script": "phase_sizing_corpus.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1303:test/run_phase_sizing_corpus_fixtures.py",
+      "id": "docs/guides/configuration.md:1449:test/run_phase_sizing_corpus_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1303,
+      "line": 1449,
       "column": 9,
       "script": "test/run_phase_sizing_corpus_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1342:test/run_inefficiency_scan_fixtures.py",
+      "id": "docs/guides/configuration.md:1488:test/run_inefficiency_scan_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1342,
+      "line": 1488,
       "column": 24,
       "script": "test/run_inefficiency_scan_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1346:test/run_behavioral_anomaly_fixtures.py",
+      "id": "docs/guides/configuration.md:1492:test/run_behavioral_anomaly_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1346,
+      "line": 1492,
       "column": 9,
       "script": "test/run_behavioral_anomaly_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1357:loop_health.py",
+      "id": "docs/guides/configuration.md:1503:loop_health.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1357,
+      "line": 1503,
       "column": 14,
       "script": "loop_health.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1372:test/run_loop_autonomy_invariant_fixtures.py",
+      "id": "docs/guides/configuration.md:1518:test/run_loop_autonomy_invariant_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1372,
+      "line": 1518,
       "column": 24,
       "script": "test/run_loop_autonomy_invariant_fixtures.py",
       "classification": "self-repo-only"
@@ -17938,181 +18334,181 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:380:wave.py",
+      "id": "docs/guides/workflows.md:391:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 380,
+      "line": 391,
       "column": 9,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:426:wave_terminal.py",
+      "id": "docs/guides/workflows.md:437:wave_terminal.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 426,
+      "line": 437,
       "column": 9,
       "script": "wave_terminal.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:436:gap-check-gate.py",
+      "id": "docs/guides/workflows.md:447:gap-check-gate.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 436,
+      "line": 447,
       "column": 9,
       "script": "gap-check-gate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:555:planning_migrate.py",
+      "id": "docs/guides/workflows.md:566:planning_migrate.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 555,
+      "line": 566,
       "column": 43,
       "script": "planning_migrate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:594:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:605:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 594,
+      "line": 605,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:595:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:606:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 595,
+      "line": 606,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:596:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:607:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 596,
+      "line": 607,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:608:planning_cross_project_recall.py",
+      "id": "docs/guides/workflows.md:619:planning_cross_project_recall.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 608,
+      "line": 619,
       "column": 8,
       "script": "planning_cross_project_recall.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:640:planning_store.py",
+      "id": "docs/guides/workflows.md:651:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 640,
+      "line": 651,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:796:planning-graph.py",
+      "id": "docs/guides/workflows.md:807:planning-graph.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 796,
+      "line": 807,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:797:planning-graph.py",
+      "id": "docs/guides/workflows.md:808:planning-graph.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 797,
+      "line": 808,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:818:planning_linear_client.py",
+      "id": "docs/guides/workflows.md:829:planning_linear_client.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 818,
+      "line": 829,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:851:planning_store.py",
+      "id": "docs/guides/workflows.md:862:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 851,
+      "line": 862,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:852:planning_store.py",
+      "id": "docs/guides/workflows.md:863:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 852,
+      "line": 863,
       "column": 53,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:863:build-chain-sync.py",
+      "id": "docs/guides/workflows.md:874:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 863,
+      "line": 874,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:884:wave.py",
+      "id": "docs/guides/workflows.md:895:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 884,
+      "line": 895,
       "column": 25,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:963:planning_store.py",
+      "id": "docs/guides/workflows.md:974:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 963,
+      "line": 974,
       "column": 12,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:964:planning_store.py",
+      "id": "docs/guides/workflows.md:975:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 964,
+      "line": 975,
       "column": 32,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:966:planning_cutover.py",
+      "id": "docs/guides/workflows.md:977:planning_cutover.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 966,
+      "line": 977,
       "column": 12,
       "script": "planning_cutover.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1036:planning_gap_capture.py",
+      "id": "docs/guides/workflows.md:1047:planning_gap_capture.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1036,
+      "line": 1047,
       "column": 173,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"

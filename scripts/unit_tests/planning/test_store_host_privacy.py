@@ -49,6 +49,7 @@ def test_probe_github_private_store(monkeypatch, tmp_path: Path) -> None:
             "store": {
                 "issuesProvider": "github-issues",
                 "storeLocation": {"mode": "separate-project", "owner": "plan-org", "repo": "planning"},
+                "issues": {"tokenEnv": "ISSUES_GITHUB_TOKEN"},
             }
         },
         "host": {"provider": "github"},
@@ -97,7 +98,7 @@ def test_probe_jira_falls_back_to_live_permission_scheme_probe(monkeypatch, tmp_
         "planning": {
             "store": {
                 "issuesProvider": "jira",
-                "issues": {"endpoint": "https://example.atlassian.net"},
+                "issues": {"endpoint": "https://example.atlassian.net", "tokenEnv": "ISSUES_JIRA_TOKEN"},
                 "projectKey": "PLAN",
             }
         }
@@ -129,7 +130,7 @@ def test_probe_jira_public_permission_scheme(monkeypatch, tmp_path: Path) -> Non
         "planning": {
             "store": {
                 "issuesProvider": "jira",
-                "issues": {"endpoint": "https://example.atlassian.net"},
+                "issues": {"endpoint": "https://example.atlassian.net", "tokenEnv": "ISSUES_JIRA_TOKEN"},
                 "projectKey": "PLAN",
             }
         }

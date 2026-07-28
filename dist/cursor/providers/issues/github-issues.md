@@ -62,8 +62,23 @@ Selected when `planning.store.issuesProvider` is `github-issues` (independent of
 
 ## Auth
 
-Token from `planning.store.issues.tokenEnv` (default `ISSUES_GITHUB_TOKEN`). Minimum scope: `repo`
-or `public_repo`. Never stored in config.
+Issue-store mutations resolve through committed `planning.store.issues.credentialRef` and the
+machine-local credential selector — independent of `host.credentialRef`. `scripts/planning_store.py`
+calls `credentials.resolver` with `purpose: planning`; secret material is delivered only via
+`credentials.send_path` after scope checks pass.
+
+Selector entries must declare non-empty `allowedRepos`, `allowedProjectIds` (must include committed
+`projectId`), and `allowedEndpoints` scoped to the issue API base (for example
+`https://api.github.com`). The broker refuses out-of-scope remotes, project ids, and endpoints —
+enforcement is fail-closed.
+
+During the one-release alias window, `planning.store.issues.tokenEnv` (default
+`ISSUES_GITHUB_TOKEN`) may name the presence env var for an `environment` backend —
+`credentialRef` wins when both are set. Minimum scope: `repo` or `public_repo`.
+
+Diagnose: `python3 scripts/credentials-doctor.py --root .` and
+`python3 scripts/planning_store.py probe-issues-token`. See
+[configuration — Credential references](../../docs/guides/configuration.md#credential-references-and-machine-local-selector).
 
 
 ## Phase 2 artifact CRUD (PRD 043)

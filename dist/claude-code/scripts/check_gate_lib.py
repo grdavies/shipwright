@@ -145,7 +145,11 @@ def cfg_value(cfg: dict[str, Any], *path: str, default: Any = None) -> Any:
 
 def host_verb(root: Path, *args: str) -> dict[str, Any]:
     host_py = SCRIPT_DIR / "host.py"
-    completed = proc.run([sys.executable, str(host_py), "--root", str(root), *args], cwd=str(root))
+    completed = proc.run(
+        [sys.executable, str(host_py), "--root", str(root), *args],
+        cwd=str(root),
+        child_env=proc.host_transport_child_env(),
+    )
     try:
         return json.loads(completed.stdout.strip() or "{}")
     except json.JSONDecodeError:
@@ -944,18 +948,31 @@ def resolve_review_state(
     else:
         active_ids = [p for p in provider_ids if p and p != "none"]
         states: list[tuple[str, dict[str, Any]]] = []
-        env_base = {
-            **os.environ,
-            "SW_PR": str(pr),
-            "SW_HEAD_SHA": head_sha,
-            "SW_OWNER": owner,
-            "SW_REPO": repo,
-            "SW_OWNER_REPO": owner_repo,
-            "SW_ROOT": str(root),
-            "SW_CHECKS_FILE": str(checks_file),
-            "SW_ISSUE_COMMENTS_FILE": str(issue_comments_file),
-            "SW_GRACE_MIN": str(grace_min),
-        }
+        env_parent = dict(os.environ)
+        env_parent.update(
+            {
+                "SW_PR": str(pr),
+                "SW_HEAD_SHA": head_sha,
+                "SW_OWNER": owner,
+                "SW_REPO": repo,
+                "SW_OWNER_REPO": owner_repo,
+                "SW_ROOT": str(root),
+                "SW_CHECKS_FILE": str(checks_file),
+                "SW_ISSUE_COMMENTS_FILE": str(issue_comments_file),
+                "SW_GRACE_MIN": str(grace_min),
+            }
+        )
+        sw_context_keys = (
+            "SW_PR",
+            "SW_HEAD_SHA",
+            "SW_OWNER",
+            "SW_REPO",
+            "SW_OWNER_REPO",
+            "SW_ROOT",
+            "SW_CHECKS_FILE",
+            "SW_ISSUE_COMMENTS_FILE",
+            "SW_GRACE_MIN",
+        )
         for pid in active_ids:
             adapter = plugin_root / "providers" / "review" / f"{pid}.py"
             if not adapter.is_file():
@@ -970,7 +987,14 @@ def resolve_review_state(
                     },
                     deprecations,
                 )
-            completed = proc.run([sys.executable, str(adapter)], cwd=str(root), env=env_base)
+            completed = proc.run(
+                [sys.executable, str(adapter)],
+                cwd=str(root),
+                child_env=proc.HookVerifyEnv(
+                    declared_context_keys=sw_context_keys,
+                    parent=env_parent,
+                ),
+            )
             try:
                 review_json = json.loads(completed.stdout.strip() or "{}")
             except json.JSONDecodeError:

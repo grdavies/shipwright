@@ -139,18 +139,28 @@ def validate_rest_url(url: str, policy: dict[str, Any] | None = None) -> urllib.
     raise RestFetchPolicyError(f"host not allowlisted: {host!r}")
 
 
+def recallium_loopback_policy() -> dict[str, Any]:
+    """Default loopback-only REST policy for Recallium hook rule-fetch."""
+    return {
+        "allowedHosts": list(_DEFAULT_LOOPBACK_HOSTS),
+        "allowLoopback": True,
+        "allowPrivate": False,
+        "allowLinkLocal": False,
+        "allowMetadata": False,
+    }
+
+
+def validate_memory_base_before_auth(
+    url: str,
+    policy: dict[str, Any] | None = None,
+) -> urllib.parse.ParseResult:
+    """Validate a memory REST base URL before authentication material is attached."""
+    return validate_rest_url(url, policy if isinstance(policy, dict) else recallium_loopback_policy())
+
+
 def is_allowed_recallium_base(url: str) -> bool:
     """Recallium localhost-only guard used by hook rule-fetch scripts."""
-    return is_rest_url_allowed(
-        url,
-        {
-            "allowedHosts": list(_DEFAULT_LOOPBACK_HOSTS),
-            "allowLoopback": True,
-            "allowPrivate": False,
-            "allowLinkLocal": False,
-            "allowMetadata": False,
-        },
-    )
+    return is_rest_url_allowed(url, recallium_loopback_policy())
 
 
 def guarded_urlopen(

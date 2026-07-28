@@ -336,6 +336,14 @@ repo root (canonical — ), resumes after crash without restarting from plan, an
 **phase-worktree** (`status collect` — not chat). Per-phase `/sw-ship` persists step-level state
 (`ship-steps.json`) for mid-chain resume.
 
+**Phase-mode context (worktree-scoped):** when `/sw-deliver` dispatches `/sw-ship` for a phase, it
+MUST invoke with `--phase-mode` and carry context via **worktree-scoped state**
+(`.cursor/sw-worktree-state.json` → `phaseMode`) and/or an **explicit dispatch environment** set on
+that spawned process only (`SW_PHASE_MODE`, `SW_PHASE_SLUG`, `SW_PHASE_ID`, `SW_RUN_DIR`,
+`SW_TASK_LIST`, `SW_INTEGRATION_BRANCH`). Ambient orchestrator shell env or a sibling worktree must
+not activate phase-mode — only the dispatcher's per-spawn bindings count. Interactive human `/sw-ship`
+runs omit `--phase-mode` (default). See `core/commands/sw-ship.md` **Phase-mode contract**.
+
 **Concurrent deliver:** orthogonal features may run `/sw-deliver run` in parallel — each
 target branch owns scoped state/lock files. `/sw-status` lists every in-flight run via
 `.cursor/sw-deliver-runs/index.json`. Living docs (`INDEX.md`, `CHANGELOG.md`) stay serialized via
@@ -374,7 +382,10 @@ mechanical `dispatch preflight` + `preToolUse` deny. Tune gate aggressiveness wi
 
 **Legitimate halts (summary):** final merge to `main`; remediation budget exhausted; merge conflict /
 destructive git; `deliver.autonomy.mode: supervised` or `doc.afterTasks: confirm`; phase liveness
-timeout; CI/external wait exhausted; run-level `deliver.autonomy.maxRunMinutes` / `maxIterations`.
+timeout; CI/external wait exhausted; run-level `deliver.autonomy.maxRunMinutes` / `maxIterations`;
+**credential lookup blocked or timed out** (`resolver-lookup-timeout` when an interactive backend
+blocks past the per-lookup hard timeout — recorded as a legitimate conductor halt with
+`haltResume.haltCause`, not a silent retry loop).
 **Merge-exec recovery:** when `merge run-next` halts with an open `mergeJournal`, resume via the
 printed `resumeCommand` — journal auto-clear runs when ancestry shows the phase already merged; otherwise use
 `python3 scripts/wave.py merge ancestry-check` then `merge exec` or `/sw-deliver run`. See

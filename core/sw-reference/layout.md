@@ -906,6 +906,26 @@ Bidirectional file ⇄ issue migration records durable per-artifact state under 
 Dry-run (no `--apply`) must not create or update this file. Command surface: `/sw-migrate` /
 `scripts/planning_migrate.py` `store-files-to-issues` | `store-issues-to-files`.
 
+## Credential machine-local records
+
+Non-secret credential references live in committed config; secret backends and scope enforcement live in
+operator-owned stores under the trusted config directory or git common dir. No secret-valued properties in
+any artifact below.
+
+| Record | Default path | Writer | Ownership / permissions |
+| --- | --- | --- | --- |
+| Selector | `$XDG_CONFIG_HOME/shipwright/credential-selector.json` | Operator (`sw-configure credential selector-add`, `/sw-init` migration) | User-owned; file `0600`, parent dir `0700`; no symlinks |
+| Pairing | `$XDG_CONFIG_HOME/shipwright/credential-pairings.json` | Operator approval / trust-on-first-use flows | Same as selector |
+| Provenance journal | `$XDG_CONFIG_HOME/shipwright/credential-provenance.journal.jsonl` | Pairing, scope-change, rotation audit append | Same as selector; append-only; metadata strings only |
+| Resolution journal | `$XDG_CONFIG_HOME/shipwright/credential-resolution.journal.jsonl` | Credential broker on successful resolution | Same as selector; records ref + principal metadata only |
+| CI selector | `.sw/credential-ci-selector.json` | `sw-configure credential declare-ci` | Committed repo file (non-secret); loaded with `skip_integrity` |
+| Planning backend disable | `$GIT_COMMON_DIR/shipwright/planning-backend-disable.json` | `planning_backend_control.py disable` | User-owned; file `0600`, parent dir `0700`; no symlinks; repo-scoped by `owner/repo` |
+
+Schema: `core/sw-reference/credential-selector.schema.json`. Layout contract for selector integrity modes
+matches `credentials.selector_integrity` (`SELECTOR_FILE_MODE` / `SELECTOR_DIR_MODE`). Planning disable
+records are enumerated by `planning_backend_control.py list` and surfaced in `planning-doctor.py` as
+`backend-disable-record` when active for the current repository.
+
 ## Hook-state vs deliver durable state (PRD 050 A1 R31)
 
 | State class | Canonical root |

@@ -37,7 +37,13 @@ def _current_hash(root: Path) -> str:
 
 
 def _protection_route(root: Path) -> str:
-    return probe_branch_protection(root).get("route", "pr")
+    """Select docs write route; unauthenticated/ambiguous probes always take the PR path."""
+    probe = probe_branch_protection(root)
+    route = probe.get("route", "pr")
+    # Fail closed: any non-ok / non-direct verdict (incl. unauthenticated 404) → PR.
+    if probe.get("verdict") != "ok" or route != "direct":
+        return "pr"
+    return "direct"
 
 
 def _premerge_check(root: Path) -> dict:
@@ -174,7 +180,16 @@ def cmd_merge_if_ready(root: Path, dry_run: bool, embedded_hash: str, pr_number:
 
 def cmd_direct_trunk(root: Path, dry_run: bool) -> tuple[dict, int]:
     probe = probe_branch_protection(root)
-    route = probe.get("route", "pr")
+    # Unauthenticated 404 must never authorize a direct-to-trunk write (PRD 080 R3).
+    if str(probe.get("reason") or "") == "unauthenticated-404":
+        return {
+            "verdict": "fail",
+            "action": "direct-trunk",
+            "error": "direct-trunk-refused",
+            "reason": "unauthenticated-404",
+            "probe": probe,
+        }, 13
+    route = _protection_route(root) if probe.get("verdict") == "ambiguous" else probe.get("route", "pr")
     allow = probe.get("allowDirectTrunk")
     if route != "direct" or not allow:
         return {"verdict": "fail", "action": "direct-trunk", "error": "direct-trunk-refused", "probe": probe}, 13

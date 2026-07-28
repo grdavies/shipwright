@@ -54,25 +54,49 @@ def classify_issue_store_probe(probe: dict) -> dict:
     Distinguishes an absent token (``store-token-absent`` — advisory, never a
     silent pass) from any other probe failure (``probe-failed`` — fail-closed).
     Pure function over the ``probe-issues-token`` result shape; no I/O.
+    Credential identity is reported by reference, not by variable name.
     """
+    credential_ref = probe.get("credentialRef")
+    credential_state = probe.get("credentialState")
     if probe.get("verdict") == "ok":
         if probe.get("skipped"):
-            return {"check": "store-reachability", "status": "ok", "reason": probe.get("reason")}
-        return {"check": "store-reachability", "status": "ok", "provider": probe.get("provider")}
+            return {
+                "check": "store-reachability",
+                "status": "ok",
+                "reason": probe.get("reason"),
+                "credentialRef": credential_ref,
+                "credentialState": credential_state,
+            }
+        return {
+            "check": "store-reachability",
+            "status": "ok",
+            "provider": probe.get("provider"),
+            "credentialRef": credential_ref,
+            "credentialState": credential_state,
+        }
     error = probe.get("error")
-    if error in {"missing-token", "missing-token-env"}:
+    if error in {"missing-token", "missing-token-env", "credential-unresolved"}:
         token_env = probe.get("tokenEnv")
+        remediation = (
+            f"Set {token_env} to enable live issue-store checks (advisory only; file-store parity unaffected)."
+            if token_env
+            else "Configure planning.store.issues.credentialRef to enable live issue-store checks (advisory only; file-store parity unaffected)."
+        )
         return {
             "check": "store-token-absent",
             "status": "advisory",
             "provider": probe.get("provider"),
+            "credentialRef": credential_ref,
+            "credentialState": credential_state,
             "tokenEnv": token_env,
-            "remediation": f"Set {token_env or '<tokenEnv>'} to enable live issue-store checks (advisory only; file-store parity unaffected).",
+            "remediation": remediation,
         }
     return {
         "check": "probe-failed",
         "status": "fail",
         "provider": probe.get("provider"),
+        "credentialRef": credential_ref,
+        "credentialState": credential_state,
         "error": error,
         "message": probe.get("message"),
     }
@@ -85,6 +109,16 @@ def wave_regression_check(root: Path) -> dict | None:
 
         cfg = ps.load_workflow_config(root)
         return ps.wave_regression_finding(root, cfg)
+    except Exception:  # noqa: BLE001 — doctor check is advisory / fail-open
+        return None
+
+
+def backend_disable_record_finding(root: Path) -> dict | None:
+    """Surface active durable backend-disable records (PRD 080 R8)."""
+    try:
+        import planning_backend_control as pbc
+
+        return pbc.disable_record_doctor_finding(root)
     except Exception:  # noqa: BLE001 — doctor check is advisory / fail-open
         return None
 
@@ -460,11 +494,24 @@ def doctor(root: Path, *, sweep: bool) -> dict:
             checks.append({"check": "memory-provider", "status": "ok", "provider": provider})
             checks.append({"check": "store-reachability", "status": "ok", "backend": store_backend, "provider": provider})
     elif store_backend == "issue-store":
+        try:
+            import planning_store as ps
+
+            cfg_for_cred = ps.load_workflow_config(root)
+            credential = ps.resolve_issues_credential(root, cfg=cfg_for_cred)
+            credential_public = credential.to_public_dict()
+        except Exception:  # noqa: BLE001 — doctor check is advisory / fail-open
+            credential_public = None
         probe = run_json([
             sys.executable, str(SCRIPT_DIR / "planning_store.py"), "--root", str(root), "probe-issues-token",
         ])
+        if credential_public is not None:
+            probe.setdefault("credentialRef", credential_public.get("ref"))
+            probe.setdefault("credentialState", credential_public.get("state"))
         finding = classify_issue_store_probe(probe)
         finding["backend"] = store_backend
+        if credential_public is not None:
+            finding["credential"] = credential_public
         checks.append(finding)
         if finding["check"] == "store-token-absent":
             warnings.append("store-token-absent")
@@ -506,12 +553,29 @@ def doctor(root: Path, *, sweep: bool) -> dict:
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         memory = cfg.get("memory") if isinstance(cfg.get("memory"), dict) else {}
         host = cfg.get("host") if isinstance(cfg.get("host"), dict) else {}
+        planning_issues = (
+            ((cfg.get("planning") or {}).get("store") or {}).get("issues") or {}
+        )
+        try:
+            from credentials.config_surface import resolve_config_surface
+
+            surface = resolve_config_surface(cfg)
+            host_cred_ref = surface.host.credential_ref
+            planning_cred_ref = surface.planning.credential_ref
+            memory_cred_ref = surface.memory.credential_ref
+        except Exception:  # noqa: BLE001 — doctor check is advisory / fail-open
+            host_cred_ref = host.get("credentialRef") if isinstance(host, dict) else None
+            planning_cred_ref = planning_issues.get("credentialRef")
+            memory_cred_ref = (memory or {}).get("credentialRef")
         checks.append({
             "check": "credential-surface",
             "status": "ok",
+            "hostCredentialRef": host_cred_ref,
+            "planningCredentialRef": planning_cred_ref,
+            "memoryCredentialRef": memory_cred_ref,
             "memoryProvider": memory.get("provider"),
             "hostTokenEnv": host.get("tokenEnv"),
-            "note": "env-var names only; no secrets in config",
+            "note": "credential references and env names only; no secrets in config",
         })
 
         deprecated_visibility_finding = planning_visibility_deprecation_finding(cfg)
@@ -556,6 +620,11 @@ def doctor(root: Path, *, sweep: bool) -> dict:
         if regression_finding.get("status") == "drift":
             warnings.append("wave-regression")
             verdict = "fail"
+
+    disable_record_finding = backend_disable_record_finding(root)
+    if disable_record_finding is not None:
+        checks.append(disable_record_finding)
+        warnings.append("backend-disable-record")
 
     gap_resolution_finding = gap_resolution_partial_finding(root)
     if gap_resolution_finding is not None:

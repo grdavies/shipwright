@@ -1,5 +1,6 @@
 {
   "$schema": "config.schema.json",
+  "projectId": "my-project",
   "defaultBaseBranch": "main",
   "stateFile": ".git/shipwright.json",
   "agentsFile": "AGENTS.md",
@@ -173,7 +174,8 @@
       "demoteMaxSuccessRate": 0.4,
       "demoteMinUsage": 5,
       "confidenceStep": 0.05
-    }
+    },
+    "credentialRef": "memory-work"
   },
   "planning": {
     "inFlight": {
@@ -214,7 +216,7 @@
         }
       },
       "issues": {
-        "tokenEnv": "ISSUES_LINEAR_TOKEN",
+        "credentialRef": "planning-work",
         "teamKey": "ENG",
         "teamId": "team_ENG",
         "authMode": "api-key"
@@ -296,5 +298,10 @@
   },
   "inefficiency": {
     "enabled": true
+  },
+  "host": {
+    "provider": "github",
+    "remote": "origin",
+    "credentialRef": "github-work"
   }
 }

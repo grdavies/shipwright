@@ -9,7 +9,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import issues_broker
 import issues_http
+from credentials.model import Resolution, ResolvedToken
 from host_lib import load_workflow_config
 from planning_canonical import (
     BODY_SIZE_LIMIT,
@@ -34,7 +36,6 @@ from planning_canonical import (
 
 LIVE_CLIENT = True
 GRAPHQL_URL = "https://api.linear.app/graphql"
-DEFAULT_TOKEN_ENV = "ISSUES_LINEAR_TOKEN"
 DEFAULT_COMPLEXITY_ESTIMATE = 100
 ADAPTER_VERBS = (
     "create",
@@ -191,8 +192,9 @@ def resolve_auth_mode(cfg: dict[str, Any]) -> str:
 
 
 def resolve_token_env(cfg: dict[str, Any]) -> str:
+    """Return an explicitly configured tokenEnv only — no implicit Linear default."""
     raw = _issues_section(cfg).get("tokenEnv")
-    return raw.strip() if isinstance(raw, str) and raw.strip() else DEFAULT_TOKEN_ENV
+    return raw.strip() if isinstance(raw, str) and raw.strip() else ""
 
 
 def resolve_team_scope(cfg: dict[str, Any]) -> dict[str, str]:
@@ -284,16 +286,52 @@ def graphql(
     query: str,
     variables: dict[str, Any] | None = None,
     token: str | None = None,
+    credential: Resolution | ResolvedToken | None = None,
     charge_budget: bool = True,
 ) -> dict[str, Any]:
     """POST a GraphQL operation to Linear; detect RATELIMITED extensions (R13)."""
-    auth_mode = resolve_auth_mode(cfg)
-    token_env = resolve_token_env(cfg)
-    auth_token = (token if token is not None else os.environ.get(token_env, "")).strip()
-    if not auth_token:
-        raise LinearClientError(f"missing token in {token_env}", code="missing-token")
+    from planning_store import resolve_issues_credential
 
-    headers = auth_headers(auth_token, auth_mode=auth_mode)
+    auth_mode = resolve_auth_mode(cfg)
+    resolved_credential = credential
+    if token is not None and token.strip():
+        auth_token = token.strip()
+    else:
+        if resolved_credential is None:
+            resolved_credential = resolve_issues_credential(
+                root,
+                issues_provider="linear",
+                destination_endpoint=GRAPHQL_URL,
+                cfg=cfg,
+            )
+        try:
+            auth_token = issues_broker.require_token(resolved_credential)
+        except issues_broker.IssuesBrokerError as exc:
+            raise LinearClientError(str(exc), code="missing-token") from exc
+
+    auth_hdrs = auth_headers(auth_token, auth_mode=auth_mode)
+    extra = issues_broker.strip_auth_headers(auth_hdrs)
+    # oauth → broker Bearer; api-key → raw Authorization in extra_headers (not Bearer).
+    if auth_mode == "oauth":
+        bearer = auth_token[7:].strip() if auth_token.lower().startswith("bearer ") else auth_token
+        bearer_token: str | None = bearer
+    else:
+        bearer_token = None
+        extra["Authorization"] = auth_hdrs["Authorization"]
+    try:
+        bound = issues_broker.prepare_bound_headers(
+            url=GRAPHQL_URL,
+            allowed_hosts=issues_broker.merge_allowed_hosts(
+                issues_broker.hosts_from_urls(GRAPHQL_URL),
+                {"api.linear.app"},
+            ),
+            bearer_token=bearer_token,
+            extra_headers=extra,
+            method="POST",
+        )
+    except issues_broker.IssuesBrokerError as exc:
+        raise LinearClientError(str(exc), code=exc.code) from exc
+
     payload: dict[str, Any] = {"query": query}
     if variables is not None:
         payload["variables"] = variables
@@ -302,7 +340,7 @@ def graphql(
         status, resp_headers, body = issues_http.http_request(
             "POST",
             GRAPHQL_URL,
-            headers,
+            bound,
             payload,
             root=root,
             issues_provider="linear",
@@ -926,8 +964,10 @@ class LinearIssuesClient:
         cfg: dict[str, Any] | None = None,
         fixture_store: Any | None = None,
         token: str | None = None,
+        credential: Resolution | ResolvedToken | None = None,
     ) -> None:
         from issues_lib import get_fixture_store, use_fixture_mode
+        from planning_store import resolve_issues_credential
 
         self.root = Path(root)
         self.cfg = cfg if cfg is not None else load_workflow_config(self.root)
@@ -937,6 +977,7 @@ class LinearIssuesClient:
         self._label_id_cache: dict[str, str] = {}
         self._team_id: str = ""
         self._token = token
+        self._credential = credential
 
         if fixture_store is not None:
             self._fixture = fixture_store
@@ -949,11 +990,24 @@ class LinearIssuesClient:
             scope = resolve_team_scope(self.cfg)
             self._team_key = scope.get("teamKey") or ""
             self._team_id = scope.get("teamId") or ""
-            token_env = resolve_token_env(self.cfg)
-            auth = (token if token is not None else os.environ.get(token_env, "")).strip()
-            if not auth:
-                raise LinearClientError(f"missing token in {token_env}", code="missing-token")
-            self._token = auth
+            if token is not None and token.strip():
+                self._token = token.strip()
+            else:
+                resolved = (
+                    credential
+                    if credential is not None
+                    else resolve_issues_credential(
+                        self.root,
+                        issues_provider="linear",
+                        destination_endpoint=GRAPHQL_URL,
+                        cfg=self.cfg,
+                    )
+                )
+                self._credential = resolved
+                try:
+                    self._token = issues_broker.require_token(resolved)
+                except issues_broker.IssuesBrokerError as exc:
+                    raise LinearClientError(str(exc), code="missing-token") from exc
         else:
             self._team_key = ""
             try:
