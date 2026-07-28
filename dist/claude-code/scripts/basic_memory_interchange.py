@@ -15,7 +15,10 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from planning_txn import PlanningTxnCoordinator
 
 MANIFEST_NAME = "shipwright-bm-project.json"
 LINKS_FILE = "links.json"
@@ -73,6 +76,12 @@ def _memories_dir(project_path: Path, memories_directory: str = DEFAULT_MEMORIES
 
 def _rules_dir(project_path: Path, rules_directory: str = DEFAULT_RULES_DIR) -> Path:
     return _project_root(project_path) / rules_directory
+
+
+def interchange_store_id(project_path: Path) -> str:
+    root = _project_root(project_path).resolve()
+    digest = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:16]
+    return f"basic-memory:{digest}"
 
 
 def _links_path(project_path: Path) -> Path:
@@ -170,7 +179,12 @@ def load_links(project_path: Path) -> list[dict[str, str]]:
     return out
 
 
-def save_links(project_path: Path, links: list[dict[str, str]]) -> None:
+def save_links(
+    project_path: Path,
+    links: list[dict[str, str]],
+    *,
+    txn: PlanningTxnCoordinator | None = None,
+) -> None:
     ensure_project(project_path)
     deduped: list[dict[str, str]] = []
     seen: set[tuple[str, str, str]] = set()
@@ -180,7 +194,15 @@ def save_links(project_path: Path, links: list[dict[str, str]]) -> None:
             continue
         seen.add(key)
         deduped.append(link)
-    _links_path(project_path).write_text(json.dumps({"links": deduped}, indent=2) + "\n", encoding="utf-8")
+    payload = json.dumps({"links": deduped}, indent=2) + "\n"
+    path = _links_path(project_path)
+    root = _project_root(project_path)
+    if txn is not None:
+        txn.stage_write(path, payload)
+        return
+    from planning_paths import atomic_write_text
+
+    atomic_write_text(path, payload, root=root, store_id=interchange_store_id(project_path))
 
 
 def note_to_record(path: Path, *, category_hint: str | None = None) -> dict[str, Any] | None:
@@ -313,6 +335,7 @@ def write_note(
     *,
     memories_directory: str = DEFAULT_MEMORIES_DIR,
     rules_directory: str = DEFAULT_RULES_DIR,
+    txn: PlanningTxnCoordinator | None = None,
 ) -> Path:
     ensure_project(
         project_path,
@@ -326,8 +349,18 @@ def write_note(
         memories_directory=memories_directory,
         rules_directory=rules_directory,
     )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_note(note), encoding="utf-8")
+    rendered = render_note(note)
+    if txn is not None:
+        txn.stage_write(path, rendered)
+        return path
+    from planning_paths import atomic_write_text
+
+    atomic_write_text(
+        path,
+        rendered,
+        root=_project_root(project_path),
+        store_id=interchange_store_id(project_path),
+    )
     return path
 
 
@@ -611,47 +644,78 @@ def import_project(
     incoming_links: list[dict[str, str]] = []
     imported_count = 0
 
-    for record in records:
-        category = str(record.get("category") or "learning")
-        if category == RULE_CATEGORY and not include_rules:
-            # Ordinary import skips rule-class unless explicitly requested.
-            continue
-        note = record_to_note(record)
-        original_id = str(record["id"])
-        final_id, was_remapped = remap_permalink_for_merge(
-            project_path,
-            existing_ids | set(id_map.values()),
-            original_id,
-            {**record, "id": original_id},
-            memories_directory=memories_directory,
-            rules_directory=rules_directory,
-        )
-        if was_remapped:
-            remapped.append({"from": original_id, "to": final_id})
-        id_map[original_id] = final_id
-        note["permalink"] = final_id
-        note["frontmatter"]["permalink"] = final_id
-        if not dry_run:
-            write_note(
+    if not dry_run:
+        from planning_txn import planning_transaction
+
+        root = _project_root(project_path)
+        with planning_transaction(root, interchange_store_id(project_path)) as txn:
+            for record in records:
+                category = str(record.get("category") or "learning")
+                if category == RULE_CATEGORY and not include_rules:
+                    continue
+                note = record_to_note(record)
+                original_id = str(record["id"])
+                final_id, was_remapped = remap_permalink_for_merge(
+                    project_path,
+                    existing_ids | set(id_map.values()),
+                    original_id,
+                    {**record, "id": original_id},
+                    memories_directory=memories_directory,
+                    rules_directory=rules_directory,
+                )
+                if was_remapped:
+                    remapped.append({"from": original_id, "to": final_id})
+                id_map[original_id] = final_id
+                note["permalink"] = final_id
+                note["frontmatter"]["permalink"] = final_id
+                write_note(
+                    project_path,
+                    note,
+                    memories_directory=memories_directory,
+                    rules_directory=rules_directory,
+                    txn=txn,
+                )
+                existing_ids.add(final_id)
+                imported_count += 1
+                for link in extract_record_links({**record, "id": original_id}):
+                    incoming_links.append(
+                        {
+                            "source": id_map.get(link["source"], link["source"]),
+                            "target": id_map.get(link["target"], link["target"]),
+                            "edge": link["edge"],
+                        }
+                    )
+            if incoming_links:
+                merged = load_links(project_path) + incoming_links
+                save_links(project_path, merged, txn=txn)
+    else:
+        for record in records:
+            category = str(record.get("category") or "learning")
+            if category == RULE_CATEGORY and not include_rules:
+                continue
+            note = record_to_note(record)
+            original_id = str(record["id"])
+            final_id, was_remapped = remap_permalink_for_merge(
                 project_path,
-                note,
+                existing_ids | set(id_map.values()),
+                original_id,
+                {**record, "id": original_id},
                 memories_directory=memories_directory,
                 rules_directory=rules_directory,
             )
-        existing_ids.add(final_id)
-        imported_count += 1
-        for link in extract_record_links({**record, "id": original_id}):
-            incoming_links.append(
-                {
-                    "source": id_map.get(link["source"], link["source"]),
-                    "target": id_map.get(link["target"], link["target"]),
-                    "edge": link["edge"],
-                }
-            )
-
-    if not dry_run and incoming_links:
-        merged = load_links(project_path) + incoming_links
-        save_links(project_path, merged)
+            if was_remapped:
+                remapped.append({"from": original_id, "to": final_id})
+            id_map[original_id] = final_id
+            existing_ids.add(final_id)
+            imported_count += 1
+            for link in extract_record_links({**record, "id": original_id}):
+                incoming_links.append(
+                    {
+                        "source": id_map.get(link["source"], link["source"]),
+                        "target": id_map.get(link["target"], link["target"]),
+                        "edge": link["edge"],
+                    }
+                )
 
     return {
         "verdict": "pass",

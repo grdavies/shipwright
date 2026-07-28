@@ -17,6 +17,7 @@ import urllib.parse
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
@@ -167,6 +168,8 @@ ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 # retry (or the doctor) can see exactly how far a put got; PUT_INCOMPLETE_LABEL
 # is the durable, provider-side twin of that same signal.
 PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
+ISSUE_STORE_TXN_ID = "issue-store"
+FILE_BACKED_STORE_TXN_ID = "file-backed"
 PUT_INCOMPLETE_LABEL = "sw:put-incomplete"
 LEGACY_UNIT_MAP_PATH = ".cursor/hooks/state/issue-store-legacy-unit-map.json"
 NATIVE_UNIT_ID_PREFIX: dict[str, str] = {
@@ -1860,9 +1863,10 @@ class InRepoPublicBackend(PlanningStoreBackend):
         return path
 
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
+        from planning_paths import atomic_write_text
+
         path = self._resolve_path(body_path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
+        atomic_write_text(path, content, root=self.root, store_id=FILE_BACKED_STORE_TXN_ID)
         log_operation("put", unit_id, body_path, content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=content_hash(content))
 
@@ -1900,14 +1904,50 @@ def load_issue_unit_index(root: Path) -> dict[str, str]:
     return {str(k): str(v) for k, v in units.items() if isinstance(k, str) and isinstance(v, str)}
 
 
+def _issue_index_payload(index: dict[str, str]) -> str:
+    return json.dumps({"version": 1, "units": index}, indent=2) + "\n"
+
+
+def _put_journal_payload(journal: dict[str, Any]) -> str:
+    return (
+        json.dumps({"version": 1, "units": journal}, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+    )
+
+
 def save_issue_unit_index(root: Path, index: dict[str, str]) -> None:
+    from planning_txn import planning_transaction
+
     path = root / ISSUE_UNIT_INDEX
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"version": 1, "units": index}, indent=2) + "\n", encoding="utf-8")
+    with planning_transaction(root, ISSUE_STORE_TXN_ID) as txn:
+        txn.stage_write(path, _issue_index_payload(index))
+
+
+def mutate_issue_unit_index(root: Path, mutator: Callable[[dict[str, str]], None]) -> None:
+    from planning_txn import planning_transaction
+
+    path = root / ISSUE_UNIT_INDEX
+    with planning_transaction(root, ISSUE_STORE_TXN_ID) as txn:
+        index = load_issue_unit_index(root)
+        mutator(index)
+        txn.stage_write(path, _issue_index_payload(index))
 
 
 def issue_index_key(project_key: str, unit_id: str) -> str:
     return f"{project_key}:{unit_id}"
+
+
+def read_issue_unit_index_locked(root: Path) -> dict[str, str]:
+    from planning_txn import store_lock
+
+    with store_lock(root, ISSUE_STORE_TXN_ID):
+        return load_issue_unit_index(root)
+
+
+def read_put_journal_locked(root: Path) -> dict[str, Any]:
+    from planning_txn import store_lock
+
+    with store_lock(root, ISSUE_STORE_TXN_ID):
+        return load_put_journal(root)
 
 
 def load_put_journal(root: Path) -> dict[str, Any]:
@@ -1924,12 +1964,21 @@ def load_put_journal(root: Path) -> dict[str, Any]:
 
 
 def save_put_journal(root: Path, journal: dict[str, Any]) -> None:
+    from planning_txn import planning_transaction
+
     path = root / PUT_JOURNAL_PATH
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps({"version": 1, "units": journal}, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    with planning_transaction(root, ISSUE_STORE_TXN_ID) as txn:
+        txn.stage_write(path, _put_journal_payload(journal))
+
+
+def mutate_put_journal(root: Path, mutator: Callable[[dict[str, Any]], None]) -> None:
+    from planning_txn import planning_transaction
+
+    path = root / PUT_JOURNAL_PATH
+    with planning_transaction(root, ISSUE_STORE_TXN_ID) as txn:
+        journal = load_put_journal(root)
+        mutator(journal)
+        txn.stage_write(path, _put_journal_payload(journal))
 
 
 class IssueStoreBackend(PlanningStoreBackend):
@@ -1944,8 +1993,18 @@ class IssueStoreBackend(PlanningStoreBackend):
         issues = resolve_issues_provider(cfg)
         self.issues_provider = str(issues.get("provider", "none"))
         self._client = IssuesClient(root, self.issues_provider)
-        self._index = load_issue_unit_index(root)
-        self._journal = load_put_journal(root)
+
+    def _read_index(self) -> dict[str, str]:
+        return read_issue_unit_index_locked(self.root)
+
+    def _read_journal(self) -> dict[str, Any]:
+        return read_put_journal_locked(self.root)
+
+    def _mutate_index(self, mutator: Callable[[dict[str, str]], None]) -> None:
+        mutate_issue_unit_index(self.root, mutator)
+
+    def _mutate_journal(self, mutator: Callable[[dict[str, Any]], None]) -> None:
+        mutate_put_journal(self.root, mutator)
 
 
     def derive_unit_status(self, unit_id: str, body_path: str) -> str:
@@ -2208,7 +2267,7 @@ class IssueStoreBackend(PlanningStoreBackend):
 
     def _lookup_record_candidate(self, unit_id: str, body_path: str, *, content: str | None = None) -> Any | None:
         idx_key = issue_index_key(self.project_key, unit_id)
-        issue_id = self._index.get(idx_key)
+        issue_id = self._read_index().get(idx_key)
         if issue_id:
             try:
                 record = self._client.issue_get(issue_id)
@@ -2234,8 +2293,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         if not matches:
             return None
         record = matches[0]
-        self._index[idx_key] = record.id
-        save_issue_unit_index(self.root, self._index)
+        self._mutate_index(lambda index: index.__setitem__(idx_key, record.id))
         self._register_native_unit_alias(unit_id, record)
         return self._maybe_backfill_labels(record, unit_id)
 
@@ -2248,10 +2306,13 @@ class IssueStoreBackend(PlanningStoreBackend):
         else:
             canonical = native_id
             register_legacy_unit_mapping(self.root, caller_unit_id, native_id)
-        self._index[issue_index_key(self.project_key, canonical)] = record.id
-        if caller_unit_id != canonical:
-            self._index[issue_index_key(self.project_key, caller_unit_id)] = record.id
-        save_issue_unit_index(self.root, self._index)
+
+        def _update(index: dict[str, str]) -> None:
+            index[issue_index_key(self.project_key, canonical)] = record.id
+            if caller_unit_id != canonical:
+                index[issue_index_key(self.project_key, caller_unit_id)] = record.id
+
+        self._mutate_index(_update)
 
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
         reject_bare_integer_unit_id(unit_id)
@@ -2313,27 +2374,34 @@ class IssueStoreBackend(PlanningStoreBackend):
         # posting a single overflow comment -- so a crash anywhere past this
         # point still resolves a retry of this same unit id back to THIS
         # issue instead of minting a duplicate (idempotent resume).
-        self._index[idx_key] = record.id
-        save_issue_unit_index(self.root, self._index)
+        self._mutate_index(lambda index: index.__setitem__(idx_key, record.id))
         self._register_native_unit_alias(unit_id, record)
         if chunked:
-            self._journal[idx_key] = {
-                "unitId": unit_id,
-                "issueId": record.id,
-                "step": "body-written",
-                "expectedChunks": len(extra_comments),
-                "postedCommentIds": [],
-            }
-            save_put_journal(self.root, self._journal)
+            self._mutate_journal(
+                lambda journal: journal.__setitem__(
+                    idx_key,
+                    {
+                        "unitId": unit_id,
+                        "issueId": record.id,
+                        "step": "body-written",
+                        "expectedChunks": len(extra_comments),
+                        "postedCommentIds": [],
+                    },
+                )
+            )
         chunk_comment_ids: list[str] = []
         for comment in extra_comments:
             self._guard_write_secrets(comment.body, path_hint=body_path)
             posted = self._client.issue_comment(record.id, comment.body, markers=comment.markers)
             chunk_comment_ids.append(posted.id)
             record = self._client.issue_get(record.id)
-            self._journal[idx_key]["step"] = "comments-pending"
-            self._journal[idx_key]["postedCommentIds"] = list(chunk_comment_ids)
-            save_put_journal(self.root, self._journal)
+
+            def _journal_pending(journal: dict[str, Any]) -> None:
+                entry = journal[idx_key]
+                entry["step"] = "comments-pending"
+                entry["postedCommentIds"] = list(chunk_comment_ids)
+
+            self._mutate_journal(_journal_pending)
         if chunk_comment_ids:
             # R8: `body` still carries the synthetic placeholder chunk ids
             # assigned before the provider issued real comment ids above;
@@ -2365,8 +2433,7 @@ class IssueStoreBackend(PlanningStoreBackend):
                     )
                 record = self._client.issue_get(record.id)
         if chunked:
-            self._journal.pop(idx_key, None)
-            save_put_journal(self.root, self._journal)
+            self._mutate_journal(lambda journal: journal.pop(idx_key, None))
         digest = canonical_hash(self._record_to_snapshot(record))
         log_operation("put", unit_id, body_path, content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=digest)
@@ -2575,9 +2642,10 @@ class LocalSyncedBackend(PlanningStoreBackend):
         return self.synced_root() / f"{safe_id}.md"
 
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
+        from planning_paths import atomic_write_text
+
         path = self._unit_path(unit_id)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content, encoding="utf-8")
+        atomic_write_text(path, content, root=self.root, store_id=FILE_BACKED_STORE_TXN_ID)
         log_operation("put", unit_id, body_path, content, self.backend_id)
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=content_hash(content))
 
@@ -2700,7 +2768,14 @@ class MemoryLocalCacheBackend(PlanningStoreBackend):
             "localCacheFallback: true\n"
             "---\n"
         )
-        target.write_text(frontmatter + redacted, encoding="utf-8")
+        from planning_paths import atomic_write_text
+
+        atomic_write_text(
+            target,
+            frontmatter + redacted,
+            root=self.root,
+            store_id=FILE_BACKED_STORE_TXN_ID,
+        )
         return target
 
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:

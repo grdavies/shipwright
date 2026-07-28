@@ -383,6 +383,19 @@ def cmd_scan_literals(root: Path) -> None:
     emit({"verdict": "pass", "consumers": list(PATH_DEPENDENT_CONSUMERS)})
 
 
+def atomic_write_bytes(path: Path, payload: bytes, *, root: Path, store_id: str, mode: int = 0o644) -> None:
+    """Durable store write via the planning transaction coordinator (PRD 082 R28)."""
+    from planning_txn import planning_transaction
+
+    root = root.resolve()
+    with planning_transaction(root, store_id) as txn:
+        txn.stage_write(path.resolve(), payload)
+
+
+def atomic_write_text(path: Path, content: str, *, root: Path, store_id: str, mode: int = 0o644) -> None:
+    atomic_write_bytes(path, content.encode("utf-8"), root=root, store_id=store_id, mode=mode)
+
+
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if not args:
