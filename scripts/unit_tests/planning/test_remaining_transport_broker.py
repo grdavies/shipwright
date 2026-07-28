@@ -69,6 +69,7 @@ class TestNoCredential:
     ) -> None:
         _write_config(tmp_path, issues={"provider": "github-issues"}, projects=True)
         cfg = ps.load_workflow_config(tmp_path)
+        monkeypatch.setattr(gp, "_fixture_enabled", lambda: False)
         monkeypatch.setattr(
             gp,
             "resolve_issues_provider",
@@ -141,6 +142,7 @@ class TestOneTransport:
             ResolvedToken(Secret(_TEST_VALUE), Principal(profile="work")),
         )
         monkeypatch.setattr(gp, "_credential_for_probe", lambda *a, **k: credential)
+        monkeypatch.setattr(gp, "_fixture_enabled", lambda: False)
         captured: dict[str, object] = {}
 
         def fake_request(method, url, headers, body=None, *, root=None, issues_provider=None, timeout=30):
