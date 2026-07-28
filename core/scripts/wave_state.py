@@ -467,8 +467,13 @@ def canonical_repo_root(start: Path | None = None) -> Path:
     return common.parent.resolve()
 
 
-def _path_normalize_anchor(start: Path) -> Path:
-    """Repo root for relative path containment; fixture-safe when git is absent."""
+def path_normalize_anchor(start: Path) -> Path:
+    """Primary repo root for path containment; fixture-safe when git is absent.
+
+    Prefer this over ``canonical_repo_root`` for path accessors that must also
+    run under harness temp trees (no ``.git``). Linked worktrees still resolve
+    to the shared primary via ``git-common-dir`` when git is present (R28).
+    """
     proc = subprocess.run(
         ["git", "-C", str(start), "rev-parse", "--git-common-dir"],
         text=True,
@@ -480,6 +485,10 @@ def _path_normalize_anchor(start: Path) -> Path:
     if not common.is_absolute():
         common = (start / common).resolve()
     return common.parent.resolve()
+
+
+# Back-compat alias for in-module callers.
+_path_normalize_anchor = path_normalize_anchor
 
 
 def _parse_state_ts(ts: str) -> datetime | None:
