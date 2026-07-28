@@ -94,6 +94,25 @@ def main(argv: list[str] | None = None) -> int:
         out = generate_platform(platform, core_root=args.core, dest_root=args.dest)
         print(f"sw generate: wrote {out}")
 
+    # Depth-aware planning_store shims: core/ uses parents[2], dist/*/scripts/
+    # uses parents[3]. Naive core→dist copy would leave dist at depth 2; refresh
+    # after emit so `sw generate --all` matches build-chain-sync (phase 10 / R27).
+    # Skip fixture overrides (--core/--dest) so harness temp trees stay isolated.
+    if args.core is None and args.dest is None:
+        shim_gen = REPO_ROOT / "scripts" / "planning_shim_gen.py"
+        if shim_gen.is_file():
+            shim_rc = subprocess.run(
+                [sys.executable, str(shim_gen), "--root", str(REPO_ROOT), "generate"],
+                cwd=str(REPO_ROOT),
+                check=False,
+            ).returncode
+            if shim_rc != 0:
+                print(
+                    f"sw generate: planning_shim_gen failed (exit {shim_rc})",
+                    file=sys.stderr,
+                )
+                return shim_rc
+
     if args.install is not None and "cursor" in platforms:
         install_script = REPO_ROOT / "scripts" / "install.py"
         if not install_script.is_file():
