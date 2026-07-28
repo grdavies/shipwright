@@ -82,39 +82,22 @@ class TestOneValidRoot:
 
 class TestManyConcurrentContexts:
     def test_contexts_do_not_alias(self, tmp_path: Path) -> None:
-        repos: list[Path] = []
-        for index in range(3):
-            repo = tmp_path / f"repo-{index}"
-            repo.mkdir()
-            subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
+        def _init_repo(path: Path, index: int) -> Path:
+            path.mkdir()
+            git_base = ["git", "-C", str(path), "-c", "user.email=test@test", "-c", "user.name=Shipwright Test"]
+            subprocess.run([*git_base, "init", "-b", "main"], check=True, capture_output=True)
+            (path / "README.md").write_text("fixture\n", encoding="utf-8")
+            subprocess.run([*git_base, "add", "README.md"], check=True, capture_output=True)
+            subprocess.run([*git_base, "commit", "-m", "init"], check=True, capture_output=True)
             subprocess.run(
-                ["git", "config", "user.email", "sw-test@example.com"],
-                cwd=repo,
+                [*git_base, "remote", "add", "origin", f"https://github.com/acme/repo-{index}.git"],
                 check=True,
                 capture_output=True,
             )
-            subprocess.run(
-                ["git", "config", "user.name", "Shipwright Test"],
-                cwd=repo,
-                check=True,
-                capture_output=True,
-            )
-            (repo / "README.md").write_text("fixture\n", encoding="utf-8")
-            subprocess.run(["git", "add", "README.md"], cwd=repo, check=True, capture_output=True)
-            subprocess.run(
-                ["git", "commit", "-m", "init"],
-                cwd=repo,
-                check=True,
-                capture_output=True,
-            )
-            subprocess.run(
-                ["git", "remote", "add", "origin", f"https://github.com/acme/repo-{index}.git"],
-                cwd=repo,
-                check=True,
-                capture_output=True,
-            )
-            _write_workflow_config(repo, project=f"project-{index}")
-            repos.append(repo)
+            _write_workflow_config(path, project=f"project-{index}")
+            return path
+
+        repos = [_init_repo(tmp_path / f"repo-{index}", index) for index in range(3)]
 
         def _build(path: Path) -> RepositoryContext:
             return from_root(path, run_id=f"run-{path.name}")
