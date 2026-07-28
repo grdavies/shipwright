@@ -645,18 +645,33 @@ def issue_store_fallback_reason(root: Path, cfg: dict[str, Any], *, override: st
     return None
 
 
-def _effective_backend_kill_switch() -> bool:
-    return os.environ.get(KILL_SWITCH_ENV, "").strip().lower() in {"1", "true", "yes"}
+def _legacy_kill_switch_shim_warnings() -> list[str]:
+    """Warn-only legacy env shim — cannot affect resolved behavior (PRD 080 R8)."""
+    import planning_backend_control as pbc
+
+    return pbc.legacy_kill_switch_env_shim()
+
+
+def _effective_backend_disable_active(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    override: str | None = None,
+) -> bool:
+    import planning_backend_control as pbc
+
+    return pbc.is_forced_file_store_fallback(root, cfg, override=override)
 
 
 def resolve_effective_backend(root: Path, cfg: dict[str, Any], *, override: str | None = None) -> dict[str, Any]:
     configured = resolve_backend_id(cfg, override=override)
-    # PRD 057 R31: an explicit per-call --backend override is a deliberate operator
-    # choice for that one invocation and takes precedence over the blanket kill-switch
-    # (e.g. `materialize_from_store` reads the real issue store while the kill-switch
-    # is globally active).
-    if override is None and configured != DEFAULT_BACKEND and _effective_backend_kill_switch():
-        return {
+    shim_warnings = _legacy_kill_switch_shim_warnings()
+    # PRD 057 R31 / PRD 080 R8: an explicit per-call --backend override is a deliberate
+    # operator choice for that one invocation and takes precedence over the durable
+    # disable record (e.g. `materialize_from_store` reads the real issue store while
+    # rollback is active).
+    if override is None and configured != DEFAULT_BACKEND and _effective_backend_disable_active(root, cfg):
+        out: dict[str, Any] = {
             "verdict": "ok",
             "configured": configured,
             "backend": DEFAULT_BACKEND,
@@ -668,6 +683,9 @@ def resolve_effective_backend(root: Path, cfg: dict[str, Any], *, override: str 
             "shipped": True,
             "deferred": False,
         }
+        if shim_warnings:
+            out["legacyShimWarnings"] = shim_warnings
+        return out
     fallback_reason = issue_store_fallback_reason(root, cfg, override=override) if configured == "issue-store" else None
     if fallback_reason:
         out: dict[str, Any] = {
@@ -3096,7 +3114,7 @@ def wave_regression_finding(
     configured backend is not issue-store, or no units are under rollback
     supervision — never a false positive on ordinary file-store repos.
     """
-    if not _effective_backend_kill_switch():
+    if not _effective_backend_disable_active(root, cfg):
         return None
     if resolve_backend_id(cfg) != "issue-store":
         return None
