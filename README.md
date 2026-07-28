@@ -41,7 +41,18 @@ git --version && python3 --version
 ```
 
 - [x] **Python ≥ 3.9** and **git** — the only runtime dependencies for install, hooks, gates, and tests
-- [x] **Host API token** — set `GITHUB_TOKEN` (or `host.tokenEnv`) for GitHub; no host CLI required
+- [x] **Host credential** — set `host.credentialRef` in `.cursor/workflow.config.json` and add a
+  machine-local selector entry (`~/.config/shipwright/credential-selector.json`). During the one-release
+  `tokenEnv` alias window, `GITHUB_TOKEN` (or `host.tokenEnv`) names the presence env var for an
+  `environment` backend — no host CLI required.
+
+### Native keystore and platform matrix
+
+On **macOS** and **Windows** workstations (not Linux, not containers), selector entries may use the
+`keystore` backend to read secrets from the native OS store (Keychain / Credential Manager) via ctypes —
+Shipwright does **not** use the Python `keyring` package. On Linux and in containers, use `environment` or
+`github_cli` instead; selecting `keystore` fails closed. Full matrix:
+[configuration — per-platform backend matrix](docs/guides/configuration.md#per-platform-backend-matrix).
 
 ## Install
 
