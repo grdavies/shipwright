@@ -44,7 +44,15 @@ def require_phase_id(phase_id: str | None) -> str:
 
 
 def runs_root(root: Path) -> Path:
-    return (root / RUNS_DIR_REL).resolve()
+    """Resolve run namespace under the primary repo-root .cursor (R28).
+
+    Linked orchestrator worktrees must not fork `.cursor/sw-deliver-runs/` — path
+    accessors always anchor at `canonical_repo_root` so plan/state/receipts stay
+    shared when deliver-loop cwd is the orchestrator worktree.
+    """
+    from wave_state import canonical_repo_root
+
+    return (canonical_repo_root(root) / RUNS_DIR_REL).resolve()
 
 
 def run_directory(root: Path, run_id: str | None) -> Path:
