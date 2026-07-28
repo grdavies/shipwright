@@ -12,6 +12,7 @@ from typing import Any, Iterator
 
 from wave_json_io import read_json, write_json
 from wave_run_paths import require_run_id, run_directory
+from wave_state import canonical_repo_root
 
 RECEIPTS_DIRNAME = "receipts"
 PENDING_SUFFIX = ".pending"
@@ -96,16 +97,17 @@ def build_input_revisions(
     if run_id:
         from wave_run_paths import plan_path, state_path
 
+        anchor = canonical_repo_root(root).resolve()
         revisions["stateFile"] = revision_record(
             label="stateFile",
-            path=str(state_path(root, str(run_id)).relative_to(root.resolve())),
+            path=str(state_path(root, str(run_id)).resolve().relative_to(anchor)),
             content_hash=hash_json(state),
         )
         plan_file = plan_path(root, str(run_id))
         if plan_file.is_file():
             revisions["planFile"] = revision_record(
                 label="planFile",
-                path=str(plan_file.relative_to(root.resolve())),
+                path=str(plan_file.resolve().relative_to(anchor)),
                 content_hash=hash_bytes(plan_file.read_bytes()),
             )
     return revisions
