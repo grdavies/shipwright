@@ -142,10 +142,14 @@ def resolve_token_env(host: dict[str, Any], provider: str = "") -> str:
 
 
 def token_present(token_env: str) -> bool:
-    """Legacy env-presence check for callers that still pass a configured variable name."""
+    """Return True when an explicitly configured token env var is set in the process environment.
+
+    Empty ``token_env`` means no env alias is configured (explicit-only after DEFAULT_* removal),
+    so the token is treated as absent.
+    """
     if not token_env:
-        return True
-    return bool(os.environ.get(token_env))
+        return False
+    return bool(os.environ.get(token_env, "").strip())
 
 
 def _api_base_for_provider(host: dict[str, Any], provider: str) -> str:
