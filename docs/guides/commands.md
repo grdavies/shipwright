@@ -170,6 +170,53 @@ to a **separate** GitHub/GitLab planning project — Jira is opt-in. See
 [`configuration.md`](configuration.md#issue-store-opt-in) and
 [`workflows.md`](workflows.md#issue-store-on-bitbucket-hosts).
 
+### Credential operations
+
+Host, planning-store, and memory adapters resolve secrets through the credential broker — not from committed
+config bodies. Operator commands:
+
+| Operation | Command |
+| --- | --- |
+| Full repository diagnosis (surfaces + reference listing) | `python3 scripts/credentials-doctor.py --root .` |
+| Remediation for a failure code | `python3 scripts/credentials-doctor.py remediate --scope local\|ci --code <code> --root .` |
+| Guided credential migration | `python3 scripts/sw-configure.py credential plan` / `apply --confirm` |
+| Legacy `tokenEnv` → `credentialRef` migration | `python3 scripts/sw-configure.py credential migrate --confirm` |
+| CI env-backend declaration | `python3 scripts/sw-configure.py credential declare-ci --confirm` |
+| Add selector entry | `python3 scripts/sw-configure.py credential selector-add …` (see [configuration](configuration.md#machine-local-selector-file)) |
+
+**Doctor reference listing:** the top-level JSON report includes a `references` array — one object per
+selector entry with `ref`, `backend`, `scopes` (`allowedRepos`, `allowedProjectIds`, `allowedEndpoints`),
+`principal`, and `lastSuccessfulResolution`. Findings name `credentialRef` only — never secret values.
+
+**Planning backend disable** (durable per-repo override — forces effective backend to `in-repo-public`):
+
+```bash
+python3 scripts/planning_backend_control.py disable --set-by <who> --reason "<why>" [--expires-at <ISO8601>]
+python3 scripts/planning_backend_control.py enable
+python3 scripts/planning_backend_control.py list
+```
+
+Record path: `$GIT_COMMON_DIR/shipwright/planning-backend-disable.json` (mode `0600`, user-owned, no
+symlinks). `planning-doctor.py` surfaces an active disable as `backend-disable-record`. Mid-deliver backend
+control changes fail closed — finish or abort the run first.
+
+**Credential rotation (repository-safe):** rotate backend material without editing the code repo:
+
+1. Leave committed `credentialRef` values and selector `ref` keys unchanged.
+2. Replace secret material at the backend only:
+   - **`environment`:** rotate the declared env var in your profile or CI secret store.
+   - **`keystore`:** update the native Keychain / Credential Manager item for service
+     `shipwright.credential/<ref>` (macOS/Windows workstations only).
+   - **`github_cli`:** re-authenticate with GitHub CLI (`gh auth login`) under the isolated config dir.
+   - **`git_credential`:** update the credential helper store for the scoped hostname.
+3. Re-run `python3 scripts/credentials-doctor.py --root .` and confirm `lastSuccessfulResolution` updates
+   for the rotated ref.
+4. Optional audit: append a `rotation` event to the machine-local provenance journal (string metadata only —
+   no secrets). See `.sw/layout.md` **Credential machine-local records**.
+
+Never widen selector scope (`allowedRepos`, `allowedProjectIds`, `allowedEndpoints`) without pairing
+approval.
+
 
 ## Entry points
 

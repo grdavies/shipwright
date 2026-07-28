@@ -10,5 +10,10 @@ the `beforeSubmitPrompt` hook (`before-submit-guardrails.py`).
 
 - Route memory ops through `memory-preflight` / `providers/<memory.provider>.md` — never call Recallium directly.
 - Never store raw transcripts or secrets in memory.
+- **Broker-only secret access** — resolve credentials only through `credentials.resolver` / adapter brokers and
+  `credentials.send_path`; never read tokens from config bodies, selector files, or ambient env outside an
+  explicitly declared `environment` backend entry.
+- **Fail-closed scope enforcement** — `allowedRepos`, `allowedProjectIds`, and `allowedEndpoints` on selector
+  entries are mandatory; resolution refuses out-of-scope remotes, project ids, and endpoints.
 - CI readiness: run `scripts/check-gate.py` — never hand-roll a green verdict.
 - `sw-` commands only for this plugin's workflow surface.

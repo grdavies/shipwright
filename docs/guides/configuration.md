@@ -36,6 +36,120 @@ python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . remove --confirm
 `check-gate.py` (for example `~/.cursor/plugins/local/shipwright/scripts`). Reinstall from the Shipwright
 source repo with `python3 scripts/install.py` when the tree is missing.
 
+## Credential references and machine-local selector
+
+Shipwright stores **non-secret credential references** in committed config and resolves secret material
+through the credential broker at runtime. Tokens never belong in config bodies, selector files, or journals.
+
+### Project id (`projectId`)
+
+Every target repo declares a top-level `projectId` — a stable slug matching `^[a-z][a-z0-9-]*$`. The broker
+binds each `credentialRef` to this project id and to the repository remote for pairing checks. `/sw-init`
+seeds `projectId` during guided credential migration.
+
+```json
+{
+  "projectId": "my-app",
+  "host": { "credentialRef": "github-work" }
+}
+```
+
+### Committed credential surfaces
+
+| Surface | Config path | `credentialRef` role |
+| --- | --- | --- |
+| **Host** (CI, PR, merge gate) | `host.credentialRef` | Resolves GitHub/GitLab/Bitbucket REST transport |
+| **Planning store** (issue-store) | `planning.store.issues.credentialRef` | Resolves issue API mutations (independent of `host.credentialRef`) |
+| **Memory** (external providers) | `memory.credentialRef` | Resolves memory REST/MCP auth when the catalog provider requires it |
+
+**Precedence:** `credentialRef` wins when both `credentialRef` and the one-release `tokenEnv` compatibility
+alias are set — remove `tokenEnv` before the deprecation cutover. Surfaces with neither reference resolve as
+explicitly no-auth (tri-state `unresolved`) rather than falling back to ambient workstation defaults.
+
+### Machine-local selector file
+
+Secret backends and scope live in a **user-owned** selector document — never committed to the code repo:
+
+| Property | Value |
+| --- | --- |
+| Default path | `$XDG_CONFIG_HOME/shipwright/credential-selector.json` (typically `~/.config/shipwright/credential-selector.json`) |
+| Schema | `core/sw-reference/credential-selector.schema.json` |
+| File mode | `0600` (user read/write only) |
+| Parent dir mode | `0700` |
+| Ownership | Current user only — symlinks rejected fail-closed |
+
+**Selector entry shape** (no secret-valued properties):
+
+```json
+{
+  "version": 1,
+  "entries": {
+    "github-work": {
+      "backend": "environment",
+      "provider": "github",
+      "hostname": "github.com",
+      "account": "work",
+      "allowedRepos": ["my-org/my-app"],
+      "allowedProjectIds": ["my-app"],
+      "allowedEndpoints": ["https://api.github.com"]
+    }
+  }
+}
+```
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `backend` | yes | One of `environment`, `github_cli`, `git_credential`, `keystore` |
+| `provider` | yes | Provider id (`github`, `gitlab`, `recallium`, …) |
+| `hostname` | optional | Host hint for `git_credential` / identity probes |
+| `account` | optional | Operator-facing account label (keystore account name) |
+| `allowedRepos` | yes | Non-empty `owner/repo` allowlist — scope enforcement fails closed outside the list |
+| `allowedProjectIds` | yes | Non-empty list — must include committed `projectId` for resolution |
+| `allowedEndpoints` | yes | Non-empty `https://…` allowlist — broker refuses downgrade or off-list hosts |
+
+Manage entries with `/sw-init` guided migration or:
+
+```bash
+python3 scripts/sw-configure.py credential selector-add \
+  --ref github-work --backend environment --provider github \
+  --hostname github.com --account work \
+  --allowed-repo my-org/my-app --allowed-project-id my-app \
+  --allowed-endpoint https://api.github.com
+```
+
+**CI declaration:** GitHub Actions runners without a machine-local selector require an explicit repository
+selector at `.sw/credential-ci-selector.json` (same entry schema; `skip_integrity` at load). Declare via
+`python3 scripts/sw-configure.py credential declare-ci --confirm`.
+
+### Per-platform backend matrix
+
+| Backend | macOS | Windows | Linux | Containers | Secret material source |
+| --- | --- | --- | --- | --- | --- |
+| `environment` | yes | yes | yes | yes (with CI declaration) | Explicitly declared env var only (`host.tokenEnv` names presence during alias window) |
+| `github_cli` | yes | yes | yes | when GitHub CLI is available | Isolated `GH_CONFIG_DIR` subprocess auth |
+| `git_credential` | yes | yes | yes | when helper is available | Git credential helper for scoped hostname |
+| `keystore` | yes (Keychain) | yes (Credential Manager) | **no** | **no** | Native OS secret store (`shipwright.credential/<ref>` service namespace) |
+
+Selecting `keystore` on Linux or inside a container fails closed with remediation to `environment` or
+`github_cli`. Shipwright does **not** depend on the Python `keyring` package — native keystore uses ctypes
+bindings to macOS Security and Windows CredRead only.
+
+### Pairing, provenance, and doctor
+
+Trust-on-first-use pairing records live at `$XDG_CONFIG_HOME/shipwright/credential-pairings.json` (same
+permission contract as the selector). The append-only provenance journal is
+`$XDG_CONFIG_HOME/shipwright/credential-provenance.journal.jsonl` (`pairing_approval`, `scope_change`,
+`rotation` events — metadata strings only, no secrets).
+
+Diagnose resolution per surface:
+
+```bash
+python3 scripts/credentials-doctor.py --root .
+```
+
+The JSON report lists configured `references` (backend + scope + last successful resolution) and per-surface
+`credentialRef` / pairing / required-operation verdicts. See [commands — Credential operations](commands.md#credential-operations).
+
 ## `/sw-init`
 
 Run `/sw-init` in your **target project repo**. It walks through setup and writes
@@ -216,7 +330,7 @@ Pin is also recorded as `memory.basicMemory.supportedPackage` (default matches t
 | Mode | Transport | Credentials | Host policy |
 | --- | --- | --- | --- |
 | **`local`** (default) | Local MCP (stdio / loopback) + on-disk `projectPath` | None | Loopback only (`localhost` / `127.0.0.1` / `::1`) |
-| **`cloud`** | Allowlisted Basic Memory Cloud MCP/API | `BASIC_MEMORY_API_KEY` (or `tokenEnv`) from env / secret store — never config bodies | Default `https://cloud.basicmemory.com`; fail closed on host allowlist mismatch |
+| **`cloud`** | Allowlisted Basic Memory Cloud MCP/API | `memory.credentialRef` → selector backend (or `tokenEnv` alias during deprecation) | Default `https://cloud.basicmemory.com`; fail closed on host allowlist mismatch |
 
 Switching `local` ↔ `cloud` is an explicit `memory.basicMemory.mode` edit. Runtime MUST NOT auto-promote
 local to cloud, degrade cloud to local, or rewrite mode when the configured endpoint fails.
@@ -243,17 +357,17 @@ local to cloud, degrade cloud to local, or rewrite mode when the configured endp
 }
 ```
 
-**Cloud mode example** (token from env only — never embed in config):
+**Cloud mode example** (reference + selector — never embed tokens in config):
 
 ```json
 {
   "memory": {
     "provider": "basic-memory",
     "project": "my-app",
+    "credentialRef": "memory-work",
     "basicMemory": {
       "mode": "cloud",
       "apiBase": "https://cloud.basicmemory.com",
-      "tokenEnv": "BASIC_MEMORY_API_KEY",
       "failClosed": true,
       "redactOnWrite": true,
       "supportedPackage": "basic-memory>=0.22.0,<1.0.0"
@@ -262,9 +376,9 @@ local to cloud, degrade cloud to local, or rewrite mode when the configured endp
 }
 ```
 
-```bash
-export BASIC_MEMORY_API_KEY="bmc_…"   # secret store / shell env — never commit
-```
+Point `memory-work` at an `environment` or `keystore` backend in the machine-local selector; scope
+`allowedEndpoints` must include the configured `apiBase` host. During the one-release alias window,
+`memory.basicMemory.tokenEnv` may still name the presence env var — `credentialRef` wins when both are set.
 
 `memory.basicMemory` rejects unknown keys (`additionalProperties: false`). `mode` is required for
 dual-mode correctness. Local `projectPath` must be a **local** filesystem path — remote URLs are rejected.
@@ -274,7 +388,7 @@ dual-mode correctness. Local `projectPath` must be a **local** filesystem path �
 | Mode | Allowed |
 | --- | --- |
 | `local` | Loopback hosts only. Reject private, metadata, and link-local targets unless an explicitly justified + tested exception exists. Local mode MUST NOT open cloud hosts. |
-| `cloud` | Allowlisted `cloud.basicmemory.com` (or configured `apiBase` that stays on that allowlist). Bearer from `tokenEnv` only. |
+| `cloud` | Allowlisted `cloud.basicmemory.com` (or configured `apiBase` that stays on that allowlist). Bearer from selector backend only. |
 
 **Hook rule-fetch**
 
@@ -318,7 +432,7 @@ Run after install + config write when you want confidence before relying on Basi
 
 1. Set `memory.basicMemory.mode` explicitly (`local` or `cloud`) — confirm there is no silent fallback path.
 2. **Local:** `uv tool install 'basic-memory>=0.22.0,<1.0.0'` (or equivalent) and `python -c "import basic_memory"` (or package probe your install uses) succeeds; `projectPath` exists and is readable.
-3. **Cloud:** `BASIC_MEMORY_API_KEY` is set in the environment / secret store (never in config); `apiBase` stays on the allowlisted host.
+3. **Cloud:** `memory.credentialRef` resolves via the selector; `apiBase` stays on the allowlisted host.
 4. `python3 providers/basic-memory-rules.py` (from repo root with `SW_WORKSPACE_ROOT=.`) returns `"ok": true` and a `rules` array (may be empty) for the configured mode.
 5. Agent MCP: `list_memory_projects` (+ `cloud_info` in cloud); `search_notes` returns without the rules directory unless opt-in.
 6. Store path: redacted `store` → `write_note` under `memoriesDirectory` (not `rulesDirectory`); `read_note` / `expand` round-trips the permalink.
@@ -342,11 +456,26 @@ Obsidian yourself before live use:
 1. Install [Obsidian](https://obsidian.md/) and open (or create) a vault at `memory.obsidian.vaultPath`.
 2. Settings → Community plugins → enable **Local REST API** (supported plugin range is pinned in
    `scripts/test/fixtures/obsidian/compat-tool-schemas.json` at implement time).
-3. Copy the API key from the plugin settings into your environment — never commit it:
+3. Configure `memory.credentialRef` and add a selector entry (`environment` or `keystore` backend) — never
+   commit API keys:
 
-```bash
-export OBSIDIAN_API_KEY="…"   # secret store / shell env — never commit
+```json
+{
+  "memory": {
+    "provider": "obsidian",
+    "project": "my-app",
+    "credentialRef": "memory-work",
+    "obsidian": {
+      "vaultPath": "/home/you/vaults/my-app",
+      "mcpBaseUrl": "http://127.0.0.1:27123",
+      "failClosed": true
+    }
+  }
+}
 ```
+
+During the one-release alias window, `memory.obsidian.tokenEnv` (default `OBSIDIAN_API_KEY`) may name the
+presence env var for an `environment` backend entry — `credentialRef` wins when both are set.
 
 Shipwright **never** auto-installs Obsidian, the plugin, or provisions the vault.
 
@@ -358,8 +487,8 @@ Shipwright **never** auto-installs Obsidian, the plugin, or provisions the vault
 | Host policy | Loopback only | `localhost` / `127.0.0.1` / `::1` — reject private, metadata, and link-local hosts |
 | HTTPS | Operator-local only | If your plugin serves HTTPS on loopback, set `mcpBaseUrl` explicitly (e.g. `https://127.0.0.1:27124`) — still loopback-only; never point at remote cloud hosts |
 
-Bearer auth uses `memory.obsidian.tokenEnv` (default `OBSIDIAN_API_KEY`) from env / secret store only —
-never embed tokens in config bodies.
+Bearer auth resolves through `memory.credentialRef` and the selector backend — never embed tokens in config
+bodies.
 
 **Schema-valid example** (vault + project folder):
 
@@ -372,7 +501,6 @@ never embed tokens in config bodies.
     "obsidian": {
       "vaultPath": "/home/you/vaults/my-app",
       "mcpBaseUrl": "http://127.0.0.1:27123",
-      "tokenEnv": "OBSIDIAN_API_KEY",
       "memoriesDirectory": "memories",
       "rulesDirectory": "rules",
       "ruleCacheTtlSec": 300,
@@ -405,8 +533,8 @@ endpoint is unreachable:
 | Guardrail hooks | When `memory.obsidian.failClosed` is `true` (default), rule-fetch failure **fails closed** for `guardrails.enforceBeforeSubmit` |
 | Break-glass (emergency only) | Set `failClosed: false` to degrade-open on hook rule-fetch failure, or change `memory.provider` explicitly — restore `true` after Obsidian is healthy |
 
-`/sw-init` doctor surfaces vault path, `tokenEnv` presence (never prints the value), and loopback reachability
-when `memory.provider` is `obsidian`.
+`/sw-init` doctor surfaces vault path, `credentialRef` resolution (never prints secret values), and
+loopback reachability when `memory.provider` is `obsidian`.
 
 **Rules directory + redaction**
 
@@ -434,7 +562,7 @@ Run after vault + plugin enablement + config write when you want confidence befo
 production flows:
 
 1. Obsidian is running with the configured vault open at `memory.obsidian.vaultPath`.
-2. Local REST API community plugin is enabled; `OBSIDIAN_API_KEY` is set in the environment (never in config).
+2. Local REST API community plugin is enabled; `memory.credentialRef` resolves (selector + pairing approved).
 3. Loopback probe succeeds, e.g. `curl -fsS -H "Authorization: Bearer $OBSIDIAN_API_KEY" http://127.0.0.1:27123/` (adjust host/port to `mcpBaseUrl`).
 4. `python3 providers/obsidian-rules.py` (from repo root with `SW_WORKSPACE_ROOT=.`) returns `"ok": true` and a `rules` array (may be empty).
 5. Agent MCP: Local REST API list/search under `memories/<memory.project>/` — results exclude `rulesDirectory` unless opt-in.
@@ -683,7 +811,8 @@ is byte-identical to today .
 | `planning.store.projectKey` | string | Project scoping key (`^[a-z][a-z0-9-]*$`) |
 | `planning.store.storeLocation.mode` | `same-repo` \| `separate-project` | Code repo vs shared planning project |
 | `planning.store.storeLocation.owner` / `.repo` | strings | Required for `separate-project` |
-| `planning.store.issues.tokenEnv` | string | Dedicated issue API token env (**not** `host.tokenEnv`) |
+| `planning.store.issues.credentialRef` | string | Dedicated issue API credential reference (**not** `host.credentialRef`) |
+| `planning.store.issues.tokenEnv` | string | One-release alias for issue API presence env (deprecated — use `credentialRef`) |
 
 Example (opt-in):
 
@@ -695,11 +824,15 @@ Example (opt-in):
 "issuesProvider": "github-issues",
 "projectKey": "my-project",
 "storeLocation": { "mode": "same-repo" },
-"issues": { "tokenEnv": "ISSUES_GITHUB_TOKEN" }
+"issues": { "credentialRef": "planning-work" }
 }
 }
 }
 ```
+
+Point `planning-work` at a selector entry scoped to the issue API endpoints and `projectId`. During the
+one-release alias window, `issues.tokenEnv` may still name the presence env var — `credentialRef` wins when
+both are set.
 
 **Fallback matrix :** effective backend falls back to `in-repo-public` when `issuesProvider` is `none`/unsupported
 or `host.provider` is `none`. A documented notice is emitted; work is never blocked.
@@ -722,7 +855,8 @@ When `planning.store.issuesProvider` is `jira`, configure the Jira adapter keys 
 | --- | --- | --- |
 | `planning.store.issues.endpoint` | URL | Jira base URL (`https://<org>.atlassian.net` for Cloud) |
 | `planning.store.issues.flavor` | `cloud` (default) \| `dc` | Serialization + auth variant (ADF vs wiki) |
-| `planning.store.issues.tokenEnv` | string | Dedicated token env (default `ISSUES_JIRA_TOKEN`) |
+| `planning.store.issues.credentialRef` | string | Dedicated credential reference (preferred) |
+| `planning.store.issues.tokenEnv` | string | One-release alias (default `ISSUES_JIRA_TOKEN`) |
 | `planning.store.issues.freezeRecordField` | string | Custom field id for write-once freeze record (Cloud) |
 | `planning.store.issues.issueType` | string | Mapped issue type for createmeta probe (default `Task`) |
 | `planning.store.issues.fieldDefaults` | object | Allowlisted defaults for required custom fields |
@@ -744,7 +878,7 @@ Example (Jira Cloud + separate planning project — typical for Bitbucket code r
 "issues": {
 "endpoint": "https://my-org.atlassian.net",
 "flavor": "cloud",
-"tokenEnv": "ISSUES_JIRA_TOKEN",
+"credentialRef": "planning-work",
 "freezeRecordField": "customfield_10042"
 }
 }
@@ -765,7 +899,8 @@ When `planning.store.issuesProvider` is `linear`, configure the Linear adapter k
 | --- | --- | --- |
 | `planning.store.issues.teamKey` | string | Human Team key/name (e.g. `ENG`) — preferred operator-facing id |
 | `planning.store.issues.teamId` | string | Linear GraphQL Team id (alternative to `teamKey`) |
-| `planning.store.issues.tokenEnv` | string | Dedicated token env (default `ISSUES_LINEAR_TOKEN`; **not** `host.tokenEnv`) |
+| `planning.store.issues.credentialRef` | string | Dedicated credential reference (preferred) |
+| `planning.store.issues.tokenEnv` | string | One-release alias (default `ISSUES_LINEAR_TOKEN`; **not** `host.tokenEnv`) |
 | `planning.store.issues.authMode` | `api-key` (default) \| `oauth` | `api-key` sends `Authorization: <API_KEY>`; `oauth` sends `Authorization: Bearer <ACCESS_TOKEN>` |
 | `planning.store.issues.oauthSharedCiException` | boolean | Explicit exception allowing `authMode: oauth` via shared CI secret |
 | `planning.store.operatorProjection.linear.enabled` | boolean (default `true`) | When `false`, Linear projection browse is skipped |
@@ -789,7 +924,7 @@ Example (Linear + same-repo planning):
 "storeLocation": { "mode": "same-repo" },
 "issues": {
 "teamKey": "ENG",
-"tokenEnv": "ISSUES_LINEAR_TOKEN",
+"credentialRef": "planning-work",
 "authMode": "api-key"
 },
 "operatorProjection": {
@@ -1004,6 +1139,11 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 
 | Key | Purpose |
 |-----|---------|
+| `projectId` | Stable repo slug (`^[a-z][a-z0-9-]*$`) — pairs credential references to this project |
+| `host.credentialRef` | Non-secret selector reference for host transport (preferred over `host.tokenEnv`) |
+| `host.tokenEnv` | One-release alias naming presence env for `environment` backend (deprecated) |
+| `planning.store.issues.credentialRef` | Issue-store credential reference (independent of host) |
+| `memory.credentialRef` | External memory provider credential reference |
 | `planningDir` | Canonical planning-unit tree (`docs/planning` post-cutover; legacy paths until migration `--verify`) |
 | `prdsDir` | Legacy PRD directory alias (defaults to `docs/prds` until `planningDir` cutover) |
 | `tasksDir` | Frozen task-list alias (defaults to `prdsDir` until cutover) |
@@ -1149,9 +1289,13 @@ verify presets) via the plugin bundle — not the full dev `.sw/` tree.
 ## GitHub / CI ceiling
 
 The merge-readiness gate (`/sw-watch-ci`, `/sw-stabilize`) observes **GitHub Actions** via the GitHub host
-adapter (`scripts/host.py` over REST). Set `host.tokenEnv` (default `GITHUB_TOKEN`) — no host CLI is required.
-Repos without a token or Actions can still use local `/sw-verify`, but cannot pass the CI-readiness gate until
-GitHub CI is available — `/sw-init` host doctor warns about this honestly.
+adapter (`scripts/host.py` over REST). Set `host.credentialRef` to a selector entry scoped to
+`https://api.github.com` (or the enterprise API base in `allowedEndpoints`). During the one-release alias
+window, `host.tokenEnv` (default `GITHUB_TOKEN`) names the presence env var for an `environment` backend —
+`credentialRef` wins when both are set. No host CLI is required.
+
+Repos without a resolved host credential or Actions can still use local `/sw-verify`, but cannot pass the
+CI-readiness gate until GitHub CI is available — `/sw-init` host doctor warns about this honestly.
 
 ## Web-specific opt-in knobs
 
@@ -1174,7 +1318,9 @@ Neutral shipped example omits scaffold; dogfood repos may set scaffold explicitl
 | **Obsidian** | `memory.provider: "obsidian"` | Vault + Local REST API on loopback; enable plugin + `OBSIDIAN_API_KEY` yourself — see **Obsidian memory provider** |
 | **Sentry** | Production signals via `/sw-feedback` or `/sw-debug` | Route production errors into the debug workstream |
 
-Provider **credentials** come from the environment or your secret store — never commit secrets.
+Provider **credentials** resolve through committed `credentialRef` values and the machine-local selector (or
+`.sw/credential-ci-selector.json` in CI) — never commit secrets. See **Credential references and
+machine-local selector** above.
 
 ## PR test-plan CI enforcement (FEAT PRs)
 
