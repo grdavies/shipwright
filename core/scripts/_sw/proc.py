@@ -91,9 +91,16 @@ def materialize_child_env(
             declared_context_keys=_non_credential_sw_keys(source),
             pythonpath=source.get("PYTHONPATH"),
         )
+        # Orchestrator-only injections (hooks must pass HookVerifyEnv and stay token-free).
         planning_token = source.get("SW_PLANNING_ISSUES_TOKEN", "").strip()
         if planning_token:
             env["SW_PLANNING_ISSUES_TOKEN"] = planning_token
+        # Host CLI auth for check-gate / gh during deliver-loop (PRD 070 host.tokenEnv).
+        for host_key in ("GH_TOKEN", "GITHUB_TOKEN"):
+            host_token = source.get(host_key, "").strip()
+            if host_token:
+                env[host_key] = host_token
+                break
         return env
     spec_parent = child_env.parent if child_env.parent is not None else parent
     source = spec_parent if spec_parent is not None else os.environ
