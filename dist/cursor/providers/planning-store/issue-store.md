@@ -27,7 +27,8 @@ wires issue CRUD. Default behavior is unchanged when unconfigured (R1).
 | `planning.store.issuesProvider` | `github-issues` \| `gitlab-issues` \| `jira` \| `none` |
 | `planning.store.projectKey` | Project scoping key (`sw:project:<key>`) |
 | `planning.store.storeLocation` | `same-repo` or `separate-project` (+ owner/repo) |
-| `planning.store.issues.tokenEnv` | Dedicated issue API token env (not `host.tokenEnv`) |
+| `planning.store.issues.credentialRef` | Dedicated issue API credential reference (**not** `host.credentialRef`) |
+| `planning.store.issues.tokenEnv` | One-release alias for issue API presence env (deprecated — use `credentialRef`) |
 
 Resolve helpers:
 
@@ -38,6 +39,23 @@ python3 scripts/planning_store.py resolve-store-location
 python3 scripts/planning_store.py probe-issues-token
 python3 scripts/planning_store.py validate-project-key [--register]
 ```
+
+### Backend disable record (local-only)
+
+Operators may temporarily disable the issue-store backend with a durable, machine-local record:
+
+```bash
+python3 scripts/planning_backend_control.py disable --set-by <who> --reason <why>
+python3 scripts/planning_backend_control.py enable
+python3 scripts/planning_backend_control.py list
+```
+
+The record lives under `git rev-parse --git-common-dir` at
+`shipwright/planning-backend-disable.json` and is **local-only** — a fresh CI clone cannot see a
+workstation disable. **CI propagation:** declare the intended backend (or closeout
+`override="issue-store"`) in workflow/CI configuration for that run so CI does not silently diverge
+from local disable authority. `planning-doctor.py` surfaces active disable records; legacy
+`SW_PLANNING_KILL_SWITCH` is a warn-only shim and must not change resolution.
 
 ## Store location (R4)
 

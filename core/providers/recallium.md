@@ -30,9 +30,28 @@ Conformance review: [`sw-reference/memory-provider-recallium-conformance.md`](..
 | `sourceOfTruthClass` | `memory-authoritative` — distilled memories are provider-SoT; repo decision records stay pointers only |
 | `interchange.jsonl` | `synthesized` — `/sw-memory-export` / `/sw-memory-import` synthesize neutral JSONL via search+expand |
 | `interchange.okf` | `synthesized` — same synthesis path into OKF v0.1 bundles (redaction before write) |
-| `credentials.location` | `env-only` — REST/MCP secrets from environment or secret store only |
+| `credentials.location` | `credentialRef` — REST/MCP auth via `memory.credentialRef` + machine-local selector |
 
 `<project>` below is `memory.project` from the config. Global scope uses the literal `__global__`.
+
+## Auth
+
+Recallium REST and hook-context rule fetches resolve through committed `memory.credentialRef` and the
+machine-local credential selector. `scripts/memory_lib.py` calls `credentials.resolver` with
+`purpose: memory`; `providers/recallium-rules.py` uses the same broker path for hook rule loads —
+never direct MCP tool calls for secret material.
+
+Selector entries must include non-empty `allowedRepos`, `allowedProjectIds` (must include committed
+`projectId`), and `allowedEndpoints` covering the configured `restBaseUrl` host (loopback-only for
+local Recallium). The broker refuses off-allowlist destinations and out-of-scope remotes — enforcement
+is fail-closed.
+
+During the one-release alias window, provider-specific `tokenEnv` keys may name the presence env var
+for an `environment` backend — `credentialRef` wins when both are set. Recallium runs locally with
+Ollama embeddings here — no external API cost or data egress when using the default loopback install.
+
+Diagnose: `python3 scripts/credentials-doctor.py --root .`. See
+[configuration — Credential references](../../docs/guides/configuration.md#credential-references-and-machine-local-selector).
 
 ## Capability flags
 
