@@ -15,7 +15,7 @@ re-implement loop or halt policy in this file.
 
 | ID | Requirement | Contract clause |
 | --- | --- | --- |
-| SHIP-A1 | Orchestrator-dispatched runs use `--phase-mode` / `SW_PHASE_MODE`; write durable `status.json`; suppress interactive merge pause | Legitimate-halt set; **Phase-mode contract** below |
+| SHIP-A1 | Orchestrator-dispatched runs use `--phase-mode` plus worktree-scoped / explicit dispatch context; write durable `status.json`; suppress interactive merge pause | Legitimate-halt set; **Phase-mode contract** below |
 | SHIP-A2 | On `sw-stabilize`, re-enter the stabilize loop in-turn until live green or remediation budget exhausted | In-turn self-continuation; legitimate-halt set |
 | SHIP-A3 | CI `yellow` uses self-wake sentinel (or bounded in-turn poll fallback) — never end turn while checks pending | Self-wake / bounded wait; external-wait exhaustion |
 | SHIP-A4 | Parallelize independent native review sub-agents when `sw-subagent-dispatch` heuristics allow; respect `worktree.parallelCeiling` | Parallel dispatch |
@@ -96,8 +96,9 @@ Canonical chain is single-sourced from `core/sw-reference/kernel-classification.
 - `--signal-id <id>` — after merge-ready pause, offer `/sw-feedback-close` for this backlog signal.
 - `--from <step>` — resume mid-chain.
 - `--dry-run` — print plan; no mutations.
-- `--phase-mode` — non-interactive contract for `/sw-deliver` phase dispatch (R48/R18). Also active when
-  `SW_PHASE_MODE` is truthy (`1`, `true`, `yes`). See **Phase-mode contract** below.
+- `--phase-mode` — non-interactive contract for `/sw-deliver` phase dispatch (R48/R18). Activation
+  is CLI plus worktree-scoped state or explicit per-spawn dispatch env — not ambient process
+  inheritance. See **Phase-mode contract** below.
 - `--after-tasks <stop|confirm|auto>` — when `/sw-ship` is entered from the doc chain with a frozen task list,
   overrides `doc.afterTasks` for the **frozen-task-list → implementation-loop** boundary (same semantics as
   `/sw-doc --after-tasks`). When an agent supplies `--after-tasks=auto`, record the choice in the per-worktree
@@ -112,7 +113,8 @@ Resume: `--from` › `phaseShip.currentStep` (durable `ship-steps.json`) › `la
 
 ### Phase-mode step persistence (R58)
 
-When `--phase-mode` / `SW_PHASE_MODE` is active, persist step-level state under the phase run dir:
+When `--phase-mode` is active (CLI and/or worktree-scoped / explicit dispatch context), persist
+step-level state under the phase run dir:
 
 ```bash
 # At chain start (after sw-tmp init records runDir):
@@ -285,17 +287,38 @@ evidence contract:
 - **Bypass flags** — `--fast` / `--skip-local` / `--skip-simplify` skip only optional/advisory gates; each
   skip writes an explicit record; no combination suppresses a mandatory gate.
 
-## Phase-mode contract (`--phase-mode` / `SW_PHASE_MODE`)
+## Phase-mode contract (`--phase-mode`)
 
-When `/sw-deliver` dispatches `/sw-ship` for a phase, it MUST invoke with `--phase-mode` or set `SW_PHASE_MODE=1`.
-Interactive human runs omit the flag (default).
+When `/sw-deliver` dispatches `/sw-ship` for a phase, it MUST invoke with `--phase-mode` and carry
+phase-mode context via **worktree-scoped state** (`.cursor/sw-worktree-state.json` → `phaseMode`)
+and/or an **explicit dispatch environment** set on that spawned process only. Interactive human runs
+omit the flag (default). Ambient process environment alone must not activate phase-mode.
 
 ### Activation
 
 - CLI: `--phase-mode`
-- Env: `SW_PHASE_MODE` truthy (`1`, `true`, `yes`, case-insensitive)
+- Worktree-scoped state: deliver writes `phaseMode` under the phase worktree before ship drive
+- Explicit dispatch env: per-spawn bindings (`SW_PHASE_MODE`, `SW_PHASE_SLUG`, `SW_RUN_DIR`,
+  `SW_PHASE_ID`, `SW_TASK_LIST`) set by the dispatcher for that child only — never inherited from a
+  sibling worktree or ambient orchestrator shell
 - Orchestrator SHOULD also set `SW_PHASE_SLUG=<phase-slug>` and optionally `SW_RUN_DIR` pointing at
-  `.cursor/sw-deliver-runs/<phase>/` (see `.sw/layout.md`).
+  `.cursor/sw-deliver-runs/<phase>/` (see `.sw/layout.md`) on the dispatched process
+
+### Durable planning-backend disable + CI companion step
+
+Persistent operating modes no longer rely on process-global kill-switch env. Operators disable the
+issue-store backend with the durable record CLI:
+
+```bash
+python3 scripts/planning_backend_control.py disable --set-by <who> --reason <why>
+python3 scripts/planning_backend_control.py enable
+```
+
+The disable record lives under `git rev-parse --git-common-dir` (`shipwright/planning-backend-disable.json`)
+and is **local-only** — a fresh CI clone cannot see a machine-local record. Companion CI propagation:
+declare the intended backend (or closeout `override="issue-store"`) in workflow/CI configuration for
+that run so CI does not silently diverge from local disable authority. Legacy `SW_PLANNING_KILL_SWITCH`
+is a warn-only shim and must not change resolution.
 
 ### Terminal outcomes (machine-readable)
 
