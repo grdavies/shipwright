@@ -674,6 +674,7 @@
 * merge phase phase-mode-context-and-harness-predicate-medium into feat/credential-repository-isolation (3a36d7d) <!-- sw-deliver:phase-mode-context-and-harness-predicate-medium -->
 * merge phase committed-config-surface-and-deprecation-precedence-medium into feat/credential-repository-isolation (0a96f49) <!-- sw-deliver:committed-config-surface-and-deprecation-precedence-medium -->
 * merge phase host-transport-migration-medium into feat/credential-repository-isolation (f04212b) <!-- sw-deliver:host-transport-migration-medium -->
+* merge phase planning-issue-store-client-migration-medium into feat/credential-repository-isolation (c17c1d8) <!-- sw-deliver:planning-issue-store-client-migration-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
