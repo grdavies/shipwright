@@ -54,6 +54,21 @@ def _is_path_under_plugin(path: Path, plugin_root: Path) -> bool:
     return True
 
 
+def _rules_script_allowed(script: Path, plugin_root: Path) -> bool:
+    resolved = script.resolve()
+    if _is_path_under_plugin(resolved, plugin_root):
+        return True
+    if os.environ.get("SW_HARNESS", "").strip() == "1":
+        fixtures_root = (plugin_root.parent.parent / "scripts" / "test" / "fixtures").resolve()
+        if fixtures_root.is_dir():
+            try:
+                resolved.relative_to(fixtures_root)
+            except ValueError:
+                return False
+            return True
+    return False
+
+
 def _resolve_rules_script_override(plugin_root: Path) -> Path | None:
     override = os.environ.get("SW_RULES_SCRIPT", "").strip()
     if not override:
@@ -61,13 +76,28 @@ def _resolve_rules_script_override(plugin_root: Path) -> Path | None:
     candidate = Path(override)
     if not candidate.is_file():
         return None
-    if not _is_path_under_plugin(candidate, plugin_root):
-        return None
-    return candidate.resolve()
+    resolved = candidate.resolve()
+    if _rules_script_allowed(resolved, plugin_root):
+        return resolved
+    return None
 
 
 def _pythonpath_for_plugin(plugin_root: Path) -> str:
-    return os.pathsep.join([str(plugin_root), os.environ.get("PYTHONPATH", "")]).strip(os.pathsep)
+    entries: list[str] = []
+    scripts = plugin_root / "scripts"
+    if scripts.is_dir():
+        entries.append(str(scripts))
+    entries.append(str(plugin_root))
+    if os.environ.get("SW_HARNESS", "").strip() == "1":
+        repo_root = plugin_root.parent.parent
+        for rel in ("scripts", "scripts/test", "scripts/unit_tests"):
+            path = (repo_root / rel).resolve()
+            if path.is_dir():
+                entries.append(str(path))
+    parent_path = os.environ.get("PYTHONPATH", "").strip()
+    if parent_path:
+        entries.append(parent_path)
+    return os.pathsep.join(dict.fromkeys(entries))
 
 
 def _resolved_adapter_credential(config: dict) -> tuple[str, str] | None:
@@ -149,7 +179,7 @@ def fetch_rules(
     script = rules_script if rules_script is not None else _rules_script(root, plugin_root, config)
     if script is None or not script.is_file():
         return False, []
-    if not _is_path_under_plugin(script, plugin_root):
+    if not _rules_script_allowed(script, plugin_root):
         return False, []
     env = build_adapter_spawn_env(root, plugin_root, config)
     cmd = [sys.executable, str(script)] if script.suffix == ".py" else ["bash", str(script)]
