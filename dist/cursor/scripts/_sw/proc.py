@@ -152,6 +152,14 @@ def spawn(
     )
 
 
+_HOST_TRANSPORT_CONTEXT_KEYS: tuple[str, ...] = (
+    "SW_HOST_FIXTURE",
+    "SW_GATE_FIXTURE",
+    "SW_GATE_NOW",
+    "SW_LOCAL_GATE_FIXTURE",
+)
+
+
 def host_transport_child_env(
     *,
     parent: dict[str, str] | None = None,
@@ -159,13 +167,20 @@ def host_transport_child_env(
     """Child env for host.py until broker transport migration (PRD 080 phase 18)."""
     source = dict(parent if parent is not None else os.environ)
     token = (source.get("GITHUB_TOKEN") or source.get("GH_TOKEN") or "").strip()
+    pythonpath = source.get("PYTHONPATH")
     if not token:
-        return HookVerifyEnv(parent=source)
+        return HookVerifyEnv(
+            declared_context_keys=_HOST_TRANSPORT_CONTEXT_KEYS,
+            pythonpath=pythonpath,
+            parent=source,
+        )
     return HostCliEnv(
+        declared_context_keys=_HOST_TRANSPORT_CONTEXT_KEYS,
         credential_env_name="GITHUB_TOKEN",
         credential_env_value=token,
         gh_host=source.get("GH_HOST", "github.com"),
         gh_config_dir=source.get("GH_CONFIG_DIR", ""),
+        pythonpath=pythonpath,
         parent=source,
     )
 
