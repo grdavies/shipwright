@@ -22,8 +22,20 @@ from deliver_closeout import (
     resolve_delivery_for_pr,
     run_closeout,
 )
-from host_lib import load_workflow_config, parse_owner_repo, remote_name, git_remote_url
+from credentials.model import Resolution, ResolutionState
+from host_lib import (
+    load_workflow_config,
+    parse_owner_repo,
+    remote_name,
+    git_remote_url,
+    resolve_host_credential,
+    resolve_token_env,
+    host_section,
+)
+from credentials.child_env import GITHUB_TOKEN_ENV_KEYS, ISSUES_TOKEN_ENV_KEYS
+import issues_broker
 
+_CLOSEOUT_CREDENTIAL_ENV_KEYS = GITHUB_TOKEN_ENV_KEYS | ISSUES_TOKEN_ENV_KEYS
 _MERGE_PR_RE = re.compile(r"(?:Merge pull request #|#)(\d+)\b")
 _SQUASH_PR_RE = re.compile(r"\(#(\d+)\)\s*$")
 DEFAULT_SLO_SECONDS = 300
@@ -111,11 +123,46 @@ def resolve_ci_gate(*, mode_arg: str | None = None, cfg: dict[str, Any] | None =
 
 
 def resolve_planning_token_env(cfg: dict[str, Any]) -> str:
+    """Return configured tokenEnv only — no ambient default fallback."""
     planning = cfg.get("planning") or {}
     store = planning.get("store") or {}
     issues = store.get("issues") or {}
-    token_env = str(issues.get("tokenEnv") or "SW_PLANNING_ISSUES_TOKEN").strip()
-    return token_env or "SW_PLANNING_ISSUES_TOKEN"
+    token_env = issues.get("tokenEnv")
+    if isinstance(token_env, str) and token_env.strip():
+        return token_env.strip()
+    return ""
+
+
+def resolve_planning_credential(root: Path, cfg: dict[str, Any]) -> Resolution:
+    from planning_store import resolve_issues_credential
+
+    return resolve_issues_credential(root, cfg=cfg)
+
+
+def resolve_closeout_control_layer(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Explicit closeout override precedence against durable backend-disable authority."""
+    import planning_backend_control as pbc
+
+    return pbc.resolve_control_layer(root, cfg, override="issue-store", closeout_override=True)
+
+
+def apply_closeout_planning_credential(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    parent: dict[str, str] | None = None,
+) -> tuple[Resolution, dict[str, str]]:
+    """Re-supply a resolved env-backend planning token into a sanitized child environment."""
+    from credentials.child_env import build_hook_verify_child_env
+
+    credential = resolve_planning_credential(root, cfg)
+    env = build_hook_verify_child_env(parent or os.environ)
+    token_env = resolve_planning_token_env(cfg)
+    if credential.state is ResolutionState.RESOLVED:
+        token, _reason = issues_broker.token_from_credential(credential)
+        if token_env and token:
+            env[token_env] = token
+    return credential, env
 
 
 def closeout_slo_config(cfg: dict[str, Any]) -> dict[str, Any]:
@@ -200,8 +247,16 @@ def surface_operator_failure(
     if pr_number is not None and surface in {"pr-comment", "all"}:
         remote = remote_name(cfg)
         owner_repo = parse_owner_repo(git_remote_url(root, remote))
-        token_env = str((cfg.get("host") or {}).get("tokenEnv") or "GITHUB_TOKEN")
-        if owner_repo and os.environ.get(token_env, "").strip():
+        host = host_section(cfg)
+        host_credential = resolve_host_credential(root)
+        token_env = resolve_token_env(host, str(host.get("provider") or "github"))
+        host_token, _reason = issues_broker.token_from_credential(host_credential)
+        if (
+            owner_repo
+            and host_credential.state is ResolutionState.RESOLVED
+            and host_token
+            and token_env
+        ):
             repo_owner, repo_name = owner_repo
             body = message.replace("'", "")
             proc = subprocess.run(
@@ -212,6 +267,7 @@ def surface_operator_failure(
                     "-f",
                     f"body={body}",
                 ],
+                env={**os.environ, token_env: host_token},
                 capture_output=True,
                 text=True,
                 check=False,
@@ -338,6 +394,7 @@ def run_ci_closeout(
     started_at = clock()
     safety = reconcile_closeout_safety_at_entry(root, dry_run=(mode == "observe"))
     cfg = load_workflow_config(root)
+    control_layer = resolve_closeout_control_layer(root, cfg)
     gate = resolve_ci_gate(mode_arg=mode, cfg=cfg)
     slo = closeout_slo_config(cfg)
     event = load_github_event()
@@ -398,28 +455,39 @@ def run_ci_closeout(
         )
         report["slo"] = build_slo_report(started_at=started_at, finished_at=finished_at, slo=slo, verdict="observe")
         report["safetyReconcile"] = safety
+        report["controlLayer"] = control_layer
         return report
 
+    credential, child_env = apply_closeout_planning_credential(root, cfg)
     token_env = resolve_planning_token_env(cfg)
-    if not os.environ.get(token_env, "").strip():
-        resume_command = f"export {token_env}=<token> && python3 scripts/closeout_ci.py run --mode mutate"
+    if credential.state is not ResolutionState.RESOLVED:
+        reason = credential.reason or "planning-credential-unresolved"
+        resume_hint = (
+            f"export {token_env}=<token> && python3 scripts/closeout_ci.py run --mode mutate"
+            if token_env
+            else "configure planning.store.issues.credentialRef and rerun python3 scripts/closeout_ci.py run --mode mutate"
+        )
         finished_at = clock()
         payload = {
             "verdict": "fail",
             "error": "planning-token-missing",
-            "tokenEnv": token_env,
+            "credentialRef": str(credential.ref),
+            "credentialState": credential.state.value,
             "gate": gate,
             "mergeSha": merge_sha,
             "deliveryCount": len(deliveries),
             "deliveries": deliveries,
-            "resumeCommand": resume_command,
+            "resumeCommand": resume_hint,
+            "controlLayer": control_layer,
         }
+        if token_env:
+            payload["tokenEnv"] = token_env
         payload["slo"] = build_slo_report(started_at=started_at, finished_at=finished_at, slo=slo, verdict="fail")
         payload["surface"] = surface_operator_failure(
             root,
             cfg,
             error="planning-token-missing",
-            resume_command=resume_command,
+            resume_command=resume_hint,
             pr_number=deliveries[0].get("prNumber"),
             prd_unit_id=str(deliveries[0].get("prdUnitId") or ""),
             slo=slo,
@@ -428,7 +496,21 @@ def run_ci_closeout(
         return payload
 
     os.environ.setdefault("SW_CLOSEOUT_TRIGGER", "ci-mutate")
-    results = run_delivery_closeouts(root, deliveries=deliveries, merge_sha=merge_sha, dry_run=False)
+    prior_env = {key: os.environ.get(key) for key in child_env if key in os.environ}
+    try:
+        for key, value in child_env.items():
+            if key in _CLOSEOUT_CREDENTIAL_ENV_KEYS or key == token_env:
+                os.environ[key] = value
+        results = run_delivery_closeouts(root, deliveries=deliveries, merge_sha=merge_sha, dry_run=False)
+    finally:
+        for key in child_env:
+            if key in prior_env:
+                if prior_env[key] is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = prior_env[key]
+            else:
+                os.environ.pop(key, None)
     finished_at = clock()
     verdict = _aggregate_closeout_verdict(results)
     resume_command = next((item.get("resumeCommand") for item in results if item.get("resumeCommand")), None)
@@ -442,6 +524,7 @@ def run_ci_closeout(
         "deliveries": deliveries,
         "closeoutResults": results,
         "safetyReconcile": safety,
+        "controlLayer": control_layer,
     }
     slo_report = build_slo_report(started_at=started_at, finished_at=finished_at, slo=slo, verdict=verdict)
     payload["slo"] = slo_report

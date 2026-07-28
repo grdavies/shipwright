@@ -54,6 +54,21 @@ def test_non_delivery_merge_noops(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 
 
 def test_batched_wave_closes_all_mapped_units(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    cfg_path = tmp_path / ".cursor"
+    cfg_path.mkdir(parents=True, exist_ok=True)
+    (cfg_path / "workflow.config.json").write_text(
+        json.dumps(
+            {
+                "defaultBaseBranch": "main",
+                "planning": {
+                    "store": {
+                        "issues": {"provider": "github-issues", "tokenEnv": "SW_PLANNING_ISSUES_TOKEN"}
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     dc.record_pr_delivery_mapping(tmp_path, _mapping(10, unit=UNIT_A, slug="automated-delivery-closeout"))
     dc.record_pr_delivery_mapping(tmp_path, _mapping(11, unit=UNIT_B, slug="other-delivery"))
     event = _wave_event(
@@ -101,6 +116,21 @@ def test_auth_failure_surfaces_resume_command(tmp_path: Path, monkeypatch: pytes
 
 
 def test_hostile_pr_title_cannot_alter_driver_calls(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    cfg_path = tmp_path / ".cursor"
+    cfg_path.mkdir(parents=True, exist_ok=True)
+    (cfg_path / "workflow.config.json").write_text(
+        json.dumps(
+            {
+                "defaultBaseBranch": "main",
+                "planning": {
+                    "store": {
+                        "issues": {"provider": "github-issues", "tokenEnv": "SW_PLANNING_ISSUES_TOKEN"}
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     dc.record_pr_delivery_mapping(tmp_path, _mapping(55, unit=UNIT_A, slug="automated-delivery-closeout"))
     hostile = "Merge pull request #55 from evil; rm -rf / (#55)"
     event = _wave_event(hostile)
