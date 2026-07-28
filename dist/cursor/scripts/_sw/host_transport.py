@@ -1,4 +1,4 @@
-"""Host HTTP transport on urllib with TLS and SSRF hardening (PRD 042 R8, R44)."""
+"""Host HTTP transport on urllib with broker send path (PRD 042 R8 / 080 R3)."""
 
 from __future__ import annotations
 
@@ -21,6 +21,8 @@ _SCRIPTS_DIR = Path(__file__).resolve().parent.parent
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+from credentials.model import Resolution, ResolutionState, ResolvedToken  # noqa: E402
+from credentials.send_path import authorization_header, broker_send  # noqa: E402
 from host_lib import host_section, load_workflow_config, resolve_rate_limit  # noqa: E402
 from host_ratelimit import RequestResult, SerialGate, execute_with_retry  # noqa: E402
 
@@ -36,6 +38,14 @@ _METADATA_IPS = (
     ipaddress.ip_network("fd00:ec2::254/128"),
 )
 _REDACT_PATTERNS = ("authorization", "bearer", "token", "ghp_", "glpat-")
+_DEFAULT_API_HOSTS = frozenset(
+    {
+        "api.github.com",
+        "api.gitlab.com",
+        "gitlab.com",
+        "api.bitbucket.org",
+    }
+)
 
 
 def _host_allowlist(root: Path) -> set[str]:
@@ -111,18 +121,56 @@ def _read_token(token_env: str) -> str | None:
     return os.environ.get(token_env) or None
 
 
-def _build_headers(token_env: str, extra_header_file: Path | None) -> dict[str, str]:
-    headers: dict[str, str] = {"Accept": "application/json"}
-    token = _read_token(token_env)
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    elif extra_header_file and extra_header_file.is_file():
-        for line in extra_header_file.read_text(encoding="utf-8", errors="replace").splitlines():
-            if ":" not in line:
-                continue
-            key, val = line.split(":", 1)
-            headers[key.strip()] = val.strip()
+def _extra_headers_from_file(extra_header_file: Path | None) -> dict[str, str]:
+    headers: dict[str, str] = {}
+    if not extra_header_file or not extra_header_file.is_file():
+        return headers
+    for line in extra_header_file.read_text(encoding="utf-8", errors="replace").splitlines():
+        if ":" not in line:
+            continue
+        key, val = line.split(":", 1)
+        headers[key.strip()] = val.strip()
     return headers
+
+
+def _bearer_from_credential(
+    credential: Resolution | ResolvedToken | None,
+    token_env: str,
+) -> tuple[str | None, str | None]:
+    """Return (bearer_token, refusal_reason). Refusal precedes any header attachment."""
+    if isinstance(credential, Resolution):
+        if credential.state is ResolutionState.UNRESOLVED:
+            return None, credential.reason or "credential-unresolved"
+        if credential.state is ResolutionState.EXPLICITLY_NO_AUTH:
+            return None, None
+        if credential.token is None or not credential.token.token.value.strip():
+            return None, "credential-unresolved"
+        return credential.token.token.value, None
+    if isinstance(credential, ResolvedToken):
+        value = credential.token.value.strip()
+        if not value:
+            return None, "credential-unresolved"
+        return value, None
+    if token_env:
+        token = _read_token(token_env)
+        if not token:
+            return None, "missing-token"
+        return token, None
+    return None, None
+
+
+def _broker_allowed_hosts(root: Path) -> set[str]:
+    """Hosts permitted for broker endpoint binding (config + known API hosts only)."""
+    allowed = set(_host_allowlist(root))
+    allowed.update(_DEFAULT_API_HOSTS)
+    host_cfg = host_section(load_workflow_config(root))
+    for key in ("apiBaseUrl", "baseUrl"):
+        raw = host_cfg.get(key)
+        if isinstance(raw, str) and raw.strip():
+            hostname = (urlparse(raw.strip()).hostname or "").strip().lower()
+            if hostname:
+                allowed.add(hostname)
+    return allowed
 
 
 def urllib_request(
@@ -131,12 +179,13 @@ def urllib_request(
     url: str,
     root: Path,
     provider: str,
+    credential: Resolution | ResolvedToken | None = None,
     token_env: str = "",
     body: bytes | None = None,
     header_file: Path | None = None,
     lock_file: Path | None = None,
 ) -> dict[str, Any]:
-    """Perform one host HTTP request with rate-limit retry; emit transport JSON payload."""
+    """Perform one host HTTP request via the broker send path (endpoint bind before headers)."""
     try:
         validate_url(url, root=root)
     except ValueError as exc:
@@ -149,13 +198,36 @@ def urllib_request(
         print(jsonio.dumps(redact_emit_payload(payload), indent=2))
         return payload
 
-    if token_env and not _read_token(token_env):
-        payload = {"verdict": "degraded", "reason": "missing-token", "retryable": False}
+    bearer, refusal = _bearer_from_credential(credential, token_env)
+    if refusal:
+        payload = {"verdict": "degraded", "reason": refusal, "retryable": False}
         print(jsonio.dumps(redact_emit_payload(payload), indent=2))
         return payload
 
+    allowed_hosts = _broker_allowed_hosts(root)
+    # Endpoint binding is enforced inside broker_send before Authorization is attached.
+    prepared = broker_send(
+        api_base=url,
+        allowed_hosts=allowed_hosts,
+        bearer_token=bearer,
+        method=method,
+        extra_headers=_extra_headers_from_file(header_file) or None,
+        transport=None,
+    )
+    if prepared.refused:
+        payload = {
+            "verdict": "fail",
+            "reason": "endpoint-refused",
+            "message": prepared.reason or "endpoint not allowlisted",
+            "retryable": False,
+            "authorizationAttached": authorization_header(prepared) is not None,
+        }
+        print(jsonio.dumps(redact_emit_payload(payload), indent=2))
+        return payload
+
+    headers = dict(prepared.headers)
+
     cfg = resolve_rate_limit(host_section(load_workflow_config(root)))
-    headers = _build_headers(token_env, header_file)
     opener = build_opener(HTTPSHandler(context=_ssl_context()), _SameHostRedirectHandler())
 
     def request_fn() -> RequestResult:
@@ -188,6 +260,8 @@ def urllib_request(
         payload["body"] = outcome.result.body
         payload["bodyBytes"] = len(outcome.result.body or "")
         payload["headers"] = outcome.result.headers
+        payload["status"] = outcome.result.status_code
+        payload["statusCode"] = outcome.result.status_code
     print(jsonio.dumps(redact_emit_payload(payload), indent=2))
     return payload
 
