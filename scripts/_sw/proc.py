@@ -11,15 +11,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-_SCRIPTS_DIR = Path(__file__).resolve().parents[1]
-if str(_SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS_DIR))
-
-from credentials.child_env import (  # noqa: E402
-    build_hook_verify_child_env,
-    build_host_cli_child_env,
-)
-
 
 @dataclass(frozen=True)
 class HookVerifyEnv:
@@ -58,12 +49,22 @@ def _reject_raw_env(env: object) -> None:
         )
 
 
+def _child_env_builders():
+    scripts_dir = Path(__file__).resolve().parents[1]
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+    from credentials.child_env import build_hook_verify_child_env, build_host_cli_child_env
+
+    return build_hook_verify_child_env, build_host_cli_child_env
+
+
 def materialize_child_env(
     child_env: ChildEnvSpec | None,
     *,
     parent: dict[str, str] | None = None,
 ) -> dict[str, str]:
     """Build a child environment from one of the two allowlist constructors."""
+    build_hook_verify_child_env, build_host_cli_child_env = _child_env_builders()
     if child_env is None:
         source = parent if parent is not None else os.environ
         return build_hook_verify_child_env(source)
@@ -167,3 +168,8 @@ def host_transport_child_env(
         gh_config_dir=source.get("GH_CONFIG_DIR", ""),
         parent=source,
     )
+
+
+def which_executable(name: str) -> str | None:
+    """Resolve an executable on PATH without invoking a shell."""
+    return shutil.which(name)

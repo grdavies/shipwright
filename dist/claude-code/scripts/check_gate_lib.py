@@ -145,7 +145,11 @@ def cfg_value(cfg: dict[str, Any], *path: str, default: Any = None) -> Any:
 
 def host_verb(root: Path, *args: str) -> dict[str, Any]:
     host_py = SCRIPT_DIR / "host.py"
-    completed = proc.run([sys.executable, str(host_py), "--root", str(root), *args], cwd=str(root))
+    completed = proc.run(
+        [sys.executable, str(host_py), "--root", str(root), *args],
+        cwd=str(root),
+        child_env=proc.host_transport_child_env(),
+    )
     try:
         return json.loads(completed.stdout.strip() or "{}")
     except json.JSONDecodeError:
