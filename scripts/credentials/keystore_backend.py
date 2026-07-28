@@ -233,14 +233,14 @@ class KeystoreBackendAdapter:
                 backend=entry.backend,
             )
         try:
-            secret_value = read_keystore_secret(entry)
+            token_payload = read_keystore_secret(entry)
         except KeystoreServiceError as exc:
             return BackendResolveResult(
                 state=ResolutionState.UNRESOLVED,
                 failure_code=exc.code,
                 backend=entry.backend,
             )
-        if secret_value is None or not secret_value.strip():
+        if token_payload is None or not token_payload.strip():
             return BackendResolveResult(
                 state=ResolutionState.UNRESOLVED,
                 failure_code=fc.MISSING_KEYSTORE_ITEM,
@@ -252,7 +252,7 @@ class KeystoreBackendAdapter:
         )
         return BackendResolveResult(
             state=ResolutionState.RESOLVED,
-            token=Secret(secret_value),
+            token=Secret(token_payload),
             principal=principal,
             backend=entry.backend,
         )
