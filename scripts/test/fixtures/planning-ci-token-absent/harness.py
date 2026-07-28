@@ -107,7 +107,7 @@ def check_issue_store_gate_skips_on_token_absent() -> dict:
         effective = planning_store.resolve_effective_backend(root, cfg)
         provider = planning_store.resolve_issues_provider(cfg).get("provider", "")
         token_env = planning_store.resolve_issues_token_env(cfg, provider)
-        token_present = planning_store.token_present(token_env)
+        token_present = bool(token_env) and planning_store.token_present(token_env)
     ok = effective.get("effective") == "issue-store" and not token_present
     return {
         "name": "issue-store-gate-token-absent-detected",

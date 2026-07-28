@@ -10,7 +10,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
+import issues_broker
 import issues_http
+from credentials.model import Resolution, ResolvedToken
 from host_lib import (
     github_api_base,
     host_section,
@@ -61,12 +63,6 @@ def _issues_section(cfg: dict[str, Any]) -> dict[str, Any]:
     return issues if isinstance(issues, dict) else {}
 
 
-def _token_env(cfg: dict[str, Any]) -> str:
-    issues = _issues_section(cfg)
-    raw = issues.get("tokenEnv")
-    return raw.strip() if isinstance(raw, str) and raw.strip() else "ISSUES_GITHUB_TOKEN"
-
-
 def _resolve_repo_target(root: Path, cfg: dict[str, Any]) -> tuple[str, str]:
     from planning_store import resolve_store_location
 
@@ -94,11 +90,9 @@ def _search_max_pages() -> int:
     return DEFAULT_MAX_PAGES
 
 
-def _github_headers(token: str, cfg: dict[str, Any], *, api_version: str = "2022-11-28") -> dict[str, str]:
-    del cfg
+def _github_base_headers(*, api_version: str = "2022-11-28") -> dict[str, str]:
     return {
         "Accept": "application/vnd.github+json",
-        "Authorization": f"Bearer {token}",
         "X-GitHub-Api-Version": api_version,
         "User-Agent": "shipwright-github-issues-client",
         "Content-Type": "application/json",
@@ -223,23 +217,52 @@ def _issue_number(issue_id: str) -> int:
 class GitHubIssuesClient:
     """Live GitHub Issues REST adapter (store location from planning.store.storeLocation)."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(
+        self,
+        root: Path,
+        *,
+        credential: Resolution | ResolvedToken | None = None,
+    ) -> None:
+        from planning_store import resolve_issues_credential
+
         self.root = root
         self.cfg = load_workflow_config(root)
         self.owner, self.repo = _resolve_repo_target(root, self.cfg)
-        token = os.environ.get(_token_env(self.cfg), "").strip()
-        if not token:
-            raise RuntimeError(f"missing GitHub issues token env {_token_env(self.cfg)}")
-        self._token = token
-        self.headers = _github_headers(token, self.cfg)
+        self._credential = (
+            credential
+            if credential is not None
+            else resolve_issues_credential(root, issues_provider="github-issues", cfg=self.cfg)
+        )
+        try:
+            self._token = issues_broker.require_token(self._credential)
+        except issues_broker.IssuesBrokerError as exc:
+            raise RuntimeError(f"missing GitHub issues credential: {exc}") from exc
+        self.headers = _github_base_headers()
         self.api_base = github_api_base(host_section(self.cfg))
         store = _store_section(self.cfg)
         raw_key = store.get("projectKey")
         self.project_key = raw_key.strip() if isinstance(raw_key, str) else ""
         self._native_links_capable_cache: bool | None = None
 
+    def _allowed_hosts(self) -> set[str]:
+        return issues_broker.merge_allowed_hosts(
+            issues_broker.hosts_from_urls(self.api_base),
+            issues_broker.ssrf_allowlist_from_host_cfg(host_section(self.cfg)),
+            {"api.github.com"},
+        )
+
+    def _bound_headers(self, headers: dict[str, str] | None = None, *, url: str, method: str) -> dict[str, str]:
+        extra = issues_broker.strip_auth_headers(headers if headers is not None else self.headers)
+        return issues_broker.prepare_bound_headers(
+            url=url,
+            allowed_hosts=self._allowed_hosts(),
+            bearer_token=self._token,
+            extra_headers=extra,
+            method=method,
+        )
+
     def _sub_issue_headers(self) -> dict[str, str]:
-        return _github_headers(self._token, self.cfg, api_version=SUB_ISSUE_API_VERSION)
+        return _github_base_headers(api_version=SUB_ISSUE_API_VERSION)
 
     def _native_links_capable(self) -> bool:
         if self._native_links_capable_cache is not None:
@@ -263,11 +286,12 @@ class GitHubIssuesClient:
         *,
         allow_404: bool = False,
     ) -> Any:
+        bound = self._bound_headers(headers, url=url, method=method)
         if allow_404:
             status, _hdrs, body = issues_http.http_request(
                 method,
                 url,
-                headers,
+                bound,
                 payload,
                 root=self.root,
                 issues_provider="github-issues",
@@ -280,7 +304,7 @@ class GitHubIssuesClient:
         return issues_http.http_json(
             method,
             url,
-            headers,
+            bound,
             payload,
             root=self.root,
             issues_provider="github-issues",
@@ -295,10 +319,11 @@ class GitHubIssuesClient:
         *,
         allow_404: bool = False,
     ) -> None:
+        bound = self._bound_headers(headers, url=url, method=method)
         issues_http.http_empty(
             method,
             url,
-            headers,
+            bound,
             payload,
             root=self.root,
             issues_provider="github-issues",

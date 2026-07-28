@@ -10,8 +10,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
+import issues_broker
 import issues_http
-from host_lib import load_workflow_config
+from credentials.model import Resolution, ResolvedToken
+from host_lib import host_section, load_workflow_config
 from planning_canonical import (
     MARKER_ARTIFACT_TYPE,
     MARKER_UNIT_ID,
@@ -96,26 +98,34 @@ def _issues_section(cfg: dict[str, Any]) -> dict[str, Any]:
     return issues if isinstance(issues, dict) else {}
 
 
-def _token_env(cfg: dict[str, Any]) -> str:
-    issues = _issues_section(cfg)
-    raw = issues.get("tokenEnv")
-    return raw.strip() if isinstance(raw, str) and raw.strip() else "ISSUES_JIRA_TOKEN"
-
-
 def _api_base(cfg: dict[str, Any]) -> str:
     endpoint = resolve_jira_endpoint(cfg)
     suffix = JIRA_DC_API if resolve_jira_flavor(cfg) == "dc" else JIRA_CLOUD_API
     return f"{endpoint}{suffix}" if endpoint else ""
 
 
-def _auth_header(cfg: dict[str, Any], token: str) -> dict[str, str]:
+def _cloud_email(cfg: dict[str, Any], credential: Resolution | ResolvedToken | None) -> str:
+    account = issues_broker.principal_account(credential)
+    if account:
+        return account
+    # Non-secret identity for Cloud Basic auth — not a token variable lookup.
+    return os.environ.get(resolve_jira_email_env(cfg), "").strip()
+
+
+def _auth_material(
+    cfg: dict[str, Any],
+    token: str,
+    credential: Resolution | ResolvedToken | None,
+) -> tuple[str | None, dict[str, str]]:
+    """Return (bearer_token, extra_headers) for broker send — DC uses Bearer, Cloud uses Basic."""
+    base = {"Accept": "application/json", "Content-Type": "application/json"}
     if resolve_jira_flavor(cfg) == "dc":
-        return {"Authorization": f"Bearer {token}", "Accept": "application/json", "Content-Type": "application/json"}
-    email = os.environ.get(resolve_jira_email_env(cfg), "").strip()
+        return token, base
+    email = _cloud_email(cfg, credential)
     if not email:
-        return {}
+        return None, {}
     cred = base64.b64encode(f"{email}:{token}".encode()).decode()
-    return {"Authorization": f"Basic {cred}", "Accept": "application/json", "Content-Type": "application/json"}
+    return None, {**base, "Authorization": f"Basic {cred}"}
 
 
 def _description_to_markdown(description: Any, *, flavor: str) -> str:
@@ -204,23 +214,58 @@ def _jql_escape(value: str) -> str:
 class JiraIssuesClient:
     """Live Jira REST issues adapter (Cloud ADF primary; DC wiki)."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(
+        self,
+        root: Path,
+        *,
+        credential: Resolution | ResolvedToken | None = None,
+    ) -> None:
+        from planning_store import resolve_issues_credential
+
         self.root = root
         self.cfg = load_workflow_config(root)
         self.flavor = resolve_jira_flavor(self.cfg)
         self.base = _api_base(self.cfg)
-        token = os.environ.get(_token_env(self.cfg), "").strip()
-        if not token:
-            raise RuntimeError(f"missing Jira token env {_token_env(self.cfg)}")
-        self.headers = _auth_header(self.cfg, token)
-        if not self.headers:
+        self._credential = (
+            credential
+            if credential is not None
+            else resolve_issues_credential(root, issues_provider="jira", cfg=self.cfg)
+        )
+        try:
+            self._token = issues_broker.require_token(self._credential)
+        except issues_broker.IssuesBrokerError as exc:
+            raise RuntimeError(f"missing Jira credential: {exc}") from exc
+        bearer, extra = _auth_material(self.cfg, self._token, self._credential)
+        self._bearer_token = bearer
+        self._auth_extra = extra
+        if not bearer and "Authorization" not in extra:
             raise RuntimeError(f"missing Jira email env {resolve_jira_email_env(self.cfg)}")
+        self.headers = {"Accept": "application/json", "Content-Type": "application/json"}
         self.project_key = resolve_jira_project_key(self.cfg)
-        self.api_project_key = resolve_jira_api_project_key(self.cfg, token, root)
+        self.api_project_key = resolve_jira_api_project_key(self.cfg, self._token, root)
         self.issue_type = resolve_jira_issue_type(self.cfg)
         self.field_defaults = resolve_field_defaults(self.cfg)
         self.link_defaults = resolve_link_defaults(self.cfg)
         self._native_links_capable_cache: bool | None = None
+
+    def _allowed_hosts(self) -> set[str]:
+        return issues_broker.merge_allowed_hosts(
+            issues_broker.hosts_from_urls(self.base, resolve_jira_endpoint(self.cfg)),
+            issues_broker.ssrf_allowlist_from_host_cfg(host_section(self.cfg)),
+            {"atlassian.net", "jira.com"},
+        )
+
+    def _bound_headers(self, headers: dict[str, str] | None = None, *, url: str, method: str) -> dict[str, str]:
+        extra = issues_broker.strip_auth_headers(headers if headers is not None else self.headers)
+        extra.update(self._auth_extra)
+        extra.setdefault("User-Agent", "shipwright-jira-client")
+        return issues_broker.prepare_bound_headers(
+            url=url,
+            allowed_hosts=self._allowed_hosts(),
+            bearer_token=self._bearer_token,
+            extra_headers=extra,
+            method=method,
+        )
 
     def _http_json(
         self,
@@ -231,11 +276,11 @@ class JiraIssuesClient:
     ) -> Any:
         from issues_lib import IssueArchivedProject
 
-        hdrs = {**headers, "User-Agent": "shipwright-jira-client"}
+        bound = self._bound_headers(headers, url=url, method=method)
         status, _hdrs, body = issues_http.http_request(
             method,
             url,
-            hdrs,
+            bound,
             payload,
             root=self.root,
             issues_provider="jira",
@@ -245,7 +290,6 @@ class JiraIssuesClient:
         if status >= 400:
             raise RuntimeError(f"Jira HTTP {status}: {body[:300]}")
         return json.loads(body) if body.strip() else {}
-
 
     def _native_links_capable(self) -> bool:
         if self._native_links_capable_cache is not None:
@@ -296,7 +340,7 @@ class JiraIssuesClient:
         return links
 
     def _create_issue_link(self, issue_id: str, link_type: str, target: str) -> bool:
-        jira_type = resolve_jira_link_type_name(self.cfg, link_type, token=os.environ.get(_token_env(self.cfg), ""), root=self.root)
+        jira_type = resolve_jira_link_type_name(self.cfg, link_type, token=self._token, root=self.root)
         body = {
             "type": {"name": jira_type},
             "inwardIssue": {"key": issue_id},
@@ -600,11 +644,11 @@ class JiraIssuesClient:
     def mark_tombstone(self, issue_id: str) -> None:
         """Remove migrated issue from active Jira discovery (DELETE, or label fallback)."""
         url = f"{self.base}/issue/{issue_id}"
-        hdrs = {**self.headers, "User-Agent": "shipwright-jira-client"}
+        bound = self._bound_headers(self.headers, url=url, method="DELETE")
         status, _hdrs, body = issues_http.http_request(
             "DELETE",
             url,
-            hdrs,
+            bound,
             root=self.root,
             issues_provider="jira",
         )
