@@ -10,6 +10,7 @@ from typing import Any
 
 from wave_json_io import StateCorruptError, read_json, write_json
 from wave_run_paths import mint_run_id, plan_path, require_run_id
+from wave_state import path_normalize_anchor
 
 
 class PlanHashMismatchError(ValueError):
@@ -69,8 +70,9 @@ def head_sha(root: Path) -> str | None:
 
 def relative_plan_path(root: Path, run_id: str) -> str:
     path = plan_path(root, run_id).resolve()
+    anchor = path_normalize_anchor(root)
     try:
-        return str(path.relative_to(root.resolve()))
+        return str(path.relative_to(anchor))
     except ValueError:
         return str(path)
 
@@ -105,7 +107,8 @@ def verify_plan_hash(root: Path, run_id: str, state: dict[str, Any]) -> None:
     path_rel = state.get("planPath")
     if not isinstance(path_rel, str) or not path_rel:
         raise PlanRecordMissingError("planPath missing from run state")
-    on_disk = (root / path_rel).resolve()
+    anchor = path_normalize_anchor(root)
+    on_disk = (anchor / path_rel).resolve()
     expected = plan_path(root, run_id).resolve()
     if on_disk != expected:
         raise PlanHashMismatchError(f"planPath {path_rel!r} outside run namespace")
