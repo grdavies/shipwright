@@ -660,6 +660,7 @@
 * merge phase machine-local-selector-file-schema-scope-integrity-medium into feat/credential-repository-isolation (9256e65) <!-- sw-deliver:machine-local-selector-file-schema-scope-integrity-medium -->
 * merge phase endpoint-guard-and-broker-owned-send-path-medium into feat/credential-repository-isolation (4b3a5c4) <!-- sw-deliver:endpoint-guard-and-broker-owned-send-path-medium -->
 * merge phase trust-on-first-use-pairing-and-provenance-journal-medium into feat/credential-repository-isolation (602fec5) <!-- sw-deliver:trust-on-first-use-pairing-and-provenance-journal-medium -->
+* merge phase default-deny-child-environment-constructors-medium into feat/credential-repository-isolation (20826b6) <!-- sw-deliver:default-deny-child-environment-constructors-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
