@@ -657,6 +657,7 @@
 * merge phase layout-and-operator-guide-currency-medium into feat/workflow-state-machine-hardening (ed65f1b) <!-- sw-deliver:layout-and-operator-guide-currency-medium -->
 * merge phase conductor-contract-and-generated-surfaces-medium into feat/workflow-state-machine-hardening (43093aa) <!-- sw-deliver:conductor-contract-and-generated-surfaces-medium -->
 * merge phase credential-model-secret-wrapper-tri-state-result-medium into feat/credential-repository-isolation (42e5fc4) <!-- sw-deliver:credential-model-secret-wrapper-tri-state-result-medium -->
+* merge phase machine-local-selector-file-schema-scope-integrity-medium into feat/credential-repository-isolation (9256e65) <!-- sw-deliver:machine-local-selector-file-schema-scope-integrity-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
