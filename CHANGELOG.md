@@ -667,6 +667,7 @@
 * merge phase hardened-git-credential-backend-small into feat/credential-repository-isolation (c1a52f1) <!-- sw-deliver:hardened-git-credential-backend-small -->
 * merge phase ast-environment-read-lint-and-exemption-manifest-medium into feat/credential-repository-isolation (45df208) <!-- sw-deliver:ast-environment-read-lint-and-exemption-manifest-medium -->
 * merge phase github-cli-backend-with-gh-config-dir-isolation-small into feat/credential-repository-isolation (f0a588d) <!-- sw-deliver:github-cli-backend-with-gh-config-dir-isolation-small -->
+* merge phase repositorycontext-factory-and-context-envelope-medium into feat/credential-repository-isolation (f14f4f2) <!-- sw-deliver:repositorycontext-factory-and-context-envelope-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
