@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-28T18:12:34Z",
+  "generatedAt": "2026-07-28T22:00:52Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -6418,163 +6418,163 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:479:build-chain-sync.py",
+      "id": "core/sw-reference/layout.md:485:build-chain-sync.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 479,
+      "line": 485,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:506:build-chain-sync.py",
+      "id": "core/sw-reference/layout.md:512:build-chain-sync.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 506,
+      "line": 512,
       "column": 11,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:506:build-chain-sync.py",
+      "id": "core/sw-reference/layout.md:512:build-chain-sync.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 506,
+      "line": 512,
       "column": 102,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:511:planning_store.py",
+      "id": "core/sw-reference/layout.md:517:planning_store.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 511,
+      "line": 517,
       "column": 20,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:578:wave.py",
+      "id": "core/sw-reference/layout.md:584:wave.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 578,
+      "line": 584,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:579:dispatch-check.py",
+      "id": "core/sw-reference/layout.md:585:dispatch-check.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 579,
+      "line": 585,
       "column": 8,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:600:wave.py",
+      "id": "core/sw-reference/layout.md:606:wave.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 600,
+      "line": 606,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:625:wave.py",
+      "id": "core/sw-reference/layout.md:631:wave.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 625,
+      "line": 631,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:681:wave.py",
+      "id": "core/sw-reference/layout.md:687:wave.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 681,
+      "line": 687,
       "column": 28,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:801:orchestrator_signal_context.py",
+      "id": "core/sw-reference/layout.md:807:orchestrator_signal_context.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 801,
+      "line": 807,
       "column": 8,
       "script": "orchestrator_signal_context.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:802:orchestrator_run.py",
+      "id": "core/sw-reference/layout.md:808:orchestrator_run.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 802,
+      "line": 808,
       "column": 8,
       "script": "orchestrator_run.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:803:orchestrator_run.py",
+      "id": "core/sw-reference/layout.md:809:orchestrator_run.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 803,
+      "line": 809,
       "column": 8,
       "script": "orchestrator_run.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:837:refactor-gate.py",
+      "id": "core/sw-reference/layout.md:843:refactor-gate.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 837,
+      "line": 843,
       "column": 15,
       "script": "refactor-gate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:842:phase_sizing.py",
+      "id": "core/sw-reference/layout.md:848:phase_sizing.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 842,
+      "line": 848,
       "column": 47,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:844:phase_sizing.py",
+      "id": "core/sw-reference/layout.md:850:phase_sizing.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 844,
+      "line": 850,
       "column": 79,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:855:<name>.py",
+      "id": "core/sw-reference/layout.md:861:<name>.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 855,
+      "line": 861,
       "column": 67,
       "script": "<name>.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:856:copy-to-core.py",
+      "id": "core/sw-reference/layout.md:862:copy-to-core.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 856,
+      "line": 862,
       "column": 28,
       "script": "copy-to-core.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:864:sw_bootstrap.py",
+      "id": "core/sw-reference/layout.md:870:sw_bootstrap.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 864,
+      "line": 870,
       "column": 79,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
