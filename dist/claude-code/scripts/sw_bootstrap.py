@@ -7,9 +7,12 @@ executes a named helper. Consumers need no repo-local façade files.
 Usage:
   python3 scripts/sw_bootstrap.py [--root WORKSPACE] --print SCRIPT
   python3 scripts/sw_bootstrap.py [--root WORKSPACE] SCRIPT [-- SCRIPT_ARGS...]
+  python3 scripts/sw_bootstrap.py --require-envelope SCRIPT [-- SCRIPT_ARGS...]
 
 ``--print`` emits the resolved absolute helper path on stdout. Without ``--print``, the
-helper is executed with ``exec`` semantics (replaces the bootstrap process).
+helper is executed with ``exec`` semantics (replaces the bootstrap process). When a
+serialized non-secret context envelope is available it is forwarded to the child process.
+``--require-envelope`` refuses a silent working-directory fallback.
 """
 from __future__ import annotations
 
@@ -24,6 +27,13 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import build_parser, run_module_main
+from repository_context import (
+    CONTEXT_ENVELOPE_ENV,
+    RepositoryContextError,
+    envelope_from_env,
+    from_root,
+    merge_forwarded_envelope,
+)
 from sw_scripts_resolve import ScriptsResolveError, resolve_script
 
 SAFE_SCRIPT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.py$")
@@ -81,7 +91,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--root",
         default=".",
-        help="Consumer workspace root (default: cwd)",
+        help="Consumer workspace root (default: cwd when envelope not required)",
+    )
+    parser.add_argument(
+        "--require-envelope",
+        action="store_true",
+        help="Refuse when no serialized context envelope is present",
     )
     parser.add_argument(
         "--print",
@@ -107,13 +122,40 @@ def _strip_forward_separator(args: list[str]) -> list[str]:
     return args
 
 
+def resolve_workspace(
+    args: argparse.Namespace,
+    *,
+    env: dict[str, str] | None = None,
+) -> tuple[Path, dict[str, str]]:
+    """Resolve workspace root and child environment with optional envelope forwarding."""
+    source = dict(env if env is not None else os.environ)
+    context = envelope_from_env(source)
+    if args.require_envelope and context is None:
+        raise RepositoryContextError(
+            f"{CONTEXT_ENVELOPE_ENV} is required; refusing working-directory fallback"
+        )
+    if context is not None:
+        context.assert_root_invariant()
+        workspace = Path(context.root).resolve()
+        child_env = merge_forwarded_envelope(source, context=context)
+        return workspace, child_env
+    if args.root == "." and args.require_envelope:
+        raise RepositoryContextError(
+            f"{CONTEXT_ENVELOPE_ENV} is required; refusing working-directory fallback"
+        )
+    workspace = Path(args.root).resolve()
+    built = from_root(workspace)
+    child_env = merge_forwarded_envelope(source, context=built)
+    return workspace, child_env
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    workspace = Path(args.root).resolve()
     script_args = _strip_forward_separator(list(args.script_args))
     try:
-        target = resolve_helper(workspace, args.script)
-    except ScriptsResolveError as exc:
+        workspace, child_env = resolve_workspace(args)
+        target = resolve_helper(workspace, args.script, env=child_env)
+    except (ScriptsResolveError, RepositoryContextError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
 
@@ -121,8 +163,10 @@ def main(argv: list[str] | None = None) -> int:
         print(target)
         return 0
 
+    exec_env = os.environ.copy()
+    exec_env.update(child_env)
     exec_argv = [sys.executable, str(target), *script_args]
-    os.execv(sys.executable, exec_argv)
+    os.execve(sys.executable, exec_argv, exec_env)
     return 0  # pragma: no cover
 
 
