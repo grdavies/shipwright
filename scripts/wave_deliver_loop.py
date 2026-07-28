@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import time
+from collections.abc import Mapping
 
 from _sw import interpreter
 import sys
@@ -1452,15 +1453,155 @@ def phase_worktree_path(state: dict[str, Any], phase_id: str) -> Path | None:
     return None
 
 
+WORKTREE_STATE_REL = Path(".cursor") / "sw-worktree-state.json"
+PHASE_MODE_STATE_KEY = "phaseMode"
+PHASE_DISPATCH_ENV_KEYS = (
+    "SW_PHASE_MODE",
+    "SW_PHASE_SLUG",
+    "SW_RUN_DIR",
+    "SW_TASK_LIST",
+    "SW_PHASE_ID",
+    "PYTHONPATH",
+)
+_AMBIENT_PHASE_INHERIT_BLOCKLIST = frozenset(
+    {
+        "SW_PHASE_MODE",
+        "SW_PHASE_SLUG",
+        "SW_PHASE_ID",
+        "SW_RUN_DIR",
+        "SW_TASK_LIST",
+    }
+)
+
+
+def worktree_state_path(worktree: Path) -> Path:
+    return worktree / WORKTREE_STATE_REL
+
+
+def read_phase_mode_context(worktree: Path) -> dict[str, Any] | None:
+    """Read worktree-scoped phase-mode context (PRD 080 R8 / phase 16.2)."""
+    path = worktree_state_path(worktree)
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    ctx = payload.get(PHASE_MODE_STATE_KEY)
+    return ctx if isinstance(ctx, dict) else None
+
+
+def write_phase_mode_context(
+    worktree: Path,
+    *,
+    phase_id: str,
+    phase_slug: str,
+    task_list: str,
+    run_dir: str | None = None,
+) -> dict[str, Any]:
+    """Persist phase-mode context under the phase worktree state file."""
+    path = worktree_state_path(worktree)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload: dict[str, Any] = {}
+    if path.is_file():
+        try:
+            loaded = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                payload = loaded
+        except (OSError, json.JSONDecodeError):
+            payload = {}
+    ctx: dict[str, Any] = {
+        "active": True,
+        "phaseId": str(phase_id),
+        "phaseSlug": str(phase_slug),
+        "runDir": run_dir or f".cursor/sw-deliver-runs/{phase_slug}",
+        "taskList": str(task_list or ""),
+    }
+    payload[PHASE_MODE_STATE_KEY] = ctx
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return ctx
+
+
+def clear_phase_mode_context(worktree: Path) -> None:
+    path = worktree_state_path(worktree)
+    if not path.is_file():
+        return
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    if not isinstance(payload, dict) or PHASE_MODE_STATE_KEY not in payload:
+        return
+    payload.pop(PHASE_MODE_STATE_KEY, None)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def phase_mode_from_dispatch_env(env: Mapping[str, str] | None) -> bool:
+    if not env:
+        return False
+    return str(env.get("SW_PHASE_MODE", "")).strip().lower() in ("1", "true", "yes")
+
+
+def phase_mode_context_active(
+    worktree: Path | None = None,
+    *,
+    dispatch_env: Mapping[str, str] | None = None,
+) -> bool:
+    """True only from worktree-scoped state or explicit per-spawn dispatch env.
+
+    Never consults ambient ``os.environ`` — ambient ``SW_PHASE_MODE`` alone must
+    not activate phase-mode (PRD 080 R8 / phase 16.2).
+    """
+    if phase_mode_from_dispatch_env(dispatch_env):
+        return True
+    if worktree is None:
+        return False
+    ctx = read_phase_mode_context(worktree)
+    return bool(ctx and ctx.get("active") is True)
+
+
 def ship_loop_env_for_phase(state: dict[str, Any], phase_id: str, slug: str) -> dict[str, str]:
+    """Build explicit phase-mode dispatch env and persist worktree-scoped state."""
+    task_list = str(state.get("source_task_list") or "")
+    run_dir = f".cursor/sw-deliver-runs/{slug}"
+    wt = phase_worktree_path(state, phase_id)
+    if wt is not None:
+        write_phase_mode_context(
+            wt,
+            phase_id=phase_id,
+            phase_slug=slug,
+            task_list=task_list,
+            run_dir=run_dir,
+        )
     return {
         "SW_PHASE_MODE": "1",
         "SW_PHASE_SLUG": slug,
-        "SW_RUN_DIR": f".cursor/sw-deliver-runs/{slug}",
-        "SW_TASK_LIST": str(state.get("source_task_list") or ""),
+        "SW_RUN_DIR": run_dir,
+        "SW_TASK_LIST": task_list,
         "SW_PHASE_ID": str(phase_id),
         "PYTHONPATH": "scripts",
     }
+
+
+def build_ship_dispatch_child_env(
+    dispatch: Mapping[str, str],
+    *,
+    parent: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    """Build a spawn env whose phase-mode bindings come only from ``dispatch``.
+
+    Parent process ambient ``SW_PHASE_*`` / run bindings are scrubbed so sibling
+    worktrees cannot inherit each other's phase-mode context. All other parent
+    keys are retained so host/git tooling keeps working.
+    """
+    source = dict(parent if parent is not None else os.environ)
+    for key in _AMBIENT_PHASE_INHERIT_BLOCKLIST:
+        source.pop(key, None)
+    for key, value in dispatch.items():
+        source[str(key)] = str(value)
+    return source
 
 
 def run_ship_loop_drive(
@@ -1478,10 +1619,11 @@ def run_ship_loop_drive(
         "--phase",
         phase_slug,
     ]
+    child_env = build_ship_dispatch_child_env(env)
     proc = subprocess.run(
         cmd,
         cwd=str(worktree),
-        env={**os.environ, **env},
+        env=child_env,
         capture_output=True,
         text=True,
     )
