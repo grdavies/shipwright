@@ -253,7 +253,7 @@ def _backend_to_resolution(ref: CredentialRef, backend_result: BackendResolveRes
     if backend_result.state is ResolutionState.RESOLVED:
         if backend_result.token is None or not backend_result.token.value.strip():
             return Resolution.unresolved(ref, reason=fc.INSUFFICIENT_ACCESS)
-        resolved = ResolvedToken(token=backend_result.token, principal=backend_result.principal)
+        resolved = ResolvedToken(backend_result.token, backend_result.principal)
         return Resolution.resolved(ref, resolved)
     if backend_result.state is ResolutionState.EXPLICITLY_NO_AUTH:
         return Resolution.explicitly_no_auth(ref)
