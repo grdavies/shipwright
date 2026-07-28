@@ -12,7 +12,7 @@ from typing import Any
 
 _CANONICAL_MODULE_NAME = "_planning_store_canonical"
 _CANONICAL_REL = "scripts/planning_store.py"
-_REPO_ROOT_DEPTH = 3
+_REPO_ROOT_DEPTH = 2
 _EXPORTED_NAMES = (
     'DEFAULT_BACKEND',
     'DEFAULT_ISSUES_TOKEN_ENV',
