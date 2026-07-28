@@ -16,6 +16,9 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_paths  # noqa: E402
 import planning_visibility as pv  # noqa: E402
+from _planning_pkg_loader import load_package  # noqa: E402
+
+PlanningUnit = load_package().PlanningUnit
 
 GENERATION_STATE_REL = ".cursor/hooks/state/planning-index-generation.json"
 
@@ -65,21 +68,6 @@ class IndexRegions:
     inFlight: str
     prefix: str
     suffix: str
-
-
-@dataclass(frozen=True)
-class PlanningUnit:
-    id: str
-    type: str
-    status: str
-    title: str
-    visibility: str
-    edges: str
-    body_path: str
-    opaque_title: bool = False
-    edge_map: dict[str, Any] | None = None
-    source: str = ""
-    schedule: str = ""
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
