@@ -151,6 +151,19 @@ def spawn(
     )
 
 
-def which_executable(name: str) -> str | None:
-    """Resolve an executable on PATH without invoking a shell."""
-    return shutil.which(name)
+def host_transport_child_env(
+    *,
+    parent: dict[str, str] | None = None,
+) -> HostCliEnv | HookVerifyEnv:
+    """Child env for host.py until broker transport migration (PRD 080 phase 18)."""
+    source = dict(parent if parent is not None else os.environ)
+    token = (source.get("GITHUB_TOKEN") or source.get("GH_TOKEN") or "").strip()
+    if not token:
+        return HookVerifyEnv(parent=source)
+    return HostCliEnv(
+        credential_env_name="GITHUB_TOKEN",
+        credential_env_value=token,
+        gh_host=source.get("GH_HOST", "github.com"),
+        gh_config_dir=source.get("GH_CONFIG_DIR", ""),
+        parent=source,
+    )
