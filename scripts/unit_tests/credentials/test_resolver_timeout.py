@@ -24,7 +24,17 @@ from credentials.selector_store import SelectorEntry
 from halt_resume import enrich_legitimate_halt
 
 
-_TEST_VALUE = "unit-test-credential-value-abcdef"
+_TEST_VALUE = "sk_test_fixture_allowlisted_secret_scan_0123456789"
+
+
+def _resolved_backend() -> BackendResolveResult:
+    return BackendResolveResult(
+        ResolutionState.RESOLVED,
+        Secret(_TEST_VALUE),
+        Principal(profile="work", account="work"),
+        None,
+        "keystore",
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,10 +52,11 @@ class _BlockingBackend:
         _ = (entry, purpose, context)
         time.sleep(self.delay_seconds)
         return BackendResolveResult(
-            state=ResolutionState.RESOLVED,
-            token=Secret(_TEST_VALUE),
-            principal=Principal(profile="work", account="work"),
-            backend=self.backend_name,
+            ResolutionState.RESOLVED,
+            Secret(_TEST_VALUE),
+            Principal(profile="work", account="work"),
+            None,
+            self.backend_name,
         )
 
 

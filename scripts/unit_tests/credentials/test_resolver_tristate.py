@@ -24,7 +24,17 @@ from credentials.resolver import (
 from credentials.selector_store import SelectorEntry
 
 
-_TEST_VALUE = "unit-test-credential-value-abcdef"
+_TEST_VALUE = "sk_test_fixture_allowlisted_secret_scan_0123456789"
+
+
+def _resolved_backend(principal: Principal, backend_name: str = "github_cli") -> BackendResolveResult:
+    return BackendResolveResult(
+        ResolutionState.RESOLVED,
+        Secret(_TEST_VALUE),
+        principal,
+        None,
+        backend_name,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -129,11 +139,7 @@ class TestTriStateMatrix:
                 "github_cli",
                 _StubBackend(
                     "github_cli",
-                    BackendResolveResult(
-                        state=ResolutionState.RESOLVED,
-                        token=Secret(_TEST_VALUE),
-                        principal=Principal(profile="work", account="work"),
-                    ),
+                    _resolved_backend(Principal(profile="work", account="work")),
                 ),
             )
 
@@ -176,11 +182,7 @@ class TestTriStateMatrix:
             "github_cli",
             _StubBackend(
                 "github_cli",
-                BackendResolveResult(
-                    state=ResolutionState.RESOLVED,
-                    token=Secret(_TEST_VALUE),
-                    principal=Principal(profile="work", account="work"),
-                ),
+                _resolved_backend(Principal(profile="work", account="work")),
             ),
         )
 
