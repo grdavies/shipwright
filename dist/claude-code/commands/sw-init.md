@@ -281,7 +281,46 @@ Detect and recommend (never hard-fail scaffold):
 - **Jira issue-store init probes (PRD 047 R101/R105/R108/R109):** when `planning.store.issuesProvider` is `jira`, run `python3 scripts/planning_store.py probe-jira-init` — auth (Cloud email+token / DC PAT), per-issue privacy classification, createmeta required fields, and label-write permission (fail-closed).
 - **Planning store doctor** via `python3 scripts/planning-doctor.py` — validates `planning.store` backend reachability (degrade-open when `memory` is configured but no memory provider is present), sweeps orphaned `.cursor/planning-materialized/` trees, and never prints provider tokens (R27).
 
-### 5b. Portability self-check (R24/R25)
+### 5c. Guided credential setup (PRD 080 R1/R2/R6)
+
+After host provider detection and before portability self-check, run the **guided single-identity**
+credential path for the common case (one detected account). This is the one guided action that writes
+**both** the repository `credentialRef` fields and the matching machine-local selector entry.
+
+```bash
+python3 scripts/sw-configure.py credential plan
+python3 scripts/sw-configure.py credential apply --confirm
+```
+
+**Progressive disclosure:** when `credential plan` reports `disclosure: multi` (many detected accounts),
+do **not** run the guided apply — surface keystore and multi-principal configuration instead. Keystore
+options appear only when multiple accounts are detected or the operator explicitly opts in.
+
+**Repository-local vs user-level write exception:** `/sw-init` is repo-local only, but the selector
+file is the documented exception — it lives at `~/.config/shipwright/credential-selector.json`
+(user-level, mode `0600`, directory mode `0700`). Repository config still receives `projectId` and
+`credentialRef` values only.
+
+**Legacy token-variable migration:** when an existing config uses `host.tokenEnv`, offer consent-gated
+migration before cutover. Dry-run prints the exact selector command; confirm writes `credentialRef` and
+the user-level selector entry:
+
+```bash
+python3 scripts/sw-configure.py credential migrate          # prints selectorCommand
+python3 scripts/sw-configure.py credential migrate --confirm
+```
+
+**Actions env-backend declaration:** offer a repository CI selector so fresh runners resolve without a
+machine-local file:
+
+```bash
+python3 scripts/sw-configure.py credential declare-ci          # offer only
+python3 scripts/sw-configure.py credential declare-ci --confirm  # writes .sw/credential-ci-selector.json
+```
+
+Never print token values — reference env var names only.
+
+### 5d. Portability self-check (R24/R25)
 
 Before first `/sw-ship`:
 

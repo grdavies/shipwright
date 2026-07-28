@@ -15,6 +15,14 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import run_module_main
+from init_credential_migration import (
+    apply_guided_single_identity,
+    build_init_plan,
+    credential_patch_for_draft,
+    offer_ci_env_declaration,
+    offer_legacy_migration,
+    selector_add,
+)
 from init_posture_defaults import greenfield_posture_patch
 
 
@@ -80,6 +88,116 @@ def cmd_drift_check(root: Path, config: str) -> int:
     return 0
 
 
+def _deep_merge(base: dict, patch: dict) -> dict:
+    merged = dict(base)
+    for key, value in patch.items():
+        if isinstance(value, dict) and isinstance(merged.get(key), dict):
+            merged[key] = _deep_merge(dict(merged[key]), value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def _credential_argv(rest: list[str]) -> tuple[str, list[str]]:
+    if not rest:
+        return "", []
+    return rest[0], rest[1:]
+
+
+def cmd_credential(root: Path, subcmd: str, rest: list[str]) -> int:
+    confirm = "--confirm" in rest
+    selector_path = ""
+    xdg_base = ""
+    config_root = Path.cwd()
+    i = 0
+    while i < len(rest):
+        token = rest[i]
+        if token == "--root" and i + 1 < len(rest):
+            config_root = Path(rest[i + 1]).expanduser().resolve()
+            i += 2
+            continue
+        if token == "--selector-path" and i + 1 < len(rest):
+            selector_path = rest[i + 1]
+            i += 2
+            continue
+        if token == "--xdg-base" and i + 1 < len(rest):
+            xdg_base = rest[i + 1]
+            i += 2
+            continue
+        i += 1
+    selector = Path(selector_path) if selector_path else None
+    xdg = Path(xdg_base) if xdg_base else None
+    plan = build_init_plan(config_root, selector_path=selector, xdg_base=xdg)
+
+    if subcmd == "plan":
+        print(json.dumps(plan.to_public_dict(), indent=2))
+        return 0
+    if subcmd == "apply":
+        result = apply_guided_single_identity(
+            config_root,
+            plan,
+            confirm=confirm,
+            selector_path=selector,
+            xdg_base=xdg,
+        )
+        print(json.dumps(result, indent=2))
+        return 0 if result.get("verdict") in {"ok", "confirm-required"} else 1
+    if subcmd == "migrate":
+        result = offer_legacy_migration(
+            config_root,
+            plan,
+            confirm=confirm,
+            selector_path=selector,
+            xdg_base=xdg,
+        )
+        print(json.dumps(result, indent=2))
+        return 0 if result.get("verdict") in {"ok", "confirm-required", "noop"} else 1
+    if subcmd == "declare-ci":
+        result = offer_ci_env_declaration(config_root, plan, confirm=confirm)
+        print(json.dumps(result, indent=2))
+        return 0 if result.get("verdict") in {"ok", "confirm-required"} else 1
+    if subcmd == "selector-add":
+        values: dict[str, str] = {}
+        j = 0
+        while j < len(rest):
+            token = rest[j]
+            if token.startswith("--") and j + 1 < len(rest):
+                values[token.removeprefix("--").replace("-", "_")] = rest[j + 1]
+                j += 2
+                continue
+            j += 1
+        required = (
+            "ref",
+            "backend",
+            "provider",
+            "hostname",
+            "account",
+            "allowed_repo",
+            "allowed_project_id",
+            "allowed_endpoint",
+        )
+        missing = [key for key in required if not values.get(key)]
+        if missing:
+            print(json.dumps({"verdict": "fail", "missing": missing}), file=sys.stderr)
+            return 2
+        result = selector_add(
+            ref=values["ref"],
+            backend=values["backend"],
+            provider=values["provider"],
+            hostname=values["hostname"],
+            account=values["account"],
+            allowed_repo=values["allowed_repo"],
+            allowed_project_id=values["allowed_project_id"],
+            allowed_endpoint=values["allowed_endpoint"],
+            selector_path=selector,
+            xdg_base=xdg,
+        )
+        print(json.dumps(result, indent=2))
+        return 0
+    print(json.dumps({"verdict": "fail", "error": f"unknown credential command: {subcmd}"}), file=sys.stderr)
+    return 2
+
+
 def cmd_write_draft(root: Path, *, accept: bool, write_verify: bool, config: str) -> int:
     out_path = config or "/tmp/sw-init-draft.json"
     detect = json.loads(
@@ -100,6 +218,7 @@ def cmd_write_draft(root: Path, *, accept: bool, write_verify: bool, config: str
         },
     }
     draft.update(greenfield_posture_patch())
+    draft = _deep_merge(draft, credential_patch_for_draft(root))
     comm_defaults_path = root / "core/sw-reference/communication-routing.defaults.json"
     if comm_defaults_path.is_file():
         try:
@@ -171,7 +290,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args or args[0] in ("-h", "--help"):
         print(
             "usage: sw-configure.py detect|schema-version|shipwright-version|"
-            "drift-check|portability-check|write-draft",
+            "drift-check|portability-check|write-draft|credential",
             file=sys.stderr,
         )
         return 2 if args else 0
@@ -219,6 +338,12 @@ def main(argv: list[str] | None = None) -> int:
     if cmd == "write-draft":
         out = config or "/tmp/sw-init-draft.json"
         return cmd_write_draft(root, accept=accept, write_verify=write_verify, config=out)
+    if cmd == "credential":
+        subcmd, sub_rest = _credential_argv(rest)
+        if not subcmd:
+            print(json.dumps({"verdict": "fail", "error": "credential subcommand required"}), file=sys.stderr)
+            return 2
+        return cmd_credential(root, subcmd, sub_rest)
     print(json.dumps({"verdict": "fail", "error": f"unknown command: {cmd}"}), file=sys.stderr)
     return 2
 
