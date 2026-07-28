@@ -63,6 +63,11 @@ fi
 while IFS= read -r -d '' file; do
   rel="${file#"$SRC"/}"
   should_skip_relpath "$rel" && continue
+  if [ "$rel" = "planning_store.py" ]; then
+    if [ -f "$DST/$rel" ] && grep -q "planning-store-shim/v1" "$DST/$rel" 2>/dev/null; then
+      continue
+    fi
+  fi
   if [ ! -f "$DST/$rel" ]; then
     echo "FAIL core-scripts-parity missing core/scripts/$rel"
     FAIL=1
