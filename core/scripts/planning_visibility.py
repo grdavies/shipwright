@@ -16,6 +16,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from credentials.model import ResolutionState
 from host_lib import (
     detect_provider_from_url,
     git_remote_url,
@@ -24,8 +25,9 @@ from host_lib import (
     load_workflow_config,
     parse_owner_repo,
     remote_name,
-    resolve_token_env,
+    resolve_host_credential,
 )
+import issues_broker
 
 VISIBILITY_VALUES = frozenset({"public", "private", "memory"})
 VISIBILITY_PROFILES = frozenset({"all-private", "specs-public", "all-public"})
@@ -221,16 +223,20 @@ def _github_repo_private(
 ) -> bool | None:
     from issues_lib import IssueRateLimited
 
-    token_env = resolve_token_env(host, provider)
-    api_token = os.environ.get(token_env, "") if token_env else ""
+    credential = resolve_host_credential(root, provider=provider)
+    if credential.state is ResolutionState.UNRESOLVED:
+        return None
+    token, _reason = issues_broker.token_from_credential(credential)
     base = github_api_base(host)
     url = f"{base}/repos/{owner}/{repo}"
     headers = {
         "Accept": "application/vnd.github+json",
         "User-Agent": "shipwright-planning-visibility",
     }
-    if api_token:
-        headers["Authorization"] = f"Bearer {api_token}"
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    elif credential.state is not ResolutionState.EXPLICITLY_NO_AUTH:
+        return None
     try:
         status, _, body = issues_http.http_request(
             "GET",
@@ -243,7 +249,7 @@ def _github_repo_private(
         if status == 404:
             return None
         if status >= 400:
-            if status == 403 and not api_token:
+            if status == 403 and not token:
                 return None
             return None
         data = json.loads(body)
