@@ -58,6 +58,20 @@ def _child_env_builders():
     return build_hook_verify_child_env, build_host_cli_child_env
 
 
+def _non_credential_sw_keys(parent: dict[str, str]) -> tuple[str, ...]:
+    """SW_* keys safe to forward for internal script dispatch (not credential-bearing)."""
+    blocked = {
+        "SW_PLANNING_ISSUES_TOKEN",
+    }
+    return tuple(
+        sorted(
+            key
+            for key in parent
+            if key.startswith("SW_") and key not in blocked
+        )
+    )
+
+
 def materialize_child_env(
     child_env: ChildEnvSpec | None,
     *,
@@ -66,8 +80,14 @@ def materialize_child_env(
     """Build a child environment from one of the two allowlist constructors."""
     build_hook_verify_child_env, build_host_cli_child_env = _child_env_builders()
     if child_env is None:
-        source = parent if parent is not None else os.environ
-        return build_hook_verify_child_env(source)
+        # Default internal dispatch (e.g. wave.py → wave_*.py): forward SW_* harness
+        # markers so CI-status deliver gate skip still works; never inherit tokens.
+        source = dict(parent if parent is not None else os.environ)
+        return build_hook_verify_child_env(
+            source,
+            declared_context_keys=_non_credential_sw_keys(source),
+            pythonpath=source.get("PYTHONPATH"),
+        )
     spec_parent = child_env.parent if child_env.parent is not None else parent
     source = spec_parent if spec_parent is not None else os.environ
     if isinstance(child_env, HookVerifyEnv):
