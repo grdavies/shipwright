@@ -387,9 +387,14 @@ def atomic_write_bytes(path: Path, payload: bytes, *, root: Path, store_id: str,
     """Durable store write via the planning transaction coordinator (PRD 082 R28)."""
     from planning_txn import planning_transaction
 
-    root = root.resolve()
-    with planning_transaction(root, store_id) as txn:
-        txn.stage_write(path.resolve(), payload)
+    target = path.resolve()
+    txn_root = root.resolve()
+    try:
+        target.relative_to(txn_root)
+    except ValueError:
+        txn_root = target.parent
+    with planning_transaction(txn_root, store_id) as txn:
+        txn.stage_write(target, payload)
 
 
 def atomic_write_text(path: Path, content: str, *, root: Path, store_id: str, mode: int = 0o644) -> None:
