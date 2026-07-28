@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Host provider doctor — validate provider, token, remote (PRD 026 R33, R34; PRD 079 R11)."""
+"""Host provider doctor — validate provider, remote, and identity-aware host auth (PRD 080 phase 22)."""
 from __future__ import annotations
 
 import argparse
@@ -13,6 +13,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import run_module_main
+from credentials.doctor import CREDENTIAL_DOCTOR_CLI, diagnose_host_surface
 from host_doctor_lib import probe_ci_status_capability  # noqa: E402
 
 
@@ -23,7 +24,6 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(args.root).resolve() if args.root else SCRIPT_DIR.parent
     host = root / "scripts" / "host_lib.py"
     resolved = json.loads(subprocess.check_output([sys.executable, str(host), "--root", str(root), "resolve"], text=True))
-    token = json.loads(subprocess.check_output([sys.executable, str(host), "--root", str(root), "token-status"], text=True))
     warnings: list[str] = []
     checks: list[dict] = []
     provider = resolved.get("provider", "none")
@@ -37,14 +37,27 @@ def main(argv: list[str] | None = None) -> int:
     else:
         checks.append({"check": "remote", "status": "warn", "remote": remote, "message": "remote not configured or missing"})
         warnings.append("missing-remote")
-    if provider != "none":
-        if token.get("present"):
-            checks.append({"check": "token", "status": "ok", "tokenEnv": token.get("tokenEnv")})
-        else:
-            checks.append({"check": "token", "status": "degraded", "tokenEnv": token.get("tokenEnv")})
-            warnings.append("missing-token")
-    else:
-        checks.append({"check": "token", "status": "skipped", "reason": "local-mode"})
+
+    host_identity = diagnose_host_surface(root)
+    identity_status = "ok"
+    if host_identity.get("requiredOperationVerdict") == "fail":
+        identity_status = "fail"
+        warnings.append("host-credential-failed")
+    elif host_identity.get("requiredOperationVerdict") == "skipped":
+        identity_status = "skipped"
+    checks.append(
+        {
+            "check": "host-identity",
+            "status": identity_status,
+            "principal": host_identity.get("principal"),
+            "requiredOperationVerdict": host_identity.get("requiredOperationVerdict"),
+            "repositoryAccess": host_identity.get("repositoryAccess"),
+            "credentialRef": host_identity.get("credentialRef"),
+            "credentialDoctor": host_identity.get("credentialDoctor"),
+            "failure": host_identity.get("failure"),
+        }
+    )
+
     rate = resolved.get("rateLimit") or {}
     checks.append({"check": "rateLimit", "status": "ok", "config": rate})
 
@@ -64,14 +77,23 @@ def main(argv: list[str] | None = None) -> int:
         warnings.append("ci-status-inconclusive")
 
     verdict = "fail" if any(c.get("status") == "fail" for c in checks) else ("degraded" if warnings else "ok")
-    print(json.dumps({
-        "verdict": verdict,
-        "provider": provider,
-        "warnings": warnings,
-        "checks": checks,
-        "ciStatus": ci_status,
-        "migration": {"githubTokenOnly": provider == "github" and token.get("present") and not resolved.get("configured")},
-    }, indent=2))
+    print(
+        json.dumps(
+            {
+                "verdict": verdict,
+                "provider": provider,
+                "warnings": warnings,
+                "checks": checks,
+                "ciStatus": ci_status,
+                "credentialDoctor": f"{CREDENTIAL_DOCTOR_CLI} --root {root}",
+                "migration": {
+                    "deferCredentialReporting": True,
+                    "credentialDoctorSurface": f"{CREDENTIAL_DOCTOR_CLI} --root {root}",
+                },
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
