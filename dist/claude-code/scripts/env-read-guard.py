@@ -276,7 +276,12 @@ def check(root: Path | None = None) -> list[EnvReadFinding]:
 
 
 def mode() -> str:
-    return os.environ.get("SW_ENV_READ_MODE", "warn").strip().lower()
+    explicit = os.environ.get("SW_ENV_READ_MODE", "").strip().lower()
+    if explicit:
+        return explicit
+    from credentials.migration_release_gate import env_read_enforcement_mode
+
+    return env_read_enforcement_mode()
 
 
 def main(argv: list[str] | None = None) -> int:
