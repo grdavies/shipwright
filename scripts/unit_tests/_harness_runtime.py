@@ -404,12 +404,22 @@ class FixtureContext:
         merged = self.env.copy()
         if env:
             merged.update(env)
-        return proc.run(cmd, cwd=str(cwd or self.root), env=merged, input_text=input_text, check=check)
+        declared = tuple(key for key in merged if key.startswith("SW_"))
+        return proc.run(
+            cmd,
+            cwd=str(cwd or self.root),
+            child_env=proc.HookVerifyEnv(
+                declared_context_keys=declared,
+                parent=merged,
+            ),
+            input_text=input_text,
+            check=check,
+        )
 
     def run_git(self, *args: str, cwd: Path) -> None:
         from _sw import proc
 
-        proc.run(["git", *args], cwd=str(cwd), env=self.env, check=False)
+        proc.run(["git", *args], cwd=str(cwd), child_env=proc.HookVerifyEnv(parent=self.env), check=False)
 
     def jq(self, text: str, expr: str) -> str:
         import sys

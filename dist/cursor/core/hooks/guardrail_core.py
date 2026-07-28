@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -34,6 +35,117 @@ _FOLLOWUP = (
     "avoid duplicates; never store raw transcripts or secrets. If nothing durable surfaced, "
     "respond exactly: No high-signal memory updates."
 )
+_HOOK_ADAPTER_CONTEXT_KEYS = ("SW_WORKSPACE_ROOT",)
+
+
+def _ensure_credentials_importable(plugin_root: Path) -> None:
+    scripts = plugin_root / "scripts"
+    if scripts.is_dir():
+        entry = str(scripts)
+        if entry not in sys.path:
+            sys.path.insert(0, entry)
+
+
+def _is_path_under_plugin(path: Path, plugin_root: Path) -> bool:
+    try:
+        path.resolve().relative_to(plugin_root.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _rules_script_allowed(script: Path, plugin_root: Path) -> bool:
+    resolved = script.resolve()
+    if _is_path_under_plugin(resolved, plugin_root):
+        return True
+    if os.environ.get("SW_HARNESS", "").strip() == "1":
+        fixtures_root = (plugin_root.parent.parent / "scripts" / "test" / "fixtures").resolve()
+        if fixtures_root.is_dir():
+            try:
+                resolved.relative_to(fixtures_root)
+            except ValueError:
+                return False
+            return True
+    return False
+
+
+def _resolve_rules_script_override(plugin_root: Path) -> Path | None:
+    override = os.environ.get("SW_RULES_SCRIPT", "").strip()
+    if not override:
+        return None
+    candidate = Path(override)
+    if not candidate.is_file():
+        return None
+    resolved = candidate.resolve()
+    if _rules_script_allowed(resolved, plugin_root):
+        return resolved
+    return None
+
+
+def _pythonpath_for_plugin(plugin_root: Path) -> str:
+    entries: list[str] = []
+    scripts = plugin_root / "scripts"
+    if scripts.is_dir():
+        entries.append(str(scripts))
+    entries.append(str(plugin_root))
+    if os.environ.get("SW_HARNESS", "").strip() == "1":
+        repo_root = plugin_root.parent.parent
+        for rel in ("scripts", "scripts/test", "scripts/unit_tests"):
+            path = (repo_root / rel).resolve()
+            if path.is_dir():
+                entries.append(str(path))
+    parent_path = os.environ.get("PYTHONPATH", "").strip()
+    if parent_path:
+        entries.append(parent_path)
+    return os.pathsep.join(dict.fromkeys(entries))
+
+
+def _resolved_adapter_credential(config: dict) -> tuple[str, str] | None:
+    memory = config.get("memory") if isinstance(config.get("memory"), dict) else {}
+    ref_value = str(memory.get("credentialRef") or "").strip()
+    token_env = str(memory.get("tokenEnv") or "").strip()
+    if not ref_value or not token_env:
+        return None
+    from credentials.model import CredentialRef, ResolutionState
+    from credentials.resolver import resolve
+
+    outcome = resolve(CredentialRef(ref_value), config=config)
+    if outcome.state is not ResolutionState.RESOLVED or outcome.token is None:
+        return None
+    return token_env, outcome.token.token.value
+
+
+def build_adapter_spawn_env(
+    root: Path,
+    plugin_root: Path,
+    config: dict,
+    *,
+    parent: Mapping[str, str] | None = None,
+) -> dict[str, str]:
+    """Build a sanitized child environment for provider adapter subprocesses."""
+    _ensure_credentials_importable(plugin_root)
+    from credentials.child_env import build_hook_verify_child_env, build_host_cli_child_env
+
+    source = dict(parent) if parent is not None else dict(os.environ)
+    source["SW_WORKSPACE_ROOT"] = str(root)
+    pythonpath = _pythonpath_for_plugin(plugin_root)
+    cred = _resolved_adapter_credential(config)
+    if cred is None:
+        return build_hook_verify_child_env(
+            source,
+            declared_context_keys=_HOOK_ADAPTER_CONTEXT_KEYS,
+            pythonpath=pythonpath,
+        )
+    env_name, env_value = cred
+    return build_host_cli_child_env(
+        source,
+        declared_context_keys=_HOOK_ADAPTER_CONTEXT_KEYS,
+        credential_env_name=env_name,
+        credential_env_value=env_value,
+        gh_host="",
+        gh_config_dir="",
+        pythonpath=pythonpath,
+    )
 
 
 @dataclass(frozen=True)
@@ -48,9 +160,9 @@ class StopSyncResult:
 
 
 def _rules_script(root: Path, plugin_root: Path, config: dict) -> Path | None:
-    override = os.environ.get("SW_RULES_SCRIPT", "").strip()
-    if override:
-        return Path(override)
+    override = _resolve_rules_script_override(plugin_root)
+    if override is not None:
+        return override
     provider = resolve_memory_provider(root, config, plugin_root=plugin_root)
     if not provider:
         return None
@@ -67,11 +179,9 @@ def fetch_rules(
     script = rules_script if rules_script is not None else _rules_script(root, plugin_root, config)
     if script is None or not script.is_file():
         return False, []
-    env = os.environ.copy()
-    env["SW_WORKSPACE_ROOT"] = str(root)
-    env["PYTHONPATH"] = os.pathsep.join(
-        [str(plugin_root), env.get("PYTHONPATH", "")]
-    ).strip(os.pathsep)
+    if not _rules_script_allowed(script, plugin_root):
+        return False, []
+    env = build_adapter_spawn_env(root, plugin_root, config)
     cmd = [sys.executable, str(script)] if script.suffix == ".py" else ["bash", str(script)]
     try:
         proc = subprocess.run(
@@ -214,9 +324,9 @@ def _setup_hint(root: Path) -> str | None:
 
 
 def fetch_rule_summaries(root: Path, plugin_root: Path, config: dict) -> list[str]:
-    override = os.environ.get("SW_RULES_SCRIPT", "").strip()
-    if override:
-        script: Path | None = Path(override)
+    override = _resolve_rules_script_override(plugin_root)
+    if override is not None:
+        script: Path | None = override
     else:
         provider = resolve_memory_provider(root, config, plugin_root=plugin_root)
         script = None
