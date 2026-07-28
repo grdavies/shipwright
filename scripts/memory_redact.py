@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -21,6 +22,9 @@ def redact(text: str, *, destination: str) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if os.environ.get("SW_HARNESS") == "1" and "--destination" not in argv:
+        argv = ["--destination", "external", *argv]
     parser = argparse.ArgumentParser(description="R41 redaction chokepoint")
     parser.add_argument(
         "--destination",

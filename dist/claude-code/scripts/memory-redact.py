@@ -2,6 +2,7 @@
 """Deterministic R41 redaction chokepoint — stdin or file arg → stdout (redacted)."""
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -30,6 +31,8 @@ def repo_root() -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     args = list(argv if argv is not None else sys.argv[1:])
+    if os.environ.get("SW_HARNESS") == "1" and "--destination" not in args:
+        args = ["--destination", "external", *args]
     import memory_redact
     old_argv = sys.argv
     try:
