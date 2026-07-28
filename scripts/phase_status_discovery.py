@@ -72,7 +72,22 @@ def canonical_phase_artifact_path(
 
 
 def worktree_mirror_path(root: Path, worktree: Path, canonical: Path) -> Path:
-    rel = canonical.resolve().relative_to(root.resolve())
+    """Map a canonical status path into a phase worktree mirror.
+
+    When deliver-loop cwd is the orchestrator worktree, run-scoped status may
+    live under the primary repo (R28 ``path_normalize_anchor``). Relativize
+    against that anchor so discovery does not raise ``ValueError``.
+    """
+    canon = canonical.resolve()
+    try:
+        rel = canon.relative_to(root.resolve())
+    except ValueError:
+        from wave_state import path_normalize_anchor
+
+        try:
+            rel = canon.relative_to(path_normalize_anchor(root))
+        except ValueError:
+            return canon
     return (worktree / rel).resolve()
 
 
