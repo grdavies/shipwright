@@ -687,6 +687,7 @@
 * merge phase sourceoftruth-default-flip-behind-a-fail-closed-gate-small into feat/planning-authority-memory-integrity (703da01) <!-- sw-deliver:sourceoftruth-default-flip-behind-a-fail-closed-gate-small -->
 * merge phase hermetic-memory-eval-harness-medium into feat/planning-authority-memory-integrity (66b9adc) <!-- sw-deliver:hermetic-memory-eval-harness-medium -->
 * merge phase authority-decision-object-fallback-reason-mapping-medium into feat/planning-authority-memory-integrity (c3fca5b) <!-- sw-deliver:authority-decision-object-fallback-reason-mapping-medium -->
+* merge phase import-and-cli-inventory-plus-generated-shims-small into feat/planning-authority-memory-integrity (c700c71) <!-- sw-deliver:import-and-cli-inventory-plus-generated-shims-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
