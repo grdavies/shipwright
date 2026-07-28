@@ -182,7 +182,11 @@ def test_jira_mark_tombstone_delete(monkeypatch, tmp_path: Path) -> None:
         "planning": {
             "store": {
                 "projectKey": "shipwright",
-                "issues": {"endpoint": "https://example.atlassian.net", "flavor": "cloud"},
+                "issues": {
+                    "endpoint": "https://example.atlassian.net",
+                    "flavor": "cloud",
+                    "tokenEnv": "ISSUES_JIRA_TOKEN",
+                },
             }
         }
     }

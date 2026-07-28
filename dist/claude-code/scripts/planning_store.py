@@ -22,6 +22,14 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 import issues_http
 
+from credentials.model import (
+    CredentialRef,
+    Resolution,
+    ResolutionState,
+    ResolvedToken,
+    Secret,
+)
+from credentials.resolver import RepositoryContext, resolve
 from host_lib import (
     github_api_base,
     git_remote_url,
@@ -99,14 +107,6 @@ ISSUES_PROVIDERS = _BASE_ISSUES_PROVIDERS | (
 # until conformance + OAuth docs gate pass.
 DEFERRED_ISSUES_PROVIDERS = frozenset({"gitlab-issues"})
 SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "jira"})
-
-DEFAULT_ISSUES_TOKEN_ENV: dict[str, str] = {
-    "github-issues": "ISSUES_GITHUB_TOKEN",
-    "gitlab-issues": "ISSUES_GITLAB_TOKEN",
-    "jira": "ISSUES_JIRA_TOKEN",
-    "linear": "ISSUES_LINEAR_TOKEN",
-    "none": "",
-}
 
 MIN_ISSUES_SCOPES: dict[str, list[str]] = {
     "github-issues": ["repo"],
@@ -595,12 +595,97 @@ def doctor_issues_provider_stub(root: Path, cfg: dict[str, Any]) -> dict[str, An
     return {"verdict": "pass", "action": "doctor-issues-provider-stub", "provider": provider}
 
 
-def resolve_issues_token_env(cfg: dict[str, Any], issues_provider: str) -> str:
+def resolve_issues_token_env(cfg: dict[str, Any], issues_provider: str = "") -> str:
+    """Return an explicitly configured issues tokenEnv only — no implicit provider defaults."""
+    _ = issues_provider
     issues = issues_section(cfg)
     token_env = issues.get("tokenEnv")
     if isinstance(token_env, str) and token_env.strip():
         return token_env.strip()
-    return DEFAULT_ISSUES_TOKEN_ENV.get(issues_provider, "")
+    return ""
+
+
+_ISSUES_PROVIDER_TO_BROKER: dict[str, str] = {
+    "github-issues": "github",
+    "gitlab-issues": "gitlab",
+    "jira": "jira",
+    "linear": "linear",
+}
+
+
+def _issues_destination_endpoint(cfg: dict[str, Any], issues_provider: str) -> str:
+    host = host_section(cfg)
+    if issues_provider == "github-issues":
+        return github_api_base(host)
+    if issues_provider == "gitlab-issues":
+        return gitlab_api_base(host)
+    if issues_provider == "jira":
+        from planning_jira_probe import resolve_jira_endpoint
+
+        endpoint = resolve_jira_endpoint(cfg)
+        return endpoint or ""
+    if issues_provider == "linear":
+        return "https://api.linear.app/graphql"
+    return ""
+
+
+def resolve_issues_credential(
+    root: Path,
+    *,
+    issues_provider: str | None = None,
+    destination_endpoint: str | None = None,
+    cfg: dict[str, Any] | None = None,
+) -> Resolution:
+    """Resolve the planning issue-store credential through the broker (tri-state)."""
+    resolved_cfg = cfg if cfg is not None else load_workflow_config(root)
+    provider_info = resolve_issues_provider(resolved_cfg)
+    provider = issues_provider or str(provider_info.get("provider") or "none")
+    issues = issues_section(resolved_cfg)
+    cred_ref_raw = issues.get("credentialRef")
+    token_env = resolve_issues_token_env(resolved_cfg, provider)
+    api_base = destination_endpoint or _issues_destination_endpoint(resolved_cfg, provider)
+    project_id = resolved_cfg.get("projectId")
+    project_id_str = (
+        project_id.strip() if isinstance(project_id, str) and project_id.strip() else "unpaired"
+    )
+    remote = remote_name(resolved_cfg)
+    remote_url = git_remote_url(root, remote)
+    parsed = parse_owner_repo(remote_url if isinstance(remote_url, str) else None)
+    repo_slug = f"{parsed[0]}/{parsed[1]}" if parsed else ""
+    broker_provider = _ISSUES_PROVIDER_TO_BROKER.get(provider, provider)
+
+    if isinstance(cred_ref_raw, str) and cred_ref_raw.strip():
+        ref = CredentialRef(cred_ref_raw.strip())
+        context = RepositoryContext(
+            remote=remote_url or remote,
+            repo_slug=repo_slug,
+            project_id=project_id_str,
+            destination_endpoint=api_base or "https://api.github.com",
+        )
+        return resolve(
+            ref,
+            provider=broker_provider if broker_provider not in {"none", ""} else "github",
+            purpose="planning",
+            context=context,
+        )
+
+    if token_env:
+        # One-release tokenEnv alias — explicit configured name only (no DEFAULT_ISSUES_TOKEN_ENV).
+        value = os.environ.get(token_env, "")
+        alias_ref = CredentialRef(f"tokenEnv:{token_env}")
+        if value.strip():
+            return Resolution.resolved(alias_ref, ResolvedToken(Secret(value)))
+        return Resolution.unresolved(alias_ref, reason="missing-token")
+
+    if provider in {"none", ""} or not api_base:
+        return Resolution.explicitly_no_auth(
+            CredentialRef("issues-none"),
+            reason="no-issues-credential",
+        )
+    return Resolution.explicitly_no_auth(
+        CredentialRef("issues-unauthenticated"),
+        reason="no-issues-credential",
+    )
 
 
 def bitbucket_host_active(root: Path, cfg: dict[str, Any]) -> bool:

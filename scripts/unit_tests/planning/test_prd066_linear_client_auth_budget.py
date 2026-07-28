@@ -61,7 +61,14 @@ def test_r9_live_client_present_before_issues_providers_recognition() -> None:
     assert callable(plc.graphql)
     assert "linear" in ps.ISSUES_PROVIDERS
     assert "linear" not in ps.SHIPPED_ISSUES_PROVIDERS
-    assert ps.DEFAULT_ISSUES_TOKEN_ENV.get("linear") == "ISSUES_LINEAR_TOKEN"
+    assert not hasattr(ps, "DEFAULT_ISSUES_TOKEN_ENV")
+    assert not hasattr(plc, "DEFAULT_TOKEN_ENV")
+    assert ps.resolve_issues_token_env(
+        {"planning": {"store": {"issues": {"tokenEnv": "ISSUES_LINEAR_TOKEN"}}}},
+        "linear",
+    ) == "ISSUES_LINEAR_TOKEN"
+    assert plc.resolve_token_env({}) == ""
+    assert plc.resolve_token_env(_cfg()) == "ISSUES_LINEAR_TOKEN"
     assert "linear" in issues_http.ISSUES_PROVIDER_TO_RATELIMIT
 
 

@@ -10,7 +10,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
+import issues_broker
 import issues_http
+from credentials.model import Resolution, ResolvedToken
 from host_lib import gitlab_api_base, host_section, load_workflow_config, url_encode_project
 from planning_canonical import (
     FROZEN_LABEL,
@@ -54,12 +56,6 @@ def _issues_section(cfg: dict[str, Any]) -> dict[str, Any]:
     return issues if isinstance(issues, dict) else {}
 
 
-def _token_env(cfg: dict[str, Any]) -> str:
-    issues = _issues_section(cfg)
-    raw = issues.get("tokenEnv")
-    return raw.strip() if isinstance(raw, str) and raw.strip() else "ISSUES_GITLAB_TOKEN"
-
-
 def _resolve_repo_target(root: Path, cfg: dict[str, Any]) -> tuple[str, str]:
     from planning_store import resolve_store_location
 
@@ -71,6 +67,12 @@ def _resolve_repo_target(root: Path, cfg: dict[str, Any]) -> tuple[str, str]:
     if not isinstance(owner, str) or not owner.strip() or not isinstance(repo, str) or not repo.strip():
         raise RuntimeError("store location missing owner/repo")
     return owner.strip(), repo.strip()
+
+
+def _token_env(cfg: dict[str, Any]) -> str:
+    issues = _issues_section(cfg)
+    raw = issues.get("tokenEnv")
+    return raw.strip() if isinstance(raw, str) and raw.strip() else ""
 
 
 def _search_page_size() -> int:
@@ -87,11 +89,11 @@ def _search_max_pages() -> int:
     return DEFAULT_MAX_PAGES
 
 
-def _gitlab_headers(token: str) -> dict[str, str]:
+def _gitlab_base_headers() -> dict[str, str]:
     return {
-        "PRIVATE-TOKEN": token,
         "User-Agent": "shipwright-gitlab-issues-client",
         "Content-Type": "application/json",
+        "Accept": "application/json",
     }
 
 
@@ -203,15 +205,27 @@ def _issue_iid(issue_id: str) -> int:
 class GitLabIssuesClient:
     """Live GitLab Issues REST adapter (store location from planning.store.storeLocation)."""
 
-    def __init__(self, root: Path) -> None:
+    def __init__(
+        self,
+        root: Path,
+        *,
+        credential: Resolution | ResolvedToken | None = None,
+    ) -> None:
+        from planning_store import resolve_issues_credential
+
         self.root = root
         self.cfg = load_workflow_config(root)
         self.owner, self.repo = _resolve_repo_target(root, self.cfg)
-        token = os.environ.get(_token_env(self.cfg), "").strip()
-        if not token:
-            raise RuntimeError(f"missing GitLab issues token env {_token_env(self.cfg)}")
-        self._token = token
-        self.headers = _gitlab_headers(token)
+        self._credential = (
+            credential
+            if credential is not None
+            else resolve_issues_credential(root, issues_provider="gitlab-issues", cfg=self.cfg)
+        )
+        try:
+            self._token = issues_broker.require_token(self._credential)
+        except issues_broker.IssuesBrokerError as exc:
+            raise RuntimeError(f"missing GitLab issues credential: {exc}") from exc
+        self.headers = _gitlab_base_headers()
         self.api_base = gitlab_api_base(host_section(self.cfg))
         self.project_path = url_encode_project(self.owner, self.repo)
         store = _store_section(self.cfg)
@@ -219,6 +233,24 @@ class GitLabIssuesClient:
         self.project_key = raw_key.strip() if isinstance(raw_key, str) else ""
         self._project_id: int | None = None
         self._native_links_capable_cache: bool | None = None
+
+    def _allowed_hosts(self) -> set[str]:
+        return issues_broker.merge_allowed_hosts(
+            issues_broker.hosts_from_urls(self.api_base),
+            issues_broker.ssrf_allowlist_from_host_cfg(host_section(self.cfg)),
+            {"gitlab.com", "api.gitlab.com"},
+        )
+
+    def _bound_headers(self, headers: dict[str, str] | None = None, *, url: str, method: str) -> dict[str, str]:
+        extra = issues_broker.strip_auth_headers(headers if headers is not None else self.headers)
+        extra["PRIVATE-TOKEN"] = self._token
+        return issues_broker.prepare_bound_headers(
+            url=url,
+            allowed_hosts=self._allowed_hosts(),
+            bearer_token=None,
+            extra_headers=extra,
+            method=method,
+        )
 
     def _project_url(self, suffix: str = "") -> str:
         return f"{self.api_base}/projects/{self.project_path}{suffix}"
@@ -248,11 +280,12 @@ class GitLabIssuesClient:
         *,
         allow_404: bool = False,
     ) -> Any:
+        bound = self._bound_headers(headers, url=url, method=method)
         if allow_404:
             status, _hdrs, body = issues_http.http_request(
                 method,
                 url,
-                headers,
+                bound,
                 payload,
                 root=self.root,
                 issues_provider="gitlab-issues",
@@ -265,7 +298,7 @@ class GitLabIssuesClient:
         return issues_http.http_json(
             method,
             url,
-            headers,
+            bound,
             payload,
             root=self.root,
             issues_provider="gitlab-issues",
