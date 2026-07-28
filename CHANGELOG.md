@@ -677,6 +677,7 @@
 * merge phase planning-issue-store-client-migration-medium into feat/credential-repository-isolation (c17c1d8) <!-- sw-deliver:planning-issue-store-client-migration-medium -->
 * merge phase remaining-enumerated-transports-medium into feat/credential-repository-isolation (9276bd2) <!-- sw-deliver:remaining-enumerated-transports-medium -->
 * merge phase memory-adapters-and-hook-spawned-providers-small into feat/credential-repository-isolation (8f5ca30) <!-- sw-deliver:memory-adapters-and-hook-spawned-providers-small -->
+* merge phase identity-aware-authentication-doctor-medium into feat/credential-repository-isolation (d6c121e) <!-- sw-deliver:identity-aware-authentication-doctor-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
