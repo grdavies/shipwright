@@ -684,6 +684,7 @@
 * merge phase rollout-alias-removal-preflight-dist-regeneration-medium into feat/credential-repository-isolation (ab6cf39) <!-- sw-deliver:rollout-alias-removal-preflight-dist-regeneration-medium -->
 * merge phase transaction-coordinator-durable-journal-medium into feat/planning-authority-memory-integrity (993ac25) <!-- sw-deliver:transaction-coordinator-durable-journal-medium -->
 * merge phase memory-envelope-v2-codec-and-v1-upgrader-medium into feat/planning-authority-memory-integrity (2a8f1a5) <!-- sw-deliver:memory-envelope-v2-codec-and-v1-upgrader-medium -->
+* merge phase sourceoftruth-default-flip-behind-a-fail-closed-gate-small into feat/planning-authority-memory-integrity (703da01) <!-- sw-deliver:sourceoftruth-default-flip-behind-a-fail-closed-gate-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
