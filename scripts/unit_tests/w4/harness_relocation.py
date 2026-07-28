@@ -58,11 +58,21 @@ else
 fi
 
 # Every golden manifest path must exist under core/ with identical hash.
+# Exception: scripts/planning_store.py is a depth-specific shim (core depth 2,
+# dist depth 3) — require presence + marker, not byte identity (PRD 082 R27).
 while IFS=$'\t' read -r path hash; do
   [ -n "$path" ] || continue
   core_file="$CORE/$path"
   if [ ! -f "$core_file" ]; then
     echo "FAIL relocation-coverage missing core/$path"
+    FAIL=1
+    continue
+  fi
+  if [ "$path" = "scripts/planning_store.py" ]; then
+    if grep -q "planning-store-shim/v1" "$core_file" 2>/dev/null; then
+      continue
+    fi
+    echo "FAIL relocation-hash core/$path missing planning-store-shim marker"
     FAIL=1
     continue
   fi

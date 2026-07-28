@@ -53,6 +53,25 @@ def _restore_dist_snapshot(root: Path, snap: Path) -> None:
 
 
 
+def _refresh_planning_store_shims(root: Path) -> int:
+    proc = subprocess.run(
+        [sys.executable, str(root / "scripts/planning_shim_gen.py"), "--root", str(root), "generate"],
+        cwd=str(root),
+    )
+    return proc.returncode
+
+
+def _run_generate_pipeline(root: Path, *, capture: bool = False) -> int:
+    kwargs = {"cwd": str(root), "capture_output": capture}
+    if subprocess.run([sys.executable, "-m", "sw", "generate", "--all"], **kwargs).returncode != 0:
+        return 1
+    if subprocess.run([sys.executable, str(root / "scripts/copy-to-core.py")], **kwargs).returncode != 0:
+        return 1
+    if _refresh_planning_store_shims(root) != 0:
+        return 1
+    return 0
+
+
 def _emit_fail(step: str, error: str, *, exit_code: int = 1) -> int:
     payload = {
         "verdict": "fail",
@@ -82,7 +101,7 @@ def main(argv=None):
         try:
             _snapshot_dist(root, snap_dir)
             before = dist_hash(root)
-            if subprocess.run([sys.executable, "-m", "sw", "generate", "--all"], cwd=str(root), capture_output=True).returncode != 0:
+            if _run_generate_pipeline(root, capture=True) != 0:
                 fail = 1
             after = dist_hash(root)
             if before and before != after:
@@ -96,15 +115,13 @@ def main(argv=None):
         return 0
 
     before = dist_hash(root)
-    if subprocess.run([sys.executable, "-m", "sw", "generate", "--all"], cwd=str(root)).returncode != 0:
-        return _emit_fail("generate", "sw generate --all failed")
+    if _run_generate_pipeline(root) != 0:
+        return _emit_fail("generate", "build-chain generate pipeline failed")
     after = dist_hash(root)
     if before != after:
         if subprocess.run([sys.executable, str(root / "scripts/snapshot-tree.py"), str(golden)], cwd=str(root)).returncode != 0:
             return _emit_fail("golden-manifest", "snapshot-tree failed")
         print(f"build-chain-sync: dist changed — updated {golden}")
-    if subprocess.run([sys.executable, str(root / "scripts/copy-to-core.py")], cwd=str(root)).returncode != 0:
-        return _emit_fail("copy-to-core", "copy-to-core failed")
     print("build-chain-sync: complete")
     return 0
 
