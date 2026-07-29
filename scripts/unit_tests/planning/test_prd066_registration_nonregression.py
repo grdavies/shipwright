@@ -146,12 +146,13 @@ def test_r20_linear_live_backend_fail_closed_without_shipped(tmp_path: Path, mon
     assert "not shipped" in str(exc.value).lower()
 
 
-def test_r20_linear_issue_store_falls_back_to_file_store(tmp_path: Path) -> None:
-    """R20 — issue-store with unshipped linear resolves to in-repo-public."""
+def test_r20_linear_issue_store_reports_blocked_without_substitution(tmp_path: Path) -> None:
+    """R20 — unshipped linear keeps configured id and blocks without substitution."""
     resolved = ps.resolve_effective_backend(tmp_path, _linear_cfg())
     assert resolved["configured"] == "issue-store"
-    assert resolved["effective"] == ps.DEFAULT_BACKEND
+    assert resolved["effective"] == "issue-store"
     assert resolved["fallbackReason"] == "issues-provider-not-shipped"
+    assert resolved["authorityState"] == "blocked"
 
 
 def test_r21_github_issues_unchanged_when_linear_projects_off(

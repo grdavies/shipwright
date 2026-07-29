@@ -160,14 +160,14 @@ class TestBoundariesExplicitOverride:
         assert _non_configured_writes(pa.backend_write_log(), "issue-store") == []
 
 
-class TestIntegrationNoLegacyEffectiveField:
-    def test_resolve_effective_backend_differs_from_authority_contract(self, tmp_git_repo: Path) -> None:
+class TestIntegrationAuthorityContract:
+    def test_resolve_effective_backend_matches_authority_contract(self, tmp_git_repo: Path) -> None:
         _seed_remote(tmp_git_repo)
         cfg = _issue_store_cfg()
         _write_cfg(tmp_git_repo, cfg)
         assert pbc.cmd_disable(tmp_git_repo, set_by="operator", reason="rollback")["verdict"] == "ok"
-        legacy = ps.resolve_effective_backend(tmp_git_repo, cfg)
+        resolved = ps.resolve_effective_backend(tmp_git_repo, cfg)
         decision = pa.resolve_authority(tmp_git_repo, cfg)
-        assert legacy.get("effective") == ps.DEFAULT_BACKEND
-        assert decision.configured == "issue-store"
-        assert "effective" not in decision.to_dict()
+        assert resolved["configured"] == decision.configured
+        assert resolved["effective"] == decision.configured
+        assert resolved["authorityState"] == decision.authorityState

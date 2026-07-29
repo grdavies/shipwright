@@ -55,6 +55,7 @@ _EXPORTED_NAMES = (
     'assert_r1_answerability_while_clean',
     'assign_issue_to_cycle',
     'audit_closure_completeness',
+    'authority_io_block',
     'backfill_frontmatter_hybrid',
     'check_canonical_projection_split_brain',
     'check_projection_drift',

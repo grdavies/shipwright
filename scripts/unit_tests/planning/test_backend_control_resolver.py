@@ -57,7 +57,7 @@ def test_no_record_uses_configured_backend(tmp_git_repo: Path, monkeypatch: pyte
     assert resolved.get("fallback") is False
 
 
-def test_disable_record_forces_file_store_default(tmp_git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_disable_record_forces_read_only_without_substitution(tmp_git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _seed_remote(tmp_git_repo)
     cfg = _issue_store_cfg()
     _write_cfg(tmp_git_repo, cfg)
@@ -65,9 +65,11 @@ def test_disable_record_forces_file_store_default(tmp_git_repo: Path, monkeypatc
     out = pbc.cmd_disable(tmp_git_repo, set_by="operator", reason="wave rollback")
     assert out["verdict"] == "ok"
     resolved = ps.resolve_effective_backend(tmp_git_repo, cfg)
-    assert resolved["effective"] == "in-repo-public"
+    assert resolved["effective"] == "issue-store"
+    assert resolved["configured"] == "issue-store"
     assert resolved.get("killSwitch") is True
     assert resolved.get("fallbackReason") == "kill-switch"
+    assert resolved["authorityState"] == "read-only"
 
 
 def test_explicit_backend_override_bypasses_disable_record(tmp_git_repo: Path) -> None:
@@ -126,6 +128,6 @@ def test_legacy_kill_switch_shim_cannot_change_behavior(
     assert pbc.legacy_kill_switch_env_shim()
     assert pbc.cmd_disable(tmp_git_repo, set_by="operator", reason="wave rollback")["verdict"] == "ok"
     with_record = ps.resolve_effective_backend(tmp_git_repo, cfg)
-    assert with_record["effective"] == "in-repo-public"
+    assert with_record["effective"] == "issue-store"
     assert with_record.get("killSwitch") is True
     assert with_record.get("legacyShimWarnings")

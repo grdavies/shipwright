@@ -771,55 +771,79 @@ def _effective_backend_disable_active(
     return pbc.is_forced_file_store_fallback(root, cfg, override=override)
 
 
+def _authority_resolution(root: Path, cfg: dict[str, Any], *, override: str | None = None):
+    import planning_authority as pa
+
+    return pa.resolve_authority(root, cfg, override=override)
+
+
+def authority_io_block(
+    resolved: dict[str, Any],
+    *,
+    operation: str = "read",
+) -> dict[str, Any] | None:
+    """Return a fail-closed payload when authority blocks the requested operation."""
+    state = str(resolved.get("authorityState") or "")
+    reason = resolved.get("reason")
+    if reason == "identity-mismatch":
+        return {
+            "verdict": "fail",
+            "error": "identity-mismatch",
+            "reason": reason,
+            "operation": operation,
+            "configured": resolved.get("configured"),
+        }
+    if state == "blocked":
+        return {
+            "verdict": "fail",
+            "error": "authority-blocked",
+            "reason": reason,
+            "operation": operation,
+            "configured": resolved.get("configured"),
+        }
+    if operation == "write" and state == "read-only":
+        return {
+            "verdict": "fail",
+            "error": "authority-read-only",
+            "reason": reason,
+            "operation": operation,
+            "configured": resolved.get("configured"),
+        }
+    return None
+
+
 def resolve_effective_backend(root: Path, cfg: dict[str, Any], *, override: str | None = None) -> dict[str, Any]:
-    configured = resolve_backend_id(cfg, override=override)
+    """Resolve backend authority — configured id only; no silent substitution (PRD 082 R26)."""
+    import planning_authority_reasons as par
+
+    decision = _authority_resolution(root, cfg, override=override)
+    configured = decision.configured
     shim_warnings = _legacy_kill_switch_shim_warnings()
-    # PRD 057 R31 / PRD 080 R8: an explicit per-call --backend override is a deliberate
-    # operator choice for that one invocation and takes precedence over the durable
-    # disable record (e.g. `materialize_from_store` reads the real issue store while
-    # rollback is active).
-    if override is None and configured != DEFAULT_BACKEND and _effective_backend_disable_active(root, cfg):
-        out: dict[str, Any] = {
-            "verdict": "ok",
-            "configured": configured,
-            "backend": DEFAULT_BACKEND,
-            "effective": DEFAULT_BACKEND,
-            "fallback": True,
-            "fallbackReason": "kill-switch",
-            "killSwitch": True,
-            "notice": KILL_SWITCH_NOTICE,
-            "shipped": True,
-            "deferred": False,
-        }
-        if shim_warnings:
-            out["legacyShimWarnings"] = shim_warnings
-        return out
-    fallback_reason = issue_store_fallback_reason(root, cfg, override=override) if configured == "issue-store" else None
-    if fallback_reason:
-        out: dict[str, Any] = {
-            "verdict": "ok",
-            "configured": configured,
-            "backend": DEFAULT_BACKEND,
-            "effective": DEFAULT_BACKEND,
-            "fallback": True,
-            "fallbackReason": fallback_reason,
-            "notice": ISSUE_STORE_FALLBACK_NOTICE,
-            "shipped": True,
-            "deferred": False,
-        }
-        guidance = bitbucket_issue_store_guidance(root, cfg)
-        if guidance:
-            out["guidance"] = guidance
-        return out
-    return {
+    out: dict[str, Any] = {
         "verdict": "ok",
         "configured": configured,
         "backend": configured,
         "effective": configured,
-        "fallback": False,
+        "authorityState": decision.authorityState,
+        "writeDisposition": decision.writeDisposition,
+        "cacheValidity": decision.cacheValidity,
+        "reason": decision.reason,
+        "fallback": decision.reason is not None,
         "shipped": configured in SHIPPED_BACKENDS,
         "deferred": configured in DEFERRED_BACKENDS,
     }
+    if decision.reason:
+        out["fallbackReason"] = decision.reason
+    if decision.guidance:
+        out["guidance"] = decision.guidance
+    if decision.reason == par.REASON_KILL_SWITCH:
+        out["killSwitch"] = True
+        out["notice"] = KILL_SWITCH_NOTICE
+    elif decision.reason and configured == "issue-store":
+        out["notice"] = ISSUE_STORE_FALLBACK_NOTICE
+    if shim_warnings:
+        out["legacyShimWarnings"] = shim_warnings
+    return out
 
 
 def _probe_rate_limited_result(exc: Exception) -> dict[str, Any] | None:
@@ -2702,10 +2726,19 @@ def resolve_backend_id(cfg: dict[str, Any], *, override: str | None = None) -> s
     return DEFAULT_BACKEND
 
 
-def get_backend(root: Path, cfg: dict[str, Any] | None = None, *, override: str | None = None) -> PlanningStoreBackend:
+def get_backend(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+    *,
+    override: str | None = None,
+    operation: str = "read",
+) -> PlanningStoreBackend:
     cfg = cfg if cfg is not None else load_workflow_config(root)
     effective = resolve_effective_backend(root, cfg, override=override)
-    backend_id = effective["effective"]
+    blocked = authority_io_block(effective, operation=operation)
+    if blocked is not None:
+        raise PlanningStoreAuthorityError(blocked)
+    backend_id = effective["configured"]
     cls = BACKEND_CLASSES[backend_id]
     if backend_id in DEFERRED_BACKENDS:
         return cls(root, cfg, backend_id)
@@ -4759,7 +4792,7 @@ def progress_update(
 
     cfg = load_workflow_config(root)
     backend = resolve_effective_backend(root, cfg)
-    if backend.get("effective") != "issue-store":
+    if backend.get("configured") != "issue-store":
         return {"verdict": "ok", "skipped": True, "reason": "file-store"}
 
     resolved_provider = provider
@@ -4946,7 +4979,7 @@ def comment_sync(
     """R18 — inbound provider comments for authoring/deliver consumers via facade."""
     cfg = load_workflow_config(root)
     backend = resolve_effective_backend(root, cfg)
-    if backend.get("effective") != "issue-store":
+    if backend.get("configured") != "issue-store":
         return {
             "verdict": "ok",
             "skipped": True,
@@ -5200,11 +5233,14 @@ def _imports_issues_client(path: Path) -> list[int]:
 def issue_get_facade(root: Path, cfg: dict[str, Any], issue_ref: str) -> dict[str, Any]:
     """Facade wrapper for issue lookup used by non-allowlisted workflow scripts."""
     effective = resolve_effective_backend(root, cfg)
-    if effective.get("effective") != "issue-store":
+    blocked = authority_io_block(effective, operation="read")
+    if blocked is not None:
+        return blocked
+    if effective.get("configured") != "issue-store":
         return {
             "verdict": "fail",
-            "error": "--issue requires issue-store effective backend",
-            "effectiveBackend": effective.get("effective"),
+            "error": "--issue requires issue-store configured backend",
+            "configuredBackend": effective.get("configured"),
         }
     key_result = validate_project_key(root, cfg)
     if key_result.get("verdict") != "ok":
@@ -5229,7 +5265,10 @@ def issue_get_facade(root: Path, cfg: dict[str, Any], issue_ref: str) -> dict[st
 def issue_search_by_unit_facade(root: Path, cfg: dict[str, Any], *, unit_id: str) -> dict[str, Any]:
     """Facade wrapper for issue search by unit id."""
     effective = resolve_effective_backend(root, cfg)
-    if effective.get("effective") != "issue-store":
+    blocked = authority_io_block(effective, operation="read")
+    if blocked is not None:
+        return blocked
+    if effective.get("configured") != "issue-store":
         return {"verdict": "ok", "records": []}
     key_result = validate_project_key(root, cfg)
     if key_result.get("verdict") != "ok":
@@ -5314,6 +5353,14 @@ def lint_facade_imports(root: Path, *, scope: str | None = None) -> dict[str, An
         result["baselineMissing"] = sorted(FACADE_BYPASS_BASELINE - found)
         result["unexpected"] = sorted(found - FACADE_BYPASS_BASELINE - ISSUES_CLIENT_ALLOWLIST)
     return result
+
+
+class PlanningStoreAuthorityError(RuntimeError):
+    """Authority gate blocked a planning-store operation."""
+
+    def __init__(self, payload: dict[str, Any]) -> None:
+        super().__init__(str(payload.get("error") or "authority-blocked"))
+        self.payload = payload
 
 
 class SemanticStatusError(ValueError):
@@ -6071,7 +6118,7 @@ def main() -> None:
         result = validate_project_key(root, cfg, register=register)
         emit(result, 0 if result.get("verdict") == "ok" else 2)
     elif args.command == "put":
-        backend = get_backend(root, cfg, override=_optional(rest, "--backend"))
+        backend = get_backend(root, cfg, override=_optional(rest, "--backend"), operation="write")
         result = backend.put(_require(rest, "--unit-id"), _require(rest, "--body-path"), _require(rest, "--content"), content_class=_optional(rest, "--content-class"))
         emit(result.as_dict())
     elif args.command == "get":
