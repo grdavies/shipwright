@@ -23,6 +23,10 @@ Enumerates every planning-body read/write path that must route through `planning
 | `issue-store-comment` | `scripts/planning_store.py` | `planning_visibility.issue_store_visibility_gate` | 3 (live) | `issue-store-secret-scan-r45` |
 | `issue-store-freeze-record` | `scripts/planning_store.py` | `planning_visibility.issue_store_visibility_gate` | 3 (live) | `issue-store-freeze-r13` |
 | `issue-store-memory-pointer` | `scripts/planning_store.py` | `planning_visibility.issue_store_visibility_gate` | 3 (live) | `issue-store-freeze-r13` |
+| `deliver-annotation` | `scripts/wave_deliver.py` | *(deferred phase 5)* | — | — |
+| `deliver-annotation-ingest` | `scripts/wave_deliver.py` | *(deferred phase 5)* | — | — |
+| `issue-derived-ingest` | `scripts/planning_store.py` | `planning_visibility.issue_store_visibility_gate` | 3 (live) | `issue-derived-ingest-r82` |
+| `issue-close-batch` | `scripts/wave_deliver.py` | *(deferred phase 5)* | — | — |
 
 
 ## Writer surfaces

@@ -528,9 +528,11 @@ def reconcile_supersede_entries(
 def redact_text(text: str) -> str:
     try:
         from memory_redact import redact
+        from planning_visibility import resolve_emission_destination
     except ImportError:
         return text
-    return redact(text)
+    destination = resolve_emission_destination("handoff-032")
+    return redact(text, destination=destination)
 
 
 def record_to_jsonl(record: dict[str, Any]) -> dict[str, Any]:

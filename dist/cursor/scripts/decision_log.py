@@ -19,6 +19,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from _sw.cli import run_module_main
+from planning_visibility import resolve_emission_destination
 
 
 def extract_block(body: str) -> str | None:
@@ -67,8 +68,9 @@ def validate_record(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def redact_text(text: str) -> tuple[str, dict[str, Any]]:
+    destination = resolve_emission_destination("pr-diff")
     proc = subprocess.run(
-        [sys.executable, str(SCRIPT_DIR / "memory-redact.py")],
+        [sys.executable, str(SCRIPT_DIR / "memory-redact.py"), "--destination", destination],
         input=text,
         capture_output=True,
         text=True,

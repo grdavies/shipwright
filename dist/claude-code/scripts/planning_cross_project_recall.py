@@ -32,8 +32,9 @@ def fail(error: str, exit_code: int = 20, **extra: Any) -> None:
 
 
 def redact_text(text: str) -> str:
+    destination = pv.resolve_emission_destination("issue-derived-ingest")
     proc = subprocess.run(
-        [sys.executable, str(SCRIPT_DIR / "memory-redact.py")],
+        [sys.executable, str(SCRIPT_DIR / "memory-redact.py"), "--destination", destination],
         input=text,
         capture_output=True,
         text=True,

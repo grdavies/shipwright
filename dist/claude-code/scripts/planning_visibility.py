@@ -48,26 +48,128 @@ CONFIG_REL = Path(".cursor/workflow.config.json")
 
 REDACTED_BODY_MARKER = "[redacted:private-body]"
 
-EMISSION_POINTS: dict[str, str] = {
-    "index-active": "Unified INDEX active rows (PRD 034 R4)",
-    "index-archive": "Unified INDEX archived rows (PRD 034 R4)",
-    "legacy-gap-backlog": "033 legacy GAP-BACKLOG projection",
-    "legacy-prd-index": "033 legacy PRD INDEX projection",
-    "pr-diff": "PR diff planning-body paths",
-    "dispatch-context": "Dispatch / subagent planning context",
-    "spec-seed": "wave spec-seed body copy",
-    "store-get": "planning.store get / list --json",
-    "superseded-manifest": "SUPERSEDED manifest rows",
-    "inflight-tuple": "Committed INDEX inFlight tuple (032 R13 handoff)",
-    "reconciler-output": "033 reconciler emitted bodies",
-    "run-log": "Deliver run logs",
-    "handoff-032": "032 handoff artifacts",
-    "issue-store-memory-pointer": "Issue-store brainstorm distillation pointer (PRD 043 R19)",
-    "issue-store-freeze-record": "Issue-store freeze-record comment (PRD 043 R13)",
-    "issue-store-comment": "Issue-store comment / overflow chunk write (PRD 043 R45)",
-    "issue-store-put": "Issue-store put/create body write (PRD 043 R45)",
-    "pull-in-confirm": "035 pull-in confirm lists",
+DESTINATION_TIERS = frozenset({"local", "committed", "external", "cross-project", "logs"})
+DEFAULT_UNREGISTERED_DESTINATION = "external"
+
+EMISSION_POINT_REGISTRY: dict[str, dict[str, str]] = {
+    "index-active": {
+        "description": "Unified INDEX active rows (PRD 034 R4)",
+        "destination": "committed",
+    },
+    "index-archive": {
+        "description": "Unified INDEX archived rows (PRD 034 R4)",
+        "destination": "committed",
+    },
+    "legacy-gap-backlog": {
+        "description": "033 legacy GAP-BACKLOG projection",
+        "destination": "committed",
+    },
+    "legacy-prd-index": {
+        "description": "033 legacy PRD INDEX projection",
+        "destination": "committed",
+    },
+    "pr-diff": {
+        "description": "PR diff planning-body paths",
+        "destination": "committed",
+    },
+    "dispatch-context": {
+        "description": "Dispatch / subagent planning context",
+        "destination": "external",
+    },
+    "spec-seed": {
+        "description": "wave spec-seed body copy",
+        "destination": "committed",
+    },
+    "store-get": {
+        "description": "planning.store get / list --json",
+        "destination": "external",
+    },
+    "superseded-manifest": {
+        "description": "SUPERSEDED manifest rows",
+        "destination": "committed",
+    },
+    "inflight-tuple": {
+        "description": "Committed INDEX inFlight tuple (032 R13 handoff)",
+        "destination": "committed",
+    },
+    "reconciler-output": {
+        "description": "033 reconciler emitted bodies",
+        "destination": "committed",
+    },
+    "run-log": {
+        "description": "Deliver run logs",
+        "destination": "logs",
+    },
+    "handoff-032": {
+        "description": "032 handoff artifacts",
+        "destination": "local",
+    },
+    "issue-store-memory-pointer": {
+        "description": "Issue-store brainstorm distillation pointer (PRD 043 R19)",
+        "destination": "external",
+    },
+    "issue-store-freeze-record": {
+        "description": "Issue-store freeze-record comment (PRD 043 R13)",
+        "destination": "external",
+    },
+    "issue-store-comment": {
+        "description": "Issue-store comment / overflow chunk write (PRD 043 R45)",
+        "destination": "external",
+    },
+    "issue-store-put": {
+        "description": "Issue-store put/create body write (PRD 043 R45)",
+        "destination": "external",
+    },
+    "pull-in-confirm": {
+        "description": "035 pull-in confirm lists",
+        "destination": "committed",
+    },
+    "deliver-annotation": {
+        "description": "045 R68 deliver annotation comments",
+        "destination": "cross-project",
+    },
+    "deliver-annotation-ingest": {
+        "description": "045 R68 host-sourced annotation ingest",
+        "destination": "cross-project",
+    },
+    "issue-derived-ingest": {
+        "description": "046 R82/R84 issue-derived ingest before INDEX/cache write",
+        "destination": "cross-project",
+    },
+    "issue-close-batch": {
+        "description": "045 R67 close-on-merge and separate-repo issue-close batch",
+        "destination": "cross-project",
+    },
 }
+
+# Back-compat alias: point id -> description (PRD 034 R14).
+EMISSION_POINTS: dict[str, str] = {
+    point_id: entry["description"] for point_id, entry in EMISSION_POINT_REGISTRY.items()
+}
+
+
+def resolve_emission_destination(point_id: str | None) -> str:
+    """Resolve redaction destination for an emission point (PRD 082 R32).
+
+    Unregistered or omitted emission points resolve to ``external`` — the strictest
+    practical tier during migration.
+    """
+    if not point_id:
+        return DEFAULT_UNREGISTERED_DESTINATION
+    entry = EMISSION_POINT_REGISTRY.get(point_id)
+    if entry is None:
+        return DEFAULT_UNREGISTERED_DESTINATION
+    destination = entry.get("destination", DEFAULT_UNREGISTERED_DESTINATION)
+    if destination not in DESTINATION_TIERS:
+        return DEFAULT_UNREGISTERED_DESTINATION
+    return destination
+
+
+def emission_point_destinations() -> dict[str, str]:
+    return {
+        point_id: resolve_emission_destination(point_id)
+        for point_id in sorted(EMISSION_POINT_REGISTRY)
+    }
 
 
 def planning_section(cfg: dict[str, Any]) -> dict[str, Any]:
@@ -624,7 +726,32 @@ def _cmd_emit_point(args: argparse.Namespace) -> int:
 
 
 def _cmd_list_emission_points(_args: argparse.Namespace) -> int:
-    print(json.dumps({"points": EMISSION_POINTS}, indent=2))
+    print(
+        json.dumps(
+            {
+                "points": EMISSION_POINTS,
+                "destinations": emission_point_destinations(),
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _cmd_resolve_destination(args: argparse.Namespace) -> int:
+    point = args.point.strip() if args.point else None
+    destination = resolve_emission_destination(point)
+    print(
+        json.dumps(
+            {
+                "verdict": "ok",
+                "point": point,
+                "destination": destination,
+                "registered": bool(point and point in EMISSION_POINT_REGISTRY),
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
@@ -664,6 +791,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p_list = sub.add_parser("list-emission-points", help="List emission point registry")
     p_list.set_defaults(func=_cmd_list_emission_points)
+
+    p_dest = sub.add_parser("resolve-destination", help="Resolve redaction destination for emission point")
+    p_dest.add_argument("--point", default=None, help="Emission point id (unregistered -> external)")
+    p_dest.set_defaults(func=_cmd_resolve_destination)
 
     args = parser.parse_args(argv)
     return int(args.func(args))

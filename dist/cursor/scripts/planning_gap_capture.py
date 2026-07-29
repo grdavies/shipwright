@@ -406,8 +406,10 @@ def find_duplicate_open_gap(title: str, open_titles: dict[str, str]) -> str | No
 
 def redact_override_reason(reason: str) -> str:
     from memory_redact import redact
+    from planning_visibility import resolve_emission_destination
 
-    return redact(reason)
+    destination = resolve_emission_destination("reconciler-output")
+    return redact(reason, destination=destination)
 
 
 def _normalize_override_anchor(

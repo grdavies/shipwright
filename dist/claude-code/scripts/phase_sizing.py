@@ -23,6 +23,11 @@ ADVISORY_HEADING = "## Sizing & Split Suggestions"
 OVERRIDE_DIR_REL = Path(".cursor/sw-sizing-overrides")
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from planning_visibility import resolve_emission_destination  # noqa: E402
+
 
 def valid_path(path: str) -> bool:
     if not path or "{" in path or "}" in path or "`" in path or "(" in path:
@@ -991,8 +996,9 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def redact_json_payload(text: str) -> tuple[str, dict[str, Any]]:
+    destination = resolve_emission_destination("run-log")
     proc = subprocess.run(
-        [sys.executable, str(SCRIPT_DIR / "memory-redact.py")],
+        [sys.executable, str(SCRIPT_DIR / "memory-redact.py"), "--destination", destination],
         input=text,
         capture_output=True,
         text=True,

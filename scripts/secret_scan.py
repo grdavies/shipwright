@@ -231,9 +231,11 @@ def cmd_stdin(allowlist: dict[str, list[str]]) -> int:
 
 def cmd_patterns_check() -> int:
     from memory_redact import redact  # noqa: PLC0415 — intentional coupling check
+    from planning_visibility import resolve_emission_destination
 
     sample = "token=ghp_" + ("x" * 40)
-    redacted = redact(sample)
+    destination = resolve_emission_destination("dispatch-context")
+    redacted = redact(sample, destination=destination)
     if "ghp_" in redacted:
         print("secret-scan: memory_redact.py does not redact ghp_ sample", file=sys.stderr)
         return EXIT_ERROR

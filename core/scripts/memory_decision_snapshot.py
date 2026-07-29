@@ -25,6 +25,8 @@ from memory_sot import (  # noqa: E402
     resolve_decision_home,
 )
 
+from planning_visibility import resolve_emission_destination  # noqa: E402
+
 _DECISION_PATH_RE = re.compile(r"docs/decisions/\d{3}-[a-z0-9-]+\.md")
 
 
@@ -77,8 +79,9 @@ def resolve_sot(root: Path) -> dict:
 
 def redact_text(root: Path, text: str) -> str:
     scripts = plugin_scripts(root)
+    destination = resolve_emission_destination("handoff-032")
     proc = subprocess.run(
-        [sys.executable, str(scripts / "memory-redact.py")],
+        [sys.executable, str(scripts / "memory-redact.py"), "--destination", destination],
         input=text,
         text=True,
         capture_output=True,
