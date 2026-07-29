@@ -689,6 +689,7 @@
 * merge phase authority-decision-object-fallback-reason-mapping-medium into feat/planning-authority-memory-integrity (c3fca5b) <!-- sw-deliver:authority-decision-object-fallback-reason-mapping-medium -->
 * merge phase import-and-cli-inventory-plus-generated-shims-small into feat/planning-authority-memory-integrity (c700c71) <!-- sw-deliver:import-and-cli-inventory-plus-generated-shims-small -->
 * merge phase store-atomic-write-and-interchange-adopt-the-coordinator-medium into feat/planning-authority-memory-integrity (7865f4b) <!-- sw-deliver:store-atomic-write-and-interchange-adopt-the-coordinator-medium -->
+* merge phase domain-package-model-repository-identity-migrations-medium into feat/planning-authority-memory-integrity (778c8f0) <!-- sw-deliver:domain-package-model-repository-identity-migrations-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
