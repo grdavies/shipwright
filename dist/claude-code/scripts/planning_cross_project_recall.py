@@ -15,8 +15,8 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 import planning_paths as pp  # noqa: E402
+import planning_cross_project_trust as trust  # noqa: E402
 import planning_visibility as pv  # noqa: E402
-from host_lib import load_workflow_config  # noqa: E402
 from planning_store import PROJECT_KEY_PATTERN  # noqa: E402
 
 MEMORY_POINTER_MARKER = "sw-memory-pointer"
@@ -51,14 +51,6 @@ def redact_text(text: str) -> str | None:
     return proc.stdout
 
 
-def authorize_cross_project(caller_key: str, source_key: str, authorized: list[str] | None) -> bool:
-    if caller_key == source_key:
-        return True
-    if authorized and source_key in authorized:
-        return True
-    return False
-
-
 def rank_pointers(pointers: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(
         pointers,
@@ -74,23 +66,48 @@ def recall_cross_project(
     root: Path,
     *,
     source_project_key: str,
-    caller_project_key: str,
+    caller_project_key: str | None = None,
     query: str,
     pointers: list[dict[str, Any]] | None = None,
     authorized_projects: list[str] | None = None,
+    allow_payload_trust: bool | None = None,
 ) -> dict[str, Any]:
     """Recall rationale via project-scoped memory pointers; redact on dereference (R90)."""
     worktree = pp.git_root(root)
-    if not PROJECT_KEY_PATTERN.fullmatch(caller_project_key):
-        fail("invalid-caller-project-key")
+    trust_result = trust.resolve_trusted_sources(
+        worktree,
+        payload_authorized_projects=authorized_projects,
+        allow_payload_trust=allow_payload_trust,
+    )
+    if trust_result.get("verdict") != "pass":
+        return trust_result
+
+    resolved_caller = str(trust_result["callerProjectKey"])
+    if caller_project_key is not None and caller_project_key != resolved_caller:
+        return {
+            "verdict": "denied",
+            "error": "caller-project-key-mismatch",
+            "callerProjectKey": resolved_caller,
+        }
+
     if not PROJECT_KEY_PATTERN.fullmatch(source_project_key):
         fail("invalid-source-project-key")
-    if not authorize_cross_project(caller_project_key, source_project_key, authorized_projects):
-        return {"verdict": "denied", "error": "cross-project-unauthorized", "sourceProjectKey": source_project_key}
 
+    effective_trusted = set(trust_result.get("effectiveTrustedSources") or [])
+    if not trust.authorize_cross_project(resolved_caller, source_project_key, effective_trusted):
+        return {
+            "verdict": "denied",
+            "error": "cross-project-unauthorized",
+            "sourceProjectKey": source_project_key,
+            "callerProjectKey": resolved_caller,
+        }
+
+    cross_project = resolved_caller != source_project_key
     hits: list[dict[str, Any]] = []
     for ptr in rank_pointers(pointers or []):
         if str(ptr.get("projectKey", "")) != source_project_key:
+            continue
+        if trust.cross_project_dereference_blocked(ptr, cross_project=cross_project):
             continue
         vis = pv.normalize_visibility(str(ptr.get("visibility", "private")))
         excerpt = str(ptr.get("excerpt", ""))
@@ -121,10 +138,11 @@ def recall_cross_project(
     return {
         "verdict": "pass",
         "sourceProjectKey": source_project_key,
-        "callerProjectKey": caller_project_key,
+        "callerProjectKey": resolved_caller,
         "query": query,
         "hits": hits,
         "duplicatesDeliverable": False,
+        "payloadTrustApplied": bool(trust_result.get("payloadTrustApplied")),
     }
 
 
@@ -133,10 +151,13 @@ def _cmd_recall(args: argparse.Namespace) -> int:
     result = recall_cross_project(
         Path(args.root),
         source_project_key=str(payload["sourceProjectKey"]),
-        caller_project_key=str(payload["callerProjectKey"]),
+        caller_project_key=payload.get("callerProjectKey"),
         query=str(payload.get("query", "")),
         pointers=list(payload.get("pointers") or []),
-        authorized_projects=list(payload.get("authorizedProjects") or []),
+        authorized_projects=list(payload.get("authorizedProjects") or []) or None,
+        allow_payload_trust=bool(payload.get(trust.PAYLOAD_TRUST_TEST_FLAG))
+        if trust.PAYLOAD_TRUST_TEST_FLAG in payload
+        else None,
     )
     print(json.dumps(result, indent=2))
     return 0 if result.get("verdict") == "pass" else 20
