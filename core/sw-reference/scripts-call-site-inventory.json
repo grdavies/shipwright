@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-29T05:18:31Z",
+  "generatedAt": "2026-07-29T07:19:56Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -442,28 +442,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-cleanup.md:62:cleanup_lib.py",
+      "id": "core/commands/sw-cleanup.md:68:cleanup_lib.py",
       "tree": "core/commands",
       "file": "core/commands/sw-cleanup.md",
-      "line": 62,
+      "line": 68,
       "column": 11,
       "script": "cleanup_lib.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-cleanup.md:76:sw_bootstrap.py",
+      "id": "core/commands/sw-cleanup.md:82:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-cleanup.md",
-      "line": 76,
+      "line": 82,
       "column": 11,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-cleanup.md:81:sw_bootstrap.py",
+      "id": "core/commands/sw-cleanup.md:87:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-cleanup.md",
-      "line": 81,
+      "line": 87,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -6913,28 +6913,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-cleanup.md:62:cleanup_lib.py",
+      "id": "dist/claude-code/commands/sw-cleanup.md:68:cleanup_lib.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-cleanup.md",
-      "line": 62,
+      "line": 68,
       "column": 11,
       "script": "cleanup_lib.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-cleanup.md:76:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-cleanup.md:82:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-cleanup.md",
-      "line": 76,
+      "line": 82,
       "column": 11,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-cleanup.md:81:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-cleanup.md:87:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-cleanup.md",
-      "line": 81,
+      "line": 87,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -12259,28 +12259,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-cleanup.md:62:cleanup_lib.py",
+      "id": "dist/cursor/commands/sw-cleanup.md:68:cleanup_lib.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-cleanup.md",
-      "line": 62,
+      "line": 68,
       "column": 11,
       "script": "cleanup_lib.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-cleanup.md:76:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-cleanup.md:82:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-cleanup.md",
-      "line": 76,
+      "line": 82,
       "column": 11,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-cleanup.md:81:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-cleanup.md:87:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-cleanup.md",
-      "line": 81,
+      "line": 87,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
