@@ -31,15 +31,24 @@ def fail(error: str, exit_code: int = 20, **extra: Any) -> None:
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
-def redact_text(text: str) -> str:
+def redact_text(text: str) -> str | None:
+    """Redact excerpt text; refuse emission (return None) on any chokepoint failure."""
     destination = pv.resolve_emission_destination("issue-derived-ingest")
-    proc = subprocess.run(
-        [sys.executable, str(SCRIPT_DIR / "memory-redact.py"), "--destination", destination],
-        input=text,
-        capture_output=True,
-        text=True,
-    )
-    return proc.stdout if proc.returncode == 0 else text
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(SCRIPT_DIR / "memory-redact.py"), "--destination", destination],
+            input=text,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    if not proc.stdout and text:
+        return None
+    return proc.stdout
 
 
 def authorize_cross_project(caller_key: str, source_key: str, authorized: list[str] | None) -> bool:
@@ -95,12 +104,15 @@ def recall_cross_project(
                 "redacted": True,
             })
         else:
+            redacted_excerpt = redact_text(excerpt)
+            if redacted_excerpt is None:
+                continue
             hits.append({
                 "projectKey": source_project_key,
                 "unitId": ptr.get("unitId"),
                 "memoryId": ptr.get("memoryId"),
                 "visibility": vis,
-                "excerpt": redact_text(excerpt),
+                "excerpt": redacted_excerpt,
                 "redacted": False,
             })
     if query:
