@@ -19,6 +19,7 @@ from memory_envelope_v2 import (
     new_envelope,
     parse_envelope,
 )
+from memory_sensitivity import migrate_v1_sensitivity
 
 ALIAS_LEDGER_DIR = Path(".cursor") / "sw-memory-envelope-aliases"
 ALIAS_LEDGER_SCHEMA_VERSION = 1
@@ -111,9 +112,7 @@ def upgrade_v1_to_v2(doc: Any) -> dict[str, Any]:
     if not isinstance(confidence, (int, float)):
         confidence = 0.5
 
-    sensitivity = known.get("sensitivity") or "internal"
-    if sensitivity not in ("public", "internal", "private", "secret"):
-        sensitivity = "internal"
+    sensitivity = migrate_v1_sensitivity(known.get("sensitivity"))
 
     applied = known.get("appliedRedaction")
     if not isinstance(applied, dict):
