@@ -94,6 +94,27 @@ def resolve_authority(
     )
 
 
+def substantive_deliver_allowed(decision: AuthorityDecision) -> bool:
+    """True when substantive deliver entry is permitted (R26 phase 8)."""
+    return decision.writeDisposition == "accept" and decision.authorityState == "online"
+
+
+def deliver_resume_command(
+    root: Path,
+    *,
+    phase_slug: str | None = None,
+    reason: str | None = None,
+) -> str:
+    """Resume hint after an authority disposition halt (R26 phase 8)."""
+    detail = f" ({reason})" if reason else ""
+    if phase_slug:
+        return (
+            f"/sw-ship --phase-mode --from sw-execute  "
+            f"# resume phase {phase_slug} after authority recovery{detail}"
+        )
+    return f"python3 scripts/planning_authority_probe.py {root} probe{detail}"
+
+
 def apply_write_disposition(
     decision: AuthorityDecision,
     *,

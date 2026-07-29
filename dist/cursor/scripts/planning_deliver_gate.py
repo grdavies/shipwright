@@ -162,6 +162,97 @@ def handle_unit_not_in_graph(root: Path, task_path: Path, *, action: str) -> dic
     )
 
 
+def _authority_pin_path(root: Path, phase_slug: str | None) -> Path | None:
+    if not phase_slug:
+        return None
+    return root / ".cursor" / "sw-deliver-runs" / phase_slug / "authority-pin.json"
+
+
+def read_authority_pin(root: Path, phase_slug: str | None) -> dict[str, Any] | None:
+    path = _authority_pin_path(root, phase_slug)
+    if path is None or not path.is_file():
+        return None
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return doc if isinstance(doc, dict) else None
+
+
+def write_authority_pin(root: Path, phase_slug: str, resolved: dict[str, Any]) -> None:
+    path = _authority_pin_path(root, phase_slug)
+    if path is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "writeDisposition": resolved.get("writeDisposition"),
+        "authorityState": resolved.get("authorityState"),
+        "configured": resolved.get("configured"),
+        "pinnedAt": utc_now(),
+    }
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+
+def resolve_deliver_authority(root: Path) -> dict[str, Any]:
+    from host_lib import load_workflow_config
+    from planning_store import resolve_effective_backend
+
+    cfg = load_workflow_config(root)
+    return resolve_effective_backend(root, cfg)
+
+
+def write_disposition_gate(root: Path, *, phase_slug: str | None = None) -> dict[str, Any]:
+    """Consult writeDisposition for deliver entry; halt on substantive refusal (R26 phase 8)."""
+    import planning_authority as pa
+    from halt_resume import enrich_fail_extra
+
+    resolved = resolve_deliver_authority(root)
+    decision = pa.AuthorityDecision(
+        configured=str(resolved.get("configured") or ""),
+        authorityState=str(resolved.get("authorityState") or ""),
+        reason=resolved.get("reason"),
+        writeDisposition=str(resolved.get("writeDisposition") or ""),
+        cacheValidity=str(resolved.get("cacheValidity") or ""),
+        guidance=resolved.get("guidance"),
+    )
+    pin = read_authority_pin(root, phase_slug)
+    if pin and pin.get("writeDisposition") == "accept" and not pa.substantive_deliver_allowed(decision):
+        extra = enrich_fail_extra(
+            root,
+            {
+                "halt": "authority-mid-phase-transition",
+                "cause": f"authority-mid-phase:{decision.authorityState}:{decision.writeDisposition}",
+                "writeDisposition": decision.writeDisposition,
+                "authorityState": decision.authorityState,
+                "reason": decision.reason,
+                "phaseSlug": phase_slug,
+                "resumeCommand": pa.deliver_resume_command(
+                    root, phase_slug=phase_slug, reason=decision.reason
+                ),
+            },
+        )
+        fail("authority transitioned during phase", **extra)
+    if not pa.substantive_deliver_allowed(decision):
+        extra = enrich_fail_extra(
+            root,
+            {
+                "halt": "write-disposition",
+                "cause": f"authority-{decision.authorityState}:{decision.writeDisposition}",
+                "writeDisposition": decision.writeDisposition,
+                "authorityState": decision.authorityState,
+                "reason": decision.reason,
+                "phaseSlug": phase_slug,
+                "resumeCommand": pa.deliver_resume_command(
+                    root, phase_slug=phase_slug, reason=decision.reason
+                ),
+            },
+        )
+        fail("write disposition blocks deliver entry", **extra)
+    if phase_slug:
+        write_authority_pin(root, phase_slug, resolved)
+    return {"verdict": "pass", "action": "write-disposition-gate", **resolved}
+
+
 def task_list_for_unit(root: Path, unit_id: str) -> str | None:
     worktree = pp.git_root(root)
     candidates = logical_task_list_candidates(root, unit_id)
@@ -170,10 +261,11 @@ def task_list_for_unit(root: Path, unit_id: str) -> str | None:
         if path.is_file():
             return rel
     from host_lib import load_workflow_config
-    from planning_store import get_backend, resolve_effective_backend
+    from planning_store import get_backend
 
     cfg = load_workflow_config(worktree)
-    if resolve_effective_backend(worktree, cfg).get("effective") != "issue-store":
+    resolved = resolve_deliver_authority(worktree)
+    if resolved.get("writeDisposition") != "accept" or resolved.get("configured") != "issue-store":
         return None
     backend = get_backend(worktree, cfg)
     for rel in candidates:
@@ -370,8 +462,19 @@ def enforce_ci_status_capability_deliver(root: Path) -> dict[str, Any]:
     return ci_status
 
 
-def run_start_revalidate(root: Path, task_path: Path) -> dict[str, Any]:
+def _phase_slug_from_env() -> str | None:
+    slug = os.environ.get("SW_PHASE_SLUG", "").strip()
+    return slug or None
+
+
+def run_start_revalidate(
+    root: Path,
+    task_path: Path,
+    *,
+    phase_slug: str | None = None,
+) -> dict[str, Any]:
     enforce_ci_status_capability_deliver(root)
+    write_disposition_gate(root, phase_slug=phase_slug or _phase_slug_from_env())
     unit = resolve_unit(root, task_path)
     if unit is None:
         return handle_unit_not_in_graph(root, task_path, action="run-start-revalidate")
