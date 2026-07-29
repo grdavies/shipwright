@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from datetime import date
@@ -17,11 +18,16 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from memory_sot import (  # noqa: E402
     DECISION_STUB_ALLOWLIST,
+    MIGRATION_EXPORT_COMMAND,
     decision_unit_id_from_path,
     is_decision_body_path,
     planning_store_effective,
     resolve_decision_home,
 )
+
+from planning_visibility import resolve_emission_destination  # noqa: E402
+
+_DECISION_PATH_RE = re.compile(r"docs/decisions/\d{3}-[a-z0-9-]+\.md")
 
 
 def plugin_scripts(root: Path) -> Path:
@@ -73,8 +79,9 @@ def resolve_sot(root: Path) -> dict:
 
 def redact_text(root: Path, text: str) -> str:
     scripts = plugin_scripts(root)
+    destination = resolve_emission_destination("handoff-032")
     proc = subprocess.run(
-        [sys.executable, str(scripts / "memory-redact.py")],
+        [sys.executable, str(scripts / "memory-redact.py"), "--destination", destination],
         input=text,
         text=True,
         capture_output=True,
@@ -82,6 +89,79 @@ def redact_text(root: Path, text: str) -> str:
     if proc.returncode != 0:
         fail("memory-redact failed", stderr=proc.stderr.strip())
     return proc.stdout
+
+
+def list_provider_decision_memories(root: Path) -> list[dict]:
+    store = root / ".cursor" / "sw-memory" / "memories"
+    hits: list[dict] = []
+    if not store.is_dir():
+        return hits
+    for mem in sorted(store.glob("*.md")):
+        text = mem.read_text(encoding="utf-8", errors="replace")
+        meta, body = split_frontmatter(text)
+        category = meta.get("category", "").lower()
+        if category and category != "decision":
+            continue
+        related = [m.group(0) for m in _DECISION_PATH_RE.finditer(text)]
+        if not related:
+            stem = mem.stem
+            related = [f"docs/decisions/{stem[:3]}-{stem[3:]}.md" if stem[:3].isdigit() else f"docs/decisions/001-{stem}.md"]
+        hits.append(
+            {
+                "memoryPath": mem.relative_to(root).as_posix(),
+                "relatedFiles": related,
+                "meta": meta,
+                "body": body,
+            }
+        )
+    return hits
+
+
+def export_target_path(memory: dict) -> str:
+    for rel in memory.get("relatedFiles", []):
+        if is_decision_body_path(str(rel)):
+            return str(rel)
+    stem = Path(str(memory.get("memoryPath", "decision"))).stem
+    return f"docs/decisions/001-{stem}.md"
+
+
+def render_exported_decision(meta: dict[str, str], body: str, rel_path: str) -> str:
+    out = dict(meta)
+    out.setdefault("id", decision_unit_id_from_path(rel_path))
+    out["authoritative"] = "repo"
+    out["snapshotRole"] = "authoritative"
+    out.pop("memoryPointer", None)
+    return render_frontmatter(out) + body.lstrip("\n")
+
+
+def cmd_export(root: Path, dry_run: bool) -> None:
+    memories = list_provider_decision_memories(root)
+    written: list[dict] = []
+    for memory in memories:
+        rel_path = export_target_path(memory)
+        output = render_exported_decision(memory["meta"], memory["body"], rel_path)
+        if dry_run:
+            written.append({"path": rel_path, "memoryPath": memory["memoryPath"], "dryRun": True})
+            continue
+        target = (root / rel_path).resolve()
+        try:
+            target.relative_to(root.resolve())
+        except ValueError:
+            fail("path escapes repository root", path=rel_path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(output, encoding="utf-8")
+        written.append({"path": rel_path, "memoryPath": memory["memoryPath"], "bytes": len(output.encode("utf-8"))})
+
+    emit(
+        {
+            "verdict": "pass",
+            "action": "export",
+            "exportCommand": MIGRATION_EXPORT_COMMAND,
+            "dryRun": dry_run,
+            "written": written,
+            "count": len(written),
+        }
+    )
 
 
 def split_frontmatter(text: str) -> tuple[dict[str, str], str]:
@@ -274,12 +354,21 @@ def main() -> None:
     write.add_argument("--dry-run", action="store_true")
     write.add_argument("--root", type=Path, default=None)
 
+    export = sub.add_parser(
+        "export",
+        help="Materialize provider-side decision bodies into docs/decisions/ before SoT flip (R30)",
+    )
+    export.add_argument("--dry-run", action="store_true")
+    export.add_argument("--root", type=Path, default=None)
+
     args = parser.parse_args()
     start = args.root or Path.cwd()
     root = git_root(start)
 
     if args.command == "write":
         cmd_write(root, args.path, args.memory_pointer, args.dry_run)
+    elif args.command == "export":
+        cmd_export(root, args.dry_run)
 
 
 if __name__ == "__main__":

@@ -34,6 +34,7 @@ rest_fetch_policy_from_catalog_entry = _sw_recallium_url.rest_fetch_policy_from_
 from memory_prework_gate import DEFAULT_SURFACE_MUTATION_BUDGET  # noqa: E402
 from memory_provider_catalog import CatalogError, get_provider, load_catalog  # noqa: E402
 from memory_provider_register import RegistrationError, validate_registration  # noqa: E402
+from planning_visibility import resolve_emission_destination  # noqa: E402
 
 RECORD_PATH = Path(".cursor/hooks/state/memory-prework-search.json")
 DEFAULT_CLASSES = ("rule", "decision", "learning", "code-context", "design")
@@ -129,8 +130,9 @@ def probe_provider_reachable(root: Path, provider: str, config: dict[str, Any]) 
 
 
 def redact_payload(raw: str) -> str:
+    destination = resolve_emission_destination("dispatch-context")
     proc = subprocess.run(
-        [str(SCRIPT_DIR / "memory-redact.py")],
+        [str(SCRIPT_DIR / "memory-redact.py"), "--destination", destination],
         input=raw,
         text=True,
         capture_output=True,

@@ -15,7 +15,10 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from planning_txn import PlanningTxnCoordinator
 
 MANIFEST_NAME = "shipwright-bm-project.json"
 LINKS_FILE = "links.json"
@@ -75,6 +78,12 @@ def _rules_dir(project_path: Path, rules_directory: str = DEFAULT_RULES_DIR) -> 
     return _project_root(project_path) / rules_directory
 
 
+def interchange_store_id(project_path: Path) -> str:
+    root = _project_root(project_path).resolve()
+    digest = hashlib.sha256(str(root).encode("utf-8")).hexdigest()[:16]
+    return f"basic-memory:{digest}"
+
+
 def _links_path(project_path: Path) -> Path:
     return _project_root(project_path) / LINKS_FILE
 
@@ -127,10 +136,10 @@ def _category_folder(category: str) -> str:
     return "learning"
 
 
-def _note_relpath(category: str, permalink: str) -> str:
-    folder = _category_folder(category)
-    safe = _safe_permalink(permalink).replace("/", "_")
-    return f"{folder}/{safe}.md"
+def _note_relpath(category: str, identity: str) -> str:
+    from memory_key_collision import identity_disk_relpath
+
+    return identity_disk_relpath(category, identity)
 
 
 def note_path(
@@ -141,6 +150,7 @@ def note_path(
     memories_directory: str = DEFAULT_MEMORIES_DIR,
     rules_directory: str = DEFAULT_RULES_DIR,
 ) -> Path:
+    """Return on-disk path keyed by stable identity (permalink arg is the identity key)."""
     rel = _note_relpath(category, permalink)
     if category == RULE_CATEGORY:
         return _rules_dir(project_path, rules_directory) / Path(rel).name
@@ -170,7 +180,12 @@ def load_links(project_path: Path) -> list[dict[str, str]]:
     return out
 
 
-def save_links(project_path: Path, links: list[dict[str, str]]) -> None:
+def save_links(
+    project_path: Path,
+    links: list[dict[str, str]],
+    *,
+    txn: PlanningTxnCoordinator | None = None,
+) -> None:
     ensure_project(project_path)
     deduped: list[dict[str, str]] = []
     seen: set[tuple[str, str, str]] = set()
@@ -180,7 +195,15 @@ def save_links(project_path: Path, links: list[dict[str, str]]) -> None:
             continue
         seen.add(key)
         deduped.append(link)
-    _links_path(project_path).write_text(json.dumps({"links": deduped}, indent=2) + "\n", encoding="utf-8")
+    payload = json.dumps({"links": deduped}, indent=2) + "\n"
+    path = _links_path(project_path)
+    root = _project_root(project_path)
+    if txn is not None:
+        txn.stage_write(path, payload)
+        return
+    from planning_paths import atomic_write_text
+
+    atomic_write_text(path, payload, root=root, store_id=interchange_store_id(project_path))
 
 
 def note_to_record(path: Path, *, category_hint: str | None = None) -> dict[str, Any] | None:
@@ -313,6 +336,7 @@ def write_note(
     *,
     memories_directory: str = DEFAULT_MEMORIES_DIR,
     rules_directory: str = DEFAULT_RULES_DIR,
+    txn: PlanningTxnCoordinator | None = None,
 ) -> Path:
     ensure_project(
         project_path,
@@ -326,8 +350,18 @@ def write_note(
         memories_directory=memories_directory,
         rules_directory=rules_directory,
     )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render_note(note), encoding="utf-8")
+    rendered = render_note(note)
+    if txn is not None:
+        txn.stage_write(path, rendered)
+        return path
+    from planning_paths import atomic_write_text
+
+    atomic_write_text(
+        path,
+        rendered,
+        root=_project_root(project_path),
+        store_id=interchange_store_id(project_path),
+    )
     return path
 
 
@@ -393,45 +427,142 @@ def load_note(
 
 
 def note_fingerprint(record: dict[str, Any]) -> str:
-    payload = {
-        "id": record.get("id"),
-        "category": record.get("category"),
-        "body": record.get("body"),
-        "fields": {
-            k: v
-            for k, v in dict(record.get("fields") or {}).items()
-            if k not in {"id", "updatedAt", "createdAt"}
-        },
-    }
-    return hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+    import memory_fingerprint as fp
+
+    return fp.note_fingerprint(record)
 
 
-def remap_permalink_for_merge(
+def _record_revision(record: dict[str, Any]) -> str | None:
+    fields = dict(record.get("fields") or {})
+    for key in ("revision", "contentHash", "content_hash"):
+        value = record.get(key) if key in record else fields.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _record_project_id(record: dict[str, Any]) -> str | None:
+    fields = dict(record.get("fields") or {})
+    for key in ("projectId", "project", "sourceProject"):
+        value = record.get(key) if key in record else fields.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _core_content(record: dict[str, Any]) -> str:
+    body = str(record.get("body") or "")
+    fields = dict(record.get("fields") or {})
+    for key in ("content", "summary"):
+        if key in record and str(record[key]).strip():
+            return str(record[key]).strip()
+        if key in fields and str(fields[key]).strip():
+            return str(fields[key]).strip()
+    # Strip timeline / compiled-truth scaffolding for interchange re-import compare.
+    lines: list[str] = []
+    skip = False
+    for line in body.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("## "):
+            skip = stripped in {"## Timeline", "## Compiled truth", "## Relations"}
+            continue
+        if skip:
+            continue
+        if stripped.startswith("- `") and "@ " in stripped and " — " in stripped:
+            continue
+        lines.append(line)
+    return "\n".join(lines).strip()
+
+
+def _semantic_drift(existing: dict[str, Any], incoming: dict[str, Any]) -> bool:
+    if note_fingerprint(existing) == note_fingerprint(incoming):
+        return False
+    return _core_content(existing) != _core_content(incoming)
+
+
+def resolve_merge_identity(
     project_path: Path,
     existing_ids: set[str],
     imported_id: str,
     incoming: dict[str, Any],
     *,
+    alias_index: dict[str, str] | None = None,
     memories_directory: str = DEFAULT_MEMORIES_DIR,
     rules_directory: str = DEFAULT_RULES_DIR,
 ) -> tuple[str, bool]:
-    if imported_id not in existing_ids:
-        return imported_id, False
-    current = load_note(
-        project_path,
-        imported_id,
-        memories_directory=memories_directory,
-        rules_directory=rules_directory,
-    )
-    if current and note_fingerprint(current) == note_fingerprint(incoming):
-        return imported_id, False
-    suffix = hashlib.sha256(imported_id.encode("utf-8")).hexdigest()[:8]
-    candidate = f"{imported_id}-sw-{suffix}"
-    counter = 1
-    while candidate in existing_ids:
-        candidate = f"{imported_id}-sw-{suffix}-{counter}"
-        counter += 1
-    return candidate, True
+    """Resolve merge identity using stable id and alias fallbacks (R31).
+
+    Resolution order: record id, source project + revision, content hash,
+    supersedes. Suffix-counter collision families are not used.
+    """
+    from memory_import_resolve import extract_supersedes
+    from memory_key_collision import assert_no_alias_collision
+
+    incoming_fp = note_fingerprint(incoming)
+    aliases = alias_index if alias_index is not None else {}
+
+    if imported_id in existing_ids:
+        current = load_note(
+            project_path,
+            imported_id,
+            memories_directory=memories_directory,
+            rules_directory=rules_directory,
+        )
+        if current and not _semantic_drift(current, incoming):
+            return imported_id, False
+        for target in extract_supersedes(incoming):
+            if target in existing_ids:
+                assert_no_alias_collision(aliases, incoming, canonical_id=imported_id)
+                return imported_id, False
+        raise InterchangeError(
+            f"identity collision on {imported_id!r}: semantic drift without supersedes",
+            cause="alias-collision",
+        )
+
+    for alias, canonical in aliases.items():
+        if alias == imported_id or canonical == imported_id:
+            existing = load_note(
+                project_path,
+                canonical,
+                memories_directory=memories_directory,
+                rules_directory=rules_directory,
+            )
+            if existing and not _semantic_drift(existing, incoming):
+                return canonical, False
+
+    project_id = _record_project_id(incoming)
+    revision = _record_revision(incoming)
+    if project_id and revision:
+        for existing_id in existing_ids:
+            current = load_note(
+                project_path,
+                existing_id,
+                memories_directory=memories_directory,
+                rules_directory=rules_directory,
+            )
+            if not current:
+                continue
+            if _record_project_id(current) == project_id and _record_revision(current) == revision:
+                if not _semantic_drift(current, incoming):
+                    return existing_id, False
+
+    for existing_id in existing_ids:
+        current = load_note(
+            project_path,
+            existing_id,
+            memories_directory=memories_directory,
+            rules_directory=rules_directory,
+        )
+        if current and not _semantic_drift(current, incoming):
+            return existing_id, False
+
+    for target in extract_supersedes(incoming):
+        if target in existing_ids:
+            assert_no_alias_collision(aliases, incoming, canonical_id=imported_id)
+            return imported_id, False
+
+    assert_no_alias_collision(aliases, incoming, canonical_id=imported_id)
+    return imported_id, False
 
 
 def extract_record_links(record: dict[str, Any]) -> list[dict[str, str]]:
@@ -592,7 +723,14 @@ def import_project(
     memories_directory: str = DEFAULT_MEMORIES_DIR,
     rules_directory: str = DEFAULT_RULES_DIR,
 ) -> dict[str, Any]:
-    records = parse_interchange_records(fmt, source)
+    from memory_import_resolve import ImportResolveError, two_pass_import_resolve
+    from memory_key_collision import KeyCollisionError, build_alias_index
+
+    raw_records = parse_interchange_records(fmt, source)
+    try:
+        records, registry = two_pass_import_resolve(raw_records)
+    except ImportResolveError as exc:
+        raise InterchangeError(str(exc), cause=exc.cause) from exc
     ensure_project(
         project_path,
         memories_directory=memories_directory,
@@ -606,38 +744,43 @@ def import_project(
             rules_directory=rules_directory,
         )
     )
+    alias_index = build_alias_index(
+        list_notes(
+            project_path,
+            include_rules=True,
+            memories_directory=memories_directory,
+            rules_directory=rules_directory,
+        )
+    )
     id_map: dict[str, str] = {}
     remapped: list[dict[str, str]] = []
     incoming_links: list[dict[str, str]] = []
     imported_count = 0
 
-    for record in records:
+    def _process_record(record: dict[str, Any]) -> None:
+        nonlocal imported_count
         category = str(record.get("category") or "learning")
         if category == RULE_CATEGORY and not include_rules:
-            # Ordinary import skips rule-class unless explicitly requested.
-            continue
+            return
         note = record_to_note(record)
         original_id = str(record["id"])
-        final_id, was_remapped = remap_permalink_for_merge(
-            project_path,
-            existing_ids | set(id_map.values()),
-            original_id,
-            {**record, "id": original_id},
-            memories_directory=memories_directory,
-            rules_directory=rules_directory,
-        )
+        try:
+            final_id, was_remapped = resolve_merge_identity(
+                project_path,
+                existing_ids | set(id_map.values()),
+                original_id,
+                {**record, "id": original_id},
+                alias_index=alias_index,
+                memories_directory=memories_directory,
+                rules_directory=rules_directory,
+            )
+        except KeyCollisionError as exc:
+            raise InterchangeError(str(exc), cause=exc.cause) from exc
         if was_remapped:
             remapped.append({"from": original_id, "to": final_id})
         id_map[original_id] = final_id
         note["permalink"] = final_id
         note["frontmatter"]["permalink"] = final_id
-        if not dry_run:
-            write_note(
-                project_path,
-                note,
-                memories_directory=memories_directory,
-                rules_directory=rules_directory,
-            )
         existing_ids.add(final_id)
         imported_count += 1
         for link in extract_record_links({**record, "id": original_id}):
@@ -649,9 +792,57 @@ def import_project(
                 }
             )
 
-    if not dry_run and incoming_links:
-        merged = load_links(project_path) + incoming_links
-        save_links(project_path, merged)
+    if not dry_run:
+        from planning_txn import planning_transaction
+
+        root = _project_root(project_path)
+        with planning_transaction(root, interchange_store_id(project_path)) as txn:
+            for record in records:
+                category = str(record.get("category") or "learning")
+                if category == RULE_CATEGORY and not include_rules:
+                    continue
+                note = record_to_note(record)
+                original_id = str(record["id"])
+                try:
+                    final_id, was_remapped = resolve_merge_identity(
+                        project_path,
+                        existing_ids | set(id_map.values()),
+                        original_id,
+                        {**record, "id": original_id},
+                        alias_index=alias_index,
+                        memories_directory=memories_directory,
+                        rules_directory=rules_directory,
+                    )
+                except KeyCollisionError as exc:
+                    raise InterchangeError(str(exc), cause=exc.cause) from exc
+                if was_remapped:
+                    remapped.append({"from": original_id, "to": final_id})
+                id_map[original_id] = final_id
+                note["permalink"] = final_id
+                note["frontmatter"]["permalink"] = final_id
+                write_note(
+                    project_path,
+                    note,
+                    memories_directory=memories_directory,
+                    rules_directory=rules_directory,
+                    txn=txn,
+                )
+                existing_ids.add(final_id)
+                imported_count += 1
+                for link in extract_record_links({**record, "id": original_id}):
+                    incoming_links.append(
+                        {
+                            "source": id_map.get(link["source"], link["source"]),
+                            "target": id_map.get(link["target"], link["target"]),
+                            "edge": link["edge"],
+                        }
+                    )
+            if incoming_links:
+                merged = load_links(project_path) + incoming_links
+                save_links(project_path, merged, txn=txn)
+    else:
+        for record in records:
+            _process_record(record)
 
     return {
         "verdict": "pass",
@@ -663,4 +854,5 @@ def import_project(
         "projectPath": str(_project_root(project_path)),
         "idRemaps": remapped,
         "linksImported": len(incoming_links),
+        "registeredIds": sorted(registry.canonical.keys()),
     }

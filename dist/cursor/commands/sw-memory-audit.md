@@ -51,6 +51,21 @@ Present legacy reconcile steps before applying a mode switch; never auto-mutate 
 
 **Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-memory-audit`.
 
+## Sensitivity declassification (R29)
+
+Lowering memory envelope `sensitivity` is the **sole human-gated path** for declassification.
+Raising restriction (toward `secret`) is permitted without audit approval; lowering (declassification)
+requires explicit operator approval through this command — no other workflow may lower sensitivity.
+
+1. Identify envelopes whose stored `sensitivity` should be lowered (declassified).
+2. Present the proposed `fromTier` → `toTier` transition in the audit proposal table with rationale.
+3. On explicit approval, record the transition via `scripts/memory_sensitivity.py`:
+   `record_declassification_approval` journals every approval (stable id, tiers, approver, timestamp).
+4. Apply the lowered tier only after journaling — use `set_envelope_sensitivity` with a matching
+   `approval` payload or adapter writes that route through the same setter.
+
+Never lower sensitivity during bulk import, sync, or automated promotion without this audit gate.
+
 ## Guardrails
 
 - Default is propose-only. Never mutate memory without explicit approval.

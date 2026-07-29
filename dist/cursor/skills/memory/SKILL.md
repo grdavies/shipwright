@@ -155,18 +155,93 @@ python3 scripts/memory-sot.py resolve --class learning --json
 
 Default `auto` + `in-repo` preserves today's R32/KTD3 behavior (no change for existing repos).
 
+### Migration gate (R30 — memory-authoritative providers)
+
+When `memory.sourceOfTruth` is **omitted** and the active provider's catalog row has
+`sourceOfTruthClass: memory-authoritative`, Shipwright **fail-closed** until the operator exports
+decision bodies and sets an explicit knob:
+
+```bash
+python3 scripts/memory-sot.py resolve --class decision --json
+python3 scripts/planning-doctor.py --root .   # surfaces migration-required classification
+```
+
+Remediation: run `/sw-memory-export` (or `python3 scripts/memory-sot.py` migration export command) to
+materialize provider decision bodies, then set `memory.sourceOfTruth` to `repo` or `memory` explicitly in
+`workflow.config.json`. Repo-authoritative providers (`in-repo`) with an omitted key resolve as
+implicit-repo-default without migration.
+
+## Memory envelope v2 (R29)
+
+Distilled memories use the canonical v2 envelope (`scripts/memory_envelope_v2.py`,
+`schemaVersion: 2`). Supersession creates a **new** envelope and marks the prior record `superseded` —
+no in-place mutation. Provider adapters map native storage onto this codec at read/write boundaries;
+catalog `envelopeFields` (native / sideChannel / lossy) records per-provider fidelity.
+
+| Field | Role |
+| --- | --- |
+| `stableId` | Canonical memory id (filename stem for in-repo) |
+| `projectId` | `memory.project` scope |
+| `category` | Canonical doc class (`decision`, `learning`, `rule`, …) |
+| `status` | `active` or `superseded` |
+| `scope` | `{repos, paths, tags}` binding |
+| `evidenceRefs` | Citations / backlinks |
+| `confidence` | Distillation confidence (0–1) |
+| `observedAt` | ISO timestamp of observation |
+| `lastValidatedAt` | Last validation stamp (nullable) |
+| `validUntil` | Optional expiry (nullable) |
+| `supersedes` | Prior `stableId` chain |
+| `contentHash` | SHA-256 over semantic body |
+| `schemaVersion` | Always `2` for new records |
+| `sensitivity` | `public` \| `internal` \| `private` \| `secret` |
+| `appliedRedaction` | Provenance record from the redaction chokepoint |
+
+v1 records upgrade via `scripts/memory_envelope_upgrade.py`; alias merges persist in
+`.cursor/sw-memory/alias-ledger/`.
+
+## Destination-aware redaction (R29/R41 — mandatory before persist/re-inject)
+
+Redaction is **destination-tier aware**. The `--destination` argument is **required** — there is no
+default. Valid tiers: `local`, `committed`, `external`, `cross-project`, `logs`.
+
+```bash
+python3 scripts/sw_bootstrap.py memory-redact.py --destination external <<'EOF'
+<payload>
+EOF
+```
+
+| Destination | Residual secrets |
+| --- | --- |
+| `external`, `cross-project`, `logs` | **Fail-closed** — non-zero exit when patterns remain |
+| `local`, `committed` | Advisory — residuals logged; write may proceed |
+
+Named egress enforcement points (`/sw-memory-sync`, cross-project copy) call
+`enforce_egress(..., destination_tier=...)` and stamp `appliedRedaction` via
+`scripts/memory_redaction_provenance.py`. See `rules/memory-guardrails.mdc` for the full contract.
+
+## Portability and audit commands
+
+| Command | Doc | Purpose |
+| --- | --- | --- |
+| `/sw-memory-export` | `core/commands/sw-memory-export.md` | Neutral JSONL/OKF export for backup or provider swap |
+| `/sw-memory-import` | `core/commands/sw-memory-import.md` | Import neutral interchange (human-gated for `rule` class) |
+| `/sw-memory-sync` | `core/commands/sw-memory-sync.md` | Distill transcript deltas into the provider |
+| `/sw-memory-audit` | `core/commands/sw-memory-audit.md` | Inspect, propose cleanup, human-gated rule promotion |
+
+Route all four through this skill + `providers/<memory.provider>.md` — never direct provider tool calls.
+
 ## Redaction chokepoint (R41 — mandatory before persist/re-inject)
 
 Before **any** `store`, transcript distillation (`/sw-memory-sync`), or compounding write, pipe content
 through the executable filter:
 
 ```bash
-python3 scripts/sw_bootstrap.py memory-redact.py<<'EOF'
+python3 scripts/sw_bootstrap.py memory-redact.py --destination committed <<'EOF'
 <payload>
 EOF
 ```
 
-Or: `python3 scripts/sw_bootstrap.py memory-redact.py -- path/to/file`. The filter is deterministic (same input → same output),
+Or: `python3 scripts/sw_bootstrap.py memory-redact.py --destination committed -- path/to/file`. The filter is deterministic (same input → same output),
 runs offline, and scrubs the named corpus in `rules/memory-guardrails.mdc` (AWS keys, GitHub PATs, JWTs,
 `Bearer` tokens, PEM private keys, emails). Never persist or re-inject unredacted content.
 

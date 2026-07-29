@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -218,11 +219,42 @@ def resolve_phase_id(
     return None
 
 
-def sync_phase_done(root: Path, state: dict[str, Any], phase_id: str) -> dict[str, Any]:
-    """Apply phase-done progress on parent or opt-in sub-issue (PRD 056 R6, PRD 061 R6–R8)."""
-    if not _issue_store_effective(root):
-        return {"verdict": "ok", "skipped": True, "reason": "file-store"}
+_PROGRESS_LOCAL_DIR = "_progress-local"
 
+
+def local_progress_path(root: Path, phase_id: str) -> Path:
+    run_slug = os.environ.get("SW_PHASE_SLUG", "").strip() or "global"
+    return root / ".cursor" / "sw-deliver-runs" / run_slug / _PROGRESS_LOCAL_DIR / f"phase-{phase_id}.json"
+
+
+def write_local_progress_state(root: Path, phase_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    """Persist non-authoritative progress/run-state under the phase run dir (R26 phase 8)."""
+    import planning_authority as pa
+
+    cfg = load_workflow_config(root)
+    decision = pa.resolve_authority(root, cfg)
+    disposition = pa.apply_write_disposition(decision, write_class="progress")
+    path = local_progress_path(root, phase_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    record = {
+        "phaseId": phase_id,
+        "writtenAt": utc_now(),
+        "disposition": disposition.get("disposition"),
+        "authoritative": False,
+        **payload,
+    }
+    path.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    return {
+        "verdict": "ok",
+        "action": "local-progress-write",
+        "path": str(path),
+        "disposition": disposition.get("disposition"),
+        "authoritative": False,
+    }
+
+
+def sync_phase_done(root: Path, state: dict[str, Any], phase_id: str) -> dict[str, Any]:
+    """Apply phase-done progress locally; never promote run-state to the store (R26 phase 8)."""
     hmap = load_hierarchy_map(state)
     if not hmap.get("applied"):
         return {"verdict": "ok", "skipped": True, "reason": "no-hierarchy-map"}
@@ -240,52 +272,19 @@ def sync_phase_done(root: Path, state: dict[str, Any], phase_id: str) -> dict[st
             "issueId": target,
         }
 
-    if _parent_progress_mode(hmap):
-        parent_id = hmap.get("epicIssueId")
-        if not parent_id:
-            return {"verdict": "ok", "skipped": True, "reason": "missing-parent-issue", "phaseId": phase_id}
-        task_rel = state.get("source_task_list")
-        task_list = str(task_rel) if isinstance(task_rel, str) else None
-        projected_list = (
-            _ledger_projected_task_list(root, state, task_list) if task_list else task_list
-        )
-        out = progress_update(
-            root,
-            parent_issue_id=str(parent_id),
-            phase_id=str(phase_id),
-            action="phase-done",
-            provider=str(hmap.get("provider") or "none"),
-            project_key=str(hmap.get("projectKey") or ""),
-            task_list=projected_list,
-            checked_phase_ids=_checked_phase_ids(hmap, phase_id),
-        )
-        if out.get("degraded"):
-            _emit_progress_notice("label", str(out.get("error") or out.get("notice") or "progress-update-degraded"))
-        if out.get("verdict") == "ok" and not out.get("skipped"):
-            _mark_phase_done_synced(state, phase_id)
-        out.setdefault("phaseId", phase_id)
-        out.setdefault("issueId", parent_id)
-        return out
-
-    issue_id = entry.get("issueId")
-    if not issue_id:
-        return {"verdict": "ok", "skipped": True, "reason": "missing-sub-issue", "phaseId": phase_id}
-
-    out = progress_update(
+    local = write_local_progress_state(
         root,
-        parent_issue_id=str(issue_id),
-        phase_id=str(phase_id),
-        action="phase-done",
-        provider=str(hmap.get("provider") or "none"),
-        project_key=str(hmap.get("projectKey") or ""),
+        phase_id,
+        {
+            "action": "phase-done",
+            "label": phase_done_label(str(phase_id)),
+            "hierarchyMode": hmap.get("mode"),
+        },
     )
-    if out.get("degraded"):
-        _emit_progress_notice("label", str(out.get("error") or out.get("notice") or "progress-update-degraded"))
-    if out.get("verdict") == "ok" and not out.get("skipped"):
-        _mark_phase_done_synced(state, phase_id)
-    out.setdefault("phaseId", phase_id)
-    out.setdefault("issueId", issue_id)
-    return out
+    _mark_phase_done_synced(state, phase_id)
+    local.setdefault("phaseId", phase_id)
+    local.setdefault("issueId", entry.get("issueId") or hmap.get("epicIssueId"))
+    return local
 
 
 def _ledger_projected_task_list(
@@ -325,10 +324,7 @@ def sync_task_checkbox(
     task_list: str | Path,
     task_ref: str | None = None,
 ) -> dict[str, Any]:
-    """Project execution-ledger progress outward; never mutate frozen unit body (R23)."""
-    if not _issue_store_effective(root):
-        return {"verdict": "ok", "skipped": True, "reason": "file-store"}
-
+    """Project execution-ledger progress to local run dir only (R23, R26 phase 8)."""
     hmap = load_hierarchy_map(state)
     if not hmap.get("applied"):
         return {"verdict": "ok", "skipped": True, "reason": "no-hierarchy-map"}
@@ -338,24 +334,21 @@ def sync_task_checkbox(
     if not target_id:
         return {"verdict": "ok", "skipped": True, "reason": "missing-progress-target", "phaseId": phase_id}
 
-    projected_list = _ledger_projected_task_list(root, state, task_list)
-    out = progress_update(
+    local = write_local_progress_state(
         root,
-        parent_issue_id=str(target_id),
-        phase_id=str(phase_id),
-        action="task-checkbox",
-        provider=str(hmap.get("provider") or "none"),
-        project_key=str(hmap.get("projectKey") or ""),
-        task_list=projected_list,
-        task_ref=task_ref,
+        phase_id,
+        {
+            "action": "task-checkbox",
+            "taskList": str(task_list),
+            "taskRef": task_ref,
+            "issueId": target_id,
+        },
     )
-    if out.get("degraded"):
-        _emit_progress_notice("body", str(out.get("error") or out.get("notice") or "progress-body-degraded"))
-    out.setdefault("phaseId", phase_id)
-    out.setdefault("issueId", target_id)
+    local.setdefault("phaseId", phase_id)
+    local.setdefault("issueId", target_id)
     if task_ref:
-        out.setdefault("taskRef", task_ref)
-    return out
+        local.setdefault("taskRef", task_ref)
+    return local
 
 
 def propagate_checkbox_to_issue_store(

@@ -102,7 +102,13 @@ memory id returned by `search` / used by `expand` / `modify`.
 
 `semanticSearch` is `false`: retrieval uses `scripts/in-repo-memory-search.py` (keyword body match +
 frontmatter filters). `export`/`import` are native: walk the store and emit/consume neutral JSONL per
-`CAPABILITIES.md`.
+`CAPABILITIES.md`. Catalog `envelopeFields` records full native v2 coverage for this provider.
+
+## Envelope v2 (R29)
+
+All `memory_envelope_v2.py` required fields are stored natively in committed markdown frontmatter.
+Redaction uses `memory-redact.py --destination <tier>` (required) before every write.
+See `core/sw-reference/memory-provider-catalog.json` → `in-repo.envelopeFields`.
 
 ## Compiled truth and timeline (PRD 077)
 

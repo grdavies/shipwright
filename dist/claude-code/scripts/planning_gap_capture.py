@@ -242,9 +242,52 @@ def store_put_gap(
     content: str,
     *,
     skip_enrichment: bool = False,
-) -> None:
+) -> dict[str, Any]:
+    """Store gap body respecting write disposition for projection writes (R26 phase 8)."""
+    import planning_authority as pa
+    from planning_projection_ledger import set_projection_dirty
+    import planning_refusal_ledger as prl
+
     if not skip_enrichment:
         require_gap_enrichment(content)
+    cfg = ps.load_workflow_config(root)
+    from planning_projection_ledger import load_projection_ledger
+
+    ledger = load_projection_ledger(root)
+    decision = pa.resolve_authority(
+        root,
+        cfg,
+        projection_available=not bool(ledger.get("dirty")),
+    )
+    disposition = pa.apply_write_disposition(decision, write_class="projection")
+    if disposition.get("verdict") == "refused":
+        return {
+            "verdict": "refused",
+            "action": "store-put-gap",
+            "disposition": disposition.get("disposition"),
+            "reason": disposition.get("reason") or decision.reason,
+            "unitId": unit_id,
+        }
+    if disposition.get("disposition") == "refuse-ledger":
+        ledger = prl.record_refusal(
+            root,
+            unit_id=unit_id,
+            operation="gap-projection",
+            intended_body=content,
+            authority_state=decision.authorityState,
+            authority_reason=decision.reason,
+            cfg=cfg,
+        )
+        dirty = set_projection_dirty(root, reason=decision.reason or "refuse-ledger")
+        return {
+            "verdict": "ok",
+            "action": "store-put-gap",
+            "disposition": "refuse-ledger",
+            "ledgered": ledger.get("verdict") == "ok",
+            "projectionDirty": dirty.get("dirty"),
+            "unitId": unit_id,
+            "nonBlocking": True,
+        }
     backend = ps.get_backend(root)
     result = backend.put(unit_id, body_path_rel, content)
     if result.verdict not in ("ok", "deferred"):
@@ -264,6 +307,7 @@ def store_put_gap(
             refresh_gap_backlog_projection(root, apply=True)
     except ImportError:
         pass
+    return {"verdict": "ok", "action": "store-put-gap", "disposition": "accept", "unitId": unit_id}
 
 def next_gap_number(root: Path, units: list[pig.PlanningUnit]) -> int:
     max_n = 0
@@ -406,8 +450,10 @@ def find_duplicate_open_gap(title: str, open_titles: dict[str, str]) -> str | No
 
 def redact_override_reason(reason: str) -> str:
     from memory_redact import redact
+    from planning_visibility import resolve_emission_destination
 
-    return redact(reason)
+    destination = resolve_emission_destination("reconciler-output")
+    return redact(reason, destination=destination)
 
 
 def _normalize_override_anchor(

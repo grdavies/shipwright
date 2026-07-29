@@ -59,6 +59,14 @@ batch is identifiable and re-runnable.
 
 **Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-memory-import`.
 
+## Envelope v2 fields (R29)
+
+Imported interchange records map onto the canonical v2 envelope (`scripts/memory_envelope_v2.py`).
+Required fields: `stableId`, `projectId`, `category`, `status`, `scope`, `evidenceRefs`, `confidence`,
+`observedAt`, `lastValidatedAt`, `validUntil`, `supersedes`, `contentHash`, `schemaVersion`, `sensitivity`,
+`appliedRedaction`. Pipe body text through `memory-redact.py --destination committed` before store when
+content is present. Catalog `envelopeFields` documents per-provider lossy fields on synthesized interchange.
+
 ## Guardrails
 
 - Idempotent and dry-run-first. Never write without showing the intended batch and getting approval.

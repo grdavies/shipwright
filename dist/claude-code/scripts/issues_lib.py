@@ -483,40 +483,35 @@ class IssuesClient:
     def _live_backend(self) -> FixtureIssuesStore | Any:
         if self._fixture is not None:
             return self._fixture
+        from _planning_pkg_loader import load_providers_package
         from planning_store import resolve_issues_credential
 
-        if self.provider == "jira":
-            if self._jira is None:
-                from planning_jira_client import JiraIssuesClient
-
-                cred = resolve_issues_credential(self.root, issues_provider="jira")
-                self._jira = JiraIssuesClient(self.root, credential=cred)
-            return self._jira
-        if self.provider == "github-issues":
-            if self._github is None:
-                from planning_github_client import GitHubIssuesClient
-
-                cred = resolve_issues_credential(self.root, issues_provider="github-issues")
-                self._github = GitHubIssuesClient(self.root, credential=cred)
-            return self._github
+        providers = load_providers_package()
+        if self.provider in DEFERRED_ISSUES_PROVIDERS:
+            raise IssueCapabilityError(deferred_provider_message(self.provider))
         if self.provider == "linear":
             from planning_store import SHIPPED_ISSUES_PROVIDERS
 
             if self.provider not in SHIPPED_ISSUES_PROVIDERS:
                 raise IssueCapabilityError(unshipped_provider_message(self.provider))
-            if self._linear is None:
-                from planning_linear_client import LinearIssuesClient
-
-                cred = resolve_issues_credential(self.root, issues_provider="linear")
-                self._linear = LinearIssuesClient(self.root, credential=cred)
-            return self._linear
-        if self.provider in DEFERRED_ISSUES_PROVIDERS:
-            # PRD 057 R7 / D1: fail closed for deferred providers (gitlab-issues)
-            # rather than instantiating an unshipped adapter.
-            raise IssueCapabilityError(deferred_provider_message(self.provider))
-        raise IssueCapabilityError(
-            f"live {self.provider} API not available without SW_ISSUES_FIXTURE=1 in CI"
-        )
+        if self.provider not in providers.PROVIDER_MODULES:
+            raise IssueCapabilityError(
+                f"live {self.provider} API not available without SW_ISSUES_FIXTURE=1 in CI"
+            )
+        cache_attr = {
+            "github-issues": "_github",
+            "gitlab-issues": "_gitlab",
+            "jira": "_jira",
+            "linear": "_linear",
+        }.get(self.provider)
+        if cache_attr is None:
+            raise IssueCapabilityError(
+                f"live {self.provider} API not available without SW_ISSUES_FIXTURE=1 in CI"
+            )
+        if getattr(self, cache_attr) is None:
+            cred = resolve_issues_credential(self.root, issues_provider=self.provider)
+            setattr(self, cache_attr, providers.wire_client(self.provider, self.root, cred))
+        return getattr(self, cache_attr)
 
     def _charge_budget(self) -> None:
         if self._call_count >= self._budget:

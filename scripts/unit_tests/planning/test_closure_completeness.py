@@ -149,12 +149,14 @@ def test_close_done_phase_sub_issues_from_hierarchy_map(
     pp.provision_deliver_hierarchy(root, state)
     hmap = state["hierarchyMap"]
     phase1 = hmap["phases"]["1"]
-    sync_phase_done(root, state, "1")
+    sync_out = sync_phase_done(root, state, "1")
+    assert sync_out.get("action") == "local-progress-write", sync_out
+    assert hmap["phases"]["1"].get("doneSynced") is True
 
     fixture_path = root / ".cursor/hooks/state/issue-store-fixture.json"
     store = FixtureIssuesStore(fixture_path)
     issue = store.get(str(phase1["issueId"]))
-    assert phase_done_label("1") in issue.labels
+    assert phase_done_label("1") not in issue.labels
 
     out = close_done_phase_sub_issues(
         root,

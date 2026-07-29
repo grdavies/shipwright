@@ -14,8 +14,10 @@ if str(scripts) not in sys.path:
 
 import issues_http
 import issues_lib
+import host_lib
 import planning_linear_client as plc
 import planning_store as ps
+import planning_store_facade as ps_facade
 
 
 def _github_cfg(*, projects_enabled: bool = False) -> dict[str, Any]:
@@ -146,12 +148,13 @@ def test_r20_linear_live_backend_fail_closed_without_shipped(tmp_path: Path, mon
     assert "not shipped" in str(exc.value).lower()
 
 
-def test_r20_linear_issue_store_falls_back_to_file_store(tmp_path: Path) -> None:
-    """R20 — issue-store with unshipped linear resolves to in-repo-public."""
+def test_r20_linear_issue_store_reports_blocked_without_substitution(tmp_path: Path) -> None:
+    """R20 — unshipped linear keeps configured id and blocks without substitution."""
     resolved = ps.resolve_effective_backend(tmp_path, _linear_cfg())
     assert resolved["configured"] == "issue-store"
-    assert resolved["effective"] == ps.DEFAULT_BACKEND
+    assert resolved["effective"] == "issue-store"
     assert resolved["fallbackReason"] == "issues-provider-not-shipped"
+    assert resolved["authorityState"] == "blocked"
 
 
 def test_r21_github_issues_unchanged_when_linear_projects_off(
@@ -163,11 +166,13 @@ def test_r21_github_issues_unchanged_when_linear_projects_off(
     assert issues["provider"] == "github-issues"
     assert issues["shipped"] is True
     assert ps.issue_store_fallback_reason(tmp_path, cfg) != "issues-provider-not-shipped"
-    monkeypatch.setattr(
-        ps,
-        "resolve_provider",
-        lambda _root: {"verdict": "ok", "provider": "github", "remoteUrl": "https://github.com/acme/planning.git"},
-    )
+    fake_host = lambda _root: {
+        "verdict": "ok",
+        "provider": "github",
+        "remoteUrl": "https://github.com/acme/planning.git",
+    }
+    monkeypatch.setattr(host_lib, "resolve_provider", fake_host)
+    monkeypatch.setattr(ps_facade, "resolve_provider", fake_host)
     resolved = ps.resolve_effective_backend(tmp_path, cfg)
     assert resolved["configured"] == "issue-store"
     assert resolved["effective"] == "issue-store"
@@ -194,11 +199,13 @@ def test_r21_jira_unchanged_when_linear_off(tmp_path: Path, monkeypatch: pytest.
     assert issues["provider"] == "jira"
     assert issues["shipped"] is True
     assert ps.issue_store_fallback_reason(tmp_path, cfg) != "issues-provider-not-shipped"
-    monkeypatch.setattr(
-        ps,
-        "resolve_provider",
-        lambda _root: {"verdict": "ok", "provider": "github", "remoteUrl": "https://github.com/acme/planning.git"},
-    )
+    fake_host = lambda _root: {
+        "verdict": "ok",
+        "provider": "github",
+        "remoteUrl": "https://github.com/acme/planning.git",
+    }
+    monkeypatch.setattr(host_lib, "resolve_provider", fake_host)
+    monkeypatch.setattr(ps_facade, "resolve_provider", fake_host)
     resolved = ps.resolve_effective_backend(tmp_path, cfg)
     assert resolved["configured"] == "issue-store"
     assert resolved["effective"] == "issue-store"

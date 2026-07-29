@@ -18,6 +18,9 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from host_lib import load_workflow_config, remote_name, remote_ref
 
+import planning_ledger_store as pls
+import planning_refusal_ledger as prl
+
 
 def host_remote_name(root: Path) -> str:
     return remote_name(load_workflow_config(root))
@@ -526,6 +529,41 @@ def parse_worktrees(root: Path) -> list[dict[str, str]]:
     return [e for e in entries if e.get("path") and e["path"] != top]
 
 
+def enumerate_refusal_ledger(report: Report, root: Path) -> None:
+    """Enumerate operator-local refusal ledger entries for dry-run cleanup (PRD 082 R26)."""
+    cfg = load_workflow_config(root)
+    ledger_dir = pls.resolve_ledger_path(root, cfg)
+    contract = pls.verify_ledger_path_contract(root, ledger_dir)
+    if contract.get("verdict") != "ok":
+        if ledger_dir.exists():
+            report.protected.append(
+                Item(
+                    "refusal-ledger",
+                    str(ledger_dir.relative_to(root)),
+                    "protected",
+                    "ledger-path-contract-fail",
+                )
+            )
+        return
+    entries = prl.list_refusals(root, cfg)
+    if not entries:
+        return
+    report.notes.append(
+        "refusal-ledger entries are purge candidates; reconciling a refused write remains a human decision"
+    )
+    for entry in entries:
+        entry_id = str(entry.get("entryId") or entry.get("idempotencyKey") or "")
+        unit_id = str(entry.get("unitId") or "")
+        report.would_remove.append(
+            Item(
+                "refusal-ledger-entry",
+                entry_id,
+                "ledger-purge",
+                f"unit={unit_id}; reconciling refused writes is operator-only",
+            )
+        )
+
+
 def enumerate_cleanup(root: Path) -> Report:
     report = Report(dry_run=True)
     host_remote = host_remote_name(root)
@@ -619,10 +657,11 @@ def enumerate_cleanup(root: Path) -> Report:
             state_rel = rel_to_repo(root, resolve_state_path(root, state_hint=deliver_view.state))
             report.protected.append(Item("run-state", state_rel, "protected", verdict))
 
+    enumerate_refusal_ledger(report, root)
     return report
 
 
-_APPLY_KIND_ORDER = {"worktree": 0, "run-state": 1, "remote": 2, "branch": 3}
+_APPLY_KIND_ORDER = {"worktree": 0, "run-state": 1, "refusal-ledger-entry": 2, "remote": 3, "branch": 4}
 
 
 def _apply_sort_key(item: Item) -> tuple[int, str]:
@@ -677,6 +716,14 @@ def apply_report(root: Path, report: Report) -> Report:
                 elif path.is_file():
                     path.unlink(missing_ok=True)
                 report.removed.append(item)
+            elif item.kind == "refusal-ledger-entry":
+                cfg = load_workflow_config(root)
+                ledger_dir = pls.resolve_ledger_path(root, cfg)
+                result = pls.purge_entries(ledger_dir, [item.name], reason="cleanup-purge")
+                if result.get("purged"):
+                    report.removed.append(item)
+                else:
+                    report.errors.append(f"refusal-ledger-entry {item.name}: not found")
         except OSError as exc:
             report.errors.append(f"{item.kind} {item.name}: {exc}")
     report.would_remove = []

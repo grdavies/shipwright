@@ -682,6 +682,19 @@
 * merge phase operator-documentation-currency-medium into feat/credential-repository-isolation (3bf234b) <!-- sw-deliver:operator-documentation-currency-medium -->
 * merge phase provider-and-workflow-documentation-currency-medium into feat/credential-repository-isolation (a3e1b05) <!-- sw-deliver:provider-and-workflow-documentation-currency-medium -->
 * merge phase rollout-alias-removal-preflight-dist-regeneration-medium into feat/credential-repository-isolation (ab6cf39) <!-- sw-deliver:rollout-alias-removal-preflight-dist-regeneration-medium -->
+* merge phase transaction-coordinator-durable-journal-medium into feat/planning-authority-memory-integrity (993ac25) <!-- sw-deliver:transaction-coordinator-durable-journal-medium -->
+* merge phase memory-envelope-v2-codec-and-v1-upgrader-medium into feat/planning-authority-memory-integrity (2a8f1a5) <!-- sw-deliver:memory-envelope-v2-codec-and-v1-upgrader-medium -->
+* merge phase sourceoftruth-default-flip-behind-a-fail-closed-gate-small into feat/planning-authority-memory-integrity (703da01) <!-- sw-deliver:sourceoftruth-default-flip-behind-a-fail-closed-gate-small -->
+* merge phase hermetic-memory-eval-harness-medium into feat/planning-authority-memory-integrity (66b9adc) <!-- sw-deliver:hermetic-memory-eval-harness-medium -->
+* merge phase authority-decision-object-fallback-reason-mapping-medium into feat/planning-authority-memory-integrity (c3fca5b) <!-- sw-deliver:authority-decision-object-fallback-reason-mapping-medium -->
+* merge phase import-and-cli-inventory-plus-generated-shims-small into feat/planning-authority-memory-integrity (c700c71) <!-- sw-deliver:import-and-cli-inventory-plus-generated-shims-small -->
+* merge phase store-atomic-write-and-interchange-adopt-the-coordinator-medium into feat/planning-authority-memory-integrity (7865f4b) <!-- sw-deliver:store-atomic-write-and-interchange-adopt-the-coordinator-medium -->
+* merge phase domain-package-model-repository-identity-migrations-medium into feat/planning-authority-memory-integrity (778c8f0) <!-- sw-deliver:domain-package-model-repository-identity-migrations-medium -->
+* merge phase deduplication-fingerprint-allowlist-small into feat/planning-authority-memory-integrity (b8e3966) <!-- sw-deliver:deduplication-fingerprint-allowlist-small -->
+* merge phase sensitivity-tiers-and-monotonic-declassification-small into feat/planning-authority-memory-integrity (7c3b638) <!-- sw-deliver:sensitivity-tiers-and-monotonic-declassification-small -->
+* merge phase destination-binding-and-emission-point-registry-medium into feat/planning-authority-memory-integrity (0e32761) <!-- sw-deliver:destination-binding-and-emission-point-registry-medium -->
+* merge phase resolve-backend-cutover-write-lint-and-the-prd-080-boundary-medium into feat/planning-authority-memory-integrity (cda108c) <!-- sw-deliver:resolve-backend-cutover-write-lint-and-the-prd-080-boundary-medium -->
+* merge phase authority-hysteresis-and-per-operation-pinning-small into feat/planning-authority-memory-integrity (3f9cde8) <!-- sw-deliver:authority-hysteresis-and-per-operation-pinning-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

@@ -14,6 +14,7 @@ from memory_provider_register import validate_registration
 _CONFIG_PATHS = (".cursor/workflow.config.json", "workflow.config.json")
 _MARKER_PATHS = (".cursor/sw-memory.provider", "sw-memory.provider")
 _SOT_KNOB_VALUES = frozenset({"repo", "memory", "auto"})
+MIGRATION_EXPORT_COMMAND = "python3 scripts/memory-decision-snapshot.py export"
 _DECISION_CLASS = "decision"
 _DECISION_VIRTUAL_PREFIX = "docs/decisions/"
 DECISION_STUB_ALLOWLIST = frozenset(
@@ -80,14 +81,112 @@ def resolve_memory_provider(root: Path, config: dict | None = None) -> str | Non
     return read_memory_provider_marker(root)
 
 
-def read_source_of_truth_knob(config: dict) -> str:
+def source_of_truth_knob_state(config: dict) -> tuple[str | None, bool]:
+    """Return (knob value when valid, explicit flag). Absent key is unset (not auto)."""
     memory = config.get("memory", {}) if isinstance(config, dict) else {}
-    if not isinstance(memory, dict):
-        return "auto"
-    raw = memory.get("sourceOfTruth", "auto")
+    if not isinstance(memory, dict) or "sourceOfTruth" not in memory:
+        return None, False
+    raw = memory.get("sourceOfTruth")
     if isinstance(raw, str) and raw in _SOT_KNOB_VALUES:
-        return raw
-    return "auto"
+        return raw, True
+    return "auto", True
+
+
+def read_source_of_truth_knob(config: dict) -> str:
+    knob, explicit = source_of_truth_knob_state(config)
+    if explicit:
+        return str(knob)
+    return "repo"
+
+
+def classify_source_of_truth(root: Path, config: dict) -> dict:
+    """Classify memory.sourceOfTruth knob state for doctor (PRD 082 R30).
+
+    Returns three actionable classes on memory-authoritative providers:
+    explicit-auto, explicit-bound (repo|memory), and migration-required (omitted key).
+    Repo-authoritative providers with an omitted key resolve as implicit-repo-default (ok).
+    """
+    knob, explicit = source_of_truth_knob_state(config)
+    provider = resolve_memory_provider(root, config)
+    source_class = provider_source_of_truth_class(root, provider)
+    memory_authoritative = source_class == "memory-authoritative"
+
+    if not explicit:
+        if memory_authoritative:
+            blocked = migration_gate_blocks(root, config) or {}
+            return {
+                "check": "memory-source-of-truth",
+                "classification": "migration-required",
+                "status": "action-required",
+                "provider": provider,
+                "sourceOfTruthClass": source_class,
+                "exportCommand": blocked.get("exportCommand", MIGRATION_EXPORT_COMMAND),
+                "remediation": blocked.get(
+                    "remediation",
+                    (
+                        f"Run `{MIGRATION_EXPORT_COMMAND}` to materialize provider decision bodies, "
+                        "then set `memory.sourceOfTruth` explicitly in workflow.config.json"
+                    ),
+                ),
+            }
+        return {
+            "check": "memory-source-of-truth",
+            "classification": "implicit-repo-default",
+            "status": "ok",
+            "provider": provider,
+            "sourceOfTruthClass": source_class,
+            "note": "Omitted key on repo-authoritative provider resolves to repo without migration",
+        }
+
+    if knob == "auto":
+        return {
+            "check": "memory-source-of-truth",
+            "classification": "explicit-auto",
+            "status": "ok",
+            "provider": provider,
+            "sourceOfTruth": "auto",
+            "sourceOfTruthClass": source_class,
+            "note": "Explicit auto preserves provider-derived behavior",
+        }
+
+    return {
+        "check": "memory-source-of-truth",
+        "classification": "explicit-bound",
+        "status": "ok",
+        "provider": provider,
+        "sourceOfTruth": knob,
+        "sourceOfTruthClass": source_class,
+        "note": "Explicit repo or memory knob is operator-bound",
+    }
+
+
+def migration_gate_blocks(root: Path, config: dict) -> dict | None:
+    """Fail-closed gate when memory-authoritative provider has unset sourceOfTruth knob (R30)."""
+    knob, explicit = source_of_truth_knob_state(config)
+    if explicit:
+        return None
+    provider = resolve_memory_provider(root, config)
+    if provider_source_of_truth_class(root, provider) != "memory-authoritative":
+        return None
+    return {
+        "verdict": "fail",
+        "error": "sourceOfTruth migration gate",
+        "reason": (
+            "memory-authoritative provider requires decision-body export before the repo default applies"
+        ),
+        "provider": provider,
+        "exportCommand": MIGRATION_EXPORT_COMMAND,
+        "remediation": (
+            f"Run `{MIGRATION_EXPORT_COMMAND}` to materialize provider decision bodies, then set "
+            "`memory.sourceOfTruth` explicitly in workflow.config.json"
+        ),
+    }
+
+
+def enforce_migration_gate(root: Path, config: dict) -> None:
+    blocked = migration_gate_blocks(root, config)
+    if blocked:
+        emit(blocked, exit_code=2)
 
 
 def provider_source_of_truth_class(root: Path, provider: str | None) -> str | None:
@@ -103,20 +202,24 @@ def provider_source_of_truth_class(root: Path, provider: str | None) -> str | No
 
 
 def resolve_effective_sot(
-    knob: str,
+    knob: str | None,
     provider: str | None,
     doc_class: str,
     *,
     root: Path,
+    knob_explicit: bool = True,
 ) -> str:
     if doc_class != _DECISION_CLASS:
         return "distillation"
-    if knob == "repo":
-        return "repo"
-    if knob == "memory":
-        return "memory"
-    if provider_source_of_truth_class(root, provider) == "memory-authoritative":
-        return "memory"
+    if knob_explicit:
+        if knob == "repo":
+            return "repo"
+        if knob == "memory":
+            return "memory"
+        if knob == "auto":
+            if provider_source_of_truth_class(root, provider) == "memory-authoritative":
+                return "memory"
+            return "repo"
     return "repo"
 
 
@@ -201,17 +304,27 @@ def git_root(start: Path) -> Path:
 
 def cmd_resolve(root: Path, doc_class: str, as_json: bool) -> None:
     config = load_config(root)
-    knob = read_source_of_truth_knob(config)
+    knob, knob_explicit = source_of_truth_knob_state(config)
+    if doc_class == _DECISION_CLASS:
+        enforce_migration_gate(root, config)
     provider = resolve_memory_provider(root, config)
-    effective = resolve_effective_sot(knob, provider, doc_class, root=root)
+    effective = resolve_effective_sot(
+        knob,
+        provider,
+        doc_class,
+        root=root,
+        knob_explicit=knob_explicit,
+    )
     scoped = doc_class == _DECISION_CLASS
+    reported_knob = knob if knob_explicit else "repo"
 
     if as_json:
         payload: dict = {
             "verdict": "pass",
             "action": "resolve",
             "class": doc_class,
-            "sourceOfTruth": knob,
+            "sourceOfTruth": reported_knob,
+            "sourceOfTruthExplicit": knob_explicit,
             "provider": provider,
             "effective": effective,
             "scoped": scoped,
@@ -314,9 +427,16 @@ def cmd_pointer_recipe(
     as_json: bool,
 ) -> None:
     config = load_config(root)
-    knob = read_source_of_truth_knob(config)
+    knob, knob_explicit = source_of_truth_knob_state(config)
+    enforce_migration_gate(root, config)
     provider = resolve_memory_provider(root, config)
-    effective = resolve_effective_sot(knob, provider, _DECISION_CLASS, root=root)
+    effective = resolve_effective_sot(
+        knob,
+        provider,
+        _DECISION_CLASS,
+        root=root,
+        knob_explicit=knob_explicit,
+    )
     decision_home = resolve_decision_home(root, config)
     recipe = build_pointer_recipe(
         effective,
@@ -326,7 +446,8 @@ def cmd_pointer_recipe(
     )
 
     if as_json:
-        recipe["sourceOfTruth"] = knob
+        recipe["sourceOfTruth"] = knob if knob_explicit else "repo"
+        recipe["sourceOfTruthExplicit"] = knob_explicit
         recipe["provider"] = provider
         recipe["decisionHome"] = decision_home
         emit(recipe)

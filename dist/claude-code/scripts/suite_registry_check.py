@@ -75,7 +75,7 @@ def run_suite_registry_check(root: Path | None = None) -> tuple[int, list[str]]:
             ok("manifest-pr-ci-subset: committed manifest matches registry pr-ci projection")
 
     workflow_path = root / ".github/workflows/pr-test-plan-ci.yml"
-    generator = root / "scripts/generate-pr-test-plan-ci-workflow.py"
+    generator = root / "scripts/ci_plan_gen.py"
     with tempfile.NamedTemporaryFile(suffix=".yml", delete=False) as tmp:
         tmp_path = Path(tmp.name)
     try:
@@ -83,6 +83,7 @@ def run_suite_registry_check(root: Path | None = None) -> tuple[int, list[str]]:
             [
                 sys.executable,
                 str(generator),
+                "pr-test-plan",
                 str(manifest_path),
                 str(tmp_path),
                 str(root),

@@ -406,6 +406,12 @@ Authoritative deliver run-state lives under `.cursor/sw-deliver-runs/<runId>/sta
 (`wave_run_paths.state_path`). The root `index.json` carries discovery fields only (`runId`, `target`,
 `taskList`, `verdict`, `statePath`, `lockKeyDigest`) — never the exclusion primitive.
 
+Run-scoped path accessors (`wave_run_paths.runs_root`, `plan_path`, `state_path`, etc.) anchor at
+`wave_state.path_normalize_anchor` — the shared primary repo root via `git-common-dir` when git is present.
+When `root` is not a git tree (unit harness fixtures only), anchoring soft-fails to `root.resolve()` so
+temp fixture trees can mint run ids without forking `.cursor/sw-deliver-runs/`. Production deliver paths
+still fail closed through `canonical_repo_root` where git presence is mandatory.
+
 Legacy slug-scoped files (`.cursor/sw-deliver-state.<slug>.json`, `.cursor/sw-deliver-<slug>.lock`) remain
 enumerable for `list` / `resume` until adopted. Orchestrator and phase worktrees read and write through
 `wave_state.resolve_state_path()` / `scoped_paths()` at the git toplevel — never a second authoritative
@@ -905,6 +911,21 @@ Bidirectional file ⇄ issue migration records durable per-artifact state under 
 
 Dry-run (no `--apply`) must not create or update this file. Command surface: `/sw-migrate` /
 `scripts/planning_migrate.py` `store-files-to-issues` | `store-issues-to-files`.
+
+## Planning backend and authority (PRD 082 R26/R27)
+
+Authority resolution is **backend-neutral** — `scripts/planning_authority.py` returns `authorityState`
+(`online` | `read-only` | `blocked`), `writeDisposition`, and `reason` for the **configured** backend only.
+There is no silent substitution to a different backend id.
+
+| Surface | Canonical path | Notes |
+| --- | --- | --- |
+| Planning package facade | `scripts/planning_store_facade.py` | Planning package facade boundary — sole implementation surface for store mutations; `scripts/planning_store.py` and `scripts/planning/cli.py` are shims that delegate here — callers must not bypass the facade |
+| Authority policy matrix | `scripts/planning_authority_reasons.py` | Maps fallback reasons to the three authority states and write dispositions |
+| Refusal ledger (operator-local) | `.cursor/sw-refusal-ledger` (default; override `planning.refusalLedger.path`) | Owner-only bounded store (`scripts/planning_ledger_store.py`); entries dir `entries/`; eviction journal `eviction-journal.json`; operator CLI `scripts/planning_refusal_ledger_cli.py` (`list`, `show`, `export`, `purge`) |
+
+Reconciling a refused write after inspection is a **human decision** — ledger export surfaces operator-runnable
+record commands only; purge is journaled and does not replay refused writes.
 
 ## Credential machine-local records
 

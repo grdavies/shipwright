@@ -172,7 +172,9 @@ def test_update_truth_atomic_and_append_only(tmp_path: Path) -> None:
 
 
 def test_atomic_write_uses_replace(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """R8 — writes go through temp file + os.replace."""
+    """R8 — writes go through coordinator-backed durable temp + rename."""
+    import planning_txn
+
     calls: list[tuple[str, str]] = []
     real_replace = os.replace
 
@@ -180,13 +182,13 @@ def test_atomic_write_uses_replace(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         calls.append((str(src), str(dst)))
         real_replace(src, dst)
 
-    monkeypatch.setattr(irms.os, "replace", tracking_replace)
+    monkeypatch.setattr(planning_txn.os, "replace", tracking_replace)
     target = tmp_path / "memories" / "x.md"
     irms.atomic_write_text(target, "hello\n")
     assert target.read_text(encoding="utf-8") == "hello\n"
     assert calls
-    assert calls[0][1] == str(target)
-    assert calls[0][0].endswith(".tmp")
+    assert calls[-1][1] == str(target)
+    assert ".staging" in calls[-1][0] or calls[-1][0].endswith(".tmp")
 
 
 def test_modify_appends_timeline_evidence(tmp_path: Path) -> None:

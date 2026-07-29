@@ -146,6 +146,49 @@ def resolve_closeout_control_layer(root: Path, cfg: dict[str, Any]) -> dict[str,
     return pbc.resolve_control_layer(root, cfg, override="issue-store", closeout_override=True)
 
 
+def resolve_closeout_authority(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Closeout mutate path must respect authority disposition — no upgrade (R26 phase 8)."""
+    import planning_authority as pa
+    from planning_store import resolve_effective_backend
+
+    resolved = resolve_effective_backend(root, cfg)
+    decision = pa.AuthorityDecision(
+        configured=str(resolved.get("configured") or ""),
+        authorityState=str(resolved.get("authorityState") or ""),
+        reason=resolved.get("reason"),
+        writeDisposition=str(resolved.get("writeDisposition") or ""),
+        cacheValidity=str(resolved.get("cacheValidity") or ""),
+        guidance=resolved.get("guidance"),
+    )
+    return {
+        "decision": decision,
+        "resolved": resolved,
+        "substantiveAllowed": pa.substantive_deliver_allowed(decision),
+    }
+
+
+def enforce_closeout_authority(
+    root: Path,
+    cfg: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return a fail payload when closeout override cannot upgrade read-only/blocked authority."""
+    import planning_authority as pa
+
+    authority = resolve_closeout_authority(root, cfg)
+    decision = authority["decision"]
+    if not authority["substantiveAllowed"]:
+        reason = decision.reason or decision.writeDisposition
+        return {
+            "verdict": "fail",
+            "error": "closeout-authority-refused",
+            "reason": reason,
+            "writeDisposition": decision.writeDisposition,
+            "authorityState": decision.authorityState,
+            "resumeCommand": pa.deliver_resume_command(root, reason=reason),
+        }
+    return None
+
+
 def apply_closeout_planning_credential(
     root: Path,
     cfg: dict[str, Any],
@@ -285,8 +328,8 @@ def surface_operator_failure(
                 if record is not None:
                     backend._client.issue_comment(record.id, message, markers=["sw-closeout-failure"])
                     channels.append("prd-unit-comment")
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001 — surface refusal reason, do not swallow
+            channels.append(f"prd-unit-comment-failed:{exc}")
 
     return {
         "verdict": "surfaced",
@@ -456,7 +499,32 @@ def run_ci_closeout(
         report["slo"] = build_slo_report(started_at=started_at, finished_at=finished_at, slo=slo, verdict="observe")
         report["safetyReconcile"] = safety
         report["controlLayer"] = control_layer
+        report["closeoutAuthority"] = resolve_closeout_authority(root, cfg)
         return report
+
+    authority_refusal = enforce_closeout_authority(root, cfg)
+    if authority_refusal is not None:
+        finished_at = clock()
+        payload = {
+            **authority_refusal,
+            "gate": gate,
+            "mergeSha": merge_sha,
+            "deliveryCount": len(deliveries),
+            "deliveries": deliveries,
+            "controlLayer": control_layer,
+        }
+        payload["slo"] = build_slo_report(started_at=started_at, finished_at=finished_at, slo=slo, verdict="fail")
+        payload["surface"] = surface_operator_failure(
+            root,
+            cfg,
+            error=str(authority_refusal.get("reason") or authority_refusal.get("error")),
+            resume_command=str(authority_refusal.get("resumeCommand") or ""),
+            pr_number=deliveries[0].get("prNumber"),
+            prd_unit_id=str(deliveries[0].get("prdUnitId") or ""),
+            slo=slo,
+            surface_hook=surface_hook,
+        )
+        return payload
 
     credential, child_env = apply_closeout_planning_credential(root, cfg)
     token_env = resolve_planning_token_env(cfg)

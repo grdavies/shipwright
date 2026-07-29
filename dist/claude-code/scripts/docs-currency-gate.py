@@ -345,10 +345,20 @@ def main(argv: list[str] | None = None) -> int:
             drift.append({"kind": "gap-backlog-integrity", "detail": payload})
 
     from docs_currency_081 import check_release_guide_artifacts
+    from docs_currency_memory import check_memory_doc_currency
+    from docs_currency_planning import check_planning_doc_currency
 
     guide_drift = check_release_guide_artifacts(root)
     if guide_drift:
         drift.extend(guide_drift)
+
+    memory_drift = check_memory_doc_currency(root)
+    if memory_drift:
+        drift.extend(memory_drift)
+
+    planning_drift = check_planning_doc_currency(root)
+    if planning_drift:
+        drift.extend(planning_drift)
 
     if drift:
         print(json.dumps({"verdict": "fail", "action": "docs-currency-gate", "prd": prd, "drift": drift}))
