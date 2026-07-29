@@ -25,6 +25,9 @@ WIDEN_GLOBS: tuple[str, ...] = (
 )
 
 REGISTRY_REL = Path("core/sw-reference/suite-registry.json")
+CORE_DOMAIN_IDS: tuple[str, ...] = ("planning", "memory", "credential")
+EVAL_DOMAIN_ID = "eval"
+CHANGED_DOMAIN_PLAN_ID = "changed-domain"
 
 
 def repo_root(start: Path | None = None) -> Path:
@@ -64,6 +67,162 @@ def load_registry(root: Path) -> dict[str, Any]:
     if not isinstance(data.get("suites"), list):
         raise ValueError("invalid suite registry shape")
     return data
+
+
+def registry_plans(registry: dict[str, Any]) -> dict[str, Any]:
+    plans = registry.get("plans")
+    return plans if isinstance(plans, dict) else {}
+
+
+def registry_domains(registry: dict[str, Any]) -> dict[str, Any]:
+    domains = registry.get("domains")
+    return domains if isinstance(domains, dict) else {}
+
+
+def domain_path_triggers(domain: dict[str, Any]) -> list[str]:
+    triggers = domain.get("pathTriggers")
+    return [str(t) for t in triggers] if isinstance(triggers, list) else []
+
+
+def domain_suite_ids(domain: dict[str, Any], *, core_only: bool = False) -> list[str]:
+    key = "coreSuiteIds" if core_only else "suiteIds"
+    values = domain.get(key)
+    if isinstance(values, list) and values:
+        return [str(v) for v in values]
+    if core_only:
+        return []
+    suite_id = domain.get("suiteId")
+    return [str(suite_id)] if suite_id else []
+
+
+def changed_paths_match_domain(domain: dict[str, Any], changed_paths: list[str]) -> bool:
+    triggers = domain_path_triggers(domain)
+    if not triggers:
+        return False
+    for changed in changed_paths:
+        for trigger in triggers:
+            if path_matches_glob(changed, trigger):
+                return True
+    return False
+
+
+def matched_domains(registry: dict[str, Any], changed_paths: list[str]) -> set[str]:
+    matched: set[str] = set()
+    for domain_id, domain in registry_domains(registry).items():
+        if not isinstance(domain, dict):
+            continue
+        if changed_paths_match_domain(domain, changed_paths):
+            matched.add(str(domain_id))
+    return matched
+
+
+def compute_changed_domain_plan(
+    changed_paths: list[str],
+    *,
+    registry: dict[str, Any] | None = None,
+    root: Path | None = None,
+) -> dict[str, Any]:
+    """Select suites for the pull-request changed-domain plan (PRD 082 R35)."""
+    root = root or repo_root()
+    registry = registry or load_registry(root)
+    normalized = [normalize_repo_path(p) for p in changed_paths if p.strip()]
+    plans = registry_plans(registry)
+    plan_meta = plans.get(CHANGED_DOMAIN_PLAN_ID)
+    if not isinstance(plan_meta, dict):
+        raise ValueError(f"missing named plan: {CHANGED_DOMAIN_PLAN_ID}")
+
+    always_include = plan_meta.get("alwaysIncludeDomains")
+    if not isinstance(always_include, list) or not always_include:
+        always_include = list(CORE_DOMAIN_IDS)
+
+    domains = registry_domains(registry)
+    selected_domains: set[str] = set(matched_domains(registry, normalized))
+    selected_domains.update(str(domain_id) for domain_id in always_include)
+
+    suite_ids: set[str] = set()
+    for domain_id in always_include:
+        domain = domains.get(str(domain_id))
+        if isinstance(domain, dict):
+            suite_ids.update(domain_suite_ids(domain, core_only=True))
+
+    for domain_id in selected_domains:
+        if domain_id == EVAL_DOMAIN_ID:
+            continue
+        domain = domains.get(domain_id)
+        if isinstance(domain, dict) and domain_id in matched_domains(registry, normalized):
+            suite_ids.update(domain_suite_ids(domain))
+
+    suite_ids.update(match_suite_ids(registry, normalized))
+    eval_included = False
+    eval_domain = domains.get(EVAL_DOMAIN_ID)
+    if isinstance(eval_domain, dict) and changed_paths_match_domain(eval_domain, normalized):
+        eval_included = True
+        suite_ids.update(domain_suite_ids(eval_domain))
+
+    return {
+        "plan": CHANGED_DOMAIN_PLAN_ID,
+        "changedPaths": normalized,
+        "domains": sorted(selected_domains),
+        "matchedDomains": sorted(matched_domains(registry, normalized)),
+        "alwaysIncludeDomains": [str(d) for d in always_include],
+        "evalIncluded": eval_included,
+        "suites": sorted(suite_ids),
+    }
+
+
+def resolve_named_plan(
+    plan_id: str,
+    changed_paths: list[str] | None = None,
+    *,
+    registry: dict[str, Any] | None = None,
+    root: Path | None = None,
+) -> dict[str, Any]:
+    root = root or repo_root()
+    registry = registry or load_registry(root)
+    normalized = [normalize_repo_path(p) for p in (changed_paths or []) if p.strip()]
+    plans = registry_plans(registry)
+    plan = plans.get(plan_id)
+    if not isinstance(plan, dict):
+        raise ValueError(f"unknown named plan: {plan_id}")
+
+    inherits = plan.get("inherits")
+    if inherits:
+        base = resolve_named_plan(str(inherits), normalized, registry=registry, root=root)
+        return {
+            "plan": plan_id,
+            "inherits": str(inherits),
+            "suites": list(base.get("suites") or []),
+            "scope": plan.get("scope"),
+            "includeIntegration": bool(plan.get("includeIntegration")),
+        }
+
+    selection = plan.get("selection")
+    if selection == "changed-domains" or plan_id == CHANGED_DOMAIN_PLAN_ID:
+        return compute_changed_domain_plan(normalized, registry=registry, root=root)
+
+    scope = str(plan.get("scope") or "phase")
+    if scope == "full":
+        payload = build_plan(normalized, scope="full", registry=registry, root=root)
+        out: dict[str, Any] = {
+            "plan": plan_id,
+            "scope": "full",
+            "suites": payload.get("suites") or [],
+            "pytestArgs": payload.get("pytestArgs") or [],
+            "includeIntegration": bool(plan.get("includeIntegration")),
+        }
+        if plan.get("includeIntegration"):
+            out["pytestArgs"] = ["scripts/unit_tests"]
+        return out
+
+    suite_ids = plan.get("suiteIds")
+    if not isinstance(suite_ids, list):
+        suite_ids = []
+    return {
+        "plan": plan_id,
+        "scope": scope,
+        "suites": sorted({str(sid) for sid in suite_ids}),
+        "includeIntegration": bool(plan.get("includeIntegration")),
+    }
 
 
 def entry_triggers(entry: dict[str, Any]) -> list[str]:
