@@ -199,7 +199,7 @@ For **in-repo**, choose commit mode:
 
 For **recallium**: setup warns if the health check fails but still allows save.
 
-#### `memory.sourceOfTruth` migration (PRD 082 R30)
+#### `memory.sourceOfTruth` migration
 
 Decision-class records only. Provider selection (`memory.provider`) and authority selection
 (`memory.sourceOfTruth`) are independent.
