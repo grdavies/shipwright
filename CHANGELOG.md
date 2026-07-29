@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.11.0](https://github.com/grdavies/shipwright/compare/v1.10.0...v1.11.0) (2026-07-29)
+
+
+### Features
+
+* **prd-79:** host check evidence validity ([#627](https://github.com/grdavies/shipwright/issues/627)) ([25b5636](https://github.com/grdavies/shipwright/commit/25b563663d0ebf79ae5e73479418ec70de125304))
+* **prd-80:** credential repository isolation ([#675](https://github.com/grdavies/shipwright/issues/675)) ([7ba37c7](https://github.com/grdavies/shipwright/commit/7ba37c74345637c8a2c29cd9fe7c0d4d7a128396))
+* **prd-81:** workflow state machine hardening ([#648](https://github.com/grdavies/shipwright/issues/648)) ([86a60ee](https://github.com/grdavies/shipwright/commit/86a60eed5130d28a974ea83850929386a7a04705))
+* **prd-82:** planning authority memory integrity ([#712](https://github.com/grdavies/shipwright/issues/712)) ([9e2786e](https://github.com/grdavies/shipwright/commit/9e2786ec4e4420e2a25c0e60c733c5d8cdf38353))
+
+
+### Bug Fixes
+
+* **docs:** skip numeric prd metadata in doc_link checks ([#628](https://github.com/grdavies/shipwright/issues/628)) ([a268253](https://github.com/grdavies/shipwright/commit/a2682531befae001dd7db46c26cd1d9c93fe6ae9))
+
 ## [1.10.0](https://github.com/grdavies/shipwright/compare/v1.9.0...v1.10.0) (2026-07-23)
 
 
