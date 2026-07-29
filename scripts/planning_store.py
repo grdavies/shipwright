@@ -81,6 +81,41 @@ from planning_linear_projection import (
 )
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+from _planning_pkg_loader import load_package  # noqa: E402
+
+_planning_pkg = load_package()
+BARE_INTEGER_UNIT_ID = _planning_pkg.BARE_INTEGER_UNIT_ID
+LEGACY_UNIT_MAP_PATH = _planning_pkg.LEGACY_UNIT_MAP_PATH
+NATIVE_UNIT_ID_PATTERN = _planning_pkg.NATIVE_UNIT_ID_PATTERN
+NATIVE_UNIT_ID_PREFIX = _planning_pkg.NATIVE_UNIT_ID_PREFIX
+PROJECT_KEY_PATTERN = _planning_pkg.PROJECT_KEY_PATTERN
+PROJECT_KEY_REGISTRY = _planning_pkg.PROJECT_KEY_REGISTRY
+format_native_unit_id = _planning_pkg.format_native_unit_id
+is_bare_integer_unit_id = _planning_pkg.is_bare_integer_unit_id
+is_namespaced_native_unit_id = _planning_pkg.is_namespaced_native_unit_id
+load_legacy_unit_map = _planning_pkg.load_legacy_unit_map
+load_project_key_registry = _planning_pkg.load_project_key_registry
+native_unit_id_prefix = _planning_pkg.native_unit_id_prefix
+register_legacy_unit_mapping = _planning_pkg.register_legacy_unit_mapping
+reject_bare_integer_unit_id = _planning_pkg.reject_bare_integer_unit_id
+resolve_legacy_unit_id = _planning_pkg.resolve_legacy_unit_id
+reverse_resolve_legacy_unit_id = _planning_pkg.reverse_resolve_legacy_unit_id
+resolve_store_location = _planning_pkg.resolve_store_location
+save_legacy_unit_map = _planning_pkg.save_legacy_unit_map
+store_location_fingerprint = _planning_pkg.store_location_fingerprint
+unit_id_lookup_candidates = _planning_pkg.unit_id_lookup_candidates
+validate_project_key = _planning_pkg.validate_project_key
+ISSUES_MIGRATION_HOOKS = _planning_pkg.ISSUES_MIGRATION_HOOKS
+ORPHAN_MIGRATED_LABEL = _planning_pkg.ORPHAN_MIGRATED_LABEL
+migrate_orphan_phase_issues = _planning_pkg.migrate_orphan_phase_issues
+MATERIALIZE_MISSING_FROZEN_BODY = _planning_pkg.MATERIALIZE_MISSING_FROZEN_BODY
+PlanningUnit = _planning_pkg.PlanningUnit
+StoreResult = _planning_pkg.StoreResult
+materialize_missing_result = _planning_pkg.materialize_missing_result
+PlanningStoreBackend = _planning_pkg.PlanningStoreBackend
 
 DEFAULT_BACKEND = "in-repo-public"
 SHIPPED_BACKENDS = frozenset({"in-repo-public", "local-synced", "memory", "issue-store"})
@@ -154,8 +189,6 @@ BITBUCKET_ISSUE_STORE_GUIDANCE = {
     "never": "native-bitbucket-issues",
 }
 
-PROJECT_KEY_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
-PROJECT_KEY_REGISTRY = ".cursor/hooks/state/issue-store-project-keys.json"
 ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 
 # PRD 057 R26 -- partial-write journal for chunked `IssueStoreBackend.put`
@@ -171,14 +204,6 @@ PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
 ISSUE_STORE_TXN_ID = "issue-store"
 FILE_BACKED_STORE_TXN_ID = "file-backed"
 PUT_INCOMPLETE_LABEL = "sw:put-incomplete"
-LEGACY_UNIT_MAP_PATH = ".cursor/hooks/state/issue-store-legacy-unit-map.json"
-NATIVE_UNIT_ID_PREFIX: dict[str, str] = {
-    "github-issues": "gh:",
-    "jira": "jira:",
-    "gitlab-issues": "gl:",
-}
-NATIVE_UNIT_ID_PATTERN = re.compile(r"^(gh|jira|gl):(\d+)$")
-BARE_INTEGER_UNIT_ID = re.compile(r"^\d{3}$")
 
 
 from issues_lib import (  # noqa: E402
@@ -503,12 +528,6 @@ ISSUES_CAPABILITY_INDEX_IDS: dict[str, str] = {
     "none": "provider.providers.issues.none",
 }
 
-ISSUES_MIGRATION_HOOKS: tuple[str, ...] = (
-    "scripts/planning_migrate_issue_store.py",
-    "scripts/planning_migrate.py",
-)
-
-
 def issues_provider_registration_footprint() -> dict[str, Any]:
     """PRD 066 R16/R20 — registration touchpoints for issue-backed adapters."""
     linear_wired = _linear_live_client_wired()
@@ -800,123 +819,6 @@ def resolve_effective_backend(root: Path, cfg: dict[str, Any], *, override: str 
         "shipped": configured in SHIPPED_BACKENDS,
         "deferred": configured in DEFERRED_BACKENDS,
     }
-
-
-def resolve_store_location(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
-    store = store_section(cfg)
-    loc = store.get("storeLocation")
-    mode = "same-repo"
-    if isinstance(loc, dict):
-        raw_mode = loc.get("mode")
-        if isinstance(raw_mode, str) and raw_mode in {"same-repo", "separate-project"}:
-            mode = raw_mode
-
-    if mode == "same-repo":
-        host = resolve_provider(root)
-        remote = host.get("remote") if isinstance(host.get("remote"), str) else remote_name(cfg)
-        owner_repo = parse_owner_repo(host.get("remoteUrl") if isinstance(host.get("remoteUrl"), str) else None)
-        owner, repo = (owner_repo if owner_repo else (None, None))
-        return {
-            "verdict": "ok",
-            "mode": "same-repo",
-            "remote": remote,
-            "owner": owner,
-            "repo": repo,
-            "hostProvider": host.get("provider"),
-        }
-
-    if not isinstance(loc, dict):
-        return {"verdict": "fail", "error": "storeLocation required for separate-project mode"}
-    owner = loc.get("owner")
-    repo = loc.get("repo")
-    if not isinstance(owner, str) or not owner.strip() or not isinstance(repo, str) or not repo.strip():
-        return {"verdict": "fail", "error": "storeLocation.owner and storeLocation.repo required for separate-project"}
-    remote = loc.get("remote")
-    remote_name_out = remote.strip() if isinstance(remote, str) and remote.strip() else "origin"
-    return {
-        "verdict": "ok",
-        "mode": "separate-project",
-        "remote": remote_name_out,
-        "owner": owner.strip(),
-        "repo": repo.strip(),
-    }
-
-
-def store_location_fingerprint(location: dict[str, Any]) -> str:
-    mode = location.get("mode", "same-repo")
-    owner = location.get("owner") or ""
-    repo = location.get("repo") or ""
-    return f"{mode}:{owner}/{repo}"
-
-
-def load_project_key_registry(root: Path) -> dict[str, Any]:
-    path = root / PROJECT_KEY_REGISTRY
-    if not path.is_file():
-        return {"version": 1, "keys": {}}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {"version": 1, "keys": {}}
-    if not isinstance(data, dict):
-        return {"version": 1, "keys": {}}
-    keys = data.get("keys")
-    if not isinstance(keys, dict):
-        data["keys"] = {}
-    return data
-
-
-def validate_project_key(root: Path, cfg: dict[str, Any], *, register: bool = False) -> dict[str, Any]:
-    store = store_section(cfg)
-    raw_key = store.get("projectKey")
-    if not isinstance(raw_key, str) or not raw_key.strip():
-        return {"verdict": "fail", "error": "missing-project-key", "message": "planning.store.projectKey is required for issue-store"}
-    project_key = raw_key.strip()
-    if not PROJECT_KEY_PATTERN.fullmatch(project_key):
-        return {
-            "verdict": "fail",
-            "error": "invalid-project-key",
-            "projectKey": project_key,
-            "message": "projectKey must match ^[a-z][a-z0-9-]*$",
-        }
-
-    location = resolve_store_location(root, cfg)
-    if location.get("verdict") != "ok":
-        return location
-    fingerprint = store_location_fingerprint(location)
-    registry = load_project_key_registry(root)
-    keys: dict[str, Any] = registry.setdefault("keys", {})
-    existing = keys.get(project_key)
-    if isinstance(existing, dict):
-        existing_fp = existing.get("storeFingerprint")
-        if isinstance(existing_fp, str) and existing_fp != fingerprint:
-            return {
-                "verdict": "fail",
-                "error": "project-key-collision",
-                "projectKey": project_key,
-                "existingFingerprint": existing_fp,
-                "requestedFingerprint": fingerprint,
-                "message": "project key already registered for a different store location; choose a namespaced key",
-            }
-
-    if register and not existing:
-        keys[project_key] = {
-            "storeFingerprint": fingerprint,
-            "mode": location.get("mode"),
-            "owner": location.get("owner"),
-            "repo": location.get("repo"),
-        }
-        reg_path = root / PROJECT_KEY_REGISTRY
-        reg_path.parent.mkdir(parents=True, exist_ok=True)
-        reg_path.write_text(json.dumps(registry, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-    return {
-        "verdict": "ok",
-        "projectKey": project_key,
-        "storeFingerprint": fingerprint,
-        "registered": bool(existing) or register,
-    }
-
-
 
 
 def _probe_rate_limited_result(exc: Exception) -> dict[str, Any] | None:
@@ -1710,46 +1612,6 @@ def handle_issue_client_error(exc: Exception) -> None:
         fail(str(exc), code="issues-capability")
 
 
-@dataclass(frozen=True)
-class StoreResult:
-    verdict: str
-    unit_id: str
-    body_path: str
-    backend: str
-    content: str | None = None
-    hash: str | None = None
-    reason: str | None = None
-    inert: bool = False
-    notice: str | None = None
-
-    def as_dict(self) -> dict[str, Any]:
-        out: dict[str, Any] = {
-            "verdict": self.verdict,
-            "unitId": self.unit_id,
-            "bodyPath": self.body_path,
-            "backend": self.backend,
-        }
-        if self.content is not None:
-            out["content"] = self.content
-        if self.hash is not None:
-            out["hash"] = self.hash
-        if self.reason is not None:
-            out["reason"] = self.reason
-        if self.inert:
-            out["inert"] = True
-        if self.notice:
-            out["notice"] = self.notice
-        return out
-
-
-MATERIALIZE_MISSING_FROZEN_BODY = "materialize:missing-frozen-body"
-
-
-def materialize_missing_result(unit_id: str, body_path: str, backend_id: str) -> StoreResult:
-    """Typed fail-closed cause when a frozen body cannot be materialized (PRD 069 R5)."""
-    return StoreResult("missing", unit_id, body_path, backend_id, reason=MATERIALIZE_MISSING_FROZEN_BODY)
-
-
 def finalize_materialize_from_get(
     got: StoreResult,
     unit_id: str,
@@ -1766,89 +1628,6 @@ def finalize_materialize_from_get(
     log_operation("materialize", unit_id, body_path, content, backend_id)
     return StoreResult("ok", unit_id, body_path, backend_id, content=content, hash=got.hash or content_hash(content))
 
-
-
-
-def _native_status_from_content(content: str, *, artifact_type: str, state: str = "open", labels: list[str] | None = None) -> str:
-    import planning_discover as pd
-
-    class _Record:
-        def __init__(self, body: str, lbls: list[str], st: str, unit_id: str, atype: str) -> None:
-            self.body = body
-            self.labels = lbls
-            self.state = st
-            self.unit_id = unit_id
-            self.artifact_type = atype
-
-    return pd._status_from_record(
-        _Record(content, list(labels or []), state, "", artifact_type),
-        content,
-    )
-
-
-def _unified_status_from_native(native_status: str, artifact_type: str) -> str:
-    import planning_unit_status as pus
-
-    return pus.map_native_status_to_unified(native_status, artifact_type)
-
-
-class PlanningStoreBackend(ABC):
-    backend_id: str
-
-    def __init__(self, root: Path, cfg: dict[str, Any]) -> None:
-        self.root = root
-        self.cfg = cfg
-
-    def _guard_duplicate_open_tasks_mint(self, unit_id: str) -> None:
-        """Refuse minting a second open tasks issue for the same PRD slug (PRD 068 R8)."""
-        if not unit_id.startswith("tasks"):
-            return
-        my_tail = _tasks_tail_from_unit_id(unit_id)
-        search = getattr(self._client, "issue_search", None)
-        if not callable(search):
-            return
-        for record in search(project_key=self.project_key, artifact_type="tasks"):
-            other_id = str(getattr(record, "unit_id", "") or "").strip()
-            if not other_id or other_id == unit_id:
-                continue
-            if not _tasks_slug_family_compatible(my_tail, _tasks_tail_from_unit_id(other_id)):
-                continue
-            labels = list(getattr(record, "labels", []) or [])
-            if (
-                str(getattr(record, "state", "")) == "open"
-                and FROZEN_LABEL not in labels
-                and status_from_labels(labels) != "complete"
-            ):
-                fail(
-                    "duplicate-open-tasks-refused",
-                    code="duplicate-open-tasks",
-                    unitId=unit_id,
-                    existingUnitId=other_id,
-                )
-
-    def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
-        raise NotImplementedError
-
-    @abstractmethod
-    def get(self, unit_id: str, body_path: str) -> StoreResult:
-        raise NotImplementedError
-
-    @abstractmethod
-    def exists(self, unit_id: str, body_path: str) -> StoreResult:
-        raise NotImplementedError
-
-    @abstractmethod
-    def materialize(self, unit_id: str, body_path: str, dest_path: Path) -> StoreResult:
-        raise NotImplementedError
-
-    def derive_unit_status(self, unit_id: str, body_path: str) -> str:
-        """Map backend-native state to the unified four-state surface (+ unknown)."""
-        result = self.get(unit_id, body_path)
-        if result.verdict != "ok" or not result.content:
-            return "unknown"
-        artifact_type = infer_artifact_type(body_path)
-        native = _native_status_from_content(result.content, artifact_type=artifact_type)
-        return _unified_status_from_native(native, artifact_type)
 
 
 
@@ -2006,6 +1785,32 @@ class IssueStoreBackend(PlanningStoreBackend):
     def _mutate_journal(self, mutator: Callable[[dict[str, Any]], None]) -> None:
         mutate_put_journal(self.root, mutator)
 
+    def _guard_duplicate_open_tasks_mint(self, unit_id: str) -> None:
+        """Refuse minting a second open tasks issue for the same PRD slug (PRD 068 R8)."""
+        if not unit_id.startswith("tasks"):
+            return
+        my_tail = _tasks_tail_from_unit_id(unit_id)
+        search = getattr(self._client, "issue_search", None)
+        if not callable(search):
+            return
+        for record in search(project_key=self.project_key, artifact_type="tasks"):
+            other_id = str(getattr(record, "unit_id", "") or "").strip()
+            if not other_id or other_id == unit_id:
+                continue
+            if not _tasks_slug_family_compatible(my_tail, _tasks_tail_from_unit_id(other_id)):
+                continue
+            labels = list(getattr(record, "labels", []) or [])
+            if (
+                str(getattr(record, "state", "")) == "open"
+                and FROZEN_LABEL not in labels
+                and status_from_labels(labels) != "complete"
+            ):
+                fail(
+                    "duplicate-open-tasks-refused",
+                    code="duplicate-open-tasks",
+                    unitId=unit_id,
+                    existingUnitId=other_id,
+                )
 
     def derive_unit_status(self, unit_id: str, body_path: str) -> str:
         import planning_discover as pd
@@ -2020,7 +1825,9 @@ class IssueStoreBackend(PlanningStoreBackend):
         artifact_type = self._resolve_artifact_type(
             body_path, record=record, content=content, unit_id=unit_id
         )
-        return _unified_status_from_native(native, artifact_type)
+        from _planning_pkg_loader import load_submodule
+
+        return load_submodule("repository")._unified_status_from_native(native, artifact_type)
 
     def _resolve_artifact_type(
         self,
@@ -4909,7 +4716,6 @@ def projection_refresh(
 
 
 _PROGRESS_FACADE_NOTICE_EMITTED = False
-ORPHAN_MIGRATED_LABEL = "sw:phase-orphan-migrated"
 
 
 def _emit_progress_update_notice(notice: str, message: str) -> None:
@@ -5127,148 +4933,6 @@ def progress_update(
     if task_ref:
         out["taskRef"] = task_ref
     return out
-
-
-def migrate_orphan_phase_issues(
-    root: Path,
-    cfg: dict[str, Any] | None = None,
-    *,
-    tasks_unit_id: str | None = None,
-    dry_run: bool = True,
-) -> dict[str, Any]:
-    """Close/relabel pre-061 minted phase peer issues; idempotent (PRD 061 R8a)."""
-    cfg = cfg or load_workflow_config(root)
-    if resolve_effective_backend(root, cfg).get("effective") != "issue-store":
-        return {"verdict": "ok", "skipped": True, "reason": "file-store"}
-    pk = validate_project_key(root, cfg)
-    if pk.get("verdict") != "ok":
-        return pk
-    project_key = str(pk["projectKey"])
-    provider = str(resolve_issues_provider(cfg).get("provider") or "none")
-    client = IssuesClient(root, provider)
-    search = getattr(client, "issue_search", None)
-    if not callable(search):
-        return {"verdict": "ok", "skipped": True, "reason": "issue-search-unavailable"}
-
-    migrated: list[dict[str, str]] = []
-    skipped: list[dict[str, str]] = []
-    prefix = f"{tasks_unit_id}-phase-" if tasks_unit_id else None
-    for record in search(project_key=project_key, artifact_type="tasks"):
-        unit_id = str(getattr(record, "unit_id", "") or "")
-        if prefix and not unit_id.startswith(prefix):
-            continue
-        if not prefix and "-phase-" not in unit_id:
-            continue
-        labels = list(getattr(record, "labels", []))
-        if ORPHAN_MIGRATED_LABEL in labels:
-            skipped.append({"unitId": unit_id, "reason": "already-migrated"})
-            continue
-        issue_id = str(getattr(record, "id", "") or "")
-        if dry_run:
-            migrated.append({"unitId": unit_id, "issueId": issue_id, "dryRun": True})
-            continue
-        new_labels = sorted(set(labels) | {ORPHAN_MIGRATED_LABEL})
-        try:
-            client.issue_label(issue_id, new_labels, if_match=getattr(record, "etag", None))
-            if getattr(record, "state", "open") == "open":
-                client.issue_update(issue_id, state="closed")
-            migrated.append({"unitId": unit_id, "issueId": issue_id})
-        except Exception as exc:  # noqa: BLE001
-            skipped.append({"unitId": unit_id, "reason": str(exc)})
-    return {
-        "verdict": "ok",
-        "action": "migrate-orphan-phase-issues",
-        "dryRun": dry_run,
-        "migrated": migrated,
-        "skipped": skipped,
-        "count": len(migrated),
-    }
-
-
-
-def native_unit_id_prefix(provider: str) -> str:
-    return NATIVE_UNIT_ID_PREFIX.get(provider, f"{provider}:")
-
-
-def format_native_unit_id(provider: str, issue_number: int) -> str:
-    """R19 — namespaced provider-native unit id (e.g. gh:352)."""
-    return f"{native_unit_id_prefix(provider)}{issue_number}"
-
-
-def is_namespaced_native_unit_id(unit_id: str) -> bool:
-    return bool(NATIVE_UNIT_ID_PATTERN.match((unit_id or "").strip()))
-
-
-def is_bare_integer_unit_id(unit_id: str) -> bool:
-    """Detect bare PRD numbers like 061 that collide with sequential ids (R19)."""
-    return bool(BARE_INTEGER_UNIT_ID.match((unit_id or "").strip()))
-
-
-def reject_bare_integer_unit_id(unit_id: str) -> None:
-    if is_bare_integer_unit_id(unit_id):
-        fail(
-            "bare-integer-unit-id-collision",
-            code="bare-integer-unit-id",
-            unitId=unit_id,
-        )
-
-
-def load_legacy_unit_map(root: Path) -> dict[str, str]:
-    path = root / LEGACY_UNIT_MAP_PATH
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
-        return {}
-    mapping = data.get("legacyToNative") if isinstance(data, dict) else None
-    if not isinstance(mapping, dict):
-        return {}
-    return {str(k): str(v) for k, v in mapping.items() if isinstance(k, str) and isinstance(v, str)}
-
-
-def save_legacy_unit_map(root: Path, mapping: dict[str, str]) -> None:
-    path = root / LEGACY_UNIT_MAP_PATH
-    path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "version": 1,
-        "legacyToNative": dict(sorted(mapping.items())),
-        "nativeToLegacy": {v: k for k, v in sorted(mapping.items())},
-    }
-    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-
-def register_legacy_unit_mapping(root: Path, legacy_id: str, native_id: str) -> None:
-    if not legacy_id or not native_id or legacy_id == native_id:
-        return
-    mapping = load_legacy_unit_map(root)
-    mapping[legacy_id] = native_id
-    save_legacy_unit_map(root, mapping)
-
-
-def resolve_legacy_unit_id(root: Path, unit_id: str) -> str | None:
-    return load_legacy_unit_map(root).get(unit_id)
-
-
-def reverse_resolve_legacy_unit_id(root: Path, native_id: str) -> str | None:
-    for legacy, native in load_legacy_unit_map(root).items():
-        if native == native_id:
-            return legacy
-    return None
-
-
-def unit_id_lookup_candidates(root: Path, unit_id: str) -> list[str]:
-    seen: set[str] = set()
-    ordered: list[str] = []
-    for candidate in (
-        unit_id,
-        resolve_legacy_unit_id(root, unit_id),
-        reverse_resolve_legacy_unit_id(root, unit_id),
-    ):
-        if candidate and candidate not in seen:
-            seen.add(candidate)
-            ordered.append(candidate)
-    return ordered or [unit_id]
 
 
 def comment_sync(

@@ -1,0 +1,66 @@
+"""Planning domain package (PRD 082 phase 11 / R27)."""
+from __future__ import annotations
+
+from .identity import (
+    BARE_INTEGER_UNIT_ID,
+    LEGACY_UNIT_MAP_PATH,
+    NATIVE_UNIT_ID_PATTERN,
+    NATIVE_UNIT_ID_PREFIX,
+    PROJECT_KEY_PATTERN,
+    PROJECT_KEY_REGISTRY,
+    format_native_unit_id,
+    is_bare_integer_unit_id,
+    is_namespaced_native_unit_id,
+    load_legacy_unit_map,
+    load_project_key_registry,
+    native_unit_id_prefix,
+    register_legacy_unit_mapping,
+    reject_bare_integer_unit_id,
+    resolve_legacy_unit_id,
+    reverse_resolve_legacy_unit_id,
+    resolve_store_location,
+    save_legacy_unit_map,
+    store_location_fingerprint,
+    unit_id_lookup_candidates,
+    validate_project_key,
+)
+from .migrations import ISSUES_MIGRATION_HOOKS, ORPHAN_MIGRATED_LABEL, migrate_orphan_phase_issues
+from .model import (
+    MATERIALIZE_MISSING_FROZEN_BODY,
+    PlanningUnit,
+    StoreResult,
+    materialize_missing_result,
+)
+from .repository import PlanningStoreBackend
+
+__all__ = [
+    "BARE_INTEGER_UNIT_ID",
+    "ISSUES_MIGRATION_HOOKS",
+    "LEGACY_UNIT_MAP_PATH",
+    "MATERIALIZE_MISSING_FROZEN_BODY",
+    "NATIVE_UNIT_ID_PATTERN",
+    "NATIVE_UNIT_ID_PREFIX",
+    "ORPHAN_MIGRATED_LABEL",
+    "PROJECT_KEY_PATTERN",
+    "PROJECT_KEY_REGISTRY",
+    "PlanningStoreBackend",
+    "PlanningUnit",
+    "StoreResult",
+    "format_native_unit_id",
+    "is_bare_integer_unit_id",
+    "is_namespaced_native_unit_id",
+    "load_legacy_unit_map",
+    "load_project_key_registry",
+    "materialize_missing_result",
+    "migrate_orphan_phase_issues",
+    "native_unit_id_prefix",
+    "register_legacy_unit_mapping",
+    "reject_bare_integer_unit_id",
+    "resolve_legacy_unit_id",
+    "reverse_resolve_legacy_unit_id",
+    "resolve_store_location",
+    "save_legacy_unit_map",
+    "store_location_fingerprint",
+    "unit_id_lookup_candidates",
+    "validate_project_key",
+]
