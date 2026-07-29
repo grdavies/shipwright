@@ -99,6 +99,67 @@ def read_source_of_truth_knob(config: dict) -> str:
     return "repo"
 
 
+def classify_source_of_truth(root: Path, config: dict) -> dict:
+    """Classify memory.sourceOfTruth knob state for doctor (PRD 082 R30).
+
+    Returns three actionable classes on memory-authoritative providers:
+    explicit-auto, explicit-bound (repo|memory), and migration-required (omitted key).
+    Repo-authoritative providers with an omitted key resolve as implicit-repo-default (ok).
+    """
+    knob, explicit = source_of_truth_knob_state(config)
+    provider = resolve_memory_provider(root, config)
+    source_class = provider_source_of_truth_class(root, provider)
+    memory_authoritative = source_class == "memory-authoritative"
+
+    if not explicit:
+        if memory_authoritative:
+            blocked = migration_gate_blocks(root, config) or {}
+            return {
+                "check": "memory-source-of-truth",
+                "classification": "migration-required",
+                "status": "action-required",
+                "provider": provider,
+                "sourceOfTruthClass": source_class,
+                "exportCommand": blocked.get("exportCommand", MIGRATION_EXPORT_COMMAND),
+                "remediation": blocked.get(
+                    "remediation",
+                    (
+                        f"Run `{MIGRATION_EXPORT_COMMAND}` to materialize provider decision bodies, "
+                        "then set `memory.sourceOfTruth` explicitly in workflow.config.json"
+                    ),
+                ),
+            }
+        return {
+            "check": "memory-source-of-truth",
+            "classification": "implicit-repo-default",
+            "status": "ok",
+            "provider": provider,
+            "sourceOfTruthClass": source_class,
+            "note": "Omitted key on repo-authoritative provider resolves to repo without migration",
+        }
+
+    if knob == "auto":
+        return {
+            "check": "memory-source-of-truth",
+            "classification": "explicit-auto",
+            "status": "ok",
+            "provider": provider,
+            "sourceOfTruth": "auto",
+            "sourceOfTruthClass": source_class,
+            "note": "Explicit auto preserves provider-derived behavior",
+        }
+
+    return {
+        "check": "memory-source-of-truth",
+        "classification": "explicit-bound",
+        "status": "ok",
+        "provider": provider,
+        "sourceOfTruth": knob,
+        "sourceOfTruthClass": source_class,
+        "note": "Explicit repo or memory knob is operator-bound",
+    }
+
+
 def migration_gate_blocks(root: Path, config: dict) -> dict | None:
     """Fail-closed gate when memory-authoritative provider has unset sourceOfTruth knob (R30)."""
     knob, explicit = source_of_truth_knob_state(config)
