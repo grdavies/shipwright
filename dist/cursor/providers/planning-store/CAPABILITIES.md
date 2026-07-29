@@ -37,6 +37,20 @@ routed by `planning.store.backend` in `workflow.config.json`.
 
 Deferred seam backends (`private-repo`, `encryption-at-rest`) are present-but-inert in v1.
 
+## Authority states (PRD 082 R26)
+
+Resolution via `scripts/planning_authority.py` reports only the **configured** backend. There is **no silent fallback** to a substitute backend id — unavailable or mismatched authority yields a typed refusal instead of routing writes elsewhere.
+
+| `authorityState` | Typical `writeDisposition` | Operator effect |
+| --- | --- | --- |
+| `online` | `accept` | Reads and substantive writes proceed when policy permits |
+| `read-only` | `refuse-substantive` | Reads allowed; substantive writes refused (e.g. kill-switch / `planning_backend_control.py disable`) |
+| `blocked` | `refuse-substantive` | Reads and writes blocked with typed reason and guidance (issues provider unavailable, identity mismatch, ambiguous authority, store unavailable) |
+
+Projection-only writes may map to `refuse-ledger` under policy — substantive refusals are recorded in the
+operator-local refusal ledger (`.cursor/sw-refusal-ledger` by default). Reconciling a refused write remains a
+human decision.
+
 ## Logging contract (R18)
 
 Store operations log `unitId`, content hash, and backend id only — never body bytes.

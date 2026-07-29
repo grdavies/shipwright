@@ -326,6 +326,23 @@ stamped, forgery fail-closed).
 **Worktree invariant:** never write implementation files on bare `main` — use a worktree + phase
 branch.
 
+## Planning refusal ledger (operator CLI)
+
+Refused substantive writes are recorded operator-locally under `.cursor/sw-refusal-ledger` (or
+`planning.refusalLedger.path`). Inspect and purge via the refusal ledger CLI — **reconciling a refused write
+after inspection is a human decision**; export surfaces operator-runnable record commands only and does not
+replay refused writes.
+
+```bash
+python3 scripts/planning_refusal_ledger_cli.py list
+python3 scripts/planning_refusal_ledger_cli.py show <entryId>
+python3 scripts/planning_refusal_ledger_cli.py export [--out path]
+python3 scripts/planning_refusal_ledger_cli.py purge --entry-id <id>   # or --all (journaled)
+```
+
+`/sw-cleanup` dry-run may enumerate `refusal-ledger-entry` purge candidates; confirm applies the same purge
+semantics. Default ledger layout: `core/sw-reference/layout.md` (Planning backend and authority).
+
 ## Memory and compounding
 
 | Command | Role |

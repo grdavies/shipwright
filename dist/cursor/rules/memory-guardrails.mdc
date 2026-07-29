@@ -57,13 +57,25 @@ The `planning.store` memory backend routes exclusively through the provider-agno
 `scripts/memory-redact.py` on both read and write. It never calls provider MCP tools directly, bans
 `discussion`/`progress` classes for planning bodies, and refuses raw transcript content.
 
-## Redaction chokepoint (R41)
+## Redaction chokepoint (R41 / PRD 082 R32)
 
 Before any memory persist or re-injection, run the shared redaction filter on:
 
 - transcript deltas (`/sw-memory-sync`)
 - deploy-log edges (deferred workstream)
 - Sentry payload edges (deferred workstream)
+
+### Destination-aware contract (fail-closed)
+
+`scripts/memory_redact.py` requires an explicit `--destination` tier (`local` | `committed` | `external` |
+`cross-project` | `logs`) — **no default**. Callers that omit `--destination` must fail closed rather than
+infer a tier. Mandatory removal destinations (`external`, `cross-project`, `logs`) raise when residual
+secret patterns survive substitution.
+
+Planning and memory emission points bind to destinations via `scripts/planning_visibility.py`
+(`resolve_emission_destination` / `EMISSION_POINT_DESTINATIONS`). Unregistered emission points resolve to
+`external` (strictest tier). Redaction at each emission point uses the bound destination — not ambient
+context.
 
 Named patterns: AWS `AKIA…`, `ghp_…`/PATs, JWTs, `Bearer` headers, PEM private keys, email addresses.
 
