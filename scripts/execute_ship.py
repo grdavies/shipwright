@@ -20,6 +20,7 @@ from execute_plan import (
 from execute_task_status import status_path as execute_status_path
 from intra_phase_dispatch import load_workflow_config
 from kernel_classification import normalize_step
+from planning_visibility import resolve_emission_destination
 from wave_deliver import resolve_task_list_path
 from wave_json_io import read_json, write_json
 
@@ -296,8 +297,9 @@ def resume_frontier(root: Path, run_dir: Path) -> dict[str, Any]:
 def redact_execute_artifact(root: Path, payload: Any) -> str:
     raw = payload if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False, indent=2)
     script = Path(__file__).resolve().parent / "memory-redact.py"
+    destination = resolve_emission_destination("run-log")
     proc = subprocess.run(
-        [sys.executable, str(script)],
+        [sys.executable, str(script), "--destination", destination],
         input=raw,
         text=True,
         capture_output=True,
