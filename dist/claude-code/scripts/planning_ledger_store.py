@@ -268,6 +268,49 @@ def append_eviction_journal(ledger_dir: Path, events: list[dict[str, Any]]) -> P
     return path
 
 
+def purge_entries(
+    ledger_dir: Path,
+    entry_ids: list[str],
+    *,
+    reason: str = "purge",
+) -> dict[str, Any]:
+    entry_root = entries_dir(ledger_dir)
+    purged: list[dict[str, Any]] = []
+    for entry_id in entry_ids:
+        doc = load_entry(entry_root, entry_id)
+        path = _entry_file_path(entry_root, entry_id)
+        if not path.is_file():
+            continue
+        event = {
+            "entryId": (doc or {}).get("entryId") or entry_id,
+            "idempotencyKey": (doc or {}).get("idempotencyKey") or entry_id,
+            "recordedAt": (doc or {}).get("recordedAt"),
+            "reason": reason,
+            "path": path.name,
+        }
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            continue
+        purged.append(event)
+    if purged:
+        append_eviction_journal(ledger_dir, purged)
+    return {"verdict": "ok", "purged": purged}
+
+
+def purge_all_entries(ledger_dir: Path, *, reason: str = "purge") -> dict[str, Any]:
+    entry_root = entries_dir(ledger_dir)
+    ids = []
+    for path in list_entry_paths(entry_root):
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            doc = {}
+        entry_id = str((doc or {}).get("entryId") or (doc or {}).get("idempotencyKey") or path.stem)
+        ids.append(entry_id)
+    return purge_entries(ledger_dir, ids, reason=reason)
+
+
 def enforce_ledger_bounds(
     ledger_dir: Path,
     *,

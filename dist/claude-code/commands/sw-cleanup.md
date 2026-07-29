@@ -46,14 +46,20 @@ Dry-run by default; deletions only after explicit confirmation.
 
 4. Worktree teardown uses `git worktree remove` + `git worktree prune` only — never `rm -rf`.
 
-5. **Scoped in-flight protection (PRD 062 R10/R11)** — deliver run-state enumeration scopes inflight checks
+5. **Refusal ledger purge (PRD 082 R26)** — dry-run enumerates operator-local refusal ledger entries
+   under `.cursor/sw-refusal-ledger` (or configured `planning.refusalLedger.path`) as
+   `refusal-ledger-entry` candidates. Confirm applies `planning_refusal_ledger_cli.py purge` semantics
+   (journaled eviction). **Reconciling a refused write is a human decision** — cleanup never replays
+   refused mutations automatically.
+
+6. **Scoped in-flight protection (PRD 062 R10/R11)** — deliver run-state enumeration scopes inflight checks
    to the **active run/worktree** (`_run_in_active_scope` + `_scoped_run_inflight`). Unrelated scoped runs with
    terminal verdicts do not block orchestrator cleanup. Non-terminal verdicts protected: `running`, `blocked`,
    `halted`, `watching` (shared `RESUMABLE_DELIVER_VERDICTS` constant). Dry-run is **terminal-class only** for
    `cleanup.autonomy: auto` — autonomous apply deletes only when deliver `verdict` ∈ `{complete, rejected}` and
    merge detection is not `indeterminate`.
 
-6. **Autonomous apply (R25/R26)** — when `cleanup.autonomy` is `auto` in
+7. **Autonomous apply (R25/R26)** — when `cleanup.autonomy` is `auto` in
    `.cursor/workflow.config.json`, a deterministic post-merge path may apply the dry-run `wouldRemove` set
    without human confirm when: no in-flight **scoped** deliver run, merge status is not `indeterminate`, and
    targets are not the current/default branch. Invocation:
@@ -64,7 +70,7 @@ Dry-run by default; deletions only after explicit confirmation.
 
    `indeterminate` merge status always falls back to the human gate (step 3).
 
-7. Remote branch deletion is guarded: indeterminate squash-merge status fails closed (branch protected).
+8. Remote branch deletion is guarded: indeterminate squash-merge status fails closed (branch protected).
 
 ## Merge detection (R56)
 

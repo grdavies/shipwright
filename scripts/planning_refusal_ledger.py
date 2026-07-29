@@ -190,7 +190,9 @@ def main(argv: list[str] | None = None) -> int:
     record = sub.add_parser("record", help="Append a refusal entry (idempotent)")
     record.add_argument("--unit-id", required=True)
     record.add_argument("--operation", required=True)
-    record.add_argument("--body", required=True, help="Intended body text")
+    body = record.add_mutually_exclusive_group(required=True)
+    body.add_argument("--body", help="Intended body text")
+    body.add_argument("--body-file", type=Path, help="Read intended body from file")
     record.add_argument("--authority-state", required=True)
     record.add_argument("--authority-reason", default=None)
     record.add_argument("--destination-policy-id", default=DEFAULT_DESTINATION_POLICY_ID)
@@ -202,11 +204,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     root = args.root.resolve()
     if args.command == "record":
+        if args.body_file is not None:
+            intended_body = args.body_file.read_text(encoding="utf-8")
+        else:
+            intended_body = args.body or ""
         payload = record_refusal(
             root,
             unit_id=args.unit_id,
             operation=args.operation,
-            intended_body=args.body,
+            intended_body=intended_body,
             authority_state=args.authority_state,
             authority_reason=args.authority_reason,
             destination_policy_id=args.destination_policy_id,
