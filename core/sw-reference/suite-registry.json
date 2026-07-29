@@ -1445,6 +1445,7 @@
       "pathTriggers": [
         "scripts/test_scope.py",
         "scripts/unit_tests/scope/**",
+        "scripts/unit_tests/test/test_suite_registry_plans.py",
         "core/sw-reference/suite-registry.schema.json"
       ],
       "pytestPath": "scripts/unit_tests/scope",
@@ -1742,6 +1743,174 @@
         "planning",
         "prd-061"
       ]
+    },
+    {
+      "id": "memory-eval-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "classification": "required",
+      "verifyOrder": 64,
+      "pytestPath": "scripts/unit_tests/memory",
+      "pathTriggers": [
+        "scripts/test/memory-eval/**",
+        "scripts/memory_redact.py",
+        "scripts/memory_redaction_provenance.py",
+        "scripts/memory_redaction.py",
+        "providers/**",
+        "scripts/unit_tests/memory/test_memory_eval*.py",
+        "scripts/unit_tests/memory/test_redaction*.py",
+        "scripts/unit_tests/memory/test_memory_provider*.py"
+      ],
+      "tags": [
+        "pytest",
+        "memory",
+        "eval"
+      ]
     }
-  ]
+  ],
+  "plans": {
+    "pull-request-core": {
+      "description": "Always-on PR guard jobs (data-driven; PRD 082 R35).",
+      "suiteIds": [
+        "docs-link-check",
+        "scripts-inventory-guard",
+        "bash-py-invocation-guard",
+        "git-push-secret-scan-chokepoint",
+        "claims-audit-unit",
+        "rca-fanout-unit",
+        "skills-spec-guard-fixtures"
+      ]
+    },
+    "changed-domain": {
+      "description": "PR pytest plan: path-selected domains plus mandatory planning/memory/credential core.",
+      "selection": "changed-domains",
+      "alwaysIncludeDomains": [
+        "planning",
+        "memory",
+        "credential"
+      ],
+      "evalDomain": "eval"
+    },
+    "main-full": {
+      "description": "Full unit_tests collection on main push.",
+      "scope": "full"
+    },
+    "scheduled-full-plus-integration": {
+      "description": "Scheduled nightly full suite including integration-marked tests.",
+      "scope": "full",
+      "includeIntegration": true
+    },
+    "minimum-python": {
+      "description": "Minimum supported Python matrix leg — core guard suites only.",
+      "inherits": "pull-request-core"
+    }
+  },
+  "domains": {
+    "planning": {
+      "pathTriggers": [
+        "scripts/planning_*.py",
+        "scripts/planning/**",
+        "core/commands/sw-doc.md",
+        "core/commands/sw-amend.md",
+        "core/commands/sw-freeze.md",
+        "core/commands/sw-tasks.md",
+        "docs/planning/**"
+      ],
+      "coreSuiteIds": [
+        "planning-store-fixtures",
+        "planning-unit-fixtures"
+      ],
+      "suiteIds": [
+        "planning-store-fixtures",
+        "planning-unit-fixtures",
+        "planning-graph-fixtures",
+        "planning-scheduler-fixtures",
+        "planning-materialize-fixtures"
+      ]
+    },
+    "memory": {
+      "pathTriggers": [
+        "scripts/memory_*.py",
+        "scripts/basic_memory_*.py",
+        "providers/recallium*.md",
+        "providers/recallium*.py",
+        ".cursor/sw-memory/**",
+        "core/skills/memory-*/**"
+      ],
+      "coreSuiteIds": [
+        "memory-provider-fixtures",
+        "memory-sot-fixtures",
+        "memory-prework-fixtures"
+      ],
+      "suiteIds": [
+        "memory-provider-fixtures",
+        "memory-sot-fixtures",
+        "memory-prework-fixtures",
+        "memory-eval-fixtures"
+      ]
+    },
+    "credential": {
+      "pathTriggers": [
+        "scripts/credentials*.py",
+        "scripts/credential_*.py",
+        "providers/**/credentials*",
+        "core/sw-reference/credentials*"
+      ],
+      "coreSuiteIds": [
+        "guardrail-rules-resolution-fixtures",
+        "guardrail-matrix-fixtures"
+      ],
+      "suiteIds": [
+        "guardrail-rules-resolution-fixtures",
+        "guardrail-matrix-fixtures"
+      ]
+    },
+    "eval": {
+      "pathTriggers": [
+        "scripts/test/memory-eval/**",
+        "scripts/memory_redact.py",
+        "scripts/memory_redaction*.py",
+        "providers/**",
+        "scripts/unit_tests/memory/test_memory_eval*.py",
+        "scripts/unit_tests/memory/test_redaction*.py",
+        "scripts/unit_tests/memory/test_memory_provider*.py"
+      ],
+      "suiteId": "memory-eval-fixtures"
+    },
+    "deliver": {
+      "pathTriggers": [
+        "scripts/wave*.py",
+        "scripts/ship_*.py",
+        "scripts/deliver*.py",
+        "core/commands/sw-deliver.md",
+        "core/commands/sw-ship.md",
+        "core/skills/deliver/**",
+        "core/skills/conductor/**"
+      ],
+      "coreSuiteIds": [],
+      "suiteIds": [
+        "deliver-concurrency-fixtures",
+        "deliver-invariant-fixtures",
+        "status-integrity-fixtures",
+        "planning-035-deliver-conductor-fixtures"
+      ]
+    },
+    "docs": {
+      "pathTriggers": [
+        "docs/**",
+        "scripts/doc_*.py",
+        "scripts/docs_*.py",
+        "core/commands/sw-doc.md"
+      ],
+      "coreSuiteIds": [],
+      "suiteIds": [
+        "doc-fixtures",
+        "doc-format-fixtures",
+        "doc-currency-033-fixtures",
+        "doc-currency-049-fixtures"
+      ]
+    }
+  }
 }
