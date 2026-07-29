@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-28T23:47:09Z",
+  "generatedAt": "2026-07-29T03:10:01Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -2008,19 +2008,19 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-memory-sync.md:39:reconcile.py",
+      "id": "core/commands/sw-memory-sync.md:48:reconcile.py",
       "tree": "core/commands",
       "file": "core/commands/sw-memory-sync.md",
-      "line": 39,
+      "line": 48,
       "column": 42,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-memory-sync.md:51:sw_bootstrap.py",
+      "id": "core/commands/sw-memory-sync.md:60:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-memory-sync.md",
-      "line": 51,
+      "line": 60,
       "column": 43,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -8479,19 +8479,19 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-memory-sync.md:39:reconcile.py",
+      "id": "dist/claude-code/commands/sw-memory-sync.md:48:reconcile.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-sync.md",
-      "line": 39,
+      "line": 48,
       "column": 42,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-memory-sync.md:51:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-memory-sync.md:60:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-sync.md",
-      "line": 51,
+      "line": 60,
       "column": 43,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -13825,19 +13825,19 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-memory-sync.md:39:reconcile.py",
+      "id": "dist/cursor/commands/sw-memory-sync.md:48:reconcile.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-memory-sync.md",
-      "line": 39,
+      "line": 48,
       "column": 42,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-memory-sync.md:51:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-memory-sync.md:60:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-memory-sync.md",
-      "line": 51,
+      "line": 60,
       "column": 43,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
