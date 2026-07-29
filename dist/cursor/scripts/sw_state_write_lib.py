@@ -73,8 +73,9 @@ def resolve_store_path(root: Path, store: str, *, rel: str | None = None) -> Pat
 
 
 def redact_text(text: str) -> str:
+    destination = resolve_emission_destination("handoff-032")
     try:
-        return memory_redact.redact(text)
+        return memory_redact.redact(text, destination=destination)
     except Exception as exc:
         raise StateWriteError(f"memory_redact failed: {exc}", halt="redaction-failed") from exc
 
