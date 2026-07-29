@@ -691,6 +691,7 @@
 * merge phase store-atomic-write-and-interchange-adopt-the-coordinator-medium into feat/planning-authority-memory-integrity (7865f4b) <!-- sw-deliver:store-atomic-write-and-interchange-adopt-the-coordinator-medium -->
 * merge phase domain-package-model-repository-identity-migrations-medium into feat/planning-authority-memory-integrity (778c8f0) <!-- sw-deliver:domain-package-model-repository-identity-migrations-medium -->
 * merge phase deduplication-fingerprint-allowlist-small into feat/planning-authority-memory-integrity (b8e3966) <!-- sw-deliver:deduplication-fingerprint-allowlist-small -->
+* merge phase sensitivity-tiers-and-monotonic-declassification-small into feat/planning-authority-memory-integrity (7c3b638) <!-- sw-deliver:sensitivity-tiers-and-monotonic-declassification-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
