@@ -146,7 +146,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         labels.update(_ps().structural_labels_from_content(content))
         return sorted(labels)
 
-    def _record_to_snapshot(self, record: Any) -> IssueSnapshot:
+    def _record_to_snapshot(self, record: Any) -> Any:
         return _ps().IssueSnapshot(
             title=record.title,
             body=record.body,
@@ -563,7 +563,7 @@ class IssueStoreBackend(PlanningStoreBackend):
             labels = sorted(set(record.labels) | {_ps().FROZEN_LABEL})
             record = self._client.issue_label(record.id, labels, if_match=record.etag)
             digest = _ps().canonical_hash(self._record_to_snapshot(record))
-            freeze_body = build_freeze_record_body(digest)
+            freeze_body = _ps().build_freeze_record_body(digest)
             self._guard_write_secrets(freeze_body, path_hint="sw-freeze-record")
             self._client.issue_comment(record.id, freeze_body, markers=["sw-freeze-record"])
             record = self._client.issue_get(record.id)
@@ -624,11 +624,11 @@ class IssueStoreBackend(PlanningStoreBackend):
     def _ensure_absorb_linkage_at_freeze(self, unit_id: str, content: str) -> dict[str, Any]:
         from planning_gap_capture import record_absorb_linkage
 
-        fm = _migrate_issue_store().parse_frontmatter_fields(content)
-        prd_num = _prd_number_from_unit_id(unit_id)
-        absorbs = _parse_absorbs_targets(fm.get("absorbs", ""))
+        fm = _ps()._migrate_issue_store().parse_frontmatter_fields(content)
+        prd_num = _ps()._prd_number_from_unit_id(unit_id)
+        absorbs = _ps()._parse_absorbs_targets(fm.get("absorbs", ""))
         gap_targets = [g for g in absorbs if "gap" in g or g.startswith("gap-")]
-        planning_issues = parse_planning_issues_refs(fm.get("planningIssues", ""))
+        planning_issues = _ps().parse_planning_issues_refs(fm.get("planningIssues", ""))
         if not gap_targets and not planning_issues:
             return {"verdict": "skipped", "reason": "no-absorb-targets"}
         return record_absorb_linkage(
