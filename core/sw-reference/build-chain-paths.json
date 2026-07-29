@@ -10,5 +10,32 @@
     "rules/",
     "agents/",
     "providers/"
-  ]
+  ],
+  "sourceModules": {
+    "planningPackage": [
+      "scripts/planning/"
+    ],
+    "ledger": [
+      "scripts/planning_refusal_ledger.py",
+      "scripts/planning_refusal_ledger_cli.py",
+      "scripts/planning_audit_journal.py",
+      "scripts/planning_audit_journal_cli.py",
+      "scripts/planning_ledger_store.py"
+    ],
+    "redaction": [
+      "scripts/memory_redact.py",
+      "scripts/memory_redact_patterns.py",
+      "scripts/memory_redact_allowlist.py",
+      "scripts/memory_redaction_provenance.py",
+      "scripts/redaction-guard.py"
+    ],
+    "evalHarness": [
+      "scripts/test/memory-eval/"
+    ],
+    "doctor": [
+      "scripts/planning-doctor.py",
+      "scripts/planning_doctor_ledger.py",
+      "scripts/memory_doctor_checks.py"
+    ]
+  }
 }
