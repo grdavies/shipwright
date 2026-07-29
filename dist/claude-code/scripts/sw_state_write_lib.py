@@ -11,6 +11,7 @@ from typing import Any
 from wave_json_io import StateCorruptError, read_json, write_json
 
 import memory_redact
+from planning_visibility import resolve_emission_destination
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 

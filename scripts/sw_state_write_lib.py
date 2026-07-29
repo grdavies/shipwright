@@ -11,6 +11,7 @@ from typing import Any
 from wave_json_io import StateCorruptError, read_json, write_json
 
 import memory_redact
+from planning_visibility import resolve_emission_destination
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -72,8 +73,9 @@ def resolve_store_path(root: Path, store: str, *, rel: str | None = None) -> Pat
 
 
 def redact_text(text: str) -> str:
+    destination = resolve_emission_destination("handoff-032")
     try:
-        return memory_redact.redact(text)
+        return memory_redact.redact(text, destination=destination)
     except Exception as exc:
         raise StateWriteError(f"memory_redact failed: {exc}", halt="redaction-failed") from exc
 
