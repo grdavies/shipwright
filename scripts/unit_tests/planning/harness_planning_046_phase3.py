@@ -57,7 +57,7 @@ topic: 046-test
 ### 2. Beta phase
 TASKS
   cat > .cursor/workflow.config.json <<'CFG'
-{"version":1,"planning":{"store":{"backend":"issue-store","issuesProvider":"github-issues","projectKey":"phase3046"}},"host":{"provider":"github"}}
+{"version":1,"planning":{"store":{"backend":"issue-store","issuesProvider":"github-issues","projectKey":"proj-b"}},"memory":{"crossProjectTrustedSources":["proj-a"]},"host":{"provider":"github"}}
 CFG
   export SW_ISSUES_FIXTURE=1
   OUT=$(python3 "$HIER" --root "$TMP" project docs/prds/046-test/tasks-046-test.md)

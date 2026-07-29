@@ -86,6 +86,16 @@ def test_cross_project_recall_skips_hit_when_redaction_refused(
 ) -> None:
     root = SCRIPTS.parent
     monkeypatch.setattr(recall, "redact_text", lambda _text: None)
+    monkeypatch.setattr(
+        recall.trust,
+        "resolve_trusted_sources",
+        lambda *_a, **_k: {
+            "verdict": "pass",
+            "callerProjectKey": "proj-b",
+            "effectiveTrustedSources": ["proj-a"],
+            "payloadTrustApplied": False,
+        },
+    )
     result = recall.recall_cross_project(
         root,
         source_project_key="proj-a",
