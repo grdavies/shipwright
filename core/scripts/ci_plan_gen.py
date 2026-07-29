@@ -93,6 +93,7 @@ def generate_pr_test_plan_workflow(
         lines.append("    runs-on: ubuntu-latest")
         if classification == "advisory":
             lines.append("    continue-on-error: true")
+        lines.append("    steps:")
         lines.extend(_python_setup_steps(DEFAULT_PYTHON))
         suite_ids = job.get("suiteIds") or [entry["id"] for entry in job.get("entries") or []]
         label = ", ".join(suite_ids) if len(suite_ids) > 1 else str(suite_ids[0])
