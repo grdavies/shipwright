@@ -15,7 +15,7 @@ MEMORY_SKILL_MARKERS: tuple[str, ...] = (
     "schemaVersion",
     "appliedRedaction",
     "--destination",
-    "migration gate",
+    "Migration gate",
     "memory-authoritative",
     "/sw-memory-export",
     "/sw-memory-import",
