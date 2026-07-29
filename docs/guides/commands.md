@@ -334,10 +334,10 @@ after inspection is a human decision**; export surfaces operator-runnable record
 replay refused writes.
 
 ```bash
-python3 scripts/planning_refusal_ledger_cli.py list
-python3 scripts/planning_refusal_ledger_cli.py show <entryId>
-python3 scripts/planning_refusal_ledger_cli.py export [--out path]
-python3 scripts/planning_refusal_ledger_cli.py purge --entry-id <id>   # or --all (journaled)
+python3 scripts/sw_bootstrap.py planning_refusal_ledger_cli.py -- list
+python3 scripts/sw_bootstrap.py planning_refusal_ledger_cli.py -- show <entryId>
+python3 scripts/sw_bootstrap.py planning_refusal_ledger_cli.py -- export [--out path]
+python3 scripts/sw_bootstrap.py planning_refusal_ledger_cli.py -- purge --entry-id <id>   # or --all (journaled)
 ```
 
 `/sw-cleanup` dry-run may enumerate `refusal-ledger-entry` purge candidates; confirm applies the same purge
