@@ -19,7 +19,7 @@ MIGRATION_WAVES_REL = Path("core/sw-reference/migration-waves.json")
 RUN_PYTEST_SCRIPT = "scripts/test/run_pytest.py"
 MANIFEST_REL = Path("core/sw-reference/pr-test-plan.manifest.json")
 WORKFLOW_REL = Path(".github/workflows/pr-test-plan-ci.yml")
-WORKFLOW_GEN = Path("scripts/generate-pr-test-plan-ci-workflow.py")
+WORKFLOW_GEN = Path("scripts/ci_plan_gen.py")
 
 
 def load_wave_suites(root: Path, wave: str) -> list[dict[str, Any]]:
@@ -56,6 +56,7 @@ def regen_manifest_and_workflow(root: Path) -> None:
         [
             sys.executable,
             str(root / WORKFLOW_GEN),
+            "pr-test-plan",
             str(manifest_path),
             str(root / WORKFLOW_REL),
             str(root),

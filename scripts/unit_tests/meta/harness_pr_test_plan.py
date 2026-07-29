@@ -53,7 +53,7 @@ GATE_SKILL="$ROOT/core/skills/checks-gate/SKILL.md"
 GATE_RULE="$ROOT/core/rules/checks-gate.mdc"
 STABILIZE_SKILL="$ROOT/core/skills/stabilize-loop/SKILL.md"
 CONFIG_GUIDE="$ROOT/docs/guides/configuration.md"
-GENERATOR="$ROOT/scripts/generate-pr-test-plan-ci-workflow.py"
+GENERATOR="$ROOT/scripts/ci_plan_gen.py"
 
 # --- pr-test-plan-set-single-source (R1, R3) ---
 if [[ -f "$MANIFEST" ]] && [[ -f "$WF_CONFIG" ]] && \
@@ -66,11 +66,11 @@ fi
 
 TMP_WF="$(mktemp)"
 trap 'rm -f "$TMP_WF"' EXIT
-python3 "$GENERATOR" "$MANIFEST" "$TMP_WF" "$ROOT" >/dev/null 2>&1
+python3 "$GENERATOR" pr-test-plan "$MANIFEST" "$TMP_WF" "$ROOT" >/dev/null 2>&1
 if cmp -s "$WORKFLOW" "$TMP_WF" 2>/dev/null; then
   ok "pr-test-plan-set-single-source: CI workflow matches manifest generator"
 else
-  bad "pr-test-plan-set-single-source: workflow drift — run python3 scripts/generate-pr-test-plan-ci-workflow.py core/sw-reference/pr-test-plan.manifest.json .github/workflows/pr-test-plan-ci.yml ."
+  bad "pr-test-plan-set-single-source: workflow drift — run python3 scripts/ci_plan_gen.py pr-test-plan core/sw-reference/pr-test-plan.manifest.json .github/workflows/pr-test-plan-ci.yml ."
 fi
 
 # --- pr-test-plan-jobs-on-pr (R1) ---
