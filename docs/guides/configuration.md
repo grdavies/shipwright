@@ -199,6 +199,35 @@ For **in-repo**, choose commit mode:
 
 For **recallium**: setup warns if the health check fails but still allows save.
 
+#### `memory.sourceOfTruth` migration (PRD 082 R30)
+
+Decision-class records only. Provider selection (`memory.provider`) and authority selection
+(`memory.sourceOfTruth`) are independent.
+
+| Knob state | Memory-authoritative provider | Repo-authoritative provider (`in-repo`) |
+| --- | --- | --- |
+| **Key omitted** | Fail closed — export decision bodies, then set the knob explicitly | Resolves to `repo` (no migration) |
+| **`"auto"` explicit** | Preserves today’s provider-derived behavior | Preserves today’s repo behavior |
+| **`"repo"` or `"memory"` explicit** | Operator-bound authority | Operator-bound authority |
+
+**Explicit `auto` is not the same as an omitted key.** Only an omitted key on a memory-authoritative
+provider changes behavior at upgrade: `planning-doctor.py` classifies it as `migration-required` and
+blocks until you materialize provider-side decision bodies and set the knob.
+
+```bash
+# 1) Export provider decision bodies into docs/decisions/
+python3 scripts/memory-decision-snapshot.py export
+
+# 2) Set the knob explicitly (example: keep auto semantics on Recallium)
+# Edit .cursor/workflow.config.json:
+#   "memory": { "sourceOfTruth": "auto", ... }
+```
+
+Shipwright’s own repo sets `"sourceOfTruth": "auto"` explicitly at migration so Recallium behavior is
+unchanged. Refusal-ledger bounds (`planning.refusalLedger.path`, `ttlSeconds`, `maxSizeBytes`) are
+documented in `core/sw-reference/config.schema.json` — storage is gitignored under
+`.cursor/sw-refusal-ledger` by default.
+
 For **mempalace**: `/sw-init` catalog-detects the provider but **does not auto-install** the package.
 Validate `memory.mempalace.palacePath` and the supported package range when configured; see
 **MemPalace memory provider** below.

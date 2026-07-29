@@ -578,6 +578,14 @@ def doctor(root: Path, *, sweep: bool) -> dict:
             "note": "credential references and env names only; no secrets in config",
         })
 
+        from memory_sot import classify_source_of_truth
+
+        sot_finding = classify_source_of_truth(root, cfg)
+        checks.append(sot_finding)
+        if sot_finding.get("classification") == "migration-required":
+            warnings.append("memory-source-of-truth-migration-required")
+            verdict = "fail"
+
         deprecated_visibility_finding = planning_visibility_deprecation_finding(cfg)
         if deprecated_visibility_finding is not None:
             checks.append(deprecated_visibility_finding)

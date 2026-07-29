@@ -643,7 +643,7 @@
             "auto"
           ],
           "default": "auto",
-          "description": "Authoritative store for decision-class records. auto derives from provider (external\u2192memory, in-repo/none\u2192repo)."
+          "description": "Authoritative store for decision-class records only. When the key is present, auto derives from provider (external\u2192memory, in-repo/none\u2192repo). When the key is omitted, repo-authoritative providers resolve to repo; memory-authoritative providers fail closed until decision bodies are exported and the knob is set explicitly (see memory_sot.py migration gate). Explicit auto preserves today\u2019s behavior and does not trigger migration."
         },
         "inRepo": {
           "type": "object",
@@ -1614,6 +1614,30 @@
                   }
                 }
               }
+            }
+          }
+        },
+        "refusalLedger": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Operator-local refusal ledger bounds (PRD 082 R26). Storage is gitignored; bodies never committed.",
+          "properties": {
+            "path": {
+              "type": "string",
+              "default": ".cursor/sw-refusal-ledger",
+              "description": "Gitignored cursor-local directory for append-only refusal records (0600 files, 0700 directories)."
+            },
+            "ttlSeconds": {
+              "type": "integer",
+              "minimum": 3600,
+              "default": 2592000,
+              "description": "Per-entry TTL before journaled oldest-first eviction (default 30 days)."
+            },
+            "maxSizeBytes": {
+              "type": "integer",
+              "minimum": 1048576,
+              "default": 52428800,
+              "description": "Total on-disk ledger size bound before eviction (default 50 MiB)."
             }
           }
         },
