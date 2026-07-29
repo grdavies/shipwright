@@ -113,7 +113,7 @@ def test_in_repo_export_to_basic_memory_import_preserves_links(repo_root: Path, 
     assert (project / "memories" / "learning" / "20260701-link-a.md").is_file()
 
 
-def test_basic_memory_merge_remaps_conflicting_permalinks_and_resolves_links(
+def test_basic_memory_merge_refuses_conflicting_permalink_without_supersedes(
     repo_root: Path, tmp_path: Path
 ) -> None:
     workspace = _seed_workspace(tmp_path, repo_root, provider="basic-memory")
@@ -135,13 +135,9 @@ def test_basic_memory_merge_remaps_conflicting_permalinks_and_resolves_links(
     )
     export_path = workspace / "export.jsonl"
     ms.export_in_repo_store(workspace / ".cursor/sw-memory", "jsonl", export_path)
-    result = bmi.import_project(project, "jsonl", export_path, dry_run=False)
-    remapped = {entry["from"]: entry["to"] for entry in result["idRemaps"]}
-    assert "20260701-link-a" in remapped
-    new_a = remapped["20260701-link-a"]
-    links = bmi.load_links(project)
-    assert any(link["source"] == new_a and link["target"] == "20260701-link-b" for link in links)
-    assert result["imported"] > 0
+    with pytest.raises(bmi.InterchangeError) as exc:
+        bmi.import_project(project, "jsonl", export_path, dry_run=False)
+    assert exc.value.cause == "alias-collision"
 
 
 def test_basic_memory_export_round_trip_jsonl(repo_root: Path, tmp_path: Path) -> None:
