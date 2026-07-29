@@ -30,8 +30,9 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
    bug root-causes, design choices, notable review/CI patterns, distilled session recaps.
 4. Filter aggressively. Skip routine, recoverable, or already-stored content. Search-before-store: if a
    near-duplicate memory exists, `modify` it (or skip) rather than adding another.
-5. **Redact** each payload before store: pipe distilled text through `python3 scripts/sw_bootstrap.py memory-redact.py`
-   (R41 chokepoint — same filter as `/sw-compound`). Stamp `appliedRedaction` on the v2 envelope via
+5. **Redact** each payload before store: pipe distilled text through
+   `python3 scripts/sw_bootstrap.py memory-redact.py --destination committed` (R41 chokepoint — `--destination`
+   is required; no default). Stamp `appliedRedaction` on the v2 envelope via
    `scripts/memory_redaction_provenance.py` (`build_applied_redaction_record` / `redact_with_provenance`) so
    the record carries destination tier applied, pattern-set version, and substitution count — distinct from
    `sensitivity`.
@@ -58,6 +59,14 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
 **Communication intensity:** ultra
 
 **Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-memory-sync`.
+
+## Envelope v2 fields (R29)
+
+Each stored record conforms to `scripts/memory_envelope_v2.py` (`schemaVersion: 2`). Required fields:
+`stableId`, `projectId`, `category`, `status`, `scope`, `evidenceRefs`, `confidence`, `observedAt`,
+`lastValidatedAt`, `validUntil`, `supersedes`, `contentHash`, `schemaVersion`, `sensitivity`,
+`appliedRedaction`. Provider fidelity is recorded in catalog `envelopeFields` (native / sideChannel / lossy).
+See `core/skills/memory/SKILL.md` for the full codec contract.
 
 ## Guardrails
 

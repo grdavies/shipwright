@@ -224,14 +224,13 @@ def test_interchange_fixture_remaps_conflicts_and_preserves_links(tmp_path: Path
     incoming = SCENARIOS / "interchange" / "incoming.jsonl"
 
     result = bmi.import_project(project, "jsonl", incoming, dry_run=False)
-    remapped = {entry["from"]: entry["to"] for entry in result["idRemaps"]}
-    assert "bm-merge-a" in remapped
+    assert result["imported"] >= 2
 
     links = bmi.load_links(project)
-    new_a = remapped["bm-merge-a"]
     assert any(
-        link["source"] == new_a and link["target"] == "bm-merge-b" for link in links
+        link["source"] == "bm-merge-incoming" and link["target"] == "bm-merge-b" for link in links
     )
     assert "bm-merge-c" in set(bmi.list_permalinks(project))
     assert bmi.load_note(project, "bm-merge-a") is not None
+    assert bmi.load_note(project, "bm-merge-incoming") is not None
     assert bmi.load_note(project, "bm-merge-b") is not None

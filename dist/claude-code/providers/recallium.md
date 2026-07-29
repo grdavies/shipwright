@@ -31,6 +31,7 @@ Conformance review: [`sw-reference/memory-provider-recallium-conformance.md`](..
 | `interchange.jsonl` | `synthesized` — `/sw-memory-export` / `/sw-memory-import` synthesize neutral JSONL via search+expand |
 | `interchange.okf` | `synthesized` — same synthesis path into OKF v0.1 bundles (redaction before write) |
 | `credentials.location` | `credentialRef` — REST/MCP auth via `memory.credentialRef` + machine-local selector |
+| `envelopeFields` | Catalog row lists v2 envelope field coverage: `native`, `sideChannel`, `lossy` per `memory_envelope_v2.py` |
 
 `<project>` below is `memory.project` from the config. Global scope uses the literal `__global__`.
 

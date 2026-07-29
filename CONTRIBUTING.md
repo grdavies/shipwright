@@ -85,6 +85,39 @@ committed `dist/` drifts from `core/`.
 
 Additional domain suites live under `scripts/unit_tests/` and are run via `scripts/test/run_pytest.py`.
 
+## CI topology (named plans — PRD 082 R35)
+
+Pull-request and main CI dispatch **named plans** from `core/sw-reference/suite-registry.json`
+(`plans` block) — workflows are generated (`scripts/ci_plan_gen.py`) rather than hand-edited job lists.
+
+| Plan | When | What runs |
+| --- | --- | --- |
+| `pull-request-core` | Every PR | Always-on guard suites (docs link check, scripts inventory, bash/py invocation, secret-scan chokepoint, claims-audit unit, RCA fanout, skills-spec guard) |
+| `changed-domain` | PR pytest leg | Path-selected domain suites plus mandatory `planning`, `memory`, and `credential` core; adds `eval` when retrieval/provider/redaction paths change |
+| `main-full` | Push to `main` | Full `scripts/unit_tests` collection |
+| `scheduled-full-plus-integration` | Nightly schedule | Full suite including integration-marked tests |
+| `minimum-python` | Matrix leg | Inherits `pull-request-core` on the minimum supported Python version |
+
+Regenerate workflows after editing the registry:
+
+```bash
+python3 scripts/ci_plan_gen.py
+python3 scripts/unit_tests/test/test_ci_plan_generation.py  # via run_pytest
+```
+
+## Initialization and doctor checks
+
+First-run setup and ongoing health use stable CLI entry points with **stable failure codes** (one code →
+one remediation command):
+
+| Surface | Command | Stable codes |
+| --- | --- | --- |
+| First-run / config | `/sw-init` → `scripts/sw-configure.py` | `verify-unconfigured`, config drift warnings |
+| Credentials | `python3 scripts/credentials-doctor.py --root .` | Broker scope, selector, and resolution codes (`credentials-doctor.py remediate --code <code>`) |
+| Planning + memory | `python3 scripts/planning-doctor.py --root .` | Authority state, ledger/journal integrity, `memory-source-of-truth` / `migration-required`, projection health, distribution freshness |
+
+Re-run the matching doctor after remediation; codes are designed for CI log grep and scripted fix paths.
+
 ## Code style
 
 - Match existing patterns in the area you are editing.
