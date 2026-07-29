@@ -180,10 +180,12 @@ def _load_canonical():
     if _cached is not None:
         return _cached
     existing = sys.modules.get(_CANONICAL_MODULE_NAME)
-    if existing is not None:
-        _cached = existing
-        return _cached
     path = _repo_root() / _CANONICAL_REL
+    if existing is not None:
+        existing_path = getattr(existing, "__file__", None)
+        if existing_path and Path(existing_path).resolve() == path.resolve():
+            _cached = existing
+            return _cached
     spec = importlib.util.spec_from_file_location(_CANONICAL_MODULE_NAME, path)
     if spec is None or spec.loader is None:
         raise ImportError(f"cannot load canonical planning store: {path}")
