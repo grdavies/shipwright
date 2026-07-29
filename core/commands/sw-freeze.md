@@ -167,3 +167,10 @@ broker — freeze receipts and CI output still must never print secret values. `
 - No unfreeze path exists.
 - Post-freeze parent edits are forbidden — use `/sw-amend`.
 - Credential hygiene: hook/CI output must not contain secrets.
+
+## Planning-store facade (PRD 082)
+
+Issue-store freeze / `verify-frozen-hash` entrypoints remain `scripts/planning_store.py` (generated
+shim). Canonical implementation lives in `scripts/planning_store_facade.py` — operators and CI still
+invoke the shim path; do not import the facade module from workflow commands.
+
