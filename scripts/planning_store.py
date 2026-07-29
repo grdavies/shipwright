@@ -2150,6 +2150,12 @@ def resolve_delivery_linked_units(
 def _phase_done_from_state(state: dict[str, Any] | None, phase_id: str) -> bool:
     if not state:
         return False
+    from wave_state import load_hierarchy_map
+
+    hmap = load_hierarchy_map(state)
+    hentry = (hmap.get("phases") or {}).get(str(phase_id))
+    if isinstance(hentry, dict) and hentry.get("doneSynced"):
+        return True
     phases = state.get("phases") or {}
     meta = phases.get(str(phase_id)) if isinstance(phases, dict) else None
     if isinstance(meta, dict):

@@ -184,9 +184,17 @@ def test_issue_store_progress_uses_ledger_projection(
     }
     pp.provision_deliver_hierarchy(tmp_path, state)
     out = pp.sync_task_checkbox(tmp_path, state, phase_id="1", task_list=task_rel, task_ref="1.1")
-    assert out.get("verdict") in ("ok", None) or out.get("skipped"), out
+    assert out.get("verdict") == "ok", out
+    assert out.get("action") == "local-progress-write", out
     assert before_hash == frozen_body_hash(task_path.read_text(encoding="utf-8"))
 
-    projected_path = tmp_path / ".cursor" / "sw-deliver-runs" / "_progress-projections" / task_rel
-    assert projected_path.is_file()
-    assert parse_task_checkboxes(projected_path.read_text(encoding="utf-8"))["1.1"] is True
+    progress_path = Path(out["path"])
+    assert progress_path.is_file(), out
+    progress_doc = json.loads(progress_path.read_text(encoding="utf-8"))
+    assert progress_doc.get("action") == "task-checkbox"
+    assert progress_doc.get("taskRef") == "1.1"
+    projected = project_checkboxes_from_ledger(
+        task_path.read_text(encoding="utf-8"),
+        state["taskLedger"]["tasks"],
+    )
+    assert parse_task_checkboxes(projected)["1.1"] is True
