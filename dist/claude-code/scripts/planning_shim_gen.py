@@ -22,6 +22,7 @@ GENERATED_HEADER = (
 )
 
 SHIM_TARGETS: tuple[tuple[str, int], ...] = (
+    ("scripts/planning_store.py", 1),
     ("core/scripts/planning_store.py", 2),
     ("dist/cursor/scripts/planning_store.py", 3),
     ("dist/claude-code/scripts/planning_store.py", 3),

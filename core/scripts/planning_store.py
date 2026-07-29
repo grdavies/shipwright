@@ -11,7 +11,7 @@ from typing import Any
 # Marker: planning-store-shim/v1
 
 _CANONICAL_MODULE_NAME = "_planning_store_canonical"
-_CANONICAL_REL = "scripts/planning_store.py"
+_CANONICAL_REL = "scripts/planning_store_facade.py"
 _REPO_ROOT_DEPTH = 2
 _EXPORTED_NAMES = (
     'BITBUCKET_ISSUE_STORE_GUIDANCE',
