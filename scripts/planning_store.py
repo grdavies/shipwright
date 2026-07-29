@@ -124,11 +124,9 @@ ALL_BACKENDS = SHIPPED_BACKENDS | DEFERRED_BACKENDS
 
 def _linear_live_client_wired() -> bool:
     """PRD 066 R9 — recognize Linear in ISSUES_PROVIDERS only when live client exists."""
-    try:
-        import planning_linear_client as _plc  # noqa: WPS433 — optional provider probe
-    except ImportError:
-        return False
-    return bool(getattr(_plc, "LIVE_CLIENT", False)) and callable(getattr(_plc, "graphql", None))
+    from _planning_pkg_loader import load_providers_package
+
+    return load_providers_package().live_client_wired()
 
 
 _BASE_ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira", "none"})
@@ -412,6 +410,8 @@ ISSUES_CAPABILITY_INDEX_IDS: dict[str, str] = {
 
 def issues_provider_registration_footprint() -> dict[str, Any]:
     """PRD 066 R16/R20 — registration touchpoints for issue-backed adapters."""
+    from _planning_pkg_loader import load_providers_package
+
     linear_wired = _linear_live_client_wired()
     return {
         "verdict": "ok",
@@ -422,14 +422,11 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
         "rateLimitMap": dict(issues_http.ISSUES_PROVIDER_TO_RATELIMIT),
         "capabilityIndexIds": dict(ISSUES_CAPABILITY_INDEX_IDS),
         "migrationHooks": list(ISSUES_MIGRATION_HOOKS),
-        "linear": {
-            "recognized": "linear" in ISSUES_PROVIDERS,
-            "shipped": "linear" in SHIPPED_ISSUES_PROVIDERS,
-            "liveClientWired": linear_wired,
-            "promotionGatedBy": ["conformance", "oauth-docs-gate"],
-            "adapterModule": "scripts/planning_linear_client.py",
-            "doctorHooks": ["doctor-issues-provider-stub", "planning_linear_client.doctor-oauth"],
-        },
+        "linear": load_providers_package().linear.registration_footprint(
+            recognized="linear" in ISSUES_PROVIDERS,
+            shipped="linear" in SHIPPED_ISSUES_PROVIDERS,
+            live_client_wired=linear_wired,
+        ),
         "recognitionVsShipped": {
             provider: {
                 "recognized": provider in ISSUES_PROVIDERS,
@@ -458,44 +455,17 @@ def doctor_issues_provider_stub(root: Path, cfg: dict[str, Any]) -> dict[str, An
                 "(github-issues or jira) or use file-store fallback"
             ),
         }
-    if provider == "linear" and provider not in ISSUES_PROVIDERS:
-        return {
-            "verdict": "fail",
-            "action": "doctor-issues-provider-stub",
-            "error": "linear-stub-refused",
-            "provider": provider,
-            "message": (
-                "linear is configured but no live client is wired — enum-only stub refused; "
-                "install planning_linear_client.py with LIVE_CLIENT before recognition"
-            ),
-        }
-    if provider == "linear" and provider not in SHIPPED_ISSUES_PROVIDERS:
-        oauth = {}
-        try:
-            from planning_linear_client import doctor_oauth_ci_secret_check
+    if provider == "linear":
+        from _planning_pkg_loader import load_providers_package
 
-            oauth = doctor_oauth_ci_secret_check(root)
-        except ImportError:
-            oauth = {"verdict": "fail", "error": "linear-client-missing"}
-        if oauth.get("verdict") == "fail" and oauth.get("error") == "oauth-shared-ci-secret-refused":
-            return {
-                "verdict": "fail",
-                "action": "doctor-issues-provider-stub",
-                "error": "linear-oauth-stub-refused",
-                "provider": provider,
-                "oauth": oauth,
-            }
-        return {
-            "verdict": "pass",
-            "action": "doctor-issues-provider-stub",
-            "provider": provider,
-            "notice": "linear-recognized-not-shipped",
-            "message": (
-                "linear is recognized (live client wired) but not yet in SHIPPED_ISSUES_PROVIDERS; "
-                "issue-store falls back to file-store until conformance + OAuth docs gate pass"
-            ),
-            "oauth": oauth,
-        }
+        linear_result = load_providers_package().linear.doctor_stub_result(
+            root,
+            provider=provider,
+            issues_providers=ISSUES_PROVIDERS,
+            shipped_providers=SHIPPED_ISSUES_PROVIDERS,
+        )
+        if linear_result is not None:
+            return linear_result
     return {"verdict": "pass", "action": "doctor-issues-provider-stub", "provider": provider}
 
 
@@ -518,19 +488,9 @@ _ISSUES_PROVIDER_TO_BROKER: dict[str, str] = {
 
 
 def _issues_destination_endpoint(cfg: dict[str, Any], issues_provider: str) -> str:
-    host = host_section(cfg)
-    if issues_provider == "github-issues":
-        return github_api_base(host)
-    if issues_provider == "gitlab-issues":
-        return gitlab_api_base(host)
-    if issues_provider == "jira":
-        from planning_jira_probe import resolve_jira_endpoint
+    from _planning_pkg_loader import load_providers_package
 
-        endpoint = resolve_jira_endpoint(cfg)
-        return endpoint or ""
-    if issues_provider == "linear":
-        return "https://api.linear.app/graphql"
-    return ""
+    return load_providers_package().destination_endpoint(cfg, issues_provider)
 
 
 def resolve_issues_credential(
@@ -727,435 +687,80 @@ def resolve_effective_backend(root: Path, cfg: dict[str, Any], *, override: str 
     return out
 
 
-def _probe_rate_limited_result(exc: Exception) -> dict[str, Any] | None:
-    from issues_lib import IssueRateLimited
+def _providers_pkg():
+    from _planning_pkg_loader import load_providers_package
 
-    if not isinstance(exc, IssueRateLimited):
-        return None
-    return {
-        "verdict": "fail",
-        "error": "rate-limited",
-        "retryable": bool(exc.retryable),
-        "reason": exc.reason,
-        "cumulativeWaitMs": exc.cumulative_wait_ms,
-        "message": str(exc),
-    }
+    return load_providers_package()
+
+
+def _probe_rate_limited_result(exc: Exception) -> dict[str, Any] | None:
+    from _planning_pkg_loader import load_submodule
+
+    return load_submodule("providers._common").probe_rate_limited_result(exc)
+
 
 def _github_probe_headers(token: str) -> dict[str, str]:
-    return {
-        "Accept": "application/vnd.github+json",
-        "Authorization": f"Bearer {token}",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "User-Agent": "shipwright-planning-store",
-    }
+    return _providers_pkg().github.probe_headers(token)
 
 
-def _github_fine_grained_probe(
-    token: str,
-    cfg: dict[str, Any],
-    root: Path,
-    *,
-    required: set[str],
-) -> dict[str, Any]:
-    """Fine-grained PATs omit X-OAuth-Scopes — verify issue-store repo access functionally."""
-    location = resolve_store_location(root, cfg)
-    if location.get("verdict") != "ok":
-        return {
-            "verdict": "fail",
-            "error": "store-location-unresolved",
-            "message": str(location.get("error") or "unable to resolve store location for probe"),
-        }
-    owner = location.get("owner")
-    repo = location.get("repo")
-    if not isinstance(owner, str) or not owner.strip() or not isinstance(repo, str) or not repo.strip():
-        return {
-            "verdict": "fail",
-            "error": "store-location-unresolved",
-            "message": "store location missing owner/repo for fine-grained probe",
-        }
-    owner = owner.strip()
-    repo = repo.strip()
-    api_base = github_api_base(host_section(cfg))
-    headers = _github_probe_headers(token)
-    probes = (
-        (f"{api_base}/repos/{owner}/{repo}", "metadata"),
-        (f"{api_base}/repos/{owner}/{repo}/issues?state=all&per_page=1", "issues"),
-    )
-    for probe_url, probe_kind in probes:
-        try:
-            status, _, _body = issues_http.http_request(
-                "GET",
-                probe_url,
-                headers,
-                root=root,
-                issues_provider="github-issues",
-                timeout=15,
-            )
-        except ConnectionError as exc:
-            return {"verdict": "fail", "error": "network-unavailable", "message": str(exc)}
-        except Exception as exc:
-            limited = _probe_rate_limited_result(exc)
-            if limited is not None:
-                limited["probe"] = probe_kind
-                return limited
-            raise
-        else:
-            if status >= 400:
-                if status in {401, 403}:
-                    return {
-                        "verdict": "fail",
-                        "error": "insufficient-scope",
-                        "probe": probe_kind,
-                        "httpStatus": status,
-                        "scopes": [],
-                        "required": sorted(required),
-                        "message": f"GitHub fine-grained token lacks {probe_kind} access to {owner}/{repo}",
-                    }
-                if status == 404:
-                    return {
-                        "verdict": "fail",
-                        "error": "repo-not-found",
-                        "httpStatus": 404,
-                        "owner": owner,
-                        "repo": repo,
-                        "message": f"Repository {owner}/{repo} not found or not accessible with this token",
-                    }
-                return {"verdict": "fail", "error": "auth-failed", "httpStatus": status}
-    return {
-        "verdict": "ok",
-        "scopes": [],
-        "required": sorted(required),
-        "tokenKind": "fine-grained",
-        "probeRepo": f"{owner}/{repo}",
-        "owner": owner,
-        "repo": repo,
-    }
+def _github_fine_grained_probe(token: str, cfg: dict[str, Any], root: Path, *, required: set[str]) -> dict[str, Any]:
+    return _providers_pkg().github.fine_grained_probe(token, cfg, root, required=required)
 
 
+def _github_native_links_capable_probe(token: str, cfg: dict[str, Any], root: Path, *, owner: str, repo: str) -> bool:
+    return _providers_pkg().github.native_links_capable_probe(token, cfg, root, owner=owner, repo=repo)
 
 
-def _github_native_links_capable_probe(
-    token: str,
-    cfg: dict[str, Any],
-    root: Path,
-    *,
-    owner: str,
-    repo: str,
-) -> bool:
-    api_base = github_api_base(host_section(cfg))
-    headers = _github_probe_headers(token)
-    headers["X-GitHub-Api-Version"] = "2026-03-10"
-    url = f"{api_base}/repos/{owner}/{repo}/issues/1/sub_issues"
-    try:
-        status, _, _body = issues_http.http_request(
-            "GET",
-            url,
-            headers,
-            root=root,
-            issues_provider="github-issues",
-            timeout=15,
-        )
-    except Exception:
-        return False
-    if status == 403:
-        return False
-    return status < 400 or status == 404
+def _attach_github_native_links_capable(probe: dict[str, Any], token: str, cfg: dict[str, Any], root: Path) -> None:
+    _providers_pkg().github.attach_native_links_capable(probe, token, cfg, root)
 
 
-def _attach_github_native_links_capable(
-    probe: dict[str, Any],
-    token: str,
-    cfg: dict[str, Any],
-    root: Path,
-) -> None:
-    if probe.get("verdict") != "ok":
-        probe["nativeLinksCapable"] = False
-        return
-    owner = probe.get("owner")
-    repo = probe.get("repo")
-    probe_repo = probe.get("probeRepo")
-    if (not owner or not repo) and isinstance(probe_repo, str) and "/" in probe_repo:
-        owner, repo = probe_repo.split("/", 1)
-    if not isinstance(owner, str) or not isinstance(repo, str) or not owner or not repo:
-        location = resolve_store_location(root, cfg)
-        owner = location.get("owner") if isinstance(location.get("owner"), str) else ""
-        repo = location.get("repo") if isinstance(location.get("repo"), str) else ""
-    if owner and repo:
-        probe["nativeLinksCapable"] = _github_native_links_capable_probe(
-            token,
-            cfg,
-            root,
-            owner=owner.strip(),
-            repo=repo.strip(),
-        )
-    else:
-        probe["nativeLinksCapable"] = False
-
-
-
-def _gitlab_native_links_capable_probe(
-    token: str,
-    cfg: dict[str, Any],
-    root: Path,
-    *,
-    owner: str,
-    project: str,
-) -> bool:
-    from urllib.parse import quote
-
-    api_base = gitlab_api_base(host_section(cfg))
-    encoded = quote(f"{owner}/{project}", safe="")
-    url = f"{api_base}/projects/{encoded}/issues/1/links"
-    headers = {"PRIVATE-TOKEN": token, "User-Agent": "shipwright-planning-store"}
-    try:
-        status, _, _body = issues_http.http_request(
-            "GET",
-            url,
-            headers,
-            root=root,
-            issues_provider="gitlab-issues",
-            timeout=15,
-        )
-    except Exception:
-        return False
-    if status == 403:
-        return False
-    return status < 400 or status == 404
+def _gitlab_native_links_capable_probe(token: str, cfg: dict[str, Any], root: Path, *, owner: str, project: str) -> bool:
+    return _providers_pkg().gitlab.native_links_capable_probe(token, cfg, root, owner=owner, project=project)
 
 
 def _jira_native_links_capable_probe(token: str, cfg: dict[str, Any], root: Path) -> bool:
-    from planning_jira_probe import _api_base, _auth_header, _http_get
-
-    base = _api_base(cfg)
-    headers = _auth_header(cfg, token)
-    if not base or not headers:
-        return False
-    try:
-        status, _payload = _http_get(f"{base}/issueLinkType", headers, root=root)
-    except Exception:
-        return False
-    return status < 400
+    return _providers_pkg().jira.native_links_capable_probe(token, cfg, root)
 
 
-def _attach_gitlab_native_links_capable(
-    probe: dict[str, Any],
-    token: str,
-    cfg: dict[str, Any],
-    root: Path,
-) -> None:
-    if probe.get("verdict") != "ok":
-        probe["nativeLinksCapable"] = False
-        return
-    owner = probe.get("owner")
-    repo = probe.get("repo")
-    probe_repo = probe.get("probeRepo")
-    if (not owner or not repo) and isinstance(probe_repo, str) and "/" in probe_repo:
-        owner, repo = probe_repo.split("/", 1)
-    if not isinstance(owner, str) or not isinstance(repo, str) or not owner or not repo:
-        location = resolve_store_location(root, cfg)
-        owner = location.get("owner") if isinstance(location.get("owner"), str) else ""
-        repo = location.get("repo") if isinstance(location.get("repo"), str) else ""
-    if owner and repo:
-        probe["nativeLinksCapable"] = _gitlab_native_links_capable_probe(
-            token,
-            cfg,
-            root,
-            owner=owner.strip(),
-            project=repo.strip(),
-        )
-    else:
-        probe["nativeLinksCapable"] = False
+def _attach_gitlab_native_links_capable(probe: dict[str, Any], token: str, cfg: dict[str, Any], root: Path) -> None:
+    _providers_pkg().gitlab.attach_native_links_capable(probe, token, cfg, root)
 
 
-def _attach_jira_native_links_capable(
-    probe: dict[str, Any],
-    token: str,
-    cfg: dict[str, Any],
-    root: Path,
-) -> None:
-    if probe.get("verdict") != "ok":
-        probe["nativeLinksCapable"] = False
-        return
-    probe["nativeLinksCapable"] = _jira_native_links_capable_probe(token, cfg, root)
+def _attach_jira_native_links_capable(probe: dict[str, Any], token: str, cfg: dict[str, Any], root: Path) -> None:
+    _providers_pkg().jira.attach_native_links_capable(probe, token, cfg, root)
+
 
 def _github_scope_probe(token: str, cfg: dict[str, Any], root: Path) -> dict[str, Any]:
-    host = host_section(cfg)
-    url = f"{github_api_base(host)}/user"
-    headers = _github_probe_headers(token)
-    try:
-        status, resp_headers, _body = issues_http.http_request(
-            "GET",
-            url,
-            headers,
-            root=root,
-            issues_provider="github-issues",
-            timeout=15,
-        )
-    except ConnectionError as exc:
-        return {"verdict": "fail", "error": "network-unavailable", "message": str(exc)}
-    except Exception as exc:
-        limited = _probe_rate_limited_result(exc)
-        if limited is not None:
-            return limited
-        raise
-    else:
-        if status >= 400:
-            return {"verdict": "fail", "error": "auth-failed", "httpStatus": status}
-        scopes_header = resp_headers.get("x-oauth-scopes") or resp_headers.get("X-OAuth-Scopes") or ""
-    scopes = {s.strip() for s in scopes_header.split(",") if s.strip()}
-    required = set(MIN_ISSUES_SCOPES["github-issues"])
-    if scopes & required:
-        return {
-            "verdict": "ok",
-            "scopes": sorted(scopes),
-            "required": sorted(required),
-            "tokenKind": "classic",
-        }
-    if "repo" in scopes or "public_repo" in scopes:
-        return {
-            "verdict": "ok",
-            "scopes": sorted(scopes),
-            "required": sorted(required),
-            "tokenKind": "classic",
-        }
-    if not scopes:
-        return _github_fine_grained_probe(token, cfg, root, required=required)
-    return {
-        "verdict": "fail",
-        "error": "insufficient-scope",
-        "scopes": sorted(scopes),
-        "required": sorted(required),
-        "message": "GitHub token lacks repo/public_repo scope for issue-store",
-    }
+    return _providers_pkg().github.scope_probe(token, cfg, root)
 
 
 def _gitlab_scope_probe(token: str, cfg: dict[str, Any], root: Path) -> dict[str, Any]:
-    host = host_section(cfg)
-    url = f"{gitlab_api_base(host)}/user"
-    headers = {"PRIVATE-TOKEN": token, "User-Agent": "shipwright-planning-store"}
-    try:
-        status, _, _body = issues_http.http_request(
-            "GET",
-            url,
-            headers,
-            root=root,
-            issues_provider="gitlab-issues",
-            timeout=15,
-        )
-    except ConnectionError as exc:
-        return {"verdict": "fail", "error": "network-unavailable", "message": str(exc)}
-    except Exception as exc:
-        limited = _probe_rate_limited_result(exc)
-        if limited is not None:
-            return limited
-        raise
-    else:
-        if status >= 400:
-            return {"verdict": "fail", "error": "auth-failed", "httpStatus": status}
-    return {"verdict": "ok", "required": MIN_ISSUES_SCOPES["gitlab-issues"]}
+    return _providers_pkg().gitlab.scope_probe(token, cfg, root)
 
 
 def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
-    issues = resolve_issues_provider(cfg)
-    provider = issues.get("provider", "none")
-    if provider in {"none", ""} or not issues.get("supported"):
-        return {
-            "verdict": "ok",
-            "skipped": True,
-            "reason": "issues-provider-none-or-unsupported",
-            "provider": provider,
-        }
-    if provider not in SHIPPED_ISSUES_PROVIDERS:
-        return {
-            "verdict": "ok",
-            "skipped": True,
-            "reason": "issues-provider-not-shipped",
-            "provider": provider,
-        }
-    token_env = resolve_issues_token_env(cfg, provider)
-    if not token_env:
-        return {"verdict": "fail", "error": "missing-token-env", "provider": provider}
-    if not token_present(token_env):
-        return {
-            "verdict": "fail",
-            "error": "missing-token",
-            "provider": provider,
-            "tokenEnv": token_env,
-            "message": f"Set {token_env} for issue-store API access (value never logged).",
-        }
-    token = os.environ.get(token_env, "")
-    if provider == "github-issues":
-        probe = _github_scope_probe(token, cfg, root)
-    elif provider == "gitlab-issues":
-        probe = _gitlab_scope_probe(token, cfg, root)
-    elif provider == "jira":
-        probe = _jira_scope_probe(root, cfg, token)
-    else:
-        return {
-            "verdict": "fail",
-            "error": "probe-not-implemented",
-            "provider": provider,
-            "requiredScopes": MIN_ISSUES_SCOPES.get(provider, []),
-        }
-    out: dict[str, Any] = {
-        "verdict": probe.get("verdict", "fail"),
-        "provider": provider,
-        "tokenEnv": token_env,
-        "tokenPresent": True,
-        "requiredScopes": MIN_ISSUES_SCOPES.get(provider, []),
-    }
-    for key in ("error", "message", "scopes", "required", "httpStatus", "tokenKind", "probeRepo", "probe", "owner", "repo"):
-        if key in probe:
-            out[key] = probe[key]
-    if provider == "github-issues":
-        _attach_github_native_links_capable(out, token, cfg, root)
-    elif provider == "gitlab-issues":
-        _attach_gitlab_native_links_capable(out, token, cfg, root)
-    elif provider == "jira":
-        _attach_jira_native_links_capable(out, token, cfg, root)
-    else:
-        out["nativeLinksCapable"] = False
-    return out
-
+    return _providers_pkg().probe_issues_token(root, cfg)
 
 
 def _jira_scope_probe(root: Path, cfg: dict[str, Any], token: str) -> dict[str, Any]:
-    from planning_jira_probe import probe_jira_init
-
-    return probe_jira_init(cfg, token, root)
+    return _providers_pkg().jira.scope_probe(root, cfg, token)
 
 
 def jira_privacy_create_gate(root: Path, cfg: dict[str, Any], unit_id: str, body_path: str, content: str) -> None:
-    """R105 — fail-closed on create when shared Jira project + private/memory unit."""
-    issues = resolve_issues_provider(cfg)
-    if issues.get("provider") != "jira":
-        return
-    from planning_jira_probe import probe_jira_privacy
+    _providers_pkg().jira.privacy_create_gate(root, cfg, unit_id, body_path, content)
 
-    artifact_type = require_artifact_type(body_path, content=content)
-    unit: dict[str, Any] = {"id": unit_id, "type": artifact_type, "bodyPath": body_path}
-    explicit = parse_visibility_from_content(content)
-    if explicit:
-        unit["visibility"] = explicit
-    resolved = planning_visibility.resolve_unit_visibility(unit, cfg)
-    if not planning_visibility.body_is_redacted(resolved["visibility"]):
-        return
-    probe = probe_jira_privacy(cfg, root)
-    if probe.get("verdict") != "ok":
-        fail(
-            probe.get("error", "per-issue-privacy-unsupported"),
-            code="visibility-refused",
-            visibility=resolved["visibility"],
-            unitId=unit_id,
-            remediation=probe.get("remediation"),
-        )
-    fail(
-        "per-issue-privacy-unsupported-on-jira",
-        code="visibility-refused",
-        visibility=resolved["visibility"],
-        unitId=unit_id,
-        remediation="use separate Jira project per visibility tier or reroute per PRD 043 R28/R43",
-    )
+
+def _jira_store_project_browse_private(root: Path, cfg: dict[str, Any], project_key: str) -> bool | None:
+    return _providers_pkg().jira.store_project_browse_private(root, cfg, project_key)
+
+
+def _github_store_repo_private(root: Path, cfg: dict[str, Any], owner: str, repo: str) -> bool | None:
+    return _providers_pkg().github.store_repo_private(root, cfg, owner, repo)
+
+
+def _gitlab_store_project_private(root: Path, cfg: dict[str, Any], owner: str, project: str) -> bool | None:
+    return _providers_pkg().gitlab.store_project_private(root, cfg, owner, project)
 
 
 def parse_visibility_from_content(content: str) -> str | None:
@@ -1206,129 +811,6 @@ def _store_host_privacy_override() -> str | None:
     raw = os.environ.get("SW_STORE_HOST_PRIVACY", "").strip().lower()
     if raw in {"private", "public"}:
         return raw
-    return None
-
-
-def _jira_store_project_browse_private(root: Path, cfg: dict[str, Any], project_key: str) -> bool | None:
-    """R14 — real host-privacy probe for the Jira shipped provider (was previously a
-    placeholder that always fell through to ``unknown`` when ``jiraProjectVisibility``
-    was not declared). Inspects the project's permission scheme BROWSE_PROJECTS grants:
-    a grant to an unrestricted holder (``anyone`` / any authenticated Jira user) means
-    the project is effectively public within the Jira instance; grants scoped only to
-    specific groups, roles, or users mean the project is private. Returns ``None``
-    (probe-inconclusive) when unauthenticated, unreachable, or the scheme carries no
-    BROWSE_PROJECTS entries."""
-    from planning_jira_probe import _api_base, _auth_header, resolve_jira_flavor
-
-    token_env = resolve_issues_token_env(cfg, "jira")
-    api_token = os.environ.get(token_env, "") if token_env else ""
-    if not api_token:
-        return None
-    if resolve_jira_flavor(cfg) == "dc":
-        headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
-    else:
-        headers = _auth_header(cfg, api_token)
-    base = _api_base(cfg)
-    if not base or not headers:
-        return None
-    url = f"{base}/project/{project_key}/permissionscheme"
-    request_headers = {**headers, "User-Agent": "shipwright-planning-store"}
-    try:
-        status, _resp_headers, body = issues_http.http_request(
-            "GET",
-            url,
-            request_headers,
-            root=root,
-            issues_provider="jira",
-            timeout=15,
-        )
-        if status >= 400:
-            return None
-        data = json.loads(body)
-    except (ConnectionError, json.JSONDecodeError, TimeoutError):
-        return None
-    if not isinstance(data, dict):
-        return None
-    browse_holders = [
-        entry.get("holder")
-        for entry in data.get("permissions") or []
-        if isinstance(entry, dict) and entry.get("permission") == "BROWSE_PROJECTS"
-    ]
-    browse_holders = [h for h in browse_holders if isinstance(h, dict)]
-    if not browse_holders:
-        return None
-    unrestricted_holder_types = {"anyone", "loggedin", "authenticated"}
-    if any(str(h.get("type", "")).strip().lower() in unrestricted_holder_types for h in browse_holders):
-        return False
-    return True
-
-
-def _github_store_repo_private(root: Path, cfg: dict[str, Any], owner: str, repo: str) -> bool | None:
-    from issues_lib import IssueRateLimited
-
-    provider = "github-issues"
-    token_env = resolve_issues_token_env(cfg, provider)
-    api_token = os.environ.get(token_env, "") if token_env else ""
-    host = host_section(cfg)
-    url = f"{github_api_base(host)}/repos/{owner}/{repo}"
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "User-Agent": "shipwright-planning-store",
-    }
-    if api_token:
-        headers["Authorization"] = f"Bearer {api_token}"
-    try:
-        status, _, body = issues_http.http_request(
-            "GET",
-            url,
-            headers,
-            root=root,
-            issues_provider=provider,
-            timeout=15,
-        )
-        if status >= 400:
-            return None
-        data = json.loads(body)
-    except (IssueRateLimited, ConnectionError, json.JSONDecodeError, TimeoutError):
-        return None
-    if isinstance(data, dict) and "private" in data:
-        return bool(data["private"])
-    return None
-
-
-def _gitlab_store_project_private(root: Path, cfg: dict[str, Any], owner: str, project: str) -> bool | None:
-    from issues_lib import IssueRateLimited
-    from urllib.parse import quote
-
-    provider = "gitlab-issues"
-    token_env = resolve_issues_token_env(cfg, provider)
-    api_token = os.environ.get(token_env, "") if token_env else ""
-    host = host_section(cfg)
-    encoded = quote(f"{owner}/{project}", safe="")
-    url = f"{gitlab_api_base(host)}/projects/{encoded}"
-    headers = {"PRIVATE-TOKEN": api_token, "User-Agent": "shipwright-planning-store"}
-    if not api_token:
-        return None
-    try:
-        status, _, body = issues_http.http_request(
-            "GET",
-            url,
-            headers,
-            root=root,
-            issues_provider=provider,
-            timeout=15,
-        )
-        if status >= 400:
-            return None
-        data = json.loads(body)
-    except (IssueRateLimited, ConnectionError, json.JSONDecodeError, TimeoutError):
-        return None
-    if isinstance(data, dict):
-        visibility = str(data.get("visibility", "")).strip().lower()
-        if visibility == "private":
-            return True
-        if visibility in {"public", "internal"}:
-            return False
     return None
 
 
