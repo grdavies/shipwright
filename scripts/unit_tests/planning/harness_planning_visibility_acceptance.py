@@ -85,9 +85,9 @@ check_doc() {
 # --- store-emitter-parity (R22) ---
 for rel in "${SCRIPTS_034[@]}"; do
   if [[ "$rel" == "planning_store.py" ]]; then
-    # Canonical lives at scripts/; core/dist carry depth-specific shims (R27).
-    if [[ -f "$ROOT/scripts/$rel" && -f "$ROOT/core/scripts/$rel" ]] \
-      && ! grep -q "planning-store-shim/v1" "$ROOT/scripts/$rel" \
+    # Canonical lives at scripts/planning_store_facade.py; scripts/core/dist are shims (R27 phase 14).
+    if [[ -f "$ROOT/scripts/planning_store_facade.py" && -f "$ROOT/scripts/$rel" ]] \
+      && grep -q "planning-store-shim/v1" "$ROOT/scripts/$rel" \
       && grep -q "planning-store-shim/v1" "$ROOT/core/scripts/$rel"; then
       :
     else

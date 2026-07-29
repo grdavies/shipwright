@@ -24,7 +24,8 @@ from _sw.cli import run_module_main
 INVENTORY_VERSION = 1
 INVENTORY_SCHEMA = "planning-import-inventory/v1"
 INVENTORY_REL = Path("core/sw-reference/planning-import-inventory.json")
-CANONICAL_REL = "scripts/planning_store.py"
+CANONICAL_REL = "scripts/planning_store_facade.py"
+CLI_MODULE_REL = "scripts/planning/cli.py"
 
 SCAN_TREES: tuple[str, ...] = (
     "scripts",
@@ -73,7 +74,7 @@ def scan_import_sites(root: Path) -> dict[str, list[dict[str, Any]]]:
             if should_skip(path):
                 continue
             rel = rel_path(root, path)
-            if rel == CANONICAL_REL:
+            if rel in {CANONICAL_REL, CLI_MODULE_REL}:
                 continue
             try:
                 src = path.read_text(encoding="utf-8")
@@ -116,9 +117,17 @@ def scan_import_sites(root: Path) -> dict[str, list[dict[str, Any]]]:
     return symbols
 
 
+def cli_module_path(root: Path) -> Path:
+    path = root / CLI_MODULE_REL
+    if not path.is_file():
+        raise FileNotFoundError(f"missing CLI module: {CLI_MODULE_REL}")
+    return path
+
+
 def scan_cli_surface(root: Path) -> dict[str, Any]:
-    src = canonical_path(root).read_text(encoding="utf-8")
-    tree = ast.parse(src, filename=CANONICAL_REL)
+    cli_rel = CLI_MODULE_REL
+    src = cli_module_path(root).read_text(encoding="utf-8")
+    tree = ast.parse(src, filename=cli_rel)
     subcommands: list[str] = []
     flags: set[str] = {"--root"}
     for node in ast.walk(tree):

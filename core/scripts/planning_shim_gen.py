@@ -22,6 +22,7 @@ GENERATED_HEADER = (
 )
 
 SHIM_TARGETS: tuple[tuple[str, int], ...] = (
+    ("scripts/planning_store.py", 1),
     ("core/scripts/planning_store.py", 2),
     ("dist/cursor/scripts/planning_store.py", 3),
     ("dist/claude-code/scripts/planning_store.py", 3),
@@ -56,7 +57,7 @@ from typing import Any
 
 {GENERATED_HEADER.strip()}
 
-_CANONICAL_MODULE_NAME = "_planning_store_canonical"
+_CANONICAL_MODULE_NAME = "planning_store_facade"
 _CANONICAL_REL = "{CANONICAL_REL}"
 _REPO_ROOT_DEPTH = {repo_depth}
 _EXPORTED_NAMES = (
@@ -73,7 +74,13 @@ def _load_canonical():
     global _cached
     if _cached is not None:
         return _cached
+    existing = sys.modules.get(_CANONICAL_MODULE_NAME)
     path = _repo_root() / _CANONICAL_REL
+    if existing is not None:
+        existing_path = getattr(existing, "__file__", None)
+        if existing_path and Path(existing_path).resolve() == path.resolve():
+            _cached = existing
+            return _cached
     spec = importlib.util.spec_from_file_location(_CANONICAL_MODULE_NAME, path)
     if spec is None or spec.loader is None:
         raise ImportError(f"cannot load canonical planning store: {{path}}")

@@ -1,9 +1,9 @@
 {
   "version": 1,
   "schema": "planning-import-inventory/v1",
-  "generatedAt": "2026-07-28T20:35:47Z",
+  "generatedAt": "2026-07-29T08:03:47Z",
   "generatedBy": "planning_import_inventory.py",
-  "canonicalModule": "scripts/planning_store.py",
+  "canonicalModule": "scripts/planning_store_facade.py",
   "trees": [
     "scripts",
     "core",
@@ -13,15 +13,81 @@
   ],
   "symbols": [
     {
-      "name": "DEFAULT_BACKEND",
+      "name": "BITBUCKET_ISSUE_STORE_GUIDANCE",
       "sites": [
         {
-          "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 153,
+          "file": "core/scripts/planning_authority_reasons.py",
+          "line": 77,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_authority_reasons.py",
+          "line": 77,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/cursor/scripts/planning_authority_reasons.py",
+          "line": 77,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_authority_reasons.py",
+          "line": 77,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_authority_reasons.py",
+          "line": 77,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_authority_reasons.py",
+          "line": 77,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_planning_authority_reasons.py",
+          "line": 149,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 1
+      "siteCount": 7
+    },
+    {
+      "name": "DEFAULT_BACKEND",
+      "sites": [
+        {
+          "file": "core/scripts/planning_authority_reasons.py",
+          "line": 134,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_authority_reasons.py",
+          "line": 134,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/cursor/scripts/planning_authority_reasons.py",
+          "line": 134,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_authority_reasons.py",
+          "line": 134,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_authority_reasons.py",
+          "line": 134,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_authority_reasons.py",
+          "line": 134,
+          "kind": "attribute-access"
+        }
+      ],
+      "siteCount": 6
     },
     {
       "name": "DEFAULT_ISSUES_TOKEN_ENV",
@@ -67,6 +133,26 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/credentials/config_surface.py",
+          "line": 43,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/credentials/config_surface.py",
+          "line": 294,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/credentials/config_surface.py",
+          "line": 43,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/credentials/config_surface.py",
+          "line": 294,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/unit_tests/credentials/test_tokenenv_deprecation.py",
           "line": 88,
           "kind": "attribute-access"
@@ -77,7 +163,7 @@
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 10
+      "siteCount": 14
     },
     {
       "name": "DEFERRED_ISSUES_PROVIDERS",
@@ -107,6 +193,17 @@
       "siteCount": 1
     },
     {
+      "name": "FILE_BACKED_STORE_TXN_ID",
+      "sites": [
+        {
+          "file": "scripts/unit_tests/planning/harness_planning_store_transactional.py",
+          "line": 16,
+          "kind": "import-from"
+        }
+      ],
+      "siteCount": 1
+    },
+    {
       "name": "ISSUES_PROVIDERS",
       "sites": [
         {
@@ -126,7 +223,7 @@
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 112,
+          "line": 113,
           "kind": "attribute-access"
         }
       ],
@@ -156,18 +253,28 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 220,
+          "line": 223,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 273,
+          "line": 276,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 298,
+          "line": 301,
           "kind": "attribute-access"
         },
         {
@@ -179,9 +286,14 @@
           "file": "scripts/unit_tests/git/test_docs_prds_materialize_r5.py",
           "line": 64,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_planning_backend_adapters.py",
+          "line": 101,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 9
+      "siteCount": 12
     },
     {
       "name": "IssueStoreBackend",
@@ -267,8 +379,48 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/closeout_ci.py",
+          "line": 280,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/deliver_closeout.py",
+          "line": 551,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/deliver_closeout.py",
+          "line": 861,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/closeout_ci.py",
+          "line": 280,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/deliver_closeout.py",
+          "line": 551,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/deliver_closeout.py",
+          "line": 861,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 166,
+          "line": 168,
           "kind": "attribute-access"
         },
         {
@@ -297,12 +449,17 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/unit_tests/planning/test_planning_backend_adapters.py",
+          "line": 102,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_prd070_closeout_regressions.py",
           "line": 14,
           "kind": "import-from"
         }
       ],
-      "siteCount": 23
+      "siteCount": 32
     },
     {
       "name": "KILL_SWITCH_ENV",
@@ -319,11 +476,63 @@
         },
         {
           "file": "scripts/unit_tests/planning/test_backend_control_resolver.py",
-          "line": 122,
+          "line": 124,
           "kind": "attribute-access"
         }
       ],
       "siteCount": 3
+    },
+    {
+      "name": "KILL_SWITCH_NOTICE",
+      "sites": [
+        {
+          "file": "core/scripts/planning_authority_reasons.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_authority_reasons.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/cursor/scripts/planning_authority_reasons.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_authority_reasons.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_authority_reasons.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_authority_reasons.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_planning_authority_reasons.py",
+          "line": 106,
+          "kind": "attribute-access"
+        }
+      ],
+      "siteCount": 7
+    },
+    {
+      "name": "LocalSyncedBackend",
+      "sites": [
+        {
+          "file": "scripts/unit_tests/planning/test_planning_backend_adapters.py",
+          "line": 103,
+          "kind": "attribute-access"
+        }
+      ],
+      "siteCount": 1
     },
     {
       "name": "MATERIALIZE_MISSING_FROZEN_BODY",
@@ -353,9 +562,14 @@
           "file": "scripts/test/fixtures/memory-roundtrip/harness.py",
           "line": 130,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_planning_backend_adapters.py",
+          "line": 104,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 2
+      "siteCount": 3
     },
     {
       "name": "PROJECT_KEY_PATTERN",
@@ -366,8 +580,18 @@
           "kind": "import-from"
         },
         {
+          "file": "core/scripts/planning_cross_project_trust.py",
+          "line": 11,
+          "kind": "import-from"
+        },
+        {
           "file": "dist/claude-code/scripts/planning_cross_project_recall.py",
           "line": 20,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_cross_project_trust.py",
+          "line": 11,
           "kind": "import-from"
         },
         {
@@ -376,12 +600,42 @@
           "kind": "import-from"
         },
         {
+          "file": "dist/cursor/scripts/planning_cross_project_trust.py",
+          "line": 11,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/planning_cross_project_recall.py",
           "line": 20,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/planning_cross_project_trust.py",
+          "line": 11,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_cross_project_recall.py",
+          "line": 20,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_cross_project_trust.py",
+          "line": 11,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_cross_project_recall.py",
+          "line": 20,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_cross_project_trust.py",
+          "line": 11,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 12
     },
     {
       "name": "PUT_INCOMPLETE_LABEL",
@@ -431,32 +685,82 @@
           "file": "scripts/planning_github_projects_v2.py",
           "line": 23,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "SHIPPED_ISSUES_PROVIDERS",
       "sites": [
         {
           "file": "core/scripts/issues_lib.py",
-          "line": 503,
+          "line": 493,
           "kind": "import-from"
+        },
+        {
+          "file": "core/scripts/planning/providers/__init__.py",
+          "line": 111,
+          "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/issues_lib.py",
-          "line": 503,
+          "line": 493,
           "kind": "import-from"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/providers/__init__.py",
+          "line": 111,
+          "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/issues_lib.py",
-          "line": 503,
+          "line": 493,
           "kind": "import-from"
         },
         {
+          "file": "dist/cursor/scripts/planning/providers/__init__.py",
+          "line": 111,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/issues_lib.py",
-          "line": 503,
+          "line": 493,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/planning/providers/__init__.py",
+          "line": 111,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/issues_lib.py",
+          "line": 493,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/providers/__init__.py",
+          "line": 111,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/issues_lib.py",
+          "line": 493,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/providers/__init__.py",
+          "line": 111,
+          "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-gitlab-demotion/harness.py",
@@ -480,11 +784,11 @@
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 113,
+          "line": 114,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 9
+      "siteCount": 17
     },
     {
       "name": "SemanticStatusError",
@@ -535,31 +839,77 @@
           "file": "scripts/credentials/doctor.py",
           "line": 338,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/credentials/doctor.py",
+          "line": 338,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/credentials/doctor.py",
+          "line": 338,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
+    },
+    {
+      "name": "_contains_raw_transcript",
+      "sites": [
+        {
+          "file": "core/scripts/planning/backends/memory_cache.py",
+          "line": 45,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/backends/memory_cache.py",
+          "line": 45,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/backends/memory_cache.py",
+          "line": 45,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/planning/backends/memory_cache.py",
+          "line": 45,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/backends/memory_cache.py",
+          "line": 45,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/backends/memory_cache.py",
+          "line": 45,
+          "kind": "import-from"
+        }
+      ],
+      "siteCount": 6
     },
     {
       "name": "_default_body_path",
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 991,
+          "line": 993,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1053,
+          "line": 1055,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1132,
+          "line": 1134,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1202,
+          "line": 1204,
           "kind": "attribute-access"
         },
         {
@@ -574,22 +924,22 @@
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 991,
+          "line": 993,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1053,
+          "line": 1055,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1132,
+          "line": 1134,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1202,
+          "line": 1204,
           "kind": "attribute-access"
         },
         {
@@ -604,22 +954,22 @@
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 991,
+          "line": 993,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1053,
+          "line": 1055,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1132,
+          "line": 1134,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1202,
+          "line": 1204,
           "kind": "attribute-access"
         },
         {
@@ -634,22 +984,22 @@
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 991,
+          "line": 993,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1053,
+          "line": 1055,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1132,
+          "line": 1134,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1202,
+          "line": 1204,
           "kind": "attribute-access"
         },
         {
@@ -659,6 +1009,66 @@
         },
         {
           "file": "scripts/planning_lifecycle.py",
+          "line": 396,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 993,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1055,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1134,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1204,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 315,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 396,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 993,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1055,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1134,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1204,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 315,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
           "line": 396,
           "kind": "attribute-access"
         },
@@ -698,7 +1108,103 @@
           "kind": "import-from"
         }
       ],
-      "siteCount": 31
+      "siteCount": 43
+    },
+    {
+      "name": "_fail",
+      "sites": [
+        {
+          "file": "core/scripts/planning/backends/in_repo.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "core/scripts/planning/backends/local_synced.py",
+          "line": 21,
+          "kind": "import-from"
+        },
+        {
+          "file": "core/scripts/planning/backends/memory_cache.py",
+          "line": 33,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/backends/in_repo.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/backends/local_synced.py",
+          "line": 21,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/backends/memory_cache.py",
+          "line": 33,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/backends/in_repo.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/backends/local_synced.py",
+          "line": 21,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/backends/memory_cache.py",
+          "line": 33,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/planning/backends/in_repo.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/planning/backends/local_synced.py",
+          "line": 21,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/planning/backends/memory_cache.py",
+          "line": 33,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/backends/in_repo.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/backends/local_synced.py",
+          "line": 21,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/backends/memory_cache.py",
+          "line": 33,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/backends/in_repo.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/backends/local_synced.py",
+          "line": 21,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/backends/memory_cache.py",
+          "line": 33,
+          "kind": "import-from"
+        }
+      ],
+      "siteCount": 18
     },
     {
       "name": "_gap_closure_evidence",
@@ -718,9 +1224,14 @@
           "file": "scripts/unit_tests/planning/test_issue_store_remediation.py",
           "line": 331,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_planning_provider_adapters.py",
+          "line": 112,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 1
+      "siteCount": 2
     },
     {
       "name": "_is_allowed_recallium_base",
@@ -780,9 +1291,24 @@
           "file": "scripts/credentials/doctor.py",
           "line": 318,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/credentials/doctor.py",
+          "line": 318,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/credentials/doctor.py",
+          "line": 318,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_planning_provider_adapters.py",
+          "line": 117,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 4
+      "siteCount": 7
     },
     {
       "name": "_lookup_issue_record",
@@ -826,16 +1352,36 @@
           "file": "scripts/deliver_closeout.py",
           "line": 861,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/deliver_closeout.py",
+          "line": 551,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/deliver_closeout.py",
+          "line": 861,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/deliver_closeout.py",
+          "line": 551,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/deliver_closeout.py",
+          "line": 861,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 8
+      "siteCount": 12
     },
     {
       "name": "_parse_absorbs_targets",
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 933,
+          "line": 935,
           "kind": "attribute-access"
         },
         {
@@ -845,7 +1391,7 @@
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 933,
+          "line": 935,
           "kind": "attribute-access"
         },
         {
@@ -855,7 +1401,7 @@
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 933,
+          "line": 935,
           "kind": "attribute-access"
         },
         {
@@ -865,11 +1411,31 @@
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 933,
+          "line": 935,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_lifecycle.py",
+          "line": 183,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 935,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 183,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 935,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
           "line": 183,
           "kind": "attribute-access"
         },
@@ -879,33 +1445,43 @@
           "kind": "import-from"
         }
       ],
-      "siteCount": 9
+      "siteCount": 13
     },
     {
       "name": "_prd_number_from_unit_id",
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1052,
+          "line": 1054,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1052,
+          "line": 1054,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1052,
+          "line": 1054,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1052,
+          "line": 1054,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1054,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1054,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "_prd_unit_id_alias_candidates",
@@ -919,6 +1495,42 @@
       "siteCount": 1
     },
     {
+      "name": "_redact_content",
+      "sites": [
+        {
+          "file": "core/scripts/planning/backends/memory_cache.py",
+          "line": 39,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/backends/memory_cache.py",
+          "line": 39,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/backends/memory_cache.py",
+          "line": 39,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/planning/backends/memory_cache.py",
+          "line": 39,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/backends/memory_cache.py",
+          "line": 39,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/backends/memory_cache.py",
+          "line": 39,
+          "kind": "import-from"
+        }
+      ],
+      "siteCount": 6
+    },
+    {
       "name": "_slug_from_prd_unit",
       "sites": [
         {
@@ -928,6 +1540,42 @@
         }
       ],
       "siteCount": 1
+    },
+    {
+      "name": "_store_section",
+      "sites": [
+        {
+          "file": "core/scripts/planning/backends/local_synced.py",
+          "line": 27,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/backends/local_synced.py",
+          "line": 27,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/backends/local_synced.py",
+          "line": 27,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/planning/backends/local_synced.py",
+          "line": 27,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/backends/local_synced.py",
+          "line": 27,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/backends/local_synced.py",
+          "line": 27,
+          "kind": "import-from"
+        }
+      ],
+      "siteCount": 6
     },
     {
       "name": "_tasks_unit_id_candidates",
@@ -1155,6 +1803,16 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_prd066_operator_projection_contract.py",
           "line": 55,
           "kind": "attribute-access"
@@ -1165,7 +1823,7 @@
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 6
+      "siteCount": 8
     },
     {
       "name": "assert_r1_answerability_while_clean",
@@ -1209,7 +1867,7 @@
         },
         {
           "file": "core/scripts/wave_deliver_loop.py",
-          "line": 3324,
+          "line": 3328,
           "kind": "import-from"
         },
         {
@@ -1219,7 +1877,7 @@
         },
         {
           "file": "dist/claude-code/scripts/wave_deliver_loop.py",
-          "line": 3324,
+          "line": 3328,
           "kind": "import-from"
         },
         {
@@ -1229,12 +1887,32 @@
         },
         {
           "file": "dist/cursor/scripts/wave_deliver_loop.py",
-          "line": 3324,
+          "line": 3328,
           "kind": "import-from"
         },
         {
           "file": "scripts/deliver_closeout.py",
           "line": 164,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/deliver_closeout.py",
+          "line": 164,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/wave_deliver_loop.py",
+          "line": 3328,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/deliver_closeout.py",
+          "line": 164,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/wave_deliver_loop.py",
+          "line": 3328,
           "kind": "import-from"
         },
         {
@@ -1264,11 +1942,27 @@
         },
         {
           "file": "scripts/wave_deliver_loop.py",
-          "line": 3324,
+          "line": 3328,
           "kind": "import-from"
         }
       ],
-      "siteCount": 13
+      "siteCount": 17
+    },
+    {
+      "name": "authority_io_block",
+      "sites": [
+        {
+          "file": "scripts/unit_tests/planning/test_resolve_backend_authority.py",
+          "line": 77,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_resolve_backend_authority.py",
+          "line": 91,
+          "kind": "attribute-access"
+        }
+      ],
+      "siteCount": 2
     },
     {
       "name": "backfill_frontmatter_hybrid",
@@ -1328,7 +2022,7 @@
         },
         {
           "file": "core/scripts/wave_deliver_loop.py",
-          "line": 3314,
+          "line": 3318,
           "kind": "import-from"
         },
         {
@@ -1338,7 +2032,7 @@
         },
         {
           "file": "dist/claude-code/scripts/wave_deliver_loop.py",
-          "line": 3314,
+          "line": 3318,
           "kind": "import-from"
         },
         {
@@ -1348,12 +2042,32 @@
         },
         {
           "file": "dist/cursor/scripts/wave_deliver_loop.py",
-          "line": 3314,
+          "line": 3318,
           "kind": "import-from"
         },
         {
           "file": "scripts/deliver_closeout.py",
           "line": 861,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/deliver_closeout.py",
+          "line": 861,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/wave_deliver_loop.py",
+          "line": 3318,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/deliver_closeout.py",
+          "line": 861,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/wave_deliver_loop.py",
+          "line": 3318,
           "kind": "import-from"
         },
         {
@@ -1368,11 +2082,11 @@
         },
         {
           "file": "scripts/wave_deliver_loop.py",
-          "line": 3314,
+          "line": 3318,
           "kind": "import-from"
         }
       ],
-      "siteCount": 10
+      "siteCount": 14
     },
     {
       "name": "close_done_phase_sub_issues",
@@ -1393,6 +2107,16 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/wave_deliver.py",
+          "line": 1830,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/wave_deliver.py",
+          "line": 1830,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_closure_completeness.py",
           "line": 13,
           "kind": "import-from"
@@ -1403,7 +2127,7 @@
           "kind": "import-from"
         }
       ],
-      "siteCount": 5
+      "siteCount": 7
     },
     {
       "name": "close_parent_epic_if_complete",
@@ -1465,9 +2189,19 @@
           "file": "scripts/context_compress.py",
           "line": 21,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/context_compress.py",
+          "line": 21,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/context_compress.py",
+          "line": 21,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "content_hash",
@@ -1531,9 +2265,39 @@
           "file": "scripts/planning_migrate_issue_store.py",
           "line": 95,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/frozen_spec_ledger.py",
+          "line": 13,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/frozen_spec_ledger.py",
+          "line": 13,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 12
+      "siteCount": 18
     },
     {
       "name": "cycle_sharing_notice",
@@ -1588,17 +2352,27 @@
       "sites": [
         {
           "file": "core/scripts/wave_deliver_loop.py",
-          "line": 3324,
+          "line": 3328,
           "kind": "import-from"
         },
         {
           "file": "dist/claude-code/scripts/wave_deliver_loop.py",
-          "line": 3324,
+          "line": 3328,
           "kind": "import-from"
         },
         {
           "file": "dist/cursor/scripts/wave_deliver_loop.py",
-          "line": 3324,
+          "line": 3328,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/wave_deliver_loop.py",
+          "line": 3328,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/wave_deliver_loop.py",
+          "line": 3328,
           "kind": "import-from"
         },
         {
@@ -1608,23 +2382,23 @@
         },
         {
           "file": "scripts/wave_deliver_loop.py",
-          "line": 3324,
+          "line": 3328,
           "kind": "import-from"
         }
       ],
-      "siteCount": 5
+      "siteCount": 7
     },
     {
       "name": "doctor_issues_provider_stub",
       "sites": [
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 128,
+          "line": 129,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 135,
+          "line": 136,
           "kind": "attribute-access"
         }
       ],
@@ -1724,9 +2498,19 @@
       "name": "fail",
       "sites": [
         {
+          "file": "core/scripts/planning/identity.py",
+          "line": 166,
+          "kind": "import-from"
+        },
+        {
           "file": "core/scripts/spec_union_056.py",
           "line": 94,
           "kind": "attribute-access"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/identity.py",
+          "line": 166,
+          "kind": "import-from"
         },
         {
           "file": "dist/claude-code/scripts/spec_union_056.py",
@@ -1734,17 +2518,47 @@
           "kind": "attribute-access"
         },
         {
+          "file": "dist/cursor/scripts/planning/identity.py",
+          "line": 166,
+          "kind": "import-from"
+        },
+        {
           "file": "dist/cursor/scripts/spec_union_056.py",
           "line": 94,
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/planning/identity.py",
+          "line": 166,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/spec_union_056.py",
+          "line": 94,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/identity.py",
+          "line": 166,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/spec_union_056.py",
+          "line": 94,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/identity.py",
+          "line": 166,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/spec_union_056.py",
           "line": 94,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 4
+      "siteCount": 12
     },
     {
       "name": "format_native_unit_id",
@@ -1793,26 +2607,36 @@
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1032,
+          "line": 1034,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1032,
+          "line": 1034,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1032,
+          "line": 1034,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1032,
+          "line": 1034,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1034,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1034,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "gate_prd_060_r1_r7",
@@ -1871,12 +2695,12 @@
         },
         {
           "file": "core/scripts/memory_decision_snapshot.py",
-          "line": 152,
+          "line": 232,
           "kind": "import-from"
         },
         {
           "file": "core/scripts/memory_decision_snapshot.py",
-          "line": 173,
+          "line": 253,
           "kind": "import-from"
         },
         {
@@ -1896,7 +2720,7 @@
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1080,
+          "line": 1082,
           "kind": "attribute-access"
         },
         {
@@ -1981,12 +2805,12 @@
         },
         {
           "file": "dist/claude-code/scripts/memory_decision_snapshot.py",
-          "line": 152,
+          "line": 232,
           "kind": "import-from"
         },
         {
           "file": "dist/claude-code/scripts/memory_decision_snapshot.py",
-          "line": 173,
+          "line": 253,
           "kind": "import-from"
         },
         {
@@ -2006,7 +2830,7 @@
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1080,
+          "line": 1082,
           "kind": "attribute-access"
         },
         {
@@ -2091,12 +2915,12 @@
         },
         {
           "file": "dist/cursor/scripts/memory_decision_snapshot.py",
-          "line": 152,
+          "line": 232,
           "kind": "import-from"
         },
         {
           "file": "dist/cursor/scripts/memory_decision_snapshot.py",
-          "line": 173,
+          "line": 253,
           "kind": "import-from"
         },
         {
@@ -2116,7 +2940,7 @@
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1080,
+          "line": 1082,
           "kind": "attribute-access"
         },
         {
@@ -2201,12 +3025,12 @@
         },
         {
           "file": "scripts/memory_decision_snapshot.py",
-          "line": 152,
+          "line": 232,
           "kind": "import-from"
         },
         {
           "file": "scripts/memory_decision_snapshot.py",
-          "line": 173,
+          "line": 253,
           "kind": "import-from"
         },
         {
@@ -2226,7 +3050,7 @@
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1080,
+          "line": 1082,
           "kind": "attribute-access"
         },
         {
@@ -2278,6 +3102,226 @@
           "file": "scripts/spec_union_056.py",
           "line": 99,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/check_frozen_lib.py",
+          "line": 156,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/closeout_ci.py",
+          "line": 280,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/deliver_closeout.py",
+          "line": 551,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/deliver_closeout.py",
+          "line": 861,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/doc_link.py",
+          "line": 77,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/memory_decision_snapshot.py",
+          "line": 232,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/memory_decision_snapshot.py",
+          "line": 253,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_artifact_handle.py",
+          "line": 10,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_deliver_gate.py",
+          "line": 173,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 248,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1082,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_index_issue.py",
+          "line": 20,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 274,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 308,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 374,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 437,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_reserve.py",
+          "line": 319,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_reserve.py",
+          "line": 405,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_unit_status.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/spec_union_056.py",
+          "line": 99,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/wave_living_docs.py",
+          "line": 292,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/check_frozen_lib.py",
+          "line": 156,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/closeout_ci.py",
+          "line": 280,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/deliver_closeout.py",
+          "line": 551,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/deliver_closeout.py",
+          "line": 861,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/doc_link.py",
+          "line": 77,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/memory_decision_snapshot.py",
+          "line": 232,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/memory_decision_snapshot.py",
+          "line": 253,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_artifact_handle.py",
+          "line": 10,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_deliver_gate.py",
+          "line": 173,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 248,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1082,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_index_issue.py",
+          "line": 20,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 274,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 308,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 374,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
+          "line": 437,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_reserve.py",
+          "line": 319,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_reserve.py",
+          "line": 405,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_unit_status.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/spec_union_056.py",
+          "line": 99,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/wave_living_docs.py",
+          "line": 292,
+          "kind": "import-from"
         },
         {
           "file": "scripts/test/fixtures/planning-chunk-reassembly/harness.py",
@@ -2351,22 +3395,22 @@
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 165,
+          "line": 167,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 218,
+          "line": 221,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 263,
+          "line": 266,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 295,
+          "line": 298,
           "kind": "attribute-access"
         },
         {
@@ -2405,8 +3449,13 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/unit_tests/planning/test_planning_backend_adapters.py",
+          "line": 109,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 216,
+          "line": 218,
           "kind": "attribute-access"
         },
         {
@@ -2430,7 +3479,7 @@
           "kind": "import-from"
         }
       ],
-      "siteCount": 117
+      "siteCount": 162
     },
     {
       "name": "git_root",
@@ -2494,9 +3543,39 @@
           "file": "scripts/planning_reserve.py",
           "line": 453,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 299,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 365,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_reserve.py",
+          "line": 453,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 299,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 365,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_reserve.py",
+          "line": 453,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 12
+      "siteCount": 18
     },
     {
       "name": "is_bare_integer_unit_id",
@@ -2558,9 +3637,19 @@
           "file": "scripts/planning_unit_status.py",
           "line": 23,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_unit_status.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_unit_status.py",
+          "line": 23,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "issue_index_key",
@@ -2606,12 +3695,37 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_hierarchy.py",
+          "line": 22,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_hierarchy.py",
+          "line": 22,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/test/fixtures/planning-put-journal/harness.py",
           "line": 149,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/harness_planning_store_transactional.py",
+          "line": 16,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 9
+      "siteCount": 14
     },
     {
       "name": "issue_search_by_unit_facade",
@@ -2635,13 +3749,53 @@
           "file": "scripts/planning_unit_status.py",
           "line": 23,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_unit_status.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_unit_status.py",
+          "line": 23,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "issue_store_fallback_reason",
       "sites": [
+        {
+          "file": "core/scripts/planning_authority_reasons.py",
+          "line": 138,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_authority_reasons.py",
+          "line": 138,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/cursor/scripts/planning_authority_reasons.py",
+          "line": 138,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_authority_reasons.py",
+          "line": 138,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_authority_reasons.py",
+          "line": 138,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_authority_reasons.py",
+          "line": 138,
+          "kind": "attribute-access"
+        },
         {
           "file": "scripts/test/fixtures/planning-gitlab-demotion/harness.py",
           "line": 112,
@@ -2649,16 +3803,16 @@
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 165,
+          "line": 167,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 196,
+          "line": 198,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 3
+      "siteCount": 9
     },
     {
       "name": "issue_store_private_enough",
@@ -2693,9 +3847,19 @@
           "file": "scripts/planning_migrate_issue_store.py",
           "line": 1675,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 1675,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 1675,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "issue_store_visibility_gate",
@@ -2719,16 +3883,26 @@
           "file": "scripts/planning_migrate_issue_store.py",
           "line": 95,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "issues_provider_registration_footprint",
       "sites": [
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 96,
+          "line": 97,
           "kind": "attribute-access"
         }
       ],
@@ -2916,9 +4090,99 @@
           "file": "scripts/planning_jira_probe.py",
           "line": 110,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_probe.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_probe.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_probe.py",
+          "line": 28,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_probe.py",
+          "line": 44,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_probe.py",
+          "line": 72,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_probe.py",
+          "line": 77,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_probe.py",
+          "line": 86,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_probe.py",
+          "line": 91,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_probe.py",
+          "line": 110,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_probe.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_probe.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_probe.py",
+          "line": 28,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_probe.py",
+          "line": 44,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_probe.py",
+          "line": 72,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_probe.py",
+          "line": 77,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_probe.py",
+          "line": 86,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_probe.py",
+          "line": 91,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_probe.py",
+          "line": 110,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 36
+      "siteCount": 54
     },
     {
       "name": "linear_entity_mapping",
@@ -3056,9 +4320,54 @@
           "file": "scripts/planning_migrate_issue_store.py",
           "line": 95,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_artifact_handle.py",
+          "line": 90,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 274,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_hierarchy.py",
+          "line": 22,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_artifact_handle.py",
+          "line": 90,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 274,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_hierarchy.py",
+          "line": 22,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/harness_planning_store_transactional.py",
+          "line": 16,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 16
+      "siteCount": 25
     },
     {
       "name": "load_projection_ledger",
@@ -3095,6 +4404,16 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 321,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 321,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/test/fixtures/planning-put-journal/harness.py",
           "line": 106,
           "kind": "attribute-access"
@@ -3110,7 +4429,7 @@
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 7
+      "siteCount": 9
     },
     {
       "name": "load_workflow_config",
@@ -3142,17 +4461,17 @@
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1051,
+          "line": 1053,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1272,
+          "line": 1274,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1348,
+          "line": 1350,
           "kind": "attribute-access"
         },
         {
@@ -3207,17 +4526,17 @@
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1051,
+          "line": 1053,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1272,
+          "line": 1274,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1348,
+          "line": 1350,
           "kind": "attribute-access"
         },
         {
@@ -3272,17 +4591,17 @@
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1051,
+          "line": 1053,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1272,
+          "line": 1274,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1348,
+          "line": 1350,
           "kind": "attribute-access"
         },
         {
@@ -3337,17 +4656,17 @@
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1051,
+          "line": 1053,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1272,
+          "line": 1274,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1348,
+          "line": 1350,
           "kind": "attribute-access"
         },
         {
@@ -3376,6 +4695,136 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 110,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 143,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 318,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 372,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 500,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1053,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1274,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1350,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 300,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 366,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 474,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_reserve.py",
+          "line": 454,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/spec_union_056.py",
+          "line": 82,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 110,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 143,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 318,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 372,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 500,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1053,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1274,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1350,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 300,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 366,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 474,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_reserve.py",
+          "line": 454,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/spec_union_056.py",
+          "line": 82,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/test/fixtures/planning-deliver-parity/full_matrix.py",
           "line": 252,
           "kind": "attribute-access"
@@ -3392,32 +4841,32 @@
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 162,
+          "line": 164,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 178,
+          "line": 180,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 198,
+          "line": 200,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 216,
+          "line": 219,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 262,
+          "line": 265,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 294,
+          "line": 297,
           "kind": "attribute-access"
         },
         {
@@ -3446,24 +4895,24 @@
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 66
+      "siteCount": 92
     },
     {
       "name": "materialize_from_store",
       "sites": [
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 233,
+          "line": 236,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 269,
+          "line": 272,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 271,
+          "line": 274,
           "kind": "attribute-access"
         }
       ],
@@ -3488,6 +4937,16 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/wave_deliver.py",
+          "line": 994,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/wave_deliver.py",
+          "line": 994,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/test/run_deliver_fixtures.py",
           "line": 211,
           "kind": "import-from"
@@ -3508,7 +4967,7 @@
           "kind": "import-from"
         }
       ],
-      "siteCount": 7
+      "siteCount": 9
     },
     {
       "name": "migrate_orphan_phase_issues",
@@ -3530,6 +4989,17 @@
         }
       ],
       "siteCount": 3
+    },
+    {
+      "name": "mutate_issue_unit_index",
+      "sites": [
+        {
+          "file": "scripts/unit_tests/planning/harness_planning_store_transactional.py",
+          "line": 16,
+          "kind": "import-from"
+        }
+      ],
+      "siteCount": 1
     },
     {
       "name": "normalize_semantic_status",
@@ -3667,26 +5137,36 @@
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1027,
+          "line": 1029,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1027,
+          "line": 1029,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1027,
+          "line": 1029,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1027,
+          "line": 1029,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1029,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1029,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "parse_visibility_from_content",
@@ -3710,9 +5190,19 @@
           "file": "scripts/planning_migrate_issue_store.py",
           "line": 95,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "planning_section",
@@ -3736,16 +5226,26 @@
           "file": "scripts/planning_materialize.py",
           "line": 18,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
+          "line": 18,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "planning_store",
       "sites": [
         {
           "file": "core/scripts/planning_visibility.py",
-          "line": 343,
+          "line": 445,
           "kind": "import-module"
         },
         {
@@ -3755,7 +5255,7 @@
         },
         {
           "file": "dist/claude-code/scripts/planning_visibility.py",
-          "line": 343,
+          "line": 445,
           "kind": "import-module"
         },
         {
@@ -3765,7 +5265,7 @@
         },
         {
           "file": "dist/cursor/scripts/planning_visibility.py",
-          "line": 343,
+          "line": 445,
           "kind": "import-module"
         },
         {
@@ -3775,11 +5275,31 @@
         },
         {
           "file": "scripts/planning_visibility.py",
-          "line": 343,
+          "line": 445,
           "kind": "import-module"
         },
         {
           "file": "scripts/spec_union_056.py",
+          "line": 78,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_visibility.py",
+          "line": 445,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/spec_union_056.py",
+          "line": 78,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_visibility.py",
+          "line": 445,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/spec_union_056.py",
           "line": 78,
           "kind": "import-module"
         },
@@ -3812,9 +5332,14 @@
           "file": "scripts/unit_tests/planning/test_closure_completeness.py",
           "line": 475,
           "kind": "import-module"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_planning_package_parity.py",
+          "line": 15,
+          "kind": "import-module"
         }
       ],
-      "siteCount": 14
+      "siteCount": 19
     },
     {
       "name": "probe_initiative_availability",
@@ -3858,22 +5383,32 @@
       "sites": [
         {
           "file": "core/scripts/planning_visibility.py",
-          "line": 354,
+          "line": 456,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_visibility.py",
-          "line": 354,
+          "line": 456,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_visibility.py",
-          "line": 354,
+          "line": 456,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_visibility.py",
-          "line": 354,
+          "line": 456,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_visibility.py",
+          "line": 456,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_visibility.py",
+          "line": 456,
           "kind": "attribute-access"
         },
         {
@@ -3917,7 +5452,7 @@
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 12
+      "siteCount": 14
     },
     {
       "name": "progress_update",
@@ -3941,9 +5476,19 @@
           "file": "scripts/planning_progress.py",
           "line": 25,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_progress.py",
+          "line": 25,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_progress.py",
+          "line": 25,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "project_graph_to_linear_layout",
@@ -4070,6 +5615,46 @@
           "kind": "import-module"
         },
         {
+          "file": "core/scripts/planning/backends/issues.py",
+          "line": 23,
+          "kind": "import-module"
+        },
+        {
+          "file": "core/scripts/planning/backends/memory_cache.py",
+          "line": 96,
+          "kind": "import-module"
+        },
+        {
+          "file": "core/scripts/planning/providers/__init__.py",
+          "line": 100,
+          "kind": "import-module"
+        },
+        {
+          "file": "core/scripts/planning/providers/github.py",
+          "line": 20,
+          "kind": "import-module"
+        },
+        {
+          "file": "core/scripts/planning/providers/gitlab.py",
+          "line": 21,
+          "kind": "import-module"
+        },
+        {
+          "file": "core/scripts/planning/providers/jira.py",
+          "line": 18,
+          "kind": "import-module"
+        },
+        {
+          "file": "core/scripts/planning_authority.py",
+          "line": 13,
+          "kind": "import-module"
+        },
+        {
+          "file": "core/scripts/planning_authority_reasons.py",
+          "line": 8,
+          "kind": "import-module"
+        },
+        {
           "file": "core/scripts/planning_gap_capture.py",
           "line": 20,
           "kind": "import-module"
@@ -4137,6 +5722,46 @@
         {
           "file": "dist/claude-code/scripts/planning-doctor.py",
           "line": 498,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/backends/issues.py",
+          "line": 23,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/backends/memory_cache.py",
+          "line": 96,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/providers/__init__.py",
+          "line": 100,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/providers/github.py",
+          "line": 20,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/providers/gitlab.py",
+          "line": 21,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/providers/jira.py",
+          "line": 18,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_authority.py",
+          "line": 13,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_authority_reasons.py",
+          "line": 8,
           "kind": "import-module"
         },
         {
@@ -4210,6 +5835,46 @@
           "kind": "import-module"
         },
         {
+          "file": "dist/cursor/scripts/planning/backends/issues.py",
+          "line": 23,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/backends/memory_cache.py",
+          "line": 96,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/providers/__init__.py",
+          "line": 100,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/providers/github.py",
+          "line": 20,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/providers/gitlab.py",
+          "line": 21,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/providers/jira.py",
+          "line": 18,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/cursor/scripts/planning_authority.py",
+          "line": 13,
+          "kind": "import-module"
+        },
+        {
+          "file": "dist/cursor/scripts/planning_authority_reasons.py",
+          "line": 8,
+          "kind": "import-module"
+        },
+        {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
           "line": 20,
           "kind": "import-module"
@@ -4280,6 +5945,46 @@
           "kind": "import-module"
         },
         {
+          "file": "scripts/planning/backends/issues.py",
+          "line": 23,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/planning/backends/memory_cache.py",
+          "line": 96,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/planning/providers/__init__.py",
+          "line": 100,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/planning/providers/github.py",
+          "line": 20,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/planning/providers/gitlab.py",
+          "line": 21,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/planning/providers/jira.py",
+          "line": 18,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/planning_authority.py",
+          "line": 13,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/planning_authority_reasons.py",
+          "line": 8,
+          "kind": "import-module"
+        },
+        {
           "file": "scripts/planning_gap_capture.py",
           "line": 20,
           "kind": "import-module"
@@ -4321,6 +6026,226 @@
         },
         {
           "file": "scripts/planning_reserve.py",
+          "line": 450,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 108,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 139,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 315,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 367,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 498,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/backends/issues.py",
+          "line": 23,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/backends/memory_cache.py",
+          "line": 96,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/providers/__init__.py",
+          "line": 100,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/providers/github.py",
+          "line": 20,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/providers/gitlab.py",
+          "line": 21,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/providers/jira.py",
+          "line": 18,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_authority.py",
+          "line": 13,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_authority_reasons.py",
+          "line": 8,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 20,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 181,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 272,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 296,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 362,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_lifecycle.py",
+          "line": 472,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_reserve.py",
+          "line": 317,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_reserve.py",
+          "line": 340,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_reserve.py",
+          "line": 450,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 108,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 139,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 315,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 367,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 498,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/backends/issues.py",
+          "line": 23,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/backends/memory_cache.py",
+          "line": 96,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/providers/__init__.py",
+          "line": 100,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/providers/github.py",
+          "line": 20,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/providers/gitlab.py",
+          "line": 21,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/providers/jira.py",
+          "line": 18,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_authority.py",
+          "line": 13,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_authority_reasons.py",
+          "line": 8,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 20,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 181,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 272,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 296,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 362,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_lifecycle.py",
+          "line": 472,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_reserve.py",
+          "line": 317,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_reserve.py",
+          "line": 340,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_reserve.py",
           "line": 450,
           "kind": "import-module"
         },
@@ -4405,6 +6330,11 @@
           "kind": "import-module"
         },
         {
+          "file": "scripts/unit_tests/planning/test_authority_no_substitution.py",
+          "line": 19,
+          "kind": "import-module"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_backend_control_resolver.py",
           "line": 17,
           "kind": "import-module"
@@ -4432,6 +6362,21 @@
         {
           "file": "scripts/unit_tests/planning/test_issue_store_remediation.py",
           "line": 282,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_planning_authority_reasons.py",
+          "line": 19,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_planning_backend_adapters.py",
+          "line": 14,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_planning_provider_adapters.py",
+          "line": 15,
           "kind": "import-module"
         },
         {
@@ -4486,7 +6431,7 @@
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 18,
+          "line": 19,
           "kind": "import-module"
         },
         {
@@ -4505,12 +6450,17 @@
           "kind": "import-module"
         },
         {
+          "file": "scripts/unit_tests/planning/test_resolve_backend_authority.py",
+          "line": 20,
+          "kind": "import-module"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_store_host_privacy.py",
           "line": 9,
           "kind": "import-module"
         }
       ],
-      "siteCount": 93
+      "siteCount": 174
     },
     {
       "name": "put",
@@ -4556,6 +6506,26 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/docs_worktree.py",
+          "line": 64,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 251,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/docs_worktree.py",
+          "line": 64,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 251,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/test/run_planning_035_gap_lifecycle_fixtures.py",
           "line": 199,
           "kind": "attribute-access"
@@ -4576,7 +6546,7 @@
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 12
+      "siteCount": 16
     },
     {
       "name": "py",
@@ -4627,48 +6597,68 @@
           "kind": "attribute-access"
         },
         {
-          "file": "core/scripts/planning_store.py",
-          "line": 3255,
+          "file": "core/scripts/planning_shim_gen.py",
+          "line": 25,
           "kind": "attribute-access"
         },
         {
-          "file": "core/scripts/planning_store.py",
-          "line": 4016,
+          "file": "core/scripts/planning_shim_gen.py",
+          "line": 26,
           "kind": "attribute-access"
         },
         {
-          "file": "core/scripts/planning_store.py",
-          "line": 4167,
+          "file": "core/scripts/planning_shim_gen.py",
+          "line": 27,
           "kind": "attribute-access"
         },
         {
-          "file": "core/scripts/planning_store.py",
-          "line": 4205,
+          "file": "core/scripts/planning_shim_gen.py",
+          "line": 28,
           "kind": "attribute-access"
         },
         {
-          "file": "core/scripts/planning_store.py",
-          "line": 4304,
+          "file": "core/scripts/planning_store_facade.py",
+          "line": 1541,
           "kind": "attribute-access"
         },
         {
-          "file": "core/scripts/planning_store.py",
-          "line": 4456,
+          "file": "core/scripts/planning_store_facade.py",
+          "line": 2302,
           "kind": "attribute-access"
         },
         {
-          "file": "core/scripts/planning_store.py",
-          "line": 5299,
+          "file": "core/scripts/planning_store_facade.py",
+          "line": 2453,
           "kind": "attribute-access"
         },
         {
-          "file": "core/scripts/planning_store.py",
-          "line": 5327,
+          "file": "core/scripts/planning_store_facade.py",
+          "line": 2491,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_store_facade.py",
+          "line": 2590,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_store_facade.py",
+          "line": 2742,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_store_facade.py",
+          "line": 3442,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_store_facade.py",
+          "line": 3470,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/wave_deliver_loop.py",
-          "line": 3332,
+          "line": 3336,
           "kind": "attribute-access"
         },
         {
@@ -4717,48 +6707,68 @@
           "kind": "attribute-access"
         },
         {
-          "file": "dist/claude-code/scripts/planning_store.py",
-          "line": 3255,
+          "file": "dist/claude-code/scripts/planning_shim_gen.py",
+          "line": 25,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/claude-code/scripts/planning_store.py",
-          "line": 4016,
+          "file": "dist/claude-code/scripts/planning_shim_gen.py",
+          "line": 26,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/claude-code/scripts/planning_store.py",
-          "line": 4167,
+          "file": "dist/claude-code/scripts/planning_shim_gen.py",
+          "line": 27,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/claude-code/scripts/planning_store.py",
-          "line": 4205,
+          "file": "dist/claude-code/scripts/planning_shim_gen.py",
+          "line": 28,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/claude-code/scripts/planning_store.py",
-          "line": 4304,
+          "file": "dist/claude-code/scripts/planning_store_facade.py",
+          "line": 1541,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/claude-code/scripts/planning_store.py",
-          "line": 4456,
+          "file": "dist/claude-code/scripts/planning_store_facade.py",
+          "line": 2302,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/claude-code/scripts/planning_store.py",
-          "line": 5299,
+          "file": "dist/claude-code/scripts/planning_store_facade.py",
+          "line": 2453,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/claude-code/scripts/planning_store.py",
-          "line": 5327,
+          "file": "dist/claude-code/scripts/planning_store_facade.py",
+          "line": 2491,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_store_facade.py",
+          "line": 2590,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_store_facade.py",
+          "line": 2742,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_store_facade.py",
+          "line": 3442,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_store_facade.py",
+          "line": 3470,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/wave_deliver_loop.py",
-          "line": 3332,
+          "line": 3336,
           "kind": "attribute-access"
         },
         {
@@ -4807,48 +6817,68 @@
           "kind": "attribute-access"
         },
         {
-          "file": "dist/cursor/scripts/planning_store.py",
-          "line": 3255,
+          "file": "dist/cursor/scripts/planning_shim_gen.py",
+          "line": 25,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/cursor/scripts/planning_store.py",
-          "line": 4016,
+          "file": "dist/cursor/scripts/planning_shim_gen.py",
+          "line": 26,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/cursor/scripts/planning_store.py",
-          "line": 4167,
+          "file": "dist/cursor/scripts/planning_shim_gen.py",
+          "line": 27,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/cursor/scripts/planning_store.py",
-          "line": 4205,
+          "file": "dist/cursor/scripts/planning_shim_gen.py",
+          "line": 28,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/cursor/scripts/planning_store.py",
-          "line": 4304,
+          "file": "dist/cursor/scripts/planning_store_facade.py",
+          "line": 1541,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/cursor/scripts/planning_store.py",
-          "line": 4456,
+          "file": "dist/cursor/scripts/planning_store_facade.py",
+          "line": 2302,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/cursor/scripts/planning_store.py",
-          "line": 5299,
+          "file": "dist/cursor/scripts/planning_store_facade.py",
+          "line": 2453,
           "kind": "attribute-access"
         },
         {
-          "file": "dist/cursor/scripts/planning_store.py",
-          "line": 5327,
+          "file": "dist/cursor/scripts/planning_store_facade.py",
+          "line": 2491,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/cursor/scripts/planning_store_facade.py",
+          "line": 2590,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/cursor/scripts/planning_store_facade.py",
+          "line": 2742,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/cursor/scripts/planning_store_facade.py",
+          "line": 3442,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/cursor/scripts/planning_store_facade.py",
+          "line": 3470,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/wave_deliver_loop.py",
-          "line": 3332,
+          "line": 3336,
           "kind": "attribute-access"
         },
         {
@@ -4887,11 +6917,6 @@
           "kind": "attribute-access"
         },
         {
-          "file": "scripts/planning_import_inventory.py",
-          "line": 27,
-          "kind": "attribute-access"
-        },
-        {
           "file": "scripts/planning_materialize.py",
           "line": 366,
           "kind": "attribute-access"
@@ -4917,6 +6942,231 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/planning_shim_gen.py",
+          "line": 28,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/docs-currency-gate.py",
+          "line": 45,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 347,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 412,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 424,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 430,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 458,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 506,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 366,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 397,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_shim_gen.py",
+          "line": 25,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_shim_gen.py",
+          "line": 26,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_shim_gen.py",
+          "line": 27,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_shim_gen.py",
+          "line": 28,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_store_facade.py",
+          "line": 1541,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_store_facade.py",
+          "line": 2302,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_store_facade.py",
+          "line": 2453,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_store_facade.py",
+          "line": 2491,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_store_facade.py",
+          "line": 2590,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_store_facade.py",
+          "line": 2742,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_store_facade.py",
+          "line": 3442,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_store_facade.py",
+          "line": 3470,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/wave_deliver_loop.py",
+          "line": 3336,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/docs-currency-gate.py",
+          "line": 45,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 347,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 412,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 424,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 430,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 458,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 506,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
+          "line": 366,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
+          "line": 397,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_shim_gen.py",
+          "line": 25,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_shim_gen.py",
+          "line": 26,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_shim_gen.py",
+          "line": 27,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_shim_gen.py",
+          "line": 28,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_store_facade.py",
+          "line": 1541,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_store_facade.py",
+          "line": 2302,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_store_facade.py",
+          "line": 2453,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_store_facade.py",
+          "line": 2491,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_store_facade.py",
+          "line": 2590,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_store_facade.py",
+          "line": 2742,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_store_facade.py",
+          "line": 3442,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_store_facade.py",
+          "line": 3470,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/wave_deliver_loop.py",
+          "line": 3336,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/test/run_deliver_fixtures.py",
           "line": 229,
           "kind": "attribute-access"
@@ -4929,6 +7179,11 @@
         {
           "file": "scripts/unit_tests/git/test_planning_store_resync.py",
           "line": 14,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/meta/harness_core_scripts_parity.py",
+          "line": 66,
           "kind": "attribute-access"
         },
         {
@@ -5027,18 +7282,18 @@
           "kind": "attribute-access"
         },
         {
-          "file": "scripts/unit_tests/planning/test_planning_shim_parity.py",
-          "line": 21,
+          "file": "scripts/unit_tests/planning/harness_planning_visibility_acceptance.py",
+          "line": 87,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_planning_cli_parity.py",
+          "line": 17,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/unit_tests/planning/test_planning_shim_parity.py",
-          "line": 71,
-          "kind": "attribute-access"
-        },
-        {
-          "file": "scripts/unit_tests/planning/test_planning_shim_parity.py",
-          "line": 85,
+          "line": 106,
           "kind": "attribute-access"
         },
         {
@@ -5057,12 +7312,33 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/unit_tests/w4/harness_relocation.py",
+          "line": 61,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/w4/harness_relocation.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/wave_deliver_loop.py",
-          "line": 3332,
+          "line": 3336,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 96
+      "siteCount": 155
+    },
+    {
+      "name": "read_issue_unit_index_locked",
+      "sites": [
+        {
+          "file": "scripts/unit_tests/planning/harness_planning_store_transactional.py",
+          "line": 16,
+          "kind": "import-from"
+        }
+      ],
+      "siteCount": 1
     },
     {
       "name": "rebuild_projection_from_graph",
@@ -5118,9 +7394,19 @@
           "file": "scripts/context_compress.py",
           "line": 21,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/context_compress.py",
+          "line": 21,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/context_compress.py",
+          "line": 21,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "refuse_banned_living_doc_write",
@@ -5144,9 +7430,19 @@
           "file": "scripts/reconcile_lib.py",
           "line": 224,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/reconcile_lib.py",
+          "line": 224,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/reconcile_lib.py",
+          "line": 224,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "register_legacy_unit_mapping",
@@ -5190,6 +7486,16 @@
       "name": "resolve_backend_id",
       "sites": [
         {
+          "file": "core/scripts/planning_authority.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_authority_reasons.py",
+          "line": 133,
+          "kind": "attribute-access"
+        },
+        {
           "file": "core/scripts/planning_materialize.py",
           "line": 18,
           "kind": "import-from"
@@ -5198,6 +7504,16 @@
           "file": "core/scripts/planning_materialize.py",
           "line": 437,
           "kind": "import-from"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_authority.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning_authority_reasons.py",
+          "line": 133,
+          "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_materialize.py",
@@ -5210,6 +7526,16 @@
           "kind": "import-from"
         },
         {
+          "file": "dist/cursor/scripts/planning_authority.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/cursor/scripts/planning_authority_reasons.py",
+          "line": 133,
+          "kind": "attribute-access"
+        },
+        {
           "file": "dist/cursor/scripts/planning_materialize.py",
           "line": 18,
           "kind": "import-from"
@@ -5220,17 +7546,67 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/planning_authority.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_authority_reasons.py",
+          "line": 133,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/planning_materialize.py",
           "line": 18,
           "kind": "import-from"
         },
         {
           "file": "scripts/planning_materialize.py",
+          "line": 437,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_authority.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_authority_reasons.py",
+          "line": 133,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 437,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_authority.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_authority_reasons.py",
+          "line": 133,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
           "line": 437,
           "kind": "import-from"
         }
       ],
-      "siteCount": 8
+      "siteCount": 24
     },
     {
       "name": "resolve_canonical_freeze_body",
@@ -5288,12 +7664,12 @@
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1273,
+          "line": 1275,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1349,
+          "line": 1351,
           "kind": "attribute-access"
         },
         {
@@ -5303,12 +7679,12 @@
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1273,
+          "line": 1275,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1349,
+          "line": 1351,
           "kind": "attribute-access"
         },
         {
@@ -5318,12 +7694,12 @@
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1273,
+          "line": 1275,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1349,
+          "line": 1351,
           "kind": "attribute-access"
         },
         {
@@ -5333,12 +7709,42 @@
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1273,
+          "line": 1275,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1349,
+          "line": 1351,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/deliver_closeout.py",
+          "line": 861,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1275,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1351,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/deliver_closeout.py",
+          "line": 861,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1275,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1351,
           "kind": "attribute-access"
         },
         {
@@ -5377,14 +7783,19 @@
           "kind": "import-from"
         }
       ],
-      "siteCount": 19
+      "siteCount": 25
     },
     {
       "name": "resolve_effective_backend",
       "sites": [
         {
           "file": "core/scripts/memory_sot.py",
-          "line": 141,
+          "line": 244,
+          "kind": "import-from"
+        },
+        {
+          "file": "core/scripts/planning/migrations.py",
+          "line": 26,
           "kind": "import-from"
         },
         {
@@ -5454,7 +7865,7 @@
         },
         {
           "file": "core/scripts/planning_visibility.py",
-          "line": 346,
+          "line": 448,
           "kind": "attribute-access"
         },
         {
@@ -5469,7 +7880,12 @@
         },
         {
           "file": "dist/claude-code/scripts/memory_sot.py",
-          "line": 141,
+          "line": 244,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/migrations.py",
+          "line": 26,
           "kind": "import-from"
         },
         {
@@ -5539,7 +7955,7 @@
         },
         {
           "file": "dist/claude-code/scripts/planning_visibility.py",
-          "line": 346,
+          "line": 448,
           "kind": "attribute-access"
         },
         {
@@ -5554,7 +7970,12 @@
         },
         {
           "file": "dist/cursor/scripts/memory_sot.py",
-          "line": 141,
+          "line": 244,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/migrations.py",
+          "line": 26,
           "kind": "import-from"
         },
         {
@@ -5624,7 +8045,7 @@
         },
         {
           "file": "dist/cursor/scripts/planning_visibility.py",
-          "line": 346,
+          "line": 448,
           "kind": "attribute-access"
         },
         {
@@ -5639,7 +8060,12 @@
         },
         {
           "file": "scripts/memory_sot.py",
-          "line": 141,
+          "line": 244,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/planning/migrations.py",
+          "line": 26,
           "kind": "import-from"
         },
         {
@@ -5709,13 +8135,193 @@
         },
         {
           "file": "scripts/planning_visibility.py",
-          "line": 346,
+          "line": 448,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/spec_union_056.py",
           "line": 83,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/memory_sot.py",
+          "line": 244,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/migrations.py",
+          "line": 26,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_artifact_handle.py",
+          "line": 10,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_cutover.py",
+          "line": 26,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_deliver_gate.py",
+          "line": 173,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_hierarchy.py",
+          "line": 22,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_index_issue.py",
+          "line": 20,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 355,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 388,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 437,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 251,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_path_redirect.py",
+          "line": 93,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_progress.py",
+          "line": 25,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_unit_status.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_visibility.py",
+          "line": 448,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/spec_union_056.py",
+          "line": 83,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/wave_deliver.py",
+          "line": 994,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/memory_sot.py",
+          "line": 244,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/migrations.py",
+          "line": 26,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_artifact_handle.py",
+          "line": 10,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_cutover.py",
+          "line": 26,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_deliver_gate.py",
+          "line": 173,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_hierarchy.py",
+          "line": 22,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_index_issue.py",
+          "line": 20,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
+          "line": 355,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
+          "line": 388,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
+          "line": 437,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 251,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_path_redirect.py",
+          "line": 93,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_progress.py",
+          "line": 25,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_unit_status.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_visibility.py",
+          "line": 448,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/spec_union_056.py",
+          "line": 83,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/wave_deliver.py",
+          "line": 994,
+          "kind": "import-from"
         },
         {
           "file": "scripts/test/fixtures/planning-ci-token-absent/harness.py",
@@ -5754,17 +8360,22 @@
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 164,
+          "line": 166,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 180,
+          "line": 182,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 200,
+          "line": 202,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_authority_no_substitution.py",
+          "line": 169,
           "kind": "attribute-access"
         },
         {
@@ -5779,17 +8390,17 @@
         },
         {
           "file": "scripts/unit_tests/planning/test_backend_control_resolver.py",
-          "line": 78,
+          "line": 80,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/unit_tests/planning/test_backend_control_resolver.py",
-          "line": 123,
+          "line": 125,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/unit_tests/planning/test_backend_control_resolver.py",
-          "line": 128,
+          "line": 130,
           "kind": "attribute-access"
         },
         {
@@ -5819,22 +8430,47 @@
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 151,
+          "line": 152,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 171,
+          "line": 173,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 202,
+          "line": 204,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 211,
+          "line": 213,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_resolve_backend_authority.py",
+          "line": 58,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_resolve_backend_authority.py",
+          "line": 71,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_resolve_backend_authority.py",
+          "line": 89,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_resolve_backend_authority.py",
+          "line": 100,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_resolve_backend_authority.py",
+          "line": 113,
           "kind": "attribute-access"
         },
         {
@@ -5843,7 +8479,7 @@
           "kind": "import-from"
         }
       ],
-      "siteCount": 92
+      "siteCount": 138
     },
     {
       "name": "resolve_issues_credential",
@@ -5855,7 +8491,7 @@
         },
         {
           "file": "core/scripts/issues_lib.py",
-          "line": 486,
+          "line": 487,
           "kind": "import-from"
         },
         {
@@ -5900,7 +8536,7 @@
         },
         {
           "file": "dist/claude-code/scripts/issues_lib.py",
-          "line": 486,
+          "line": 487,
           "kind": "import-from"
         },
         {
@@ -5945,7 +8581,7 @@
         },
         {
           "file": "dist/cursor/scripts/issues_lib.py",
-          "line": 486,
+          "line": 487,
           "kind": "import-from"
         },
         {
@@ -5990,7 +8626,7 @@
         },
         {
           "file": "scripts/issues_lib.py",
-          "line": 486,
+          "line": 487,
           "kind": "import-from"
         },
         {
@@ -6029,12 +8665,102 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/closeout_ci.py",
+          "line": 137,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/issues_lib.py",
+          "line": 487,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 501,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_github_client.py",
+          "line": 226,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gitlab_client.py",
+          "line": 214,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_client.py",
+          "line": 223,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_linear_client.py",
+          "line": 293,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_linear_client.py",
+          "line": 970,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/closeout_ci.py",
+          "line": 137,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/issues_lib.py",
+          "line": 487,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 501,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_github_client.py",
+          "line": 226,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gitlab_client.py",
+          "line": 214,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_client.py",
+          "line": 223,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_linear_client.py",
+          "line": 293,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_linear_client.py",
+          "line": 970,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_issue_client_broker.py",
           "line": 52,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 37
+      "siteCount": 55
     },
     {
       "name": "resolve_issues_provider",
@@ -6048,6 +8774,16 @@
           "file": "core/scripts/credentials/doctor.py",
           "line": 338,
           "kind": "import-from"
+        },
+        {
+          "file": "core/scripts/planning/migrations.py",
+          "line": 26,
+          "kind": "import-from"
+        },
+        {
+          "file": "core/scripts/planning/providers/__init__.py",
+          "line": 102,
+          "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_github_projects_v2.py",
@@ -6070,6 +8806,16 @@
           "kind": "import-from"
         },
         {
+          "file": "dist/claude-code/scripts/planning/migrations.py",
+          "line": 26,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/providers/__init__.py",
+          "line": 102,
+          "kind": "attribute-access"
+        },
+        {
           "file": "dist/claude-code/scripts/planning_github_projects_v2.py",
           "line": 23,
           "kind": "import-from"
@@ -6088,6 +8834,16 @@
           "file": "dist/cursor/scripts/credentials/doctor.py",
           "line": 338,
           "kind": "import-from"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/migrations.py",
+          "line": 26,
+          "kind": "import-from"
+        },
+        {
+          "file": "dist/cursor/scripts/planning/providers/__init__.py",
+          "line": 102,
+          "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_github_projects_v2.py",
@@ -6110,12 +8866,82 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/planning/migrations.py",
+          "line": 26,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/planning/providers/__init__.py",
+          "line": 102,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/planning_github_projects_v2.py",
           "line": 23,
           "kind": "import-from"
         },
         {
           "file": "scripts/spec_union_056.py",
+          "line": 87,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/credentials/doctor.py",
+          "line": 318,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/credentials/doctor.py",
+          "line": 338,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/migrations.py",
+          "line": 26,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/providers/__init__.py",
+          "line": 102,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/spec_union_056.py",
+          "line": 87,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/credentials/doctor.py",
+          "line": 318,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/credentials/doctor.py",
+          "line": 338,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/migrations.py",
+          "line": 26,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/providers/__init__.py",
+          "line": 102,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/spec_union_056.py",
           "line": 87,
           "kind": "attribute-access"
         },
@@ -6141,20 +8967,25 @@
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 162,
+          "line": 164,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
-          "line": 193,
+          "line": 195,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 22
+      "siteCount": 42
     },
     {
       "name": "resolve_issues_token_env",
       "sites": [
+        {
+          "file": "core/scripts/planning/providers/__init__.py",
+          "line": 118,
+          "kind": "attribute-access"
+        },
         {
           "file": "core/scripts/planning_github_projects_v2.py",
           "line": 23,
@@ -6163,6 +8994,11 @@
         {
           "file": "core/scripts/spec_union_056.py",
           "line": 88,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "dist/claude-code/scripts/planning/providers/__init__.py",
+          "line": 118,
           "kind": "attribute-access"
         },
         {
@@ -6176,6 +9012,11 @@
           "kind": "attribute-access"
         },
         {
+          "file": "dist/cursor/scripts/planning/providers/__init__.py",
+          "line": 118,
+          "kind": "attribute-access"
+        },
+        {
           "file": "dist/cursor/scripts/planning_github_projects_v2.py",
           "line": 23,
           "kind": "import-from"
@@ -6186,12 +9027,47 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/planning/providers/__init__.py",
+          "line": 118,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/planning_github_projects_v2.py",
           "line": 23,
           "kind": "import-from"
         },
         {
           "file": "scripts/spec_union_056.py",
+          "line": 88,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning/providers/__init__.py",
+          "line": 118,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/spec_union_056.py",
+          "line": 88,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning/providers/__init__.py",
+          "line": 118,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/spec_union_056.py",
           "line": 88,
           "kind": "attribute-access"
         },
@@ -6216,7 +9092,7 @@
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 12
+      "siteCount": 22
     },
     {
       "name": "resolve_legacy_unit_id",
@@ -6234,46 +9110,66 @@
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1028,
+          "line": 1030,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1145,
+          "line": 1147,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1028,
+          "line": 1030,
           "kind": "attribute-access"
         },
         {
           "file": "dist/claude-code/scripts/planning_gap_capture.py",
-          "line": 1145,
+          "line": 1147,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1028,
+          "line": 1030,
           "kind": "attribute-access"
         },
         {
           "file": "dist/cursor/scripts/planning_gap_capture.py",
-          "line": 1145,
+          "line": 1147,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1028,
+          "line": 1030,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1145,
+          "line": 1147,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1030,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gap_capture.py",
+          "line": 1147,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1030,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gap_capture.py",
+          "line": 1147,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 8
+      "siteCount": 12
     },
     {
       "name": "resolve_store_location",
@@ -6285,7 +9181,7 @@
         },
         {
           "file": "core/scripts/memory_sot.py",
-          "line": 164,
+          "line": 267,
           "kind": "import-from"
         },
         {
@@ -6315,7 +9211,7 @@
         },
         {
           "file": "dist/claude-code/scripts/memory_sot.py",
-          "line": 164,
+          "line": 267,
           "kind": "import-from"
         },
         {
@@ -6345,7 +9241,7 @@
         },
         {
           "file": "dist/cursor/scripts/memory_sot.py",
-          "line": 164,
+          "line": 267,
           "kind": "import-from"
         },
         {
@@ -6375,7 +9271,7 @@
         },
         {
           "file": "scripts/memory_sot.py",
-          "line": 164,
+          "line": 267,
           "kind": "import-from"
         },
         {
@@ -6395,6 +9291,66 @@
         },
         {
           "file": "scripts/planning_gitlab_client.py",
+          "line": 60,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/docs_worktree.py",
+          "line": 44,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/memory_sot.py",
+          "line": 267,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_artifact_handle.py",
+          "line": 10,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_github_client.py",
+          "line": 67,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_gitlab_client.py",
+          "line": 60,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/docs_worktree.py",
+          "line": 44,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/memory_sot.py",
+          "line": 267,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_artifact_handle.py",
+          "line": 10,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_github_client.py",
+          "line": 67,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_gitlab_client.py",
           "line": 60,
           "kind": "import-from"
         },
@@ -6419,7 +9375,7 @@
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 28
+      "siteCount": 40
     },
     {
       "name": "resolve_task_ref_aliases",
@@ -6496,9 +9452,34 @@
           "file": "scripts/planning_migrate_issue_store.py",
           "line": 95,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_hierarchy.py",
+          "line": 22,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_hierarchy.py",
+          "line": 22,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/harness_planning_store_transactional.py",
+          "line": 16,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 8
+      "siteCount": 13
     },
     {
       "name": "save_legacy_unit_map",
@@ -6533,9 +9514,19 @@
           "file": "scripts/planning_migrate_issue_store.py",
           "line": 95,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 6
     },
     {
       "name": "serialize_comments_relations_facade",
@@ -6701,9 +9692,79 @@
           "file": "scripts/planning_tracking_issue.py",
           "line": 19,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/docs_worktree.py",
+          "line": 44,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_hierarchy.py",
+          "line": 22,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_probe.py",
+          "line": 33,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_jira_probe.py",
+          "line": 240,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_materialize.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_tracking_issue.py",
+          "line": 19,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/docs_worktree.py",
+          "line": 44,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_github_projects_v2.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_hierarchy.py",
+          "line": 22,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_probe.py",
+          "line": 33,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_jira_probe.py",
+          "line": 240,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_materialize.py",
+          "line": 18,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_tracking_issue.py",
+          "line": 19,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 28
+      "siteCount": 42
     },
     {
       "name": "token_present",
@@ -6729,6 +9790,16 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/spec_union_056.py",
+          "line": 89,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/spec_union_056.py",
+          "line": 89,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/test/fixtures/planning-ci-token-absent/harness.py",
           "line": 110,
           "kind": "attribute-access"
@@ -6744,7 +9815,7 @@
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 7
+      "siteCount": 9
     },
     {
       "name": "validate_project_key",
@@ -6848,9 +9919,59 @@
           "file": "scripts/planning_unit_status.py",
           "line": 23,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 370,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_discover.py",
+          "line": 39,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_scheduler.py",
+          "line": 30,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning_unit_status.py",
+          "line": 23,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 370,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_discover.py",
+          "line": 39,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_migrate_issue_store.py",
+          "line": 95,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_scheduler.py",
+          "line": 30,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning_unit_status.py",
+          "line": 23,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 20
+      "siteCount": 30
     },
     {
       "name": "verify_absorb_linkage_066",
@@ -6892,27 +10013,37 @@
           "kind": "attribute-access"
         },
         {
-          "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 227,
+          "file": "scripts/test/fixtures/emitter-fixture/out/claude-code/scripts/planning-doctor.py",
+          "line": 111,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/emitter-fixture/out/cursor/scripts/planning-doctor.py",
+          "line": 111,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 231,
+          "line": 230,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
-          "line": 235,
+          "line": 234,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
           "line": 238,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/test/fixtures/planning-wave-rollback/harness.py",
+          "line": 241,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 8
+      "siteCount": 10
     },
     {
       "name": "write_back_gap_prereqs_061",
@@ -6926,7 +10057,7 @@
       "siteCount": 1
     }
   ],
-  "symbolCount": 143,
+  "symbolCount": 154,
   "cli": {
     "subcommands": [
       "bitbucket-issue-store-guidance",
@@ -6975,7 +10106,6 @@
       "--backend",
       "--body-path",
       "--brainstorm-unit",
-      "--cached",
       "--checked-phase-ids",
       "--content",
       "--content-class",
@@ -6990,7 +10120,6 @@
       "--path",
       "--phase-id",
       "--planning-issue",
-      "--porcelain",
       "--prd-unit",
       "--prd-unit-id",
       "--project-key",
@@ -6998,7 +10127,6 @@
       "--register",
       "--resync",
       "--root",
-      "--show-toplevel",
       "--task-list",
       "--task-ref",
       "--tasks-unit-id",
