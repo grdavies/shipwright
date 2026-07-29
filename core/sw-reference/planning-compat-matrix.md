@@ -2,8 +2,8 @@
 
 Published matrix of `planning_store` shim symbols and package CLI surface by
 implementation phase. Rows are validated against
-`core/sw-reference/planning-import-inventory.json` via
-`python3 scripts/planning_boundary_lint.py --validate-matrix --check`.
+`core/sw-reference/planning-import-inventory.json` via the
+`planning_boundary_lint.py --validate-matrix --check` CLI.
 
 ## Compat-removal condition
 
