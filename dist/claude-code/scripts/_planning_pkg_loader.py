@@ -18,6 +18,9 @@ def load_submodule(name: str) -> ModuleType:
   if name.startswith("backends."):
     rel = name.split(".", 1)[1]
     path = _PKG_DIR / "backends" / f"{rel.replace('.', '/')}.py"
+  elif name.startswith("providers."):
+    rel = name.split(".", 1)[1]
+    path = _PKG_DIR / "providers" / f"{rel.replace('.', '/')}.py"
   else:
     path = _PKG_DIR / f"{name}.py"
   module_name = f"sw_planning.{name}"
@@ -48,6 +51,32 @@ def load_package() -> ModuleType:
   sys.modules[module_name] = module
   spec.loader.exec_module(module)
   _CACHE["__package__"] = module
+  return module
+
+
+def load_providers_package() -> ModuleType:
+  """Load scripts/planning/providers without colliding with unit_tests/planning."""
+  cached = _CACHE.get("__providers__")
+  if cached is not None:
+    return cached
+  parent = load_package()
+  providers_dir = _PKG_DIR / "providers"
+  init_path = providers_dir / "__init__.py"
+  module_name = "sw_planning.providers"
+  spec = importlib.util.spec_from_file_location(
+    module_name,
+    init_path,
+    submodule_search_locations=[str(providers_dir)],
+  )
+  if spec is None or spec.loader is None:
+    raise ImportError("cannot load planning.providers package")
+  module = importlib.util.module_from_spec(spec)
+  module.__package__ = module_name
+  module.__path__ = [str(providers_dir)]  # type: ignore[attr-defined]
+  sys.modules[module_name] = module
+  setattr(parent, "providers", module)
+  spec.loader.exec_module(module)
+  _CACHE["__providers__"] = module
   return module
 
 
