@@ -471,3 +471,12 @@ integration branch) established by `phase dispatch-env` / harness predicates in 
 Credential lookups that block or time out are legitimate conductor halts — not silent ambient-token
 fallbacks. Terminal `list, resume, finalize`, **Resume cardinality**, **Drain-budget** continuation,
 **Run finalization vs** merge verification, and `finalize:merge-unverified` remain as documented above.
+
+## Terminal prepare gates (PRD 082 currency)
+
+Before presenting the human merge gate, `scripts/wave_terminal.py` runs living-docs append +
+`docs-currency-gate` and tasks-currency corroboration. Drift on command docs bound to
+`wave_deliver.py` / `wave_deliver_loop.py` / `wave_terminal.py` / `wave_run_adopt.py` blocks
+`terminal pr prepare` fail-closed — refresh the stale command doc (this file or `/sw-freeze`) and
+re-run prepare; do not skip the gate.
+
