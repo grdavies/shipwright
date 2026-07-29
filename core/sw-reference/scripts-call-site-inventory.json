@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-29T15:35:10Z",
+  "generatedAt": "2026-07-29T18:03:17Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3817,10 +3817,10 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/rules/memory-guardrails.mdc:90:memory-sot.py",
+      "id": "core/rules/memory-guardrails.mdc:102:memory-sot.py",
       "tree": "core/rules",
       "file": "core/rules/memory-guardrails.mdc",
-      "line": 90,
+      "line": 102,
       "column": 21,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
@@ -17848,19 +17848,55 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:376:test/run_dispatch_foundation_fixtures.py",
+      "id": "docs/guides/commands.md:337:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 376,
+      "line": 337,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "docs/guides/commands.md:338:sw_bootstrap.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 338,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "docs/guides/commands.md:339:sw_bootstrap.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 339,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "docs/guides/commands.md:340:sw_bootstrap.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 340,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "docs/guides/commands.md:393:test/run_dispatch_foundation_fixtures.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 393,
       "column": 78,
       "script": "test/run_dispatch_foundation_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:376:test/run_fanout_fixtures.py",
+      "id": "docs/guides/commands.md:393:test/run_fanout_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 376,
+      "line": 393,
       "column": 19,
       "script": "test/run_fanout_fixtures.py",
       "classification": "self-repo-only"
