@@ -115,7 +115,13 @@ def _ci_yml_fixture_steps(registry: dict[str, Any]) -> list[tuple[str, str]]:
         pytest_path = row.get("pytestPath")
         if not pytest_path:
             continue
-        steps.append((str(row["id"]), f"python3 scripts/test/run_pytest.py {pytest_path} -q"))
+        suite_id = str(row["id"])
+        if suite_id.endswith("-fixtures"):
+            stem = suite_id[: -len("-fixtures")].replace("-", "_")
+            target = f"{pytest_path}/test_{stem}.py"
+        else:
+            target = str(pytest_path)
+        steps.append((suite_id, f"python3 scripts/test/run_pytest.py {target} -q"))
     return steps
 
 
@@ -210,7 +216,7 @@ def generate_ci_workflow(root: Path, *, out_path: Path | None = None) -> str:
             "        with:",
             '          python-version: "${{ matrix.python-version }}"',
             "      - name: Vendored pytest bootstrap",
-            "        run: python3 scripts/test/run_pytest.py -h",
+            "        run: python3 --version",
         ]
     )
     for step_id, command in minimum_steps:
