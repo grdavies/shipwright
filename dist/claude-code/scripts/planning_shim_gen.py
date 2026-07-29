@@ -57,7 +57,7 @@ from typing import Any
 
 {GENERATED_HEADER.strip()}
 
-_CANONICAL_MODULE_NAME = "_planning_store_canonical"
+_CANONICAL_MODULE_NAME = "planning_store_facade"
 _CANONICAL_REL = "{CANONICAL_REL}"
 _REPO_ROOT_DEPTH = {repo_depth}
 _EXPORTED_NAMES = (

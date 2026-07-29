@@ -165,8 +165,7 @@ def test_r21_github_issues_unchanged_when_linear_projects_off(
     assert issues["shipped"] is True
     assert ps.issue_store_fallback_reason(tmp_path, cfg) != "issues-provider-not-shipped"
     monkeypatch.setattr(
-        ps,
-        "resolve_provider",
+        "planning_store_facade.resolve_provider",
         lambda _root: {"verdict": "ok", "provider": "github", "remoteUrl": "https://github.com/acme/planning.git"},
     )
     resolved = ps.resolve_effective_backend(tmp_path, cfg)
@@ -196,8 +195,7 @@ def test_r21_jira_unchanged_when_linear_off(tmp_path: Path, monkeypatch: pytest.
     assert issues["shipped"] is True
     assert ps.issue_store_fallback_reason(tmp_path, cfg) != "issues-provider-not-shipped"
     monkeypatch.setattr(
-        ps,
-        "resolve_provider",
+        "planning_store_facade.resolve_provider",
         lambda _root: {"verdict": "ok", "provider": "github", "remoteUrl": "https://github.com/acme/planning.git"},
     )
     resolved = ps.resolve_effective_backend(tmp_path, cfg)
