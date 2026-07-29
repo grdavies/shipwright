@@ -179,10 +179,12 @@ hmap = load_hierarchy_map(state)
 phase1 = (hmap.get("phases") or {}).get("1")
 assert phase1 and phase1.get("issueId"), hmap
 sync1 = pp.sync_phase_done(tmp, state, "1")
-assert sync1.get("synced") and sync1.get("label") == "sw:phase:1:done", sync1
-store = FixtureIssuesStore(fixture_path)
-issue = store.get(str(phase1["issueId"]))
-assert "sw:phase:1:done" in issue.labels, issue.labels
+assert sync1.get("action") == "local-progress-write" and sync1.get("disposition") == "local-only", sync1
+assert sync1.get("authoritative") is False, sync1
+progress_path = Path(sync1["path"])
+assert progress_path.is_file(), sync1
+progress_doc = json.loads(progress_path.read_text(encoding="utf-8"))
+assert progress_doc.get("label") == "sw:phase:1:done", progress_doc
 sync2 = pp.sync_phase_done(tmp, state, "1")
 assert sync2.get("idempotent"), sync2
 print("phase-green-label-ok")
@@ -212,9 +214,9 @@ state = {
     }
 }
 out = pp.sync_phase_done(tmp, state, "1")
-assert out.get("skipped") and out.get("reason") == "file-store", out
+assert out.get("action") == "local-progress-write" and out.get("disposition") == "local-only", out
 out2 = pp.sync_task_checkbox(tmp, state, phase_id="1", task_list="missing.md")
-assert out2.get("skipped") and out2.get("reason") == "file-store", out2
+assert out2.get("action") == "local-progress-write" and out2.get("disposition") == "local-only", out2
 print("file-store-sync-skip-ok")
 PY
 then
@@ -268,10 +270,9 @@ pp.provision_deliver_hierarchy(tmp, state)
 hmap = load_hierarchy_map(state)
 phase1 = (hmap.get("phases") or {}).get("1")
 sync = pp.sync_task_checkbox(tmp, state, phase_id="1", task_list=task_rel, task_ref="1.1")
-assert sync.get("synced"), sync
-store = FixtureIssuesStore(fixture_path)
-issue = store.get(str(phase1["issueId"]))
-assert "- [x] 1.1" in issue.body, issue.body
+assert sync.get("action") == "local-progress-write" and sync.get("taskRef") == "1.1", sync
+progress_doc = json.loads(Path(sync["path"]).read_text(encoding="utf-8"))
+assert progress_doc.get("taskRef") == "1.1", progress_doc
 print("checkbox-sync-ok")
 PY
 then
