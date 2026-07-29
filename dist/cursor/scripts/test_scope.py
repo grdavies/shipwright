@@ -21,6 +21,8 @@ WIDEN_GLOBS: tuple[str, ...] = (
     "scripts/test_scope.py",
     "scripts/suite_registry.py",
     ".github/workflows/pr-test-plan-ci.yml",
+    ".github/workflows/ci.yml",
+    "scripts/ci_plan_gen.py",
     "scripts/generate-pr-test-plan-ci-workflow.py",
 )
 
