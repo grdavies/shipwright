@@ -74,7 +74,7 @@ jobs:
         with:
           python-version: "${{ matrix.python-version }}"
       - name: Vendored pytest bootstrap
-        run: python3 scripts/test/run_pytest.py --version
+        run: python3 scripts/test/run_pytest.py -h
       - name: minimum-python bash-py-invocation-guard
         run: python3 scripts/test/bash-py-invocation-guard.test
 
