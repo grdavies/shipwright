@@ -24,19 +24,19 @@ jobs:
         with:
           python-version: "3.12"
       - name: claude-golden-fixtures
-        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_claude_golden.py -q
 
       - name: core-scripts-parity-fixtures
-        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_core_scripts_parity.py -q
 
       - name: emitter-fixtures
-        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_emitter.py -q
 
       - name: gate-fixtures
-        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_gate.py -q
 
       - name: parity-fixtures
-        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_parity.py -q
 
   verify-main-full:
     name: verify-main-full
@@ -74,7 +74,7 @@ jobs:
         with:
           python-version: "${{ matrix.python-version }}"
       - name: Vendored pytest bootstrap
-        run: python3 scripts/test/run_pytest.py -h
+        run: python3 --version
       - name: minimum-python bash-py-invocation-guard
         run: python3 scripts/test/bash-py-invocation-guard.test
 

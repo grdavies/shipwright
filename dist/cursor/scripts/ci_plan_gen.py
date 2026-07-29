@@ -210,7 +210,7 @@ def generate_ci_workflow(root: Path, *, out_path: Path | None = None) -> str:
             "        with:",
             '          python-version: "${{ matrix.python-version }}"',
             "      - name: Vendored pytest bootstrap",
-            "        run: python3 scripts/test/run_pytest.py --version",
+            "        run: python3 scripts/test/run_pytest.py -h",
         ]
     )
     for step_id, command in minimum_steps:

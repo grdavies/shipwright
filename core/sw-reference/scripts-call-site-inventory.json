@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-29T05:02:05Z",
+  "generatedAt": "2026-07-29T05:18:31Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -97,15 +97,6 @@
       "line": 63,
       "column": 13,
       "script": "test/_runner.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/ci.yml:77:test/run_pytest.py",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/ci.yml",
-      "line": 77,
-      "column": 21,
-      "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
