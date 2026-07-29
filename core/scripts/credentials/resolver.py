@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Final, Protocol
 
 from credentials import failure_codes as fc
+from credentials.backends import load_backend
 from credentials.endpoint_guard import EndpointGuardError, normalize_allowed_hosts, validate_destination
 from credentials.model import CredentialRef, Principal, Resolution, ResolutionState, ResolvedToken, Secret
 from credentials.pairing_store import PairingVerdict, check_pairing
@@ -94,15 +95,38 @@ _BACKEND_ADAPTERS: dict[str, BackendAdapter] = {
     "git_credential": _UnavailableBackendAdapter(),
     "keystore": _UnavailableBackendAdapter(),
 }
+_LAZY_REGISTRATION_ENABLED: bool = True
 
 
 def register_backend_adapter(backend: str, adapter: BackendAdapter) -> None:
     _BACKEND_ADAPTERS[backend] = adapter
 
 
-def clear_backend_adapters() -> None:
+def clear_backend_adapters(*, disable_lazy: bool = True) -> None:
+    """Reset every adapter to the unavailable placeholder.
+
+    `disable_lazy` keeps a cleared registry cleared, so isolation in tests is not undone by
+    on-demand registration.
+    """
+    global _LAZY_REGISTRATION_ENABLED
     for backend in tuple(_BACKEND_ADAPTERS):
         _BACKEND_ADAPTERS[backend] = _UnavailableBackendAdapter()
+    _LAZY_REGISTRATION_ENABLED = not disable_lazy
+
+
+def backend_adapter(backend: str) -> BackendAdapter:
+    """Return the adapter for a backend, registering it on demand when none is bound yet."""
+    adapter = _BACKEND_ADAPTERS.get(backend)
+    if adapter is not None and not isinstance(adapter, _UnavailableBackendAdapter):
+        return adapter
+    if not _LAZY_REGISTRATION_ENABLED:
+        return adapter or _UnavailableBackendAdapter()
+    try:
+        load_backend(backend)()
+    except (ImportError, ValueError):
+        logger.warning("credential backend %s could not be registered", backend)
+        return adapter or _UnavailableBackendAdapter()
+    return _BACKEND_ADAPTERS.get(backend) or _UnavailableBackendAdapter()
 
 
 def lookup_timeout_seconds() -> float:
@@ -226,7 +250,7 @@ def _invoke_backend(
     context: RepositoryContext,
     timeout_seconds: float,
 ) -> BackendResolveResult:
-    adapter = _BACKEND_ADAPTERS.get(entry.backend, _UnavailableBackendAdapter())
+    adapter = backend_adapter(entry.backend)
 
     def _call() -> BackendResolveResult:
         return adapter.resolve(entry, purpose=purpose, context=context)

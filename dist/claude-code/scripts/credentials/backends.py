@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import Callable
 from typing import Final
 
@@ -31,11 +32,23 @@ def list_backends() -> tuple[str, ...]:
     return BACKEND_NAMES
 
 
+def register_function_name(backend: str) -> str:
+    return f"register_{backend}_backend"
+
+
 def load_backend(backend: str) -> Callable[[], None]:
-    """Return a no-op placeholder until backend modules ship in later phases."""
-    _ = backend_module_name(backend)
+    """Return an idempotent loader that imports the backend module and registers its adapter.
 
-    def _placeholder() -> None:
-        return None
+    Import alone is not sufficient: `keystore_backend` registers only on explicit call, so the
+    loader invokes the module's `register_<backend>_backend` entry point when present.
+    """
+    module_name = backend_module_name(backend)
+    entry_point = register_function_name(backend)
 
-    return _placeholder
+    def _load() -> None:
+        module = importlib.import_module(module_name)
+        register = getattr(module, entry_point, None)
+        if callable(register):
+            register()
+
+    return _load
