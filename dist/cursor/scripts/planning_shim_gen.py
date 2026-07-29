@@ -74,6 +74,10 @@ def _load_canonical():
     global _cached
     if _cached is not None:
         return _cached
+    existing = sys.modules.get(_CANONICAL_MODULE_NAME)
+    if existing is not None:
+        _cached = existing
+        return _cached
     path = _repo_root() / _CANONICAL_REL
     spec = importlib.util.spec_from_file_location(_CANONICAL_MODULE_NAME, path)
     if spec is None or spec.loader is None:
