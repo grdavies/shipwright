@@ -693,6 +693,7 @@
 * merge phase deduplication-fingerprint-allowlist-small into feat/planning-authority-memory-integrity (b8e3966) <!-- sw-deliver:deduplication-fingerprint-allowlist-small -->
 * merge phase sensitivity-tiers-and-monotonic-declassification-small into feat/planning-authority-memory-integrity (7c3b638) <!-- sw-deliver:sensitivity-tiers-and-monotonic-declassification-small -->
 * merge phase destination-binding-and-emission-point-registry-medium into feat/planning-authority-memory-integrity (0e32761) <!-- sw-deliver:destination-binding-and-emission-point-registry-medium -->
+* merge phase resolve-backend-cutover-write-lint-and-the-prd-080-boundary-medium into feat/planning-authority-memory-integrity (cda108c) <!-- sw-deliver:resolve-backend-cutover-write-lint-and-the-prd-080-boundary-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
