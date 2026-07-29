@@ -7,18 +7,56 @@ import os
 import sys
 from pathlib import Path
 
-from secret_patterns import REDACTIONS
+from secret_patterns import DENY_PATTERNS, REDACTIONS
 
 DESTINATION_VALUES = frozenset({"local", "committed", "external", "cross-project", "logs"})
+MANDATORY_REMOVAL_DESTINATIONS = frozenset({"external", "cross-project", "logs"})
+ADVISORY_DESTINATIONS = frozenset({"local", "committed"})
 
 
-def redact(text: str, *, destination: str) -> str:
-    if destination not in DESTINATION_VALUES:
-        raise ValueError(f"invalid destination: {destination!r}")
+class RedactionError(Exception):
+    def __init__(self, message: str, *, detector: str | None = None) -> None:
+        super().__init__(message)
+        self.detector = detector
+
+
+def scan_residual_detectors(text: str) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for deny in DENY_PATTERNS:
+        hits = len(deny.pattern.findall(text))
+        if hits:
+            counts[deny.name] = hits
+    return counts
+
+
+def apply_substitutions(text: str) -> str:
+    if not REDACTIONS:
+        raise RedactionError("missing pattern set")
     out = text
     for pattern, replacement in REDACTIONS:
         out = pattern.sub(replacement, out)
     return out
+
+
+def redact_with_postcondition(text: str, *, destination: str) -> tuple[str, dict[str, int]]:
+    if destination not in DESTINATION_VALUES:
+        raise ValueError(f"invalid destination: {destination!r}")
+    substituted = apply_substitutions(text)
+    residuals = scan_residual_detectors(substituted)
+    if residuals and destination in MANDATORY_REMOVAL_DESTINATIONS:
+        detector = sorted(residuals)[0]
+        raise RedactionError(f"residual:{detector}", detector=detector)
+    return substituted, residuals
+
+
+def redact(text: str, *, destination: str) -> str:
+    out, _residuals = redact_with_postcondition(text, destination=destination)
+    return out
+
+
+def emit_advisory_warnings(residuals: dict[str, int]) -> None:
+    for detector, count in sorted(residuals.items()):
+        print(f"warning: residual detector {detector}: {count}", file=sys.stderr)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -42,7 +80,19 @@ def main(argv: list[str] | None = None) -> int:
         text = Path(args.file).read_text(encoding="utf-8", errors="replace")
     else:
         text = sys.stdin.read()
-    sys.stdout.write(redact(text, destination=args.destination))
+
+    try:
+        out, residuals = redact_with_postcondition(text, destination=args.destination)
+    except RedactionError as exc:
+        if exc.detector:
+            print(f"redaction failed: detector {exc.detector}", file=sys.stderr)
+        else:
+            print(str(exc), file=sys.stderr)
+        return 1
+
+    if residuals and args.destination in ADVISORY_DESTINATIONS:
+        emit_advisory_warnings(residuals)
+    sys.stdout.write(out)
     return 0
 
 
