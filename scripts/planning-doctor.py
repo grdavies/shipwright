@@ -350,6 +350,147 @@ def put_partial_finding(root: Path) -> dict | None:
     }
 
 
+def identity_credential_authority_checks(root: Path, cfg: dict[str, Any]) -> list[dict[str, Any]]:
+    """Repository identity, credential probe surface, and authority health (PRD 082 R34)."""
+    checks: list[dict[str, Any]] = []
+    try:
+        from repository_context import from_root
+
+        ctx = from_root(root)
+        envelope = ctx.to_envelope()
+        checks.append(
+            {
+                "check": "repository-identity",
+                "status": "ok",
+                "projectId": envelope.get("projectId"),
+                "worktreeId": envelope.get("worktreeId"),
+                "repoSlug": envelope.get("repoSlug"),
+                "remote": envelope.get("remote"),
+                "planningAuthority": envelope.get("planningAuthority"),
+                "memoryNamespace": envelope.get("memoryNamespace"),
+            }
+        )
+    except Exception as exc:  # noqa: BLE001 — doctor check is advisory / fail-open
+        checks.append(
+            {
+                "check": "repository-identity",
+                "status": "fail",
+                "failureCode": "repository-identity-unavailable",
+                "remediation": "repair workflow.config.json and repository root invariants",
+                "error": str(exc),
+            }
+        )
+
+    try:
+        from credentials.doctor import diagnose_repository
+
+        credential_report = diagnose_repository(root, skip_integrity=True)
+        surfaces = credential_report.get("surfaces") or []
+        principals = [
+            {
+                "surface": surface.get("surface"),
+                "credentialRef": surface.get("credential_ref"),
+                "principal": surface.get("resolved_principal"),
+            }
+            for surface in surfaces
+            if isinstance(surface, dict)
+        ]
+        failure = credential_report.get("failure")
+        if credential_report.get("verdict") == "fail" and failure:
+            checks.append(
+                {
+                    "check": "credential-probe",
+                    "status": "warn",
+                    "failureCode": failure.get("code"),
+                    "remediation": failure.get("remediationCommand"),
+                    "surfaces": principals,
+                }
+            )
+        else:
+            checks.append(
+                {
+                    "check": "credential-probe",
+                    "status": "ok",
+                    "surfaces": principals,
+                    "note": "profile and principal via PRD 080 probe interface only; no secrets",
+                }
+            )
+    except Exception as exc:  # noqa: BLE001 — doctor check is advisory / fail-open
+        checks.append(
+            {
+                "check": "credential-probe",
+                "status": "warn",
+                "failureCode": "credential-probe-unavailable",
+                "remediation": "python3 scripts/credentials-doctor.py --root .",
+                "error": str(exc),
+            }
+        )
+
+    try:
+        import planning_authority_probe as pap
+
+        decision = pap.resolve_with_hysteresis(root, cfg)
+        flap = pap.doctor_authority_flap_report(root)
+        checks.append(
+            {
+                "check": "planning-authority-state",
+                "status": "ok",
+                "authorityState": decision.authorityState,
+                "writeDisposition": decision.writeDisposition,
+                "configured": decision.configured,
+                "reason": decision.reason,
+            }
+        )
+        flap_status = "ok"
+        transition_count = int(flap.get("transitionCount") or 0)
+        if transition_count > 10:
+            flap_status = "warn"
+        checks.append(
+            {
+                "check": "authority-flap-history",
+                "status": flap_status,
+                "transitionCount": transition_count,
+                "flapTransitions": flap.get("flapTransitions") or [],
+                "authorityState": flap.get("authorityState"),
+            }
+        )
+        import planning_projection_ledger as ppl
+
+        ledger = ppl.load_projection_ledger(root)
+        projection_status = "fail" if ledger.get("dirty") else "ok"
+        projection_check: dict[str, Any] = {
+            "check": "projection-health",
+            "status": projection_status,
+            "dirty": bool(ledger.get("dirty")),
+            "dirtyReason": ledger.get("dirtyReason"),
+            "checkpointGeneration": ledger.get("checkpointGeneration"),
+            "entryCount": len(ledger.get("entries") or {}),
+        }
+        if ledger.get("dirty"):
+            projection_check["failureCode"] = "projection-dirty"
+            projection_check["remediation"] = (
+                "resume or clear dirty projection via planning_projection_ledger.py"
+            )
+        checks.append(projection_check)
+        if projection_status == "fail" and decision.writeDisposition == "accept":
+            checks[-2] = {
+                **checks[-2],
+                "status": "warn",
+                "note": "authority accepts writes while projection ledger is dirty",
+            }
+    except Exception as exc:  # noqa: BLE001 — doctor check is advisory / fail-open
+        checks.append(
+            {
+                "check": "planning-authority-state",
+                "status": "warn",
+                "failureCode": "authority-probe-unavailable",
+                "remediation": "python3 scripts/planning_authority_probe.py probe",
+                "error": str(exc),
+            }
+        )
+    return checks
+
+
 def chunk_cardinality_finding(root: Path) -> dict | None:
     """Manifest/comment cardinality-mismatch finding for chunked issue-store
     bodies (PRD 057 R26).
@@ -578,14 +719,6 @@ def doctor(root: Path, *, sweep: bool) -> dict:
             "note": "credential references and env names only; no secrets in config",
         })
 
-        from memory_sot import classify_source_of_truth
-
-        sot_finding = classify_source_of_truth(root, cfg)
-        checks.append(sot_finding)
-        if sot_finding.get("classification") == "migration-required":
-            warnings.append("memory-source-of-truth-migration-required")
-            verdict = "fail"
-
         deprecated_visibility_finding = planning_visibility_deprecation_finding(cfg)
         if deprecated_visibility_finding is not None:
             checks.append(deprecated_visibility_finding)
@@ -653,6 +786,46 @@ def doctor(root: Path, *, sweep: bool) -> dict:
     if cardinality_finding is not None:
         checks.append(cardinality_finding)
         warnings.append("chunk-cardinality-mismatch")
+        if verdict == "ok":
+            verdict = "degraded"
+
+    cfg_for_sections = None
+    cfg_path = root / ".cursor/workflow.config.json"
+    if cfg_path.is_file():
+        try:
+            cfg_for_sections = json.loads(cfg_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            cfg_for_sections = {}
+    else:
+        cfg_for_sections = {}
+
+    for section_check in identity_credential_authority_checks(root, cfg_for_sections or {}):
+        checks.append(section_check)
+        code = section_check.get("failureCode")
+        if code:
+            warnings.append(str(code))
+        if section_check.get("status") == "fail":
+            verdict = "fail"
+        elif section_check.get("status") in {"warn", "degraded", "action-required"} and verdict == "ok":
+            verdict = "degraded"
+
+    try:
+        import memory_doctor_checks as mdc
+        import planning_doctor_ledger as pdl
+
+        ledger_checks = pdl.run_ledger_checks(root, cfg_for_sections)
+        memory_checks = mdc.run_memory_checks(root, cfg_for_sections)
+        for section_check in [*ledger_checks, *memory_checks]:
+            checks.append(section_check)
+            code = section_check.get("failureCode")
+            if code:
+                warnings.append(str(code))
+            if section_check.get("status") == "fail":
+                verdict = "fail"
+            elif section_check.get("status") in {"warn", "degraded"} and verdict == "ok":
+                verdict = "degraded"
+    except Exception:  # noqa: BLE001 — unified inspection must not break legacy doctor
+        warnings.append("unified-doctor-sections-unavailable")
         if verdict == "ok":
             verdict = "degraded"
 
