@@ -143,9 +143,11 @@ def check_kill_switch_forces_file_store_and_restores() -> dict:
         with durable_disable(root, False):
             off = ps.resolve_effective_backend(root, cfg)
     ok = (
-        on.get("effective") == "in-repo-public"
+        on.get("effective") == "issue-store"
+        and on.get("configured") == "issue-store"
         and on.get("killSwitch") is True
         and on.get("fallbackReason") == "kill-switch"
+        and on.get("authorityState") == "read-only"
         and off.get("effective") == "issue-store"
         and off.get("killSwitch") is None
     )
@@ -199,7 +201,8 @@ def check_legacy_shim_with_durable_record_surfaces_warnings() -> dict:
         with durable_disable(root, True), legacy_kill_switch_shim(True):
             resolved = ps.resolve_effective_backend(root, cfg)
     ok = (
-        resolved.get("effective") == "in-repo-public"
+        resolved.get("effective") == "issue-store"
+        and resolved.get("configured") == "issue-store"
         and resolved.get("killSwitch") is True
         and bool(resolved.get("legacyShimWarnings"))
     )
