@@ -229,18 +229,21 @@ def append_timeline_entry(
 
 
 def atomic_write_text(path: Path, content: str) -> None:
-    """Write via temp file + os.replace so readers never see partial files."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    try:
-        tmp.write_text(content, encoding="utf-8")
-        os.replace(tmp, path)
-    finally:
-        if tmp.exists():
-            try:
-                tmp.unlink()
-            except OSError:
-                pass
+    """Write via coordinator-backed durable temp + rename (PRD 082 R28)."""
+    import subprocess
+
+    from planning_paths import atomic_write_text as coordinator_atomic_write
+
+    proc = subprocess.run(
+        ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"],
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode == 0 and proc.stdout.strip():
+        root = Path(proc.stdout.strip())
+    else:
+        root = path.resolve().parent
+    coordinator_atomic_write(path, content, root=root, store_id="in-repo-memory")
 
 
 def parse_scalar(raw: str) -> Any:
