@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "metrics": {
+    "authorized_recall_rate": {
+      "min": 1.0
+    },
+    "cross_project_leakage": {
+      "max": 0.0
+    },
+    "negative_controls_blocked": {
+      "min": 3.0
+    }
+  },
+  "waivers": []
+}
