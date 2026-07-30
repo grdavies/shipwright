@@ -26,6 +26,14 @@ MISSING_CI_DECLARATION_REMEDIATION: Final[str] = (
     f"{CI_SELECTOR_RELATIVE.as_posix()} or the machine-local selector file"
 )
 
+# Standard CI token env vars per provider — used as a fallback when workflow config
+# has no explicit tokenEnv, e.g. when loading from a bare tmp dir in tests or CI.
+_PROVIDER_DEFAULT_TOKEN_ENVS: Final[dict[str, str]] = {
+    "github": "GITHUB_TOKEN",
+    "gitlab": "GITLAB_TOKEN",
+    "bitbucket": "BITBUCKET_TOKEN",
+}
+
 
 @dataclass(frozen=True, slots=True)
 class AmbientTokenFinding:
@@ -127,12 +135,19 @@ def is_environment_backend_declared(
 
 
 def resolve_presence_env_name(entry: SelectorEntry, *, root: Path | str) -> str:
-    """Return the host token env var used for presence checks and env-backend reads."""
+    """Return the host token env var used for presence checks and env-backend reads.
+
+    Prefers the explicit ``tokenEnv`` from workflow config; falls back to the
+    standard CI env var for the declared provider when no explicit value is set.
+    """
     from host_lib import host_section, load_workflow_config, resolve_token_env
 
     cfg = load_workflow_config(Path(root))
     host = host_section(cfg)
-    return resolve_token_env(host, entry.provider)
+    configured = resolve_token_env(host, entry.provider)
+    if configured:
+        return configured
+    return _PROVIDER_DEFAULT_TOKEN_ENVS.get(entry.provider.strip().lower(), "")
 
 
 def detect_ambient_token_without_declaration(
