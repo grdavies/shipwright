@@ -712,6 +712,7 @@
 * merge phase authority-hysteresis-and-per-operation-pinning-small into feat/planning-authority-memory-integrity (3f9cde8) <!-- sw-deliver:authority-hysteresis-and-per-operation-pinning-small -->
 * merge phase windows-safe-selector-integrity-check-r4 into feat/ci-reliability-and-runner-credential-resolution (f0519af) <!-- sw-deliver:windows-safe-selector-integrity-check-r4 -->
 * merge phase repin-deliver-closeout-workflow-action-refs-r9 into feat/ci-reliability-and-runner-credential-resolution (00497e0) <!-- sw-deliver:repin-deliver-closeout-workflow-action-refs-r9 -->
+* merge phase disjoint-pytest-shard-partitioning-r1 into feat/ci-reliability-and-runner-credential-resolution (0890cf6) <!-- sw-deliver:disjoint-pytest-shard-partitioning-r1 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
