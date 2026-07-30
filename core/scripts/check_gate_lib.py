@@ -761,6 +761,34 @@ def apply_quality_blocking_promotion(
     return new_verdict, req, reason, payload
 
 
+def run_pin_validity_gate(root: Path, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    """Run the workflow pin-validity checker and annotate the payload (PRD 083 R10).
+
+    Confirmed-invalid pins → returns non-zero exit with a blocked payload.
+    Transient lookup errors → exit 0, warning annotated in payload (fail-open).
+    """
+    try:
+        import workflow_pin_validity_check_lib as pv_lib
+        pin_exit, pin_result = pv_lib.run_check(root, skip_api=True)
+    except Exception:
+        # If the library itself cannot be imported or crashes, fail open.
+        return 0, payload
+
+    payload = dict(payload)
+    payload["pinValidityCheck"] = pin_result
+
+    if pin_result.get("verdict") == "fail":
+        blocked: dict[str, Any] = {
+            "verdict": "blocked",
+            "reason": "workflow-pin-validity: invalid action pins detected",
+            "pinValidityCheck": pin_result,
+        }
+        jsonio.emit(blocked)
+        return 30, blocked
+
+    return 0, payload
+
+
 def finalize_gate_payload(
     root: Path,
     cfg: dict[str, Any],
@@ -771,6 +799,9 @@ def finalize_gate_payload(
     reason: str,
 ) -> tuple[int, dict[str, Any]]:
     ec, payload = attach_quality_context(root, cfg, payload)
+    if ec != 0:
+        return ec, payload
+    ec, payload = run_pin_validity_gate(root, payload)
     if ec != 0:
         return ec, payload
     verdict, required_failing, reason, payload = apply_quality_blocking_promotion(
