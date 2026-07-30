@@ -710,6 +710,7 @@
 * merge phase destination-binding-and-emission-point-registry-medium into feat/planning-authority-memory-integrity (0e32761) <!-- sw-deliver:destination-binding-and-emission-point-registry-medium -->
 * merge phase resolve-backend-cutover-write-lint-and-the-prd-080-boundary-medium into feat/planning-authority-memory-integrity (cda108c) <!-- sw-deliver:resolve-backend-cutover-write-lint-and-the-prd-080-boundary-medium -->
 * merge phase authority-hysteresis-and-per-operation-pinning-small into feat/planning-authority-memory-integrity (3f9cde8) <!-- sw-deliver:authority-hysteresis-and-per-operation-pinning-small -->
+* merge phase windows-safe-selector-integrity-check-r4 into feat/ci-reliability-and-runner-credential-resolution (f0519af) <!-- sw-deliver:windows-safe-selector-integrity-check-r4 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
