@@ -113,17 +113,10 @@ class TestSecretRedaction:
 
 
 class TestPackageSurface:
-    _IMPLEMENTED_BACKENDS = frozenset({"keystore"})
-
     def test_importing_backends_has_no_secret_side_effects(self) -> None:
         for backend in list_backends():
-            module_name = backend_module_name(backend)
-            if backend in self._IMPLEMENTED_BACKENDS:
-                module = importlib.import_module(module_name)
-                assert module is not None
-            else:
-                with pytest.raises(ModuleNotFoundError):
-                    importlib.import_module(module_name)
+            module = importlib.import_module(backend_module_name(backend))
+            assert module is not None
             assert load_backend(backend)() is None
 
     def test_redact_secret_value_is_constant(self) -> None:

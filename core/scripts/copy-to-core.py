@@ -19,6 +19,14 @@ from _sw.cli import build_parser, run_module_main
 
 PROVENANCE_REL = ".sw/build-chain-last-synced.json"
 
+# Repo-local operator state that lives under .sw/ but is never shipped as sw-reference content.
+# `credential-ci-selector.json` carries this repository's account, scope, and endpoint bindings
+# (PRD 080 R6); mirroring it would publish one repo's identity metadata into the plugin payload.
+OPERATOR_LOCAL_SW_FILES = (
+    "build-chain-last-synced.json",
+    "credential-ci-selector.json",
+)
+
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
@@ -248,7 +256,7 @@ def sync(root: Path, *, force: bool = False) -> int:
     if sw_reference_input is not None:
         check_sw_reference_orphans(core, sw_reference_input, manifest, force=force)
         excludes = list(manifest.get("coreAuthoredAllowlist", [])) if sw_reference_input.name == ".sw" else []
-        excludes.append("build-chain-last-synced.json")
+        excludes.extend(OPERATOR_LOCAL_SW_FILES)
         mirror.mirror(sw_reference_input, core / "sw-reference", excludes=excludes, delete=True)
 
     _write_provenance(root, _sw_reference_tree_hashes(core / "sw-reference"))
