@@ -130,9 +130,10 @@ def check_command_documentation_currency(root: Path) -> list[dict[str, object]]:
     return drift
 
 
-def _parse_run_id(argv: list[str]) -> tuple[str | None, list[str]]:
+def _parse_run_id(argv: list[str]) -> tuple[str | None, bool, list[str]]:
     cleaned: list[str] = []
     run_id: str | None = None
+    skip_artifact_currency: bool = False
     idx = 0
     while idx < len(argv):
         token = argv[idx]
@@ -140,9 +141,13 @@ def _parse_run_id(argv: list[str]) -> tuple[str | None, list[str]]:
             run_id = argv[idx + 1]
             idx += 2
             continue
+        if token == "--skip-artifact-currency":
+            skip_artifact_currency = True
+            idx += 1
+            continue
         cleaned.append(token)
         idx += 1
-    return run_id, cleaned
+    return run_id, skip_artifact_currency, cleaned
 
 
 def resolve_plan_path(
@@ -200,7 +205,7 @@ def _resolve_argv(argv: list[str]) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     raw_argv = list(argv if argv is not None else sys.argv)
-    run_id, stripped = _parse_run_id(raw_argv)
+    run_id, skip_artifact_currency, stripped = _parse_run_id(raw_argv)
     resolved = _resolve_argv(stripped)
     root = Path(resolved[1])
     state_root = Path(resolved[2])
@@ -344,40 +349,42 @@ def main(argv: list[str] | None = None) -> int:
                 payload = {"error": gb.stderr or gb.stdout}
             drift.append({"kind": "gap-backlog-integrity", "detail": payload})
 
-    from docs_currency_081 import check_release_guide_artifacts
-    from docs_currency_memory import check_memory_doc_currency
-    from docs_currency_planning import check_planning_doc_currency
+    if not skip_artifact_currency:
+        from docs_currency_081 import check_release_guide_artifacts
+        from docs_currency_memory import check_memory_doc_currency
+        from docs_currency_planning import check_planning_doc_currency
 
-    guide_drift = check_release_guide_artifacts(root)
-    if guide_drift:
-        drift.extend(guide_drift)
+        guide_drift = check_release_guide_artifacts(root)
+        if guide_drift:
+            drift.extend(guide_drift)
 
-    memory_drift = check_memory_doc_currency(root)
-    if memory_drift:
-        drift.extend(memory_drift)
+        memory_drift = check_memory_doc_currency(root)
+        if memory_drift:
+            drift.extend(memory_drift)
 
-    planning_drift = check_planning_doc_currency(root)
-    if planning_drift:
-        drift.extend(planning_drift)
+        planning_drift = check_planning_doc_currency(root)
+        if planning_drift:
+            drift.extend(planning_drift)
 
     if drift:
         print(json.dumps({"verdict": "fail", "action": "docs-currency-gate", "prd": prd, "drift": drift}))
         sys.exit(1)
 
-    command_doc_drift = check_command_documentation_currency(root)
-    if command_doc_drift:
-        print(
-            json.dumps(
-                {
-                    "verdict": "fail",
-                    "action": "docs-currency-gate",
-                    "prd": prd,
-                    "drift": command_doc_drift,
-                    "artifactSet": [str(e.get("id") or e.get("doc")) for e in COMMAND_DOC_CURRENCY_ARTIFACTS],
-                }
+    if not skip_artifact_currency:
+        command_doc_drift = check_command_documentation_currency(root)
+        if command_doc_drift:
+            print(
+                json.dumps(
+                    {
+                        "verdict": "fail",
+                        "action": "docs-currency-gate",
+                        "prd": prd,
+                        "drift": command_doc_drift,
+                        "artifactSet": [str(e.get("id") or e.get("doc")) for e in COMMAND_DOC_CURRENCY_ARTIFACTS],
+                    }
+                )
             )
-        )
-        sys.exit(1)
+            sys.exit(1)
 
     print(
         json.dumps(
