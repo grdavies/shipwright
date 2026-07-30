@@ -2,20 +2,60 @@
 """CI pytest shard grouping for pr-test-plan manifest (PRD 054 TR13)."""
 from __future__ import annotations
 
+import math
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
-REQUIRED_SHARD_COUNT = 4
+# Configurable target: aim for at most this many test files per required shard.
+# Callers may override via compute_required_shard_count(count, target_per_shard=N).
+TARGET_PER_SHARD: int = 40
+
+# Minimum floor: never drop below 4 required shards regardless of suite size.
+_MIN_REQUIRED_SHARDS: int = 4
+
 ADVISORY_SHARD_COUNT = 1
+
+
+def compute_required_shard_count(
+    total_test_count: int,
+    target_per_shard: int = TARGET_PER_SHARD,
+) -> int:
+    """Return the required shard count scaled to the suite size (R2).
+
+    Formula: max(_MIN_REQUIRED_SHARDS, ceil(total_test_count / target_per_shard))
+
+    The result is monotonically non-decreasing as *total_test_count* grows.
+    At zero or negative input the floor (_MIN_REQUIRED_SHARDS = 4) is returned.
+    The count first exceeds the floor when total_test_count > _MIN_REQUIRED_SHARDS * target_per_shard
+    (with default settings: > 160 test files).
+    """
+    if total_test_count <= 0 or target_per_shard <= 0:
+        return _MIN_REQUIRED_SHARDS
+    return max(_MIN_REQUIRED_SHARDS, math.ceil(total_test_count / target_per_shard))
 
 
 def shard_job_name(classification: str, shard: int) -> str:
     return f"feat-test-plan-pytest-{classification}-shard-{shard}"
 
 
-def assign_shard(classification: str, index: int, total: int) -> int:
-    buckets = REQUIRED_SHARD_COUNT if classification == "required" else ADVISORY_SHARD_COUNT
+def assign_shard(
+    classification: str,
+    index: int,
+    total: int,
+    shard_count: int | None = None,
+) -> int:
+    """Assign *index* (0-based) out of *total* entries to a shard bucket.
+
+    *shard_count* overrides the required-shard count when provided; callers
+    that know the live test-file count should pass
+    ``compute_required_shard_count(live_count)`` here.  The default (None)
+    falls back to ``compute_required_shard_count(0)`` which equals the
+    _MIN_REQUIRED_SHARDS floor for backward compatibility.
+    """
+    if shard_count is None:
+        shard_count = compute_required_shard_count(0)
+    buckets = shard_count if classification == "required" else ADVISORY_SHARD_COUNT
     if total <= 0:
         return 1
     return (index * buckets // total) + 1
