@@ -92,7 +92,7 @@ PR jobs run `.github/workflows/pr-test-plan-ci.yml`, generated from
 - **Classification** — `required` shards block merge; `advisory` shards use `continue-on-error` (checks-gate
  semantics unchanged).
 
-### TR13 — Auto-scaling required shard count (R2)
+### TR13 — Auto-scaling required shard count
 
 The number of required shards is no longer hardcoded. `scripts/ci_shard_lib.py` exports:
 
