@@ -139,7 +139,7 @@ core/sw-reference/pr-test-plan.manifest.json \
 **Consolidated full verify** — `.github/workflows/ci.yml` `verify-full` on `main` push and nightly schedule runs
 `python3 scripts/test/_runner.py verify --scope full`.
 
-### Nightly failure triage-owner notification ( )
+### Nightly failure triage-owner notification
 
 The `verify-scheduled-full-plus-integration` scheduled job invokes
 `scripts/nightly-failure-notify.py` on failure (`if: failure()`). The helper:
