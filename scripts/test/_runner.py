@@ -340,16 +340,16 @@ def run_pytest_scope(
 
     resolved_root = root if (root / "scripts" / "unit_tests").is_dir() else repo_root()
     effective_scope = (scope or _resolve_scope()).lower()
-    if pytest_args:
-        return run_pytest(pytest_args, root=resolved_root)
-
     paths = changed_paths
     if paths is None:
         paths = ts.resolve_changed_paths(resolved_root, None)
     plan = ts.build_plan(paths, scope=effective_scope, root=resolved_root)
     for advisory in plan.get("advisories") or []:
         print(f"ADVISORY test-scope: {advisory}")
-    return run_pytest(plan.get("pytestArgs") or ["scripts/unit_tests"], root=resolved_root)
+    final_args = list(plan.get("pytestArgs") or ["scripts/unit_tests"])
+    if pytest_args:
+        final_args.extend(pytest_args)
+    return run_pytest(final_args, root=resolved_root)
 
 
 def run_verify(

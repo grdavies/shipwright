@@ -108,6 +108,7 @@ def test_docs_currency_gate_cli_accepts_run_id(repo: Path) -> None:
             str(script),
             "--run-id",
             run_id,
+            "--skip-artifact-currency",
             str(repo),
             str(repo),
             str(state_path),
