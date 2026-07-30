@@ -69,7 +69,7 @@ def generate_pr_test_plan_workflow(
     out_path = out_path or (root / PR_WORKFLOW_REL)
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
     fixtures = data.get("fixtures") or []
-    jobs = group_fixtures_for_ci(fixtures)
+    jobs = group_fixtures_for_ci(fixtures, root=root)
 
     lines = [
         GENERATOR_BANNER,
