@@ -1800,7 +1800,8 @@
     "scheduled-full-plus-integration": {
       "description": "Scheduled nightly full suite including integration-marked tests.",
       "scope": "full",
-      "includeIntegration": true
+      "includeIntegration": true,
+      "triageOwner": "platform-ops"
     },
     "minimum-python": {
       "description": "Minimum supported Python matrix leg — core guard suites only.",

@@ -139,6 +139,27 @@ python3 scripts/generate-pr-test-plan-ci-workflow.py \
 **Consolidated full verify** — `.github/workflows/ci.yml` `verify-full` on `main` push and nightly schedule runs
 `python3 scripts/test/_runner.py verify --scope full`.
 
+### Nightly failure triage-owner notification (PRD 083 R8)
+
+The `verify-scheduled-full-plus-integration` scheduled job invokes
+`scripts/nightly-failure-notify.py` on failure (`if: failure()`). The helper:
+
+1. Resolves the responsible owner from `core/sw-reference/suite-registry.json`
+   plan metadata (`plans.scheduled-full-plus-integration.triageOwner`, default
+   `platform-ops` when unset).
+2. Auto-files an authoritative planning-store gap via `planning_gap_capture.capture_gap`
+   with a stable `nightly-failure:<job>:<run-id>` signal id (deduped against open gaps).
+
+Dry-run locally:
+
+```bash
+python3 scripts/nightly-failure-notify.py \
+  --payload-file /tmp/nightly-failure.json \
+  --dry-run --no-dedupe
+```
+
+Regression: `scripts/unit_tests/test/test_nightly_failure_notify.py`.
+
 ## Running tests locally
 
 ```bash

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-30T14:53:26Z",
+  "generatedAt": "2026-07-30T18:53:37Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -82,82 +82,100 @@
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:63:test/_runner.py",
+      "id": ".github/workflows/ci.yml:64:test/_runner.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 63,
+      "line": 64,
       "column": 40,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:63:test/_runner.py",
+      "id": ".github/workflows/ci.yml:64:test/_runner.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 63,
+      "line": 64,
       "column": 13,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:79:test/bash-py-invocation-guard.test",
+      "id": ".github/workflows/ci.yml:68:nightly-failure-notify.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 79,
+      "line": 68,
+      "column": 37,
+      "script": "nightly-failure-notify.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/ci.yml:68:nightly-failure-notify.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/ci.yml",
+      "line": 68,
+      "column": 10,
+      "script": "nightly-failure-notify.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/ci.yml:87:test/bash-py-invocation-guard.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/ci.yml",
+      "line": 87,
       "column": 21,
       "script": "test/bash-py-invocation-guard.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:82:test/claims-audit-unit.test",
+      "id": ".github/workflows/ci.yml:90:test/claims-audit-unit.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 82,
+      "line": 90,
       "column": 21,
       "script": "test/claims-audit-unit.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:85:docs-link-check.py",
+      "id": ".github/workflows/ci.yml:93:docs-link-check.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 85,
+      "line": 93,
       "column": 21,
       "script": "docs-link-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:88:test/git-push-secret-scan-chokepoint.test",
+      "id": ".github/workflows/ci.yml:96:test/git-push-secret-scan-chokepoint.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 88,
+      "line": 96,
       "column": 21,
       "script": "test/git-push-secret-scan-chokepoint.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:91:test/rca-fanout-unit.test",
+      "id": ".github/workflows/ci.yml:99:test/rca-fanout-unit.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 91,
+      "line": 99,
       "column": 21,
       "script": "test/rca-fanout-unit.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:94:check_scripts_inventory.py",
+      "id": ".github/workflows/ci.yml:102:check_scripts_inventory.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 94,
+      "line": 102,
       "column": 21,
       "script": "check_scripts_inventory.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:97:test/skills-spec-guard.test",
+      "id": ".github/workflows/ci.yml:105:test/skills-spec-guard.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 97,
+      "line": 105,
       "column": 21,
       "script": "test/skills-spec-guard.test",
       "classification": "self-repo-only"
@@ -18451,91 +18469,100 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:146:test/run_pytest.py",
+      "id": "docs/guides/testing.md:156:nightly-failure-notify.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 146,
+      "line": 156,
+      "column": 8,
+      "script": "nightly-failure-notify.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/testing.md:167:test/run_pytest.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/testing.md",
+      "line": 167,
       "column": 8,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:149:test/_runner.py",
+      "id": "docs/guides/testing.md:170:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 149,
+      "line": 170,
       "column": 27,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:149:test/_runner.py",
+      "id": "docs/guides/testing.md:170:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 149,
+      "line": 170,
       "column": 0,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:160:build-chain-sync.py",
+      "id": "docs/guides/testing.md:181:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 160,
+      "line": 181,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:166:build-chain-sync.py",
+      "id": "docs/guides/testing.md:187:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 166,
+      "line": 187,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:169:build-chain-sync.py",
+      "id": "docs/guides/testing.md:190:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 169,
+      "line": 190,
       "column": 41,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:178:deprecated_surface_freshness.py",
+      "id": "docs/guides/testing.md:199:deprecated_surface_freshness.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 178,
+      "line": 199,
       "column": 11,
       "script": "deprecated_surface_freshness.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:179:harness_isolation_lint.py",
+      "id": "docs/guides/testing.md:200:harness_isolation_lint.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 179,
+      "line": 200,
       "column": 11,
       "script": "harness_isolation_lint.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:227:test/_runner.py",
+      "id": "docs/guides/testing.md:248:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 227,
+      "line": 248,
       "column": 27,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:227:test/_runner.py",
+      "id": "docs/guides/testing.md:248:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 227,
+      "line": 248,
       "column": 0,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
