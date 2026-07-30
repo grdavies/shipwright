@@ -13,6 +13,7 @@ from typing import Final, Protocol
 
 from credentials import failure_codes as fc
 from credentials.backends import load_backend
+from credentials.ci_declaration import try_load_ci_selector
 from credentials.endpoint_guard import EndpointGuardError, normalize_allowed_hosts, validate_destination
 from credentials.model import CredentialRef, Principal, Resolution, ResolutionState, ResolvedToken, Secret
 from credentials.pairing_store import PairingVerdict, check_pairing
@@ -183,16 +184,35 @@ def _project_in_scope(project_id: str, allowed_project_ids: tuple[str, ...]) -> 
     return any(normalized == item.strip() for item in allowed_project_ids)
 
 
+def _detect_repo_root(start: Path | None = None) -> Path | None:
+    """Walk up from *start* (default: cwd) looking for a .git directory or file."""
+    current = (start or Path.cwd()).resolve()
+    while True:
+        if (current / ".git").exists():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+
+
 def _load_selector(
     *,
     selector_path: Path | None,
     xdg_base: Path | None,
     skip_integrity: bool,
+    repo_root: Path | None = None,
 ) -> SelectorDocument:
     try:
         return load_selector_store(path=selector_path, xdg_base=xdg_base, skip_integrity=skip_integrity)
     except SelectorStoreError as exc:
         if exc.code == "selector-absent":
+            # Consult the committed CI selector before failing closed (R3).
+            root = repo_root if repo_root is not None else _detect_repo_root()
+            if root is not None:
+                ci_doc = try_load_ci_selector(root=root)
+                if ci_doc is not None:
+                    return ci_doc
             raise ResolverScopeError(fc.MISSING_SELECTOR, exc.hint) from exc
         if exc.code.startswith("selector-missing-"):
             raise ResolverScopeError(fc.INSUFFICIENT_SCOPE, exc.hint) from exc
