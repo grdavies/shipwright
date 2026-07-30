@@ -55,11 +55,11 @@ Prefer matrices over copy-pasted cases:
 
 ```python
 @pytest.mark.parametrize(
- ("scope", "expected"),
- [("fast", 0), ("phase", 0), ("full", 0)],
+("scope", "expected"),
+[("fast", 0), ("phase", 0), ("full", 0)],
 )
 def test_scope_dispatch(scope, expected, repo_root):
- ...
+...
 ```
 
 ### Negative outcomes
@@ -68,9 +68,9 @@ Add one explicit test per public error path:
 
 ```python
 def test_dependency_gate_rejects_unfrozen(tmp_path):
- with pytest.raises(SystemExit) as exc:
- run_gate(tmp_path / "tasks.md", frozen=False)
- assert exc.value.code == 2
+with pytest.raises(SystemExit) as exc:
+run_gate(tmp_path / "tasks.md", frozen=False)
+assert exc.value.code == 2
 ```
 
 ### Temporary state
@@ -84,13 +84,13 @@ PR jobs run `.github/workflows/pr-test-plan-ci.yml`, generated from
 
 - **Standalone jobs** — guard scripts that are not pytest packages (`docs-link-check`, bash guards).
 - **Pytest shards** — `feat-test-plan-pytest-required-shard-{1..N}` and
- `feat-test-plan-pytest-advisory-shard-1` batch registry `pytestPath` targets per shard.
+`feat-test-plan-pytest-advisory-shard-1` batch registry `pytestPath` targets per shard.
 - **Disjoint partition** — `scripts/ci_shard_lib.py` expands manifest directory args to
- concrete `test_*.py` files (or preserves `::` node ids) and assigns each target to exactly one
- required shard. Manifest order wins on overlap; the duplication factor
- (`total assignments / unique files`) must stay `1.0` — no file runs in more than one required shard.
+concrete `test_*.py` files (or preserves `::` node ids) and assigns each target to exactly one
+required shard. Manifest order wins on overlap; the duplication factor
+(`total assignments / unique files`) must stay `1.0` — no file runs in more than one required shard.
 - **Classification** — `required` shards block merge; `advisory` shards use `continue-on-error` (checks-gate
- semantics unchanged).
+semantics unchanged).
 
 ### TR13 — Auto-scaling required shard count
 
@@ -98,8 +98,8 @@ The number of required shards is no longer hardcoded. `scripts/ci_shard_lib.py` 
 
 ```python
 compute_required_shard_count(
-    total_test_count: int,
-    target_per_shard: int = TARGET_PER_SHARD,  # default: 40
+total_test_count: int,
+target_per_shard: int = TARGET_PER_SHARD, # default: 40
 ) -> int
 ```
 
@@ -118,7 +118,7 @@ is always preserved. The shard count first exceeds `4` when:
 
 ```
 total_test_count > _MIN_REQUIRED_SHARDS × TARGET_PER_SHARD
-                 > 4 × 40 = 160   (with defaults)
+> 4 × 40 = 160 (with defaults)
 ```
 
 The current manifest has fewer than 160 required pytest fixtures, so the shard count remains `4` today.
@@ -132,30 +132,30 @@ Regenerate after manifest edits:
 
 ```bash
 python3 scripts/generate-pr-test-plan-ci-workflow.py \
- core/sw-reference/pr-test-plan.manifest.json \
- .github/workflows/pr-test-plan-ci.yml .
+core/sw-reference/pr-test-plan.manifest.json \
+.github/workflows/pr-test-plan-ci.yml .
 ```
 
 **Consolidated full verify** — `.github/workflows/ci.yml` `verify-full` on `main` push and nightly schedule runs
 `python3 scripts/test/_runner.py verify --scope full`.
 
-### Nightly failure triage-owner notification (PRD 083 R8)
+### Nightly failure triage-owner notification ( )
 
 The `verify-scheduled-full-plus-integration` scheduled job invokes
 `scripts/nightly-failure-notify.py` on failure (`if: failure()`). The helper:
 
 1. Resolves the responsible owner from `core/sw-reference/suite-registry.json`
-   plan metadata (`plans.scheduled-full-plus-integration.triageOwner`, default
-   `platform-ops` when unset).
+plan metadata (`plans.scheduled-full-plus-integration.triageOwner`, default
+`platform-ops` when unset).
 2. Auto-files an authoritative planning-store gap via `planning_gap_capture.capture_gap`
-   with a stable `nightly-failure:<job>:<run-id>` signal id (deduped against open gaps).
+with a stable `nightly-failure:<job>:<run-id>` signal id (deduped against open gaps).
 
 Dry-run locally:
 
 ```bash
 python3 scripts/nightly-failure-notify.py \
-  --payload-file /tmp/nightly-failure.json \
-  --dry-run --no-dedupe
+--payload-file /tmp/nightly-failure.json \
+--dry-run --no-dedupe
 ```
 
 Regression: `scripts/unit_tests/test/test_nightly_failure_notify.py`.
