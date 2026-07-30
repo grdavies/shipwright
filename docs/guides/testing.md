@@ -77,7 +77,7 @@ def test_dependency_gate_rejects_unfrozen(tmp_path):
 
 Use `tmp_path` or `tmp_git_repo` — never mutate the developer checkout.
 
-## CI shards ( TR13)
+## CI shards (TR13)
 
 PR jobs run `.github/workflows/pr-test-plan-ci.yml`, generated from
 `core/sw-reference/pr-test-plan.manifest.json`:
@@ -85,6 +85,10 @@ PR jobs run `.github/workflows/pr-test-plan-ci.yml`, generated from
 - **Standalone jobs** — guard scripts that are not pytest packages (`docs-link-check`, bash guards).
 - **Pytest shards** — `feat-test-plan-pytest-required-shard-{1..4}` and
  `feat-test-plan-pytest-advisory-shard-1` batch registry `pytestPath` targets per shard.
+- **Disjoint partition (R1)** — `scripts/ci_shard_lib.py` expands manifest directory args to
+ concrete `test_*.py` files (or preserves `::` node ids) and assigns each target to exactly one
+ required shard. Manifest order wins on overlap; the duplication factor
+ (`total assignments / unique files`) must stay `1.0` — no file runs in more than one required shard.
 - **Classification** — `required` shards block merge; `advisory` shards use `continue-on-error` (checks-gate
  semantics unchanged).
 
