@@ -88,10 +88,28 @@ while IFS= read -r job; do
     bad "pr-test-plan-jobs-on-pr: missing job ${job}"
   fi
 done < <(
-  python3 - "$MANIFEST" <<'PY'
-import json, sys
-for entry in json.load(open(sys.argv[1])).get("fixtures") or []:
-    print(entry["ciJobName"])
+python3 - "$MANIFEST" "$ROOT" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+manifest_path = Path(sys.argv[1])
+root = Path(sys.argv[2])
+sys.path.insert(0, str(root / "scripts"))
+from ci_shard_lib import partition_required_pytest_files, required_shard_number
+
+fixtures = json.loads(manifest_path.read_text(encoding="utf-8")).get("fixtures") or []
+shard_files, _ = partition_required_pytest_files(fixtures, root)
+seen = set()
+for entry in fixtures:
+    job = entry["ciJobName"]
+    if job in seen:
+        continue
+    seen.add(job)
+    shard = required_shard_number(job)
+    if shard is not None and not shard_files.get(shard):
+        continue
+    print(job)
 PY
 )
 
