@@ -83,7 +83,7 @@ PR jobs run `.github/workflows/pr-test-plan-ci.yml`, generated from
 `core/sw-reference/pr-test-plan.manifest.json`:
 
 - **Standalone jobs** — guard scripts that are not pytest packages (`docs-link-check`, bash guards).
-- **Pytest shards** — `feat-test-plan-pytest-required-shard-{1..4}` and
+- **Pytest shards** — `feat-test-plan-pytest-required-shard-{1..N}` and
  `feat-test-plan-pytest-advisory-shard-1` batch registry `pytestPath` targets per shard.
 - **Disjoint partition** — `scripts/ci_shard_lib.py` expands manifest directory args to
  concrete `test_*.py` files (or preserves `::` node ids) and assigns each target to exactly one
@@ -91,6 +91,42 @@ PR jobs run `.github/workflows/pr-test-plan-ci.yml`, generated from
  (`total assignments / unique files`) must stay `1.0` — no file runs in more than one required shard.
 - **Classification** — `required` shards block merge; `advisory` shards use `continue-on-error` (checks-gate
  semantics unchanged).
+
+### TR13 — Auto-scaling required shard count (R2)
+
+The number of required shards is no longer hardcoded. `scripts/ci_shard_lib.py` exports:
+
+```python
+compute_required_shard_count(
+    total_test_count: int,
+    target_per_shard: int = TARGET_PER_SHARD,  # default: 40
+) -> int
+```
+
+**Scaling input** — `total_test_count`: the number of collected required pytest test files (or fixture
+entries) from the manifest. Callers pass the live count; `assign_shard()` accepts an optional
+`shard_count` override for the same purpose.
+
+**Target-wall-clock config knob** — `TARGET_PER_SHARD` (module-level constant, default `40`). This
+represents the target number of test files per shard — tune it to hit the desired per-shard wall-clock
+budget. Lower values produce more shards (shorter wall-clock); higher values produce fewer.
+
+**Formula** — `max(4, ceil(total_test_count / target_per_shard))`
+
+The result is monotonically non-decreasing as `total_test_count` grows. The floor (`_MIN_REQUIRED_SHARDS = 4`)
+is always preserved. The shard count first exceeds `4` when:
+
+```
+total_test_count > _MIN_REQUIRED_SHARDS × TARGET_PER_SHARD
+                 > 4 × 40 = 160   (with defaults)
+```
+
+The current manifest has fewer than 160 required pytest fixtures, so the shard count remains `4` today.
+As the suite grows past 160 fixtures the scheduler will automatically allocate additional shards
+without manual config changes.
+
+**Regression** — `scripts/unit_tests/test/test_ci_shard_lib.py` verifies monotonicity, the floor,
+boundary at exactly the threshold, and that the live manifest stays at the floor.
 
 Regenerate after manifest edits:
 
