@@ -11,6 +11,10 @@ from typing import Any
 
 SELECTOR_FILE_MODE = 0o600
 SELECTOR_DIR_MODE = 0o700
+WINDOWS_REDUCED_REASON = (
+    "POSIX ownership and permission checks are unavailable on this platform; "
+    "presence and symlink checks still apply"
+)
 
 
 class SelectorIntegrityError(Exception):
@@ -23,15 +27,27 @@ class SelectorIntegrityError(Exception):
 
 
 @dataclass(frozen=True, slots=True)
+class PathVerificationResult:
+    verdict: str
+    posture: str | None = None
+    reason: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class IntegrityReport:
     verdict: str
     warnings: tuple[str, ...] = ()
+    posture: str | None = None
+    reason: str | None = None
 
 
+def _supports_posix_ownership_checks() -> bool:
+    """True when POSIX uid/mode checks are meaningful on this platform."""
+    return os.name == "posix"
 
-def verify_selector_path(path: Path, *, uid: int | None = None) -> None:
+
+def verify_selector_path(path: Path, *, uid: int | None = None) -> PathVerificationResult:
     """Fail closed on mode, ownership, or symlink violations."""
-    owner = os.getuid() if uid is None else uid
     if not path.exists():
         raise SelectorIntegrityError(
             "selector-absent",
@@ -46,6 +62,14 @@ def verify_selector_path(path: Path, *, uid: int | None = None) -> None:
                 "selector-integrity-symlink",
                 "selector file and parent directories must not be symlinks",
             )
+    if not _supports_posix_ownership_checks():
+        return PathVerificationResult(
+            verdict="ok",
+            posture="windows-reduced",
+            reason=WINDOWS_REDUCED_REASON,
+        )
+    owner = os.getuid() if uid is None else uid
+    for current in targets:
         stat = current.stat()
         if stat.st_uid != owner:
             raise SelectorIntegrityError(
@@ -64,6 +88,7 @@ def verify_selector_path(path: Path, *, uid: int | None = None) -> None:
                 "selector-integrity-dir-mode",
                 f"selector parent directory must be mode {oct(SELECTOR_DIR_MODE)}",
             )
+    return PathVerificationResult(verdict="ok")
 
 
 def entry_content_digest(entry: dict[str, Any]) -> str:
@@ -102,7 +127,7 @@ def check_selector_integrity(
     previous_digests: dict[str, str] | None = None,
     uid: int | None = None,
 ) -> IntegrityReport:
-    verify_selector_path(path, uid=uid)
+    path_result = verify_selector_path(path, uid=uid)
     raw = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         raise SelectorIntegrityError(
@@ -110,4 +135,9 @@ def check_selector_integrity(
             "selector document must be a JSON object",
         )
     warnings = tuple(digest_change_warnings(entry_digests(raw), previous_digests))
-    return IntegrityReport(verdict="ok", warnings=warnings)
+    return IntegrityReport(
+        verdict="ok",
+        warnings=warnings,
+        posture=path_result.posture,
+        reason=path_result.reason,
+    )
