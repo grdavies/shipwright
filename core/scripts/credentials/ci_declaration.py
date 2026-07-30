@@ -98,7 +98,7 @@ def try_load_local_selector(
     try:
         return load_selector_store(path=path, xdg_base=xdg_base, skip_integrity=True)
     except SelectorStoreError as exc:
-        if exc.code == "selector-absent":
+        if exc.code in ("selector-absent", "selector-untrusted-xdg-base"):
             return None
         raise
 
