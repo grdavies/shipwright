@@ -108,13 +108,6 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-pytest-required-shard-1",
-      "scenarios": [
-        "credentials-ci-visible",
-        "selector-integrity",
-        "ci-declaration",
-        "resolver-tristate",
-        "broker-send-path"
-      ],
       "ciShard": 1
     },
     {

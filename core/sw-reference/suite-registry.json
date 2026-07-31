@@ -251,6 +251,19 @@
       "ciShard": 1
     },
     {
+      "id": "credentials-unit-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "scripts/unit_tests/credentials",
+      "ciShard": 1,
+      "verifyOrder": 65
+    },
+    {
       "id": "debug-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
@@ -1804,7 +1817,7 @@
       "triageOwner": "platform-ops"
     },
     "minimum-python": {
-      "description": "Minimum supported Python matrix leg — core guard suites only.",
+      "description": "Minimum supported Python matrix leg \u2014 core guard suites only.",
       "inherits": "pull-request-core"
     }
   },
