@@ -69,7 +69,7 @@ def generate_pr_test_plan_workflow(
     out_path = out_path or (root / PR_WORKFLOW_REL)
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
     fixtures = data.get("fixtures") or []
-    jobs = group_fixtures_for_ci(fixtures)
+    jobs = group_fixtures_for_ci(fixtures, root=root)
 
     lines = [
         GENERATOR_BANNER,
@@ -202,7 +202,15 @@ def generate_ci_workflow(root: Path, *, out_path: Path | None = None) -> str:
     lines.extend(
         [
             "      - name: Named plan scheduled-full-plus-integration",
+            "        id: scheduled-full-plus-integration",
             "        run: PYTHONPATH=scripts python3 scripts/test/_runner.py run-pytest --scope full scripts/unit_tests",
+            "      - name: Notify triage owner on nightly failure",
+            "        if: failure()",
+            "        run: |",
+            "          PYTHONPATH=scripts python3 scripts/nightly-failure-notify.py \\",
+            "            --job verify-scheduled-full-plus-integration \\",
+            '            --workflow-run-id "${{ github.run_id }}" \\',
+            '            --repository "${{ github.repository }}"',
             "",
             "  minimum-python:",
             "    name: minimum-python",

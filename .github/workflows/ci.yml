@@ -60,7 +60,15 @@ jobs:
         with:
           python-version: "3.12"
       - name: Named plan scheduled-full-plus-integration
+        id: scheduled-full-plus-integration
         run: PYTHONPATH=scripts python3 scripts/test/_runner.py run-pytest --scope full scripts/unit_tests
+      - name: Notify triage owner on nightly failure
+        if: failure()
+        run: |
+          PYTHONPATH=scripts python3 scripts/nightly-failure-notify.py \
+            --job verify-scheduled-full-plus-integration \
+            --workflow-run-id "${{ github.run_id }}" \
+            --repository "${{ github.repository }}"
 
   minimum-python:
     name: minimum-python

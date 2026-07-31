@@ -98,12 +98,18 @@ Pull-request and main CI dispatch **named plans** from `core/sw-reference/suite-
 | `scheduled-full-plus-integration` | Nightly schedule | Full suite including integration-marked tests |
 | `minimum-python` | Matrix leg | Inherits `pull-request-core` on the minimum supported Python version |
 
+Required PR pytest shards also include `credentials-unit-fixtures` (`scripts/unit_tests/credentials`)
+via `pr-test-plan.manifest.json` + matching `suite-registry.json` `pr-ci` row — keep those two in sync
+when adding credential unit coverage.
+
 Regenerate workflows after editing the registry:
 
 ```bash
 python3 scripts/ci_plan_gen.py
 python3 scripts/unit_tests/test/test_ci_plan_generation.py  # via run_pytest
 ```
+
+<!-- suite-registry.json and ci_plan_gen.py are authoritative for plan names above. -->
 
 ## Initialization and doctor checks
 

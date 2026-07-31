@@ -710,6 +710,16 @@
 * merge phase destination-binding-and-emission-point-registry-medium into feat/planning-authority-memory-integrity (0e32761) <!-- sw-deliver:destination-binding-and-emission-point-registry-medium -->
 * merge phase resolve-backend-cutover-write-lint-and-the-prd-080-boundary-medium into feat/planning-authority-memory-integrity (cda108c) <!-- sw-deliver:resolve-backend-cutover-write-lint-and-the-prd-080-boundary-medium -->
 * merge phase authority-hysteresis-and-per-operation-pinning-small into feat/planning-authority-memory-integrity (3f9cde8) <!-- sw-deliver:authority-hysteresis-and-per-operation-pinning-small -->
+* merge phase windows-safe-selector-integrity-check-r4 into feat/ci-reliability-and-runner-credential-resolution (f0519af) <!-- sw-deliver:windows-safe-selector-integrity-check-r4 -->
+* merge phase repin-deliver-closeout-workflow-action-refs-r9 into feat/ci-reliability-and-runner-credential-resolution (00497e0) <!-- sw-deliver:repin-deliver-closeout-workflow-action-refs-r9 -->
+* merge phase disjoint-pytest-shard-partitioning-r1 into feat/ci-reliability-and-runner-credential-resolution (0890cf6) <!-- sw-deliver:disjoint-pytest-shard-partitioning-r1 -->
+* merge phase resolver-consults-committed-ci-selector-before-failing-closed-r3 into feat/ci-reliability-and-runner-credential-resolution (d062adb) <!-- sw-deliver:resolver-consults-committed-ci-selector-before-failing-closed-r3 -->
+* merge phase auto-scaling-required-shard-count-r2 into feat/ci-reliability-and-runner-credential-resolution (de3dee8) <!-- sw-deliver:auto-scaling-required-shard-count-r2 -->
+* merge phase fix-the-nightly-scheduled-full-plus-integration-lane-r7 into feat/ci-reliability-and-runner-credential-resolution (0917e5a) <!-- sw-deliver:fix-the-nightly-scheduled-full-plus-integration-lane-r7 -->
+* merge phase pin-validity-ci-check-r10 into feat/ci-reliability-and-runner-credential-resolution (57a66cd) <!-- sw-deliver:pin-validity-ci-check-r10 -->
+* merge phase triage-and-fix-hermetic-credential-test-failures-r5 into feat/ci-reliability-and-runner-credential-resolution (d366c5e) <!-- sw-deliver:triage-and-fix-hermetic-credential-test-failures-r5 -->
+* merge phase triage-owner-notification-path-for-a-red-nightly-lane-r8 into feat/ci-reliability-and-runner-credential-resolution (789c679) <!-- sw-deliver:triage-owner-notification-path-for-a-red-nightly-lane-r8 -->
+* merge phase register-credentials-tree-in-a-required-pr-ci-shard-r6 into feat/ci-reliability-and-runner-credential-resolution (e948f5a) <!-- sw-deliver:register-credentials-tree-in-a-required-pr-ci-shard-r6 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
