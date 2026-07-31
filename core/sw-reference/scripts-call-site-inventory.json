@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-07-30T18:53:37Z",
+  "generatedAt": "2026-07-31T23:58:47Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3826,10 +3826,10 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/rules/memory-guardrails.mdc:102:memory-sot.py",
+      "id": "core/rules/memory-guardrails.mdc:103:memory-sot.py",
       "tree": "core/rules",
       "file": "core/rules/memory-guardrails.mdc",
-      "line": 102,
+      "line": 103,
       "column": 21,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
