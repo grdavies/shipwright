@@ -725,6 +725,7 @@
 * merge phase hermetic-credential-test-fixture-small into feat/credential-broker-and-privacy-hardening (aa98f63) <!-- sw-deliver:hermetic-credential-test-fixture-small -->
 * merge phase privacy-tier-resolver-fails-closed-on-an-inconclusive-probe-small into feat/credential-broker-and-privacy-hardening (1eb439f) <!-- sw-deliver:privacy-tier-resolver-fails-closed-on-an-inconclusive-probe-small -->
 * merge phase suppress-mismatched-provider-selector-writes-in-guided-sw-init-small into feat/credential-broker-and-privacy-hardening (0734aa3) <!-- sw-deliver:suppress-mismatched-provider-selector-writes-in-guided-sw-init-small -->
+* merge phase recallium-rules-py-reports-the-real-broker-refusal-code-small into feat/credential-broker-and-privacy-hardening (1eeb12d) <!-- sw-deliver:recallium-rules-py-reports-the-real-broker-refusal-code-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
