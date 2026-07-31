@@ -135,11 +135,15 @@ def is_environment_backend_declared(
 
 
 def resolve_presence_env_name(entry: SelectorEntry, *, root: Path | str) -> str:
-    """Return the host token env var used for presence checks and env-backend reads.
+    """Return the token env var used for presence checks and env-backend reads.
 
-    Prefers the explicit ``tokenEnv`` from workflow config; falls back to the
-    standard CI env var for the declared provider when no explicit value is set.
+    Prefers the selector entry's own ``tokenEnv`` when declared, then the
+    explicit ``tokenEnv`` from workflow host config; falls back to the standard
+    CI env var for the declared provider when neither is set.
     """
+    if entry.token_env:
+        return entry.token_env
+
     from host_lib import host_section, load_workflow_config, resolve_token_env
 
     cfg = load_workflow_config(Path(root))

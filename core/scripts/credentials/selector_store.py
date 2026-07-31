@@ -39,6 +39,7 @@ class SelectorEntry:
     allowed_repos: tuple[str, ...]
     allowed_project_ids: tuple[str, ...]
     allowed_endpoints: tuple[str, ...]
+    token_env: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +131,7 @@ def _parse_entry(ref: str, raw: Any) -> SelectorEntry:
         )
     hostname = raw.get("hostname")
     account = raw.get("account")
+    token_env = raw.get("tokenEnv")
     return SelectorEntry(
         ref=ref,
         backend=backend,
@@ -147,6 +149,7 @@ def _parse_entry(ref: str, raw: Any) -> SelectorEntry:
             field="allowedEndpoints",
             ref=ref,
         ),
+        token_env=token_env.strip() if isinstance(token_env, str) and token_env.strip() else None,
     )
 
 
