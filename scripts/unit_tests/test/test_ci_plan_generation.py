@@ -34,6 +34,8 @@ def test_ci_workflow_contains_named_plan_jobs(repo_root: Path) -> None:
         assert "minimum-python" in text
         assert "Named plan main-full" in text
         assert "Named plan scheduled-full-plus-integration" in text
+        assert "Notify triage owner on nightly failure" in text
+        assert "nightly-failure-notify.py" in text
         assert 'if: github.event_name == "push"' not in text
         assert "github.event_name == 'push'" in text
 
