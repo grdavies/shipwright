@@ -307,8 +307,18 @@ def _repository_context_for_surface(
     )
 
 
-def _destination_for_surface(cfg: Mapping[str, Any], surface: str) -> str:
+def _destination_for_surface(
+    cfg: Mapping[str, Any],
+    surface: str,
+    *,
+    root: Path,
+) -> str:
     from host_lib import _api_base_for_provider, host_section
+
+    if surface == "memory":
+        from memory_lib import memory_rest_base
+
+        return memory_rest_base(dict(cfg))
 
     host = host_section(cfg)
     provider = str(host.get("provider") or "github")
@@ -330,8 +340,19 @@ def _purpose_for_surface(surface: str) -> str:
     return "api"
 
 
-def _provider_for_surface(cfg: Mapping[str, Any], surface: str) -> str:
+def _provider_for_surface(
+    cfg: Mapping[str, Any],
+    surface: str,
+    *,
+    root: Path,
+) -> str:
     from host_lib import host_section
+
+    if surface == "memory":
+        from memory_sot import resolve_memory_provider
+
+        provider = resolve_memory_provider(root, dict(cfg)) or "recallium"
+        return provider if provider != "none" else "recallium"
 
     host = host_section(cfg)
     if surface == "planning":
@@ -360,7 +381,7 @@ def diagnose_surface(
         root,
         cfg,
         surface=surface_binding.surface,
-        destination_endpoint=_destination_for_surface(cfg, surface_binding.surface),
+        destination_endpoint=_destination_for_surface(cfg, surface_binding.surface, root=root),
     )
     credential_ref = surface_binding.credential_ref
     if credential_ref is None and surface_binding.token_env:
@@ -460,7 +481,7 @@ def diagnose_surface(
 
     lookup = resolve_lookup(
         CredentialRef(credential_ref),
-        provider=_provider_for_surface(cfg, surface_binding.surface),
+        provider=_provider_for_surface(cfg, surface_binding.surface, root=root),
         purpose=_purpose_for_surface(surface_binding.surface),
         context=context,
         selector_path=selector_path,
@@ -551,11 +572,14 @@ def diagnose_repository(
             "verdict": "fail",
             "projectId": None,
             "surfaces": [],
-            "references": list_known_references(
-                selector_path=selector_path,
-                xdg_base=xdg_base,
-                skip_integrity=skip_integrity,
-            ),
+            "references": [
+                _reference_to_dict(item)
+                for item in list_known_references(
+                    selector_path=selector_path,
+                    xdg_base=xdg_base,
+                    skip_integrity=skip_integrity,
+                )
+            ],
             "credentialDoctor": f"{CREDENTIAL_DOCTOR_CLI} --root {root.resolve()}",
             "failure": {
                 "code": failure.code,
