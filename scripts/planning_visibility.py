@@ -471,14 +471,17 @@ def resolve_default_profile(root: Path, *, write: bool = False) -> dict[str, Any
 
     remote_public = remote_vis == "public"
     host_public = store_host_privacy == "public"
-    if remote_public or host_public:
+    probe_inconclusive = remote_probe.get("source") == "probe-inconclusive"
+    if remote_public or host_public or probe_inconclusive:
         tier = "all-private"
         if remote_public and host_public:
             reason = "public-origin-remote+public-store-host"
         elif host_public:
             reason = "public-store-host"
-        else:
+        elif remote_public:
             reason = "public-origin-remote"
+        else:
+            reason = "probe-inconclusive"
         ack = {"required": True, "recordedAt": None, "reason": reason}
     else:
         tier = "specs-public"
