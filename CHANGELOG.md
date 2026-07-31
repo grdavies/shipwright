@@ -719,6 +719,7 @@
 * merge phase pin-validity-ci-check-r10 into feat/ci-reliability-and-runner-credential-resolution (57a66cd) <!-- sw-deliver:pin-validity-ci-check-r10 -->
 * merge phase triage-and-fix-hermetic-credential-test-failures-r5 into feat/ci-reliability-and-runner-credential-resolution (d366c5e) <!-- sw-deliver:triage-and-fix-hermetic-credential-test-failures-r5 -->
 * merge phase triage-owner-notification-path-for-a-red-nightly-lane-r8 into feat/ci-reliability-and-runner-credential-resolution (789c679) <!-- sw-deliver:triage-owner-notification-path-for-a-red-nightly-lane-r8 -->
+* merge phase register-credentials-tree-in-a-required-pr-ci-shard-r6 into feat/ci-reliability-and-runner-credential-resolution (e948f5a) <!-- sw-deliver:register-credentials-tree-in-a-required-pr-ci-shard-r6 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
