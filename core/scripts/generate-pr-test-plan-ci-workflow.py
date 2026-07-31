@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Generate .github/workflows/pr-test-plan-ci.yml from pr-test-plan.manifest.json (PRD 016 R1–R3)."""
+"""Generate .github/workflows/pr-test-plan-ci.yml from pr-test-plan.manifest.json (PRD 016 R1–R3).
+
+Regenerate after adding required fixtures (e.g. scripts/unit_tests/credentials/ for PRD 083 R6).
+"""
 from __future__ import annotations
 import sys
 from pathlib import Path

@@ -100,6 +100,24 @@
       "ciShard": 1
     },
     {
+      "id": "credentials-unit-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/credentials",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "scenarios": [
+        "credentials-ci-visible",
+        "selector-integrity",
+        "ci-declaration",
+        "resolver-tristate",
+        "broker-send-path"
+      ],
+      "ciShard": 1
+    },
+    {
       "id": "deliver-concurrency-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
