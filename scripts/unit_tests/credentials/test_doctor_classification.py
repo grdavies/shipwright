@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -13,12 +15,28 @@ from credentials.ci_declaration import ci_selector_path
 from credentials.doctor import (
     LegacyClassification,
     classify_legacy_surface,
+    diagnose_repository,
+    diagnose_surface,
     release_blocking_alias_preflight,
     remediate,
 )
 from credentials.config_surface import ResolvedCredentialSurface, resolve_config_surface
+from credentials.model import Principal, ResolutionState, Secret
+from credentials.pairing_store import approve_pairing, record_first_use
+from credentials.resolver import BackendResolveResult, register_backend_adapter
 
 _TEST_VALUE = "sk_test_fixture_allowlisted_secret_scan_0123456789"
+SCRIPTS = Path(__file__).resolve().parents[2]
+
+
+class _HealthyBackend:
+    def resolve(self, entry, **kwargs):  # noqa: ANN001
+        return BackendResolveResult(
+            state=ResolutionState.RESOLVED,
+            token=Secret("broker-fixture-token"),
+            principal=Principal(profile="work", account="work"),
+            backend=entry.backend,
+        )
 
 
 def _valid_entry(**overrides: object) -> dict[str, object]:
@@ -187,3 +205,140 @@ class TestConfigSurfaceClassification:
             source="absent",
         )
         assert classify_legacy_surface(root, surface) == LegacyClassification.READY
+
+
+def _write_config(root: Path, **overrides: object) -> None:
+    cfg: dict[str, object] = {
+        "projectId": "proj-1",
+        "host": {
+            "provider": "github",
+            "credentialRef": "github-work",
+        },
+    }
+    cfg.update(overrides)
+    path = root / ".cursor" / "workflow.config.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(cfg), encoding="utf-8")
+
+
+def _init_git_remote(root: Path, slug: str = "owner/repo") -> str:
+    remote = f"https://github.com/{slug}.git"
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    subprocess.run(["git", "remote", "add", "origin", remote], cwd=root, check=True)
+    return remote
+
+
+def _write_pairing(path: Path, ref: str, project_id: str, remote: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(path.parent, 0o700)
+    record_first_use(ref, project_id, remote, path=path, skip_integrity=True)
+    approve_pairing(ref, project_id, remote, path=path, skip_integrity=True)
+
+
+def _recallium_entry(**overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "backend": "environment",
+        "provider": "recallium",
+        "hostname": "localhost",
+        "account": "work",
+        "allowedRepos": ["owner/repo"],
+        "allowedProjectIds": ["proj-1"],
+        "allowedEndpoints": ["http://localhost:8001"],
+    }
+    payload.update(overrides)
+    return payload
+
+
+class TestMemorySurfaceDiagnosis:
+    def test_memory_surface_mismatch_reports_fail_not_ok(self, tmp_path: Path) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_git_remote(root)
+        _write_config(
+            root,
+            memory={
+                "provider": "recallium",
+                "credentialRef": "memory-work",
+                "connection": {"restBaseUrl": "http://localhost:8001"},
+            },
+        )
+        selector = tmp_path / "credential-selector.json"
+        _write_selector(
+            selector,
+            {"memory-work": _valid_entry(provider="github", allowedEndpoints=["https://api.github.com"])},
+        )
+        pairing = tmp_path / "credential-pairings.json"
+        _write_pairing(pairing, "memory-work", "proj-1", "https://github.com/owner/repo.git")
+
+        cfg = json.loads((root / ".cursor" / "workflow.config.json").read_text(encoding="utf-8"))
+        surface = resolve_config_surface(cfg).memory
+
+        diagnosis = diagnose_surface(
+            root,
+            cfg,
+            surface,
+            selector_path=selector,
+            pairing_path=pairing,
+            skip_integrity=True,
+            register_env_backend=False,
+        )
+
+        assert diagnosis.required_operation_verdict == "fail"
+        assert diagnosis.failure is not None
+        assert diagnosis.failure.code == fc.PROVIDER_MISMATCH
+        assert diagnosis.required_operation_verdict != "pass"
+
+    def test_memory_surface_matched_provider_still_resolves_ok(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_git_remote(root)
+        _write_config(
+            root,
+            memory={
+                "provider": "recallium",
+                "credentialRef": "memory-work",
+                "connection": {"restBaseUrl": "http://localhost:8001"},
+            },
+        )
+        selector = tmp_path / "credential-selector.json"
+        _write_selector(selector, {"memory-work": _recallium_entry()})
+        pairing = tmp_path / "credential-pairings.json"
+        _write_pairing(pairing, "memory-work", "proj-1", "https://github.com/owner/repo.git")
+        register_backend_adapter("environment", _HealthyBackend())
+
+        report = diagnose_repository(
+            root,
+            selector_path=selector,
+            pairing_path=pairing,
+            skip_integrity=True,
+            register_env_backend=False,
+        )
+        memory_surface = next(item for item in report["surfaces"] if item["surface"] == "memory")
+        assert memory_surface["requiredOperationVerdict"] == "pass"
+        assert memory_surface.get("failure") is None
+
+
+class TestConfigSurfaceErrorJsonSafety:
+    def test_config_surface_error_branch_is_json_safe(self, tmp_path: Path) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        selector = tmp_path / "credential-selector.json"
+        _write_selector(selector, {"github-work": _valid_entry()})
+
+        report = diagnose_repository(root, selector_path=selector, skip_integrity=True)
+        json.dumps(report)
+
+        doctor_script = SCRIPTS / "credentials-doctor.py"
+        proc = subprocess.run(
+            [sys.executable, str(doctor_script), "--root", str(root)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert proc.returncode != 0
+        payload = json.loads(proc.stdout)
+        json.dumps(payload)
+        assert payload["verdict"] == "fail"
+        assert payload["failure"]["code"] == "project-id-absent"
