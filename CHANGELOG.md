@@ -723,6 +723,7 @@
 * merge phase selector-schema-parser-resolver-gains-per-entry-tokenenv-small into feat/credential-broker-and-privacy-hardening (18cb4be) <!-- sw-deliver:selector-schema-parser-resolver-gains-per-entry-tokenenv-small -->
 * merge phase doctor-resolves-the-memory-surface-accurately-and-never-crashes-small into feat/credential-broker-and-privacy-hardening (7e8a08b) <!-- sw-deliver:doctor-resolves-the-memory-surface-accurately-and-never-crashes-small -->
 * merge phase hermetic-credential-test-fixture-small into feat/credential-broker-and-privacy-hardening (aa98f63) <!-- sw-deliver:hermetic-credential-test-fixture-small -->
+* merge phase privacy-tier-resolver-fails-closed-on-an-inconclusive-probe-small into feat/credential-broker-and-privacy-hardening (1eb439f) <!-- sw-deliver:privacy-tier-resolver-fails-closed-on-an-inconclusive-probe-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
