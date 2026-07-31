@@ -75,7 +75,8 @@ secret patterns survive substitution.
 Planning and memory emission points bind to destinations via `scripts/planning_visibility.py`
 (`resolve_emission_destination` / `EMISSION_POINT_DESTINATIONS`). Unregistered emission points resolve to
 `external` (strictest tier). Redaction at each emission point uses the bound destination — not ambient
-context.
+context. Remote visibility probing in the same module is fail-closed: inconclusive or unprobeable remotes
+must not relax destination tier or emission policy.
 
 Named patterns: AWS `AKIA…`, `ghp_…`/PATs, JWTs, `Bearer` headers, PEM private keys, email addresses.
 
