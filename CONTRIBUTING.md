@@ -105,6 +105,8 @@ python3 scripts/ci_plan_gen.py
 python3 scripts/unit_tests/test/test_ci_plan_generation.py  # via run_pytest
 ```
 
+<!-- suite-registry.json and ci_plan_gen.py are authoritative for plan names above. -->
+
 ## Initialization and doctor checks
 
 First-run setup and ongoing health use stable CLI entry points with **stable failure codes** (one code →

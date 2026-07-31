@@ -90,9 +90,15 @@ class TestImplicitDefaultTablesAtCutover:
         )
 
     def test_cutover_asserts_tables_absent(self) -> None:
-        # During the deprecation release the tables are still present — cutover must fail closed.
         present = present_implicit_default_tables()
-        assert set(IMPLICIT_DEFAULT_TABLE_TARGETS).issubset(set(present)) or present
+        if not present:
+            # Tables already removed on this branch — cutover acceptance is a no-op.
+            assert_implicit_default_tables_absent_at_cutover(
+                deprecation_phase=DeprecationPhase.CUTOVER
+            )
+            return
+        # During the deprecation release the tables are still present — cutover must fail closed.
+        assert set(IMPLICIT_DEFAULT_TABLE_TARGETS).issubset(set(present))
         with pytest.raises(CutoverError) as exc:
             assert_implicit_default_tables_absent_at_cutover(
                 deprecation_phase=DeprecationPhase.CUTOVER
