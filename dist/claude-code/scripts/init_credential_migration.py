@@ -389,14 +389,83 @@ def _load_selector_document(path: Path) -> dict[str, Any]:
     return {"version": 1, "entries": {}}
 
 
+def _configured_provider_for_credential_ref(
+    root: Path,
+    cfg: Mapping[str, Any],
+    ref: str,
+    credential_refs: CredentialRefs,
+) -> str:
+    if ref == credential_refs.host:
+        host = cfg.get("host") if isinstance(cfg.get("host"), dict) else {}
+        provider = str(host.get("provider") or "github")
+        return provider if provider != "none" else "github"
+    if ref == credential_refs.memory:
+        memory = cfg.get("memory") if isinstance(cfg.get("memory"), dict) else {}
+        configured = memory.get("provider")
+        if isinstance(configured, str) and configured.strip():
+            provider = configured.strip()
+            return provider if provider != "none" else "recallium"
+        from memory_sot import resolve_memory_provider
+
+        provider = resolve_memory_provider(root, dict(cfg))
+        if provider:
+            return provider if provider != "none" else "recallium"
+        host = cfg.get("host") if isinstance(cfg.get("host"), dict) else {}
+        host_provider = str(host.get("provider") or "github")
+        return host_provider if host_provider != "none" else "github"
+    if ref == credential_refs.planning:
+        from planning_store import _ISSUES_PROVIDER_TO_BROKER, resolve_issues_provider
+
+        issues_provider = str(resolve_issues_provider(dict(cfg)).get("provider") or "github-issues")
+        broker = _ISSUES_PROVIDER_TO_BROKER.get(issues_provider, issues_provider)
+        return broker if broker not in {"", "none"} else "github"
+    return ""
+
+
+def _entry_provider_matches_ref(
+    root: Path,
+    cfg: Mapping[str, Any],
+    ref: str,
+    entry: Mapping[str, object],
+    credential_refs: CredentialRefs,
+) -> bool:
+    configured = _configured_provider_for_credential_ref(root, cfg, ref, credential_refs)
+    if not configured:
+        return True
+    entry_provider = str(entry.get("provider") or "")
+    return configured == entry_provider
+
+
+def _remove_selector_ref(path: Path, ref: str) -> None:
+    if not path.is_file():
+        return
+    document = _load_selector_document(path)
+    entries = document.get("entries")
+    if not isinstance(entries, dict) or ref not in entries:
+        return
+    del entries[ref]
+    if entries:
+        path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
+    else:
+        path.unlink(missing_ok=True)
+
+
 def write_local_selector_entry(
     *,
     ref: str,
     entry: Mapping[str, object],
     selector_path: Path | None = None,
     xdg_base: Path | None = None,
-) -> Path:
+    root: Path | None = None,
+    credential_refs: CredentialRefs | None = None,
+) -> Path | None:
     path = selector_path or default_selector_path(xdg_base=xdg_base)
+    refs = credential_refs or default_credential_refs()
+    if root is not None:
+        cfg = _read_config(root)
+        if not _entry_provider_matches_ref(root, cfg, ref, entry, refs):
+            _remove_selector_ref(path, ref)
+            return None
     if not path.parent.exists():
         path.parent.mkdir(parents=True, exist_ok=True)
         os.chmod(path.parent, 0o700)
@@ -415,6 +484,7 @@ def write_ci_selector_declaration(
     root: Path,
     *,
     entries: Mapping[str, Mapping[str, object]],
+    credential_refs: CredentialRefs | None = None,
 ) -> Path:
     path = ci_selector_path(root)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -423,8 +493,13 @@ def write_ci_selector_declaration(
     if not isinstance(store, dict):
         store = {}
         document["entries"] = store
+    refs = credential_refs or default_credential_refs()
+    cfg = _read_config(root)
     for ref, entry in entries.items():
-        store[ref] = dict(entry)
+        if _entry_provider_matches_ref(root, cfg, ref, entry, refs):
+            store[ref] = dict(entry)
+        else:
+            store.pop(ref, None)
     path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
     return path
 
@@ -489,19 +564,24 @@ def apply_guided_single_identity(
         entry=entry,
         selector_path=selector_path,
         xdg_base=xdg_base,
+        root=root,
+        credential_refs=plan.credential_refs,
     )
+    active_selector = selector_written or selector_path or default_selector_path(xdg_base=xdg_base)
     for ref_name in (plan.credential_refs.planning, plan.credential_refs.memory):
         write_local_selector_entry(
             ref=ref_name,
             entry=entry,
-            selector_path=selector_written,
+            selector_path=active_selector,
             xdg_base=xdg_base,
+            root=root,
+            credential_refs=plan.credential_refs,
         )
     return {
         "verdict": "ok",
         "disclosure": plan.disclosure,
         "configPath": str(config_path),
-        "selectorPath": str(selector_written),
+        "selectorPath": str(active_selector),
         "selectorCommand": selector_command,
         "projectId": plan.project_id,
         "credentialRefs": plan.credential_refs.as_dict(),
@@ -608,6 +688,7 @@ def offer_ci_env_declaration(
             refs.planning: entry,
             refs.memory: entry,
         },
+        credential_refs=refs,
     )
     cfg = merge_config_patch(_read_config(root), {"host": {"tokenEnv": env_name}})
     _write_config(root, cfg)
