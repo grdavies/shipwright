@@ -721,6 +721,7 @@
 * merge phase triage-owner-notification-path-for-a-red-nightly-lane-r8 into feat/ci-reliability-and-runner-credential-resolution (789c679) <!-- sw-deliver:triage-owner-notification-path-for-a-red-nightly-lane-r8 -->
 * merge phase register-credentials-tree-in-a-required-pr-ci-shard-r6 into feat/ci-reliability-and-runner-credential-resolution (e948f5a) <!-- sw-deliver:register-credentials-tree-in-a-required-pr-ci-shard-r6 -->
 * merge phase selector-schema-parser-resolver-gains-per-entry-tokenenv-small into feat/credential-broker-and-privacy-hardening (18cb4be) <!-- sw-deliver:selector-schema-parser-resolver-gains-per-entry-tokenenv-small -->
+* merge phase doctor-resolves-the-memory-surface-accurately-and-never-crashes-small into feat/credential-broker-and-privacy-hardening (7e8a08b) <!-- sw-deliver:doctor-resolves-the-memory-surface-accurately-and-never-crashes-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
