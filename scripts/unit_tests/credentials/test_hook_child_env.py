@@ -110,7 +110,7 @@ def test_fetch_rules_child_sees_only_allowlisted_keys(
     monkeypatch.setenv("GITHUB_TOKEN", "inherited-token")
     monkeypatch.setenv("SW_RUN_DIR", ".cursor/sw-deliver-runs/example")
 
-    ok, rules = guardrail_core.fetch_rules(
+    ok, rules, failure_code = guardrail_core.fetch_rules(
         workspace,
         plugin,
         {"memory": {}},
@@ -118,3 +118,4 @@ def test_fetch_rules_child_sees_only_allowlisted_keys(
     )
     assert ok is True
     assert rules == []
+    assert failure_code is None
