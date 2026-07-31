@@ -248,8 +248,9 @@ def build_selector_entry(
     repo_slug: str,
     project_id: str,
     allowed_endpoint: str = DEFAULT_ENDPOINT,
+    token_env: str | None = None,
 ) -> dict[str, object]:
-    return {
+    entry: dict[str, object] = {
         "backend": backend,
         "provider": provider,
         "hostname": hostname,
@@ -258,6 +259,9 @@ def build_selector_entry(
         "allowedProjectIds": [project_id],
         "allowedEndpoints": [allowed_endpoint],
     }
+    if token_env and token_env.strip():
+        entry["tokenEnv"] = token_env.strip()
+    return entry
 
 
 def selector_add_command(
