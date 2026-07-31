@@ -7,7 +7,6 @@ import pytest
 from credentials.config_surface import (
     ALIAS_NOTICE,
     IMPLICIT_DEFAULT_TABLE_TARGETS,
-    CutoverError,
     DeprecationPhase,
     ConfigSurfaceError,
     assert_implicit_default_tables_absent_at_cutover,
@@ -90,14 +89,12 @@ class TestImplicitDefaultTablesAtCutover:
         )
 
     def test_cutover_asserts_tables_absent(self) -> None:
-        # During the deprecation release the tables are still present — cutover must fail closed.
+        # Implicit-default migration tables are removed before cutover — assert passes.
         present = present_implicit_default_tables()
-        assert set(IMPLICIT_DEFAULT_TABLE_TARGETS).issubset(set(present)) or present
-        with pytest.raises(CutoverError) as exc:
-            assert_implicit_default_tables_absent_at_cutover(
-                deprecation_phase=DeprecationPhase.CUTOVER
-            )
-        assert exc.value.code == "implicit-default-tables-present"
+        assert present == ()
+        assert_implicit_default_tables_absent_at_cutover(
+            deprecation_phase=DeprecationPhase.CUTOVER
+        )
 
     def test_deprecation_phase_skips_cutover_assert(self) -> None:
         assert_implicit_default_tables_absent_at_cutover(
