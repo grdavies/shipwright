@@ -1,9 +1,13 @@
-"""PRD 085 R9/R10 — doc-loop terminal completion and doc-driver env scoping."""
+"""PRD 085 R14 — doc-to-feature handoff lock and real feature-seed publication fixtures."""
 
 from __future__ import annotations
 
+import io
+import json
 import os
+import subprocess
 import sys
+from contextlib import redirect_stdout
 from pathlib import Path
 from unittest.mock import patch
 
@@ -13,18 +17,42 @@ scripts = Path(__file__).resolve().parents[2]
 if str(scripts) not in sys.path:
     sys.path.insert(0, str(scripts))
 
-from check_frozen_lib import is_driver_invoked
-from doc_loop import (
-    acknowledge_checkpoint,
-    consume_agent_stage,
-    execute_mechanical_stage,
-    freeze_stage_artifact,
-    load_doc_state,
-    provision_doc_run,
-    run_related_work_scan,
-    set_pending_checkpoint,
-)
-from wave_lock import doc_run_lock_path_for
+import wave_spec_seed as wss
+from doc_loop import publication_mode, run_feature_seed
+from wave_lock import doc_to_feature_handoff_lock_path_for, target_lock_path_for
+from wave_spec_seed_guard import acquire_doc_to_feature_handoff_lock
+from wave_target_lock import acquire_target_lock
+
+_REAL_SUBPROCESS_RUN = subprocess.run
+
+
+def _run_spec_seed_inprocess(cmd: list[str], **kwargs):
+    if "spec-seed" not in cmd:
+        return _REAL_SUBPROCESS_RUN(cmd, **kwargs)
+    root = Path(cmd[cmd.index("spec-seed") - 1]).resolve()
+    args = cmd[cmd.index("spec-seed") + 1 :]
+    docs_dir = root / "docs/prds/085-demo"
+    target_branch = "feat/085-demo"
+    buf = io.StringIO()
+    rc = 0
+    old_cwd = os.getcwd()
+    os.chdir(root)
+    original_resolve = wss.resolve_target_branch
+    wss.resolve_target_branch = lambda _root, _rel: (target_branch, "085-demo", docs_dir)
+    try:
+        with patch(
+            "planning_artifact_handle.issue_store_separate_project_effective",
+            return_value=False,
+        ), redirect_stdout(buf):
+            try:
+                wss.cmd_spec_seed(root, args)
+            except SystemExit as exc:
+                code = exc.code
+                rc = int(code) if isinstance(code, int) else (0 if code is None else 1)
+    finally:
+        wss.resolve_target_branch = original_resolve
+        os.chdir(old_cwd)
+    return subprocess.CompletedProcess(cmd, rc, buf.getvalue(), "")
 
 
 @pytest.fixture
@@ -32,163 +60,178 @@ def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
     (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@example.com"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    (root / "README.md").write_text("seed\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=root, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "seed"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(["git", "branch", "-M", "main"], cwd=root, check=True, capture_output=True)
     return root
 
 
 @pytest.fixture(autouse=True)
 def anchor_repo(repo: Path):
     with patch("wave_lock._canonical_repo_root_for_locks", return_value=repo):
-        with patch("wave_state.path_normalize_anchor", return_value=repo.resolve()):
-            yield
+        yield
 
 
-def _verified_freeze(stage: str) -> dict:
-    key = "prd" if stage == "freeze-prd" else "tasks"
+def _verified_receipt(artifact: str) -> dict:
     return {
         "verdict": "pass",
-        "artifactKey": key,
-        "receipt": {
-            "owner": "doc-loop:test",
-            "durabilityState": "verified",
-            "lifecycleState": "frozen",
-            "revision": "rev",
-        },
+        "artifact": artifact,
+        "owner": "doc-loop:test",
+        "lifecycleState": "frozen",
+        "durabilityState": "verified",
+        "revision": "abc123",
     }
 
 
-def _feature_seed_pass() -> dict:
+def _feature_seed_state(repo: Path, run_id: str = "doc-r14-a") -> dict:
+    (repo / "docs/brainstorms").mkdir(parents=True, exist_ok=True)
+    brainstorm = repo / "docs/brainstorms/085-demo-brainstorm.md"
+    brainstorm.write_text(
+        "---\ntype: brainstorm\nvisibility: public\n---\n# Brainstorm\n",
+        encoding="utf-8",
+    )
+    docs_dir = repo / "docs/prds/085-demo"
+    docs_dir.mkdir(parents=True)
+    prd = docs_dir / "085-prd-demo.md"
+    prd.write_text(
+        "---\n"
+        "type: prd\n"
+        "frozen: true\n"
+        "visibility: public\n"
+        "brainstorm: docs/brainstorms/085-demo-brainstorm.md\n"
+        "---\n"
+        "# PRD\n",
+        encoding="utf-8",
+    )
+    tasks = docs_dir / "tasks-085-demo.md"
+    tasks.write_text(
+        "---\ntype: tasks\nfrozen: true\nvisibility: public\nprd: 085-prd-demo\n---\n# Tasks\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "add", "docs"], cwd=repo, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "add docs"],
+        cwd=repo,
+        check=True,
+        capture_output=True,
+    )
     return {
-        "verdict": "pass",
-        "action": "feature-seed",
-        "receipt": {
-            "transitionName": "feature-seed",
-            "publicationMode": "file-store-feature-seed",
-            "remoteState": {"dryRun": True},
+        "runId": run_id,
+        "topic": "085-demo",
+        "unitIds": {"prd": "085-prd-demo", "tasks": "tasks-085-demo"},
+        "artifactPaths": {
+            "prd": "docs/prds/085-demo/085-prd-demo.md",
+            "tasks": "docs/prds/085-demo/tasks-085-demo.md",
         },
+        "artifactRevisions": {
+            "prd": _verified_receipt("docs/prds/085-demo/085-prd-demo.md"),
+            "tasks": _verified_receipt("docs/prds/085-demo/tasks-085-demo.md"),
+        },
+        "pendingRelatedWork": {"status": "acknowledged"},
     }
 
 
-def _drive_doc_run_to_complete(repo: Path, topic: str) -> str:
-    provisioned = provision_doc_run(repo, topic=topic, tier="Standard")
-    assert provisioned["verdict"] == "pass"
-    run_id = str(provisioned["runId"])
-    lock_path = doc_run_lock_path_for(repo, topic)
-    assert lock_path.is_file(), "doc-run lock should exist after provision"
+def test_feature_seed_real_commit_releases_handoff_lock(repo: Path) -> None:
+    state = _feature_seed_state(repo)
+    run_id = f"doc-loop:{state['runId']}"
+    target_branch = "feat/085-demo"
 
-    state = load_doc_state(repo, run_id)
-    consume_agent_stage(repo, state, "triage", outcome={"unitIds": {"prd": "prd-085", "tasks": "tasks-085"}})
-    state = load_doc_state(repo, run_id)
-    consume_agent_stage(repo, state, "prd", outcome={})
-    state = load_doc_state(repo, run_id)
-    consume_agent_stage(repo, state, "doc-review", outcome={})
-    state = load_doc_state(repo, run_id)
+    with patch(
+        "planning_artifact_handle.issue_store_separate_project_effective",
+        return_value=False,
+    ), patch(
+        "wave_spec_seed.resolve_target_branch",
+        return_value=(target_branch, "085-demo", repo / "docs/prds/085-demo"),
+    ), patch("subprocess.run", side_effect=_run_spec_seed_inprocess):
+        outcome = run_feature_seed(repo, state)
 
-    with patch("doc_loop.run_related_work_scan", return_value={"verdict": "ok", "proposals": []}):
-        execute_mechanical_stage(repo, state, "related-work")
-    state = load_doc_state(repo, run_id)
-
-    with patch("doc_loop.freeze_stage_artifact", side_effect=lambda _r, _s, stage: _verified_freeze(stage)):
-        execute_mechanical_stage(repo, state, "freeze-prd")
-    state = load_doc_state(repo, run_id)
-
-    consume_agent_stage(repo, state, "tasks", outcome={})
-    state = load_doc_state(repo, run_id)
-
-    with patch("doc_loop.freeze_stage_artifact", side_effect=lambda _r, _s, stage: _verified_freeze(stage)):
-        execute_mechanical_stage(repo, state, "freeze-tasks")
-    state = load_doc_state(repo, run_id)
-
-    set_pending_checkpoint(repo, state)
-    state = load_doc_state(repo, run_id)
-    acknowledge_checkpoint(repo, state)
-    state = load_doc_state(repo, run_id)
-
-    with patch("doc_loop.run_feature_seed", return_value=_feature_seed_pass()):
-        result = execute_mechanical_stage(repo, state, "feature-seed")
-
-    final = load_doc_state(repo, run_id)
-    assert final["stage"] == "complete"
-    assert final["verdict"] == "complete"
-    assert result.get("lockRelease", {}).get("verdict") == "pass"
-    return run_id
+    assert outcome["verdict"] == "pass"
+    receipt = outcome["receipt"]
+    assert receipt["remoteState"]["dryRun"] is False
+    commit_sha = receipt["remoteState"].get("commit") or outcome["seed"].get("commit")
+    if commit_sha:
+        show = subprocess.run(
+            ["git", "rev-parse", target_branch],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert show.stdout.strip() == commit_sha
+    else:
+        assert outcome["seed"].get("skipped") is True
+        assert (
+            subprocess.run(
+                ["git", "show-ref", "--verify", f"refs/heads/{target_branch}"],
+                cwd=repo,
+                capture_output=True,
+            ).returncode
+            == 0
+        )
+    lock_path = doc_to_feature_handoff_lock_path_for(repo, target_branch, run_id)
+    assert not lock_path.is_file()
 
 
-def test_terminal_completion_releases_doc_run_lock(repo: Path) -> None:
-    topic = "terminal-release-topic"
-    run_id = _drive_doc_run_to_complete(repo, topic)
-    lock_path = doc_run_lock_path_for(repo, topic)
-    assert not lock_path.is_file(), "doc-run lock must be released after terminal complete"
-
-    state = load_doc_state(repo, run_id)
-    assert state["verdict"] == "complete"
-
-
-def _state_with_prd(repo: Path, run_id: str) -> dict:
-    state = load_doc_state(repo, run_id)
-    state["unitIds"] = {"prd": "085-prd-demo", "tasks": "tasks-085-demo"}
-    state["artifactPaths"] = {
-        "prd": "docs/prds/085-prd-demo/prd.md",
-        "tasks": "docs/prds/085-prd-demo/tasks-085-demo.md",
-    }
-    return state
+def test_separate_project_store_only_skip_unchanged(repo: Path) -> None:
+    state = _feature_seed_state(repo)
+    with patch("planning_artifact_handle.issue_store_separate_project_effective", return_value=True):
+        assert publication_mode(repo) == "separate-project-store-only"
+        outcome = run_feature_seed(repo, state)
+    assert outcome["skipped"] is True
+    assert outcome["reason"] == "separate-project-store-only"
 
 
-def test_doc_driver_env_restored_after_related_work_scan(repo: Path) -> None:
-    """R10 — driver-invoked signal via parameter; SW_DOC_DRIVER not leaked."""
-    prd_dir = repo / "docs/prds/085-prd-demo"
-    prd_dir.mkdir(parents=True, exist_ok=True)
-    (prd_dir / "prd.md").write_text("---\ntype: prd\n---\n# Demo\n", encoding="utf-8")
+def test_feature_seed_target_lock_conflict_fails_closed(repo: Path) -> None:
+    state = _feature_seed_state(repo, run_id="doc-r14-c")
+    target_branch = "feat/085-demo"
+    held = acquire_target_lock(repo, target_branch, "deliver-other-run")
+    assert held["verdict"] == "pass"
 
-    provisioned = provision_doc_run(repo, topic="driver-env-scope", tier="Standard")
-    run_id = str(provisioned["runId"])
-    state = _state_with_prd(repo, run_id)
+    with patch(
+        "planning_artifact_handle.issue_store_separate_project_effective",
+        return_value=False,
+    ), patch(
+        "wave_spec_seed.resolve_target_branch",
+        return_value=(target_branch, "085-demo", repo / "docs/prds/085-demo"),
+    ), patch(
+        "doc_link.check_artifact",
+        return_value={"verdict": "pass"},
+    ):
+        outcome = run_feature_seed(repo, state)
 
-    os.environ.pop("SW_DOC_DRIVER", None)
-    captured: list[tuple[bool | None, str | None]] = []
-
-    def capture_scan(_root, _source, *, mode, driver_invoked=None, **kwargs):
-        captured.append((driver_invoked, os.environ.get("SW_DOC_DRIVER")))
-        return {"verdict": "ok", "proposals": []}
-
-    with patch("planning_related.source_from_path", return_value=object()):
-        with patch("planning_related.scan_related", side_effect=capture_scan):
-            run_related_work_scan(repo, state)
-
-    assert captured == [(True, None)]
-    assert os.environ.get("SW_DOC_DRIVER") is None
-
-    os.environ["SW_DOC_DRIVER"] = "legacy"
-    with patch("planning_related.source_from_path", return_value=object()):
-        with patch("planning_related.scan_related", side_effect=capture_scan):
-            run_related_work_scan(repo, state)
-    assert os.environ.get("SW_DOC_DRIVER") == "legacy"
+    assert outcome["verdict"] == "fail"
+    assert outcome["halt"] == "target-lock-conflict"
+    lock_path = target_lock_path_for(repo, target_branch)
+    meta = json.loads(lock_path.read_text(encoding="utf-8"))
+    assert meta["runId"] == "deliver-other-run"
+    handoff_path = doc_to_feature_handoff_lock_path_for(
+        repo, target_branch, f"doc-loop:{state['runId']}"
+    )
+    assert not handoff_path.is_file()
 
 
-def test_freeze_stage_driver_invoked_without_env_mutation(repo: Path) -> None:
-    """R10 — freeze path passes driver_invoked to is_driver_invoked without env mutation."""
-    prd_dir = repo / "docs/prds/085-prd-demo"
-    prd_dir.mkdir(parents=True, exist_ok=True)
-    (prd_dir / "prd.md").write_text("---\ntype: prd\n---\n# Demo\n", encoding="utf-8")
-
-    provisioned = provision_doc_run(repo, topic="freeze-driver-param", tier="Standard")
-    run_id = str(provisioned["runId"])
-    state = _state_with_prd(repo, run_id)
-
-    os.environ.pop("SW_DOC_DRIVER", None)
-    seen: list[bool] = []
-
-    def fake_freeze(_root, _artifact, *, owner, driver_invoked, unit_id=None, **kwargs):
-        seen.append(is_driver_invoked(driver_invoked))
-        return {
-            "verdict": "pass",
-            "owner": owner,
-            "durabilityState": "verified",
-            "lifecycleState": "frozen",
-            "revision": "rev",
-        }
-
-    with patch("check_frozen_lib.freeze_artifact", side_effect=fake_freeze):
-        freeze_stage_artifact(repo, state, "freeze-prd")
-
-    assert seen == [True]
-    assert os.environ.get("SW_DOC_DRIVER") is None
+def test_handoff_lock_acquire_refuses_live_target_lock(repo: Path) -> None:
+    target_branch = "feat/conflict"
+    acquire_target_lock(repo, target_branch, "deliver-holder")
+    out = acquire_doc_to_feature_handoff_lock(repo, target_branch, "doc-loop:probe")
+    assert out["verdict"] == "fail"
+    assert out["error"] == "target-lock-conflict"

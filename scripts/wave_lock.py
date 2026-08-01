@@ -28,8 +28,10 @@ SHIP_LEASE_STALE_SECONDS = int(os.environ.get("SW_SHIP_LEASE_STALE_SECONDS", "30
 LOCKS_DIR_NAME = "sw-deliver-locks"
 TARGET_LOCKS_DIR_NAME = "sw-target-locks"
 DOC_RUN_LOCKS_DIR_NAME = "sw-doc-run-locks"
+DOC_TO_FEATURE_HANDOFF_LOCKS_DIR_NAME = "sw-doc-to-feature-handoff-locks"
 TARGET_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
 DOC_RUN_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
+DOC_TO_FEATURE_HANDOFF_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
 SAFE_SLUG_RE = re.compile(r"[^a-zA-Z0-9._-]+")
 
 
@@ -161,6 +163,66 @@ def doc_run_lock_path_for(root: Path, topic: str) -> Path:
 def doc_run_lock_key_digest(root: Path, topic: str) -> str:
     raw = f"{repository_identity(root)}\0doc-topic\0{topic}".encode("utf-8")
     return hashlib.sha256(raw).hexdigest()[:32]
+
+
+def doc_to_feature_handoff_locks_dir(root: Path) -> Path:
+    """Git-common-dir anchored doc-to-feature handoff lock directory (PRD 085 R14)."""
+    repo_root = _canonical_repo_root_for_locks(root)
+    base_raw = repo_root / ".cursor" / DOC_TO_FEATURE_HANDOFF_LOCKS_DIR_NAME
+    parent_raw = repo_root / ".cursor"
+    if parent_raw.is_symlink():
+        fail("doc-to-feature-handoff-lock parent is symlinked", exit_code=20, halt="lock-path-unsafe")
+    if base_raw.is_symlink():
+        fail("doc-to-feature-handoff-lock directory is symlinked", exit_code=20, halt="lock-path-unsafe")
+    base = base_raw.resolve()
+    parent = base.parent.resolve()
+    if parent.is_symlink():
+        fail("doc-to-feature-handoff-lock parent is symlinked", exit_code=20, halt="lock-path-unsafe")
+    base.mkdir(parents=True, exist_ok=True)
+    return base
+
+
+def doc_to_feature_handoff_lock_key_digest(root: Path, target_branch: str, run_id: str) -> str:
+    raw = f"{repository_identity(root)}\0doc-to-feature-handoff\0{target_branch}\0{run_id}".encode(
+        "utf-8"
+    )
+    return hashlib.sha256(raw).hexdigest()[:32]
+
+
+def doc_to_feature_handoff_lock_path_for(root: Path, target_branch: str, run_id: str) -> Path:
+    locks = doc_to_feature_handoff_locks_dir(root)
+    digest = doc_to_feature_handoff_lock_key_digest(root, target_branch, run_id)
+    safe_target = sanitize_lock_component(target_branch.rsplit("/", 1)[-1])
+    safe_run = sanitize_lock_component(run_id.replace(":", "-"))
+    filename = f"{digest}-{safe_target}-{safe_run}.lock"
+    path = (locks / filename).resolve()
+    if path.parent != locks:
+        fail("doc-to-feature-handoff lock path escapes locks directory", exit_code=20, halt="lock-path-unsafe")
+    locks_raw = _canonical_repo_root_for_locks(root) / ".cursor" / DOC_TO_FEATURE_HANDOFF_LOCKS_DIR_NAME
+    if locks_raw.is_symlink():
+        fail("doc-to-feature-handoff locks directory is symlinked", exit_code=20, halt="lock-path-unsafe")
+    return path
+
+
+def doc_to_feature_handoff_lock_journal_path(root: Path) -> Path:
+    return doc_to_feature_handoff_locks_dir(root) / DOC_TO_FEATURE_HANDOFF_LOCK_JOURNAL_NAME
+
+
+def append_doc_to_feature_handoff_lock_journal(root: Path, entry: dict[str, Any]) -> None:
+    """Append reclaim journal entry; write failure fails takeover closed (R14)."""
+    journal = doc_to_feature_handoff_lock_journal_path(root)
+    line = json.dumps({**entry, "at": utc_now()}, ensure_ascii=False) + "\n"
+    try:
+        with open(journal, "a", encoding="utf-8") as handle:
+            handle.write(line)
+        os.chmod(journal, 0o600)
+    except OSError as exc:
+        fail(
+            "doc-to-feature-handoff-lock journal write failed",
+            exit_code=20,
+            halt="doc-to-feature-handoff-lock-journal-write-failed",
+            error=str(exc),
+        )
 
 
 def doc_run_lock_journal_path(root: Path) -> Path:

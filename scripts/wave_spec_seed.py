@@ -525,18 +525,40 @@ def cmd_spec_seed(root: Path, args: list[str]) -> None:
             exit_code=20,
             halt="target-lock-required",
         )
-    from wave_spec_seed_guard import assert_target_lock_for_seed
+    from wave_spec_seed_guard import (
+        assert_handoff_lock_for_seed,
+        assert_target_lock_for_seed,
+        is_doc_loop_run_id,
+    )
 
-    try:
-        lock_guard = assert_target_lock_for_seed(top, branch, run_id)
-    except PermissionError as exc:
-        fail(
-            str(exc),
-            exit_code=20,
-            halt="target-lock-required",
-            targetBranch=branch,
-            runId=run_id,
-        )
+    if is_doc_loop_run_id(run_id):
+        try:
+            lock_guard = assert_handoff_lock_for_seed(top, branch, run_id)
+        except PermissionError as exc:
+            message = str(exc)
+            halt = (
+                "target-lock-conflict"
+                if "target-lock-conflict" in message
+                else "handoff-lock-required"
+            )
+            fail(
+                message,
+                exit_code=20,
+                halt=halt,
+                targetBranch=branch,
+                runId=run_id,
+            )
+    else:
+        try:
+            lock_guard = assert_target_lock_for_seed(top, branch, run_id)
+        except PermissionError as exc:
+            fail(
+                str(exc),
+                exit_code=20,
+                halt="target-lock-required",
+                targetBranch=branch,
+                runId=run_id,
+            )
 
     from primary_checkout_guard import enforce_guard
     enforce_guard(top, branch)
