@@ -732,6 +732,7 @@
 * merge phase freeze-integrity-split-recursive-freeze-path-and-harden-idempotency-r5-r6 into feat/deliver-and-doc-loop-orchestration-integrity (9038a3e) <!-- sw-deliver:freeze-integrity-split-recursive-freeze-path-and-harden-idempotency-r5-r6 -->
 * merge phase doc-loop-robustness-run-id-validation-and-canonical-anchoring-r7-r8 into feat/deliver-and-doc-loop-orchestration-integrity (4610270) <!-- sw-deliver:doc-loop-robustness-run-id-validation-and-canonical-anchoring-r7-r8 -->
 * merge phase doc-behavior-drift-and-compliance-cli-docs-conductor-docs-missing-config-key-r12-r13-r19 into feat/deliver-and-doc-loop-orchestration-integrity (8adc7b7) <!-- sw-deliver:doc-behavior-drift-and-compliance-cli-docs-conductor-docs-missing-config-key-r12-r13-r19 -->
+* merge phase wiring-proof-task-row-schema-field-and-reachability-check-r15-r16 into feat/deliver-and-doc-loop-orchestration-integrity (34222ab) <!-- sw-deliver:wiring-proof-task-row-schema-field-and-reachability-check-r15-r16 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
