@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-01T06:23:27Z",
+  "generatedAt": "2026-08-01T14:55:01Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3160,46 +3160,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:55:tasks_generate.py",
+      "id": "core/commands/sw-tasks.md:61:tasks_generate.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 55,
+      "line": 61,
       "column": 18,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:55:tasks_generate.py",
+      "id": "core/commands/sw-tasks.md:61:tasks_generate.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 55,
+      "line": 61,
       "column": 115,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:58:planning_visibility.py",
+      "id": "core/commands/sw-tasks.md:64:planning_visibility.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 58,
+      "line": 64,
       "column": 12,
       "script": "planning_visibility.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:72:sw_bootstrap.py",
+      "id": "core/commands/sw-tasks.md:78:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 72,
+      "line": 78,
       "column": 44,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-tasks.md:85:phase_sizing.py",
+      "id": "core/commands/sw-tasks.md:91:phase_sizing.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 85,
+      "line": 91,
       "column": 79,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
@@ -9667,46 +9667,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:55:tasks_generate.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:61:tasks_generate.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 55,
+      "line": 61,
       "column": 18,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:55:tasks_generate.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:61:tasks_generate.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 55,
+      "line": 61,
       "column": 115,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:58:planning_visibility.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:64:planning_visibility.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 58,
+      "line": 64,
       "column": 12,
       "script": "planning_visibility.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:72:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:78:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 72,
+      "line": 78,
       "column": 44,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:85:phase_sizing.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:91:phase_sizing.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 85,
+      "line": 91,
       "column": 79,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
@@ -15049,46 +15049,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:55:tasks_generate.py",
+      "id": "dist/cursor/commands/sw-tasks.md:61:tasks_generate.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 55,
+      "line": 61,
       "column": 18,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:55:tasks_generate.py",
+      "id": "dist/cursor/commands/sw-tasks.md:61:tasks_generate.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 55,
+      "line": 61,
       "column": 115,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:58:planning_visibility.py",
+      "id": "dist/cursor/commands/sw-tasks.md:64:planning_visibility.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 58,
+      "line": 64,
       "column": 12,
       "script": "planning_visibility.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:72:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-tasks.md:78:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 72,
+      "line": 78,
       "column": 44,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:85:phase_sizing.py",
+      "id": "dist/cursor/commands/sw-tasks.md:91:phase_sizing.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 85,
+      "line": 91,
       "column": 79,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
