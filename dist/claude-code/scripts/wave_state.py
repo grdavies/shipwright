@@ -156,10 +156,15 @@ def target_branch_from_state(state: dict[str, Any]) -> str | None:
     return None
 
 
-def scoped_paths(root: Path, target: str) -> dict[str, Path]:
-    """Per-branch scoped state/lock paths (PRD 013 R6/R9)."""
+def scoped_paths(root: Path, target: str, *, local: bool = False) -> dict[str, Path]:
+    """Per-branch scoped state/lock paths (PRD 013 R6/R9).
+
+    By default paths anchor to the primary repo root (R28). Pass ``local=True``
+    when resolving paths inside an orchestrator worktree mirror (R4).
+    """
     slug = slug_from_target(target)
-    cursor = _cursor_dir(root)
+    base = root.resolve() if local else _path_normalize_anchor(root)
+    cursor = base / ".cursor"
     runs = cursor / "sw-deliver-runs"
     return {
         "state": cursor / f"sw-deliver-state.{slug}.json",
@@ -167,6 +172,20 @@ def scoped_paths(root: Path, target: str) -> dict[str, Path]:
         "log": runs / f"run.{slug}.log",
         "runs": runs,
     }
+
+
+def _mirror_state_path(
+    mirror_root: Path,
+    *,
+    target: str | None = None,
+    state_hint: dict[str, Any] | None = None,
+) -> Path:
+    """Physical scoped state file inside an orchestrator worktree mirror (R4)."""
+    branch = target or (target_branch_from_state(state_hint) if state_hint else None)
+    if not is_feature_target(branch):
+        return mirror_root.resolve() / ".cursor" / LEGACY_STATE_NAME
+    assert branch is not None
+    return scoped_paths(mirror_root, branch, local=True)["state"]
 
 
 def legacy_paths(root: Path) -> dict[str, Path]:
@@ -636,7 +655,7 @@ def persist_deliver_state_primary_first(
     primary_path = scoped_paths(repo_root, branch)["state"]
     prior: dict[str, Any] | None = _read_state_optional(primary_path)
     if not prior and mirror_root is not None:
-        prior = _read_state_optional(scoped_paths(mirror_root, branch)["state"])
+        prior = _read_state_optional(scoped_paths(mirror_root, branch, local=True)["state"])
     _assert_completion_finalize_allowed(repo_root, state, prior or None)
     now = utc_now()
     state["updatedAt"] = now
@@ -644,7 +663,7 @@ def persist_deliver_state_primary_first(
     write_json(primary_path, state)
     _write_legacy_breadcrumb(repo_root, target=branch, scoped_state=primary_path)
     if mirror_root is not None:
-        mirror_path = scoped_paths(mirror_root, branch)["state"]
+        mirror_path = scoped_paths(mirror_root, branch, local=True)["state"]
         mirror_path.parent.mkdir(parents=True, exist_ok=True)
         write_json(mirror_path, state)
     return primary_path
@@ -694,7 +713,7 @@ def repair_mirror_from_primary(
     mirror_root = Path(orch_raw).resolve()
     if mirror_root.resolve() == repo_root.resolve():
         return scoped_paths(repo_root, branch)["state"]
-    mirror_path = scoped_paths(mirror_root, branch)["state"]
+    mirror_path = scoped_paths(mirror_root, branch, local=True)["state"]
     mirror_path.parent.mkdir(parents=True, exist_ok=True)
     write_json(mirror_path, primary)
     return mirror_path
@@ -759,10 +778,9 @@ def sync_canonical_state_read(
     if isinstance(orch_raw, str) and orch_raw.strip():
         orch_root = Path(orch_raw).resolve()
         if orch_root != repo_root.resolve():
-            mirror_path = resolve_state_path(
+            mirror_path = _mirror_state_path(
                 orch_root,
                 target=target or target_branch_from_state(root_state),
-                task_list=task_list,
                 state_hint=root_state or state_hint,
             )
             mirror_state = _load_state_normalized(mirror_path, anchor=repo_root)
@@ -827,10 +845,9 @@ def ensure_canonical_state_synced(
     if isinstance(orch_raw, str) and orch_raw.strip():
         orch_root = Path(orch_raw).resolve()
         if orch_root != repo_root.resolve():
-            mirror_path = resolve_state_path(
+            mirror_path = _mirror_state_path(
                 orch_root,
                 target=target or target_branch_from_state(root_state),
-                task_list=task_list,
                 state_hint=root_state or state_hint,
             )
             mirror_state = _load_state_normalized(mirror_path, anchor=repo_root)
