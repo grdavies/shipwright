@@ -11,7 +11,13 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 from _sw.cli import run_module_main
-from check_frozen_lib import freeze_artifact, is_driver_invoked
+from check_frozen_lib import (
+    commit_frozen_artifact,
+    content_revision,
+    freeze_artifact,
+    is_driver_invoked,
+    verify_commit_contains_revision,
+)
 
 
 def _parse_freeze_args(args: list[str]) -> dict[str, str | bool]:
@@ -93,14 +99,25 @@ def main(argv=None):
         if not artifact:
             print(json.dumps({"verdict": "fail", "reason": "--artifact required"}), file=sys.stderr)
             return 2
-        receipt = freeze_artifact(
-            root,
-            artifact,
-            owner="operator",
-            driver_invoked=driver_invoked,
-        )
-        print(json.dumps(receipt, ensure_ascii=False, indent=2))
-        return 0 if receipt.get("verdict") in {"pass", "warn"} else 20
+        artifact_path = (root / artifact).resolve()
+        if not artifact_path.is_file():
+            print(json.dumps({"verdict": "fail", "reason": "artifact missing"}), file=sys.stderr)
+            return 2
+        revision = content_revision(artifact_path)
+        commit_payload = commit_frozen_artifact(root, artifact, revision)
+        commit_sha = commit_payload.get("commit")
+        verdict = str(commit_payload.get("verdict") or "")
+        if verdict in {"pass", "ok"} and commit_sha:
+            verified = verify_commit_contains_revision(root, artifact, revision, commit_sha=str(commit_sha))
+            if verified.get("verdict") == "pass":
+                commit_payload["verdict"] = "pass"
+                print(json.dumps(commit_payload, ensure_ascii=False, indent=2))
+                return 0
+        if verdict == "warn":
+            print(json.dumps(commit_payload, ensure_ascii=False, indent=2))
+            return 0
+        print(json.dumps(commit_payload, ensure_ascii=False, indent=2))
+        return 20
 
     base = args[0] if args else None
     if not base:

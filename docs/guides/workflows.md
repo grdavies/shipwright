@@ -181,15 +181,19 @@ Publication mode is store-conditioned — the doc driver never reaches standalon
 
 | Store mode | Publication path | In-driver behaviour |
 | --- | --- | --- |
-| File-store | `wave_spec_seed.py` feature-seed onto `<type>/<slug>` at freeze/afterTasks | Mechanical seed only — no nested docs-PR |
-| Issue-store | Issue bodies authoritative; materialize at deliver run-entry | `planning_materialize.py` verifies frozen hash |
+| File-store (`file-store-feature-seed`) | `wave_spec_seed.py` feature-seed onto `<type>/<slug>` at freeze/afterTasks | Acquire doc-to-feature handoff lock → real non-dry-run seed → release lock; no nested docs-PR |
+| Issue-store (same-repo) | Same feature-seed path when publication mode permits | Handoff lock + seed as above |
+| Issue-store (`separate-project-store-only`) | Feature-seed skipped | `skipped: true` — handoff lock not acquired |
+| Issue-store (materialize) | Issue bodies authoritative; materialize at deliver run-entry | `planning_materialize.py` verifies frozen hash |
 
 Standalone `scripts/docs_worktree.py` / `scripts/docs_pr.py` remain **operator tools** for pre-existing
 docs branches — the durable doc driver does not invoke them. `publication_mode(root)` selects the path;
 attempting an unreachable stage raises `publication-stage-unreachable`.
 
 Target-lock ordering: doc-run exclusion (`sw-doc-run-locks/`) is acquired before persistent doc-run
-state mutation, matching deliver target-lock precedence.
+state mutation, matching deliver target-lock precedence. Feature-seed additionally requires the
+doc-to-feature handoff lock (`wave_spec_seed_guard.py`) and refuses when a live deliver target-lock
+already holds the destination branch.
 
 ---
 

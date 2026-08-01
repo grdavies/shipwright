@@ -12,6 +12,7 @@ from checkbox_diff import parse_task_checkboxes
 
 SUBTASK_CHECKBOX = re.compile(r"^-\s+\[([ xX])\]\s+(\d+(?:\.\d+)+)\s+(.+)$")
 EXPECTED_LINE = re.compile(r"^\s*-\s+\*\*Expected:\*\*\s*(.+)$")
+WIRED_LINE = re.compile(r"^\s*-\s*\*\*(?:Wired|Callsite):\*\*\s*(.+)$", re.IGNORECASE)
 
 
 def utc_now() -> str:
@@ -37,6 +38,7 @@ def parse_phase_subtasks(text: str, phase_id: str) -> list[dict[str, Any]]:
                 "title": match.group(3).strip(),
                 "files": [],
                 "expected": "",
+                "wired": "",
                 "checked": match.group(1).lower() == "x",
             }
             continue
@@ -58,6 +60,10 @@ def parse_phase_subtasks(text: str, phase_id: str) -> list[dict[str, Any]]:
         expected_match = EXPECTED_LINE.match(line)
         if expected_match:
             current["expected"] = expected_match.group(1).strip()
+            continue
+        wired_match = WIRED_LINE.match(line)
+        if wired_match:
+            current["wired"] = wired_match.group(1).strip().strip("`")
     if current:
         subtasks.append(current)
     for st in subtasks:
@@ -78,6 +84,7 @@ def completed_claims(text: str, phase_id: str, *, refs: set[str] | None = None) 
             "title": st.get("title") or "",
             "files": list(st.get("files") or []),
             "expected": st.get("expected") or "",
+            "wired": st.get("wired") or "",
         })
     return claims
 
@@ -222,8 +229,111 @@ def merge_claim_results(
     }
 
 
-def build_agent_brief(claims: list[dict[str, Any]], *, diff_paths: set[str], diff_stat: str = "") -> dict[str, Any]:
-    return {
+def _artifact_reference_tokens(artifact_path: str) -> list[str]:
+    """Derive importable tokens from a produced artifact path."""
+    path = artifact_path.strip().rstrip("/")
+    if not path:
+        return []
+    tokens: list[str] = []
+    stem = Path(path).stem
+    if stem:
+        tokens.append(stem)
+    if path.endswith(".py"):
+        mod = path[:-3].replace("/", ".").replace("\\", ".")
+        if mod.startswith("."):
+            mod = mod.lstrip(".")
+        tokens.append(mod)
+        parts = mod.split(".")
+        if len(parts) >= 2:
+            tokens.append(".".join(parts[-2:]))
+    tokens.append(Path(path).name)
+    return [t for t in dict.fromkeys(tokens) if t]
+
+
+def _callsite_references_artifact(callsite_text: str, artifact_path: str) -> bool:
+    if not callsite_text.strip():
+        return False
+    for token in _artifact_reference_tokens(artifact_path):
+        token_re = re.escape(token)
+        patterns = (
+            re.compile(rf"\bfrom\s+{token_re}\b", re.IGNORECASE),
+            re.compile(rf"\bimport\s+{token_re}\b", re.IGNORECASE),
+            re.compile(rf'["\']{token_re}["\']'),
+            re.compile(rf"`{token_re}`"),
+        )
+        if any(p.search(callsite_text) for p in patterns):
+            return True
+    return False
+
+
+def reachability_findings(
+    root: Path,
+    claims: list[dict[str, Any]],
+    *,
+    touched: set[str],
+) -> list[dict[str, Any]]:
+    """Static reachability check for Wired: rows (PRD 085 R16)."""
+    findings: list[dict[str, Any]] = []
+    for claim in claims:
+        wired = str(claim.get("wired") or "").strip()
+        if not wired:
+            continue
+        ref = str(claim.get("ref") or "")
+        produced = list(claim.get("files") or [])
+        if not produced:
+            continue
+        if not path_touched(wired, touched):
+            findings.append({
+                "ref": ref,
+                "verdict": "fail",
+                "dimension": "reachability",
+                "reason": f"Wired callsite {wired!r} not touched in diff",
+            })
+            continue
+        callsite_path = root / wired
+        if not callsite_path.is_file():
+            findings.append({
+                "ref": ref,
+                "verdict": "fail",
+                "dimension": "reachability",
+                "reason": f"Wired callsite missing on disk: {wired}",
+            })
+            continue
+        callsite_text = callsite_path.read_text(encoding="utf-8", errors="replace")
+        gaps = [
+            artifact
+            for artifact in produced
+            if path_touched(artifact, touched)
+            and not _callsite_references_artifact(callsite_text, artifact)
+        ]
+        if gaps:
+            findings.append({
+                "ref": ref,
+                "verdict": "fail",
+                "dimension": "reachability",
+                "reason": (
+                    f"Wired callsite {wired!r} does not reference produced artifact(s): "
+                    f"{', '.join(gaps)}"
+                ),
+            })
+        else:
+            findings.append({
+                "ref": ref,
+                "verdict": "pass",
+                "dimension": "reachability",
+                "reason": "callsite references produced artifact in diff",
+            })
+    return findings
+
+
+def build_agent_brief(
+    claims: list[dict[str, Any]],
+    *,
+    diff_paths: set[str],
+    diff_stat: str = "",
+    root: Path | None = None,
+) -> dict[str, Any]:
+    brief: dict[str, Any] = {
         "claims": claims,
         "touchedPaths": sorted(diff_paths),
         "diffStat": diff_stat,
@@ -233,6 +343,14 @@ def build_agent_brief(claims: list[dict[str, Any]], *, diff_paths: set[str], dif
             "for every claim. Fail closed on any mismatch between Expected and on-disk evidence."
         ),
     }
+    if root is not None:
+        reachability = reachability_findings(root, claims, touched=diff_paths)
+        if reachability:
+            brief["reachabilityFindings"] = reachability
+            brief["reachabilityVerdict"] = (
+                "fail" if any(r.get("verdict") == "fail" for r in reachability) else "pass"
+            )
+    return brief
 
 
 def apply_verification_overlay(verdict: dict[str, Any], claims_status: dict[str, Any] | None) -> dict[str, Any]:

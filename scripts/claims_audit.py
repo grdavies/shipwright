@@ -52,7 +52,7 @@ def main(argv: list[str] | None = None) -> int:
         claims = lib.completed_claims(text, args.phase_id)
         base = args.diff_base or lib.resolve_diff_base(root)
         touched = lib.git_diff_paths(root, base)
-        emit(lib.build_agent_brief(claims, diff_paths=touched))
+        emit(lib.build_agent_brief(claims, diff_paths=touched, root=root))
 
     if args.command == "run":
         agent_claims = None

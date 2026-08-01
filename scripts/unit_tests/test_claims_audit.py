@@ -49,3 +49,65 @@ def test_apply_verification_overlay_fail_closed():
     out = lib.apply_verification_overlay(verdict, {"verdict": "fail", "claims": []})
     assert out["verdict"] == "inconclusive"
     assert out["inconclusiveClass"] == "missing-required"
+
+
+WIRED_TASKS_SNIPPET = """
+### 1. Credential backend wiring (R16)
+
+- [x] 1.1 Add foo backend (R16)
+  - **File:** `scripts/credentials/backends/foo.py`
+  - **Expected:** adds a new backend/adapter registration function
+  - **Wired:** `scripts/credentials/resolver.py`
+"""
+
+
+def test_reachability_findings_gap_when_callsite_missing_reference(tmp_path: Path):
+    resolver = tmp_path / "scripts/credentials/resolver.py"
+    backend = tmp_path / "scripts/credentials/backends/foo.py"
+    resolver.parent.mkdir(parents=True)
+    backend.parent.mkdir(parents=True)
+    resolver.write_text("# resolver without backend import\n", encoding="utf-8")
+    backend.write_text("def register():\n    pass\n", encoding="utf-8")
+    claims = lib.completed_claims(WIRED_TASKS_SNIPPET, "1")
+    touched = {
+        "scripts/credentials/resolver.py",
+        "scripts/credentials/backends/foo.py",
+    }
+    findings = lib.reachability_findings(tmp_path, claims, touched=touched)
+    assert any(f["verdict"] == "fail" and f["dimension"] == "reachability" for f in findings)
+
+
+def test_reachability_findings_passes_with_genuine_reference(tmp_path: Path):
+    resolver = tmp_path / "scripts/credentials/resolver.py"
+    backend = tmp_path / "scripts/credentials/backends/foo.py"
+    resolver.parent.mkdir(parents=True)
+    backend.parent.mkdir(parents=True)
+    resolver.write_text(
+        "from scripts.credentials.backends import foo\n",
+        encoding="utf-8",
+    )
+    backend.write_text("def register():\n    pass\n", encoding="utf-8")
+    claims = lib.completed_claims(WIRED_TASKS_SNIPPET, "1")
+    touched = {
+        "scripts/credentials/resolver.py",
+        "scripts/credentials/backends/foo.py",
+    }
+    findings = lib.reachability_findings(tmp_path, claims, touched=touched)
+    assert findings and all(f["verdict"] == "pass" for f in findings)
+
+
+def test_build_agent_brief_includes_reachability_verdict(tmp_path: Path):
+    resolver = tmp_path / "scripts/credentials/resolver.py"
+    backend = tmp_path / "scripts/credentials/backends/foo.py"
+    resolver.parent.mkdir(parents=True)
+    backend.parent.mkdir(parents=True)
+    resolver.write_text("# no reference\n", encoding="utf-8")
+    backend.write_text("pass\n", encoding="utf-8")
+    claims = lib.completed_claims(WIRED_TASKS_SNIPPET, "1")
+    touched = {
+        "scripts/credentials/resolver.py",
+        "scripts/credentials/backends/foo.py",
+    }
+    brief = lib.build_agent_brief(claims, diff_paths=touched, root=tmp_path)
+    assert brief.get("reachabilityVerdict") == "fail"
+    assert brief.get("reachabilityFindings")

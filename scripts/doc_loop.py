@@ -19,7 +19,13 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from wave_json_io import read_json, write_json
-from wave_target_lock import acquire_doc_run_lock, heartbeat_doc_run_lock, release_doc_run_lock
+from wave_run_paths import RunIdRequiredError, require_run_id
+from wave_target_lock import (
+    acquire_doc_run_lock,
+    heartbeat_doc_run_lock,
+    release_doc_run_lock,
+    release_doc_run_lock_on_terminal_complete,
+)
 from wave_transition_receipt import hash_json
 
 DOC_RUNS_DIR_REL = ".cursor/sw-doc-runs"
@@ -76,11 +82,15 @@ def has_flag(args: list[str], flag: str) -> bool:
 
 
 def doc_runs_root(root: Path) -> Path:
-    return (root / DOC_RUNS_DIR_REL).resolve()
+    """Resolve doc-run namespace under the primary repo-root .cursor (R8)."""
+    from wave_state import path_normalize_anchor
+
+    return (path_normalize_anchor(root) / DOC_RUNS_DIR_REL).resolve()
 
 
 def doc_run_directory(root: Path, run_id: str) -> Path:
-    return doc_runs_root(root) / run_id
+    rid = require_run_id(run_id)
+    return doc_runs_root(root) / rid
 
 
 def doc_state_path(root: Path, run_id: str) -> Path:
@@ -226,6 +236,13 @@ def next_stage_after(state: dict[str, Any], current: str) -> str | None:
     return None
 
 
+def related_work_resolved(state: dict[str, Any]) -> bool:
+    pending = state.get("pendingRelatedWork") or {}
+    if pending.get("status") == "acknowledged":
+        return True
+    return bool(state.get("relatedWorkScan"))
+
+
 def build_step(state: dict[str, Any], stage: str) -> dict[str, Any]:
     step: dict[str, Any] = {
         "action": stage,
@@ -237,6 +254,10 @@ def build_step(state: dict[str, Any], stage: str) -> dict[str, Any]:
     }
     if stage == "tasks":
         step["noFreeze"] = True
+        if related_work_resolved(state):
+            step["orchestrated"] = True
+            step["relatedWorkResolved"] = True
+            step["parentRunId"] = state.get("runId")
     if stage == "related-work-checkpoint":
         step["checkpoint"] = state.get("pendingRelatedWork") or {
             "kind": "related-work-checkpoint",
@@ -392,6 +413,17 @@ def advance_stage(state: dict[str, Any], completed_stage: str) -> dict[str, Any]
     return updated
 
 
+def finalize_doc_run_terminal(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """Release the topic doc-run lock when the run reaches terminal ``complete`` (R9)."""
+    topic = str(state.get("topic") or "")
+    run_id = str(state.get("runId") or "")
+    if not topic or not run_id:
+        return {"verdict": "fail", "error": "doc-state-missing-topic-or-run-id"}
+    if str(state.get("stage") or "") != "complete" or state.get("verdict") != "complete":
+        return {"verdict": "skip", "note": "not-terminal-complete"}
+    return release_doc_run_lock_on_terminal_complete(root, topic, run_id)
+
+
 def artifact_rel_path(state: dict[str, Any], key: str) -> str | None:
     paths = state.get("artifactPaths") or {}
     rel = paths.get(key)
@@ -484,53 +516,111 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
 
     import subprocess
 
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT_DIR / "wave_spec_seed.py"),
-            str(root),
-            "spec-seed",
-            "--task-list",
-            tasks_rel,
-            "--run-id",
-            f"doc-loop:{state.get('runId')}",
-            "--dry-run",
-        ],
-        capture_output=True,
-        text=True,
-        cwd=str(root),
+    from wave_spec_seed import resolve_target_branch
+    from wave_spec_seed_guard import (
+        acquire_doc_to_feature_handoff_lock,
+        release_doc_to_feature_handoff_lock,
     )
-    remote_state = {"branch": None, "commit": None, "dryRun": True}
+
+    run_id = f"doc-loop:{state.get('runId')}"
     try:
-        seed_payload = json.loads(proc.stdout or "{}")
-    except json.JSONDecodeError:
-        seed_payload = {"verdict": "fail", "detail": proc.stdout or proc.stderr}
-    exit_status = proc.returncode
-    if exit_status != 0:
+        target_branch, _slug, _docs_dir = resolve_target_branch(root, tasks_rel)
+    except SystemExit:
         return {
             "verdict": "fail",
-            "error": seed_payload.get("error") or "feature-seed-failed",
+            "error": "feature-seed-target-resolution-failed",
             "halt": "doc-loop:feature-seed",
-            "exitStatus": exit_status,
-            "seed": seed_payload,
         }
 
-    receipt = {
-        "transitionName": "feature-seed",
-        "publicationMode": mode,
-        "exitStatus": exit_status,
-        "remoteState": remote_state,
-        "seed": seed_payload,
-        "timestamp": utc_now(),
-        "status": "complete",
-    }
-    return {
-        "verdict": "pass",
-        "action": "feature-seed",
-        "publicationMode": mode,
-        "receipt": receipt,
-        "seed": seed_payload,
-    }
+    lock_acquire = acquire_doc_to_feature_handoff_lock(root, target_branch, run_id)
+    if lock_acquire.get("verdict") != "pass":
+        error = lock_acquire.get("error") or "handoff-lock-acquire-failed"
+        halt = "target-lock-conflict" if error == "target-lock-conflict" else "doc-loop:feature-seed"
+        if lock_acquire.get("holder"):
+            holder = lock_acquire["holder"]
+            if holder.get("kind") == "target-lock":
+                halt = "target-lock-conflict"
+        return {
+            "verdict": "fail",
+            "error": error,
+            "halt": halt,
+            "lock": lock_acquire,
+        }
+
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "wave_spec_seed.py"),
+                str(root),
+                "spec-seed",
+                "--task-list",
+                tasks_rel,
+                "--run-id",
+                run_id,
+            ],
+            capture_output=True,
+            text=True,
+            cwd=str(root),
+        )
+        remote_state: dict[str, Any] = {"branch": target_branch, "commit": None, "dryRun": True}
+        try:
+            seed_payload = json.loads(proc.stdout or "{}")
+        except json.JSONDecodeError:
+            seed_payload = {"verdict": "fail", "detail": proc.stdout or proc.stderr}
+        exit_status = proc.returncode
+        if exit_status != 0:
+            error = seed_payload.get("error") or "feature-seed-failed"
+            halt = seed_payload.get("halt") or "doc-loop:feature-seed"
+            if halt == "target-lock-conflict" or "target-lock-conflict" in str(error):
+                halt = "target-lock-conflict"
+            return {
+                "verdict": "fail",
+                "error": error,
+                "halt": halt,
+                "exitStatus": exit_status,
+                "seed": seed_payload,
+            }
+
+        commit_sha = seed_payload.get("commit")
+        branch = seed_payload.get("branch") or target_branch
+        skipped = seed_payload.get("skipped") is True
+        if commit_sha:
+            verify = subprocess.run(
+                ["git", "merge-base", "--is-ancestor", commit_sha, branch],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+            )
+            if verify.returncode != 0:
+                return {
+                    "verdict": "fail",
+                    "error": "feature-seed-commit-verify-failed",
+                    "halt": "doc-loop:feature-seed",
+                    "seed": seed_payload,
+                }
+            remote_state = {"branch": branch, "commit": commit_sha, "dryRun": False}
+        elif skipped:
+            remote_state = {"branch": branch, "commit": None, "dryRun": False}
+
+        receipt = {
+            "transitionName": "feature-seed",
+            "publicationMode": mode,
+            "exitStatus": exit_status,
+            "remoteState": remote_state,
+            "seed": seed_payload,
+            "timestamp": utc_now(),
+            "status": "complete",
+        }
+        return {
+            "verdict": "pass",
+            "action": "feature-seed",
+            "publicationMode": mode,
+            "receipt": receipt,
+            "seed": seed_payload,
+        }
+    finally:
+        release_doc_to_feature_handoff_lock(root, target_branch, run_id)
 
 
 def run_related_work_scan(root: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -539,11 +629,11 @@ def run_related_work_scan(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     prd_path = artifact_rel_path(state, "prd")
     if not prd_path:
         return {"verdict": "ok", "proposals": [], "skipped": True, "reason": "missing-prd-path"}
-    os.environ["SW_DOC_DRIVER"] = "1"
     return planning_related.scan_related(
         root,
         planning_related.source_from_path(root, prd_path),
         mode="tasks-rescan",
+        driver_invoked=True,
     )
 
 
@@ -641,6 +731,8 @@ def execute_mechanical_stage(root: Path, state: dict[str, Any], stage: str) -> d
         result["halted"] = True
         result["halt"] = new_state.get("halt")
         result["deliverHandoffReachable"] = deliver_handoff_reachable(new_state)
+    if new_state.get("stage") == "complete" and new_state.get("verdict") == "complete":
+        result["lockRelease"] = finalize_doc_run_terminal(root, new_state)
     return result
 
 
@@ -760,7 +852,13 @@ def provision_doc_run(
     run_id: str | None = None,
 ) -> dict[str, Any]:
     """Acquire doc-run lock then create run directory (lock precedes run dir — R11)."""
-    rid = run_id or mint_doc_run_id(root)
+    if run_id:
+        try:
+            rid = require_run_id(run_id)
+        except RunIdRequiredError as exc:
+            return {"verdict": "fail", "error": str(exc), "runId": run_id}
+    else:
+        rid = mint_doc_run_id(root)
     lock = acquire_doc_run_lock(root, topic, rid)
     if lock.get("verdict") != "pass":
         return lock
@@ -796,7 +894,10 @@ def resolve_run_id(root: Path, args: list[str]) -> str:
         or ""
     )
     if run_id:
-        return run_id
+        try:
+            return require_run_id(run_id)
+        except RunIdRequiredError as exc:
+            fail(str(exc), exit_code=20, halt="doc-run-id-invalid")
     topic = parse_kv(args, "--topic")
     if topic:
         provisioned = provision_doc_run(
@@ -877,6 +978,7 @@ def cmd_doc_loop(root: Path, args: list[str]) -> None:
             emit(handshake_payload(state=state, step=step, resumed=resumed, dry_run=True))
 
         if stage in TERMINAL_STAGES:
+            lock_release = finalize_doc_run_terminal(root, state)
             emit(
                 handshake_payload(
                     state=state,
@@ -884,6 +986,7 @@ def cmd_doc_loop(root: Path, args: list[str]) -> None:
                     resumed=resumed,
                     stepsTaken=steps_taken,
                     complete=True,
+                    lockRelease=lock_release,
                 )
             )
 
@@ -961,6 +1064,10 @@ def cmd_release(root: Path, args: list[str]) -> None:
     run_id = parse_kv(args, "--run-id") or os.environ.get("SW_DOC_RUN_ID", "")
     if not run_id:
         fail("--run-id required")
+    try:
+        run_id = require_run_id(run_id)
+    except RunIdRequiredError as exc:
+        fail(str(exc), exit_code=20, halt="doc-run-id-invalid")
     state = load_doc_state(root, run_id)
     topic = str(state.get("topic") or "")
     if not topic:

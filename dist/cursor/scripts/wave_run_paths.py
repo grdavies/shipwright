@@ -11,6 +11,7 @@ RUNS_DIR_REL = ".cursor/sw-deliver-runs"
 INDEX_FILENAME = "index.json"
 STATE_FILENAME = "state.json"
 PLAN_FILENAME = "plan.json"
+PLAN_PENDING_FILENAME = "plan.pending.json"
 EVENTS_FILENAME = "events.jsonl"
 LEASE_FILENAME = "lease.json"
 BLOCKER_FILENAME = "blocker.json"
@@ -40,7 +41,10 @@ def require_run_id(run_id: str | None) -> str:
 def require_phase_id(phase_id: str | None) -> str:
     if phase_id is None or not str(phase_id).strip():
         raise PhaseIdRequiredError("phase id required")
-    return str(phase_id).strip()
+    pid = str(phase_id).strip()
+    if not SAFE_RUN_ID_RE.match(pid):
+        raise PhaseIdRequiredError(f"invalid phase id: {phase_id!r}")
+    return pid
 
 
 def runs_root(root: Path) -> Path:
@@ -73,6 +77,11 @@ def mint_run_id(root: Path) -> str:
 def plan_path(root: Path, run_id: str | None) -> Path:
     require_run_id(run_id)
     return run_directory(root, run_id) / PLAN_FILENAME
+
+
+def plan_pending_path(root: Path, run_id: str | None) -> Path:
+    require_run_id(run_id)
+    return run_directory(root, run_id) / PLAN_PENDING_FILENAME
 
 
 def state_path(root: Path, run_id: str | None) -> Path:
@@ -138,7 +147,9 @@ def sanitize_index_entry(entry: dict[str, object]) -> dict[str, object]:
 
 def global_plan_path(root: Path) -> Path:
     """Repository-global transient plan path (legacy; prefer run-scoped plan_path)."""
-    return (root / GLOBAL_PLAN_REL).resolve()
+    from wave_state import path_normalize_anchor
+
+    return (path_normalize_anchor(root) / GLOBAL_PLAN_REL).resolve()
 
 
 def is_repository_global_plan_path(root: Path, candidate: Path) -> bool:

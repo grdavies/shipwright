@@ -3874,9 +3874,16 @@ def assert_flat_comment_provider_non_regression(
     return {"verdict": "pass", "action": "assert-flat-comment-provider", "provider": provider}
 
 
+def _projects_live_client_wired() -> bool:
+    """PRD 085 R18 — recognize GitHub Projects only when live client exists."""
+    from _planning_pkg_loader import load_submodule
+
+    return load_submodule("providers.github_projects").live_client_wired()
+
+
 def operator_projection_capability_matrix() -> dict[str, Any]:
     """PRD 066 R1/R3 — shared operator-projection capability matrix skeleton."""
-    return {
+    payload: dict[str, Any] = {
         "backends": ["github-issues", "github-projects", "jira", "linear"],
         "contractBackends": ["github-projects", "linear"],
         "rows": [dict(row) for row in OPERATOR_PROJECTION_MATRIX_ROWS],
@@ -3886,7 +3893,10 @@ def operator_projection_capability_matrix() -> dict[str, Any]:
             for provider, mapping in SEMANTIC_STATUS_ALIASES.items()
         },
         "r1BrowseContract": R1_BROWSE_CONTRACT,
+        "linearAnswerable": _linear_live_client_wired(),
+        "projectsAnswerable": _projects_live_client_wired(),
     }
+    return payload
 
 
 def operator_projection_adapter_complete_claim(matrix: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -3896,7 +3906,7 @@ def operator_projection_adapter_complete_claim(matrix: dict[str, Any] | None = N
     backends = set(payload.get("backends") or [])
     contract_backends = set(payload.get("contractBackends") or [])
     present = [name for name in required if name in backends and name in contract_backends]
-    # Skeleton stage: both backends are declared; answerability lands in later phases.
+    # PRD 085 R18 — skeleton stage until live-probe producers populate answerability.
     answerable = {
         "linear": bool(payload.get("linearAnswerable")),
         "github-projects": bool(payload.get("projectsAnswerable")),

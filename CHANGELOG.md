@@ -727,6 +727,19 @@
 * merge phase suppress-mismatched-provider-selector-writes-in-guided-sw-init-small into feat/credential-broker-and-privacy-hardening (0734aa3) <!-- sw-deliver:suppress-mismatched-provider-selector-writes-in-guided-sw-init-small -->
 * merge phase recallium-rules-py-reports-the-real-broker-refusal-code-small into feat/credential-broker-and-privacy-hardening (1eeb12d) <!-- sw-deliver:recallium-rules-py-reports-the-real-broker-refusal-code-small -->
 * merge phase guardrail-hook-surfaces-the-distinguishing-code-not-a-generic-unreachable-message-small into feat/credential-broker-and-privacy-hardening (7d6154c) <!-- sw-deliver:guardrail-hook-surfaces-the-distinguishing-code-not-a-generic-unreachable-message-small -->
+* merge phase freeze-integrity-split-recursive-freeze-path-and-harden-idempotency-r5-r6 into feat/deliver-and-doc-loop-orchestration-integrity (2c5841a) <!-- sw-deliver:freeze-integrity-split-recursive-freeze-path-and-harden-idempotency-r5-r6 -->
+* merge phase run-identity-locking-fail-closed-plan-adoption-r1-r2 into feat/deliver-and-doc-loop-orchestration-integrity (1e7a3f3) <!-- sw-deliver:run-identity-locking-fail-closed-plan-adoption-r1-r2 -->
+* merge phase freeze-integrity-split-recursive-freeze-path-and-harden-idempotency-r5-r6 into feat/deliver-and-doc-loop-orchestration-integrity (9038a3e) <!-- sw-deliver:freeze-integrity-split-recursive-freeze-path-and-harden-idempotency-r5-r6 -->
+* merge phase doc-loop-robustness-run-id-validation-and-canonical-anchoring-r7-r8 into feat/deliver-and-doc-loop-orchestration-integrity (4610270) <!-- sw-deliver:doc-loop-robustness-run-id-validation-and-canonical-anchoring-r7-r8 -->
+* merge phase doc-behavior-drift-and-compliance-cli-docs-conductor-docs-missing-config-key-r12-r13-r19 into feat/deliver-and-doc-loop-orchestration-integrity (8adc7b7) <!-- sw-deliver:doc-behavior-drift-and-compliance-cli-docs-conductor-docs-missing-config-key-r12-r13-r19 -->
+* merge phase wiring-proof-task-row-schema-field-and-reachability-check-r15-r16 into feat/deliver-and-doc-loop-orchestration-integrity (34222ab) <!-- sw-deliver:wiring-proof-task-row-schema-field-and-reachability-check-r15-r16 -->
+* merge phase wiring-proof-deferred-placeholder-lint-r17 into feat/deliver-and-doc-loop-orchestration-integrity (d1659ed) <!-- sw-deliver:wiring-proof-deferred-placeholder-lint-r17 -->
+* merge phase wiring-proof-live-probe-producers-for-the-operator-projection-adapter-complete-claim-r18 into feat/deliver-and-doc-loop-orchestration-integrity (f13ced7) <!-- sw-deliver:wiring-proof-live-probe-producers-for-the-operator-projection-adapter-complete-claim-r18 -->
+* merge phase path-anchoring-complete-r28-canonical-root-resolution-r4 into feat/deliver-and-doc-loop-orchestration-integrity (74e5eb1) <!-- sw-deliver:path-anchoring-complete-r28-canonical-root-resolution-r4 -->
+* merge phase doc-loop-robustness-release-the-doc-run-lock-on-terminal-completion-r9 into feat/deliver-and-doc-loop-orchestration-integrity (5217b63) <!-- sw-deliver:doc-loop-robustness-release-the-doc-run-lock-on-terminal-completion-r9 -->
+* merge phase doc-loop-robustness-scope-the-doc-driver-environment-signal-r10 into feat/deliver-and-doc-loop-orchestration-integrity (1870707) <!-- sw-deliver:doc-loop-robustness-scope-the-doc-driver-environment-signal-r10 -->
+* merge phase doc-loop-robustness-single-related-work-checkpoint-r11 into feat/deliver-and-doc-loop-orchestration-integrity (9be106b) <!-- sw-deliver:doc-loop-robustness-single-related-work-checkpoint-r11 -->
+* merge phase feature-seed-contract-doc-to-feature-handoff-lock-seed-verify-release-r14 into feat/deliver-and-doc-loop-orchestration-integrity (f5ef8e6) <!-- sw-deliver:feature-seed-contract-doc-to-feature-handoff-lock-seed-verify-release-r14 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

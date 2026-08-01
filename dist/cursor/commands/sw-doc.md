@@ -58,10 +58,10 @@ transitions, conductor in-turn continuation, and legitimate-halt reports with `r
 | Transition receipts | `.cursor/sw-doc-runs/<run-id>/receipts/<idempotency-key>.json` |
 | Target lock | Repository-level lock directory (via `wave_target_lock.acquire_doc_run_lock`) |
 
-Provision:
+Provision (side effect of `--topic` on the `doc-loop` subcommand — `resolve_run_id` → `provision_doc_run`; there is no standalone `provision` subcommand):
 
 ```bash
-python3 scripts/doc_loop.py provision --topic <topic> --tier <Full|Standard>
+python3 scripts/doc_loop.py <root> doc-loop --topic <topic> --tier <Standard|Full>
 ```
 
 Resume reads `state.json` + receipts alone — incomplete pending receipts block resume fail-closed.
@@ -377,3 +377,10 @@ memory payloads.
 - Worktree invariant (R6/R27): implementation never starts on bare default branch; enforced by `scripts/sw-assert-worktree.py` at implementation entry, not by orchestrator prose alone.
 - Does not merge, ship, or run CI gate.
 - Pattern: v1 `/ship` delegates-to-atomics model.
+
+## Currency (PRD 085 R14)
+
+`feature-seed` under `file-store-feature-seed` acquires the doc-to-feature handoff lock via
+`wave_spec_seed_guard.py`, invokes `wave_spec_seed.py` with `remoteState.dryRun: false`, then releases
+the lock. `separate-project-store-only` remains skipped. Driver entrypoints stay `doc_loop.py` —
+unreachable publication stages (`docs-commit` / `docs-pr`) unchanged.

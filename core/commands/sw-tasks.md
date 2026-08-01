@@ -50,6 +50,12 @@ Environment: `SW_DOC_DRIVER=1` / `SW_DOC_ORCHESTRATOR=1` sets `driverInvoked` on
      `python3 scripts/planning-related.py scan --mode tasks-rescan --path <prd-path>`; propose PRD amendments
      for newly-related items; human confirms via `planning-related.py confirm`. Edge materialization remains
      autonomous via the PRD 033 reconciler **after** confirmed choices only (R3).
+   - **Orchestrated short-circuit (R11):** when the doc-loop `tasks` step includes an orchestrated receipt
+     (`orchestrated: true`, `relatedWorkResolved: true`, `parentRunId: <doc-run-id>`) because the parent run's
+     `related-work` stage already resolved, pass `--orchestrated --parent-run-id <doc-run-id>` to
+     `planning-related.py scan` instead of re-running the rescan — doc-loop-orchestrated runs get exactly one
+     related-work checkpoint, not two. Standalone `/sw-tasks` invocations omit these flags and run the rescan
+     unchanged.
 4. In **one pass**, draft parent tasks (phases), expand executable sub-tasks, Relevant Files, and Notes.
 5. Add **`## Phase Dependencies`** table: `| Phase | Depends on |` with one row per phase (`none` or phase refs); machine-parseable by `/sw-deliver` (R5/R6/R37).
 6. Run **`python3 scripts/tasks_generate.py apply-granularity --task-list <task-list> --inplace`** then **`python3 scripts/tasks_generate.py check --task-list <task-list>`** — execute-tier granularity is required alongside Phase Dependencies and Traceability (R16–R18).
@@ -89,3 +95,9 @@ Environment: `SW_DOC_DRIVER=1` / `SW_DOC_ORCHESTRATOR=1` sets `driverInvoked` on
 - Legacy lists missing `## Phase Dependencies` at deliver time follow the PRD 013 ladder in `skills/deliver/SKILL.md`
   (declared → file-set inference → sequential+notice) — authors must still emit the table at freeze.
 - Does not provision worktrees or run `/sw-execute`.
+
+## Currency (PRD 085 R11)
+
+When the parent doc-loop `tasks` stage carries an orchestrated receipt (`orchestrated`,
+`relatedWorkResolved`, `parentRunId`), pass `--orchestrated --parent-run-id` to
+`planning-related.py scan` so related-work is not rescanned. Standalone `/sw-tasks` omits those flags.

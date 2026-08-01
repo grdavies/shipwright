@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from wave_json_io import StateCorruptError, read_json, write_json
-from wave_run_paths import mint_run_id, plan_path, require_run_id
+from wave_run_paths import mint_run_id, plan_path, plan_pending_path, require_run_id
 from wave_state import path_normalize_anchor
 
 
@@ -23,6 +23,10 @@ class PlanRecordMissingError(ValueError):
 
 class PlanCommitShaMismatchError(ValueError):
     """Raised when plan commit SHA does not match expected HEAD."""
+
+
+class PlanValidationError(ValueError):
+    """Raised when a plan payload fails structural validation before persist."""
 
 
 def canonical_plan_bytes(plan: dict[str, Any]) -> bytes:
@@ -68,6 +72,17 @@ def head_sha(root: Path) -> str | None:
     return sha if len(sha) == 40 else None
 
 
+def validate_plan_payload(plan: dict[str, Any]) -> None:
+    if not isinstance(plan, dict):
+        raise PlanValidationError("plan must be an object")
+    mode = plan.get("mode")
+    if not isinstance(mode, str) or not mode.strip():
+        raise PlanValidationError("plan.mode required")
+    target = plan.get("target")
+    if not isinstance(target, dict) or not target.get("branch"):
+        raise PlanValidationError("plan.target.branch required")
+
+
 def relative_plan_path(root: Path, run_id: str) -> str:
     path = plan_path(root, run_id).resolve()
     anchor = path_normalize_anchor(root)
@@ -84,9 +99,12 @@ def persist_plan(
     state: dict[str, Any],
 ) -> dict[str, Any]:
     rid = require_run_id(run_id)
-    target = plan_path(root, rid)
-    write_json(target, plan)
+    validate_plan_payload(plan)
+    pending = plan_pending_path(root, rid)
+    final = plan_path(root, rid)
+    write_json(pending, plan)
     content_hash = compute_plan_hash(plan)
+    pending.replace(final)
     revision = next_plan_revision(state)
     metadata: dict[str, Any] = {
         "planPath": relative_plan_path(root, rid),

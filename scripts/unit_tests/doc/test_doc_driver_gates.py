@@ -15,6 +15,7 @@ if str(scripts) not in sys.path:
 
 from doc_loop import (
     acknowledge_related_work,
+    build_step,
     deliver_handoff_reachable,
     execute_mechanical_stage,
     load_doc_state,
@@ -148,3 +149,62 @@ def test_checkpoint_blocked_without_durable_artifacts(repo: Path) -> None:
     with pytest.raises(SystemExit) as exc:
         set_pending_checkpoint(repo, state)
     assert exc.value.code == 20
+
+
+def test_tasks_stage_emits_orchestrated_receipt_after_related_work(repo: Path) -> None:
+    provisioned = provision_doc_run(repo, topic="orchestrated-receipt", tier="Standard")
+    run_id = str(provisioned["runId"])
+    state = _state_with_artifacts(repo, run_id)
+    state["relatedWorkScan"] = {"verdict": "ok", "proposals": []}
+    state["pendingRelatedWork"] = {
+        "kind": "related-work-checkpoint",
+        "status": "acknowledged",
+        "proposals": [],
+    }
+    state["stage"] = "tasks"
+    step = build_step(state, "tasks")
+    assert step["noFreeze"] is True
+    assert step["orchestrated"] is True
+    assert step["relatedWorkResolved"] is True
+    assert step["parentRunId"] == run_id
+
+
+def test_orchestrated_rescan_short_circuits_second_scan(repo: Path) -> None:
+    from planning_related import source_from_path
+
+    provisioned = provision_doc_run(repo, topic="rescan-short-circuit", tier="Standard")
+    run_id = str(provisioned["runId"])
+    state = _state_with_artifacts(repo, run_id)
+    with patch("doc_loop.run_related_work_scan") as mock_scan:
+        mock_scan.return_value = {"verdict": "ok", "proposals": [], "serializedForParent": []}
+        execute_mechanical_stage(repo, state, "related-work")
+    assert mock_scan.call_count == 1
+
+    source = source_from_path(repo, "docs/prds/081-prd-demo/prd.md")
+    receipt = {
+        "orchestrated": True,
+        "relatedWorkResolved": True,
+        "parentRunId": run_id,
+    }
+    with patch("planning_related.pg.discover_units") as mock_discover:
+        result = scan_related(
+            repo,
+            source,
+            mode="tasks-rescan",
+            orchestrated_receipt=receipt,
+        )
+        mock_discover.assert_not_called()
+    assert result["orchestratedShortCircuit"] is True
+    assert result["skippedRescan"] is True
+    assert result["proposals"] == []
+
+
+def test_standalone_tasks_rescan_still_runs_full_scan(repo: Path) -> None:
+    from planning_related import source_from_path
+
+    source = source_from_path(repo, "docs/prds/081-prd-demo/prd.md")
+    with patch("planning_related.pg.discover_units", return_value=[]) as mock_discover:
+        result = scan_related(repo, source, mode="tasks-rescan")
+        mock_discover.assert_called_once()
+    assert result.get("orchestratedShortCircuit") is not True
+    assert "humanGated" in result

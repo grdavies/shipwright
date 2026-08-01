@@ -174,3 +174,8 @@ Issue-store freeze / `verify-frozen-hash` entrypoints remain `scripts/planning_s
 shim). Canonical implementation lives in `scripts/planning_store_facade.py` — operators and CI still
 invoke the shim path; do not import the facade module from workflow commands.
 
+## Currency note
+
+Freeze durability continues through `planning_store.py` → `planning_store_facade.py` and
+`check_frozen_lib.py` / `check-frozen.py`. No behavior change in this refresh — commit bumps docs-currency
+binding against current freeze helpers.

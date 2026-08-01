@@ -156,10 +156,15 @@ def target_branch_from_state(state: dict[str, Any]) -> str | None:
     return None
 
 
-def scoped_paths(root: Path, target: str) -> dict[str, Path]:
-    """Per-branch scoped state/lock paths (PRD 013 R6/R9)."""
+def scoped_paths(root: Path, target: str, *, local: bool = False) -> dict[str, Path]:
+    """Per-branch scoped state/lock paths (PRD 013 R6/R9).
+
+    By default paths anchor to the primary repo root (R28). Pass ``local=True``
+    when resolving paths inside an orchestrator worktree mirror (R4).
+    """
     slug = slug_from_target(target)
-    cursor = root / ".cursor"
+    base = root.resolve() if local else _path_normalize_anchor(root)
+    cursor = base / ".cursor"
     runs = cursor / "sw-deliver-runs"
     return {
         "state": cursor / f"sw-deliver-state.{slug}.json",
@@ -169,8 +174,22 @@ def scoped_paths(root: Path, target: str) -> dict[str, Path]:
     }
 
 
+def _mirror_state_path(
+    mirror_root: Path,
+    *,
+    target: str | None = None,
+    state_hint: dict[str, Any] | None = None,
+) -> Path:
+    """Physical scoped state file inside an orchestrator worktree mirror (R4)."""
+    branch = target or (target_branch_from_state(state_hint) if state_hint else None)
+    if not is_feature_target(branch):
+        return mirror_root.resolve() / ".cursor" / LEGACY_STATE_NAME
+    assert branch is not None
+    return scoped_paths(mirror_root, branch, local=True)["state"]
+
+
 def legacy_paths(root: Path) -> dict[str, Path]:
-    cursor = root / ".cursor"
+    cursor = _cursor_dir(root)
     runs = cursor / "sw-deliver-runs"
     return {
         "state": cursor / LEGACY_STATE_NAME,
@@ -380,7 +399,7 @@ def resolve_state_path(
                         return legacy
                     return scoped
         return legacy
-    matches = sorted((root / ".cursor").glob("sw-deliver-state.*.json"))
+    matches = sorted(_cursor_dir(root).glob("sw-deliver-state.*.json"))
     if len(matches) == 1:
         return matches[0]
     return legacy
@@ -388,7 +407,8 @@ def resolve_state_path(
 
 def enumerate_scoped_runs(root: Path) -> list[dict[str, Any]]:
     """List live scoped deliver runs for index / cleanup (PRD 013 R10)."""
-    cursor = root / ".cursor"
+    anchor = _path_normalize_anchor(root)
+    cursor = anchor / ".cursor"
     runs: list[dict[str, Any]] = []
     for path in sorted(cursor.glob("sw-deliver-state.*.json")):
         slug = path.name.removeprefix("sw-deliver-state.").removesuffix(".json")
@@ -398,7 +418,7 @@ def enumerate_scoped_runs(root: Path) -> list[dict[str, Any]]:
         runs.append(
             {
                 "slug": slug,
-                "statePath": str(path.relative_to(root)),
+                "statePath": str(path.relative_to(anchor)),
                 "taskList": state.get("source_task_list"),
                 "verdict": state.get("verdict"),
                 "target": (state.get("target") or {}).get("branch"),
@@ -489,6 +509,11 @@ def path_normalize_anchor(start: Path) -> Path:
 
 # Back-compat alias for in-module callers.
 _path_normalize_anchor = path_normalize_anchor
+
+
+def _cursor_dir(root: Path) -> Path:
+    """Canonical ``.cursor`` directory under the primary repo root (R28)."""
+    return _path_normalize_anchor(root) / ".cursor"
 
 
 def _parse_state_ts(ts: str) -> datetime | None:
@@ -630,7 +655,7 @@ def persist_deliver_state_primary_first(
     primary_path = scoped_paths(repo_root, branch)["state"]
     prior: dict[str, Any] | None = _read_state_optional(primary_path)
     if not prior and mirror_root is not None:
-        prior = _read_state_optional(scoped_paths(mirror_root, branch)["state"])
+        prior = _read_state_optional(scoped_paths(mirror_root, branch, local=True)["state"])
     _assert_completion_finalize_allowed(repo_root, state, prior or None)
     now = utc_now()
     state["updatedAt"] = now
@@ -638,7 +663,7 @@ def persist_deliver_state_primary_first(
     write_json(primary_path, state)
     _write_legacy_breadcrumb(repo_root, target=branch, scoped_state=primary_path)
     if mirror_root is not None:
-        mirror_path = scoped_paths(mirror_root, branch)["state"]
+        mirror_path = scoped_paths(mirror_root, branch, local=True)["state"]
         mirror_path.parent.mkdir(parents=True, exist_ok=True)
         write_json(mirror_path, state)
     return primary_path
@@ -688,7 +713,7 @@ def repair_mirror_from_primary(
     mirror_root = Path(orch_raw).resolve()
     if mirror_root.resolve() == repo_root.resolve():
         return scoped_paths(repo_root, branch)["state"]
-    mirror_path = scoped_paths(mirror_root, branch)["state"]
+    mirror_path = scoped_paths(mirror_root, branch, local=True)["state"]
     mirror_path.parent.mkdir(parents=True, exist_ok=True)
     write_json(mirror_path, primary)
     return mirror_path
@@ -753,10 +778,9 @@ def sync_canonical_state_read(
     if isinstance(orch_raw, str) and orch_raw.strip():
         orch_root = Path(orch_raw).resolve()
         if orch_root != repo_root.resolve():
-            mirror_path = resolve_state_path(
+            mirror_path = _mirror_state_path(
                 orch_root,
                 target=target or target_branch_from_state(root_state),
-                task_list=task_list,
                 state_hint=root_state or state_hint,
             )
             mirror_state = _load_state_normalized(mirror_path, anchor=repo_root)
@@ -821,10 +845,9 @@ def ensure_canonical_state_synced(
     if isinstance(orch_raw, str) and orch_raw.strip():
         orch_root = Path(orch_raw).resolve()
         if orch_root != repo_root.resolve():
-            mirror_path = resolve_state_path(
+            mirror_path = _mirror_state_path(
                 orch_root,
                 target=target or target_branch_from_state(root_state),
-                task_list=task_list,
                 state_hint=root_state or state_hint,
             )
             mirror_state = _load_state_normalized(mirror_path, anchor=repo_root)
@@ -1059,7 +1082,9 @@ def discovery_entry_for_run(
         "target": target_branch_from_state(state),
         "taskList": state.get("source_task_list"),
         "verdict": state.get("verdict"),
-        "statePath": str(run_state_path(root, run_id).relative_to(root)),
+        "statePath": str(
+            run_state_path(root, run_id).relative_to(_path_normalize_anchor(root))
+        ),
         "updatedAt": state.get("updatedAt") or utc_now(),
     }
     if lock_key_digest:
@@ -1438,7 +1463,7 @@ def _resolve_lock_path(root: Path, args: list[str]) -> Path:
         return lock_path
     matches = [
         p
-        for p in sorted((root / ".cursor").glob("sw-deliver-*.lock"))
+        for p in sorted(_cursor_dir(root).glob("sw-deliver-*.lock"))
         if p.name != LEGACY_LOCK_NAME
     ]
     if len(matches) == 1:

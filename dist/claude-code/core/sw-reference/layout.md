@@ -104,12 +104,19 @@ read). After adoption, `legacyAdopted` / `adoptedPlanHash` on run-scoped `state.
 
 Doc-run exclusion uses `.cursor/sw-doc-run-locks/` (`wave_target_lock.acquire_doc_run_lock`).
 
+**Doc-to-feature handoff lock (PRD 085 R14):** under `file-store-feature-seed` publication mode the
+`feature-seed` stage acquires a doc-loop-scoped handoff lock (`wave_spec_seed_guard.acquire_doc_to_feature_handoff_lock`)
+before invoking `wave_spec_seed.py` with `remoteState.dryRun: false`, then releases it after seed verification.
+Concurrent deliver target-lock holders on the same branch fail closed (`target-lock-conflict`). Separate-project
+issue-store modes remain `skipped: true` and do not take the handoff lock.
+
 ### Target-lock and run-local lease paths (PRD 081 R19, R20)
 
 | Lock kind | Directory | Resolver | Journal |
 | --- | --- | --- | --- |
 | Target-branch exclusion | `.cursor/sw-target-locks/` | `wave_lock.target_lock_path_for` | `reclaim-journal.jsonl` |
 | Doc-run exclusion | `.cursor/sw-doc-run-locks/` | `wave_lock.doc_run_lock_path_for` | `reclaim-journal.jsonl` |
+| Doc-to-feature handoff | `.cursor/sw-doc-to-feature-handoff-locks/` | `wave_lock.doc_to_feature_handoff_lock_path_for` | `reclaim-journal.jsonl` |
 | Phase-head ship lease | `.cursor/sw-deliver-locks/` | `wave_lock.lock_path_for` | — |
 | Run-local lease record | `<runId>/lease.json` | `wave_run_paths.lease_path` | points at target-lock digest |
 
