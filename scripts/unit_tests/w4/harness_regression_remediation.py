@@ -164,7 +164,9 @@ HALT_FIX=$(mktemp -d "${TMPDIR:-/tmp}/sw-regression-halt.XXXXXX")
   cp "$ROOT/scripts/"*.py scripts/
   cp "$ROOT/scripts/wave.sh" scripts/ && chmod +x scripts/wave.sh
   echo '{"deliver":{"remediation":{"maxAttempts":2}}}' >.cursor/workflow.config.json
-  echo '{"mode":"phase","target":{"branch":"feat/demo","slug":"demo"},"items":[{"id":"1","slug":"alpha","branch":"feat/demo-phase-alpha"}],"waves":[["1"]],"edges":[]}' \
+  mkdir -p docs/prds/036-demo
+  echo '# fixture tasks' >docs/prds/036-demo/tasks.md
+  echo '{"mode":"phase","target":{"branch":"feat/demo","slug":"demo"},"source_task_list":"docs/prds/036-demo/tasks.md","items":[{"id":"1","slug":"alpha","branch":"feat/demo-phase-alpha"}],"waves":[["1"]],"edges":[]}' \
     >.cursor/sw-deliver-plan.json
   python3 -c "
 import json

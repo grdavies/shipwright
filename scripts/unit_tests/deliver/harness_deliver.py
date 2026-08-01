@@ -832,7 +832,7 @@ write_json(state_path, state)
 BR_FIX=$(mktemp -d)
 mkdir -p "$BR_FIX/.cursor"
 cat >"$BR_FIX/.cursor/sw-deliver-plan.json" <<'JSON'
-{"mode":"phase","edges":[{"from":"1","to":"3"},{"from":"2","to":"3"}],"items":[{"id":"1","slug":"alpha"},{"id":"2","slug":"beta"},{"id":"3","slug":"gamma"}]}
+{"mode":"phase","target":{"branch":"feat/demo"},"edges":[{"from":"1","to":"3"},{"from":"2","to":"3"}],"items":[{"id":"1","slug":"alpha"},{"id":"2","slug":"beta"},{"id":"3","slug":"gamma"}]}
 JSON
 cat >"$BR_FIX/.cursor/sw-deliver-state.json" <<'JSON'
 {"target":{"branch":"feat/demo"},"phases":{"1":{"id":"1","slug":"alpha","status":"blocked","cause":"verify:failed"},"2":{"id":"2","slug":"beta","status":"pending"},"3":{"id":"3","slug":"gamma","status":"pending"}}}
@@ -899,7 +899,7 @@ REVERT_FIX=$(mktemp -d)
   cp "$ROOT/version.txt" version.txt 2>/dev/null || echo "1.2.2" >version.txt
   git add CHANGELOG.md version.txt && git commit -q -m init-bookkeeping 2>/dev/null || true
   cat >.cursor/sw-deliver-plan.json <<JSON
-{"mode":"phase","edges":[{"from":"1","to":"2"}],"items":[{"id":"1","slug":"alpha"},{"id":"2","slug":"beta"}]}
+{"mode":"phase","target":{"branch":"feat/demo"},"edges":[{"from":"1","to":"2"}],"items":[{"id":"1","slug":"alpha"},{"id":"2","slug":"beta"}]}
 JSON
   cat >.cursor/sw-deliver-state.json <<JSON
 {"target":{"branch":"feat/demo"},"phases":{"1":{"id":"1","slug":"alpha","status":"green-merged","branch":"feat/demo-phase-alpha","mergeCommit":"$MERGE_SHA"},"2":{"id":"2","slug":"beta","status":"pending"}},"mergedPhases":[{"phaseSlug":"alpha","mergeCommit":"$MERGE_SHA"}],"orchestratorWorktree":{"path":"$REVERT_FIX"}}
