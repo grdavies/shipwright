@@ -516,53 +516,111 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
 
     import subprocess
 
-    proc = subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT_DIR / "wave_spec_seed.py"),
-            str(root),
-            "spec-seed",
-            "--task-list",
-            tasks_rel,
-            "--run-id",
-            f"doc-loop:{state.get('runId')}",
-            "--dry-run",
-        ],
-        capture_output=True,
-        text=True,
-        cwd=str(root),
+    from wave_spec_seed import resolve_target_branch
+    from wave_spec_seed_guard import (
+        acquire_doc_to_feature_handoff_lock,
+        release_doc_to_feature_handoff_lock,
     )
-    remote_state = {"branch": None, "commit": None, "dryRun": True}
+
+    run_id = f"doc-loop:{state.get('runId')}"
     try:
-        seed_payload = json.loads(proc.stdout or "{}")
-    except json.JSONDecodeError:
-        seed_payload = {"verdict": "fail", "detail": proc.stdout or proc.stderr}
-    exit_status = proc.returncode
-    if exit_status != 0:
+        target_branch, _slug, _docs_dir = resolve_target_branch(root, tasks_rel)
+    except SystemExit:
         return {
             "verdict": "fail",
-            "error": seed_payload.get("error") or "feature-seed-failed",
+            "error": "feature-seed-target-resolution-failed",
             "halt": "doc-loop:feature-seed",
-            "exitStatus": exit_status,
-            "seed": seed_payload,
         }
 
-    receipt = {
-        "transitionName": "feature-seed",
-        "publicationMode": mode,
-        "exitStatus": exit_status,
-        "remoteState": remote_state,
-        "seed": seed_payload,
-        "timestamp": utc_now(),
-        "status": "complete",
-    }
-    return {
-        "verdict": "pass",
-        "action": "feature-seed",
-        "publicationMode": mode,
-        "receipt": receipt,
-        "seed": seed_payload,
-    }
+    lock_acquire = acquire_doc_to_feature_handoff_lock(root, target_branch, run_id)
+    if lock_acquire.get("verdict") != "pass":
+        error = lock_acquire.get("error") or "handoff-lock-acquire-failed"
+        halt = "target-lock-conflict" if error == "target-lock-conflict" else "doc-loop:feature-seed"
+        if lock_acquire.get("holder"):
+            holder = lock_acquire["holder"]
+            if holder.get("kind") == "target-lock":
+                halt = "target-lock-conflict"
+        return {
+            "verdict": "fail",
+            "error": error,
+            "halt": halt,
+            "lock": lock_acquire,
+        }
+
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "wave_spec_seed.py"),
+                str(root),
+                "spec-seed",
+                "--task-list",
+                tasks_rel,
+                "--run-id",
+                run_id,
+            ],
+            capture_output=True,
+            text=True,
+            cwd=str(root),
+        )
+        remote_state: dict[str, Any] = {"branch": target_branch, "commit": None, "dryRun": True}
+        try:
+            seed_payload = json.loads(proc.stdout or "{}")
+        except json.JSONDecodeError:
+            seed_payload = {"verdict": "fail", "detail": proc.stdout or proc.stderr}
+        exit_status = proc.returncode
+        if exit_status != 0:
+            error = seed_payload.get("error") or "feature-seed-failed"
+            halt = seed_payload.get("halt") or "doc-loop:feature-seed"
+            if halt == "target-lock-conflict" or "target-lock-conflict" in str(error):
+                halt = "target-lock-conflict"
+            return {
+                "verdict": "fail",
+                "error": error,
+                "halt": halt,
+                "exitStatus": exit_status,
+                "seed": seed_payload,
+            }
+
+        commit_sha = seed_payload.get("commit")
+        branch = seed_payload.get("branch") or target_branch
+        skipped = seed_payload.get("skipped") is True
+        if commit_sha:
+            verify = subprocess.run(
+                ["git", "merge-base", "--is-ancestor", commit_sha, branch],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+            )
+            if verify.returncode != 0:
+                return {
+                    "verdict": "fail",
+                    "error": "feature-seed-commit-verify-failed",
+                    "halt": "doc-loop:feature-seed",
+                    "seed": seed_payload,
+                }
+            remote_state = {"branch": branch, "commit": commit_sha, "dryRun": False}
+        elif skipped:
+            remote_state = {"branch": branch, "commit": None, "dryRun": False}
+
+        receipt = {
+            "transitionName": "feature-seed",
+            "publicationMode": mode,
+            "exitStatus": exit_status,
+            "remoteState": remote_state,
+            "seed": seed_payload,
+            "timestamp": utc_now(),
+            "status": "complete",
+        }
+        return {
+            "verdict": "pass",
+            "action": "feature-seed",
+            "publicationMode": mode,
+            "receipt": receipt,
+            "seed": seed_payload,
+        }
+    finally:
+        release_doc_to_feature_handoff_lock(root, target_branch, run_id)
 
 
 def run_related_work_scan(root: Path, state: dict[str, Any]) -> dict[str, Any]:
