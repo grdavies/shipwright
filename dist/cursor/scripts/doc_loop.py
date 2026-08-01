@@ -236,6 +236,13 @@ def next_stage_after(state: dict[str, Any], current: str) -> str | None:
     return None
 
 
+def related_work_resolved(state: dict[str, Any]) -> bool:
+    pending = state.get("pendingRelatedWork") or {}
+    if pending.get("status") == "acknowledged":
+        return True
+    return bool(state.get("relatedWorkScan"))
+
+
 def build_step(state: dict[str, Any], stage: str) -> dict[str, Any]:
     step: dict[str, Any] = {
         "action": stage,
@@ -247,6 +254,10 @@ def build_step(state: dict[str, Any], stage: str) -> dict[str, Any]:
     }
     if stage == "tasks":
         step["noFreeze"] = True
+        if related_work_resolved(state):
+            step["orchestrated"] = True
+            step["relatedWorkResolved"] = True
+            step["parentRunId"] = state.get("runId")
     if stage == "related-work-checkpoint":
         step["checkpoint"] = state.get("pendingRelatedWork") or {
             "kind": "related-work-checkpoint",
