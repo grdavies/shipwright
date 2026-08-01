@@ -72,7 +72,6 @@ PLANNING_DOC_BINDINGS: tuple[dict[str, Any], ...] = (
         "doc": "core/rules/memory-guardrails.mdc",
         "sources": (
             "scripts/memory_redact.py",
-            "scripts/planning_visibility.py",
         ),
         "markers": (
             "--destination",
