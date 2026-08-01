@@ -12,7 +12,7 @@ from typing import Any
 
 _CANONICAL_MODULE_NAME = "planning_store_facade"
 _CANONICAL_REL = "scripts/planning_store_facade.py"
-_REPO_ROOT_DEPTH = 2
+_REPO_ROOT_DEPTH = 1
 _EXPORTED_NAMES = (
     'BITBUCKET_ISSUE_STORE_GUIDANCE',
     'DEFAULT_BACKEND',
