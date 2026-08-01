@@ -8,9 +8,10 @@ import os
 import re
 import subprocess
 import sys
+from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -30,6 +31,22 @@ def is_driver_invoked(explicit: bool | None = None) -> bool:
     if os.environ.get("SW_DOC_ORCHESTRATOR", "").strip().lower() in {"1", "true", "yes"}:
         return True
     return False
+
+
+@contextmanager
+def scoped_doc_driver_env() -> Iterator[None]:
+    """Temporarily set SW_DOC_DRIVER; restore prior value (including unset) on exit."""
+    key = "SW_DOC_DRIVER"
+    had_key = key in os.environ
+    prior = os.environ.get(key)
+    os.environ[key] = "1"
+    try:
+        yield
+    finally:
+        if had_key:
+            os.environ[key] = prior  # type: ignore[assignment]
+        else:
+            os.environ.pop(key, None)
 
 
 def parse_frontmatter(text: str) -> dict[str, str]:
