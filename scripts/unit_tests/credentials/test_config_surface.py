@@ -123,3 +123,30 @@ class TestPatternViolatingId:
             validate_project_id("ACME_Demo")
         assert exc.value.code == "project-id-pattern"
         assert PROJECT_ID_PATTERN_DOC in exc.value.message
+
+
+class TestShipwrightWorkflowConfig:
+    def test_repo_workflow_config_resolves_project_id(self) -> None:
+        root = Path(__file__).resolve().parents[3]
+        cfg_path = root / ".cursor" / "workflow.config.json"
+        assert cfg_path.is_file(), "workflow.config.json must exist for R19"
+        import json
+
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        result = resolve_config_surface(cfg)
+        assert result.project_id == "shipwright"
+
+    def test_planning_doctor_credential_probe_not_project_id_absent(self) -> None:
+        import importlib
+
+        root = Path(__file__).resolve().parents[3]
+        doctor = importlib.import_module("planning-doctor")
+        out = doctor.doctor(root, sweep=False)
+        probe = next(
+            (check for check in out.get("checks", []) if check.get("check") == "credential-probe"),
+            None,
+        )
+        assert probe is not None
+        assert probe.get("failureCode") != "project-id-absent"
+        if out.get("verdict") == "degraded":
+            assert probe.get("failureCode") != "project-id-absent"

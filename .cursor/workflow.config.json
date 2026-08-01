@@ -1,5 +1,6 @@
 {
   "$schema": "../.sw/config.schema.json",
+  "projectId": "shipwright",
   "review": {
     "provider": "none"
   },
