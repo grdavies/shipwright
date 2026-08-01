@@ -181,7 +181,7 @@ Publication mode is store-conditioned — the doc driver never reaches standalon
 
 | Store mode | Publication path | In-driver behaviour |
 | --- | --- | --- |
-| File-store (`file-store-feature-seed`) | `wave_spec_seed.py` feature-seed onto `<type>/<slug>` at freeze/afterTasks | Acquire doc-to-feature handoff lock → real non-dry-run seed → release lock (PRD 085 R14); no nested docs-PR |
+| File-store (`file-store-feature-seed`) | `wave_spec_seed.py` feature-seed onto `<type>/<slug>` at freeze/afterTasks | Acquire doc-to-feature handoff lock → real non-dry-run seed → release lock; no nested docs-PR |
 | Issue-store (same-repo) | Same feature-seed path when publication mode permits | Handoff lock + seed as above |
 | Issue-store (`separate-project-store-only`) | Feature-seed skipped | `skipped: true` — handoff lock not acquired |
 | Issue-store (materialize) | Issue bodies authoritative; materialize at deliver run-entry | `planning_materialize.py` verifies frozen hash |
