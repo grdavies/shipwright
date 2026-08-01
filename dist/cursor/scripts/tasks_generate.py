@@ -25,7 +25,31 @@ SUBTASK_CHECKBOX = re.compile(
     r"^-\s+\[([ xX])\]\s+(?:\*\*)?(\d+(?:\.\d+)+)(?:\*\*)?\s+(.+)$"
 )
 FILE_LINE = re.compile(r"^(\s*-?\s*\*\*File:\*\*\s*)(.+)$")
+WIRED_LINE = re.compile(r"^\s*-\s*\*\*(?:Wired|Callsite):\*\*\s*(.+)$", re.IGNORECASE)
 REF_ID_PATTERN = re.compile(r"^\d+(?:\.\d+)+$")
+
+# Bounded wiring categories (PRD 085 R15) — Expected-text signals only.
+WIRING_CATEGORY_PATTERNS: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"main\(\)\s+dispatch", re.IGNORECASE), "main-dispatch"),
+    (re.compile(r"new\s+CLI\s+subcommand", re.IGNORECASE), "cli-subcommand"),
+    (re.compile(r"CLI\s+subcommand", re.IGNORECASE), "cli-subcommand"),
+    (re.compile(r"hook\s+registration", re.IGNORECASE), "hook-registration"),
+    (
+        re.compile(
+            r"backend[/\s-]*adapter\s+registration|adapter\s+registration\s+function|"
+            r"backend/adapter\s+registration",
+            re.IGNORECASE,
+        ),
+        "backend-registration",
+    ),
+    (
+        re.compile(
+            r"\.github/workflows/.*\.yml|new\s+workflow\s*\(|workflow\s+file",
+            re.IGNORECASE,
+        ),
+        "workflow-file",
+    ),
+]
 
 
 def emit(obj: dict[str, Any], code: int = 0) -> None:
@@ -86,6 +110,8 @@ class SubtaskRef:
     files: list[str] = field(default_factory=list)
     file_line_index: int | None = None
     file_raw: str = ""
+    expected: str = ""
+    wired: str = ""
 
     def clone(self) -> SubtaskRef:
         return SubtaskRef(
@@ -96,6 +122,8 @@ class SubtaskRef:
             files=list(self.files),
             file_line_index=self.file_line_index,
             file_raw=self.file_raw,
+            expected=self.expected,
+            wired=self.wired,
         )
 
 
@@ -127,6 +155,13 @@ def parse_phase_subtasks(chunk: str) -> list[SubtaskRef]:
             current.files.extend(paths)
             current.file_line_index = len(current.detail_lines) - 1
             current.file_raw = raw
+            continue
+        wired_match = WIRED_LINE.match(line)
+        if wired_match:
+            current.wired = wired_match.group(1).strip().strip("`")
+            continue
+        if re.match(r"^\s*-\s*\*\*Expected:\*\*\s*(.+)$", line):
+            current.expected = re.sub(r"^\s*-\s*\*\*Expected:\*\*\s*", "", line).strip()
     if current:
         refs.append(current)
     return refs
@@ -397,6 +432,31 @@ def apply_granularity(root: Path, task_list: Path, *, inplace: bool) -> dict[str
     return result
 
 
+def expected_matches_wiring_category(expected: str) -> str | None:
+    text = (expected or "").strip()
+    if not text:
+        return None
+    for pattern, category in WIRING_CATEGORY_PATTERNS:
+        if pattern.search(text):
+            return category
+    return None
+
+
+def check_wiring_fields(content: str) -> list[str]:
+    """Flag sub-tasks whose Expected matches a wiring category but lack Wired:/Callsite: (R15)."""
+    failures: list[str] = []
+    for phase in wd.parse_phases(content):
+        pid = phase["id"]
+        for ref in parse_phase_subtasks(doc_format.phase_section_text(content, pid)):
+            category = expected_matches_wiring_category(ref.expected)
+            if category and not (ref.wired or "").strip():
+                failures.append(
+                    f"{ref.ref_id}: Expected matches wiring category {category!r} "
+                    f"but missing Wired:/Callsite: field"
+                )
+    return failures
+
+
 def check_granularity(root: Path, task_list: Path) -> dict[str, Any]:
     text = task_list.read_text(encoding="utf-8")
     rel = rel_task_list(task_list, root)
@@ -421,6 +481,9 @@ def check_granularity(root: Path, task_list: Path) -> dict[str, Any]:
 
     if phase_sizing.has_advisory_block(text):
         failures.append("advisory sizing block present — strip before freeze (R30)")
+
+    wiring_failures = check_wiring_fields(content)
+    failures.extend(wiring_failures)
 
     verdict = "pass" if not failures else "fail"
     return {

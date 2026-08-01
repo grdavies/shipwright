@@ -127,6 +127,31 @@ inflating merge-gate load).
 Parent phase items (`1.`, `2.`) may remain summary-level; **numbered sub-tasks** (`1.1`, `1.2`) carry File +
 Expected for `/sw-execute` plan-self-review.
 
+### Wiring proof (`Wired:` / `Callsite:`) (PRD 085 R15)
+
+When a sub-task's **Expected** introduces a new production-reachable entry point in one of these **bounded
+categories**, the row MUST declare a **`Wired:`** (or alias **`Callsite:`**) field naming the calling
+module or file that dispatches to / registers the produced artifact:
+
+| Category | Example `Expected` signal |
+| --- | --- |
+| Script `main()` dispatch branch | "new script's `main()` dispatch branch" |
+| CLI subcommand | "adds a new CLI subcommand" |
+| Hook registration | "new hook registration" |
+| Backend / adapter registration | "backend/adapter registration function" |
+| Workflow file | "new workflow (`.github/workflows/*.yml`) file" |
+
+```markdown
+- [ ] 3.2 Register the foo backend (R4)
+  - **File:** `scripts/credentials/backends/foo.py`
+  - **Expected:** adds a new backend/adapter registration function
+  - **Wired:** `scripts/credentials/resolver.py`
+  - **R-IDs:** R4
+```
+
+`tasks_generate.py check` enforces the field for rows matching these categories (not a general "every
+artifact must declare a caller" rule). `claims_audit.py brief` performs a bounded static reachability check
+that the cited callsite file references the produced artifact in the branch diff (R16).
 
 ## Execute-tier granularity (PRD 055 R16–R20)
 
