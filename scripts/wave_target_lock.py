@@ -237,6 +237,31 @@ def release_doc_run_lock(root: Path, topic: str, run_id: str) -> dict[str, Any]:
     return {"verdict": "pass", "action": "doc-run-lock-release", "topic": topic}
 
 
+def release_doc_run_lock_on_terminal_complete(
+    root: Path,
+    topic: str,
+    run_id: str,
+) -> dict[str, Any]:
+    """Release doc-run lock when a doc-loop run reaches terminal ``complete`` (R9)."""
+    lock_path = doc_run_lock_path_for(root, topic)
+    had_lock = lock_path.is_file()
+    out = release_doc_run_lock(root, topic, run_id)
+    if out.get("verdict") == "pass" and had_lock:
+        append_doc_run_lock_journal(
+            root,
+            {
+                "action": "doc-run-lock-terminal-release",
+                "topic": topic,
+                "runId": run_id,
+                "timestamp": utc_now(),
+                "lockPath": str(lock_path),
+            },
+        )
+        out["action"] = "doc-run-lock-terminal-release"
+    out["terminalComplete"] = True
+    return out
+
+
 def cmd_doc_acquire(root: Path, args: list[str]) -> None:
     topic = parse_kv(args, "--topic")
     run_id = parse_kv(args, "--run-id") or os.environ.get("SW_DOC_RUN_ID", "")
