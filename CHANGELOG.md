@@ -734,6 +734,7 @@
 * merge phase doc-behavior-drift-and-compliance-cli-docs-conductor-docs-missing-config-key-r12-r13-r19 into feat/deliver-and-doc-loop-orchestration-integrity (8adc7b7) <!-- sw-deliver:doc-behavior-drift-and-compliance-cli-docs-conductor-docs-missing-config-key-r12-r13-r19 -->
 * merge phase wiring-proof-task-row-schema-field-and-reachability-check-r15-r16 into feat/deliver-and-doc-loop-orchestration-integrity (34222ab) <!-- sw-deliver:wiring-proof-task-row-schema-field-and-reachability-check-r15-r16 -->
 * merge phase wiring-proof-deferred-placeholder-lint-r17 into feat/deliver-and-doc-loop-orchestration-integrity (d1659ed) <!-- sw-deliver:wiring-proof-deferred-placeholder-lint-r17 -->
+* merge phase wiring-proof-live-probe-producers-for-the-operator-projection-adapter-complete-claim-r18 into feat/deliver-and-doc-loop-orchestration-integrity (f13ced7) <!-- sw-deliver:wiring-proof-live-probe-producers-for-the-operator-projection-adapter-complete-claim-r18 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
