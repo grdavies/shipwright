@@ -20,7 +20,12 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from wave_json_io import read_json, write_json
 from wave_run_paths import RunIdRequiredError, require_run_id
-from wave_target_lock import acquire_doc_run_lock, heartbeat_doc_run_lock, release_doc_run_lock
+from wave_target_lock import (
+    acquire_doc_run_lock,
+    heartbeat_doc_run_lock,
+    release_doc_run_lock,
+    release_doc_run_lock_on_terminal_complete,
+)
 from wave_transition_receipt import hash_json
 
 DOC_RUNS_DIR_REL = ".cursor/sw-doc-runs"
@@ -397,6 +402,17 @@ def advance_stage(state: dict[str, Any], completed_stage: str) -> dict[str, Any]
     return updated
 
 
+def finalize_doc_run_terminal(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """Release the topic doc-run lock when the run reaches terminal ``complete`` (R9)."""
+    topic = str(state.get("topic") or "")
+    run_id = str(state.get("runId") or "")
+    if not topic or not run_id:
+        return {"verdict": "fail", "error": "doc-state-missing-topic-or-run-id"}
+    if str(state.get("stage") or "") != "complete" or state.get("verdict") != "complete":
+        return {"verdict": "skip", "note": "not-terminal-complete"}
+    return release_doc_run_lock_on_terminal_complete(root, topic, run_id)
+
+
 def artifact_rel_path(state: dict[str, Any], key: str) -> str | None:
     paths = state.get("artifactPaths") or {}
     rel = paths.get(key)
@@ -646,6 +662,8 @@ def execute_mechanical_stage(root: Path, state: dict[str, Any], stage: str) -> d
         result["halted"] = True
         result["halt"] = new_state.get("halt")
         result["deliverHandoffReachable"] = deliver_handoff_reachable(new_state)
+    if new_state.get("stage") == "complete" and new_state.get("verdict") == "complete":
+        result["lockRelease"] = finalize_doc_run_terminal(root, new_state)
     return result
 
 
@@ -891,6 +909,7 @@ def cmd_doc_loop(root: Path, args: list[str]) -> None:
             emit(handshake_payload(state=state, step=step, resumed=resumed, dry_run=True))
 
         if stage in TERMINAL_STAGES:
+            lock_release = finalize_doc_run_terminal(root, state)
             emit(
                 handshake_payload(
                     state=state,
@@ -898,6 +917,7 @@ def cmd_doc_loop(root: Path, args: list[str]) -> None:
                     resumed=resumed,
                     stepsTaken=steps_taken,
                     complete=True,
+                    lockRelease=lock_release,
                 )
             )
 
