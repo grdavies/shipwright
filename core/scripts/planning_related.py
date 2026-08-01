@@ -307,7 +307,39 @@ def format_confirm_list(proposals, redacted_context):
     return "\n".join(lines)
 
 
-def scan_related(root, source, *, mode, refresh_stale=False, driver_invoked: bool | None = None):
+def orchestrated_short_circuit_result(source, *, mode: str, parent_run_id: str | None) -> dict[str, Any]:
+    return {
+        "verdict": "ok",
+        "mode": mode,
+        "orchestratedShortCircuit": True,
+        "orchestrated": True,
+        "relatedWorkResolved": True,
+        "parentRunId": parent_run_id,
+        "source": source.unit_id,
+        "proposals": [],
+        "serializedForParent": [],
+        "humanGated": False,
+        "deferredConfirm": False,
+        "skippedRescan": True,
+    }
+
+
+def scan_related(
+    root,
+    source,
+    *,
+    mode,
+    refresh_stale=False,
+    driver_invoked: bool | None = None,
+    orchestrated_receipt: dict[str, Any] | None = None,
+):
+    if mode == "tasks-rescan" and orchestrated_receipt:
+        if orchestrated_receipt.get("orchestrated") and orchestrated_receipt.get("relatedWorkResolved"):
+            return orchestrated_short_circuit_result(
+                source,
+                mode=mode,
+                parent_run_id=orchestrated_receipt.get("parentRunId"),
+            )
     cfg = load_workflow_config(pp.git_root(root))
     pull_cfg = pull_in_config(cfg)
     state = load_state(root)
@@ -442,12 +474,20 @@ def cmd_scan(root, args):
     if not args.path:
         fail("--path required for scan")
     driver_invoked = bool(getattr(args, "driver_invoked", False))
+    orchestrated_receipt = None
+    if bool(getattr(args, "orchestrated", False)):
+        orchestrated_receipt = {
+            "orchestrated": True,
+            "relatedWorkResolved": True,
+            "parentRunId": (getattr(args, "parent_run_id", "") or "").strip() or None,
+        }
     result = scan_related(
         root,
         source_from_path(root, args.path),
         mode=args.mode,
         refresh_stale=bool(args.refresh_stale),
         driver_invoked=driver_invoked,
+        orchestrated_receipt=orchestrated_receipt,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
     return 0
@@ -473,6 +513,12 @@ def main(argv=None):
     p_scan.add_argument("--mode", choices=["creation", "tasks-rescan"], default="creation")
     p_scan.add_argument("--refresh-stale", action="store_true")
     p_scan.add_argument("--driver-invoked", action="store_true")
+    p_scan.add_argument(
+        "--orchestrated",
+        action="store_true",
+        help="doc-loop orchestrated receipt: skip tasks-rescan when related-work already resolved",
+    )
+    p_scan.add_argument("--parent-run-id", default="", help="doc-loop run id for orchestrated receipt")
     p_scan.set_defaults(func=cmd_scan)
     p_confirm = sub.add_parser("confirm")
     p_confirm.add_argument("--path", required=True)
