@@ -1,7 +1,8 @@
-"""PRD 085 R9 — doc-loop terminal completion releases doc-run lock."""
+"""PRD 085 R9/R10 — doc-loop terminal completion and doc-driver env scoping."""
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -12,12 +13,15 @@ scripts = Path(__file__).resolve().parents[2]
 if str(scripts) not in sys.path:
     sys.path.insert(0, str(scripts))
 
+from check_frozen_lib import is_driver_invoked
 from doc_loop import (
     acknowledge_checkpoint,
     consume_agent_stage,
     execute_mechanical_stage,
+    freeze_stage_artifact,
     load_doc_state,
     provision_doc_run,
+    run_related_work_scan,
     set_pending_checkpoint,
 )
 from wave_lock import doc_run_lock_path_for
@@ -117,3 +121,74 @@ def test_terminal_completion_releases_doc_run_lock(repo: Path) -> None:
 
     state = load_doc_state(repo, run_id)
     assert state["verdict"] == "complete"
+
+
+def _state_with_prd(repo: Path, run_id: str) -> dict:
+    state = load_doc_state(repo, run_id)
+    state["unitIds"] = {"prd": "085-prd-demo", "tasks": "tasks-085-demo"}
+    state["artifactPaths"] = {
+        "prd": "docs/prds/085-prd-demo/prd.md",
+        "tasks": "docs/prds/085-prd-demo/tasks-085-demo.md",
+    }
+    return state
+
+
+def test_doc_driver_env_restored_after_related_work_scan(repo: Path) -> None:
+    """R10 — driver-invoked signal via parameter; SW_DOC_DRIVER not leaked."""
+    prd_dir = repo / "docs/prds/085-prd-demo"
+    prd_dir.mkdir(parents=True, exist_ok=True)
+    (prd_dir / "prd.md").write_text("---\ntype: prd\n---\n# Demo\n", encoding="utf-8")
+
+    provisioned = provision_doc_run(repo, topic="driver-env-scope", tier="Standard")
+    run_id = str(provisioned["runId"])
+    state = _state_with_prd(repo, run_id)
+
+    os.environ.pop("SW_DOC_DRIVER", None)
+    captured: list[tuple[bool | None, str | None]] = []
+
+    def capture_scan(_root, _source, *, mode, driver_invoked=None, **kwargs):
+        captured.append((driver_invoked, os.environ.get("SW_DOC_DRIVER")))
+        return {"verdict": "ok", "proposals": []}
+
+    with patch("planning_related.source_from_path", return_value=object()):
+        with patch("planning_related.scan_related", side_effect=capture_scan):
+            run_related_work_scan(repo, state)
+
+    assert captured == [(True, None)]
+    assert os.environ.get("SW_DOC_DRIVER") is None
+
+    os.environ["SW_DOC_DRIVER"] = "legacy"
+    with patch("planning_related.source_from_path", return_value=object()):
+        with patch("planning_related.scan_related", side_effect=capture_scan):
+            run_related_work_scan(repo, state)
+    assert os.environ.get("SW_DOC_DRIVER") == "legacy"
+
+
+def test_freeze_stage_driver_invoked_without_env_mutation(repo: Path) -> None:
+    """R10 — freeze path passes driver_invoked to is_driver_invoked without env mutation."""
+    prd_dir = repo / "docs/prds/085-prd-demo"
+    prd_dir.mkdir(parents=True, exist_ok=True)
+    (prd_dir / "prd.md").write_text("---\ntype: prd\n---\n# Demo\n", encoding="utf-8")
+
+    provisioned = provision_doc_run(repo, topic="freeze-driver-param", tier="Standard")
+    run_id = str(provisioned["runId"])
+    state = _state_with_prd(repo, run_id)
+
+    os.environ.pop("SW_DOC_DRIVER", None)
+    seen: list[bool] = []
+
+    def fake_freeze(_root, _artifact, *, owner, driver_invoked, unit_id=None, **kwargs):
+        seen.append(is_driver_invoked(driver_invoked))
+        return {
+            "verdict": "pass",
+            "owner": owner,
+            "durabilityState": "verified",
+            "lifecycleState": "frozen",
+            "revision": "rev",
+        }
+
+    with patch("check_frozen_lib.freeze_artifact", side_effect=fake_freeze):
+        freeze_stage_artifact(repo, state, "freeze-prd")
+
+    assert seen == [True]
+    assert os.environ.get("SW_DOC_DRIVER") is None
