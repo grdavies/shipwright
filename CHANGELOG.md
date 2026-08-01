@@ -730,6 +730,7 @@
 * merge phase freeze-integrity-split-recursive-freeze-path-and-harden-idempotency-r5-r6 into feat/deliver-and-doc-loop-orchestration-integrity (2c5841a) <!-- sw-deliver:freeze-integrity-split-recursive-freeze-path-and-harden-idempotency-r5-r6 -->
 * merge phase run-identity-locking-fail-closed-plan-adoption-r1-r2 into feat/deliver-and-doc-loop-orchestration-integrity (1e7a3f3) <!-- sw-deliver:run-identity-locking-fail-closed-plan-adoption-r1-r2 -->
 * merge phase freeze-integrity-split-recursive-freeze-path-and-harden-idempotency-r5-r6 into feat/deliver-and-doc-loop-orchestration-integrity (9038a3e) <!-- sw-deliver:freeze-integrity-split-recursive-freeze-path-and-harden-idempotency-r5-r6 -->
+* merge phase doc-loop-robustness-run-id-validation-and-canonical-anchoring-r7-r8 into feat/deliver-and-doc-loop-orchestration-integrity (4610270) <!-- sw-deliver:doc-loop-robustness-run-id-validation-and-canonical-anchoring-r7-r8 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
