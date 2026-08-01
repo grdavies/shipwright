@@ -6319,19 +6319,19 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/tasks/SKILL.md:142:tasks_generate.py",
+      "id": "core/skills/tasks/SKILL.md:167:tasks_generate.py",
       "tree": "core/skills",
       "file": "core/skills/tasks/SKILL.md",
-      "line": 142,
+      "line": 167,
       "column": 8,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/tasks/SKILL.md:143:tasks_generate.py",
+      "id": "core/skills/tasks/SKILL.md:168:tasks_generate.py",
       "tree": "core/skills",
       "file": "core/skills/tasks/SKILL.md",
-      "line": 143,
+      "line": 168,
       "column": 8,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
@@ -12016,19 +12016,19 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/tasks/SKILL.md:142:tasks_generate.py",
+      "id": "dist/claude-code/skills/tasks/SKILL.md:167:tasks_generate.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/tasks/SKILL.md",
-      "line": 142,
+      "line": 167,
       "column": 8,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/tasks/SKILL.md:143:tasks_generate.py",
+      "id": "dist/claude-code/skills/tasks/SKILL.md:168:tasks_generate.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/tasks/SKILL.md",
-      "line": 143,
+      "line": 168,
       "column": 8,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
@@ -17398,19 +17398,19 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/tasks/SKILL.md:142:tasks_generate.py",
+      "id": "dist/cursor/skills/tasks/SKILL.md:167:tasks_generate.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/tasks/SKILL.md",
-      "line": 142,
+      "line": 167,
       "column": 8,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/tasks/SKILL.md:143:tasks_generate.py",
+      "id": "dist/cursor/skills/tasks/SKILL.md:168:tasks_generate.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/tasks/SKILL.md",
-      "line": 143,
+      "line": 168,
       "column": 8,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
