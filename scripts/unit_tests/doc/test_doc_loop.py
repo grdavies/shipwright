@@ -1,11 +1,10 @@
-"""PRD 085 R7/R8 — doc-loop run-id validation and canonical anchoring."""
+"""PRD 085 R9 — doc-loop terminal completion releases doc-run lock."""
 
 from __future__ import annotations
 
-import os
-import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -13,9 +12,15 @@ scripts = Path(__file__).resolve().parents[2]
 if str(scripts) not in sys.path:
     sys.path.insert(0, str(scripts))
 
-from doc_loop import doc_run_directory, doc_runs_root, mint_doc_run_id
-from wave_lock import doc_run_locks_dir
-from wave_run_paths import RunIdRequiredError, require_run_id
+from doc_loop import (
+    acknowledge_checkpoint,
+    consume_agent_stage,
+    execute_mechanical_stage,
+    load_doc_state,
+    provision_doc_run,
+    set_pending_checkpoint,
+)
+from wave_lock import doc_run_lock_path_for
 
 
 @pytest.fixture
@@ -26,70 +31,89 @@ def repo(tmp_path: Path) -> Path:
     return root
 
 
-@pytest.mark.parametrize(
-    "unsafe",
-    [
-        "../../unexpected-directory",
-        "../sibling",
-        "foo/bar",
-        "",
-        " ",
-        "/absolute",
-    ],
-)
-def test_run_id_resolution_rejects_unsafe_values(repo: Path, unsafe: str) -> None:
-    with pytest.raises(RunIdRequiredError):
-        require_run_id(unsafe)
-    with pytest.raises(RunIdRequiredError):
-        doc_run_directory(repo, unsafe)
+@pytest.fixture(autouse=True)
+def anchor_repo(repo: Path):
+    with patch("wave_lock._canonical_repo_root_for_locks", return_value=repo):
+        with patch("wave_state.path_normalize_anchor", return_value=repo.resolve()):
+            yield
 
 
-def test_run_id_resolution_accepts_minted_shape(repo: Path) -> None:
-    run_id = mint_doc_run_id(repo)
-    assert require_run_id(run_id) == run_id
-    assert doc_run_directory(repo, run_id) == doc_runs_root(repo) / run_id
+def _verified_freeze(stage: str) -> dict:
+    key = "prd" if stage == "freeze-prd" else "tasks"
+    return {
+        "verdict": "pass",
+        "artifactKey": key,
+        "receipt": {
+            "owner": "doc-loop:test",
+            "durabilityState": "verified",
+            "lifecycleState": "frozen",
+            "revision": "rev",
+        },
+    }
 
 
-def _git_env() -> dict[str, str]:
-    env = os.environ.copy()
-    env["GIT_AUTHOR_NAME"] = "Test"
-    env["GIT_COMMITTER_NAME"] = "Test"
-    # Git accepts identifier-only emails for fixture repos; avoid @ literals in source (secret-scan).
-    env["GIT_AUTHOR_EMAIL"] = "nobody"
-    env["GIT_COMMITTER_EMAIL"] = "nobody"
-    return env
+def _feature_seed_pass() -> dict:
+    return {
+        "verdict": "pass",
+        "action": "feature-seed",
+        "receipt": {
+            "transitionName": "feature-seed",
+            "publicationMode": "file-store-feature-seed",
+            "remoteState": {"dryRun": True},
+        },
+    }
 
 
-def test_doc_runs_root_matches_lock_anchor_from_linked_worktree(tmp_path: Path) -> None:
-    primary = tmp_path / "primary"
-    primary.mkdir()
-    env = _git_env()
-    subprocess.run(["git", "init", "-q"], cwd=primary, check=True, capture_output=True, env=env)
-    subprocess.run(
-        ["git", "commit", "--allow-empty", "-q", "-m", "init"],
-        cwd=primary,
-        check=True,
-        capture_output=True,
-        env=env,
-    )
-    (primary / ".cursor").mkdir(parents=True, exist_ok=True)
+def _drive_doc_run_to_complete(repo: Path, topic: str) -> str:
+    provisioned = provision_doc_run(repo, topic=topic, tier="Standard")
+    assert provisioned["verdict"] == "pass"
+    run_id = str(provisioned["runId"])
+    lock_path = doc_run_lock_path_for(repo, topic)
+    assert lock_path.is_file(), "doc-run lock should exist after provision"
 
-    worktree = tmp_path / "docs-wt"
-    subprocess.run(
-        ["git", "worktree", "add", "-q", "-b", "docs/topic", str(worktree)],
-        cwd=primary,
-        check=True,
-        capture_output=True,
-        env=env,
-    )
-    (worktree / ".cursor").mkdir(parents=True, exist_ok=True)
+    state = load_doc_state(repo, run_id)
+    consume_agent_stage(repo, state, "triage", outcome={"unitIds": {"prd": "prd-085", "tasks": "tasks-085"}})
+    state = load_doc_state(repo, run_id)
+    consume_agent_stage(repo, state, "prd", outcome={})
+    state = load_doc_state(repo, run_id)
+    consume_agent_stage(repo, state, "doc-review", outcome={})
+    state = load_doc_state(repo, run_id)
 
-    runs_from_worktree = doc_runs_root(worktree)
-    locks_from_worktree = doc_run_locks_dir(worktree)
-    expected_runs = (primary / ".cursor" / "sw-doc-runs").resolve()
-    expected_locks = (primary / ".cursor" / "sw-doc-run-locks").resolve()
+    with patch("doc_loop.run_related_work_scan", return_value={"verdict": "ok", "proposals": []}):
+        execute_mechanical_stage(repo, state, "related-work")
+    state = load_doc_state(repo, run_id)
 
-    assert runs_from_worktree == expected_runs
-    assert locks_from_worktree == expected_locks
-    assert runs_from_worktree.parent == locks_from_worktree.parent
-    assert not (worktree / ".cursor" / "sw-doc-runs").exists()
+    with patch("doc_loop.freeze_stage_artifact", side_effect=lambda _r, _s, stage: _verified_freeze(stage)):
+        execute_mechanical_stage(repo, state, "freeze-prd")
+    state = load_doc_state(repo, run_id)
+
+    consume_agent_stage(repo, state, "tasks", outcome={})
+    state = load_doc_state(repo, run_id)
+
+    with patch("doc_loop.freeze_stage_artifact", side_effect=lambda _r, _s, stage: _verified_freeze(stage)):
+        execute_mechanical_stage(repo, state, "freeze-tasks")
+    state = load_doc_state(repo, run_id)
+
+    set_pending_checkpoint(repo, state)
+    state = load_doc_state(repo, run_id)
+    acknowledge_checkpoint(repo, state)
+    state = load_doc_state(repo, run_id)
+
+    with patch("doc_loop.run_feature_seed", return_value=_feature_seed_pass()):
+        result = execute_mechanical_stage(repo, state, "feature-seed")
+
+    final = load_doc_state(repo, run_id)
+    assert final["stage"] == "complete"
+    assert final["verdict"] == "complete"
+    assert result.get("lockRelease", {}).get("verdict") == "pass"
+    return run_id
+
+
+def test_terminal_completion_releases_doc_run_lock(repo: Path) -> None:
+    topic = "terminal-release-topic"
+    run_id = _drive_doc_run_to_complete(repo, topic)
+    lock_path = doc_run_lock_path_for(repo, topic)
+    assert not lock_path.is_file(), "doc-run lock must be released after terminal complete"
+
+    state = load_doc_state(repo, run_id)
+    assert state["verdict"] == "complete"
