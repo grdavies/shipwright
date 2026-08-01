@@ -40,7 +40,10 @@ def require_run_id(run_id: str | None) -> str:
 def require_phase_id(phase_id: str | None) -> str:
     if phase_id is None or not str(phase_id).strip():
         raise PhaseIdRequiredError("phase id required")
-    return str(phase_id).strip()
+    pid = str(phase_id).strip()
+    if not SAFE_RUN_ID_RE.match(pid):
+        raise PhaseIdRequiredError(f"invalid phase id: {phase_id!r}")
+    return pid
 
 
 def runs_root(root: Path) -> Path:
