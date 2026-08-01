@@ -735,6 +735,7 @@
 * merge phase wiring-proof-task-row-schema-field-and-reachability-check-r15-r16 into feat/deliver-and-doc-loop-orchestration-integrity (34222ab) <!-- sw-deliver:wiring-proof-task-row-schema-field-and-reachability-check-r15-r16 -->
 * merge phase wiring-proof-deferred-placeholder-lint-r17 into feat/deliver-and-doc-loop-orchestration-integrity (d1659ed) <!-- sw-deliver:wiring-proof-deferred-placeholder-lint-r17 -->
 * merge phase wiring-proof-live-probe-producers-for-the-operator-projection-adapter-complete-claim-r18 into feat/deliver-and-doc-loop-orchestration-integrity (f13ced7) <!-- sw-deliver:wiring-proof-live-probe-producers-for-the-operator-projection-adapter-complete-claim-r18 -->
+* merge phase path-anchoring-complete-r28-canonical-root-resolution-r4 into feat/deliver-and-doc-loop-orchestration-integrity (74e5eb1) <!-- sw-deliver:path-anchoring-complete-r28-canonical-root-resolution-r4 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
