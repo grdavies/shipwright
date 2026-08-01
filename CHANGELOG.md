@@ -738,6 +738,7 @@
 * merge phase path-anchoring-complete-r28-canonical-root-resolution-r4 into feat/deliver-and-doc-loop-orchestration-integrity (74e5eb1) <!-- sw-deliver:path-anchoring-complete-r28-canonical-root-resolution-r4 -->
 * merge phase doc-loop-robustness-release-the-doc-run-lock-on-terminal-completion-r9 into feat/deliver-and-doc-loop-orchestration-integrity (5217b63) <!-- sw-deliver:doc-loop-robustness-release-the-doc-run-lock-on-terminal-completion-r9 -->
 * merge phase doc-loop-robustness-scope-the-doc-driver-environment-signal-r10 into feat/deliver-and-doc-loop-orchestration-integrity (1870707) <!-- sw-deliver:doc-loop-robustness-scope-the-doc-driver-environment-signal-r10 -->
+* merge phase doc-loop-robustness-single-related-work-checkpoint-r11 into feat/deliver-and-doc-loop-orchestration-integrity (9be106b) <!-- sw-deliver:doc-loop-robustness-single-related-work-checkpoint-r11 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
