@@ -18,6 +18,16 @@ def live_client_wired() -> bool:
     return bool(getattr(_plc, "LIVE_CLIENT", False)) and callable(getattr(_plc, "graphql", None))
 
 
+def operator_projection_linear_answerable() -> bool:
+    """PRD 085 R18 — live-probe producer for matrix ``linearAnswerable`` (no network)."""
+    return live_client_wired()
+
+
+def populate_operator_projection_capability(payload: dict[str, Any]) -> None:
+    """PRD 085 R18 — attach ``linearAnswerable`` from the Linear live-probe."""
+    payload["linearAnswerable"] = operator_projection_linear_answerable()
+
+
 def destination_endpoint(_cfg: dict[str, Any]) -> str:
     return GRAPHQL_ENDPOINT
 

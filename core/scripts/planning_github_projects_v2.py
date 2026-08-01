@@ -31,6 +31,7 @@ from planning_store import (
     store_section,
 )
 
+LIVE_CLIENT = True
 GITHUB_PROJECTS_SCOPES = ("read:project", "project")
 FIXTURE_ENV = "SW_PROJECTS_FIXTURE"
 FIXTURE_REL = ".cursor/hooks/state/github-projects-fixture.json"
