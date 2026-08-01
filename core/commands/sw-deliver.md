@@ -480,3 +480,8 @@ Before presenting the human merge gate, `scripts/wave_terminal.py` runs living-d
 `terminal pr prepare` fail-closed — refresh the stale command doc (this file or `/sw-freeze`) and
 re-run prepare; do not skip the gate.
 
+## Currency (PRD 085 terminal)
+
+Terminal prepare remains gated by `docs-currency-gate` + tasks-currency on bindings to
+`wave_deliver.py` / `wave_deliver_loop.py` / `wave_terminal.py` / `wave_run_adopt.py`. Phase acceptance +
+gap-check + live host evidence still precede `merge-enqueue`.

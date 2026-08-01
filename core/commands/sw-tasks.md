@@ -95,3 +95,9 @@ Environment: `SW_DOC_DRIVER=1` / `SW_DOC_ORCHESTRATOR=1` sets `driverInvoked` on
 - Legacy lists missing `## Phase Dependencies` at deliver time follow the PRD 013 ladder in `skills/deliver/SKILL.md`
   (declared → file-set inference → sequential+notice) — authors must still emit the table at freeze.
 - Does not provision worktrees or run `/sw-execute`.
+
+## Currency (PRD 085 R11)
+
+When the parent doc-loop `tasks` stage carries an orchestrated receipt (`orchestrated`,
+`relatedWorkResolved`, `parentRunId`), pass `--orchestrated --parent-run-id` to
+`planning-related.py scan` so related-work is not rescanned. Standalone `/sw-tasks` omits those flags.
