@@ -3896,7 +3896,7 @@ def operator_projection_adapter_complete_claim(matrix: dict[str, Any] | None = N
     backends = set(payload.get("backends") or [])
     contract_backends = set(payload.get("contractBackends") or [])
     present = [name for name in required if name in backends and name in contract_backends]
-    # Skeleton stage: both backends are declared; answerability lands in later phases.
+    # PRD 085 R18 — skeleton stage until live-probe producers populate answerability.
     answerable = {
         "linear": bool(payload.get("linearAnswerable")),
         "github-projects": bool(payload.get("projectsAnswerable")),
