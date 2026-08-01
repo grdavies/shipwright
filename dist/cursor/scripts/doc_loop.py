@@ -19,6 +19,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from wave_json_io import read_json, write_json
+from wave_run_paths import RunIdRequiredError, require_run_id
 from wave_target_lock import acquire_doc_run_lock, heartbeat_doc_run_lock, release_doc_run_lock
 from wave_transition_receipt import hash_json
 
@@ -76,11 +77,15 @@ def has_flag(args: list[str], flag: str) -> bool:
 
 
 def doc_runs_root(root: Path) -> Path:
-    return (root / DOC_RUNS_DIR_REL).resolve()
+    """Resolve doc-run namespace under the primary repo-root .cursor (R8)."""
+    from wave_state import path_normalize_anchor
+
+    return (path_normalize_anchor(root) / DOC_RUNS_DIR_REL).resolve()
 
 
 def doc_run_directory(root: Path, run_id: str) -> Path:
-    return doc_runs_root(root) / run_id
+    rid = require_run_id(run_id)
+    return doc_runs_root(root) / rid
 
 
 def doc_state_path(root: Path, run_id: str) -> Path:
@@ -760,7 +765,13 @@ def provision_doc_run(
     run_id: str | None = None,
 ) -> dict[str, Any]:
     """Acquire doc-run lock then create run directory (lock precedes run dir — R11)."""
-    rid = run_id or mint_doc_run_id(root)
+    if run_id:
+        try:
+            rid = require_run_id(run_id)
+        except RunIdRequiredError as exc:
+            return {"verdict": "fail", "error": str(exc), "runId": run_id}
+    else:
+        rid = mint_doc_run_id(root)
     lock = acquire_doc_run_lock(root, topic, rid)
     if lock.get("verdict") != "pass":
         return lock
@@ -796,7 +807,10 @@ def resolve_run_id(root: Path, args: list[str]) -> str:
         or ""
     )
     if run_id:
-        return run_id
+        try:
+            return require_run_id(run_id)
+        except RunIdRequiredError as exc:
+            fail(str(exc), exit_code=20, halt="doc-run-id-invalid")
     topic = parse_kv(args, "--topic")
     if topic:
         provisioned = provision_doc_run(
@@ -961,6 +975,10 @@ def cmd_release(root: Path, args: list[str]) -> None:
     run_id = parse_kv(args, "--run-id") or os.environ.get("SW_DOC_RUN_ID", "")
     if not run_id:
         fail("--run-id required")
+    try:
+        run_id = require_run_id(run_id)
+    except RunIdRequiredError as exc:
+        fail(str(exc), exit_code=20, halt="doc-run-id-invalid")
     state = load_doc_state(root, run_id)
     topic = str(state.get("topic") or "")
     if not topic:
