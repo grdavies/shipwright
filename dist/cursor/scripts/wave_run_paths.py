@@ -11,6 +11,7 @@ RUNS_DIR_REL = ".cursor/sw-deliver-runs"
 INDEX_FILENAME = "index.json"
 STATE_FILENAME = "state.json"
 PLAN_FILENAME = "plan.json"
+PLAN_PENDING_FILENAME = "plan.pending.json"
 EVENTS_FILENAME = "events.jsonl"
 LEASE_FILENAME = "lease.json"
 BLOCKER_FILENAME = "blocker.json"
@@ -73,6 +74,11 @@ def mint_run_id(root: Path) -> str:
 def plan_path(root: Path, run_id: str | None) -> Path:
     require_run_id(run_id)
     return run_directory(root, run_id) / PLAN_FILENAME
+
+
+def plan_pending_path(root: Path, run_id: str | None) -> Path:
+    require_run_id(run_id)
+    return run_directory(root, run_id) / PLAN_PENDING_FILENAME
 
 
 def state_path(root: Path, run_id: str | None) -> Path:
