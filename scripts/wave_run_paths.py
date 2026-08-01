@@ -147,7 +147,9 @@ def sanitize_index_entry(entry: dict[str, object]) -> dict[str, object]:
 
 def global_plan_path(root: Path) -> Path:
     """Repository-global transient plan path (legacy; prefer run-scoped plan_path)."""
-    return (root / GLOBAL_PLAN_REL).resolve()
+    from wave_state import path_normalize_anchor
+
+    return (path_normalize_anchor(root) / GLOBAL_PLAN_REL).resolve()
 
 
 def is_repository_global_plan_path(root: Path, candidate: Path) -> bool:
