@@ -10,9 +10,12 @@ import pytest
 
 from wave_lock import target_lock_key_digest
 from wave_run_paths import (
+    PhaseIdRequiredError,
     RunIdRequiredError,
     mint_run_id,
+    phase_directory,
     plan_path,
+    require_phase_id,
     require_run_id,
     runs_index_path,
     state_path,
@@ -43,6 +46,35 @@ def repo(tmp_path: Path) -> Path:
 def anchor_repo(repo: Path):
     with patch("wave_lock._canonical_repo_root_for_locks", return_value=repo):
         yield
+
+
+@pytest.mark.parametrize(
+    "unsafe",
+    [
+        "../escape",
+        "foo/bar",
+        "..",
+        ".",
+        "phase id",
+        "phase\nid",
+        "",
+        "   ",
+    ],
+)
+def test_require_phase_id_rejects_path_unsafe_values(repo: Path, unsafe: str) -> None:
+    with pytest.raises(PhaseIdRequiredError):
+        require_phase_id(unsafe)
+    run_id = mint_run_id(repo)
+    with pytest.raises(PhaseIdRequiredError):
+        phase_directory(repo, run_id, unsafe)
+
+
+@pytest.mark.parametrize("safe", ["1", "3", "7", "12", "phase-3"])
+def test_require_phase_id_accepts_numeric_and_opaque_ids(repo: Path, safe: str) -> None:
+    assert require_phase_id(safe) == safe
+    run_id = mint_run_id(repo)
+    path = phase_directory(repo, run_id, safe)
+    assert path.name == safe
 
 
 def test_missing_run_id_raises_instead_of_defaulting(repo: Path) -> None:
