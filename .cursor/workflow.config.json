@@ -153,7 +153,8 @@
       "jitter": true,
       "nearLimitThreshold": 5,
       "mutatingMinDelayMs": 1000
-    }
+    },
+    "credentialRef": "github-work"
   },
   "deliver": {
     "autonomy": {
@@ -176,18 +177,7 @@
         "repo": "planning"
       },
       "issues": {
-        "tokenEnv": "SW_PLANNING_ISSUES_TOKEN",
-        "credentialContract": {
-          "envVar": "SW_PLANNING_ISSUES_TOKEN",
-          "scope": "issues:write on grdavies/planning only",
-          "leastPrivilege": "Planning-project issue mutations only; host.tokenEnv (GITHUB_TOKEN) is not used for cross-repo close-out or issue-store writes.",
-          "rotationPolicy": {
-            "cadenceDays": 90,
-            "expiryDays": 365,
-            "owner": "platform-ops",
-            "procedure": "Issue a fine-grained PAT or org secret scoped to grdavies/planning issues write; rotate on cadence; revoke the prior token; update the SW_PLANNING_ISSUES_TOKEN GitHub Actions secret and operator local env."
-          }
-        }
+        "credentialRef": "planning-work"
       }
     },
     "privacyAck": {
@@ -235,8 +225,8 @@
     }
   },
   "configuredWith": {
-    "shipwrightVersion": "1.8.0",
-    "schemaVersion": "bec765ad6ba0"
+    "shipwrightVersion": "1.11.0",
+    "schemaVersion": "57248a60a28e"
   },
   "compound": {
     "autonomy": "auto"
@@ -387,5 +377,6 @@
   "intraPhase": {
     "parallelBudget": 4,
     "harnessLimit": 16
-  }
+  },
+  "projectId": "shipwright"
 }
