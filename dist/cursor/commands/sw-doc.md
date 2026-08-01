@@ -58,10 +58,10 @@ transitions, conductor in-turn continuation, and legitimate-halt reports with `r
 | Transition receipts | `.cursor/sw-doc-runs/<run-id>/receipts/<idempotency-key>.json` |
 | Target lock | Repository-level lock directory (via `wave_target_lock.acquire_doc_run_lock`) |
 
-Provision:
+Provision (side effect of `--topic` on the `doc-loop` subcommand — `resolve_run_id` → `provision_doc_run`; there is no standalone `provision` subcommand):
 
 ```bash
-python3 scripts/doc_loop.py provision --topic <topic> --tier <Full|Standard>
+python3 scripts/doc_loop.py <root> doc-loop --topic <topic> --tier <Standard|Full>
 ```
 
 Resume reads `state.json` + receipts alone — incomplete pending receipts block resume fail-closed.

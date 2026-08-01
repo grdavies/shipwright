@@ -47,13 +47,22 @@ The conductor **invokes** these commands and interprets their JSON — it does n
 
 A fresh agent with no prior chat context resumes from:
 
+**Precedence:** run-scoped paths under `.cursor/sw-deliver-runs/<runId>/` are **authoritative** for deliver
+lifecycle state. Legacy slug-scoped paths (`.cursor/sw-deliver-runs/<phase-slug>/`) remain the adoption source
+consumed by R1's identity-checked adoption path — never treat slug-scoped artifacts as overriding a bound
+`runId` namespace. Authoritative layout detail: `core/sw-reference/layout.md`.
+
 | Artifact | Path |
 | --- | --- |
 | Run cursor (scoped) | `.cursor/sw-deliver-state.<slug>.json` at **repo root** (`nextAction`, `currentWave`, phase statuses) |
-| Plan | `.cursor/sw-deliver-plan.json` |
+| Plan (legacy slug-scoped) | `.cursor/sw-deliver-plan.json` |
+| **Run-scoped deliver state** | `.cursor/sw-deliver-runs/<runId>/state.json` |
+| **Run-scoped deliver plan** | `.cursor/sw-deliver-runs/<runId>/plan.json` |
+| **Run-scoped deliver events** | `.cursor/sw-deliver-runs/<runId>/events.jsonl` |
+| **Per-phase ship status (run-scoped)** | `.cursor/sw-deliver-runs/<runId>/phases/<phaseId>/status.json` |
 | Concurrent-run index | `.cursor/sw-deliver-runs/index.json` |
-| Per-phase `/sw-ship` status | `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
-| Phase step plan | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` (executor-owned) |
+| Per-phase `/sw-ship` status (legacy slug-scoped) | `.cursor/sw-deliver-runs/<phase-slug>/status.json` |
+| Phase step plan (legacy slug-scoped) | `.cursor/sw-deliver-runs/<phase-slug>/phase-step-plan.json` (executor-owned) |
 | Wave batching plan | `waveBatchingPlan` on `.cursor/sw-deliver-state.<slug>.json` (conductor-only) |
 | Two-tier lifecycle | `twoTierLifecycle` on shared run-state |
 | Append-only progress | `.cursor/sw-deliver-runs/run.log` |
