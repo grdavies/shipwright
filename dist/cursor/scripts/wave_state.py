@@ -159,7 +159,7 @@ def target_branch_from_state(state: dict[str, Any]) -> str | None:
 def scoped_paths(root: Path, target: str) -> dict[str, Path]:
     """Per-branch scoped state/lock paths (PRD 013 R6/R9)."""
     slug = slug_from_target(target)
-    cursor = root / ".cursor"
+    cursor = _cursor_dir(root)
     runs = cursor / "sw-deliver-runs"
     return {
         "state": cursor / f"sw-deliver-state.{slug}.json",
@@ -170,7 +170,7 @@ def scoped_paths(root: Path, target: str) -> dict[str, Path]:
 
 
 def legacy_paths(root: Path) -> dict[str, Path]:
-    cursor = root / ".cursor"
+    cursor = _cursor_dir(root)
     runs = cursor / "sw-deliver-runs"
     return {
         "state": cursor / LEGACY_STATE_NAME,
@@ -380,7 +380,7 @@ def resolve_state_path(
                         return legacy
                     return scoped
         return legacy
-    matches = sorted((root / ".cursor").glob("sw-deliver-state.*.json"))
+    matches = sorted(_cursor_dir(root).glob("sw-deliver-state.*.json"))
     if len(matches) == 1:
         return matches[0]
     return legacy
@@ -388,7 +388,8 @@ def resolve_state_path(
 
 def enumerate_scoped_runs(root: Path) -> list[dict[str, Any]]:
     """List live scoped deliver runs for index / cleanup (PRD 013 R10)."""
-    cursor = root / ".cursor"
+    anchor = _path_normalize_anchor(root)
+    cursor = anchor / ".cursor"
     runs: list[dict[str, Any]] = []
     for path in sorted(cursor.glob("sw-deliver-state.*.json")):
         slug = path.name.removeprefix("sw-deliver-state.").removesuffix(".json")
@@ -398,7 +399,7 @@ def enumerate_scoped_runs(root: Path) -> list[dict[str, Any]]:
         runs.append(
             {
                 "slug": slug,
-                "statePath": str(path.relative_to(root)),
+                "statePath": str(path.relative_to(anchor)),
                 "taskList": state.get("source_task_list"),
                 "verdict": state.get("verdict"),
                 "target": (state.get("target") or {}).get("branch"),
@@ -489,6 +490,11 @@ def path_normalize_anchor(start: Path) -> Path:
 
 # Back-compat alias for in-module callers.
 _path_normalize_anchor = path_normalize_anchor
+
+
+def _cursor_dir(root: Path) -> Path:
+    """Canonical ``.cursor`` directory under the primary repo root (R28)."""
+    return _path_normalize_anchor(root) / ".cursor"
 
 
 def _parse_state_ts(ts: str) -> datetime | None:
@@ -1059,7 +1065,9 @@ def discovery_entry_for_run(
         "target": target_branch_from_state(state),
         "taskList": state.get("source_task_list"),
         "verdict": state.get("verdict"),
-        "statePath": str(run_state_path(root, run_id).relative_to(root)),
+        "statePath": str(
+            run_state_path(root, run_id).relative_to(_path_normalize_anchor(root))
+        ),
         "updatedAt": state.get("updatedAt") or utc_now(),
     }
     if lock_key_digest:
@@ -1438,7 +1446,7 @@ def _resolve_lock_path(root: Path, args: list[str]) -> Path:
         return lock_path
     matches = [
         p
-        for p in sorted((root / ".cursor").glob("sw-deliver-*.lock"))
+        for p in sorted(_cursor_dir(root).glob("sw-deliver-*.lock"))
         if p.name != LEGACY_LOCK_NAME
     ]
     if len(matches) == 1:

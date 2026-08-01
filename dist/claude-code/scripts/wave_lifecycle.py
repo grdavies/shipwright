@@ -728,9 +728,9 @@ def cmd_phase_teardown_run(root: Path, args: list[str]) -> None:
         )
 
     slug = meta.get("slug", phase_id)
-    status_retained = (
-        root / ".cursor" / "sw-deliver-runs" / str(slug) / "status.json"
-    ).is_file()
+    from wave_run_paths import runs_root
+
+    status_retained = (runs_root(root) / str(slug) / "status.json").is_file()
     branch_retained = bool(meta.get("branch"))
 
     teardown_args = ["phase-teardown", "--worktree", wt_path]
