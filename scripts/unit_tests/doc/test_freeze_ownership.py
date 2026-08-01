@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 from unittest.mock import patch
@@ -13,7 +14,14 @@ scripts = Path(__file__).resolve().parents[2]
 if str(scripts) not in sys.path:
     sys.path.insert(0, str(scripts))
 
-from check_frozen_lib import artifact_is_frozen, is_driver_invoked, stamp_frozen
+from check_frozen_lib import (
+    artifact_is_frozen,
+    content_revision,
+    freeze_artifact,
+    freeze_record_path,
+    is_driver_invoked,
+    stamp_frozen,
+)
 import check_frozen_lib
 from doc_loop import (
     build_step,
@@ -51,7 +59,10 @@ def _write_tasks(repo: Path, unit_id: str = "081-prd-workflow") -> str:
     rel = f"docs/prds/{unit_id}/tasks-{slug}.md"
     path = repo / rel
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("---\ntype: tasks\n---\n# Tasks\n", encoding="utf-8")
+    path.write_text(
+        "---\ntype: tasks\n---\n# Tasks\n\n### 1. Phase one (R1)\n\n- [ ] 1.1 Do thing\n",
+        encoding="utf-8",
+    )
     return rel
 
 
@@ -171,3 +182,124 @@ def test_no_freeze_leaves_tasks_draft(repo: Path) -> None:
     assert not artifact_is_frozen(path)
     text = path.read_text(encoding="utf-8")
     assert "frozen: true" not in text
+
+
+def _git(repo: Path) -> list[str]:
+    return ["git", "-c", "user.name=Test", "-c", "user.email=shipwright-ci"]
+
+
+def _init_git_repo(repo: Path) -> None:
+    (repo / "README.md").write_text("# test\n", encoding="utf-8")
+    git_id = _git(repo)
+    subprocess.run([*git_id, "init", "-b", "main"], cwd=repo, check=True, capture_output=True)
+    subprocess.run([*git_id, "add", "."], cwd=repo, check=True, capture_output=True)
+    subprocess.run([*git_id, "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+
+
+def test_freeze_commit_no_recursive_subprocess(repo: Path) -> None:
+    _init_git_repo(repo)
+    unit_id = "081-prd-freeze-recursion"
+    rel = f"docs/prds/{unit_id}/081-prd-freeze-recursion.md"
+    path = repo / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("---\ntype: prd\ntopic: freeze-recursion\n---\n# PRD\n", encoding="utf-8")
+    stamp_frozen(path)
+    subprocess.run([*_git(repo), "add", rel], cwd=repo, check=True, capture_output=True)
+    subprocess.run([*_git(repo), "commit", "-m", "track prd"], cwd=repo, check=True, capture_output=True)
+
+    real_run = subprocess.run
+    nested_freeze_calls = 0
+
+    def counting_run(cmd, *args, **kwargs):
+        nonlocal nested_freeze_calls
+        argv = cmd if isinstance(cmd, list) else []
+        joined = " ".join(str(part) for part in argv)
+        if "check-frozen.py" in joined and "freeze-commit" in joined:
+            nested_freeze_calls += 1
+        if any("freeze_artifact" in str(part) for part in argv):
+            nested_freeze_calls += 1
+        return real_run(cmd, *args, **kwargs)
+
+    with patch("subprocess.run", side_effect=counting_run):
+        proc = real_run(
+            [sys.executable, str(scripts / "check-frozen.py"), "freeze-commit", "--artifact", rel],
+            cwd=repo,
+            capture_output=True,
+            text=True,
+        )
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert nested_freeze_calls == 0
+
+
+def test_freeze_owner_conflict(repo: Path) -> None:
+    _init_git_repo(repo)
+    prd = _write_prd(repo, "081-prd-owner-conflict")
+    tasks = _write_tasks(repo, "081-prd-owner-conflict")
+    subprocess.run([*_git(repo), "add", prd, tasks], cwd=repo, check=True, capture_output=True)
+    subprocess.run([*_git(repo), "commit", "-m", "track prd"], cwd=repo, check=True, capture_output=True)
+
+    def verified_commit(root, artifact, revision):
+        return {
+            "durabilityState": "verified",
+            "commitSha": "deadbeef",
+            "freezeRecordDigest": revision,
+        }
+
+    first = freeze_artifact(
+        repo,
+        prd,
+        owner="operator",
+        driver_invoked=False,
+        freeze_commit_fn=verified_commit,
+    )
+    assert first["verdict"] == "pass"
+
+    second = freeze_artifact(
+        repo,
+        prd,
+        owner="doc-loop:other-run",
+        driver_invoked=True,
+        freeze_commit_fn=verified_commit,
+    )
+    assert second["verdict"] == "fail"
+    assert second["error"] == "freeze-owner-conflict"
+
+
+def test_freeze_idempotent_same_owner(repo: Path) -> None:
+    _init_git_repo(repo)
+    prd = _write_prd(repo, "081-prd-idempotent")
+    tasks = _write_tasks(repo, "081-prd-idempotent")
+    subprocess.run([*_git(repo), "add", prd, tasks], cwd=repo, check=True, capture_output=True)
+    subprocess.run([*_git(repo), "commit", "-m", "track prd"], cwd=repo, check=True, capture_output=True)
+
+    def verified_commit(root, artifact, revision):
+        return {
+            "durabilityState": "verified",
+            "commitSha": "cafebabe",
+            "freezeRecordDigest": revision,
+        }
+
+    first = freeze_artifact(
+        repo,
+        prd,
+        owner="operator",
+        driver_invoked=False,
+        freeze_commit_fn=verified_commit,
+    )
+    assert first["verdict"] == "pass"
+    record_path = freeze_record_path(repo, prd)
+    assert record_path.is_file()
+    before = json.loads(record_path.read_text(encoding="utf-8"))
+
+    second = freeze_artifact(
+        repo,
+        prd,
+        owner="operator",
+        driver_invoked=False,
+        freeze_commit_fn=verified_commit,
+    )
+    assert second["verdict"] == "pass"
+    assert second.get("note") == "idempotent-freeze-record"
+    after = json.loads(record_path.read_text(encoding="utf-8"))
+    assert after == before
