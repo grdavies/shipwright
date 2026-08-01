@@ -789,6 +789,30 @@ def run_pin_validity_gate(root: Path, payload: dict[str, Any]) -> tuple[int, dic
     return 0, payload
 
 
+def run_deferred_placeholder_lint_gate(root: Path, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    """Run deferred-placeholder lint — untracked deferral markers fail closed (PRD 085 R17)."""
+    completed = proc.run(
+        [sys.executable, str(SCRIPT_DIR / "deferred-placeholder-lint.py"), "--check"],
+        cwd=str(root),
+    )
+    lint_result: dict[str, Any] = {}
+    try:
+        lint_result = json.loads(completed.stdout.strip() or "{}")
+    except json.JSONDecodeError:
+        lint_result = {"verdict": "fail", "error": "deferred-placeholder-lint-invalid-output"}
+    payload = dict(payload)
+    payload["deferredPlaceholderLint"] = lint_result
+    if lint_result.get("verdict") != "pass":
+        blocked: dict[str, Any] = {
+            "verdict": "blocked",
+            "reason": "deferred-placeholder-lint: untracked deferral marker(s)",
+            "deferredPlaceholderLint": lint_result,
+        }
+        jsonio.emit(blocked)
+        return 30, blocked
+    return 0, payload
+
+
 def finalize_gate_payload(
     root: Path,
     cfg: dict[str, Any],
@@ -802,6 +826,9 @@ def finalize_gate_payload(
     if ec != 0:
         return ec, payload
     ec, payload = run_pin_validity_gate(root, payload)
+    if ec != 0:
+        return ec, payload
+    ec, payload = run_deferred_placeholder_lint_gate(root, payload)
     if ec != 0:
         return ec, payload
     verdict, required_failing, reason, payload = apply_quality_blocking_promotion(
