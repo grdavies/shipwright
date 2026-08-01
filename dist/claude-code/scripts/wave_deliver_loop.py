@@ -1016,6 +1016,22 @@ def resolve_plan_with_adoption(
     # (target-lock must precede run-scoped plan). Without this read, compute_next
     # sees an empty plan and re-runs `plan` forever → conductor:no-progress.
     if not state.get("planHash") and not state.get("adoptedPlanHash"):
+        run_id = state.get("runId")
+        if run_id:
+            from wave_run_paths import plan_path as run_scoped_plan_path
+
+            scoped = run_scoped_plan_path(root, str(run_id))
+            if scoped.is_file():
+                try:
+                    pending = read_json(scoped, absent_ok=False)
+                except (StateCorruptError, json.JSONDecodeError, OSError):
+                    pending = None
+                if isinstance(pending, dict) and pending.get("mode"):
+                    if plan_matches_requested_unit(
+                        root, pending, task_list=task_list, state=state
+                    ):
+                        return pending, state
+                    return {}, state
         transient_path = root / GLOBAL_PLAN_REL
         if transient_path.is_file():
             try:
@@ -1023,7 +1039,11 @@ def resolve_plan_with_adoption(
             except (StateCorruptError, json.JSONDecodeError, OSError):
                 pending = None
             if isinstance(pending, dict) and pending.get("mode"):
-                return pending, state
+                if plan_matches_requested_unit(
+                    root, pending, task_list=task_list, state=state
+                ):
+                    return pending, state
+                return {}, state
     if state.get("phases") and state.get("verdict") == "running":
         from wave_run_adopt import (
             locate_legacy_source,
@@ -1880,6 +1900,25 @@ def canonical_task_list_path(root: Path, raw: str) -> str:
         return str(path)
 
 
+def plan_matches_requested_unit(
+    root: Path,
+    plan: dict[str, Any],
+    *,
+    task_list: str | None,
+    state: dict[str, Any] | None = None,
+) -> bool:
+    """True when *plan* belongs to the requested deliver unit (R1)."""
+    requested = task_list or (state or {}).get("source_task_list")
+    if not requested:
+        return True
+    plan_tl = plan.get("source_task_list")
+    if not plan_tl:
+        return False
+    return canonical_task_list_path(root, str(plan_tl)) == canonical_task_list_path(
+        root, str(requested)
+    )
+
+
 
 
 def check_deliver_hang_desync(root: Path, state: dict[str, Any]) -> str | None:
@@ -2708,9 +2747,8 @@ def _execute_mechanical_inner(
         if not plan:
             fail("plan action returned no plan payload")
         run_id = run_plan.ensure_run_id(root, state)
-        transient_path = root / GLOBAL_PLAN_REL
-        transient_path.parent.mkdir(parents=True, exist_ok=True)
-        write_json_file(transient_path, plan)
+        run_plan.persist_plan(root, run_id, plan, state)
+        state["source_task_list"] = str(task_list)
         save_state(root, state)
         persist_cursor(root, state, "lock-acquire")
         return {"executed": "plan", "plan": plan.get("target"), "runId": run_id}
