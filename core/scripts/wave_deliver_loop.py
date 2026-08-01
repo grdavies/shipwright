@@ -79,7 +79,7 @@ from wave_state import (
     sync_canonical_state_read,
 )
 import wave_run_plan as run_plan
-from wave_run_paths import GLOBAL_PLAN_REL
+from wave_run_paths import GLOBAL_PLAN_REL, global_plan_path, runs_root
 from wave_action_precedence import (
     ACTION_PRECEDENCE_CLASS,
     assert_action_classified,
@@ -1032,7 +1032,7 @@ def resolve_plan_with_adoption(
                     ):
                         return pending, state
                     return {}, state
-        transient_path = root / GLOBAL_PLAN_REL
+        transient_path = global_plan_path(root)
         if transient_path.is_file():
             try:
                 pending = read_json(transient_path, absent_ok=False)
@@ -1050,7 +1050,6 @@ def resolve_plan_with_adoption(
             maybe_adopt_on_deliver_loop,
             read_legacy_global_plan_once,
         )
-        from wave_run_paths import global_plan_path
 
         adoption = maybe_adopt_on_deliver_loop(root, state)
         if adoption.get("adopted"):
@@ -1860,7 +1859,9 @@ def task_list_from(state: dict[str, Any], plan: dict[str, Any]) -> str | None:
 
 
 def trunk_base_persisted(root: Path) -> bool:
-    path = root / ".cursor" / "sw-base-state.json"
+    from wave_state import path_normalize_anchor
+
+    path = path_normalize_anchor(root) / ".cursor" / "sw-base-state.json"
     if not path.is_file():
         return False
     try:
@@ -2096,7 +2097,7 @@ def effective_wave_plan(state: dict[str, Any], plan: dict[str, Any]) -> dict[str
 
 
 def phase_run_dir_for_slug(root: Path, slug: str) -> Path:
-    return root / ".cursor" / "sw-deliver-runs" / slug
+    return runs_root(root) / slug
 
 
 def mechanical_phase_plan(
@@ -2807,7 +2808,7 @@ def _execute_mechanical_inner(
                 state.update(load_state(root))
             pending_plan = load_plan(root, state)
             if not pending_plan:
-                transient_path = root / GLOBAL_PLAN_REL
+                transient_path = global_plan_path(root)
                 if transient_path.is_file() and state.get("phases"):
                     fail(
                         "legacy global plan present but adoption required",
@@ -3040,7 +3041,7 @@ def _execute_mechanical_inner(
 
             smoke_ec, smoke_cause = run_pre_pr_smoke(smoke_root)
             if smoke_ec != 0:
-                run_dir = root / ".cursor" / "sw-deliver-runs" / slug
+                run_dir = runs_root(root) / slug
                 run_dir.mkdir(parents=True, exist_ok=True)
                 status_path = run_dir / "status.json"
                 doc = build_status_document(
@@ -3067,7 +3068,7 @@ def _execute_mechanical_inner(
                 pr_number=pr_number,
                 branch_head=branch_head,
             )
-            run_dir = root / ".cursor" / "sw-deliver-runs" / slug
+            run_dir = runs_root(root) / slug
             run_dir.mkdir(parents=True, exist_ok=True)
             status_path = run_dir / "status.json"
             reemit_verdict = verdict
