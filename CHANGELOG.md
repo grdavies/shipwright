@@ -720,6 +720,13 @@
 * merge phase triage-and-fix-hermetic-credential-test-failures-r5 into feat/ci-reliability-and-runner-credential-resolution (d366c5e) <!-- sw-deliver:triage-and-fix-hermetic-credential-test-failures-r5 -->
 * merge phase triage-owner-notification-path-for-a-red-nightly-lane-r8 into feat/ci-reliability-and-runner-credential-resolution (789c679) <!-- sw-deliver:triage-owner-notification-path-for-a-red-nightly-lane-r8 -->
 * merge phase register-credentials-tree-in-a-required-pr-ci-shard-r6 into feat/ci-reliability-and-runner-credential-resolution (e948f5a) <!-- sw-deliver:register-credentials-tree-in-a-required-pr-ci-shard-r6 -->
+* merge phase selector-schema-parser-resolver-gains-per-entry-tokenenv-small into feat/credential-broker-and-privacy-hardening (18cb4be) <!-- sw-deliver:selector-schema-parser-resolver-gains-per-entry-tokenenv-small -->
+* merge phase doctor-resolves-the-memory-surface-accurately-and-never-crashes-small into feat/credential-broker-and-privacy-hardening (7e8a08b) <!-- sw-deliver:doctor-resolves-the-memory-surface-accurately-and-never-crashes-small -->
+* merge phase hermetic-credential-test-fixture-small into feat/credential-broker-and-privacy-hardening (aa98f63) <!-- sw-deliver:hermetic-credential-test-fixture-small -->
+* merge phase privacy-tier-resolver-fails-closed-on-an-inconclusive-probe-small into feat/credential-broker-and-privacy-hardening (1eb439f) <!-- sw-deliver:privacy-tier-resolver-fails-closed-on-an-inconclusive-probe-small -->
+* merge phase suppress-mismatched-provider-selector-writes-in-guided-sw-init-small into feat/credential-broker-and-privacy-hardening (0734aa3) <!-- sw-deliver:suppress-mismatched-provider-selector-writes-in-guided-sw-init-small -->
+* merge phase recallium-rules-py-reports-the-real-broker-refusal-code-small into feat/credential-broker-and-privacy-hardening (1eeb12d) <!-- sw-deliver:recallium-rules-py-reports-the-real-broker-refusal-code-small -->
+* merge phase guardrail-hook-surfaces-the-distinguishing-code-not-a-generic-unreachable-message-small into feat/credential-broker-and-privacy-hardening (7d6154c) <!-- sw-deliver:guardrail-hook-surfaces-the-distinguishing-code-not-a-generic-unreachable-message-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

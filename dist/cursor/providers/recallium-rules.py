@@ -87,8 +87,17 @@ def main() -> int:
     url = f"{base.rstrip('/')}/api/projects/{quoted}/memories?memory_type=rule&limit=25"
     try:
         headers = prepare_bound_headers(url=url, policy=policy, credential=credential)
-    except MemoryBrokerError:
-        print(json.dumps({"ok": False, "error": "restBaseUrl must be localhost-only", "rules": []}))
+    except MemoryBrokerError as exc:
+        print(
+            json.dumps(
+                {
+                    "ok": False,
+                    "error": str(exc),
+                    "code": exc.code,
+                    "rules": [],
+                }
+            )
+        )
         return 1
 
     try:

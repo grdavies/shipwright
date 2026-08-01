@@ -175,12 +175,18 @@ def fetch_rules(
     config: dict,
     *,
     rules_script: Path | None = None,
-) -> tuple[bool, list[dict]]:
+) -> tuple[bool, list[dict], str | None]:
+    """Load rule-class rows from the provider rules script.
+
+    Returns ``(ok, rules, failure_code)``. On success ``failure_code`` is ``None``.
+    On failure, ``failure_code`` is the rules-script JSON ``code`` when present
+    (e.g. broker scope refusal), else ``None`` for generic unreachability.
+    """
     script = rules_script if rules_script is not None else _rules_script(root, plugin_root, config)
     if script is None or not script.is_file():
-        return False, []
+        return False, [], None
     if not _rules_script_allowed(script, plugin_root):
-        return False, []
+        return False, [], None
     env = build_adapter_spawn_env(root, plugin_root, config)
     cmd = [sys.executable, str(script)] if script.suffix == ".py" else ["bash", str(script)]
     try:
@@ -193,19 +199,30 @@ def fetch_rules(
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired):
-        return False, []
-    if proc.returncode != 0:
-        return False, []
+        return False, [], None
+
+    payload: dict | None = None
+    failure_code: str | None = None
     try:
-        payload = json.loads(proc.stdout or "{}")
+        raw = json.loads(proc.stdout or "{}")
     except ValueError:
-        return False, []
+        raw = None
+    if isinstance(raw, dict):
+        payload = raw
+        raw_code = payload.get("code")
+        if isinstance(raw_code, str) and raw_code.strip():
+            failure_code = raw_code.strip()
+
+    if proc.returncode != 0:
+        return False, [], failure_code
+    if payload is None:
+        return False, [], None
     if not payload.get("ok", False):
-        return False, []
+        return False, [], failure_code
     rules = payload.get("rules", [])
     if not isinstance(rules, list):
-        return False, []
-    return True, [r for r in rules if isinstance(r, dict)]
+        return False, [], failure_code
+    return True, [r for r in rules if isinstance(r, dict)], None
 
 
 def provider_unreachable_message(provider: str | None) -> str:
@@ -234,6 +251,14 @@ def provider_unreachable_message(provider: str | None) -> str:
     )
 
 
+def credential_scope_refusal_message(code: str) -> str:
+    """Message when rules-script reports a broker/scope refusal code (not connectivity)."""
+    return (
+        f"Shipwright: credential scope refusal: {code} — "
+        "fix the memory credential ref's provider/scope, not Recallium connectivity"
+    )
+
+
 def resolve_submit_config(root: Path, *, plugin_root: Path) -> dict | None:
     config_path = workflow_config_path(root)
     if config_path is None:
@@ -253,8 +278,13 @@ def evaluate_submit_guard(root: Path, plugin_root: Path) -> SubmitGuardResult:
         return SubmitGuardResult(allow=True)
 
     provider = resolve_memory_provider(root, config, plugin_root=plugin_root)
-    ok, rules = fetch_rules(root, plugin_root, config)
+    ok, rules, failure_code = fetch_rules(root, plugin_root, config)
     if not ok:
+        if failure_code:
+            return SubmitGuardResult(
+                allow=False,
+                message=credential_scope_refusal_message(failure_code),
+            )
         return SubmitGuardResult(allow=False, message=provider_unreachable_message(provider))
 
     allowlist_status, allowlist = load_allowlist(root)
@@ -334,7 +364,7 @@ def fetch_rule_summaries(root: Path, plugin_root: Path, config: dict) -> list[st
             script = rules_script_for_provider(plugin_root, provider)
     if script is None or not script.is_file():
         return []
-    ok, rules = fetch_rules(root, plugin_root, config, rules_script=script)
+    ok, rules, _failure_code = fetch_rules(root, plugin_root, config, rules_script=script)
     if not ok:
         return []
     allowlist_status, allowlist = load_allowlist(root)

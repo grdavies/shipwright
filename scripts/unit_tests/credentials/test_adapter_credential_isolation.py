@@ -43,9 +43,10 @@ def test_rules_script_outside_plugin_root_is_rejected(
 
     monkeypatch.setenv("SW_RULES_SCRIPT", str(outside))
     assert guardrail_core._resolve_rules_script_override(plugin) is None
-    ok, rules = guardrail_core.fetch_rules(workspace, plugin, {"memory": {}})
+    ok, rules, failure_code = guardrail_core.fetch_rules(workspace, plugin, {"memory": {}})
     assert ok is False
     assert rules == []
+    assert failure_code is None
 
 
 def test_adapter_receives_no_credential_without_resolution(
