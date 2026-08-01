@@ -560,11 +560,11 @@ def run_related_work_scan(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     prd_path = artifact_rel_path(state, "prd")
     if not prd_path:
         return {"verdict": "ok", "proposals": [], "skipped": True, "reason": "missing-prd-path"}
-    os.environ["SW_DOC_DRIVER"] = "1"
     return planning_related.scan_related(
         root,
         planning_related.source_from_path(root, prd_path),
         mode="tasks-rescan",
+        driver_invoked=True,
     )
 
 
