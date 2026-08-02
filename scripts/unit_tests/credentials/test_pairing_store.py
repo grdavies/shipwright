@@ -29,6 +29,18 @@ class TestPairingAbsent:
         _prepare_file(pairing)
         result = check_pairing("github-work", "proj-1", "https://github.com/owner/repo.git", path=pairing, skip_integrity=True)
         assert result.verdict is PairingVerdict.ABSENT
+
+    def test_absent_pairing_file_is_empty_store_without_integrity_skip(self, tmp_path: Path) -> None:
+        """TOFU: missing pairing file is ABSENT, not an integrity crash."""
+        pairing = tmp_path / "credential-pairings.json"
+        result = check_pairing(
+            "github-work",
+            "proj-1",
+            "https://github.com/owner/repo.git",
+            path=pairing,
+            skip_integrity=False,
+        )
+        assert result.verdict is PairingVerdict.ABSENT
         assert result.code == "pairing-absent"
         with pytest.raises(PairingStoreError) as exc:
             require_approved_pairing(

@@ -119,13 +119,14 @@ def _record_from_raw(ref: str, raw: Any) -> PairingRecord:
 
 
 def _load_document(path: Path, *, skip_integrity: bool) -> dict[str, Any]:
+    # Absent pairing is a valid empty TOFU store — integrity applies only when present.
+    if not path.exists():
+        return {"version": 1, "pairings": {}}
     if not skip_integrity:
         try:
             verify_selector_path(path)
         except SelectorIntegrityError as exc:
             raise PairingStoreError(exc.code, exc.hint) from exc
-    elif not path.exists():
-        return {"version": 1, "pairings": {}}
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
