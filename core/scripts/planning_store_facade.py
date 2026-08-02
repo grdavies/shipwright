@@ -2232,11 +2232,19 @@ def _collect_phase_sub_issue_candidates(
             continue
         issue_id = str(entry.get("issueId") or "")
         unit_id = str(entry.get("unitId") or "")
+        # parent-checkbox mode stores phaseId-only stubs — no per-phase issues to close.
+        # Only consider entries that already carry an issueId or explicit unitId.
+        if not issue_id and not unit_id:
+            continue
         if not unit_id and tasks_unit_id:
             unit_id = f"{tasks_unit_id}-phase-{phase_id}"
         _add(str(phase_id), issue_id, unit_id)
 
     if candidates or not tasks_unit_id:
+        return candidates
+
+    # parent-checkbox hierarchy has no per-phase issues — do not fan out a full tasks search.
+    if str(hmap.get("mode") or "") == "parent-checkbox":
         return candidates
 
     pmis = _migrate_issue_store()
@@ -2272,6 +2280,7 @@ def close_done_phase_sub_issues(
     *,
     state: dict[str, Any] | None = None,
     dry_run: bool = False,
+    linked_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Close phase sub-issues marked done in deliver ledger or via ``sw:phase:N:done`` (PRD 060 R5)."""
     from planning_progress import phase_done_label
@@ -2284,7 +2293,9 @@ def close_done_phase_sub_issues(
     if not isinstance(backend, IssueStoreBackend):
         return {"verdict": "fail", "error": "issue-store-backend-required", "prdUnitId": prd_unit_id}
 
-    snapshot = resolve_delivery_linked_units(root, cfg, prd_unit_id)
+    snapshot = linked_snapshot if isinstance(linked_snapshot, dict) else None
+    if snapshot is None:
+        snapshot = resolve_delivery_linked_units(root, cfg, prd_unit_id)
     if snapshot.get("verdict") != "ok":
         return snapshot
     tasks_unit_id = next(
@@ -2777,8 +2788,6 @@ def _load_deliver_state_for_prd(root: Path, prd_unit_id: str) -> dict[str, Any] 
         return load_deliver_state(root)
     except Exception:  # noqa: BLE001
         return None
-
-
 
 
 def close_delivery_units(
