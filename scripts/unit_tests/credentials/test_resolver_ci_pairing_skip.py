@@ -7,8 +7,9 @@ from pathlib import Path
 
 import pytest
 
+from credentials.environment_backend import register_environment_backend
 from credentials.model import CredentialRef, ResolutionState
-from credentials.resolver import RepositoryContext, resolve_lookup
+from credentials.resolver import RepositoryContext, clear_backend_adapters, resolve_lookup
 
 
 _TEST_VALUE = "gh_fixture_token"
@@ -43,6 +44,14 @@ def _context() -> RepositoryContext:
         project_id="proj-1",
         destination_endpoint="https://api.github.com",
     )
+
+
+@pytest.fixture(autouse=True)
+def _register_environment_backend() -> None:
+    clear_backend_adapters()
+    register_environment_backend()
+    yield
+    clear_backend_adapters()
 
 
 def test_ci_selector_resolves_without_machine_pairing(
