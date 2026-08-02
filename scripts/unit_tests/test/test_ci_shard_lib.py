@@ -75,21 +75,22 @@ def test_compute_required_shard_count_formula(count: int, target: int, expected:
     assert csl.compute_required_shard_count(count, target_per_shard=target) == expected
 
 
-def test_compute_required_shard_count_manifest_stays_at_floor(repo_root: Path) -> None:
-    """Current manifest suite size is below the scaling threshold — shard count stays at 4."""
+def test_compute_required_shard_count_manifest_uses_expanded_files(repo_root: Path) -> None:
+    """Scaling input is expanded unique file count (R5), not raw fixture-entry count."""
     manifest = repo_root / "core/sw-reference/pr-test-plan.manifest.json"
     fixtures = json.loads(manifest.read_text(encoding="utf-8"))["fixtures"]
-    required_pytest = [
-        f for f in fixtures
-        if f.get("classification") == "required"
-        and f.get("script") == "scripts/test/run_pytest.py"
-    ]
-    count = len(required_pytest)
+    files = csl.collect_required_pytest_files(fixtures, repo_root)
+    count = len(files)
     result = csl.compute_required_shard_count(count)
-    assert result == csl._MIN_REQUIRED_SHARDS, (
-        f"manifest has {count} required pytest fixtures (<= threshold {_SCALING_THRESHOLD}); "
-        f"expected floor {csl._MIN_REQUIRED_SHARDS}, got {result}"
+    # Current suite exceeds the floor threshold and stays within the hard cap.
+    assert count > _SCALING_THRESHOLD, (
+        f"expected expanded suite size > {_SCALING_THRESHOLD}, got {count}"
     )
+    assert csl._MIN_REQUIRED_SHARDS < result <= csl.MAX_REQUIRED_SHARDS, (
+        f"manifest expands to {count} files; expected shard count in "
+        f"({csl._MIN_REQUIRED_SHARDS}, {csl.MAX_REQUIRED_SHARDS}], got {result}"
+    )
+    assert result == csl.shard_count_for_file_set(count)
 
 
 # ---------------------------------------------------------------------------
