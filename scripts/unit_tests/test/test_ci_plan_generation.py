@@ -1,14 +1,16 @@
-"""CI plan generation and named-plan dispatch fixtures (PRD 082 R35)."""
+"""CI plan generation and named-plan dispatch fixtures (PRD 082 R35 / PRD 088 R3/R4)."""
 
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 from pathlib import Path
 
 import pytest
 
 import ci_plan_gen as cpg
+import ci_shard_lib as csl
 import test_scope as ts
 
 
@@ -79,3 +81,30 @@ def test_ci_workflow_is_idempotent(repo_root: Path) -> None:
         first = cpg.generate_ci_workflow(repo_root, out_path=out)
         second = cpg.generate_ci_workflow(repo_root, out_path=out)
         assert first == second
+
+
+def test_pr_workflow_synthesizes_exactly_n_balanced_required_shards(repo_root: Path) -> None:
+    """Generated YAML has required shards 1..N with exhaustive balanced membership (PRD 088 R3/R4)."""
+    manifest = repo_root / cpg.MANIFEST_REL
+    fixtures = json.loads(manifest.read_text(encoding="utf-8"))["fixtures"]
+    files = csl.collect_required_pytest_files(fixtures, repo_root)
+    expected_n = csl.shard_count_for_file_set(len(files))
+    assert expected_n > 0
+
+    with tempfile.TemporaryDirectory() as tmp:
+        out = Path(tmp) / "pr-test-plan-ci.yml"
+        text = cpg.generate_pr_test_plan_workflow(repo_root, manifest_path=manifest, out_path=out)
+
+    shards = sorted(
+        int(m.group(1))
+        for m in re.finditer(r"feat-test-plan-pytest-required-shard-(\d+):", text)
+    )
+    assert shards == list(range(1, expected_n + 1)), (shards, expected_n)
+
+    shard_files, _ = csl.partition_required_pytest_files(fixtures, repo_root)
+    assert set(shard_files) == set(shards)
+    assigned = [path for members in shard_files.values() for path in members]
+    assert sorted(assigned) == sorted(files)
+    sizes = [len(members) for members in shard_files.values()]
+    assert max(sizes) - min(sizes) <= 1
+    assert all(size > 0 for size in sizes)
