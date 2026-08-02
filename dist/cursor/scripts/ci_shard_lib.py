@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""CI pytest shard grouping for pr-test-plan manifest (PRD 054 TR13)."""
+"""CI pytest shard grouping for pr-test-plan manifest (PRD 054 TR13 / PRD 088)."""
 from __future__ import annotations
 
+import hashlib
 import math
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -11,28 +11,43 @@ from typing import Any
 # Callers may override via compute_required_shard_count(count, target_per_shard=N).
 TARGET_PER_SHARD: int = 40
 
-# Minimum floor: never drop below 4 required shards regardless of suite size.
+# Hard ceiling on required shard fan-out (PRD 088 R3/D1). Kept beside TARGET_PER_SHARD.
+MAX_REQUIRED_SHARDS: int = 12
+
+# Minimum floor: never drop below 4 required shards regardless of suite size
+# (unless the unique file count is smaller — see shard_count_for_file_set).
 _MIN_REQUIRED_SHARDS: int = 4
 
 ADVISORY_SHARD_COUNT = 1
+
+# Lamping & Veach jump consistent hash multiplier (uint64).
+_JUMP_HASH_MULTIPLIER = 2862933555777941757
 
 
 def compute_required_shard_count(
     total_test_count: int,
     target_per_shard: int = TARGET_PER_SHARD,
 ) -> int:
-    """Return the required shard count scaled to the suite size (R2).
+    """Return the required shard count scaled to the suite size (R2 / PRD 088 R3).
 
-    Formula: max(_MIN_REQUIRED_SHARDS, ceil(total_test_count / target_per_shard))
+    Formula: min(MAX_REQUIRED_SHARDS, max(_MIN_REQUIRED_SHARDS,
+              ceil(total_test_count / target_per_shard)))
 
-    The result is monotonically non-decreasing as *total_test_count* grows.
-    At zero or negative input the floor (_MIN_REQUIRED_SHARDS = 4) is returned.
-    The count first exceeds the floor when total_test_count > _MIN_REQUIRED_SHARDS * target_per_shard
-    (with default settings: > 160 test files).
+    The result is monotonically non-decreasing as *total_test_count* grows until
+    the MAX_REQUIRED_SHARDS cap. At zero or negative input the floor
+    (_MIN_REQUIRED_SHARDS = 4) is returned.
     """
     if total_test_count <= 0 or target_per_shard <= 0:
         return _MIN_REQUIRED_SHARDS
-    return max(_MIN_REQUIRED_SHARDS, math.ceil(total_test_count / target_per_shard))
+    scaled = max(_MIN_REQUIRED_SHARDS, math.ceil(total_test_count / target_per_shard))
+    return min(MAX_REQUIRED_SHARDS, scaled)
+
+
+def shard_count_for_file_set(file_count: int) -> int:
+    """N for an expanded unique file set: min(compute_required_shard_count, len(files))."""
+    if file_count <= 0:
+        return 0
+    return min(compute_required_shard_count(file_count), file_count)
 
 
 def shard_job_name(classification: str, shard: int) -> str:
@@ -52,6 +67,9 @@ def assign_shard(
     ``compute_required_shard_count(live_count)`` here.  The default (None)
     falls back to ``compute_required_shard_count(0)`` which equals the
     _MIN_REQUIRED_SHARDS floor for backward compatibility.
+
+    Note: required pytest workflow membership uses ``partition_files_sticky``;
+    this helper remains for advisory / legacy index-based callers.
     """
     if shard_count is None:
         shard_count = compute_required_shard_count(0)
@@ -75,13 +93,16 @@ def pytest_paths_from_entry(entry: dict[str, Any]) -> list[str]:
     return paths
 
 
-def _is_required_pytest_shard_entry(entry: dict[str, Any]) -> bool:
-    job_id = str(entry.get("ciJobName") or "")
+def _is_required_pytest_entry(entry: dict[str, Any]) -> bool:
     return (
         entry.get("classification") == "required"
         and entry.get("script") == "scripts/test/run_pytest.py"
-        and "pytest-required-shard" in job_id
     )
+
+
+def _is_required_pytest_shard_entry(entry: dict[str, Any]) -> bool:
+    job_id = str(entry.get("ciJobName") or "")
+    return _is_required_pytest_entry(entry) and "pytest-required-shard" in job_id
 
 
 def expand_pytest_target(path: str, root: Path) -> list[str]:
@@ -109,28 +130,125 @@ def required_shard_number(ci_job_name: str) -> int | None:
     return int(suffix)
 
 
+def _path_key(path: str) -> int:
+    digest = hashlib.sha256(path.encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big")
+
+
+def jump_consistent_hash(key: int, num_buckets: int) -> int:
+    """Jump consistent hash (Lamping & Veach) → bucket in ``[0, num_buckets)``."""
+    if num_buckets <= 0:
+        raise ValueError("num_buckets must be positive")
+    key &= 0xFFFFFFFFFFFFFFFF
+    b = -1
+    j = 0
+    while j < num_buckets:
+        b = j
+        key = (key * _JUMP_HASH_MULTIPLIER + 1) & 0xFFFFFFFFFFFFFFFF
+        j = int((b + 1) * (1 << 31) / ((key >> 33) + 1))
+    return int(b)
+
+
+def _home_shard(path: str, shard_count: int) -> int:
+    """Sticky home shard in ``1..shard_count`` (jump consistent hash)."""
+    return jump_consistent_hash(_path_key(path), shard_count) + 1
+
+
+def partition_files_sticky(files: list[str], shard_count: int) -> dict[int, list[str]]:
+    """Path-hash ordered striping with exact floor/ceil balance (PRD 088 R1/R2/R4).
+
+    Files are ordered by SHA-256 path key (sticky total order). Contiguous
+    strips sized to ``[floor(n/N), ceil(n/N)]`` yield an exhaustive, disjoint,
+    optimally balanced partition. Home affinity (``_home_shard``) is jump
+    consistent hashing — zero remapping of homes when N is unchanged; the
+    strip projection may move at most ``N-1`` existing files across strip
+    boundaries when one file is inserted (boundary shift), never a full
+    round-robin reshuffle.
+
+    Empty shards are a hard error when files remain.
+    """
+    if shard_count <= 0:
+        return {}
+    unique = sorted(set(files), key=lambda p: (_path_key(p), p))
+    buckets: dict[int, list[str]] = {i: [] for i in range(1, shard_count + 1)}
+    if not unique:
+        return buckets
+
+    n = len(unique)
+    lo = n // shard_count
+    rem = n % shard_count
+    # First ``rem`` shards get ceil (=lo+1); the rest get floor (=lo).
+    idx = 0
+    for shard in range(1, shard_count + 1):
+        take = lo + (1 if shard <= rem else 0)
+        if take == 0:
+            raise ValueError(
+                f"empty required shard after partition (files={n}, N={shard_count})"
+            )
+        buckets[shard] = unique[idx : idx + take]
+        idx += take
+    if idx != n:
+        raise RuntimeError("sticky strip partition failed to cover all files")
+
+    hi = lo + (1 if rem else 0)
+    for shard, members in buckets.items():
+        if not (lo <= len(members) <= hi):
+            raise ValueError(
+                f"shard {shard} size {len(members)} outside [{lo}, {hi}] "
+                f"(files={n}, N={shard_count})"
+            )
+    return buckets
+
+
+def collect_required_pytest_files(
+    fixtures: list[dict[str, Any]],
+    root: Path,
+) -> list[str]:
+    """Expand required pytest manifest targets to a unique sorted file/node-id set."""
+    claimed: set[str] = set()
+    for entry in fixtures:
+        if not _is_required_pytest_entry(entry):
+            continue
+        for path in pytest_paths_from_entry(entry):
+            for target in expand_pytest_target(path, root):
+                claimed.add(target)
+    return sorted(claimed)
+
+
 def partition_required_pytest_files(
     fixtures: list[dict[str, Any]],
     root: Path,
 ) -> tuple[dict[int, list[str]], dict[int, list[dict[str, Any]]]]:
-    """Assign each test file/node-id to exactly one required shard (manifest order, first claim wins)."""
-    shard_files: dict[int, list[str]] = {}
-    shard_entries: dict[int, list[dict[str, Any]]] = {}
-    claimed: set[str] = set()
+    """Assign each expanded required pytest target to exactly one shard (sticky).
 
+    Manifest ``ciJobName`` labels are not assignment authority (PRD 088 R2).
+    """
+    files = collect_required_pytest_files(fixtures, root)
+    shard_count = shard_count_for_file_set(len(files))
+    shard_files = partition_files_sticky(files, shard_count)
+
+    file_to_shard: dict[str, int] = {}
+    for shard, members in shard_files.items():
+        for path in members:
+            file_to_shard[path] = shard
+
+    shard_entries: dict[int, list[dict[str, Any]]] = {i: [] for i in range(1, shard_count + 1)}
+    seen_entry_ids: dict[int, set[str]] = {i: set() for i in range(1, shard_count + 1)}
     for entry in fixtures:
-        if not _is_required_pytest_shard_entry(entry):
+        if not _is_required_pytest_entry(entry):
             continue
-        shard = required_shard_number(str(entry["ciJobName"]))
-        if shard is None:
-            continue
-        shard_entries.setdefault(shard, []).append(entry)
+        entry_id = str(entry.get("id") or id(entry))
+        touched: set[int] = set()
         for path in pytest_paths_from_entry(entry):
             for target in expand_pytest_target(path, root):
-                if target in claimed:
-                    continue
-                claimed.add(target)
-                shard_files.setdefault(shard, []).append(target)
+                shard = file_to_shard.get(target)
+                if shard is not None:
+                    touched.add(shard)
+        for shard in sorted(touched):
+            if entry_id in seen_entry_ids[shard]:
+                continue
+            seen_entry_ids[shard].add(entry_id)
+            shard_entries[shard].append(entry)
     return shard_files, shard_entries
 
 
@@ -151,40 +269,45 @@ def group_fixtures_for_ci(
     *,
     root: Path | None = None,
 ) -> list[dict[str, Any]]:
-    """Collapse manifest fixtures sharing ciJobName into one workflow job."""
+    """Collapse manifest fixtures into workflow jobs; synthesize required shards 1..N."""
     repo_root = root or Path.cwd()
+    shard_files, shard_entries = partition_required_pytest_files(fixtures, repo_root)
+    jobs: list[dict[str, Any]] = []
+
+    for shard in sorted(shard_files):
+        files = shard_files[shard]
+        if not files:
+            raise ValueError(
+                f"refusing empty required shard {shard} while synthesizing 1..{len(shard_files)}"
+            )
+        job_id = shard_job_name("required", shard)
+        entries = shard_entries.get(shard, [])
+        cmd = "python3 scripts/test/run_pytest.py " + " ".join(files) + " -q"
+        jobs.append(
+            {
+                "ciJobName": job_id,
+                "classification": "required",
+                "entries": entries,
+                "command": cmd,
+                "suiteIds": [entry["id"] for entry in entries if "id" in entry],
+            }
+        )
+
     order: list[str] = []
     groups: dict[str, list[dict[str, Any]]] = {}
     for entry in fixtures:
+        if _is_required_pytest_entry(entry):
+            continue
         job_id = str(entry["ciJobName"])
         if job_id not in groups:
             order.append(job_id)
             groups[job_id] = []
         groups[job_id].append(entry)
 
-    shard_files, shard_entries = partition_required_pytest_files(fixtures, repo_root)
-    jobs: list[dict[str, Any]] = []
     for job_id in order:
         entries = groups[job_id]
         head = entries[0]
         classification = head.get("classification", "required")
-
-        if _is_required_pytest_shard_entry(head):
-            shard = required_shard_number(job_id)
-            files = shard_files.get(shard or -1, [])
-            if not files:
-                continue
-            cmd = "python3 scripts/test/run_pytest.py " + " ".join(files) + " -q"
-            jobs.append(
-                {
-                    "ciJobName": job_id,
-                    "classification": classification,
-                    "entries": shard_entries.get(shard or -1, entries),
-                    "command": cmd,
-                    "suiteIds": [entry["id"] for entry in shard_entries.get(shard or -1, entries)],
-                }
-            )
-            continue
 
         if len(entries) == 1 and not pytest_paths_from_entry(head):
             jobs.append(
