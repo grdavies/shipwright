@@ -206,6 +206,8 @@ def generate_ci_workflow(root: Path, *, out_path: Path | None = None) -> str:
             "        run: PYTHONPATH=scripts python3 scripts/test/_runner.py run-pytest --scope full scripts/unit_tests",
             "      - name: Notify triage owner on nightly failure",
             "        if: failure()",
+            "        env:",
+            "          SW_PLANNING_ISSUES_TOKEN: ${{ secrets.SW_PLANNING_ISSUES_TOKEN }}",
             "        run: |",
             "          PYTHONPATH=scripts python3 scripts/nightly-failure-notify.py \\",
             "            --job verify-scheduled-full-plus-integration \\",
