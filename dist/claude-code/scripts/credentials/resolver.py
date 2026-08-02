@@ -202,9 +202,14 @@ def _load_selector(
     xdg_base: Path | None,
     skip_integrity: bool,
     repo_root: Path | None = None,
-) -> SelectorDocument:
+) -> tuple[SelectorDocument, bool]:
+    """Load the machine selector, falling back to the committed CI selector.
+
+    Returns ``(document, from_ci)``. CI-sourced documents skip trust-on-first-use
+    pairing — pairing is a machine-local control plane, not a CI runner concern.
+    """
     try:
-        return load_selector_store(path=selector_path, xdg_base=xdg_base, skip_integrity=skip_integrity)
+        return load_selector_store(path=selector_path, xdg_base=xdg_base, skip_integrity=skip_integrity), False
     except SelectorStoreError as exc:
         if exc.code == "selector-absent":
             # Consult the committed CI selector before failing closed (R3).
@@ -212,7 +217,7 @@ def _load_selector(
             if root is not None:
                 ci_doc = try_load_ci_selector(root=root)
                 if ci_doc is not None:
-                    return ci_doc
+                    return ci_doc, True
             raise ResolverScopeError(fc.MISSING_SELECTOR, exc.hint) from exc
         if exc.code.startswith("selector-missing-"):
             raise ResolverScopeError(fc.INSUFFICIENT_SCOPE, exc.hint) from exc
@@ -332,7 +337,7 @@ def resolve_lookup(
     provider_norm = provider.strip().lower()
 
     try:
-        document = _load_selector(
+        document, from_ci = _load_selector(
             selector_path=selector_path,
             xdg_base=xdg_base,
             skip_integrity=skip_integrity,
@@ -366,19 +371,20 @@ def resolve_lookup(
             backend=entry.backend,
         )
 
-    pairing_code = _check_pairing(
-        ref.value,
-        context,
-        pairing_path=pairing_path,
-        xdg_base=xdg_base,
-        skip_integrity=skip_integrity,
-    )
-    if pairing_code is not None:
-        return ResolverResult(
-            resolution=Resolution.unresolved(ref, reason=pairing_code),
-            failure_code=pairing_code,
-            backend=entry.backend,
+    if not from_ci:
+        pairing_code = _check_pairing(
+            ref.value,
+            context,
+            pairing_path=pairing_path,
+            xdg_base=xdg_base,
+            skip_integrity=skip_integrity,
         )
+        if pairing_code is not None:
+            return ResolverResult(
+                resolution=Resolution.unresolved(ref, reason=pairing_code),
+                failure_code=pairing_code,
+                backend=entry.backend,
+            )
 
     if purpose_norm in _NO_AUTH_PURPOSES:
         resolution = Resolution.explicitly_no_auth(ref, reason="explicitly-no-auth")

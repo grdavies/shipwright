@@ -304,7 +304,12 @@ def token_status(root: Path) -> dict[str, Any]:
         "credentialState": credential.state.value,
     }
     if not present:
-        out["reason"] = credential.reason or "missing-token"
+        reason = credential.reason or "missing-token"
+        # Empty declared environment secret surfaces as broker insufficient-access;
+        # token-status keeps the operator-facing missing-token reason.
+        if reason == "resolver-insufficient-access":
+            reason = "missing-token"
+        out["reason"] = reason
         if token_env:
             out["message"] = f"Set {token_env} for host API access (value never logged)."
         else:

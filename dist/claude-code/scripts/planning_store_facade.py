@@ -1697,12 +1697,21 @@ def _discover_planning_issues_gaps(
     """Augment expected gap set from provenance-bound planningIssues refs (R7)."""
     out = set(delivery_grade)
     skip = list(skipped)
-    for ref in parse_planning_issues_refs(fm.get("planningIssues", "")):
-        gap_id = resolve_planning_issue_ref_to_gap(root, cfg, ref)
+    refs = parse_planning_issues_refs(fm.get("planningIssues", ""))
+    if not refs:
+        return out, skip
+    backend = get_backend(root, cfg, override="issue-store")
+    shared_backend = backend if isinstance(backend, IssueStoreBackend) else None
+    for ref in refs:
+        gap_id = resolve_planning_issue_ref_to_gap(
+            root, cfg, ref, backend=shared_backend
+        )
         if not gap_id:
             skip.append({"ref": ref, "reason": "planning-issue-unresolved"})
             continue
-        if gap_has_absorb_provenance(root, cfg, gap_id, prd_unit_id, fm, prd_num=prd_num, edges=edges):
+        if gap_has_absorb_provenance(
+            root, cfg, gap_id, prd_unit_id, fm, prd_num=prd_num, edges=edges
+        ):
             out.add(gap_id)
         else:
             skip.append({"ref": ref, "unitId": gap_id, "reason": "planning-issue-no-provenance"})
@@ -1833,8 +1842,14 @@ def resolve_planning_issue_ref_to_gap(
     ref: str,
     *,
     backend: "IssueStoreBackend | None" = None,
+    gap_catalog: list[Any] | None = None,
 ) -> str | None:
-    """Map a planning issue ref to a gap unit id via issue-store search (R7)."""
+    """Map a planning issue ref to a gap unit id (R7).
+
+    Numeric refs resolve via ``issue_get`` (O(1)) — never a full gap catalog search per
+    ref. Catalog search is only the fallback for non-numeric / related-field matching, and
+    callers may pass a shared ``gap_catalog`` to avoid N+1 list fetches.
+    """
     pmis = _migrate_issue_store()
     if not pmis.issue_store_effective(root, cfg):
         return None
@@ -1852,10 +1867,27 @@ def resolve_planning_issue_ref_to_gap(
     if m:
         issue_num = int(m.group(1))
     client = backend._client
+
+    # Prefer direct get for numeric planning issue refs (avoids rate-limit N+1).
+    if issue_num is not None:
+        getter = getattr(client, "issue_get", None) or getattr(client, "get", None)
+        if callable(getter):
+            try:
+                record = getter(str(issue_num))
+            except Exception:
+                record = None
+            if record is not None:
+                unit_id = str(getattr(record, "unit_id", "") or "").strip()
+                if unit_id:
+                    return unit_id
+
     search = getattr(client, "issue_search", None)
     if not callable(search):
         return None
-    for record in search(project_key=project_key, artifact_type="gap"):
+    records = gap_catalog
+    if records is None:
+        records = list(search(project_key=project_key, artifact_type="gap"))
+    for record in records:
         unit_id = str(getattr(record, "unit_id", "") or "").strip()
         if not unit_id:
             continue
@@ -1864,7 +1896,11 @@ def resolve_planning_issue_ref_to_gap(
         body = reassemble_body(record.body, record.comments)
         gap_fm = pmis.parse_frontmatter_fields(strip_markers_and_edges(body))
         related = str(gap_fm.get("related") or "")
-        needles = {normalized, f"planning#{issue_num}" if issue_num else "", f"#{issue_num}" if issue_num else ""}
+        needles = {
+            normalized,
+            f"planning#{issue_num}" if issue_num else "",
+            f"#{issue_num}" if issue_num else "",
+        }
         if any(n and n in related for n in needles):
             return unit_id
     return None
@@ -2196,11 +2232,19 @@ def _collect_phase_sub_issue_candidates(
             continue
         issue_id = str(entry.get("issueId") or "")
         unit_id = str(entry.get("unitId") or "")
+        # parent-checkbox mode stores phaseId-only stubs — no per-phase issues to close.
+        # Only consider entries that already carry an issueId or explicit unitId.
+        if not issue_id and not unit_id:
+            continue
         if not unit_id and tasks_unit_id:
             unit_id = f"{tasks_unit_id}-phase-{phase_id}"
         _add(str(phase_id), issue_id, unit_id)
 
     if candidates or not tasks_unit_id:
+        return candidates
+
+    # parent-checkbox hierarchy has no per-phase issues — do not fan out a full tasks search.
+    if str(hmap.get("mode") or "") == "parent-checkbox":
         return candidates
 
     pmis = _migrate_issue_store()
@@ -2236,6 +2280,7 @@ def close_done_phase_sub_issues(
     *,
     state: dict[str, Any] | None = None,
     dry_run: bool = False,
+    linked_snapshot: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Close phase sub-issues marked done in deliver ledger or via ``sw:phase:N:done`` (PRD 060 R5)."""
     from planning_progress import phase_done_label
@@ -2248,7 +2293,9 @@ def close_done_phase_sub_issues(
     if not isinstance(backend, IssueStoreBackend):
         return {"verdict": "fail", "error": "issue-store-backend-required", "prdUnitId": prd_unit_id}
 
-    snapshot = resolve_delivery_linked_units(root, cfg, prd_unit_id)
+    snapshot = linked_snapshot if isinstance(linked_snapshot, dict) else None
+    if snapshot is None:
+        snapshot = resolve_delivery_linked_units(root, cfg, prd_unit_id)
     if snapshot.get("verdict") != "ok":
         return snapshot
     tasks_unit_id = next(
@@ -2696,6 +2743,53 @@ def close_parent_epic_if_complete(
 
 
 
+def _load_deliver_state_for_prd(root: Path, prd_unit_id: str) -> dict[str, Any] | None:
+    """Best-effort load of deliver run state matching ``prd_unit_id`` (for phase closure)."""
+    try:
+        from wave_json_io import read_json
+        from wave_state import enumerate_run_scoped_dirs, load_deliver_state
+    except Exception:  # noqa: BLE001
+        return None
+
+    needle = str(prd_unit_id or "").strip()
+    prd_num = _prd_number_from_unit_id(needle) or ""
+    candidates: list[Path] = []
+    try:
+        for entry in enumerate_run_scoped_dirs(root):
+            sp = root / str(entry.get("statePath") or "")
+            if sp.is_file():
+                candidates.append(sp)
+    except Exception:  # noqa: BLE001
+        pass
+    # Also consider scoped slug state files
+    cursor = root / ".cursor"
+    if cursor.is_dir():
+        for path in cursor.glob("sw-deliver-state*.json"):
+            if path.is_file():
+                candidates.append(path)
+
+    for path in candidates:
+        try:
+            data = read_json(path)
+        except Exception:  # noqa: BLE001
+            continue
+        if not isinstance(data, dict) or data.get("migrated"):
+            continue
+        source = str(data.get("source_task_list") or "")
+        pin = data.get("planningStorePin") if isinstance(data.get("planningStorePin"), dict) else {}
+        unit = str(pin.get("unitId") or data.get("prd_number") or "")
+        if needle and (
+            needle in source
+            or needle == unit
+            or (prd_num and (prd_num == str(data.get("prd_number") or "") or f"/{prd_num}-" in source))
+        ):
+            return data
+    try:
+        return load_deliver_state(root)
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def close_delivery_units(
     root: Path,
     cfg: dict[str, Any],
@@ -2705,6 +2799,8 @@ def close_delivery_units(
     state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Close linked PRD/tasks/brainstorm/gap units after retrospective merge (PRD 059 R16-R24)."""
+    if state is None:
+        state = _load_deliver_state_for_prd(root, prd_unit_id)
     snapshot = resolve_delivery_linked_units(root, cfg, prd_unit_id)
     if snapshot.get("verdict") != "ok":
         return snapshot
@@ -2713,7 +2809,12 @@ def close_delivery_units(
         return {"verdict": "fail", "error": "issue-store-backend-required", "prdUnitId": prd_unit_id}
 
     phase_closure = close_done_phase_sub_issues(
-        root, cfg, prd_unit_id, state=state, dry_run=dry_run
+        root,
+        cfg,
+        prd_unit_id,
+        state=state,
+        dry_run=dry_run,
+        linked_snapshot=snapshot,
     )
 
     units = list(snapshot.get("snapshot") or [])
