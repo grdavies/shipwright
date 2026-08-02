@@ -740,6 +740,7 @@
 * merge phase doc-loop-robustness-scope-the-doc-driver-environment-signal-r10 into feat/deliver-and-doc-loop-orchestration-integrity (1870707) <!-- sw-deliver:doc-loop-robustness-scope-the-doc-driver-environment-signal-r10 -->
 * merge phase doc-loop-robustness-single-related-work-checkpoint-r11 into feat/deliver-and-doc-loop-orchestration-integrity (9be106b) <!-- sw-deliver:doc-loop-robustness-single-related-work-checkpoint-r11 -->
 * merge phase feature-seed-contract-doc-to-feature-handoff-lock-seed-verify-release-r14 into feat/deliver-and-doc-loop-orchestration-integrity (f5ef8e6) <!-- sw-deliver:feature-seed-contract-doc-to-feature-handoff-lock-seed-verify-release-r14 -->
+* merge phase stable-exhaustive-partition-library-small into feat/ci-test-plan-wall-clock-and-nightly (b68b1d6) <!-- sw-deliver:stable-exhaustive-partition-library-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
