@@ -86,58 +86,95 @@ PR jobs run `.github/workflows/pr-test-plan-ci.yml`, generated from
 - **Pytest shards** — `feat-test-plan-pytest-required-shard-{1..N}` and
 `feat-test-plan-pytest-advisory-shard-1` batch registry `pytestPath` targets per shard.
 - **Disjoint partition** — `scripts/ci_shard_lib.py` expands manifest directory args to
-concrete `test_*.py` files (or preserves `::` node ids) and assigns each target to exactly one
-required shard. Manifest order wins on overlap; the duplication factor
-(`total assignments / unique files`) must stay `1.0` — no file runs in more than one required shard.
+concrete `test_*.py` files (or preserves `::` node ids) and assigns each target via
+`partition_files_sticky` to exactly one required shard. Manifest `ciJobName` is not the assignment
+authority; the duplication factor (`total assignments / unique files`) must stay `1.0`.
 - **Classification** — `required` shards block merge; `advisory` shards use `continue-on-error` (checks-gate
 semantics unchanged).
 
-### TR13 — Auto-scaling required shard count
+### TR13 — Auto-scaling required shard count (stable partition)
 
-The number of required shards is no longer hardcoded. `scripts/ci_shard_lib.py` exports:
+Required pytest shards are produced by a **stable, balanced, exhaustive** partition over the
+expanded unique **file** set from required manifest targets — not by manifest `ciJobName` labels.
+
+`scripts/ci_shard_lib.py` is the authority:
 
 ```python
 compute_required_shard_count(
-total_test_count: int,
-target_per_shard: int = TARGET_PER_SHARD, # default: 40
+    total_test_count: int,
+    target_per_shard: int = TARGET_PER_SHARD,  # default: 40
 ) -> int
+
+partition_files_sticky(files: list[str], shard_count: int) -> dict[int, list[str]]
 ```
 
-**Scaling input** — `total_test_count`: the number of collected required pytest test files (or fixture
-entries) from the manifest. Callers pass the live count; `assign_shard()` accepts an optional
-`shard_count` override for the same purpose.
+**Scaling input** — expanded unique file count (`collect_required_pytest_files`), not fixture-entry
+count. Callers pass that live length into `compute_required_shard_count`.
 
-**Target-wall-clock config knob** — `TARGET_PER_SHARD` (module-level constant, default `40`). This
-represents the target number of test files per shard — tune it to hit the desired per-shard wall-clock
-budget. Lower values produce more shards (shorter wall-clock); higher values produce fewer.
-
-**Formula** — `max(4, ceil(total_test_count / target_per_shard))`
-
-The result is monotonically non-decreasing as `total_test_count` grows. The floor (`_MIN_REQUIRED_SHARDS = 4`)
-is always preserved. The shard count first exceeds `4` when:
+**Formula** —
 
 ```
-total_test_count > _MIN_REQUIRED_SHARDS × TARGET_PER_SHARD
-> 4 × 40 = 160 (with defaults)
+N = min(MAX_REQUIRED_SHARDS, max(_MIN_REQUIRED_SHARDS, ceil(n / TARGET_PER_SHARD)))
 ```
 
-The current manifest has fewer than 160 required pytest fixtures, so the shard count remains `4` today.
-As the suite grows past 160 fixtures the scheduler will automatically allocate additional shards
-without manual config changes.
+| Constant | Default | Role |
+| --- | --- | --- |
+| `_MIN_REQUIRED_SHARDS` | `4` | Floor — never fewer than 4 required shards |
+| `TARGET_PER_SHARD` | `40` | Target files per shard (tune for wall-clock) |
+| `MAX_REQUIRED_SHARDS` | `12` | Hard ceiling on required shard fan-out (PRD 088) |
 
-**Regression** — `scripts/unit_tests/test/test_ci_shard_lib.py` verifies monotonicity, the floor,
-boundary at exactly the threshold, and that the live manifest stays at the floor.
+With ~298 expanded required files and defaults, `N` exceeds the floor (typically **8**) and stays
+≤ `MAX_REQUIRED_SHARDS`.
 
-Regenerate after manifest edits:
+**Stable sticky partition** — `partition_files_sticky` path-hash orders files, then stripes into
+exact `[floor(n/N), ceil(n/N)]` shard sizes. Properties:
+
+- Disjoint + exhaustive (duplication factor `1.0`; union equals the full expanded set).
+- Sticky under single-file insertion when `N` is unchanged (reassignment churn bounded).
+- Empty required shards are a hard error when files remain to assign.
+
+**Generator synthesis (1..N)** — `ci_plan_gen` / `generate-pr-test-plan-ci-workflow` expand targets,
+compute `N`, and **synthesize** jobs `feat-test-plan-pytest-required-shard-1..N` with stable step
+labels. Manifest `ciJobName` is not the assignment authority. Regenerate after manifest or partition
+edits:
 
 ```bash
+python3 scripts/ci_plan_gen.py pr-test-plan
+# or:
 python3 scripts/generate-pr-test-plan-ci-workflow.py \
-core/sw-reference/pr-test-plan.manifest.json \
-.github/workflows/pr-test-plan-ci.yml .
+  core/sw-reference/pr-test-plan.manifest.json \
+  .github/workflows/pr-test-plan-ci.yml .
 ```
 
-**Consolidated full verify** — `.github/workflows/ci.yml` `verify-full` on `main` push and nightly schedule runs
-`python3 scripts/test/_runner.py verify --scope full`.
+**Regression** — `scripts/unit_tests/test/test_ci_shard_lib.py` and
+`scripts/unit_tests/test/test_ci_plan_generation.py` fail closed on bad duplication, incomplete
+union, empty shards, floor/ceil violations, and workflow job-count ≠ `N`.
+
+#### R7 — Wall-clock measurement protocol
+
+On the implementing PR, measure **max required pytest-shard job elapsed time excluding queue time**:
+
+1. Open the PR's Actions run for `PR test-plan (FEAT)`.
+2. For each `feat-test-plan-pytest-required-shard-*` job, record job elapsed (not queue wait).
+3. Acceptance: max ≤ **29 minutes**, and at least **two** required shards have non-trivial membership.
+4. Capture the run URL in delivery notes (phase 10 / `.cursor/sw-doc-runs/.../r7-wall-clock.md`).
+
+If measurement misses after a correct file-count stable partition: record evidence and open a
+**separate follow-on** — do **not** expand into duration-weighted planning inside this delivery.
+
+#### R10 — Nightly-only visibility policy
+
+For each nightly-only failure class:
+
+- **Promote to a required PR shard** only when the test is hermetic, cheap, and does **not** need
+  resolved credentials, live host API access, or planning-store writes — and promotion does not
+  violate the R7 wall-clock budget.
+- Otherwise document it as **nightly-only** here with rationale.
+- Credential / live-host / planning-store-write tests are **ineligible** for PR-shard promotion and
+  MUST stay on the nightly-only documentation path. Phase 10 records per-class outcomes.
+
+**Consolidated full verify** — `.github/workflows/ci.yml` `verify-full` on `main` push and nightly
+schedule runs `python3 scripts/test/_runner.py verify --scope full`.
 
 ### Nightly failure triage-owner notification
 
@@ -150,6 +187,15 @@ plan metadata (`plans.scheduled-full-plus-integration.triageOwner`, default
 2. Auto-files an authoritative planning-store gap via `planning_gap_capture.capture_gap`
 with a stable `nightly-failure:<job>:<run-id>` signal id (deduped against open gaps).
 
+**Broker / step-scope prerequisites (R9)** — planning-store writes go through broker-only
+`credentials.resolver` / `credentials.send_path` with a declared selector entry. The planning token
+(`SW_PLANNING_ISSUES_TOKEN`) MUST be injected **only** on the notify step `env:` (matching
+`deliver-closeout.yml` mutate-step pattern) — never workflow- or job-level, and never on pytest
+steps in the same job. Ambient undeclared `GITHUB_TOKEN` bypass is prohibited; resolver refusal
+MUST NOT be converted to pass. Failure envelopes emit allowlisted codes / static remediation text
+only. Selector `allowedRepos` / `allowedProjectIds` / `allowedEndpoints` MUST NOT be weakened to
+force green (scope mismatch → follow-on).
+
 Dry-run locally:
 
 ```bash
@@ -158,7 +204,8 @@ python3 scripts/nightly-failure-notify.py \
 --dry-run --no-dedupe
 ```
 
-Regression: `scripts/unit_tests/test/test_nightly_failure_notify.py`.
+Regression: `scripts/unit_tests/test/test_nightly_failure_notify.py` (plus broker/selector pins under
+`scripts/unit_tests/credentials/` when R9 lands).
 
 ## Running tests locally
 
