@@ -307,7 +307,7 @@ def token_status(root: Path) -> dict[str, Any]:
         reason = credential.reason or "missing-token"
         # Empty declared environment secret surfaces as broker insufficient-access;
         # token-status keeps the operator-facing missing-token reason.
-        if reason == "resolver-insufficient-access" and token_env:
+        if reason == "resolver-insufficient-access":
             reason = "missing-token"
         out["reason"] = reason
         if token_env:

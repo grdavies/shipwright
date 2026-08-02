@@ -144,7 +144,6 @@
   "host": {
     "provider": "github",
     "remote": "origin",
-    "tokenEnv": "GITHUB_TOKEN",
     "rateLimit": {
       "maxAttempts": 5,
       "baseBackoffMs": 1000,
@@ -377,6 +376,5 @@
   "intraPhase": {
     "parallelBudget": 4,
     "harnessLimit": 16
-  },
-  "projectId": "shipwright"
+  }
 }
