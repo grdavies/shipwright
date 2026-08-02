@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-02T21:11:40Z",
+  "generatedAt": "2026-08-02T21:34:26Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -18514,109 +18514,109 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:177:test/_runner.py",
+      "id": "docs/guides/testing.md:189:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 177,
+      "line": 189,
       "column": 23,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:202:nightly-failure-notify.py",
+      "id": "docs/guides/testing.md:214:nightly-failure-notify.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 202,
+      "line": 214,
       "column": 8,
       "script": "nightly-failure-notify.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:214:test/run_pytest.py",
+      "id": "docs/guides/testing.md:226:test/run_pytest.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 214,
+      "line": 226,
       "column": 8,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:217:test/_runner.py",
+      "id": "docs/guides/testing.md:229:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 217,
+      "line": 229,
       "column": 27,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:217:test/_runner.py",
+      "id": "docs/guides/testing.md:229:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 217,
+      "line": 229,
       "column": 0,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:228:build-chain-sync.py",
+      "id": "docs/guides/testing.md:240:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 228,
+      "line": 240,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:234:build-chain-sync.py",
+      "id": "docs/guides/testing.md:246:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 234,
+      "line": 246,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:237:build-chain-sync.py",
+      "id": "docs/guides/testing.md:249:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 237,
+      "line": 249,
       "column": 41,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:246:deprecated_surface_freshness.py",
+      "id": "docs/guides/testing.md:258:deprecated_surface_freshness.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 246,
+      "line": 258,
       "column": 11,
       "script": "deprecated_surface_freshness.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:247:harness_isolation_lint.py",
+      "id": "docs/guides/testing.md:259:harness_isolation_lint.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 247,
+      "line": 259,
       "column": 11,
       "script": "harness_isolation_lint.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:295:test/_runner.py",
+      "id": "docs/guides/testing.md:307:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 295,
+      "line": 307,
       "column": 27,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:295:test/_runner.py",
+      "id": "docs/guides/testing.md:307:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 295,
+      "line": 307,
       "column": 0,
       "script": "test/_runner.py",
       "classification": "self-repo-only"

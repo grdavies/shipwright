@@ -173,6 +173,18 @@ For each nightly-only failure class:
 - Credential / live-host / planning-store-write tests are **ineligible** for PR-shard promotion and
   MUST stay on the nightly-only documentation path. Delivery notes record per-class outcomes.
 
+**Outcomes for this wall-clock / nightly restore:**
+
+| Class | Disposition | Rationale |
+| --- | --- | --- |
+| Distribution freshness (`planningPackage` mirror digests) | Stay on scheduled full / nightly lane | Suite-wide tree digest; cheap hermetic unit already covers the bytecode-ignore contract in PR shards |
+| Bare-main orchestrator entry hardening | Already covered in required PR shards | Hermetic unit; no further promotion |
+| Global-plan literal lint | Already covered in required PR shards | Hermetic unit; no further promotion |
+| Nightly notify → planning-store gap write | Nightly-only (live) | Requires resolved planning credential + planning-store write — **ineligible** for PR promotion |
+| Notify broker / selector pin unit tests | Required PR shards (`credentials` fixtures) | Hermetic fake environment backend; no live host |
+
+Manifest `pr-test-plan.manifest.json` is unchanged for optional promotions (wall-clock budget already met with current shard set).
+
 **Consolidated full verify** — `.github/workflows/ci.yml` `verify-full` on `main` push and nightly
 schedule runs `python3 scripts/test/_runner.py verify --scope full`.
 
