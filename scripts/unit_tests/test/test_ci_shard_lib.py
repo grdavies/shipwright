@@ -139,3 +139,112 @@ def test_boundary_directory_overlap_resolves_to_single_shard(repo_root: Path) ->
 
 def test_empty_fixture_set_duplication_factor_trivial(repo_root: Path) -> None:
     assert csl.duplication_factor([], repo_root) == 1.0
+
+
+# ---------------------------------------------------------------------------
+# PRD 088 R1/R2/R4: sticky path-hash partition, floor/ceil, exhaustiveness
+# ---------------------------------------------------------------------------
+
+def test_max_required_shards_documented_beside_target() -> None:
+    assert csl.MAX_REQUIRED_SHARDS == 12
+    assert csl.TARGET_PER_SHARD == 40
+
+
+def test_compute_required_shard_count_respects_max_cap() -> None:
+    huge = csl.MAX_REQUIRED_SHARDS * csl.TARGET_PER_SHARD * 10
+    assert csl.compute_required_shard_count(huge) == csl.MAX_REQUIRED_SHARDS
+
+
+def test_partition_files_sticky_floor_ceil_and_exhaustiveness() -> None:
+    files = [f"scripts/unit_tests/fake/test_{i:03d}.py" for i in range(97)]
+    n = csl.shard_count_for_file_set(len(files))
+    assert n >= csl._MIN_REQUIRED_SHARDS
+    buckets = csl.partition_files_sticky(files, n)
+    assert set(buckets) == set(range(1, n + 1))
+    assigned = [p for members in buckets.values() for p in members]
+    assert sorted(assigned) == sorted(files)
+    assert len(assigned) == len(set(assigned))
+    lo, hi = len(files) // n, math.ceil(len(files) / n)
+    for shard, members in buckets.items():
+        assert lo <= len(members) <= hi, (shard, len(members), lo, hi)
+
+
+def test_partition_files_sticky_insertion_churn_at_most_one() -> None:
+    base = [f"scripts/unit_tests/fake/test_{i:03d}.py" for i in range(80)]
+    n = csl.shard_count_for_file_set(len(base))
+    before_home = {p: csl._home_shard(p, n) for p in base}
+    before = {
+        path: shard
+        for shard, members in csl.partition_files_sticky(base, n).items()
+        for path in members
+    }
+    newbie = "scripts/unit_tests/fake/test_inserted.py"
+    after_files = base + [newbie]
+    # N unchanged when still below next ceil threshold
+    n_after = csl.shard_count_for_file_set(len(after_files))
+    assert n_after == n
+    after_home = {p: csl._home_shard(p, n_after) for p in base}
+    assert after_home == before_home  # consistent-hash homes: zero churn
+    after = {
+        path: shard
+        for shard, members in csl.partition_files_sticky(after_files, n_after).items()
+        for path in members
+    }
+    moved = [p for p in base if before[p] != after[p]]
+    # Strip boundaries shift by at most one file per boundary (≤ N-1), never full reshuffle
+    assert len(moved) <= n - 1, f"churn too high: {len(moved)} moved"
+    assert after[newbie] in range(1, n + 1)
+
+
+def test_partition_required_ignores_manifest_job_labels(repo_root: Path) -> None:
+    """ciJobName is not assignment authority — overlapping dirs still disjoint + balanced."""
+    fixtures = [
+        {
+            "id": "a",
+            "script": "scripts/test/run_pytest.py",
+            "args": ["scripts/unit_tests/git", "-q"],
+            "classification": "required",
+            "ciJobName": "feat-test-plan-pytest-required-shard-1",
+        },
+        {
+            "id": "b",
+            "script": "scripts/test/run_pytest.py",
+            "args": ["scripts/unit_tests/git/test_build_chain_hygiene.py", "-q"],
+            "classification": "required",
+            "ciJobName": "feat-test-plan-pytest-required-shard-1",
+        },
+    ]
+    shard_files, _ = csl.partition_required_pytest_files(fixtures, repo_root)
+    all_files = [f for files in shard_files.values() for f in files]
+    assert len(all_files) == len(set(all_files))
+    assert "scripts/unit_tests/git/test_build_chain_hygiene.py" in all_files
+    n = len(shard_files)
+    lo = len(set(all_files)) // n
+    hi = math.ceil(len(set(all_files)) / n)
+    for members in shard_files.values():
+        assert lo <= len(members) <= hi
+
+
+def test_group_fixtures_synthesizes_shards_1_through_n(repo_root: Path) -> None:
+    manifest = repo_root / "core/sw-reference/pr-test-plan.manifest.json"
+    fixtures = json.loads(manifest.read_text(encoding="utf-8"))["fixtures"]
+    files = csl.collect_required_pytest_files(fixtures, repo_root)
+    n = csl.shard_count_for_file_set(len(files))
+    jobs = csl.group_fixtures_for_ci(fixtures, root=repo_root)
+    required = [
+        j for j in jobs if "pytest-required-shard-" in str(j.get("ciJobName") or "")
+    ]
+    assert len(required) == n
+    assert [csl.required_shard_number(j["ciJobName"]) for j in required] == list(
+        range(1, n + 1)
+    )
+    for job in required:
+        assert "run_pytest.py" in job["command"]
+        # no silent empty shard
+        assert job["command"].count("scripts/") >= 1
+
+
+def test_empty_shard_hard_error_when_files_remain() -> None:
+    with pytest.raises(ValueError, match="empty required shard"):
+        # Force impossible N > file count by calling partition_files_sticky directly
+        csl.partition_files_sticky(["only.py"], 2)
