@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-02T09:41:36Z",
+  "generatedAt": "2026-08-02T20:37:11Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -18496,118 +18496,127 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:134:generate-pr-test-plan-ci-workflow.py",
+      "id": "docs/guides/testing.md:142:ci_plan_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 134,
+      "line": 142,
+      "column": 8,
+      "script": "ci_plan_gen.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/testing.md:144:generate-pr-test-plan-ci-workflow.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/testing.md",
+      "line": 144,
       "column": 8,
       "script": "generate-pr-test-plan-ci-workflow.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:140:test/_runner.py",
+      "id": "docs/guides/testing.md:177:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 140,
-      "column": 9,
+      "line": 177,
+      "column": 23,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:156:nightly-failure-notify.py",
+      "id": "docs/guides/testing.md:202:nightly-failure-notify.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 156,
+      "line": 202,
       "column": 8,
       "script": "nightly-failure-notify.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:167:test/run_pytest.py",
+      "id": "docs/guides/testing.md:214:test/run_pytest.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 167,
+      "line": 214,
       "column": 8,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:170:test/_runner.py",
+      "id": "docs/guides/testing.md:217:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 170,
+      "line": 217,
       "column": 27,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:170:test/_runner.py",
+      "id": "docs/guides/testing.md:217:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 170,
+      "line": 217,
       "column": 0,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:181:build-chain-sync.py",
+      "id": "docs/guides/testing.md:228:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 181,
+      "line": 228,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:187:build-chain-sync.py",
+      "id": "docs/guides/testing.md:234:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 187,
+      "line": 234,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:190:build-chain-sync.py",
+      "id": "docs/guides/testing.md:237:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 190,
+      "line": 237,
       "column": 41,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:199:deprecated_surface_freshness.py",
+      "id": "docs/guides/testing.md:246:deprecated_surface_freshness.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 199,
+      "line": 246,
       "column": 11,
       "script": "deprecated_surface_freshness.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:200:harness_isolation_lint.py",
+      "id": "docs/guides/testing.md:247:harness_isolation_lint.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 200,
+      "line": 247,
       "column": 11,
       "script": "harness_isolation_lint.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:248:test/_runner.py",
+      "id": "docs/guides/testing.md:295:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 248,
+      "line": 295,
       "column": 27,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:248:test/_runner.py",
+      "id": "docs/guides/testing.md:295:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 248,
+      "line": 295,
       "column": 0,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
