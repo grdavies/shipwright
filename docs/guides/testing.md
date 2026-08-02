@@ -121,7 +121,7 @@ N = min(MAX_REQUIRED_SHARDS, max(_MIN_REQUIRED_SHARDS, ceil(n / TARGET_PER_SHARD
 | --- | --- | --- |
 | `_MIN_REQUIRED_SHARDS` | `4` | Floor — never fewer than 4 required shards |
 | `TARGET_PER_SHARD` | `40` | Target files per shard (tune for wall-clock) |
-| `MAX_REQUIRED_SHARDS` | `12` | Hard ceiling on required shard fan-out (PRD 088) |
+| `MAX_REQUIRED_SHARDS` | `12` | Hard ceiling on required shard fan-out |
 
 With ~298 expanded required files and defaults, `N` exceeds the floor (typically **8**) and stays
 ≤ `MAX_REQUIRED_SHARDS`.
@@ -150,28 +150,28 @@ python3 scripts/generate-pr-test-plan-ci-workflow.py \
 `scripts/unit_tests/test/test_ci_plan_generation.py` fail closed on bad duplication, incomplete
 union, empty shards, floor/ceil violations, and workflow job-count ≠ `N`.
 
-#### R7 — Wall-clock measurement protocol
+#### Wall-clock measurement protocol
 
 On the implementing PR, measure **max required pytest-shard job elapsed time excluding queue time**:
 
 1. Open the PR's Actions run for `PR test-plan (FEAT)`.
 2. For each `feat-test-plan-pytest-required-shard-*` job, record job elapsed (not queue wait).
 3. Acceptance: max ≤ **29 minutes**, and at least **two** required shards have non-trivial membership.
-4. Capture the run URL in delivery notes (phase 10 / `.cursor/sw-doc-runs/.../r7-wall-clock.md`).
+4. Capture the run URL in delivery notes (under `.cursor/sw-doc-runs/` wall-clock evidence).
 
 If measurement misses after a correct file-count stable partition: record evidence and open a
 **separate follow-on** — do **not** expand into duration-weighted planning inside this delivery.
 
-#### R10 — Nightly-only visibility policy
+#### Nightly-only visibility policy
 
 For each nightly-only failure class:
 
 - **Promote to a required PR shard** only when the test is hermetic, cheap, and does **not** need
   resolved credentials, live host API access, or planning-store writes — and promotion does not
-  violate the R7 wall-clock budget.
+  violate the wall-clock budget above.
 - Otherwise document it as **nightly-only** here with rationale.
 - Credential / live-host / planning-store-write tests are **ineligible** for PR-shard promotion and
-  MUST stay on the nightly-only documentation path. Phase 10 records per-class outcomes.
+  MUST stay on the nightly-only documentation path. Delivery notes record per-class outcomes.
 
 **Consolidated full verify** — `.github/workflows/ci.yml` `verify-full` on `main` push and nightly
 schedule runs `python3 scripts/test/_runner.py verify --scope full`.
@@ -187,7 +187,7 @@ plan metadata (`plans.scheduled-full-plus-integration.triageOwner`, default
 2. Auto-files an authoritative planning-store gap via `planning_gap_capture.capture_gap`
 with a stable `nightly-failure:<job>:<run-id>` signal id (deduped against open gaps).
 
-**Broker / step-scope prerequisites (R9)** — planning-store writes go through broker-only
+**Broker / step-scope prerequisites** — planning-store writes go through broker-only
 `credentials.resolver` / `credentials.send_path` with a declared selector entry. The planning token
 (`SW_PLANNING_ISSUES_TOKEN`) MUST be injected **only** on the notify step `env:` (matching
 `deliver-closeout.yml` mutate-step pattern) — never workflow- or job-level, and never on pytest
@@ -205,7 +205,7 @@ python3 scripts/nightly-failure-notify.py \
 ```
 
 Regression: `scripts/unit_tests/test/test_nightly_failure_notify.py` (plus broker/selector pins under
-`scripts/unit_tests/credentials/` when R9 lands).
+`scripts/unit_tests/credentials/` when the notify broker path lands).
 
 ## Running tests locally
 
