@@ -17,7 +17,7 @@ from wave_deliver_loop import (
     resolve_plan_with_adoption,
     trunk_base_persisted,
 )
-from wave_run_paths import GLOBAL_PLAN_REL, global_plan_path, plan_path, runs_root, state_path
+from wave_run_paths import global_plan_path, plan_path, runs_root, state_path
 from wave_state import path_normalize_anchor, save_run_scoped_state, scoped_paths
 
 
@@ -41,7 +41,7 @@ def test_stale_global_plan_refused_for_different_task_list(tmp_path: Path) -> No
     (tmp_path / task_b).write_text("# tasks\n", encoding="utf-8")
 
     stale = _phase_plan(task_a, slug="stale-target")
-    transient = tmp_path / GLOBAL_PLAN_REL
+    transient = global_plan_path(tmp_path)
     transient.parent.mkdir(parents=True, exist_ok=True)
     transient.write_text(json.dumps(stale), encoding="utf-8")
 
@@ -63,7 +63,7 @@ def test_stale_global_plan_does_not_route_to_lock_acquire(tmp_path: Path) -> Non
     (tmp_path / task_b).write_text("# tasks\n", encoding="utf-8")
 
     stale = _phase_plan(task_a, slug="stale-branch")
-    transient = tmp_path / GLOBAL_PLAN_REL
+    transient = global_plan_path(tmp_path)
     transient.parent.mkdir(parents=True, exist_ok=True)
     transient.write_text(json.dumps(stale), encoding="utf-8")
 
@@ -81,7 +81,7 @@ def test_matching_transient_plan_still_adopted_before_state_init(tmp_path: Path)
     (tmp_path / task_list).write_text("# tasks\n", encoding="utf-8")
 
     plan_doc = _phase_plan(task_list)
-    transient = tmp_path / GLOBAL_PLAN_REL
+    transient = global_plan_path(tmp_path)
     transient.parent.mkdir(parents=True, exist_ok=True)
     transient.write_text(json.dumps(plan_doc), encoding="utf-8")
 

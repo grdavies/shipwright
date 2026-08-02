@@ -37,6 +37,11 @@ def _file_digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _is_bytecode_noise(path: Path) -> bool:
+    """Runtime bytecode must not affect distribution freshness digests."""
+    return path.suffix == ".pyc" or "__pycache__" in path.parts
+
+
 def _tree_digest(root: Path, rel: str) -> str:
     base = root / rel
     if not base.exists():
@@ -45,7 +50,7 @@ def _tree_digest(root: Path, rel: str) -> str:
         return _file_digest(base)
     h = hashlib.sha256()
     for item in sorted(base.rglob("*")):
-        if item.is_file():
+        if item.is_file() and not _is_bytecode_noise(item):
             h.update(item.relative_to(base).as_posix().encode())
             h.update(item.read_bytes())
     return h.hexdigest()
