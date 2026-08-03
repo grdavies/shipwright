@@ -194,10 +194,15 @@ memory skill — not direct MCP calls from planning code.
 
 ## Issue-store brainstorm distillation (PRD 043)
 
-At PRD freeze in `issue-store` mode, rationale excerpts are redacted via `memory-redact.py` then
-stored as `memory_type: research` with `related_files` pointing at the brainstorm issue path and
-tags `prd-<unit>`, `brainstorm-<unit>`. Bidirectional pointers are recorded on the issue comments
-(`sw-memory-pointer`); the brainstorm issue is closed, not deleted.
+At PRD freeze in `issue-store` mode, `IssueStoreBackend._distill_brainstorm_rationale`
+(`core/scripts/planning/backends/issues.py`) excerpts linked brainstorm rationale, redacts via
+`memory-redact.py`, then persists through `MemoryLocalCacheBackend` — the local cache at
+`.cursor/sw-memory/planning-bodies/<project>/` with an optional `/planning-bodies/<unitId>` REST
+round-trip when Recallium is configured (see **Planning store adapter** above). This path is
+deliberately **not** the semantically-indexed memory-note collection (`store` / `search_memories`);
+a full planning body is not a distilled note and would pollute semantic search. A `sw-memory-pointer`
+comment on the brainstorm issue links PRD ↔ memory unit ↔ brainstorm; the brainstorm issue is
+closed, not deleted.
 
 ## Playbook + confidence mapping (R27, R28)
 
