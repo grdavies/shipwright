@@ -23,6 +23,7 @@
     "okf": "unsupported"
   },
   "sourceOfTruthClass": "memory-authoritative",
+  "supportStatus": "ga",
   "credentials": {
     "location": "none",
     "notes": "Hermetic fixture — no remote credentials."

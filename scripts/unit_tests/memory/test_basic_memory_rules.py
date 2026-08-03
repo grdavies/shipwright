@@ -355,3 +355,27 @@ def test_cache_ttl_expiry_is_miss(tmp_path: Path, bm_rules) -> None:
 def test_fail_closed_default_true(bm_rules) -> None:
     assert bm_rules.fail_closed_default({}) is True
     assert bm_rules.fail_closed_default({"failClosed": False}) is False
+
+
+def test_resolve_mode_rejects_invalid_mode(bm_rules) -> None:
+    with pytest.raises(ValueError, match="local\\|cloud"):
+        bm_rules.resolve_mode({"mode": "hybrid"})
+    with pytest.raises(ValueError, match="local\\|cloud"):
+        bm_rules.resolve_mode({"mode": "auto"})
+
+
+def test_invalid_mode_fails_closed_via_main(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    project = tmp_path / "proj"
+    (project / "rules").mkdir(parents=True)
+    _write_config(
+        tmp_path,
+        "basic-memory",
+        mode="hybrid",
+        projectPath=str(project),
+    )
+    code, payload = _run_script(tmp_path, monkeypatch)
+    assert code == 1
+    assert payload["ok"] is False
+    assert "local|cloud" in payload["error"]

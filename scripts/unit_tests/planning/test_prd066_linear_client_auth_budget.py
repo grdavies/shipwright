@@ -60,7 +60,7 @@ def test_r9_live_client_present_before_issues_providers_recognition() -> None:
     assert plc.LIVE_CLIENT is True
     assert callable(plc.graphql)
     assert "linear" in ps.ISSUES_PROVIDERS
-    assert "linear" not in ps.SHIPPED_ISSUES_PROVIDERS
+    assert "linear" in ps.SHIPPED_ISSUES_PROVIDERS
     assert not hasattr(ps, "DEFAULT_ISSUES_TOKEN_ENV")
     assert not hasattr(plc, "DEFAULT_TOKEN_ENV")
     assert ps.resolve_issues_token_env(

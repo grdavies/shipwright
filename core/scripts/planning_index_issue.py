@@ -58,8 +58,16 @@ def save_derived_cache(root: Path, statuses: dict[str, str]) -> None:
 
 
 def render_derived_body(status_map: dict[str, str]) -> str:
+    """Render derived status map body.
+
+    Always emit ``visibility: public`` so puts succeed against a public issue-store
+    host when ``planning.visibilityTier`` is ``all-private`` (private bodies are
+    refused by ``issue_store_visibility_gate``). The derived index is mechanical
+    status projection, not private planning content.
+    """
     lines = [f"{unit_id}: {status}" for unit_id, status in sorted(status_map.items())]
-    return "\n".join(lines) + ("\n" if lines else "")
+    body = "\n".join(lines) + ("\n" if lines else "")
+    return f"---\nvisibility: public\n---\n\n{body}"
 
 
 def _discover_units_for_index(worktree: Path) -> list[pig.PlanningUnit]:
@@ -197,6 +205,17 @@ def project_index_status(
         if put_result.verdict == "degraded":
             out["notice"] = put_result.reason or "planning-store-degraded"
         return out
+    except SystemExit as exc:
+        # visibility-refused and similar fail() paths must not abort merge (R3).
+        save_derived_cache(worktree, statuses)
+        return {
+            "verdict": "degraded",
+            "action": "project-index-status",
+            "notice": f"issue-store-put-refused:{exc}",
+            "prd": prd,
+            "unitId": unit_id,
+            "status": status,
+        }
     except Exception as exc:  # noqa: BLE001 — graceful degradation for unreachable store
         return {
             "verdict": "degraded",
@@ -262,6 +281,15 @@ def project_derived_map(
         if put_result.verdict == "degraded":
             out["notice"] = put_result.reason or "planning-store-degraded"
         return out
+    except SystemExit as exc:
+        if cache_authority:
+            save_derived_cache(worktree, derived)
+        return {
+            "verdict": "degraded",
+            "action": "project-derived-map",
+            "notice": f"issue-store-put-refused:{exc}",
+            "unitCount": len(derived),
+        }
     except Exception as exc:  # noqa: BLE001 — graceful degradation for unreachable store
         return {
             "verdict": "degraded",

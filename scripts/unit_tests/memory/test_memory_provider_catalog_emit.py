@@ -76,6 +76,24 @@ def test_mempalace_catalog_lineage_supersedes_010_not_071(repo_root: Path) -> No
         assert "mempalace" in emit.get("providers", {}), f"missing mempalace in {rel}"
 
 
+def test_catalog_emit_preserves_support_status(repo_root: Path) -> None:
+    """PRD 086 R3 — supportStatus survives copy-to-core emit for all five providers."""
+    expected = {
+        "recallium": "ga",
+        "in-repo": "ga",
+        "mempalace": "community-triage",
+        "basic-memory": "community-triage",
+        "obsidian": "community-triage",
+    }
+    source = json.loads((repo_root / ".sw/memory-provider-catalog.json").read_text(encoding="utf-8"))
+    emit = json.loads(
+        (repo_root / "core/sw-reference/memory-provider-catalog.json").read_text(encoding="utf-8")
+    )
+    for provider_id, want in expected.items():
+        assert source["providers"][provider_id]["supportStatus"] == want
+        assert emit["providers"][provider_id]["supportStatus"] == want
+
+
 def test_core_only_catalog_orphan_refused(repo_root: Path, tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     (tmp_path / "core" / "sw-reference").mkdir(parents=True)

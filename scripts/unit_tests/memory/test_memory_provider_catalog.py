@@ -8,6 +8,7 @@ import pytest
 
 from memory_provider_catalog import (
     SEEDED_PROVIDER_IDS,
+    SUPPORT_STATUSES,
     CatalogError,
     get_provider,
     load_catalog,
@@ -23,6 +24,44 @@ def test_seeded_catalog_loads(repo_root: Path) -> None:
     ids = provider_ids(catalog)
     assert SEEDED_PROVIDER_IDS <= ids
     assert "mempalace" in ids
+    for provider_id, entry in catalog["providers"].items():
+        status = entry.get("supportStatus")
+        assert status in SUPPORT_STATUSES, f"{provider_id}.supportStatus={status!r}"
+
+
+def test_catalog_support_status_values(repo_root: Path) -> None:
+    catalog = load_catalog(repo_root)
+    expected = {
+        "recallium": "ga",
+        "in-repo": "ga",
+        "mempalace": "community-triage",
+        "basic-memory": "community-triage",
+        "obsidian": "community-triage",
+    }
+    for provider_id, want in expected.items():
+        entry = get_provider(catalog, provider_id)
+        assert entry["supportStatus"] == want
+
+
+def test_validate_rejects_unknown_support_status(repo_root: Path) -> None:
+    catalog = load_catalog(repo_root)
+    drifted = json.loads(json.dumps(catalog))
+    drifted["providers"]["recallium"]["supportStatus"] = "beta"
+    with pytest.raises(CatalogError) as exc:
+        validate_catalog(drifted)
+    assert exc.value.cause == "partial"
+
+
+def test_partial_write_missing_support_status_fails_closed(repo_root: Path, tmp_path: Path) -> None:
+    source = load_catalog(repo_root)
+    partial = json.loads(json.dumps(source))
+    del partial["providers"]["recallium"]["supportStatus"]
+    catalog_path = tmp_path / ".sw" / "memory-provider-catalog.json"
+    catalog_path.parent.mkdir(parents=True)
+    catalog_path.write_text(json.dumps(partial), encoding="utf-8")
+    with pytest.raises(CatalogError) as exc:
+        load_catalog(tmp_path)
+    assert exc.value.cause == "partial"
 
 
 def test_mempalace_entry_matches_prd074_flags(repo_root: Path) -> None:

@@ -92,6 +92,7 @@ def _install_third_provider(
         },
         "interchange": {"jsonl": "unsupported", "okf": "unsupported"},
         "sourceOfTruthClass": source_class,
+        "supportStatus": "ga",
         "credentials": {
             "location": "env-only",
             "notes": "Fixture provider — credentials from environment/secret-store only.",
