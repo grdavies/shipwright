@@ -541,6 +541,7 @@ def diagnose_surface(
             pairing=pairing,
             repository_access="ok",
             required_operation_verdict="pass",
+            notices=surface_notices,
         )
 
     code = lookup.failure_code or lookup.resolution.reason or fc.UNAVAILABLE_BACKEND
@@ -556,6 +557,7 @@ def diagnose_surface(
         repository_access="fail",
         required_operation_verdict="fail",
         failure=DoctorFailure(code=code, remediation=remediation),
+        notices=surface_notices,
     )
 
 
@@ -616,6 +618,7 @@ def diagnose_repository(
             skip_integrity=skip_integrity,
             environ=environ,
             register_env_backend=register_env_backend,
+            config_notices=surface_result.notices,
         ),
         diagnose_surface(
             root,
@@ -627,6 +630,7 @@ def diagnose_repository(
             skip_integrity=skip_integrity,
             environ=environ,
             register_env_backend=register_env_backend,
+            config_notices=surface_result.notices,
         ),
         diagnose_surface(
             root,
@@ -638,6 +642,7 @@ def diagnose_repository(
             skip_integrity=skip_integrity,
             environ=environ,
             register_env_backend=register_env_backend,
+            config_notices=surface_result.notices,
         ),
     ]
     references = list_known_references(
@@ -847,6 +852,7 @@ def _surface_to_dict(surface: SurfaceDiagnosis) -> dict[str, Any]:
         "pairing": surface.pairing,
         "repositoryAccess": surface.repository_access,
         "requiredOperationVerdict": surface.required_operation_verdict,
+        "notices": list(surface.notices),
     }
     if surface.failure is not None:
         payload["failure"] = {
