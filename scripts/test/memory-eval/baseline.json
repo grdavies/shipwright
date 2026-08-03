@@ -4,11 +4,23 @@
     "authorized_recall_rate": {
       "min": 1.0
     },
+    "contradictory_decision_adherence": {
+      "max": 0.0
+    },
     "cross_project_leakage": {
       "max": 0.0
     },
     "negative_controls_blocked": {
       "min": 3.0
+    },
+    "precision_at_k": {
+      "min": 0.3333333333333333
+    },
+    "stale_decision_adherence": {
+      "max": 0.0
+    },
+    "stale_memory_harm": {
+      "min": 1.0
     }
   },
   "waivers": []
