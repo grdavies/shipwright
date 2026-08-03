@@ -747,6 +747,16 @@
 * merge phase memory-provider-catalog-supportstatus-mechanism-mempalace-finalize-r3 into feat/prd-provider-finalization-memory-and-planning-store-adapters (8bc6c87) <!-- sw-deliver:memory-provider-catalog-supportstatus-mechanism-mempalace-finalize-r3 -->
 * merge phase basic-memory-finalize-r4 into feat/prd-provider-finalization-memory-and-planning-store-adapters (d1c065b) <!-- sw-deliver:basic-memory-finalize-r4 -->
 * merge phase obsidian-finalize-r5 into feat/prd-provider-finalization-memory-and-planning-store-adapters (383a728) <!-- sw-deliver:obsidian-finalize-r5 -->
+* merge phase surface-tokenenv-deprecation-notices-in-the-credential-doctor-r1 into feat/prd-documentation-and-operator-ux-accuracy (63ec63c) <!-- sw-deliver:surface-tokenenv-deprecation-notices-in-the-credential-doctor-r1 -->
+* merge phase correct-recallium-md-s-brainstorm-distillation-storage-path-r3 into feat/prd-documentation-and-operator-ux-accuracy (e7a36f5) <!-- sw-deliver:correct-recallium-md-s-brainstorm-distillation-storage-path-r3 -->
+* merge phase surface-tokenenv-deprecation-in-the-default-repo-wide-doctor-r2 into feat/prd-documentation-and-operator-ux-accuracy (ebf5c8f) <!-- sw-deliver:surface-tokenenv-deprecation-in-the-default-repo-wide-doctor-r2 -->
+* merge phase correct-issue-store-md-s-freeze-procedure-step-5-r4 into feat/prd-documentation-and-operator-ux-accuracy (b62e9a6) <!-- sw-deliver:correct-issue-store-md-s-freeze-procedure-step-5-r4 -->
+* merge phase retarget-sw-amend-md-and-sw-retrospective-md-from-reconcile-status-py-r5 into feat/prd-documentation-and-operator-ux-accuracy (bc3604e) <!-- sw-deliver:retarget-sw-amend-md-and-sw-retrospective-md-from-reconcile-status-py-r5 -->
+* merge phase retarget-sw-status-md-and-living-status-skill-md-from-reconcile-status-py-r5 into feat/prd-documentation-and-operator-ux-accuracy (34f2543) <!-- sw-deliver:retarget-sw-status-md-and-living-status-skill-md-from-reconcile-status-py-r5 -->
+* merge phase retarget-sw-status-md-and-living-status-skill-md-from-reconcile-status-py-r5 into feat/prd-documentation-and-operator-ux-accuracy (018bcbd) <!-- sw-deliver:retarget-sw-status-md-and-living-status-skill-md-from-reconcile-status-py-r5 -->
+* merge phase retarget-memory-skill-md-and-terminal-lifecycle-md-verify-corpus-wide-r5 into feat/prd-documentation-and-operator-ux-accuracy (174780e) <!-- sw-deliver:retarget-memory-skill-md-and-terminal-lifecycle-md-verify-corpus-wide-r5 -->
+* merge phase retarget-memory-skill-md-and-terminal-lifecycle-md-verify-corpus-wide-r5 into feat/prd-documentation-and-operator-ux-accuracy (e48a5dd) <!-- sw-deliver:retarget-memory-skill-md-and-terminal-lifecycle-md-verify-corpus-wide-r5 -->
+* merge phase regenerate-dist-mirrors-for-the-r3-r5-fix-set-r6 into feat/prd-documentation-and-operator-ux-accuracy (e0f628d) <!-- sw-deliver:regenerate-dist-mirrors-for-the-r3-r5-fix-set-r6 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
