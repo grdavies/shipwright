@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-03T19:23:09Z",
+  "generatedAt": "2026-08-03T21:05:53Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3124,13 +3124,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:23:sw_bootstrap.py",
+      "id": "core/commands/sw-status.md:23:reconcile.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
       "line": 23,
       "column": 12,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "core/commands/sw-status.md:27:verify-unconfigured.py",
@@ -3151,13 +3151,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:34:sw_bootstrap.py",
+      "id": "core/commands/sw-status.md:34:reconcile.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
       "line": 34,
       "column": 37,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "core/commands/sw-status.md:41:wave_living_docs.py",
@@ -3182,7 +3182,7 @@
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
       "line": 53,
-      "column": 310,
+      "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
@@ -5473,49 +5473,49 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/living-status/SKILL.md:33:sw_bootstrap.py",
+      "id": "core/skills/living-status/SKILL.md:33:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/living-status/SKILL.md",
       "line": 33,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/living-status/SKILL.md:34:sw_bootstrap.py",
+      "id": "core/skills/living-status/SKILL.md:34:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/living-status/SKILL.md",
       "line": 34,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/living-status/SKILL.md:35:sw_bootstrap.py",
+      "id": "core/skills/living-status/SKILL.md:35:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/living-status/SKILL.md",
       "line": 35,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/living-status/SKILL.md:36:sw_bootstrap.py",
+      "id": "core/skills/living-status/SKILL.md:36:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/living-status/SKILL.md",
       "line": 36,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/living-status/SKILL.md:37:sw_bootstrap.py",
+      "id": "core/skills/living-status/SKILL.md:37:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/living-status/SKILL.md",
       "line": 37,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "core/skills/living-status/SKILL.md:41:planning-graph.py",
@@ -9640,13 +9640,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:23:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-status.md:23:reconcile.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
       "line": 23,
       "column": 12,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/claude-code/commands/sw-status.md:27:verify-unconfigured.py",
@@ -9667,13 +9667,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:34:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-status.md:34:reconcile.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
       "line": 34,
       "column": 37,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/claude-code/commands/sw-status.md:41:wave_living_docs.py",
@@ -9698,7 +9698,7 @@
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
       "line": 53,
-      "column": 310,
+      "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
@@ -11170,49 +11170,49 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/living-status/SKILL.md:33:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/living-status/SKILL.md:33:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/living-status/SKILL.md",
       "line": 33,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/living-status/SKILL.md:34:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/living-status/SKILL.md:34:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/living-status/SKILL.md",
       "line": 34,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/living-status/SKILL.md:35:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/living-status/SKILL.md:35:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/living-status/SKILL.md",
       "line": 35,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/living-status/SKILL.md:36:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/living-status/SKILL.md:36:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/living-status/SKILL.md",
       "line": 36,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/living-status/SKILL.md:37:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/living-status/SKILL.md:37:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/living-status/SKILL.md",
       "line": 37,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/claude-code/skills/living-status/SKILL.md:41:planning-graph.py",
@@ -15022,13 +15022,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:23:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-status.md:23:reconcile.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
       "line": 23,
       "column": 12,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/cursor/commands/sw-status.md:27:verify-unconfigured.py",
@@ -15049,13 +15049,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:34:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-status.md:34:reconcile.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
       "line": 34,
       "column": 37,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/cursor/commands/sw-status.md:41:wave_living_docs.py",
@@ -15080,7 +15080,7 @@
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
       "line": 53,
-      "column": 310,
+      "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
@@ -16552,49 +16552,49 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/living-status/SKILL.md:33:sw_bootstrap.py",
+      "id": "dist/cursor/skills/living-status/SKILL.md:33:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/living-status/SKILL.md",
       "line": 33,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/living-status/SKILL.md:34:sw_bootstrap.py",
+      "id": "dist/cursor/skills/living-status/SKILL.md:34:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/living-status/SKILL.md",
       "line": 34,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/living-status/SKILL.md:35:sw_bootstrap.py",
+      "id": "dist/cursor/skills/living-status/SKILL.md:35:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/living-status/SKILL.md",
       "line": 35,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/living-status/SKILL.md:36:sw_bootstrap.py",
+      "id": "dist/cursor/skills/living-status/SKILL.md:36:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/living-status/SKILL.md",
       "line": 36,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/living-status/SKILL.md:37:sw_bootstrap.py",
+      "id": "dist/cursor/skills/living-status/SKILL.md:37:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/living-status/SKILL.md",
       "line": 37,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/cursor/skills/living-status/SKILL.md:41:planning-graph.py",
