@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import sys
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -12,11 +13,12 @@ from typing import Any, Iterator
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 SCRIPTS = SCRIPT_DIR.parents[1]
+IN_REPO_SEARCH = SCRIPTS / "in-repo-memory-search.py"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
 from fixtures import RESERVED_PREFIX, all_corpora, exclude_reserved_ids, is_reserved_id
-from metrics import SCENARIOS, emit_all_scenarios, emit_scenario_metrics, metrics_json
+from metrics import SCENARIOS, build_fixture_index, emit_all_scenarios, emit_scenario_metrics, metrics_json
 
 # Local/null adapters permitted in hermetic runs.
 ALLOWED_HERMETIC_PROVIDERS = frozenset({"in-repo", "null", "memory-stub"})
@@ -47,6 +49,46 @@ class HermeticHarness:
     def __post_init__(self) -> None:
         self.project_root = self.project_root.resolve()
 
+    def memory_store_path(self) -> Path:
+        return self.project_root / ".cursor" / "sw-memory"
+
+    def seed_reserved_corpora(self) -> None:
+        """Seed RESERVED_PREFIX fixture corpora into the hermetic in-repo store (R1)."""
+        store = self.memory_store_path()
+        (store / "memories").mkdir(parents=True, exist_ok=True)
+        (store / "rules").mkdir(parents=True, exist_ok=True)
+        for fixtures in all_corpora(project_id=self.project_id).values():
+            for item in fixtures:
+                tags = [
+                    f"eval-corpus:{item.corpus}",
+                    f"eval-decision-hint:{item.decision_hint}",
+                    f"eval-project:{item.project_id}",
+                ]
+                if item.stale:
+                    tags.append("eval-stale:true")
+                if item.contradictory:
+                    tags.append("eval-contradictory:true")
+                subprocess.run(
+                    [
+                        sys.executable,
+                        str(IN_REPO_SEARCH),
+                        "store",
+                        "--store",
+                        str(store),
+                        "--id",
+                        item.memory_id,
+                        "--category",
+                        "learning",
+                        "--content",
+                        item.content,
+                        "--tags",
+                        ",".join(tags),
+                    ],
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                )
+
     def pin_provider(self) -> None:
         cursor = self.project_root / ".cursor"
         cursor.mkdir(parents=True, exist_ok=True)
@@ -64,6 +106,7 @@ class HermeticHarness:
         (cursor / "sw-memory.provider").write_text(f"{self.provider}\n", encoding="utf-8")
         memory_dir = cursor / "sw-memory" / "memories"
         memory_dir.mkdir(parents=True, exist_ok=True)
+        self.seed_reserved_corpora()
 
     def cleanup(self) -> None:
         if self.project_root.is_dir():
@@ -198,18 +241,31 @@ def run_smoke_benchmark(
     scenario: str = "memory_enabled",
 ) -> dict[str, Any]:
     corpora = all_corpora(project_id=harness.project_id)
-    fixtures = corpora.get("relevant", [])
+    scenario_fixtures: dict[str, list[MemoryFixture]] = {
+        "memory_enabled": corpora.get("relevant", []),
+        "memory_disabled": [],
+        "stale": corpora.get("stale", []) + corpora.get("relevant", [])[:1],
+        "contradictory": corpora.get("contradictory", []),
+        "cross_project": corpora.get("foreign_project", []),
+    }
+    fixtures = scenario_fixtures.get(scenario, corpora.get("relevant", []))
     return emit_scenario_metrics(
         scenario,
         fixtures,
         memory_enabled=scenario != "memory_disabled",
         project_id=harness.project_id,
+        store_path=harness.memory_store_path(),
+        fixture_index=build_fixture_index(corpora),
     )
 
 
 def run_full_benchmark(harness: HermeticHarness) -> dict[str, Any]:
     corpora = all_corpora(project_id=harness.project_id)
-    return emit_all_scenarios(corpora, project_id=harness.project_id)
+    return emit_all_scenarios(
+        corpora,
+        project_id=harness.project_id,
+        store_path=harness.memory_store_path(),
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
