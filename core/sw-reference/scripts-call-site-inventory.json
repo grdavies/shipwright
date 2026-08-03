@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-03T18:22:58Z",
+  "generatedAt": "2026-08-03T19:23:09Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -352,13 +352,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-amend.md:39:sw_bootstrap.py",
+      "id": "core/commands/sw-amend.md:39:reconcile.py",
       "tree": "core/commands",
       "file": "core/commands/sw-amend.md",
       "line": 39,
       "column": 48,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "core/commands/sw-amend.md:48:planning_store.py",
@@ -2512,13 +2512,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:107:sw_bootstrap.py",
+      "id": "core/commands/sw-retrospective.md:107:reconcile.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
       "line": 107,
       "column": 31,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "core/commands/sw-retrospective.md:111:wave.py",
@@ -6868,13 +6868,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-amend.md:39:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-amend.md:39:reconcile.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-amend.md",
       "line": 39,
       "column": 48,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/claude-code/commands/sw-amend.md:48:planning_store.py",
@@ -9028,13 +9028,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:107:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:107:reconcile.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
       "line": 107,
       "column": 31,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/claude-code/commands/sw-retrospective.md:111:wave.py",
@@ -12250,13 +12250,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-amend.md:39:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-amend.md:39:reconcile.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-amend.md",
       "line": 39,
       "column": 48,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/cursor/commands/sw-amend.md:48:planning_store.py",
@@ -14410,13 +14410,13 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:107:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:107:reconcile.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
       "line": 107,
       "column": 31,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/cursor/commands/sw-retrospective.md:111:wave.py",
