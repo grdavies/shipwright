@@ -746,6 +746,7 @@
 * merge phase linear-stage-1-promotion-r2 into feat/prd-provider-finalization-memory-and-planning-store-adapters (0a73484) <!-- sw-deliver:linear-stage-1-promotion-r2 -->
 * merge phase memory-provider-catalog-supportstatus-mechanism-mempalace-finalize-r3 into feat/prd-provider-finalization-memory-and-planning-store-adapters (8bc6c87) <!-- sw-deliver:memory-provider-catalog-supportstatus-mechanism-mempalace-finalize-r3 -->
 * merge phase basic-memory-finalize-r4 into feat/prd-provider-finalization-memory-and-planning-store-adapters (d1c065b) <!-- sw-deliver:basic-memory-finalize-r4 -->
+* merge phase obsidian-finalize-r5 into feat/prd-provider-finalization-memory-and-planning-store-adapters (383a728) <!-- sw-deliver:obsidian-finalize-r5 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
