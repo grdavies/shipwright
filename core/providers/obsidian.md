@@ -42,9 +42,23 @@ adapters treat path-addressable notes as first-class.
 | `interchange.jsonl` | `synthesized` — `/sw-memory-export` / `/sw-memory-import` synthesize neutral JSONL |
 | `interchange.okf` | `synthesized` — same synthesis path into OKF v0.1 bundles (redaction before write) |
 | `credentials.location` | `env-only` — `OBSIDIAN_API_KEY` from environment / secret-store-only |
+| `supportStatus` | `community-triage` — see **Community-triage promotion** below |
 
 `<project>` below is `memory.project`. Vault-relative paths are the memory identity. Global scope uses
 the literal `__global__` (explicit user direction only).
+
+## Community-triage promotion (PRD 086 R5 / D1)
+
+Obsidian is promoted to full support without an end-to-end exercise against a running Obsidian instance
+with the Local REST API plugin — including vault-backed filesystem paths under `vaultPath`, loopback REST
+on `http://127.0.0.1:27123` (default `memory.obsidian.mcpBaseUrl`), and `OBSIDIAN_API_KEY` bearer-token
+handling for agent and hook transports. The maintainer relies on community-reported issues triaged and
+fixed as they surface against real Obsidian + Local REST API setups, adjusting the catalog entry if
+real-world usage surfaces a mismatch. This documents, rather than re-litigates, the maintainer's
+already-decided policy.
+
+The catalog row carries `supportStatus: community-triage`. The Local REST API plugin compat fixture under
+`scripts/test/fixtures/obsidian/` and loopback transport contracts in this doc remain accurate and unchanged.
 
 ## Dual-transport
 
