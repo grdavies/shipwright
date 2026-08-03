@@ -16,7 +16,7 @@ Status is **derived from git and durable deliver state**, never hand-set on froz
 | `in-progress` | Deliver run active or feature branch not yet merged to `main` |
 | `complete` | Target branch merged to default branch (merge detection, PRD 007 R53) |
 
-The enum is enforced by `reconcile-status.py set-index-status` and `wave_living_docs.py reconcile`.
+The enum is enforced by `scripts/reconcile.py set-index-status` and `wave_living_docs.py reconcile`.
 
 ## Link mechanism
 
@@ -30,11 +30,11 @@ The enum is enforced by `reconcile-status.py set-index-status` and `wave_living_
 ## Commands
 
 ```bash
-python3 scripts/sw_bootstrap.py reconcile-status.py -- derive [--json]
-python3 scripts/sw_bootstrap.py reconcile-status.py -- reconcile [--dry-run] [--require-merge]
-python3 scripts/sw_bootstrap.py reconcile-status.py -- set-index-status --prd <NNN> --status <not-started|in-progress|complete>
-python3 scripts/sw_bootstrap.py reconcile-status.py -- append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]
-python3 scripts/sw_bootstrap.py reconcile-status.py -- gap-resolve --absorbing-prd <NNN> [--pr N]
+python3 scripts/reconcile.py derive [--json]
+python3 scripts/reconcile.py reconcile [--dry-run] [--require-merge]
+python3 scripts/reconcile.py set-index-status --prd <NNN> --status <not-started|in-progress|complete>
+python3 scripts/reconcile.py append-log-idempotent --prd <NNN> --phase <name> [--pr N] [--sha SHA] [--notes text]
+python3 scripts/reconcile.py gap-resolve --absorbing-prd <NNN> [--pr N]
 scripts/wave.py living-docs reconcile [--commit]
 scripts/wave.py living-docs append-terminal [--commit]
 scripts/wave.py docs-currency
@@ -45,7 +45,7 @@ python3 scripts/wave_deliver.py <repo> next
 
 ## INDEX reconciliation
 
-Archived units render in `docs/prds/INDEX-archive.md`. **Planning INDEX** (`docs/planning/INDEX.md`): `planning-graph reconcile` owns the `derived` region; deliver owns `inFlight` (read-only to reconciler). **Legacy PRD INDEX** (`docs/prds/INDEX.md`): projected table during cutover; `reconcile-status.py` may update Status column for deliver-era rows. Frozen PRD/amendment bodies untouched.
+Archived units render in `docs/prds/INDEX-archive.md`. **Planning INDEX** (`docs/planning/INDEX.md`): `planning-graph reconcile` owns the `derived` region; deliver owns `inFlight` (read-only to reconciler). **Legacy PRD INDEX** (`docs/prds/INDEX.md`): projected table during cutover; `scripts/reconcile.py` may update Status column for deliver-era rows. Frozen PRD/amendment bodies untouched.
 `merge run-next` invokes `living-docs reconcile --commit` after each green phase merge (R51).
 
 ## Completion log (R48)
@@ -100,7 +100,7 @@ Mechanical flips route through `scripts/gap-backlog.py` only:
 - **Freeze** (`absorbs:` frontmatter) → `open` → `scheduled` (`PRD NNN` or `PRD NNN Ak`).
 - **PRD ship / complete** → `scheduled` → `resolved` via the shared in-process resolver
   (`gap_backlog.resolve_for_prd()`), invoked automatically and idempotently when
-  `reconcile-status.py set-index-status --status complete` writes the INDEX row (PRD 048 R1). Rows already
+  `scripts/reconcile.py set-index-status --status complete` writes the INDEX row (PRD 048 R1). Rows already
   `resolved` are left untouched; no matching `open`/`scheduled` rows is a no-op. If the flip raises after the
   INDEX write succeeds, the CLI returns `{"verdict": "partial", ...}` (exit 21) — INDEX is not rolled back;
   retry with `living-status-gap-resolve.py --absorbing-prd <NNN>` or `gap_backlog.py flip --resolve`.
@@ -195,7 +195,7 @@ is stamped only when the retrospective closure loop runs end to end.
 
 ### Default-branch reconcile refusal (R31)
 
-`planning-graph reconcile` and legacy `reconcile-status.py reconcile` **refuse to commit** on `defaultBaseBranch`. Allowed post-merge paths:
+`planning-graph reconcile` and legacy `scripts/reconcile.py reconcile` **refuse to commit** on `defaultBaseBranch`. Allowed post-merge paths:
 
 - **Single unit:** `set-index-status` + `append-log-idempotent` on a **docs branch**.
 - **Full corpus:** reconciler on a non-default branch, or deliver `completion finalize-if-merged` — never bare full-corpus `reconcile` on `main`.
