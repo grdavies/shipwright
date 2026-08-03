@@ -750,6 +750,7 @@
 * merge phase surface-tokenenv-deprecation-notices-in-the-credential-doctor-r1 into feat/prd-documentation-and-operator-ux-accuracy (63ec63c) <!-- sw-deliver:surface-tokenenv-deprecation-notices-in-the-credential-doctor-r1 -->
 * merge phase correct-recallium-md-s-brainstorm-distillation-storage-path-r3 into feat/prd-documentation-and-operator-ux-accuracy (e7a36f5) <!-- sw-deliver:correct-recallium-md-s-brainstorm-distillation-storage-path-r3 -->
 * merge phase surface-tokenenv-deprecation-in-the-default-repo-wide-doctor-r2 into feat/prd-documentation-and-operator-ux-accuracy (ebf5c8f) <!-- sw-deliver:surface-tokenenv-deprecation-in-the-default-repo-wide-doctor-r2 -->
+* merge phase correct-issue-store-md-s-freeze-procedure-step-5-r4 into feat/prd-documentation-and-operator-ux-accuracy (b62e9a6) <!-- sw-deliver:correct-issue-store-md-s-freeze-procedure-step-5-r4 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
