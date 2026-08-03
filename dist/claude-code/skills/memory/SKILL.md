@@ -366,10 +366,10 @@ forward pointer (`memoryPointer` in frontmatter — see `scripts/memory-decision
 On record-level supersede, append the superseded path via:
 
 ```bash
-python3 scripts/sw_bootstrap.py reconcile-status.py -- append-superseded --path docs/decisions/<old>.md --replacement docs/decisions/<new>.md
+python3 scripts/reconcile.py append-superseded --path docs/decisions/<old>.md --replacement docs/decisions/<new>.md
 ```
 
-`/sw-memory-sync` runs `python3 scripts/sw_bootstrap.py reconcile-status.py -- supersede-reconcile --json` after distillation and
+`/sw-memory-sync` runs `python3 scripts/reconcile.py supersede-reconcile --json` after distillation and
 best-effort re-points the **non-authoritative** side per the active SoT (provider `relatedFiles` under
 repo-SoT; git snapshot pointer under memory-SoT). Pointer freshness is **auditable, not transactional**
 (provider out of CI reach).

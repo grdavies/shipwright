@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-03T21:06:03Z",
+  "generatedAt": "2026-08-03T21:51:25Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -4843,31 +4843,31 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/deliver/references/terminal-lifecycle.md:91:sw_bootstrap.py",
+      "id": "core/skills/deliver/references/terminal-lifecycle.md:91:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/deliver/references/terminal-lifecycle.md",
       "line": 91,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/deliver/references/terminal-lifecycle.md:92:sw_bootstrap.py",
+      "id": "core/skills/deliver/references/terminal-lifecycle.md:92:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/deliver/references/terminal-lifecycle.md",
       "line": 92,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/deliver/references/terminal-lifecycle.md:93:sw_bootstrap.py",
+      "id": "core/skills/deliver/references/terminal-lifecycle.md:93:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/deliver/references/terminal-lifecycle.md",
       "line": 93,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "core/skills/deliver/references/terminal-lifecycle.md:94:living-status-gap-resolve.py",
@@ -5761,22 +5761,22 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/SKILL.md:369:sw_bootstrap.py",
+      "id": "core/skills/memory/SKILL.md:369:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
       "line": 369,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/SKILL.md:372:sw_bootstrap.py",
+      "id": "core/skills/memory/SKILL.md:372:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
       "line": 372,
       "column": 32,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "core/skills/memory/SKILL.md:397:planning_cross_project_recall.py",
@@ -10540,31 +10540,31 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:91:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:91:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md",
       "line": 91,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:92:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:92:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md",
       "line": 92,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:93:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:93:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md",
       "line": 93,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/claude-code/skills/deliver/references/terminal-lifecycle.md:94:living-status-gap-resolve.py",
@@ -11458,22 +11458,22 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:369:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:369:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
       "line": 369,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:372:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:372:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
       "line": 372,
       "column": 32,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/claude-code/skills/memory/SKILL.md:397:planning_cross_project_recall.py",
@@ -15922,31 +15922,31 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:91:sw_bootstrap.py",
+      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:91:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/deliver/references/terminal-lifecycle.md",
       "line": 91,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:92:sw_bootstrap.py",
+      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:92:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/deliver/references/terminal-lifecycle.md",
       "line": 92,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:93:sw_bootstrap.py",
+      "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:93:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/deliver/references/terminal-lifecycle.md",
       "line": 93,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/cursor/skills/deliver/references/terminal-lifecycle.md:94:living-status-gap-resolve.py",
@@ -16840,22 +16840,22 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:369:sw_bootstrap.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:369:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
       "line": 369,
       "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:372:sw_bootstrap.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:372:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
       "line": 372,
       "column": 32,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
+      "script": "reconcile.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/cursor/skills/memory/SKILL.md:397:planning_cross_project_recall.py",
