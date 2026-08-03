@@ -743,6 +743,7 @@
 * merge phase stable-exhaustive-partition-library-small into feat/ci-test-plan-wall-clock-and-nightly (b68b1d6) <!-- sw-deliver:stable-exhaustive-partition-library-small -->
 * merge phase stable-exhaustive-partition-library-small into feat/ci-test-plan-wall-clock-and-nightly (8f1e260) <!-- sw-deliver:stable-exhaustive-partition-library-small -->
 * merge phase real-retrieval-in-hermetic-memory-eval-r1 into feat/prd-provider-finalization-memory-and-planning-store-adapters (5d437c7) <!-- sw-deliver:real-retrieval-in-hermetic-memory-eval-r1 -->
+* merge phase linear-stage-1-promotion-r2 into feat/prd-provider-finalization-memory-and-planning-store-adapters (0a73484) <!-- sw-deliver:linear-stage-1-promotion-r2 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
