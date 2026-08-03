@@ -41,9 +41,23 @@ range requires a PRD amendment before catalog release.
 | `interchange.jsonl` | `synthesized` — `/sw-memory-export` / `/sw-memory-import` synthesize neutral JSONL |
 | `interchange.okf` | `synthesized` — same synthesis path into OKF v0.1 bundles (redaction before write) |
 | `credentials.location` | `env-only` — cloud bearer from environment / secret-store-only; local needs no remote token |
+| `supportStatus` | `community-triage` — see **Community-triage promotion** below |
 
 `<project>` below is `memory.project` / `memory.basicMemory.project` (or resolved `project_id`). Global
 scope uses the literal `__global__` (explicit user direction only).
+
+## Community-triage promotion (PRD 086 R4 / D1)
+
+Basic Memory is promoted to full support without an end-to-end exercise of either **local** or **cloud**
+mode by the maintainer — including local loopback MCP / on-disk project paths, cloud-mode credential
+handling (`BASIC_MEMORY_API_KEY` bearer against the `cloud.basicmemory.com` allowlist), and mode-partitioned
+hook rule caching (`provider` + `mode` + project identity). The maintainer relies on community-reported
+issues triaged and fixed as they surface against real local and cloud Basic Memory setups, adjusting the
+catalog entry if real-world usage surfaces a mismatch. This documents, rather than re-litigates, the
+maintainer's already-decided policy.
+
+The catalog row carries `supportStatus: community-triage`. The existing `basic-memory>=0.22.0,<1.0.0`
+`supportedPackage` pin remains accurate and unchanged.
 
 ## Dual-transport
 
