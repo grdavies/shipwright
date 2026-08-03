@@ -104,7 +104,7 @@ task lists or committed checkbox toggles. Human review is required before any ta
 3. **Compound write** — load `skills/compound/SKILL.md`; route writes through `memory-preflight` +
    `scripts/memory-redact.py` (internal step — not `/sw-compound`).
 4. **`/sw-memory-sync`** — unless `--skip-memory-sync`; provider unreachable → **fail-closed** (R7).
-5. **`/sw-status`** — `python3 scripts/sw_bootstrap.py reconcile-status.py -- reconcile --require-merge` (INDEX `complete` only
+5. **`/sw-status`** — `python3 scripts/reconcile.py reconcile --require-merge` (INDEX `complete` only
    after merge detection, R11); `append-log` for COMPLETION-LOG.
 6. **Commit file outputs only** on the feature branch: COMPLETION-LOG, INDEX, CHANGELOG/version,
    learnings notes. **Never commit** memory/provider artifacts (R7).
@@ -136,7 +136,7 @@ partial discovery as green.
 | `resumeCommand` | Exact retry — typically `python3 scripts/planning_store.py close-delivery-units --prd-unit <id>` |
 | `considered` / `skipped` | Per-unit disposition with `reason` |
 
-**Operator rule:** retry **only** via the printed `resumeCommand`. Bare `reconcile-status.py reconcile` or
+**Operator rule:** retry **only** via the printed `resumeCommand`. Bare `scripts/reconcile.py reconcile` or
 manual INDEX edits do not satisfy closure-audit evidence. Under `/sw-deliver` finalize, `wave_deliver_loop`
 fails closed when `close-delivery-units` returns `not-ready` and surfaces the same `resumeCommand`.
 
@@ -177,7 +177,7 @@ python3 scripts/planning_store.py close-delivery-units --prd-unit <prd-unit-id> 
 - User halts at retro or compound approval gates when `compound.autonomy: supervised` (default).
 - Under `compound.autonomy: auto`, skip approval / "did you merge?" prompts only — not memory or rule-class gates.
 - Memory provider unreachable (fail-closed per R7).
-- `reconcile-status.py` errors on frozen PRD guard.
+- `scripts/reconcile.py` errors on frozen PRD guard.
 
 **Communication intensity:** full
 
@@ -231,4 +231,4 @@ schema `planning.store.issues.credentialContract`).
 
 ## Post-merge INDEX safety (A1)
 
-Post-merge compounding uses `completion finalize-if-merged` only. On failure, resume with the printed `resumeCommand` — do **not** fall back to bare `reconcile-status.py reconcile` on `main`. Single-unit bookkeeping belongs on a docs branch.
+Post-merge compounding uses `completion finalize-if-merged` only. On failure, resume with the printed `resumeCommand` — do **not** fall back to bare `scripts/reconcile.py reconcile` on `main`. Single-unit bookkeeping belongs on a docs branch.
