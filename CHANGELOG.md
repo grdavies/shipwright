@@ -754,6 +754,7 @@
 * merge phase retarget-sw-amend-md-and-sw-retrospective-md-from-reconcile-status-py-r5 into feat/prd-documentation-and-operator-ux-accuracy (bc3604e) <!-- sw-deliver:retarget-sw-amend-md-and-sw-retrospective-md-from-reconcile-status-py-r5 -->
 * merge phase retarget-sw-status-md-and-living-status-skill-md-from-reconcile-status-py-r5 into feat/prd-documentation-and-operator-ux-accuracy (34f2543) <!-- sw-deliver:retarget-sw-status-md-and-living-status-skill-md-from-reconcile-status-py-r5 -->
 * merge phase retarget-sw-status-md-and-living-status-skill-md-from-reconcile-status-py-r5 into feat/prd-documentation-and-operator-ux-accuracy (018bcbd) <!-- sw-deliver:retarget-sw-status-md-and-living-status-skill-md-from-reconcile-status-py-r5 -->
+* merge phase retarget-memory-skill-md-and-terminal-lifecycle-md-verify-corpus-wide-r5 into feat/prd-documentation-and-operator-ux-accuracy (174780e) <!-- sw-deliver:retarget-memory-skill-md-and-terminal-lifecycle-md-verify-corpus-wide-r5 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
