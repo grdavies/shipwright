@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-01T21:03:37Z",
+  "generatedAt": "2026-08-02T21:34:26Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -100,82 +100,82 @@
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:68:nightly-failure-notify.py",
+      "id": ".github/workflows/ci.yml:70:nightly-failure-notify.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 68,
+      "line": 70,
       "column": 37,
       "script": "nightly-failure-notify.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:68:nightly-failure-notify.py",
+      "id": ".github/workflows/ci.yml:70:nightly-failure-notify.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 68,
+      "line": 70,
       "column": 10,
       "script": "nightly-failure-notify.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:87:test/bash-py-invocation-guard.test",
+      "id": ".github/workflows/ci.yml:89:test/bash-py-invocation-guard.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 87,
+      "line": 89,
       "column": 21,
       "script": "test/bash-py-invocation-guard.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:90:test/claims-audit-unit.test",
+      "id": ".github/workflows/ci.yml:92:test/claims-audit-unit.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 90,
+      "line": 92,
       "column": 21,
       "script": "test/claims-audit-unit.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:93:docs-link-check.py",
+      "id": ".github/workflows/ci.yml:95:docs-link-check.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 93,
+      "line": 95,
       "column": 21,
       "script": "docs-link-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:96:test/git-push-secret-scan-chokepoint.test",
+      "id": ".github/workflows/ci.yml:98:test/git-push-secret-scan-chokepoint.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 96,
+      "line": 98,
       "column": 21,
       "script": "test/git-push-secret-scan-chokepoint.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:99:test/rca-fanout-unit.test",
+      "id": ".github/workflows/ci.yml:101:test/rca-fanout-unit.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 99,
+      "line": 101,
       "column": 21,
       "script": "test/rca-fanout-unit.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:102:check_scripts_inventory.py",
+      "id": ".github/workflows/ci.yml:104:check_scripts_inventory.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 102,
+      "line": 104,
       "column": 21,
       "script": "check_scripts_inventory.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:105:test/skills-spec-guard.test",
+      "id": ".github/workflows/ci.yml:107:test/skills-spec-guard.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 105,
+      "line": 107,
       "column": 21,
       "script": "test/skills-spec-guard.test",
       "classification": "self-repo-only"
@@ -199,57 +199,57 @@
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:21:check_scripts_inventory.py",
+      "id": ".github/workflows/pr-test-plan-ci.yml:21:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
       "line": 21,
       "column": 21,
-      "script": "check_scripts_inventory.py",
+      "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:32:docs-link-check.py",
+      "id": ".github/workflows/pr-test-plan-ci.yml:32:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
       "line": 32,
       "column": 21,
-      "script": "docs-link-check.py",
+      "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:43:test/bash-py-invocation-guard.test",
+      "id": ".github/workflows/pr-test-plan-ci.yml:43:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
       "line": 43,
       "column": 21,
-      "script": "test/bash-py-invocation-guard.test",
+      "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:54:test/claims-audit-unit.test",
+      "id": ".github/workflows/pr-test-plan-ci.yml:54:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
       "line": 54,
       "column": 21,
-      "script": "test/claims-audit-unit.test",
+      "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:65:test/git-push-secret-scan-chokepoint.test",
+      "id": ".github/workflows/pr-test-plan-ci.yml:65:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
       "line": 65,
       "column": 21,
-      "script": "test/git-push-secret-scan-chokepoint.test",
+      "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:76:test/rca-fanout-unit.test",
+      "id": ".github/workflows/pr-test-plan-ci.yml:76:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
       "line": 76,
       "column": 21,
-      "script": "test/rca-fanout-unit.test",
+      "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
@@ -262,37 +262,82 @@
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:99:test/run_pytest.py",
+      "id": ".github/workflows/pr-test-plan-ci.yml:98:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 99,
+      "line": 98,
       "column": 21,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:110:test/run_pytest.py",
+      "id": ".github/workflows/pr-test-plan-ci.yml:109:check_scripts_inventory.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 110,
+      "line": 109,
+      "column": 21,
+      "script": "check_scripts_inventory.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:120:docs-link-check.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 120,
+      "column": 21,
+      "script": "docs-link-check.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:131:test/bash-py-invocation-guard.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 131,
+      "column": 21,
+      "script": "test/bash-py-invocation-guard.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:142:test/claims-audit-unit.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 142,
+      "column": 21,
+      "script": "test/claims-audit-unit.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:153:test/git-push-secret-scan-chokepoint.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 153,
+      "column": 21,
+      "script": "test/git-push-secret-scan-chokepoint.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:164:test/rca-fanout-unit.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 164,
+      "column": 21,
+      "script": "test/rca-fanout-unit.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:176:test/run_pytest.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 176,
       "column": 21,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:121:test/run_pytest.py",
+      "id": ".github/workflows/pr-test-plan-ci.yml:187:test/skills-spec-guard.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 121,
-      "column": 21,
-      "script": "test/run_pytest.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:132:test/skills-spec-guard.test",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 132,
+      "line": 187,
       "column": 21,
       "script": "test/skills-spec-guard.test",
       "classification": "self-repo-only"
@@ -18451,118 +18496,127 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:134:generate-pr-test-plan-ci-workflow.py",
+      "id": "docs/guides/testing.md:142:ci_plan_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 134,
+      "line": 142,
+      "column": 8,
+      "script": "ci_plan_gen.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/testing.md:144:generate-pr-test-plan-ci-workflow.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/testing.md",
+      "line": 144,
       "column": 8,
       "script": "generate-pr-test-plan-ci-workflow.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:140:test/_runner.py",
+      "id": "docs/guides/testing.md:189:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 140,
-      "column": 9,
+      "line": 189,
+      "column": 23,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:156:nightly-failure-notify.py",
+      "id": "docs/guides/testing.md:214:nightly-failure-notify.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 156,
+      "line": 214,
       "column": 8,
       "script": "nightly-failure-notify.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:167:test/run_pytest.py",
+      "id": "docs/guides/testing.md:226:test/run_pytest.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 167,
+      "line": 226,
       "column": 8,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:170:test/_runner.py",
+      "id": "docs/guides/testing.md:229:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 170,
+      "line": 229,
       "column": 27,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:170:test/_runner.py",
+      "id": "docs/guides/testing.md:229:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 170,
+      "line": 229,
       "column": 0,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:181:build-chain-sync.py",
+      "id": "docs/guides/testing.md:240:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 181,
+      "line": 240,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:187:build-chain-sync.py",
+      "id": "docs/guides/testing.md:246:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 187,
+      "line": 246,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:190:build-chain-sync.py",
+      "id": "docs/guides/testing.md:249:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 190,
+      "line": 249,
       "column": 41,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:199:deprecated_surface_freshness.py",
+      "id": "docs/guides/testing.md:258:deprecated_surface_freshness.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 199,
+      "line": 258,
       "column": 11,
       "script": "deprecated_surface_freshness.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:200:harness_isolation_lint.py",
+      "id": "docs/guides/testing.md:259:harness_isolation_lint.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 200,
+      "line": 259,
       "column": 11,
       "script": "harness_isolation_lint.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:248:test/_runner.py",
+      "id": "docs/guides/testing.md:307:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 248,
+      "line": 307,
       "column": 27,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/testing.md:248:test/_runner.py",
+      "id": "docs/guides/testing.md:307:test/_runner.py",
       "tree": "docs/guides",
       "file": "docs/guides/testing.md",
-      "line": 248,
+      "line": 307,
       "column": 0,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
