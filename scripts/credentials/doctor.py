@@ -20,6 +20,7 @@ from credentials.ci_declaration import (
     try_load_local_selector,
 )
 from credentials.config_surface import (
+    ALIAS_NOTICE,
     DeprecationPhase,
     ResolvedCredentialSurface,
     ConfigSurfaceError,
@@ -76,6 +77,7 @@ class SurfaceDiagnosis:
     repository_access: str
     required_operation_verdict: str
     failure: DoctorFailure | None = None
+    notices: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,6 +122,15 @@ def _principal_public(principal: Principal | None) -> dict[str, str | None] | No
     if principal is None:
         return None
     return {"profile": principal.profile, "account": principal.account}
+
+
+def _notices_for_surface(
+    surface_binding: ResolvedCredentialSurface,
+    config_notices: tuple[str, ...],
+) -> tuple[str, ...]:
+    if surface_binding.source == "tokenEnv-alias" and config_notices:
+        return config_notices
+    return ()
 
 
 def _scope_binding(entry: SelectorEntry | None) -> dict[str, tuple[str, ...]] | None:
@@ -376,7 +387,9 @@ def diagnose_surface(
     skip_integrity: bool = False,
     environ: Mapping[str, str] | None = None,
     register_env_backend: bool = True,
+    config_notices: tuple[str, ...] = (),
 ) -> SurfaceDiagnosis:
+    surface_notices = _notices_for_surface(surface_binding, config_notices)
     context, remote_url = _repository_context_for_surface(
         root,
         cfg,
@@ -398,6 +411,7 @@ def diagnose_surface(
             pairing={"verdict": "absent", "approved": False},
             repository_access="skipped",
             required_operation_verdict="skipped",
+            notices=surface_notices,
         )
 
     if register_env_backend:
@@ -448,6 +462,7 @@ def diagnose_surface(
             repository_access="fail",
             required_operation_verdict="fail",
             failure=failure,
+            notices=surface_notices,
         )
 
     if str(credential_ref).startswith("tokenEnv:"):
@@ -464,6 +479,7 @@ def diagnose_surface(
                 pairing=pairing,
                 repository_access="ok",
                 required_operation_verdict="pass",
+                notices=surface_notices,
             )
         remediation = remediation_for_code(fc.INSUFFICIENT_ACCESS, root=root)
         return SurfaceDiagnosis(
@@ -477,6 +493,7 @@ def diagnose_surface(
             repository_access="fail",
             required_operation_verdict="fail",
             failure=DoctorFailure(code=fc.INSUFFICIENT_ACCESS, remediation=remediation),
+            notices=surface_notices,
         )
 
     lookup = resolve_lookup(
@@ -510,6 +527,7 @@ def diagnose_surface(
             pairing=pairing,
             repository_access="ok",
             required_operation_verdict="pass",
+            notices=surface_notices,
         )
 
     if lookup.resolution.state is ResolutionState.EXPLICITLY_NO_AUTH:
