@@ -7,7 +7,7 @@
       "source": ".sw/memory-provider-catalog.json",
       "emit": "core/sw-reference/memory-provider-catalog.json",
       "sync": "copy-to-core",
-      "sha256": "18a03f7245d267d657eee3d9df1197c1b81b79c9b4de5ec9ca02ee238124db6f"
+      "sha256": "63f44d14784eb640037b1af3cd0efbc8580e15fb4442a42979cb4425c2854571"
     }
   ]
 }
