@@ -55,6 +55,7 @@ def _install_workspace(
         },
         "interchange": {"jsonl": "unsupported", "okf": "unsupported"},
         "sourceOfTruthClass": source_class,
+        "supportStatus": "ga",
         "credentials": {"location": "env-only", "notes": "fixture"},
     }
 

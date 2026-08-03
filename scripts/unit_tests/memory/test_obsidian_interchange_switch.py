@@ -287,6 +287,7 @@ def test_skip_ack_obsidian_blocked_pair_halts_until_ack(repo_root: Path, tmp_pat
         "hookTransport": dict(catalog["providers"]["in-repo"]["hookTransport"]),
         "interchange": {"jsonl": "unsupported", "okf": "unsupported"},
         "sourceOfTruthClass": "repo-authoritative",
+        "supportStatus": "ga",
         "credentials": {"location": "none", "notes": "fixture"},
     }
     plan = ms.plan_switch(catalog, "obsidian", "blocked-dst")
