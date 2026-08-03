@@ -281,7 +281,6 @@
         "scripts/unit_tests/test_doctor_tokenenv_deprecation.py"
       ],
       "tags": [
-        "pytest",
         "doctor",
         "tokenenv"
       ]
