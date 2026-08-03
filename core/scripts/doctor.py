@@ -1,37 +1,76 @@
 #!/usr/bin/env python3
-"""Health check: stale pre-port layout + Python floor (R34)."""
+"""Health check: stale pre-port layout + Python floor + tokenEnv deprecation (R34/R2)."""
 from __future__ import annotations
+
 import json
-import sys
 from pathlib import Path
+from typing import Any
 
 from _sw.cli import build_parser, run_module_main
 from _sw.interpreter import probe
 
 SHELL_SUFFIXES = {".sh", ".bash", ".ps1"}
 HOOK_NAMES = ("pre-commit", "pre-push", "commit-msg")
+TOKENENV_MIGRATE_REMEDIATION = (
+    "python3 scripts/sw-configure.py credential migrate"
+)
 
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
 
 
-def main(argv: list[str] | None = None) -> int:
-    build_parser(prog="doctor", description="Detect stale layout and Python issues.").parse_args(argv)
-    root = repo_root()
+def _append_tokenenv_deprecations(
+    root: Path,
+    issues: list[str],
+    remediation: list[str],
+) -> None:
+    """Surface tokenEnv-alias bindings via the credential config surface (PRD 087 R2)."""
+    try:
+        from credentials.config_surface import (
+            ConfigSurfaceError,
+            DeprecationPhase,
+            resolve_config_surface,
+        )
+        from host_lib import load_workflow_config
+    except ImportError:  # pragma: no cover - scripts path always present in-repo
+        return
+
+    cfg = load_workflow_config(root)
+    if not cfg:
+        return
+    try:
+        surface_result = resolve_config_surface(
+            cfg,
+            deprecation_phase=DeprecationPhase.DEPRECATION,
+        )
+    except ConfigSurfaceError:
+        # Config-surface failures belong to credentials-doctor; skip here.
+        return
+
+    for surface in (surface_result.host, surface_result.planning, surface_result.memory):
+        if surface.source != "tokenEnv-alias":
+            continue
+        issues.append(f"tokenenv-deprecation:{surface.surface}")
+        remediation.append(TOKENENV_MIGRATE_REMEDIATION)
+
+
+def diagnose(root: Path | None = None) -> dict[str, Any]:
+    """Run repo-wide doctor checks against ``root`` (defaults to plugin root)."""
+    target = root if root is not None else repo_root()
     issues: list[str] = []
     remediation: list[str] = []
 
     for rel in ("hooks", "core/hooks", "scripts"):
-        base = root / rel
+        base = target / rel
         if not base.is_dir():
             continue
         for path in base.rglob("*"):
             if path.suffix.lower() in SHELL_SUFFIXES and path.is_file():
-                issues.append(f"stale-shell:{path.relative_to(root).as_posix()}")
+                issues.append(f"stale-shell:{path.relative_to(target).as_posix()}")
     for hook in HOOK_NAMES:
-        py_hook = root / "core" / "hooks" / f"{hook}.py"
-        sh_hook = root / "hooks" / f"{hook}.sh"
+        py_hook = target / "core" / "hooks" / f"{hook}.py"
+        sh_hook = target / "hooks" / f"{hook}.sh"
         if sh_hook.is_file() and not py_hook.is_file():
             issues.append(f"missing-python-hook:{hook}")
             remediation.append("Run: python3 scripts/install.py")
@@ -48,15 +87,32 @@ def main(argv: list[str] | None = None) -> int:
         issues.append(f"python-floor:{python_detail}")
         remediation.append("Install CPython >= 3.9 and ensure python3 is on PATH")
 
+    _append_tokenenv_deprecations(target, issues, remediation)
+
     verdict = "pass" if not issues else "warn"
-    out = {
+    return {
         "verdict": verdict,
         "issues": issues,
         "remediation": remediation,
         "python": python_detail,
     }
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser(
+        prog="doctor",
+        description="Detect stale layout, Python floor, and tokenEnv deprecation issues.",
+    )
+    parser.add_argument(
+        "--root",
+        default=None,
+        help="Repository root to diagnose (default: plugin/repo root)",
+    )
+    args = parser.parse_args(argv)
+    root = Path(args.root).resolve() if args.root else repo_root()
+    out = diagnose(root)
     print(json.dumps(out, indent=2))
-    return 0 if verdict == "pass" else 1
+    return 0 if out["verdict"] == "pass" else 1
 
 
 if __name__ == "__main__":

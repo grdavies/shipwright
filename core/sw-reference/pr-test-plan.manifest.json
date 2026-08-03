@@ -111,6 +111,17 @@
       "ciShard": 1
     },
     {
+      "id": "doctor-tokenenv-deprecation-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/test_doctor_tokenenv_deprecation.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1
+    },
+    {
       "id": "deliver-concurrency-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [

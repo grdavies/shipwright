@@ -264,6 +264,29 @@
       "verifyOrder": 65
     },
     {
+      "id": "doctor-tokenenv-deprecation-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "verifyOrder": 66,
+      "pytestPath": "scripts/unit_tests/test_doctor_tokenenv_deprecation.py",
+      "ciShard": 1,
+      "pathTriggers": [
+        "scripts/doctor.py",
+        "core/scripts/doctor.py",
+        "scripts/unit_tests/test_doctor_tokenenv_deprecation.py"
+      ],
+      "tags": [
+        "pytest",
+        "doctor",
+        "tokenenv"
+      ]
+    },
+    {
       "id": "debug-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
