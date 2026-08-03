@@ -3709,28 +3709,37 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:204:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:202:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 204,
-      "column": 10,
-      "script": "planning_linear_client.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "core/providers/issues/linear.md:233:planning_linear_client.py",
-      "tree": "core/providers",
-      "file": "core/providers/issues/linear.md",
-      "line": 233,
+      "line": 202,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:234:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:222:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 234,
+      "line": 222,
+      "column": 10,
+      "script": "planning_linear_client.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/issues/linear.md:251:planning_linear_client.py",
+      "tree": "core/providers",
+      "file": "core/providers/issues/linear.md",
+      "line": 251,
+      "column": 8,
+      "script": "planning_linear_client.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/issues/linear.md:252:planning_linear_client.py",
+      "tree": "core/providers",
+      "file": "core/providers/issues/linear.md",
+      "line": 252,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"

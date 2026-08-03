@@ -1,0 +1,17 @@
+{
+  "verdict": "ok",
+  "gate": "oauth-docs-gate",
+  "markerCount": 9,
+  "mvpDogfoodAuth": "api-key",
+  "storage": {
+    "operatorLocalOnly": true,
+    "mustNotCommitToPlanningRepo": true,
+    "sharedCiSecretRefused": true,
+    "exceptionConfigKey": "planning.store.issues.oauthSharedCiException",
+    "docHints": [
+      "Store OAuth access/refresh tokens in an operator-local secret store or machine keychain.",
+      "Do not commit tokens to the planning repo or wire authMode:oauth through shared CI secrets by default.",
+      "Set oauthSharedCiException: true only for an explicit documented exception path."
+    ]
+  }
+}

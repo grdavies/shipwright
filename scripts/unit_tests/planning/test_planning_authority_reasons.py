@@ -115,7 +115,7 @@ class TestManyConfiguredFallbacks:
 
     def test_issues_provider_not_shipped_is_blocked(self, tmp_git_repo: Path) -> None:
         _seed_remote(tmp_git_repo)
-        cfg = _issue_store_cfg(issues_provider="linear")
+        cfg = _issue_store_cfg(issues_provider="gitlab-issues")
         _write_cfg(tmp_git_repo, cfg)
         decision = pa.resolve_authority(tmp_git_repo, cfg)
         assert decision.authorityState == "blocked"

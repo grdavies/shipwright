@@ -187,6 +187,24 @@ When dogfooding on a Team that already has human Linear Projects/Cycles:
 **MVP dogfood auth:** stage-1 dogfood uses `authMode: api-key` (Team-restricted personal API key) —
 OAuth is not required for stage-1 promotion (R23).
 
+## Community-triage promotion (PRD 086 R2 / D1)
+
+Linear was promoted to `SHIPPED_ISSUES_PROVIDERS` without a full local dogfood pass across every
+Linear Team/workspace permutation. The maintainer relies on community-reported issues triaged and
+fixed as they surface against real Linear workspaces, rather than blocking promotion on exhaustive
+pre-ship coverage of all Team/Cycle/Initiative combinations.
+
+Recorded gate evidence for this promotion lives in committed fixtures under
+`scripts/test/fixtures/planning-linear-stage1-promotion/` (`stage1-dogfood-gate.ok.json`,
+`oauth-docs-gate.ok.json`). Re-check live gates via:
+
+```bash
+python3 scripts/planning_linear_client.py . promotion-gate-evidence
+```
+
+Both recorded fixtures and live `stage1-dogfood-gate` / `oauth-docs-gate` runs must return
+`verdict: ok` before promotion or re-promotion.
+
 ## OAuth secondary auth mode (R23)
 
 OAuth 2.0 is a **documented secondary** auth mode on the same adapter surface. Default remains
