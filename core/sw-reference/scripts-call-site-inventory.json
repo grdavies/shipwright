@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-02T21:34:26Z",
+  "generatedAt": "2026-08-03T18:22:58Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3844,28 +3844,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:179:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:182:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 179,
+      "line": 182,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:249:planning_store.py",
+      "id": "core/providers/planning-store/issue-store.md:252:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 249,
+      "line": 252,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/planning-store/issue-store.md:277:planning_index_issue.py",
+      "id": "core/providers/planning-store/issue-store.md:280:planning_index_issue.py",
       "tree": "core/providers",
       "file": "core/providers/planning-store/issue-store.md",
-      "line": 277,
+      "line": 280,
       "column": 8,
       "script": "planning_index_issue.py",
       "classification": "self-repo-only"
