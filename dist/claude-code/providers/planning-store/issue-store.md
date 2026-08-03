@@ -166,8 +166,11 @@ Ordered steps (fail-closed):
 2. Apply `sw:frozen` label
 3. Compute canonical content-hash (includes `sw:frozen`, excludes `sw-freeze-record` comments)
 4. Write `sw-freeze-record` comment with `sw-freeze-hash: <sha256>`
-5. On PRD freeze with linked brainstorm: distill rationale to memory (`research`) via
-   `memory-redact`, close+link brainstorm issue (retain, never delete)
+5. On PRD freeze with linked brainstorm: excerpt linked brainstorm rationale, redact via
+   `memory-redact`, then persist through `MemoryLocalCacheBackend` — local cache at
+   `.cursor/sw-memory/planning-bodies/` with optional `/planning-bodies/<unitId>` REST
+   round-trip (not semantic `memory_type: research` / `store`/`search_memories`); close+link
+   brainstorm issue (retain, never delete)
 6. Distillation failure → `sw:freeze-incomplete` label; blocks `/sw-deliver`
 
 ### Tamper detection (R37)
