@@ -29,6 +29,7 @@ INTERCHANGE_MODES = frozenset({"native", "synthesized", "unsupported"})
 HOOK_AGENT_SESSION = frozenset({"mcp", "filesystem", "rest"})
 HOOK_RULE_FETCH = frozenset({"out-of-band-script", "inline-filesystem", "none"})
 SOURCE_OF_TRUTH_CLASSES = frozenset({"memory-authoritative", "repo-authoritative"})
+SUPPORT_STATUSES = frozenset({"ga", "community-triage"})
 SEEDED_PROVIDER_IDS = frozenset({"recallium", "in-repo"})
 
 
@@ -136,6 +137,13 @@ def validate_provider_entry(provider_id: str, entry: Any) -> dict[str, Any]:
     if source_class not in SOURCE_OF_TRUTH_CLASSES:
         raise CatalogError(
             f"{label}.sourceOfTruthClass invalid: {source_class!r}",
+            cause="partial",
+        )
+
+    support_status = _require_str(row.get("supportStatus"), f"{label}.supportStatus")
+    if support_status not in SUPPORT_STATUSES:
+        raise CatalogError(
+            f"{label}.supportStatus invalid: {support_status!r}",
             cause="partial",
         )
 

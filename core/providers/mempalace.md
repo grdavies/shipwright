@@ -34,9 +34,21 @@ are pinned for that range; drift outside the range requires a PRD amendment befo
 | `interchange.jsonl` | `synthesized` — `/sw-memory-export` / `/sw-memory-import` synthesize neutral JSONL via search+expand (+ KG) |
 | `interchange.okf` | `synthesized` — same synthesis path into OKF v0.1 bundles (redaction before write) |
 | `credentials.location` | `none` — local-only `palacePath`; no remote credentials |
+| `supportStatus` | `community-triage` — see **Community-triage promotion** below |
 
 `<project>` below is `memory.project` from the config. Global scope uses the literal `__global__` (explicit
 user direction only).
+
+## Community-triage promotion (PRD 086 R3 / D1)
+
+MemPalace is promoted to full support without an end-to-end exercise against a live MemPalace MCP install
+(load-context, search with room exclusions, store redact/dedup/add, KG link/traverse, export/import
+synthesis, inactivate vs. hard-purge). The maintainer relies on community-reported issues triaged and fixed
+as they surface against real MemPalace setups, adjusting the catalog entry if real-world usage surfaces a
+mismatch. This documents, rather than re-litigates, the maintainer's already-decided policy.
+
+The catalog row carries `supportStatus: community-triage`. The existing `mempalace>=3.6.0,<4.0.0`
+`supportedPackage` pin remains accurate and unchanged.
 
 ## Dual-transport
 
