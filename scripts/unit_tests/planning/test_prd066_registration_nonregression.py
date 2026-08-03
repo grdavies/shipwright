@@ -100,7 +100,7 @@ def test_r16_registration_footprint_surface() -> None:
     assert footprint["action"] == "issues-provider-registration"
     assert "github-issues" in footprint["issuesProviders"]
     assert "linear" in footprint["issuesProviders"]
-    assert "linear" not in footprint["shippedIssuesProviders"]
+    assert "linear" in footprint["shippedIssuesProviders"]
     assert footprint["rateLimitMap"]["linear"] == "linear"
     assert footprint["capabilityIndexIds"]["linear"] == "provider.providers.issues.linear"
     assert "scripts/planning_migrate_issue_store.py" in footprint["migrationHooks"]
@@ -108,12 +108,60 @@ def test_r16_registration_footprint_surface() -> None:
     assert footprint["linear"]["promotionGatedBy"] == ["conformance", "oauth-docs-gate"]
 
 
-def test_r20_linear_recognized_not_shipped() -> None:
-    """R20 — linear in ISSUES_PROVIDERS when wired; SHIPPED promotion gated."""
+def test_r2_linear_recognized_and_shipped() -> None:
+    """R2 — linear in ISSUES_PROVIDERS and SHIPPED_ISSUES_PROVIDERS after stage-1 promotion."""
     assert plc.LIVE_CLIENT is True
     assert "linear" in ps.ISSUES_PROVIDERS
-    assert "linear" not in ps.SHIPPED_ISSUES_PROVIDERS
+    assert "linear" in ps.SHIPPED_ISSUES_PROVIDERS
     assert "linear" in issues_http.ISSUES_PROVIDER_TO_RATELIMIT
+
+
+def test_r2_linear_promotion_gate_evidence_recorded() -> None:
+    """R2 — recorded stage1-dogfood-gate and oauth-docs-gate fixtures both show verdict ok."""
+    root = Path(__file__).resolve().parents[3]
+    evidence = plc.linear_promotion_gate_evidence(root)
+    assert evidence["verdict"] == "ok", evidence.get("failures")
+    for gate in ("stage1-dogfood-gate", "oauth-docs-gate"):
+        assert evidence["recorded"][gate]["verdict"] == "ok"
+        assert evidence["live"][gate]["verdict"] == "ok"
+
+
+def test_r20_doctor_passes_when_linear_shipped(tmp_path: Path) -> None:
+    """R2 — doctor passes without unshipped notice when linear is shipped."""
+    result = ps.doctor_issues_provider_stub(tmp_path, _linear_cfg())
+    assert result["verdict"] == "pass"
+    assert result.get("notice") != "linear-recognized-not-shipped"
+
+
+def test_r2_linear_live_backend_allowed_when_shipped(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R2 — shipped linear no longer fails closed on the unshipped guard."""
+    assert "linear" in ps.SHIPPED_ISSUES_PROVIDERS
+    monkeypatch.delenv("SW_ISSUES_FIXTURE", raising=False)
+    store = issues_lib.FixtureIssuesStore(tmp_path / "linear-shipped-fixture.json")
+
+    class _FakeLinear(plc.LinearIssuesClient):
+        def __init__(self, root: Path, **kwargs: Any) -> None:  # noqa: ARG002
+            super().__init__(root, cfg=_linear_cfg()["planning"]["store"], fixture_store=store)
+
+    monkeypatch.setattr(plc, "LinearIssuesClient", _FakeLinear)
+    client = issues_lib.IssuesClient(tmp_path, "linear")
+    backend = client._live_backend()
+    assert backend is not None
+
+
+def test_r2_linear_issue_store_active_when_shipped(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R2 — shipped linear keeps issue-store effective without not-shipped fallback."""
+    fake_host = lambda _root: {
+        "verdict": "ok",
+        "provider": "github",
+        "remoteUrl": "https://github.com/acme/planning.git",
+    }
+    monkeypatch.setattr(host_lib, "resolve_provider", fake_host)
+    monkeypatch.setattr(ps_facade, "resolve_provider", fake_host)
+    resolved = ps.resolve_effective_backend(tmp_path, _linear_cfg())
+    assert resolved["configured"] == "issue-store"
+    assert resolved["effective"] == "issue-store"
+    assert resolved.get("fallbackReason") != "issues-provider-not-shipped"
 
 
 def test_r20_doctor_refuses_deferred_stub(tmp_path: Path) -> None:
@@ -130,31 +178,6 @@ def test_r20_doctor_refuses_deferred_stub(tmp_path: Path) -> None:
     result = ps.doctor_issues_provider_stub(tmp_path, cfg)
     assert result["verdict"] == "fail"
     assert result["error"] == "deferred-provider-stub-refused"
-
-
-def test_r20_doctor_notes_linear_recognized_not_shipped(tmp_path: Path) -> None:
-    """R20 — doctor passes with notice when linear recognized but unshipped."""
-    result = ps.doctor_issues_provider_stub(tmp_path, _linear_cfg())
-    assert result["verdict"] == "pass"
-    assert result["notice"] == "linear-recognized-not-shipped"
-
-
-def test_r20_linear_live_backend_fail_closed_without_shipped(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """R20 — live IssuesClient refuses unshipped linear (fixture mode still allowed)."""
-    monkeypatch.delenv("SW_ISSUES_FIXTURE", raising=False)
-    client = issues_lib.IssuesClient(tmp_path, "linear")
-    with pytest.raises(issues_lib.IssueCapabilityError) as exc:
-        client._live_backend()
-    assert "not shipped" in str(exc.value).lower()
-
-
-def test_r20_linear_issue_store_reports_blocked_without_substitution(tmp_path: Path) -> None:
-    """R20 — unshipped linear keeps configured id and blocks without substitution."""
-    resolved = ps.resolve_effective_backend(tmp_path, _linear_cfg())
-    assert resolved["configured"] == "issue-store"
-    assert resolved["effective"] == "issue-store"
-    assert resolved["fallbackReason"] == "issues-provider-not-shipped"
-    assert resolved["authorityState"] == "blocked"
 
 
 def test_r21_github_issues_unchanged_when_linear_projects_off(

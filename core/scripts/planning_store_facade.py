@@ -137,10 +137,10 @@ ISSUES_PROVIDERS = _BASE_ISSUES_PROVIDERS | (
 # config validation yet absent from the shipped set until a live adapter ships in a
 # follow-up unit (originating gap-039). Selection therefore fails closed with the
 # issues-provider-not-shipped fallback reason instead of an advertised round-trip.
-# PRD 066 R9/R20: linear is recognized when the live client is wired, but not shipped
-# until conformance + OAuth docs gate pass.
+# PRD 066 R9/R20 / PRD 086 R2: linear is recognized when the live client is wired;
+# promoted to shipped after recorded stage1-dogfood-gate + oauth-docs-gate evidence.
 DEFERRED_ISSUES_PROVIDERS = frozenset({"gitlab-issues"})
-SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "jira"})
+SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "jira", "linear"})
 
 MIN_ISSUES_SCOPES: dict[str, list[str]] = {
     "github-issues": ["repo"],

@@ -660,6 +660,54 @@ def _doc_marker_gate(
     return {"verdict": "ok", "gate": gate, "markerCount": len(markers)}
 
 
+LINEAR_PROMOTION_GATE_FIXTURES_REL = Path("scripts/test/fixtures/planning-linear-stage1-promotion")
+LINEAR_PROMOTION_GATES: tuple[str, ...] = ("stage1-dogfood-gate", "oauth-docs-gate")
+
+
+def linear_promotion_gate_fixture_path(root: Path, gate: str) -> Path:
+    """Committed gate-evidence fixture for linear stage-1 promotion (PRD 086 R2)."""
+    return (root / LINEAR_PROMOTION_GATE_FIXTURES_REL / f"{gate}.ok.json").resolve()
+
+
+def load_linear_promotion_gate_fixture(root: Path, gate: str) -> dict[str, Any]:
+    path = linear_promotion_gate_fixture_path(root, gate)
+    if not path.is_file():
+        return {
+            "verdict": "fail",
+            "gate": gate,
+            "error": "missing-promotion-gate-fixture",
+            "fixturePath": str(path),
+        }
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def linear_promotion_gate_evidence(root: Path) -> dict[str, Any]:
+    """R2 — recorded + live stage-1 promotion gate evidence (doctor-visible)."""
+    recorded: dict[str, Any] = {}
+    live: dict[str, Any] = {}
+    for gate in LINEAR_PROMOTION_GATES:
+        recorded[gate] = load_linear_promotion_gate_fixture(root, gate)
+        if gate == "stage1-dogfood-gate":
+            live[gate] = stage1_dogfood_checklist_gate(root)
+        else:
+            live[gate] = oauth_docs_gate(root)
+    failures: list[dict[str, str]] = []
+    for gate in LINEAR_PROMOTION_GATES:
+        if recorded[gate].get("verdict") != "ok":
+            failures.append({"gate": gate, "phase": "recorded", "verdict": str(recorded[gate].get("verdict"))})
+        if live[gate].get("verdict") != "ok":
+            failures.append({"gate": gate, "phase": "live", "verdict": str(live[gate].get("verdict"))})
+    return {
+        "verdict": "ok" if not failures else "fail",
+        "action": "linear-promotion-gate-evidence",
+        "gates": list(LINEAR_PROMOTION_GATES),
+        "fixtureDir": str(LINEAR_PROMOTION_GATE_FIXTURES_REL),
+        "recorded": recorded,
+        "live": live,
+        "failures": failures,
+    }
+
+
 def stage1_dogfood_checklist_gate(root: Path) -> dict[str, Any]:
     """R25 — stage-1 dogfood checklist documented in linear.md."""
     doc = linear_provider_doc_text(root)
@@ -1446,7 +1494,7 @@ class LinearIssuesClient:
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
-        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|docs-currency-gate|comments-relations-surface>"}))
+        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|promotion-gate-evidence|docs-currency-gate|comments-relations-surface>"}))
         raise SystemExit(2)
     root = Path(args[0]).resolve()
     cfg = load_workflow_config(root)
@@ -1463,6 +1511,8 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(stage1_dogfood_checklist_gate(root), indent=2))
     elif cmd == "oauth-docs-gate":
         print(json.dumps(oauth_docs_gate(root), indent=2))
+    elif cmd == "promotion-gate-evidence":
+        print(json.dumps(linear_promotion_gate_evidence(root), indent=2))
     elif cmd == "docs-currency-gate":
         print(json.dumps(docs_currency_gate(root), indent=2))
     elif cmd == "comments-relations-surface":
