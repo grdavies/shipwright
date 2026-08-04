@@ -47,10 +47,13 @@ def _write_prd(
     *,
     brainstorm: str | None = "docs/brainstorms/2026-06-25-fixture.md",
     frozen: bool = True,
+    tier_fm: str | None = "full",
 ) -> str:
     rel = "docs/prds/099-fixture/099-prd-fixture.md"
     path = repo / rel
-    fm = ["---", "type: prd", "id: 099-prd-fixture", "tier: full"]
+    fm = ["---", "type: prd", "id: 099-prd-fixture"]
+    if tier_fm:
+        fm.append(f"tier: {tier_fm}")
     if frozen:
         fm.append("frozen: true")
     if brainstorm:
@@ -85,11 +88,41 @@ def test_missing_brainstorm_fails_gate(repo: Path) -> None:
     assert any(f["code"] == "dangling-brainstorm-backref" for f in result["findings"])
 
 
-def test_frozen_prd_without_brainstorm_fails_gate(repo: Path) -> None:
-    prd = _write_prd(repo, brainstorm=None, frozen=True)
+def test_frozen_standard_prd_without_brainstorm_passes(repo: Path) -> None:
+    prd = _write_prd(repo, brainstorm=None, frozen=True, tier_fm=None)
     result = check_artifact(repo, prd, tier="standard")
+    assert result["verdict"] == "pass"
+
+
+def test_patch_tier_requires_origin_issue(repo: Path) -> None:
+    prd = _write_prd(repo, brainstorm=None, frozen=False, tier_fm=None)
+    result = check_artifact(repo, prd, tier="patch")
     assert result["verdict"] == "fail"
-    assert any(f["code"] == "missing-brainstorm-backref" for f in result["findings"])
+    assert any(f["code"] == "missing-origin" for f in result["findings"])
+
+
+def test_patch_tier_issue_origin_requires_resolvable_ref(repo: Path) -> None:
+    rel = "docs/prds/099-fixture/099-prd-fixture.md"
+    path = repo / rel
+    path.write_text(
+        "---\n"
+        "type: prd\n"
+        "id: 099-prd-fixture\n"
+        "origin: issue\n"
+        "frozen: true\n"
+        "---\n# PRD\n",
+        encoding="utf-8",
+    )
+    result = check_artifact(repo, rel, tier="patch")
+    assert result["verdict"] == "fail"
+    assert any(f["code"] == "missing-issue-ref" for f in result["findings"])
+
+
+def test_standard_tier_defaults_origin_request(repo: Path) -> None:
+    prd = _write_prd(repo, brainstorm=None, frozen=True, tier_fm=None)
+    result = check_artifact(repo, prd, tier="standard")
+    assert result["verdict"] == "pass"
+    assert not any(f["code"] == "missing-brainstorm-backref" for f in result.get("findings", []))
 
 
 def test_seeded_feature_branch_resolves_reference(repo: Path) -> None:
