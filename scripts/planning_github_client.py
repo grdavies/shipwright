@@ -571,6 +571,7 @@ class GitHubIssuesClient:
                 self.headers,
                 {"lock_reason": "resolved"},
             )
+            record = self._get_issue(issue_id)
         if FROZEN_LABEL not in record.labels:
             return self.update(
                 issue_id,
