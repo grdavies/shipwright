@@ -11,8 +11,10 @@ from pathlib import Path
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from credentials.config_surface import PROJECT_ID_PATTERN, _extract_surface_values
 from credentials.resolver import RepositoryContext as ResolverRepositoryContext
 from credentials.resolver import repo_slug_from_remote
+from credentials.selector_store import default_selector_path
 from host_lib import git_remote_url, load_workflow_config, remote_name
 
 CONTEXT_ENVELOPE_ENV = "SW_CONTEXT_ENVELOPE"
@@ -156,6 +158,71 @@ def _policy_overrides(cfg: Mapping[str, Any]) -> tuple[tuple[str, str], ...]:
     return tuple(overrides)
 
 
+def _optional_str(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
+def _normalize_to_project_id_slug(repo_slug: str, fallback: str) -> str:
+    """Normalize a provider repo slug into a stable project-id-shaped slug."""
+    raw = (repo_slug.split("/", 1)[-1] if repo_slug else fallback).lower()
+    candidate = re.sub(r"[^a-z0-9-]+", "-", raw)
+    candidate = re.sub(r"-{2,}", "-", candidate).strip("-")
+    if not candidate or not candidate[0].isalpha():
+        candidate = f"proj-{candidate or 'repo'}"
+    if not PROJECT_ID_PATTERN.fullmatch(candidate):
+        candidate = re.sub(r"[^a-z0-9-]", "", candidate)
+        if not candidate or not candidate[0].isalpha():
+            candidate = "proj-repo"
+    return candidate
+
+
+def _stable_provider_repo_id(slug: str, path_name: str) -> str | None:
+    if not slug.strip():
+        return None
+    return _normalize_to_project_id_slug(slug, path_name)
+
+
+def _canonical_remote_slug_project_id(slug: str) -> str | None:
+    if not slug.strip():
+        return None
+    candidate = slug.strip().split("/", 1)[-1].lower()
+    if PROJECT_ID_PATTERN.fullmatch(candidate):
+        return candidate
+    return None
+
+
+def derive_project_id_without_config(slug: str, path_name: str) -> str:
+    """Derive project identity without top-level ``projectId`` (PRD 089 R4)."""
+    stable = _stable_provider_repo_id(slug, path_name)
+    if stable:
+        return stable
+    canonical = _canonical_remote_slug_project_id(slug)
+    if canonical:
+        return canonical
+    return (path_name.strip() or "repo")
+
+
+def resolve_project_id(cfg: Mapping[str, Any], slug: str, path_name: str) -> str:
+    """Resolve project identity with explicit ``projectId`` precedence (PRD 089 R4)."""
+    configured = _optional_str(cfg.get("projectId"))
+    if configured:
+        return configured
+    return derive_project_id_without_config(slug, path_name)
+
+
+def _declared_credential_ref_names(cfg: Mapping[str, Any]) -> tuple[str, ...]:
+    values = _extract_surface_values(cfg)
+    refs: list[str] = []
+    for surface in ("host", "planning", "memory"):
+        cred_ref, _ = values[surface]
+        if cred_ref:
+            refs.append(cred_ref)
+    return tuple(sorted(set(refs)))
+
+
 def _worktree_id(root: Path) -> str:
     state_path = root / ".cursor" / "sw-worktree-state.json"
     if state_path.is_file():
@@ -171,8 +238,11 @@ def _worktree_id(root: Path) -> str:
     return root.name or str(root.resolve())
 
 
-def _credential_refs(root: Path) -> tuple[str, ...]:
-    selector_path = Path.home() / ".config" / "shipwright" / "credential-selector.json"
+def _credential_refs(cfg: Mapping[str, Any]) -> tuple[str, ...]:
+    declared = _declared_credential_ref_names(cfg)
+    if not declared:
+        return ()
+    selector_path = default_selector_path()
     if not selector_path.is_file():
         return ()
     try:
@@ -182,7 +252,7 @@ def _credential_refs(root: Path) -> tuple[str, ...]:
     entries = payload.get("entries") if isinstance(payload, dict) else None
     if not isinstance(entries, dict):
         return ()
-    refs = sorted(str(key).strip() for key in entries if str(key).strip())
+    refs = sorted(ref for ref in declared if ref in entries)
     return tuple(refs)
 
 
@@ -225,10 +295,10 @@ def from_root(
     provider = str(host.get("provider") or "github").strip().lower()
     endpoint = destination_endpoint or _default_destination_endpoint(provider)
 
-    project_id = str(memory.get("project") or slug or resolved.name).strip()
+    project_id = resolve_project_id(cfg, slug, resolved.name)
     memory_namespace = str(memory.get("project") or project_id).strip()
     effective_run_id = (run_id or os.environ.get("SW_RUN_ID") or os.environ.get("SW_DELIVER_RUN_ID") or "").strip()
-    refs = tuple(credential_refs) if credential_refs is not None else _credential_refs(resolved)
+    refs = tuple(credential_refs) if credential_refs is not None else _credential_refs(cfg)
 
     bound = str(resolved)
     return RepositoryContext(
