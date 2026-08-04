@@ -390,6 +390,27 @@ class IssueStoreBackend(PlanningStoreBackend):
 
         self._mutate_index(_update)
 
+    def _resolve_put_edge_projection(
+        self,
+        existing: Any | None,
+        store_content: str,
+    ) -> tuple[str, list[dict[str, Any]] | None, list[dict[str, Any]] | None]:
+        """Preserve or prefer sw-edges on put (PRD 093 R3/R4)."""
+        content_edges = _ps().parse_edges_block(store_content)
+        if content_edges is not None:
+            edges = list(content_edges.get("edges") or [])
+            native_links = list(content_edges.get("native") or [])
+            stripped = _ps().strip_markers_and_edges(store_content)
+            return stripped, edges, native_links
+        if existing is not None:
+            existing_edges = _ps().parse_edges_block(existing.body)
+            native_links = list(existing.native_links or [])
+            if existing_edges is not None or native_links:
+                edges = list((existing_edges or {}).get("edges") or [])
+                stripped = _ps().strip_markers_and_edges(store_content)
+                return stripped, edges, native_links
+        return store_content, None, None
+
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
         _ps().reject_bare_integer_unit_id(unit_id)
         self._guard_write_visibility(unit_id, body_path, content)
@@ -407,7 +428,15 @@ class IssueStoreBackend(PlanningStoreBackend):
         title = self._issue_title(artifact_type, unit_id, content)
         labels = self._labels_for(artifact_type, unit_id, content)
         store_content = _ps().operator_body_from_canonical(content) if _ps().has_raw_yaml_frontmatter(content) else content
-        body = _ps().compose_issue_body(self.project_key, artifact_type, unit_id, store_content)
+        store_content, put_edges, put_native_links = self._resolve_put_edge_projection(existing, store_content)
+        body = _ps().compose_issue_body(
+            self.project_key,
+            artifact_type,
+            unit_id,
+            store_content,
+            edges=put_edges,
+            native_links=put_native_links,
+        )
         body, extra_comments = _ps().chunk_body_if_needed(body, [], provider=self.issues_provider)
         idx_key = issue_index_key(self.project_key, unit_id)
         chunked = bool(extra_comments)
@@ -419,6 +448,11 @@ class IssueStoreBackend(PlanningStoreBackend):
         # ids that were never a real comment. Cleared only once the manifest
         # rewrite below actually succeeds.
         head_labels = sorted(set(labels) | {_ps().PUT_INCOMPLETE_LABEL}) if chunked else labels
+        create_kwargs: dict[str, Any] = {}
+        update_kwargs: dict[str, Any] = {}
+        if put_native_links is not None:
+            create_kwargs["native_links"] = put_native_links
+            update_kwargs["native_links"] = put_native_links
         if existing is None:
             record = self._client.issue_create(
                 title=title,
@@ -427,6 +461,7 @@ class IssueStoreBackend(PlanningStoreBackend):
                 project_key=self.project_key,
                 artifact_type=artifact_type,
                 unit_id=unit_id,
+                **create_kwargs,
             )
         else:
             record = existing
@@ -437,6 +472,7 @@ class IssueStoreBackend(PlanningStoreBackend):
                     body=body,
                     labels=head_labels,
                     if_match=record.etag,
+                    **update_kwargs,
                 )
             except _ps().IssueRevisionConflict as exc:
                 _ps().fail(
