@@ -1461,6 +1461,50 @@
       "ciShard": 4
     },
     {
+      "id": "freeze-etag-lock-refresh-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_lock_etag_refresh.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-6",
+      "ciShard": 6
+    },
+    {
+      "id": "freeze-first-attempt-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_freeze_first_attempt.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-7",
+      "ciShard": 7
+    },
+    {
+      "id": "put-edge-preservation-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_put_edge_preservation.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-5",
+      "ciShard": 5
+    },
+    {
+      "id": "record-absorb-linkage-edges-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_record_absorb_linkage_edges.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-6",
+      "ciShard": 6
+    },
+    {
       "id": "skills-spec-guard-fixtures",
       "script": "scripts/test/skills-spec-guard.test",
       "args": [],

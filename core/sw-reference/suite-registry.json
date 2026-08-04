@@ -1803,6 +1803,72 @@
         "memory",
         "eval"
       ]
+    },
+    {
+      "id": "freeze-etag-lock-refresh-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-6",
+      "verifyOrder": 59,
+      "pytestPath": "scripts/unit_tests/planning/test_lock_etag_refresh.py",
+      "ciShard": 6,
+      "pathTriggers": [
+        "scripts/planning_github_client.py",
+        "scripts/unit_tests/planning/test_lock_etag_refresh.py"
+      ]
+    },
+    {
+      "id": "freeze-first-attempt-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-7",
+      "verifyOrder": 60,
+      "pytestPath": "scripts/unit_tests/planning/test_freeze_first_attempt.py",
+      "ciShard": 7,
+      "pathTriggers": [
+        "scripts/planning/backends/issues.py",
+        "scripts/unit_tests/planning/test_freeze_first_attempt.py"
+      ]
+    },
+    {
+      "id": "put-edge-preservation-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-5",
+      "verifyOrder": 61,
+      "pytestPath": "scripts/unit_tests/planning/test_put_edge_preservation.py",
+      "ciShard": 5,
+      "pathTriggers": [
+        "scripts/planning/backends/issues.py",
+        "scripts/planning_canonical.py",
+        "scripts/unit_tests/planning/test_put_edge_preservation.py"
+      ]
+    },
+    {
+      "id": "record-absorb-linkage-edges-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-6",
+      "verifyOrder": 62,
+      "pytestPath": "scripts/unit_tests/planning/test_record_absorb_linkage_edges.py",
+      "ciShard": 6,
+      "pathTriggers": [
+        "scripts/planning_gap_capture.py",
+        "scripts/planning/backends/issues.py",
+        "scripts/unit_tests/planning/test_record_absorb_linkage_edges.py"
+      ]
     }
   ],
   "plans": {
