@@ -353,6 +353,95 @@ def ensure_redacted_index(root: Path) -> str | None:
     return None
 
 
+VERIFIED_COMPLETION_OUTCOMES = frozenset({"committed", "already-present"})
+
+
+def branch_head_commit(top: Path, branch: str) -> str | None:
+    proc = git_run(["rev-parse", branch], top, check=False)
+    if proc.returncode != 0:
+        return None
+    sha = proc.stdout.strip()
+    return sha or None
+
+
+def verify_commit_on_branch(top: Path, commit_sha: str, branch: str) -> bool:
+    proc = git_run(
+        ["merge-base", "--is-ancestor", commit_sha, branch],
+        top,
+        check=False,
+    )
+    return proc.returncode == 0
+
+
+def build_verified_completion(
+    top: Path,
+    branch: str,
+    commit_sha: str,
+    outcome: str,
+) -> dict[str, Any]:
+    verified = verify_commit_on_branch(top, commit_sha, branch)
+    complete = outcome in VERIFIED_COMPLETION_OUTCOMES and verified and commit_sha
+    return {
+        "outcome": outcome,
+        "verified": verified,
+        "commit": commit_sha,
+        "complete": bool(complete),
+        "branch": branch,
+        "dryRun": False,
+    }
+
+
+def build_incomplete_completion(
+    branch: str,
+    *,
+    outcome: str = "incomplete",
+    reason: str | None = None,
+    dry_run: bool | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "outcome": outcome,
+        "verified": False,
+        "commit": None,
+        "complete": False,
+        "branch": branch,
+    }
+    if dry_run is not None:
+        payload["dryRun"] = dry_run
+    if reason:
+        payload["reason"] = reason
+    return payload
+
+
+def completion_from_seed_payload(top: Path, payload: dict[str, Any]) -> dict[str, Any]:
+    """Report feature-seed completion — verified commit outcome only (PRD 089 R6)."""
+    branch = str(payload.get("branch") or "")
+    if payload.get("dry_run"):
+        return build_incomplete_completion(
+            branch,
+            outcome="failed",
+            reason="dry-run",
+            dry_run=True,
+        )
+    commit_sha = payload.get("commit")
+    if isinstance(commit_sha, str) and commit_sha and branch:
+        outcome = "already-present" if payload.get("skipped") else "committed"
+        return build_verified_completion(top, branch, commit_sha, outcome)
+    if payload.get("skipped") and branch:
+        head = branch_head_commit(top, branch)
+        if head:
+            return build_verified_completion(top, branch, head, "already-present")
+    return build_incomplete_completion(
+        branch,
+        outcome="incomplete",
+        reason="missing-verified-commit",
+    )
+
+
+def ambiguous_remote_state_default(branch: str) -> dict[str, Any]:
+    """Pre-seed remote state — not a completion signal (R6)."""
+    return {"branch": branch, "commit": None, "dryRun": True}
+
+
 def branch_has_docs_commit(top: Path, branch: str, doc_rels: list[str]) -> bool:
     if not doc_rels:
         return False
@@ -394,6 +483,12 @@ def commit_docs_seed(
         )
 
     if branch_has_docs_commit(top, branch, doc_rels):
+        head = branch_head_commit(top, branch)
+        completion = (
+            build_verified_completion(top, branch, head, "already-present")
+            if head
+            else build_incomplete_completion(branch, reason="missing-branch-head")
+        )
         emit(
             {
                 "verdict": "pass",
@@ -403,10 +498,18 @@ def commit_docs_seed(
                 "scope": scope,
                 "note": "already seeded (idempotent no-op)",
                 "skipped": True,
+                "commit": head,
+                "completion": completion,
             }
         )
 
     if dry_run:
+        completion = build_incomplete_completion(
+            branch,
+            outcome="failed",
+            reason="dry-run",
+            dry_run=True,
+        )
         emit(
             {
                 "verdict": "pass",
@@ -417,6 +520,7 @@ def commit_docs_seed(
                 "scope": scope,
                 "files": doc_rels,
                 "skippedPrivate": skipped_private or [],
+                "completion": completion,
             }
         )
 
@@ -431,6 +535,12 @@ def commit_docs_seed(
     if diff_cached.returncode == 0:
         if prev and prev != branch:
             git_run(["checkout", prev], top, check=False)
+        head = branch_head_commit(top, branch)
+        completion = (
+            build_verified_completion(top, branch, head, "already-present")
+            if head
+            else build_incomplete_completion(branch, reason="missing-branch-head")
+        )
         emit(
             {
                 "verdict": "pass",
@@ -439,6 +549,8 @@ def commit_docs_seed(
                 "scope": scope,
                 "note": "docs already match branch HEAD (idempotent)",
                 "skipped": True,
+                "commit": head,
+                "completion": completion,
             }
         )
 
@@ -452,6 +564,7 @@ def commit_docs_seed(
     if prev and prev != branch:
         git_run(["checkout", prev], top, check=False)
 
+    completion = build_verified_completion(top, branch, head, "committed")
     emit(
         {
             "verdict": "pass",
@@ -462,6 +575,7 @@ def commit_docs_seed(
             "scope": scope,
             "files": doc_rels,
             "skippedPrivate": skipped_private or [],
+            "completion": completion,
             **({"targetLock": target_lock} if target_lock else {}),
         }
     )
