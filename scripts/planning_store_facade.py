@@ -3008,6 +3008,55 @@ def classify_banned_repo_paths(root: Path) -> dict[str, list[str]]:
     }
 
 
+def doctor_repository_context_identity(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Configured vs derived project identity hygiene (PRD 089 R4)."""
+    from credentials.resolver import repo_slug_from_remote
+    from host_lib import git_remote_url, remote_name
+    from repository_context import derive_project_id_without_config, resolve_project_id
+
+    remote = git_remote_url(root, remote_name(cfg)) or ""
+    slug = repo_slug_from_remote(remote)
+    path_name = root.name
+
+    configured = str(cfg.get("projectId") or "").strip() or None
+    derived = derive_project_id_without_config(slug, path_name)
+    resolved = resolve_project_id(cfg, slug, path_name)
+    memory = cfg.get("memory") if isinstance(cfg.get("memory"), dict) else {}
+    memory_project = str(memory.get("project") or "").strip() or None
+
+    identity = {
+        "configuredProjectId": configured,
+        "derivedProjectId": derived,
+        "resolvedProjectId": resolved,
+        "memoryProject": memory_project,
+    }
+
+    if not configured and memory_project and memory_project != derived:
+        return {
+            "verdict": "fail",
+            "action": "doctor",
+            "halt": "repository-context-identity-conflict",
+            "error": (
+                "memory.project differs from derived project id without top-level projectId override"
+            ),
+            "identity": identity,
+            "remediation": (
+                "set top-level projectId explicitly or align memory.project with derived identity"
+            ),
+        }
+
+    checks = ["repository-context-identity"]
+    if configured and derived and configured != derived:
+        checks.append("project-id-explicit-overrides-derived")
+
+    return {
+        "verdict": "pass",
+        "action": "doctor",
+        "checks": checks,
+        "identity": identity,
+    }
+
+
 def doctor_separate_project_local_writes(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     from planning_artifact_handle import issue_store_separate_project_effective
 
@@ -3157,6 +3206,11 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     """Aggregate issue-store hygiene checks (PRD 061 R3)."""
     checks: list[str] = []
     skipped_reasons: list[str] = []
+
+    identity = doctor_repository_context_identity(root, cfg)
+    if identity.get("verdict") == "fail":
+        return identity
+    checks.extend(identity.get("checks", []))
 
     stub = doctor_issues_provider_stub(root, cfg)
     if stub.get("verdict") == "fail":

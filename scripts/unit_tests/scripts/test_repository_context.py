@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -63,10 +64,11 @@ class TestOneValidRoot:
         _seed_repo(tmp_git_repo, worktree_name="phase-demo")
         context = from_root(tmp_git_repo, run_id="run-1")
         context.assert_root_invariant()
-        assert context.project_id == "fixture-project"
+        assert context.project_id == "demo"
         assert context.worktree_id == "phase-demo"
         assert context.planning_authority == "issue-store:github-issues"
         assert context.run_id == "run-1"
+        assert context.memory_namespace == "fixture-project"
         assert context.repo_slug == "acme/demo"
         assert context.remote.endswith("acme/demo.git")
         assert context.policy_overrides == (
@@ -78,6 +80,55 @@ class TestOneValidRoot:
         original = from_root(tmp_git_repo, run_id="run-42")
         restored = from_envelope(original.to_envelope())
         assert restored == original
+
+    def test_explicit_project_id_overrides_derived_slug(self, tmp_git_repo: Path) -> None:
+        _seed_repo(tmp_git_repo, worktree_name="phase-demo")
+        cfg_path = tmp_git_repo / ".cursor" / "workflow.config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        cfg["projectId"] = "explicit-project"
+        cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+        context = from_root(tmp_git_repo)
+        assert context.project_id == "explicit-project"
+        assert context.memory_namespace == "fixture-project"
+
+
+class TestCredentialRefIsolation:
+    def test_declared_refs_exclude_unrelated_selector_profiles(
+        self, tmp_git_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _seed_repo(tmp_git_repo)
+        cfg_path = tmp_git_repo / ".cursor" / "workflow.config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        cfg["host"]["credentialRef"] = "github-work-a"
+        cfg["memory"]["credentialRef"] = "memory-work-a"
+        cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+
+        selector_home = Path.home() / ".sw-test-credential-selector" / tmp_path.name
+        selector_home.mkdir(parents=True, exist_ok=True)
+        selector_dir = selector_home / "shipwright"
+        selector_dir.mkdir(parents=True, exist_ok=True)
+        selector_path = selector_dir / "credential-selector.json"
+        selector_path.write_text(
+            json.dumps(
+                {
+                    "entries": {
+                        "github-work-a": {"backend": "environment"},
+                        "memory-work-a": {"backend": "environment"},
+                        "github-work-b": {"backend": "environment"},
+                        "memory-work-b": {"backend": "environment"},
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("XDG_CONFIG_HOME", str(selector_home))
+
+        context = from_root(tmp_git_repo)
+        assert context.credential_refs == ("github-work-a", "memory-work-a")
+        assert "github-work-b" not in context.credential_refs
+        assert "memory-work-b" not in context.credential_refs
+
+        shutil.rmtree(selector_home, ignore_errors=True)
 
 
 class TestManyConcurrentContexts:
