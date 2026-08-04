@@ -3008,11 +3008,26 @@ def classify_banned_repo_paths(root: Path) -> dict[str, list[str]]:
     }
 
 
+def _doctor_identity_signals_present(cfg: dict[str, Any]) -> bool:
+    memory = cfg.get("memory") if isinstance(cfg.get("memory"), dict) else {}
+    return bool(str(cfg.get("projectId") or "").strip()) or bool(str(memory.get("project") or "").strip())
+
+
 def doctor_repository_context_identity(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     """Configured vs derived project identity hygiene (PRD 089 R4)."""
     from credentials.resolver import repo_slug_from_remote
     from host_lib import git_remote_url, remote_name
     from repository_context import derive_project_id_without_config, resolve_project_id
+
+    store = store_section(cfg)
+    backend = str(store.get("backend") or DEFAULT_BACKEND).strip()
+    if backend != "issue-store" and not _doctor_identity_signals_present(cfg):
+        return {
+            "verdict": "pass",
+            "action": "doctor",
+            "skipped": True,
+            "reason": "not-issue-store-no-identity-signals",
+        }
 
     remote = git_remote_url(root, remote_name(cfg)) or ""
     slug = repo_slug_from_remote(remote)
@@ -3210,7 +3225,10 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     identity = doctor_repository_context_identity(root, cfg)
     if identity.get("verdict") == "fail":
         return identity
-    checks.extend(identity.get("checks", []))
+    if identity.get("skipped"):
+        skipped_reasons.append(str(identity.get("reason") or "repository-context-identity-skipped"))
+    else:
+        checks.extend(identity.get("checks", []))
 
     stub = doctor_issues_provider_stub(root, cfg)
     if stub.get("verdict") == "fail":
