@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/grdavies/shipwright/compare/v1.12.0...v1.13.0) (2026-08-04)
+
+
+### Features
+
+* freeze ETag retry and absorb-edge preservation (PRD 093) ([#779](https://github.com/grdavies/shipwright/issues/779)) ([dd8ff88](https://github.com/grdavies/shipwright/commit/dd8ff88cf9311e68d7c2e3668770ee5c57dabcb2))
+
 ## [1.12.0](https://github.com/grdavies/shipwright/compare/v1.11.0...v1.12.0) (2026-08-03)
 
 
