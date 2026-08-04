@@ -777,6 +777,7 @@
 * merge phase regenerate-dist-mirrors-for-the-r3-r5-fix-set-r6 into feat/prd-documentation-and-operator-ux-accuracy (e0f628d) <!-- sw-deliver:regenerate-dist-mirrors-for-the-r3-r5-fix-set-r6 -->
 * merge phase lock-etag-re-fetch-fix-r1-r2-r6 into feat/prd-freeze-etag-retry-and-absorb-edge-preservation (3354ce6) <!-- sw-deliver:lock-etag-re-fetch-fix-r1-r2-r6 -->
 * merge phase freeze-first-attempt-convergence-smoke-r2 into feat/prd-freeze-etag-retry-and-absorb-edge-preservation (41ed336) <!-- sw-deliver:freeze-first-attempt-convergence-smoke-r2 -->
+* merge phase end-to-end-absorb-linkage-regression-suite-registration-r5-r6 into feat/prd-freeze-etag-retry-and-absorb-edge-preservation (b104161) <!-- sw-deliver:end-to-end-absorb-linkage-regression-suite-registration-r5-r6 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
