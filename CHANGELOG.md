@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.12.0](https://github.com/grdavies/shipwright/compare/v1.11.0...v1.12.0) (2026-08-03)
+
+
+### Features
+
+* **ci:** restore pytest shard wall-clock and green nightly notify (PRD 088) ([#759](https://github.com/grdavies/shipwright/issues/759)) ([e9b9e5e](https://github.com/grdavies/shipwright/commit/e9b9e5eff24ce5895a354597d6e540311b9198c4))
+* documentation and operator UX accuracy (PRD 087) ([#774](https://github.com/grdavies/shipwright/issues/774)) ([b5d4060](https://github.com/grdavies/shipwright/commit/b5d40606e683017c77dea9a6d45d10cbf1a2f1d2))
+* **prd-086:** provider finalization — memory and planning store adapters ([#765](https://github.com/grdavies/shipwright/issues/765)) ([c254b19](https://github.com/grdavies/shipwright/commit/c254b19349214bda033dd5100a11adebbfaa261f))
+* **prd-83:** ci reliability and runner credential resolution ([#725](https://github.com/grdavies/shipwright/issues/725)) ([dcfa874](https://github.com/grdavies/shipwright/commit/dcfa874b41d317dac895e2d4558cf383b3ea4a0e))
+* **prd-84:** credential broker and privacy hardening ([#733](https://github.com/grdavies/shipwright/issues/733)) ([7108270](https://github.com/grdavies/shipwright/commit/7108270d4b1b1e7c75da3f55b073e09d061a8f9f))
+* **prd-85:** deliver and doc loop orchestration integrity ([#747](https://github.com/grdavies/shipwright/issues/747)) ([35dbeff](https://github.com/grdavies/shipwright/commit/35dbeff21f5edbde56bb1f6b9b65a7a6ac11245a))
+
+
+### Bug Fixes
+
+* **credentials:** register backend adapters on demand ([#713](https://github.com/grdavies/shipwright/issues/713)) ([51d9a5b](https://github.com/grdavies/shipwright/commit/51d9a5bb6e20f42666b78f0919c2ba208e9637d8))
+* **planning:** close-delivery rate-limit + init credential refs ([#748](https://github.com/grdavies/shipwright/issues/748)) ([f6e9cba](https://github.com/grdavies/shipwright/commit/f6e9cba2cf863663c71ad5b5edc95e87135d2af4))
+
 ## [1.11.0](https://github.com/grdavies/shipwright/compare/v1.10.0...v1.11.0) (2026-07-29)
 
 
