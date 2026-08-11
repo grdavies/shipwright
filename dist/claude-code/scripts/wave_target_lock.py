@@ -223,6 +223,88 @@ def heartbeat_doc_run_lock(root: Path, topic: str, run_id: str) -> dict[str, Any
     }
 
 
+def validate_doc_run_lock(root: Path, topic: str, run_id: str) -> dict[str, Any]:
+    """Validate an already-held doc-run lease without a full re-acquire (PRD 089 R3).
+
+    Distinct from ``acquire_doc_run_lock``: never creates or steals a lock. On success,
+    heartbeats the existing lease. Fails closed when missing, run-mismatched, or held by
+    another live PID/host.
+    """
+    lock_path = doc_run_lock_path_for(root, topic)
+    digest = doc_run_lock_key_digest(root, topic)
+    if not lock_path.is_file():
+        return {
+            "verdict": "fail",
+            "error": "doc-run-lock-missing",
+            "lockPath": str(lock_path),
+            "lockKeyDigest": digest,
+        }
+    meta = read_lock_meta(lock_path)
+    if meta.get("runId") != run_id:
+        return {
+            "verdict": "fail",
+            "error": "doc-run-lock-run-mismatch",
+            "holder": meta,
+            "lockPath": str(lock_path),
+        }
+    if meta.get("host") != lock_host():
+        return {
+            "verdict": "fail",
+            "error": "doc-run-lock-other-host",
+            "holder": meta,
+            "lockPath": str(lock_path),
+        }
+    holder_pid = meta.get("pid")
+    if isinstance(holder_pid, int) and holder_pid != os.getpid():
+        if ship_lease_pid_alive(meta) and target_lock_owner_live(meta):
+            return {
+                "verdict": "fail",
+                "error": "doc-run-lock-other-pid",
+                "holder": meta,
+                "lockPath": str(lock_path),
+            }
+        return {
+            "verdict": "fail",
+            "error": "doc-run-lock-stale-self",
+            "holder": meta,
+            "lockPath": str(lock_path),
+            "note": "same runId but dead/other pid — use validate_or_acquire_doc_run_lock",
+        }
+    hb = heartbeat_doc_run_lock(root, topic, run_id)
+    if hb.get("verdict") != "pass":
+        return hb
+    return {
+        "verdict": "pass",
+        "action": "doc-run-lock-validate",
+        "topic": topic,
+        "lockPath": str(lock_path),
+        "lockKeyDigest": digest,
+        "heartbeatAt": hb.get("heartbeatAt"),
+    }
+
+
+def validate_or_acquire_doc_run_lock(
+    root: Path,
+    topic: str,
+    run_id: str,
+    *,
+    cross_host_ack: bool = False,
+) -> dict[str, Any]:
+    """Resume helper: validate held lease or acquire; fail closed on other live holder (R3)."""
+    validated = validate_doc_run_lock(root, topic, run_id)
+    if validated.get("verdict") == "pass":
+        return validated
+    err = str(validated.get("error") or "")
+    if err in ("doc-run-lock-missing", "doc-run-lock-stale-self"):
+        acquired = acquire_doc_run_lock(
+            root, topic, run_id, cross_host_ack=cross_host_ack
+        )
+        if acquired.get("verdict") == "pass":
+            acquired = {**acquired, "via": "validate-or-acquire"}
+        return acquired
+    return validated
+
+
 def release_doc_run_lock(root: Path, topic: str, run_id: str) -> dict[str, Any]:
     lock_path = doc_run_lock_path_for(root, topic)
     if not lock_path.is_file():

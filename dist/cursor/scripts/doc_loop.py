@@ -25,6 +25,7 @@ from wave_target_lock import (
     heartbeat_doc_run_lock,
     release_doc_run_lock,
     release_doc_run_lock_on_terminal_complete,
+    validate_or_acquire_doc_run_lock,
 )
 from wave_transition_receipt import hash_json
 
@@ -1238,6 +1239,14 @@ def handshake_payload(
     return payload
 
 
+def ensure_doc_run_lease_for_mutation(root: Path, state: dict[str, Any], run_id: str) -> dict[str, Any]:
+    """Validate-or-acquire + heartbeat doc-run lease before mutating resume (PRD 089 R3)."""
+    topic = str(state.get("topic") or "")
+    if not topic:
+        return {"verdict": "fail", "error": "doc-state-missing-topic", "runId": run_id}
+    return validate_or_acquire_doc_run_lock(root, topic, run_id)
+
+
 def cmd_doc_loop(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     consume = has_flag(args, "--consume")
@@ -1249,11 +1258,31 @@ def cmd_doc_loop(root: Path, args: list[str]) -> None:
         assert_publication_stage_reachable(publication_stage)
     run_id = resolve_run_id(root, args)
     state = load_doc_state(root, run_id)
+    # Mutating resume: every entry that loads durable state must hold a live lease (R3).
+    # Fresh provision already acquired inside resolve_run_id/--topic; validate heartbeats.
+    if not dry_run:
+        lease = ensure_doc_run_lease_for_mutation(root, state, run_id)
+        if lease.get("verdict") != "pass":
+            fail(
+                lease.get("error", "doc-run lease validate-or-acquire failed"),
+                exit_code=20,
+                halt="doc-run-lock",
+                **{k: v for k, v in lease.items() if k not in ("verdict", "error")},
+            )
     resumed = bool(state.get("verdict") == "running" and state.get("stage") != "triage")
     steps_taken: list[dict[str, Any]] = []
 
     for _ in range(max_steps):
         state = load_doc_state(root, run_id)
+        if not dry_run:
+            lease = ensure_doc_run_lease_for_mutation(root, state, run_id)
+            if lease.get("verdict") != "pass":
+                fail(
+                    lease.get("error", "doc-run lease validate-or-acquire failed"),
+                    exit_code=20,
+                    halt="doc-run-lock",
+                    **{k: v for k, v in lease.items() if k not in ("verdict", "error")},
+                )
         if state.get("verdict") == "halted":
             emit(
                 handshake_payload(
