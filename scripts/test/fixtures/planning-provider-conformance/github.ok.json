@@ -1,0 +1,78 @@
+{
+  "verdict": "ok",
+  "provider": "github-issues",
+  "action": "provider-conformance-record",
+  "dimensions": {
+    "auth-success": {
+      "verdict": "ok",
+      "dimension": "auth-success",
+      "issueId": "f662f506-8fb9-49c6-94ce-1131f498622b"
+    },
+    "auth-failure": {
+      "verdict": "ok",
+      "dimension": "auth-failure",
+      "observed": "missing-token"
+    },
+    "identity-mismatch": {
+      "verdict": "ok",
+      "dimension": "identity-mismatch",
+      "issueId": "fdb60082-7f05-4b5d-905f-af8e5877a5ca"
+    },
+    "visibility": {
+      "verdict": "ok",
+      "dimension": "visibility"
+    },
+    "crud-lifecycle": {
+      "verdict": "ok",
+      "dimension": "crud-lifecycle",
+      "issueId": "7d83cc19-cef1-4324-ab57-3ba8505dd682",
+      "commentCount": 1
+    },
+    "optimistic-concurrency": {
+      "verdict": "ok",
+      "dimension": "optimistic-concurrency"
+    },
+    "idempotent-retries": {
+      "verdict": "ok",
+      "dimension": "idempotent-retries",
+      "attempts": 2,
+      "issueId": "f40dc892-5af1-4ffe-a6ec-394e299dcf95"
+    },
+    "rate-limits": {
+      "verdict": "ok",
+      "dimension": "rate-limits"
+    },
+    "pagination": {
+      "verdict": "ok",
+      "dimension": "pagination",
+      "count": 3
+    },
+    "partial-outage": {
+      "verdict": "ok",
+      "dimension": "partial-outage",
+      "attempts": 2,
+      "issueId": "4eaf4eed-3f26-4e6e-85bd-af5548e5abd4"
+    },
+    "redaction": {
+      "verdict": "ok",
+      "dimension": "redaction"
+    },
+    "concurrent-writes": {
+      "verdict": "ok",
+      "dimension": "concurrent-writes"
+    },
+    "timeout-recovery": {
+      "verdict": "ok",
+      "dimension": "timeout-recovery",
+      "attempts": 2,
+      "elapsedMs": 158,
+      "issueId": "3e34aad4-f081-416c-8355-6c6079b4ad17"
+    },
+    "archival": {
+      "verdict": "ok",
+      "dimension": "archival"
+    }
+  },
+  "recordHash": "4616eecbc78556b7a709c77ecc23eb1d186424e34281dfae694786c3985bcb07",
+  "writtenAt": 1786425359
+}
