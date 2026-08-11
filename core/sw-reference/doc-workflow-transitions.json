@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "source": "scripts/doc_loop.py",
+  "stageSequence": [
+    "triage",
+    "brainstorm",
+    "prd",
+    "doc-review",
+    "related-work",
+    "final-triage-rescore",
+    "freeze-prd",
+    "tasks",
+    "freeze-tasks",
+    "afterTasks-checkpoint",
+    "feature-seed",
+    "complete"
+  ],
+  "stageCategories": {
+    "agent": [
+      "brainstorm",
+      "doc-review",
+      "final-triage-rescore",
+      "prd",
+      "tasks",
+      "triage"
+    ],
+    "mechanical": [
+      "feature-seed",
+      "freeze-prd",
+      "freeze-tasks",
+      "related-work"
+    ],
+    "human": [
+      "afterTasks-checkpoint",
+      "related-work-checkpoint"
+    ],
+    "terminal": [
+      "complete"
+    ],
+    "unreachable": [
+      "docs-commit",
+      "docs-pr"
+    ]
+  },
+  "orchestratorToDriverStage": {
+    "sw-triage": "triage",
+    "sw-brainstorm": "brainstorm",
+    "sw-prd": "prd",
+    "sw-doc-review": "doc-review",
+    "sw-freeze": "freeze-prd",
+    "sw-tasks": "tasks"
+  },
+  "transitions": {
+    "Standard": {
+      "triage": [
+        "prd"
+      ],
+      "prd": [
+        "doc-review"
+      ],
+      "doc-review": [
+        "related-work"
+      ],
+      "related-work": [
+        "final-triage-rescore"
+      ],
+      "final-triage-rescore": [
+        "freeze-prd"
+      ],
+      "freeze-prd": [
+        "tasks"
+      ],
+      "tasks": [
+        "freeze-tasks"
+      ],
+      "freeze-tasks": [
+        "afterTasks-checkpoint"
+      ],
+      "afterTasks-checkpoint": [
+        "feature-seed"
+      ],
+      "feature-seed": [
+        "complete"
+      ],
+      "complete": [],
+      "related-work-checkpoint": [
+        "related-work"
+      ]
+    },
+    "Full": {
+      "triage": [
+        "brainstorm"
+      ],
+      "brainstorm": [
+        "prd"
+      ],
+      "prd": [
+        "doc-review"
+      ],
+      "doc-review": [
+        "related-work"
+      ],
+      "related-work": [
+        "final-triage-rescore"
+      ],
+      "final-triage-rescore": [
+        "freeze-prd"
+      ],
+      "freeze-prd": [
+        "tasks"
+      ],
+      "tasks": [
+        "freeze-tasks"
+      ],
+      "freeze-tasks": [
+        "afterTasks-checkpoint"
+      ],
+      "afterTasks-checkpoint": [
+        "feature-seed"
+      ],
+      "feature-seed": [
+        "complete"
+      ],
+      "complete": [],
+      "related-work-checkpoint": [
+        "related-work"
+      ]
+    }
+  }
+}
