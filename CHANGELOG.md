@@ -787,6 +787,7 @@
 * merge phase cross-clone-remote-lease-r2 into feat/prd-doc-loop-concurrency-and-coordination-hardening (cd88632) <!-- sw-deliver:cross-clone-remote-lease-r2 -->
 * merge phase evidence-backed-provider-conformance-r3 into feat/prd-doc-loop-concurrency-and-coordination-hardening (6eef5f1) <!-- sw-deliver:evidence-backed-provider-conformance-r3 -->
 * merge phase generate-workflow-docs-from-executable-schema-r4 into feat/prd-doc-loop-concurrency-and-coordination-hardening (2dc7dc5) <!-- sw-deliver:generate-workflow-docs-from-executable-schema-r4 -->
+* merge phase durable-projection-outbox-r5 into feat/prd-doc-loop-concurrency-and-coordination-hardening (1ab501a) <!-- sw-deliver:durable-projection-outbox-r5 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
