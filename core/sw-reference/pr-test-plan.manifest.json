@@ -1379,6 +1379,21 @@
       "ciShard": 2
     },
     {
+      "id": "planning-090-github-provider-conformance-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_github_provider_conformance.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "provider-conformance",
+        "shipped-from-evidence"
+      ],
+      "ciShard": 2
+    },
+    {
       "id": "planning-native-links-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
