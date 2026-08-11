@@ -782,6 +782,7 @@
 * merge phase repositorycontext-identity-and-credential-scoping-r4-r5 into feat/prd-doc-loop-tier-correctness-and-repository-context-identity (01f2018) <!-- sw-deliver:repositorycontext-identity-and-credential-scoping-r4-r5 -->
 * merge phase durable-pending-transition-receipts-in-doc-loop-r2 into feat/prd-doc-loop-tier-correctness-and-repository-context-identity (c8c37db) <!-- sw-deliver:durable-pending-transition-receipts-in-doc-loop-r2 -->
 * merge phase feature-seed-completion-requires-verified-commit-outcome-r6 into feat/prd-doc-loop-tier-correctness-and-repository-context-identity (17c1c61) <!-- sw-deliver:feature-seed-completion-requires-verified-commit-outcome-r6 -->
+* merge phase lease-validation-on-every-mutating-doc-loop-resume-r3 into feat/prd-doc-loop-tier-correctness-and-repository-context-identity (3551a42) <!-- sw-deliver:lease-validation-on-every-mutating-doc-loop-resume-r3 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
