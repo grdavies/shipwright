@@ -798,8 +798,13 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     import subprocess
 
     from wave_spec_seed import resolve_target_branch
+    from wave_spec_seed import (
+        ambiguous_remote_state_default,
+        completion_from_seed_payload,
+    )
     from wave_spec_seed_guard import (
         acquire_doc_to_feature_handoff_lock,
+        assert_handoff_completion_remote_state,
         release_doc_to_feature_handoff_lock,
     )
 
@@ -844,7 +849,7 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
             text=True,
             cwd=str(root),
         )
-        remote_state: dict[str, Any] = {"branch": target_branch, "commit": None, "dryRun": True}
+        remote_state: dict[str, Any] = ambiguous_remote_state_default(target_branch)
         try:
             seed_payload = json.loads(proc.stdout or "{}")
         except json.JSONDecodeError:
@@ -863,26 +868,34 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
                 "seed": seed_payload,
             }
 
-        commit_sha = seed_payload.get("commit")
-        branch = seed_payload.get("branch") or target_branch
-        skipped = seed_payload.get("skipped") is True
-        if commit_sha:
-            verify = subprocess.run(
-                ["git", "merge-base", "--is-ancestor", commit_sha, branch],
-                cwd=str(root),
-                capture_output=True,
-                text=True,
-            )
-            if verify.returncode != 0:
-                return {
-                    "verdict": "fail",
-                    "error": "feature-seed-commit-verify-failed",
-                    "halt": "doc-loop:feature-seed",
-                    "seed": seed_payload,
-                }
-            remote_state = {"branch": branch, "commit": commit_sha, "dryRun": False}
-        elif skipped:
-            remote_state = {"branch": branch, "commit": None, "dryRun": False}
+        completion = completion_from_seed_payload(root, seed_payload)
+        if not completion.get("complete"):
+            return {
+                "verdict": "fail",
+                "error": "feature-seed-incomplete-outcome",
+                "halt": "doc-loop:feature-seed",
+                "completion": completion,
+                "seed": seed_payload,
+            }
+
+        branch = str(completion.get("branch") or seed_payload.get("branch") or target_branch)
+        commit_sha = completion.get("commit")
+        remote_state = {
+            "branch": branch,
+            "commit": commit_sha,
+            "dryRun": False,
+            "completion": completion,
+        }
+        try:
+            assert_handoff_completion_remote_state(remote_state)
+        except PermissionError as exc:
+            return {
+                "verdict": "fail",
+                "error": str(exc),
+                "halt": "doc-loop:feature-seed",
+                "completion": completion,
+                "seed": seed_payload,
+            }
 
         receipt = {
             "transitionName": "feature-seed",
