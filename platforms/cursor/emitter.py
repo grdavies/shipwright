@@ -94,6 +94,7 @@ class CursorEmitter(EmitterBase):
         self.validate_descriptor()
         ensure_clean_dir(dest)
         self.copy_emittable_content(core_root, dest)
+        self.emit_zipapp_runtime(repo_root, dest)
         self._copy_runtime_support(core_root, repo_root, dest)
         self._emit_plugin_manifest(repo_root, dest)
         self._emit_hooks(repo_root, dest)

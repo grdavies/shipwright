@@ -46,6 +46,7 @@ class ClaudeCodeEmitter(EmitterBase):
         self.validate_descriptor()
         ensure_clean_dir(dest)
         self.copy_emittable_content(core_root, dest)
+        self.emit_zipapp_runtime(repo_root, dest)
         self._apply_use_when_to_skills(core_root, dest)
         self._copy_runtime_support(core_root, repo_root, dest)
         self._emit_plugin_manifest(repo_root, dest)
