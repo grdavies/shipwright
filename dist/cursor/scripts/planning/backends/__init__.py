@@ -18,7 +18,7 @@ from .issues_helpers import (
     save_put_journal,
 )
 from .local_synced import LocalSyncedBackend
-from .memory_cache import MemoryLocalCacheBackend
+from .memory_cache import ReplicatedPlanningCacheBackend
 
 __all__ = [
     "ISSUE_STORE_TXN_ID",
@@ -26,7 +26,7 @@ __all__ = [
     "InRepoPublicBackend",
     "IssueStoreBackend",
     "LocalSyncedBackend",
-    "MemoryLocalCacheBackend",
+    "ReplicatedPlanningCacheBackend",
     "PUT_JOURNAL_PATH",
     "issue_index_key",
     "load_issue_unit_index",

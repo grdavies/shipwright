@@ -5,6 +5,7 @@ import ipaddress
 import json
 import os
 import re
+import shutil
 import urllib.parse
 from pathlib import Path
 from typing import Any
@@ -143,10 +144,10 @@ def _provider_round_trip_get(base: str, project: str, unit_id: str) -> tuple[boo
         return False, "provider-invalid-response", None
     return True, "ok", content
 
-class MemoryLocalCacheBackend(PlanningStoreBackend):
-    """PRD 057 R21 — the `memory` backend's planning-body store.
+class ReplicatedPlanningCacheBackend(PlanningStoreBackend):
+    """PRD 057 R21 / PRD 091 R1 — replicated planning-body cache backend.
 
-    21a made the local cache (`.cursor/sw-memory/planning-bodies/`, gitignored per
+    21a made the local cache (`.cursor/sw-planning-cache/planning-bodies/`, gitignored per
     `.gitignore`) available unconditionally, independent of whether a memory provider
     is configured — see the R21a history below. 21b (this revision) adds a *real*
     round-trip through the configured provider's REST adapter on top of that cache:
@@ -182,7 +183,7 @@ class MemoryLocalCacheBackend(PlanningStoreBackend):
     misleading-durability framing described in R21.
     """
 
-    backend_id = "memory"
+    backend_id = "planning-cache"
 
     def memory_project(self) -> str:
         memory = self.cfg.get("memory")
@@ -206,8 +207,49 @@ class MemoryLocalCacheBackend(PlanningStoreBackend):
             return f"provider-not-round-trippable:{provider}"
         return "provider-rest-base-unavailable"
 
-    def _local_cache_dir(self) -> Path:
+    def _local_cache_dir_path(self) -> Path:
+        return self.root / ".cursor" / "sw-planning-cache" / "planning-bodies" / self.memory_project()
+
+    def _legacy_local_cache_dir(self) -> Path:
         return self.root / ".cursor" / "sw-memory" / "planning-bodies" / self.memory_project()
+
+    def _migrate_legacy_cache_dir_if_needed(self) -> None:
+        legacy = self._legacy_local_cache_dir()
+        if not legacy.is_dir():
+            return
+        new = self._local_cache_dir_path()
+        if new.is_dir():
+            for item in legacy.iterdir():
+                dest = new / item.name
+                if dest.exists():
+                    continue
+                if item.is_dir():
+                    shutil.copytree(item, dest)
+                else:
+                    shutil.copy2(item, dest)
+            try:
+                shutil.rmtree(legacy)
+            except OSError:
+                pass
+            legacy_parent = legacy.parent
+            if legacy_parent.is_dir() and not any(legacy_parent.iterdir()):
+                try:
+                    legacy_parent.rmdir()
+                except OSError:
+                    pass
+            return
+        new.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(legacy), str(new))
+        legacy_parent = legacy.parent
+        if legacy_parent.is_dir() and not any(legacy_parent.iterdir()):
+            try:
+                legacy_parent.rmdir()
+            except OSError:
+                pass
+
+    def _local_cache_dir(self) -> Path:
+        self._migrate_legacy_cache_dir_if_needed()
+        return self._local_cache_dir_path()
 
     def _unit_path(self, unit_id: str) -> Path:
         safe_id = re.sub(r"[^a-zA-Z0-9._-]+", "_", unit_id)

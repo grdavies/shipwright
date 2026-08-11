@@ -14,7 +14,7 @@ from .issues_helpers import (
     read_issue_unit_index_locked,
     read_put_journal_locked,
 )
-from .memory_cache import MemoryLocalCacheBackend
+from .memory_cache import ReplicatedPlanningCacheBackend
 from ..model import StoreResult
 from ..repository import PlanningStoreBackend
 
@@ -266,7 +266,7 @@ class IssueStoreBackend(PlanningStoreBackend):
             raise RuntimeError("raw-transcript-in-brainstorm")
         excerpt = content[:4000]
         redacted = _ps().redact_content(excerpt)
-        mem = MemoryLocalCacheBackend(self.root, self.cfg)
+        mem = ReplicatedPlanningCacheBackend(self.root, self.cfg)
         mem_result = mem.put(
             f"brainstorm-{brainstorm.unit_id}",
             f"docs/brainstorms/{brainstorm.unit_id}.md",

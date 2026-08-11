@@ -5,7 +5,7 @@ Proves, fully offline and deterministically (fake Recallium REST transport
 via `planning_store._urlopen` monkeypatch, no network, no live server):
 
 1. **Zero: no provider configured stays local-cache-only (21a unchanged)** —
-   `MemoryLocalCacheBackend.put`/`get` round-trip content byte-exact through
+   `ReplicatedPlanningCacheBackend.put`/`get` round-trip content byte-exact through
    the gitignored local cache alone when no memory provider is configured,
    `providerRoundTrip: false` / `providerRoundTripReason: provider-not-configured`
    is recorded, and no network call is attempted.
@@ -59,7 +59,7 @@ if str(SCRIPTS) not in sys.path:
 import planning_store as ps  # noqa: E402
 
 RECALLIUM_CFG = {
-    "planning": {"store": {"backend": "memory"}},
+    "planning": {"store": {"backend": "planning-cache"}},
     "memory": {
         "provider": "recallium",
         "project": "roundtrip-fixture",
@@ -67,7 +67,7 @@ RECALLIUM_CFG = {
     },
 }
 
-NO_PROVIDER_CFG = {"planning": {"store": {"backend": "memory"}}}
+NO_PROVIDER_CFG = {"planning": {"store": {"backend": "planning-cache"}}}
 
 
 class _FakeResponse:
@@ -124,10 +124,10 @@ def _seed_provider_catalog(tmp_root: Path) -> None:
     dest.write_text(catalog_src.read_text(encoding="utf-8"), encoding="utf-8")
 
 
-def _new_backend(tmp_root: Path, cfg: dict) -> "ps.MemoryLocalCacheBackend":
+def _new_backend(tmp_root: Path, cfg: dict) -> "ps.ReplicatedPlanningCacheBackend":
     (tmp_root / ".cursor").mkdir(parents=True, exist_ok=True)
     _seed_provider_catalog(tmp_root)
-    return ps.MemoryLocalCacheBackend(tmp_root, cfg)
+    return ps.ReplicatedPlanningCacheBackend(tmp_root, cfg)
 
 
 def check_zero_no_provider_stays_local_cache_only() -> dict:
@@ -221,7 +221,7 @@ def check_many_cross_machine_recovery_through_provider() -> dict:
 
 def check_boundary_ssrf_guard_blocks_non_loopback_base() -> dict:
     disallowed_cfg = {
-        "planning": {"store": {"backend": "memory"}},
+        "planning": {"store": {"backend": "planning-cache"}},
         "memory": {
             "provider": "recallium",
             "project": "roundtrip-fixture",

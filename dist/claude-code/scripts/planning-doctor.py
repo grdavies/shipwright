@@ -611,7 +611,7 @@ def doctor(root: Path, *, sweep: bool) -> dict:
                 checks.append({"check": "store-reachability", "status": "fail", "backend": store_backend})
                 warnings.append("local-synced-path-validation-failed")
                 verdict = "fail"
-    elif store_backend == "memory":
+    elif store_backend in ("planning-cache", "memory"):
         from memory_sot import resolve_memory_provider
 
         provider = resolve_memory_provider(root) or ""
