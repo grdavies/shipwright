@@ -3,44 +3,47 @@
   "guidelineVersion": "1.0.0",
   "orchestratorType": "doc",
   "packId": "doc",
-  "description": "Doc orchestrator guideline pack \u2014 tier-gated atomic chain with doc-review and afterTasks halts (PRD 024 TR2).",
+  "description": "Doc orchestrator guideline pack — tier-gated atomic chain with doc-review and afterTasks halts (PRD 024 TR2).",
   "canonicalFallbackChain": [
     "memory-prework",
-    "sw-triage",
-    "sw-brainstorm",
-    "sw-prd",
-    "sw-doc-review",
+    "triage",
+    "brainstorm",
+    "prd",
+    "doc-review",
     "doc-review-halt-gated-auto",
     "spec-rigor",
-    "sw-freeze",
-    "sw-tasks",
+    "freeze-prd",
+    "tasks",
+    "freeze-tasks",
     "afterTasks-checkpoint"
   ],
   "candidateSteps": [
     "memory-prework",
-    "sw-triage",
-    "sw-brainstorm",
-    "sw-prd",
-    "sw-doc-review",
+    "triage",
+    "brainstorm",
+    "prd",
+    "doc-review",
     "spec-rigor",
-    "sw-freeze",
-    "sw-tasks",
+    "freeze-prd",
+    "freeze-tasks",
+    "tasks",
     "doc-review-halt-manual",
     "doc-review-halt-gated-auto",
     "afterTasks-checkpoint"
   ],
   "requiredSteps": [
     "memory-prework",
-    "sw-triage",
-    "sw-prd",
-    "sw-doc-review",
+    "triage",
+    "prd",
+    "doc-review",
     "spec-rigor",
-    "sw-freeze",
-    "sw-tasks",
+    "freeze-prd",
+    "tasks",
+    "freeze-tasks",
     "afterTasks-checkpoint"
   ],
   "optionalSteps": [
-    "sw-brainstorm",
+    "brainstorm",
     "doc-review-halt-manual",
     "doc-review-halt-gated-auto"
   ],
@@ -59,8 +62,8 @@
   "forbiddenDeviations": [
     {
       "id": "skip-doc-review",
-      "reason": "sw-doc-review is mandatory before freeze",
-      "omitStep": "sw-doc-review"
+      "reason": "doc-review is mandatory before freeze",
+      "omitStep": "doc-review"
     },
     {
       "id": "skip-afterTasks-checkpoint",
@@ -70,13 +73,13 @@
     {
       "id": "freeze-before-doc-review-halt",
       "reason": "doc-review halts must fire before freeze steps",
-      "reorderBefore": "sw-freeze",
+      "reorderBefore": "freeze-prd",
       "reorderAfter": "doc-review-halt-manual"
     },
     {
       "id": "freeze-before-gated-auto-halt",
       "reason": "doc-review halts must fire before freeze steps",
-      "reorderBefore": "sw-freeze",
+      "reorderBefore": "freeze-prd",
       "reorderAfter": "doc-review-halt-gated-auto"
     }
   ],
@@ -84,7 +87,7 @@
     {
       "id": "doc-tier-brainstorm",
       "mandatorySteps": [
-        "sw-brainstorm"
+        "brainstorm"
       ],
       "triggers": {
         "type": "signal_context",
