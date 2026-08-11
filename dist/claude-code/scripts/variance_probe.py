@@ -35,7 +35,7 @@ PROPOSED_FIXTURE_EXEMPT_PATTERNS: dict[str, list[str]] = {
 
 LATITUDE_CHECKS: dict[str, dict[str, Any]] = {
     "debug": {"kind": "omit", "steps": ["enrich"]},
-    "doc": {"kind": "omit", "steps": ["brainstorm"]},
+    "doc": {"kind": "omit", "steps": ["sw-brainstorm"]},
     "feedback": {"kind": "insert_after", "step": "hook-trigger-halt", "after": "route"},
 }
 
