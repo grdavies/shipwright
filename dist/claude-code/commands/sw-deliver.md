@@ -57,6 +57,11 @@ same turn (see `skills/conductor/SKILL.md`).
 Unverifiable terminal merge leaves the run **nonterminal** — finalize returns `finalize:merge-unverified`
 and does not release resources.
 
+**Merge-drain durability:** after each successful phase merge, `batchIntegrationHead` is re-frozen from the
+post-merge state load so parallel batch members do not false-halt on `batch-integration-head-moved`. Host
+HTTP verbs pass the broker `credentialObject` into urllib even when `tokenEnv` is empty, so authenticated
+checks do not collapse into public-API rate-limit 403s.
+
 ## Subcommands
 
 | Subcommand | Scope |
