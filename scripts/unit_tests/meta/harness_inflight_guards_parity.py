@@ -117,13 +117,25 @@ else
 fi
 
 for dist in "$ROOT/dist/cursor" "$ROOT/dist/claude-code"; do
-  for rel in "${GUARD_SCRIPTS[@]}"; do
-    if [[ ! -f "$dist/scripts/$rel" ]]; then
-      bad "inflight-guards-emitter-freshness: missing $dist/scripts/$rel"
-    elif ! cmp -s "$ROOT/core/scripts/$rel" "$dist/scripts/$rel"; then
-      bad "inflight-guards-emitter-freshness: drift $dist/scripts/$rel vs core/scripts/$rel"
-    fi
-  done
+  [[ -f "$dist/shipwright.pyz" ]] || bad "inflight-guards-emitter-freshness: missing $dist/shipwright.pyz"
+  python3 - "$dist/shipwright.pyz" "${GUARD_SCRIPTS[@]}" <<'PY' || bad "inflight-guards-emitter-freshness: zipapp modules"
+import hashlib, sys, zipfile
+from pathlib import Path
+pyz_path, *modules = sys.argv[1:]
+root = Path(pyz_path).parents[2]
+with zipfile.ZipFile(pyz_path) as zf:
+    names = set(zf.namelist())
+    for mod in modules:
+        rel = mod if mod.endswith(".py") else f"{mod}.py"
+        if rel not in names:
+            raise SystemExit(f"missing {rel} in {pyz_path}")
+        core = root / "core" / "scripts" / rel
+        if core.is_file():
+            got = hashlib.sha256(zf.read(rel)).hexdigest()
+            want = hashlib.sha256(core.read_bytes()).hexdigest()
+            if got != want:
+                raise SystemExit(f"drift {rel} in {pyz_path}")
+PY
   for rel in "${GUARD_HOOKS[@]}"; do
     if [[ ! -f "$dist/core/hooks/$rel" ]]; then
       bad "inflight-guards-emitter-freshness: missing $dist/core/hooks/$rel"

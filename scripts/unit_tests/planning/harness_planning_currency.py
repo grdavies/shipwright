@@ -119,11 +119,17 @@ for dist in "$ROOT/dist/cursor" "$ROOT/dist/claude-code"; do
   else
     bad "emitter-freshness-planning-artifacts: missing planning-unit.schema.json in $dist"
   fi
-  for rel in planning_index_gen.py planning_migrate.py planning-unit-validate.py; do
-    if [[ ! -f "$dist/scripts/$rel" ]]; then
-      bad "emitter-freshness-planning-artifacts: missing dist/scripts/$rel"
-    fi
-  done
+  [[ -f "$dist/shipwright.pyz" ]] || bad "emitter-freshness-planning-artifacts: missing $dist/shipwright.pyz"
+  python3 - "$dist/shipwright.pyz" planning_index_gen.py planning_migrate.py planning-unit-validate.py <<'PY' || bad "emitter-freshness-planning-artifacts: zipapp modules"
+import sys, zipfile
+pyz, *modules = sys.argv[1:]
+with zipfile.ZipFile(pyz) as zf:
+    names = set(zf.namelist())
+    for mod in modules:
+        rel = mod if mod.endswith(".py") else f"{mod}.py"
+        if rel not in names:
+            raise SystemExit(f"missing {rel} in {pyz}")
+PY
 done
 [[ "$FAIL" -eq 0 ]] && ok "emitter-freshness-planning-artifacts"
 
