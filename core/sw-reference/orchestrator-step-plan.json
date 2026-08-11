@@ -91,29 +91,31 @@
     "doc": {
       "candidateSteps": [
         "memory-prework",
-        "sw-triage",
-        "sw-brainstorm",
-        "sw-prd",
-        "sw-doc-review",
+        "triage",
+        "brainstorm",
+        "prd",
+        "doc-review",
         "spec-rigor",
-        "sw-freeze",
-        "sw-tasks",
+        "freeze-prd",
+        "freeze-tasks",
+        "tasks",
         "doc-review-halt-manual",
         "doc-review-halt-gated-auto",
         "afterTasks-checkpoint"
       ],
       "requiredSteps": [
         "memory-prework",
-        "sw-triage",
-        "sw-prd",
-        "sw-doc-review",
+        "triage",
+        "prd",
+        "doc-review",
         "spec-rigor",
-        "sw-freeze",
-        "sw-tasks",
+        "freeze-prd",
+        "tasks",
+        "freeze-tasks",
         "afterTasks-checkpoint"
       ],
       "optionalSteps": [
-        "sw-brainstorm",
+        "brainstorm",
         "doc-review-halt-manual",
         "doc-review-halt-gated-auto"
       ],
@@ -131,30 +133,30 @@
       "orderingInvariants": [
         {
           "before": "memory-prework",
-          "after": "sw-triage"
+          "after": "triage"
         },
         {
-          "before": "sw-triage",
-          "after": "sw-brainstorm"
+          "before": "triage",
+          "after": "brainstorm"
         },
         {
-          "before": "sw-brainstorm",
-          "after": "sw-prd"
+          "before": "brainstorm",
+          "after": "prd"
         },
         {
-          "before": "sw-triage",
-          "after": "sw-prd"
+          "before": "triage",
+          "after": "prd"
         },
         {
-          "before": "sw-prd",
-          "after": "sw-doc-review"
+          "before": "prd",
+          "after": "doc-review"
         },
         {
-          "before": "sw-doc-review",
+          "before": "doc-review",
           "after": "doc-review-halt-manual"
         },
         {
-          "before": "sw-doc-review",
+          "before": "doc-review",
           "after": "doc-review-halt-gated-auto"
         },
         {
@@ -166,32 +168,37 @@
           "after": "spec-rigor"
         },
         {
-          "before": "sw-doc-review",
+          "before": "doc-review",
           "after": "spec-rigor"
         },
         {
           "before": "spec-rigor",
-          "after": "sw-freeze"
+          "after": "freeze-prd"
         },
         {
-          "before": "sw-freeze",
-          "after": "sw-tasks"
+          "before": "freeze-prd",
+          "after": "tasks"
         },
         {
-          "before": "sw-tasks",
+          "before": "tasks",
+          "after": "freeze-tasks"
+        },
+        {
+          "before": "freeze-tasks",
           "after": "afterTasks-checkpoint"
         }
       ],
       "canonicalChain": [
         "memory-prework",
-        "sw-triage",
-        "sw-brainstorm",
-        "sw-prd",
-        "sw-doc-review",
+        "triage",
+        "brainstorm",
+        "prd",
+        "doc-review",
         "doc-review-halt-gated-auto",
         "spec-rigor",
-        "sw-freeze",
-        "sw-tasks",
+        "freeze-prd",
+        "tasks",
+        "freeze-tasks",
         "afterTasks-checkpoint"
       ]
     },

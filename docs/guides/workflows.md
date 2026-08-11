@@ -282,6 +282,10 @@ New planning units receive a PRD number through **Number reservation transaction
 file-store a git-common-dir lock reserves the number until completion or staleness reclaim. Same-process
 threads serialize through an allocator lock in addition to `flock(2)`.
 
+**Doc-loop concurrency:** concurrent doc runs share `.cursor/sw-doc-runs/index.json` under a
+`planning_txn.store_lock`. Cross-clone exclusion for target and doc-to-feature handoff locks uses
+`wave_remote_lease` git-ref CAS. See `.sw/layout.md` Doc-run layout and target-lock sections.
+
 ---
 
 ## Implementation workstream — ship a feature from spec

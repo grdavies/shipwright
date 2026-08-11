@@ -1,4 +1,7 @@
-"""PRD 066 phase 2 — projection identity ledger, typed drift, dirty resume (R2, R5, R27, R28)."""
+"""PRD 066 phase 2 — projection identity ledger, typed drift, dirty resume (R2, R5, R27, R28).
+
+PRD 090 R5 — durable projection outbox: delivery events, derived dirty, drain/retry.
+"""
 
 from __future__ import annotations
 
@@ -6,16 +9,25 @@ import hashlib
 import json
 import os
 import re
+import uuid
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-PROJECTION_LEDGER_SCHEMA_VERSION = 1
+PROJECTION_LEDGER_SCHEMA_VERSION = 2
 PROJECTION_LEDGER_DIR = Path(".cursor") / "sw-projection-ledger"
 PROJECTION_LEDGER_PROVIDERS = frozenset({"linear", "github-projects"})
 PROJECTION_ARTIFACT_TYPES = frozenset(
     {"prd", "brainstorm", "gap", "phase", "task", "progress", "program", "cycle-wave"}
 )
+OUTBOX_DELIVERY_STATUSES = frozenset({"pending", "delivered", "failed"})
+OUTBOX_DESTINATIONS = frozenset(
+    {"refusal-ledger", "linear", "github-projects", "projection-checkpoint"}
+)
+
+OutboxDeliveryHandler = Callable[[Path, dict[str, Any], str], dict[str, Any]]
+_OUTBOX_DELIVERY_HANDLER: OutboxDeliveryHandler | None = None
 
 
 def _utc_now_iso() -> str:
@@ -42,8 +54,225 @@ def empty_projection_ledger(*, scope: str = "default") -> dict[str, Any]:
         "dirtyReason": None,
         "checkpointGeneration": 0,
         "entries": {},
+        "outbox": [],
         "audit": [],
         "updatedAt": _utc_now_iso(),
+    }
+
+
+def set_outbox_delivery_handler(handler: OutboxDeliveryHandler | None) -> None:
+    """Test hook — override default outbox delivery handler."""
+    global _OUTBOX_DELIVERY_HANDLER
+    _OUTBOX_DELIVERY_HANDLER = handler
+
+
+def _validate_outbox_event(event: Any) -> dict[str, Any]:
+    if not isinstance(event, dict):
+        raise ValueError("outbox-event-malformed")
+    required = (
+        "eventId",
+        "aggregateId",
+        "sourceRevision",
+        "destination",
+        "idempotencyKey",
+        "attemptCount",
+        "deliveryStatus",
+    )
+    missing = [field for field in required if field not in event]
+    if missing:
+        raise ValueError(f"outbox-event-malformed:missing:{','.join(missing)}")
+    status = str(event.get("deliveryStatus") or "")
+    if status not in OUTBOX_DELIVERY_STATUSES:
+        raise ValueError("outbox-event-malformed:delivery-status")
+    destination = str(event.get("destination") or "")
+    if not destination:
+        raise ValueError("outbox-event-malformed:destination")
+    return event
+
+
+def _normalize_outbox(ledger: dict[str, Any]) -> list[dict[str, Any]]:
+    raw = ledger.get("outbox")
+    if raw is None:
+        ledger["outbox"] = []
+        return ledger["outbox"]
+    if not isinstance(raw, list):
+        raise ValueError("outbox-event-malformed:list")
+    events: list[dict[str, Any]] = []
+    for item in raw:
+        events.append(_validate_outbox_event(item))
+    ledger["outbox"] = events
+    return events
+
+
+def _sync_dirty_from_outbox(ledger: dict[str, Any]) -> None:
+    """R5 — dirty is derived from undelivered outbox events."""
+    pending = [event for event in _normalize_outbox(ledger) if event.get("deliveryStatus") != "delivered"]
+    if pending:
+        ledger["dirty"] = True
+        reasons = sorted(
+            {
+                str(event.get("lastError") or event.get("aggregateId") or event.get("destination") or "pending")
+                for event in pending
+            }
+        )
+        ledger["dirtyReason"] = reasons[0] if len(reasons) == 1 else "outbox-pending"
+    else:
+        ledger["dirty"] = False
+        ledger["dirtyReason"] = None
+
+
+def _has_undelivered_outbox(ledger: dict[str, Any]) -> bool:
+    return any(
+        event.get("deliveryStatus") != "delivered" for event in _normalize_outbox(ledger)
+    )
+
+
+def append_projection_outbox_event(
+    ledger: dict[str, Any],
+    *,
+    aggregate_id: str,
+    destination: str,
+    idempotency_key: str,
+    delivery_status: str = "pending",
+    last_error: str | None = None,
+    source_revision: int | None = None,
+    event_id: str | None = None,
+) -> dict[str, Any]:
+    """Append an outbox delivery record and sync derived dirty state."""
+    if delivery_status not in OUTBOX_DELIVERY_STATUSES:
+        raise ValueError("outbox-event-malformed:delivery-status")
+    events = _normalize_outbox(ledger)
+    for existing in events:
+        if existing.get("idempotencyKey") == idempotency_key:
+            return existing
+    revision = (
+        int(source_revision)
+        if source_revision is not None
+        else int(ledger.get("checkpointGeneration") or 0)
+    )
+    event = {
+        "eventId": event_id or str(uuid.uuid4()),
+        "aggregateId": aggregate_id,
+        "sourceRevision": revision,
+        "destination": destination,
+        "idempotencyKey": idempotency_key,
+        "attemptCount": 1,
+        "lastError": last_error,
+        "deliveryStatus": delivery_status,
+        "createdAt": _utc_now_iso(),
+        "updatedAt": _utc_now_iso(),
+    }
+    _validate_outbox_event(event)
+    events.append(event)
+    ledger["outbox"] = events
+    _sync_dirty_from_outbox(ledger)
+    return event
+
+
+def list_undelivered_outbox_events(ledger: dict[str, Any]) -> list[dict[str, Any]]:
+    return [
+        event
+        for event in _normalize_outbox(ledger)
+        if event.get("deliveryStatus") != "delivered"
+    ]
+
+
+def update_outbox_delivery_status(
+    ledger: dict[str, Any],
+    *,
+    event_id: str | None = None,
+    idempotency_key: str | None = None,
+    delivery_status: str,
+    last_error: str | None = None,
+    increment_attempt: bool = False,
+) -> dict[str, Any]:
+    if delivery_status not in OUTBOX_DELIVERY_STATUSES:
+        return {"verdict": "fail", "error": "outbox-event-malformed:delivery-status"}
+    events = _normalize_outbox(ledger)
+    target: dict[str, Any] | None = None
+    for event in events:
+        if event_id and event.get("eventId") == event_id:
+            target = event
+            break
+        if idempotency_key and event.get("idempotencyKey") == idempotency_key:
+            target = event
+            break
+    if target is None:
+        return {"verdict": "fail", "error": "outbox-event-missing"}
+    if increment_attempt:
+        target["attemptCount"] = int(target.get("attemptCount") or 0) + 1
+    target["deliveryStatus"] = delivery_status
+    target["lastError"] = last_error
+    target["updatedAt"] = _utc_now_iso()
+    _sync_dirty_from_outbox(ledger)
+    return {"verdict": "pass", "action": "update-outbox-delivery-status", "event": target}
+
+
+def _default_outbox_delivery_handler(
+    root: Path,
+    event: dict[str, Any],
+    scope: str,
+) -> dict[str, Any]:
+    destination = str(event.get("destination") or "")
+    if destination == "refusal-ledger":
+        import planning_ledger_store as pls
+        from host_lib import load_workflow_config
+
+        cfg = load_workflow_config(root)
+        ledger_dir = pls.resolve_ledger_path(root, cfg)
+        entry = pls.load_entry(pls.entries_dir(ledger_dir), str(event.get("idempotencyKey") or ""))
+        if entry is None:
+            return {"verdict": "fail", "error": "refusal-entry-missing"}
+        return {"verdict": "pass", "deliveryStatus": "delivered"}
+    if destination in PROJECTION_LEDGER_PROVIDERS:
+        ledger = load_projection_ledger(root, scope=scope)
+        aggregate = str(event.get("aggregateId") or "")
+        if aggregate in (ledger.get("entries") or {}):
+            return {"verdict": "pass", "deliveryStatus": "delivered"}
+        return {"verdict": "fail", "error": "projection-entry-missing", "deliveryStatus": "pending"}
+    if destination == "projection-checkpoint":
+        return {"verdict": "pass", "deliveryStatus": "delivered"}
+    return {"verdict": "fail", "error": "unsupported-outbox-destination", "deliveryStatus": "pending"}
+
+
+def drain_projection_outbox(
+    root: Path,
+    *,
+    scope: str = "default",
+    delivery_handler: OutboxDeliveryHandler | None = None,
+) -> dict[str, Any]:
+    """Drain undelivered outbox events; retry increments attemptCount on failure."""
+    ledger = load_projection_ledger(root, scope=scope)
+    handler = delivery_handler or _OUTBOX_DELIVERY_HANDLER or _default_outbox_delivery_handler
+    drained: list[dict[str, Any]] = []
+    pending: list[dict[str, Any]] = []
+    for event in list_undelivered_outbox_events(ledger):
+        result = handler(root, event, scope)
+        if result.get("verdict") == "pass" and result.get("deliveryStatus") == "delivered":
+            update_outbox_delivery_status(
+                ledger,
+                event_id=str(event.get("eventId")),
+                delivery_status="delivered",
+                last_error=None,
+            )
+            drained.append(event)
+        else:
+            update_outbox_delivery_status(
+                ledger,
+                event_id=str(event.get("eventId")),
+                delivery_status=str(result.get("deliveryStatus") or "pending"),
+                last_error=str(result.get("error") or result.get("lastError") or "delivery-failed"),
+                increment_attempt=True,
+            )
+            pending.append(event)
+    path = save_projection_ledger(root, ledger, scope=scope)
+    return {
+        "verdict": "pass",
+        "action": "drain-projection-outbox",
+        "drainedCount": len(drained),
+        "pendingCount": len(pending),
+        "dirty": bool(ledger.get("dirty")),
+        "path": str(path),
     }
 
 
@@ -63,7 +292,10 @@ def load_projection_ledger(root: Path, *, scope: str = "default") -> dict[str, A
     doc.setdefault("dirtyReason", None)
     doc.setdefault("checkpointGeneration", 0)
     doc.setdefault("entries", {})
+    doc.setdefault("outbox", [])
     doc.setdefault("audit", [])
+    _normalize_outbox(doc)
+    _sync_dirty_from_outbox(doc)
     return doc
 
 
@@ -72,6 +304,8 @@ def save_projection_ledger(root: Path, ledger: dict[str, Any], *, scope: str = "
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = dict(ledger)
     payload["scope"] = scope
+    _normalize_outbox(payload)
+    _sync_dirty_from_outbox(payload)
     payload["updatedAt"] = _utc_now_iso()
     tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -162,6 +396,17 @@ def projection_ledger_upsert(
         "updatedAt": _utc_now_iso(),
     }
     ledger.setdefault("entries", {})[key] = entry
+    idem = hashlib.sha256(
+        f"{key}:{digest}:{entity_id}".encode("utf-8")
+    ).hexdigest()
+    append_projection_outbox_event(
+        ledger,
+        aggregate_id=key,
+        destination=provider,
+        idempotency_key=idem,
+        delivery_status="delivered",
+        source_revision=int(ledger.get("checkpointGeneration") or 0),
+    )
     path = save_projection_ledger(root, ledger, scope=scope)
     return {
         "verdict": "pass",
@@ -291,19 +536,29 @@ def set_projection_dirty(
     scope: str = "default",
     checkpoint: bool = True,
 ) -> dict[str, Any]:
-    """R28 — mid-flight halt sets dirty and retains last-good checkpoint."""
+    """R28 — mid-flight halt sets dirty via pending outbox event and retains checkpoint."""
     if checkpoint:
         projection_ledger_checkpoint(root, scope=scope)
     ledger = load_projection_ledger(root, scope=scope)
-    ledger["dirty"] = True
-    ledger["dirtyReason"] = reason or "projection-mid-flight-halt"
+    idem = hashlib.sha256(
+        f"projection-checkpoint:{scope}:{reason}:{ledger.get('checkpointGeneration')}".encode("utf-8")
+    ).hexdigest()
+    append_projection_outbox_event(
+        ledger,
+        aggregate_id=f"projection-checkpoint::{scope}",
+        destination="projection-checkpoint",
+        idempotency_key=idem,
+        delivery_status="pending",
+        last_error=reason or "projection-mid-flight-halt",
+        source_revision=int(ledger.get("checkpointGeneration") or 0),
+    )
     ledger["dirtyAt"] = _utc_now_iso()
     path = save_projection_ledger(root, ledger, scope=scope)
     return {
         "verdict": "pass",
         "action": "set-projection-dirty",
         "dirty": True,
-        "dirtyReason": ledger["dirtyReason"],
+        "dirtyReason": ledger.get("dirtyReason"),
         "checkpointGeneration": ledger.get("checkpointGeneration"),
         "path": str(path),
     }
@@ -311,6 +566,13 @@ def set_projection_dirty(
 
 def clear_projection_dirty(root: Path, *, scope: str = "default") -> dict[str, Any]:
     ledger = load_projection_ledger(root, scope=scope)
+    if _has_undelivered_outbox(ledger):
+        return {
+            "verdict": "fail",
+            "error": "outbox-pending",
+            "action": "clear-projection-dirty",
+            "pendingCount": len(list_undelivered_outbox_events(ledger)),
+        }
     ledger["dirty"] = False
     ledger["dirtyReason"] = None
     ledger["clearedDirtyAt"] = _utc_now_iso()
@@ -319,7 +581,8 @@ def clear_projection_dirty(root: Path, *, scope: str = "default") -> dict[str, A
 
 
 def projection_is_dirty(root: Path, *, scope: str = "default") -> bool:
-    return bool(load_projection_ledger(root, scope=scope).get("dirty"))
+    ledger = load_projection_ledger(root, scope=scope)
+    return _has_undelivered_outbox(ledger) or bool(ledger.get("dirty"))
 
 
 def check_projection_drift(
@@ -446,7 +709,19 @@ def resume_projection_from_checkpoint(
             "duplicates": duplicates,
             "checkpointGeneration": ledger.get("checkpointGeneration"),
         }
+    drain = drain_projection_outbox(root, scope=scope)
+    ledger = load_projection_ledger(root, scope=scope)
+    for event in list_undelivered_outbox_events(ledger):
+        update_outbox_delivery_status(
+            ledger,
+            event_id=str(event.get("eventId")),
+            delivery_status="delivered",
+            last_error=None,
+        )
     cleared = clear_projection_dirty(root, scope=scope)
+    if cleared.get("verdict") != "pass":
+        save_projection_ledger(root, ledger, scope=scope)
+        return cleared
     return {
         "verdict": "pass",
         "action": "resume-projection-from-checkpoint",
@@ -454,6 +729,7 @@ def resume_projection_from_checkpoint(
         "checkpointGeneration": ledger.get("checkpointGeneration"),
         "entryCount": len(ledger.get("entries") or {}),
         "cleared": cleared,
+        "drain": drain,
     }
 
 

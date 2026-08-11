@@ -783,6 +783,11 @@
 * merge phase durable-pending-transition-receipts-in-doc-loop-r2 into feat/prd-doc-loop-tier-correctness-and-repository-context-identity (c8c37db) <!-- sw-deliver:durable-pending-transition-receipts-in-doc-loop-r2 -->
 * merge phase feature-seed-completion-requires-verified-commit-outcome-r6 into feat/prd-doc-loop-tier-correctness-and-repository-context-identity (17c1c61) <!-- sw-deliver:feature-seed-completion-requires-verified-commit-outcome-r6 -->
 * merge phase lease-validation-on-every-mutating-doc-loop-resume-r3 into feat/prd-doc-loop-tier-correctness-and-repository-context-identity (3551a42) <!-- sw-deliver:lease-validation-on-every-mutating-doc-loop-resume-r3 -->
+* merge phase lock-the-shared-doc-run-index-r1 into feat/prd-doc-loop-concurrency-and-coordination-hardening (fdf3087) <!-- sw-deliver:lock-the-shared-doc-run-index-r1 -->
+* merge phase cross-clone-remote-lease-r2 into feat/prd-doc-loop-concurrency-and-coordination-hardening (cd88632) <!-- sw-deliver:cross-clone-remote-lease-r2 -->
+* merge phase evidence-backed-provider-conformance-r3 into feat/prd-doc-loop-concurrency-and-coordination-hardening (6eef5f1) <!-- sw-deliver:evidence-backed-provider-conformance-r3 -->
+* merge phase generate-workflow-docs-from-executable-schema-r4 into feat/prd-doc-loop-concurrency-and-coordination-hardening (2dc7dc5) <!-- sw-deliver:generate-workflow-docs-from-executable-schema-r4 -->
+* merge phase durable-projection-outbox-r5 into feat/prd-doc-loop-concurrency-and-coordination-hardening (1ab501a) <!-- sw-deliver:durable-projection-outbox-r5 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

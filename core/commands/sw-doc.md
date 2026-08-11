@@ -66,14 +66,41 @@ python3 scripts/doc_loop.py <root> doc-loop --topic <topic> --tier <Standard|Ful
 
 Resume reads `state.json` + receipts alone — incomplete pending receipts block resume fail-closed.
 
+**Concurrency (PRD 090):** the shared `.cursor/sw-doc-runs/index.json` is updated under
+`planning_txn.store_lock` with monotonic revision (R1). Target and doc-to-feature handoff locks take a
+cross-clone `wave_remote_lease` git-ref CAS (R2) in addition to local exclusion — see `.sw/layout.md`.
+
 ### Stage state machine
 
-Documented stage order (tier-gated `brainstorm` skipped for non-Full):
+Documented stage order (tier-gated `brainstorm` skipped for non-Full; generated from `scripts/doc_workflow_schema.py`):
 
 ```
-triage → [brainstorm] → prd → doc-review → related-work → final-triage-rescore
-  → freeze-prd → tasks → freeze-tasks → afterTasks-checkpoint → feature-seed → complete
+<!-- doc-stage-order:begin -->
+triage → prd → doc-review → related-work → final-triage-rescore → freeze-prd → tasks → freeze-tasks → afterTasks-checkpoint → feature-seed → complete
+<!-- doc-stage-order:end -->
 ```
+
+Stage inventory (golden-diff enforced — run `python3 scripts/doc_workflow_schema.py sync`):
+
+<!-- doc-stage-table:begin -->
+| Stage | Category | Tier / halt |
+| --- | --- | --- |
+| `triage` | agent | — |
+| `brainstorm` | agent | Full tier only |
+| `prd` | agent | — |
+| `doc-review` | agent | — |
+| `related-work` | mechanical | — |
+| `final-triage-rescore` | agent | — |
+| `freeze-prd` | mechanical | — |
+| `tasks` | agent | — |
+| `freeze-tasks` | mechanical | — |
+| `afterTasks-checkpoint` | human | Human halt before implementation dispatch |
+| `feature-seed` | mechanical | — |
+| `complete` | terminal | — |
+| `related-work-checkpoint` | human | Human halt when related work pending |
+<!-- doc-stage-table:end -->
+
+Machine-readable transitions: `core/sw-reference/doc-workflow-transitions.json` (`python3 scripts/doc_workflow_schema.py emit`).
 
 - **Agent stages** (`triage`, `brainstorm`, `prd`, `doc-review`, `final-triage-rescore`, `tasks`) — conductor
   dispatches atomic commands; outcomes recorded via idempotent transition receipts.

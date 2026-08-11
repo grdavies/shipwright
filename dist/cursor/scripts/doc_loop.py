@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,10 +31,15 @@ from wave_target_lock import (
 from wave_transition_receipt import hash_json
 
 DOC_RUNS_DIR_REL = ".cursor/sw-doc-runs"
+DOC_RUN_INDEX_TXN_ID = "doc-run-index"
 STATE_FILENAME = "state.json"
 INDEX_FILENAME = "index.json"
 RECEIPTS_DIRNAME = "receipts"
 PENDING_SUFFIX = ".pending"
+
+
+class DocRunIndexRevisionConflict(RuntimeError):
+    """Raised when the doc-run index revision changed between read and write."""
 
 # Documented /sw-doc stage sequence (tier-gated brainstorm is skipped for non-Full tiers).
 DOC_STAGE_SEQUENCE: tuple[str, ...] = (
@@ -172,28 +178,66 @@ def save_doc_state(root: Path, state: dict[str, Any]) -> None:
     update_doc_index(root, state)
 
 
-def update_doc_index(root: Path, state: dict[str, Any]) -> None:
-    index_path = doc_index_path(root)
+def _doc_index_revision(index: dict[str, Any]) -> int:
+    raw = index.get("revision")
+    try:
+        return int(raw) if raw is not None else 0
+    except (TypeError, ValueError):
+        return 0
+
+
+def _load_doc_index(index_path: Path) -> dict[str, Any]:
     index = read_json(index_path, absent_ok=True)
-    runs = index.setdefault("runs", {})
+    runs = index.get("runs")
     if not isinstance(runs, dict):
-        runs = {}
-        index["runs"] = runs
-    run_id = str(state["runId"])
-    runs[run_id] = {
-        "runId": run_id,
-        "topic": state.get("topic"),
-        "tier": state.get("tier"),
-        "stage": state.get("stage"),
-        "verdict": state.get("verdict"),
-        "lockKeyDigest": state.get("lockKeyDigest"),
-        "updatedAt": state.get("updatedAt"),
-        "createdAt": state.get("createdAt"),
-        "statePath": str(doc_state_path(root, run_id).relative_to(root.resolve())),
-    }
-    index["updatedAt"] = utc_now()
-    index_path.parent.mkdir(parents=True, exist_ok=True)
-    write_json(index_path, index)
+        index["runs"] = {}
+    return index
+
+
+def _assert_doc_index_revision(index_path: Path, expected_revision: int) -> None:
+    current = _doc_index_revision(_load_doc_index(index_path))
+    if current != expected_revision:
+        raise DocRunIndexRevisionConflict(
+            f"doc-run index revision mismatch: expected {expected_revision}, saw {current}"
+        )
+
+
+def _doc_index_write_delay() -> None:
+    raw = os.environ.get("SW_DOC_INDEX_WRITE_DELAY_SECONDS", "").strip()
+    if not raw:
+        return
+    time.sleep(float(raw))
+
+
+def update_doc_index(root: Path, state: dict[str, Any]) -> None:
+    from planning_txn import store_lock
+
+    index_path = doc_index_path(root)
+    with store_lock(root, DOC_RUN_INDEX_TXN_ID):
+        index = _load_doc_index(index_path)
+        seen_revision = _doc_index_revision(index)
+        runs = index.setdefault("runs", {})
+        if not isinstance(runs, dict):
+            runs = {}
+            index["runs"] = runs
+        run_id = str(state["runId"])
+        runs[run_id] = {
+            "runId": run_id,
+            "topic": state.get("topic"),
+            "tier": state.get("tier"),
+            "stage": state.get("stage"),
+            "verdict": state.get("verdict"),
+            "lockKeyDigest": state.get("lockKeyDigest"),
+            "updatedAt": state.get("updatedAt"),
+            "createdAt": state.get("createdAt"),
+            "statePath": str(doc_state_path(root, run_id).relative_to(root.resolve())),
+        }
+        _assert_doc_index_revision(index_path, seen_revision)
+        _doc_index_write_delay()
+        index["revision"] = seen_revision + 1
+        index["updatedAt"] = utc_now()
+        index_path.parent.mkdir(parents=True, exist_ok=True)
+        write_json(index_path, index)
 
 
 def initial_doc_state(
@@ -803,11 +847,11 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
         ambiguous_remote_state_default,
         completion_from_seed_payload,
     )
-    from wave_spec_seed_guard import (
+    from wave_target_lock import (
         acquire_doc_to_feature_handoff_lock,
-        assert_handoff_completion_remote_state,
         release_doc_to_feature_handoff_lock,
     )
+    from wave_spec_seed_guard import assert_handoff_completion_remote_state
 
     run_id = f"doc-loop:{state.get('runId')}"
     try:
@@ -823,6 +867,8 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     if lock_acquire.get("verdict") != "pass":
         error = lock_acquire.get("error") or "handoff-lock-acquire-failed"
         halt = "target-lock-conflict" if error == "target-lock-conflict" else "doc-loop:feature-seed"
+        if error == "remote-lease-conflict":
+            halt = "remote-lease-conflict"
         if lock_acquire.get("holder"):
             holder = lock_acquire["holder"]
             if holder.get("kind") == "target-lock":

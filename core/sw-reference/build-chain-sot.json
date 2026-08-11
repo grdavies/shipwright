@@ -78,6 +78,7 @@
     "inflight-signal.schema.json",
     "kernel-classification.json",
     "kernel-classification.md",
+    "doc-workflow-transitions.json",
     "loop-health.schema.json",
     "memory-envelope-lossiness.md",
     "memory-provider-recallium-conformance.md",

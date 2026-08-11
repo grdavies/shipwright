@@ -104,6 +104,11 @@ read). After adoption, `legacyAdopted` / `adoptedPlanHash` on run-scoped `state.
 
 Doc-run exclusion uses `.cursor/sw-doc-run-locks/` (`wave_target_lock.acquire_doc_run_lock`).
 
+**Shared index concurrency (PRD 090 R1):** `.cursor/sw-doc-runs/index.json` and
+`.cursor/sw-deliver-runs/index.json` read-modify-write through `planning_txn.store_lock` with monotonic
+`revision` fields (`doc_loop.py`, `wave_state.py`) — concurrent index writers fail closed rather than
+clobbering peers.
+
 **Doc-to-feature handoff lock (PRD 085 R14):** under `file-store-feature-seed` publication mode the
 `feature-seed` stage acquires a doc-loop-scoped handoff lock (`wave_spec_seed_guard.acquire_doc_to_feature_handoff_lock`)
 before invoking `wave_spec_seed.py` with `remoteState.dryRun: false`, then releases it after seed verification.
@@ -122,6 +127,10 @@ issue-store modes remain `skipped: true` and do not take the handoff lock.
 
 Target locks are git-common-dir anchored and symlink-checked (`wave_lock.py`). Takeover appends a journal
 entry before reclaim; a live heartbeat is never reclaimed without explicit cross-host acknowledgement.
+
+**Cross-clone remote lease (PRD 090 R2):** target-branch and doc-to-feature handoff locks also take a
+git-ref CAS lease via `wave_remote_lease` (`refs/sw-locks/…`) so two clones cannot both hold the same
+logical lock. Local heartbeat still wins within a clone; remote lease covers the multi-clone race.
 
 ### Gate manifest and evidence (PRD 065)
 
@@ -941,6 +950,10 @@ There is no silent substitution to a different backend id.
 
 Reconciling a refused write after inspection is a **human decision** — ledger export surfaces operator-runnable
 record commands only; purge is journaled and does not replay refused writes.
+
+**Projection outbox (PRD 090 R5):** `scripts/planning_projection_ledger.py` records durable outbox delivery
+events with derived dirty state. Mutating authority calls drain pending outbox destinations; refusal-ledger
+writes map onto outbox destinations so projection catch-up survives outages/retries without silent drop.
 
 ## Credential machine-local records
 

@@ -1602,6 +1602,23 @@
       "ciShard": 2
     },
     {
+      "id": "planning-090-github-provider-conformance-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 67,
+      "pytestPath": "scripts/unit_tests/planning/test_github_provider_conformance.py",
+      "ciShard": 2,
+      "pathTriggers": [
+        "scripts/planning/provider_conformance.py",
+        "scripts/planning_store_facade.py",
+        "scripts/test/fixtures/planning-provider-conformance/"
+      ]
+    },
+    {
       "id": "planning-native-links-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [

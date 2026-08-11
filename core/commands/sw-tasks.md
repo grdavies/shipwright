@@ -39,6 +39,10 @@ must not invoke `/sw-freeze` on the task list after a doc-loop `tasks` step:
 Environment: `SW_DOC_DRIVER=1` / `SW_DOC_ORCHESTRATOR=1` sets `driverInvoked` on freeze receipts
 (`scripts/check_frozen_lib.py`).
 
+Doc-loop concurrency for the parent run index and cross-clone handoff locks is documented under
+`/sw-doc` **Durable doc-run driver** and `.sw/layout.md` (PRD 090 R1/R2) — `/sw-tasks` inherits those
+guards when invoked as the doc-loop `tasks` stage with `noFreeze: true`.
+
 ## Procedure
 
 0. **Authoring-guard preflight (PRD 032 R5/R14)** — before the first substantive mutation on a planning unit, run `python3 scripts/authoring-guard.py preflight --path <unit-artifact> --command sw-tasks`; on a genuinely in-flight unit, pass `--handoff <reason>` instead of mutating (R6).

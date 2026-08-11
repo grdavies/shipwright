@@ -11,7 +11,12 @@ from host_lib import load_workflow_config
 
 import planning_authority_reasons as par
 import planning_store as ps
-from planning_projection_ledger import set_projection_dirty
+from planning_projection_ledger import (
+    append_projection_outbox_event,
+    drain_projection_outbox,
+    load_projection_ledger,
+    projection_is_dirty,
+)
 
 _BACKEND_WRITE_LOG: list[dict[str, Any]] = []
 
@@ -55,6 +60,18 @@ def record_backend_write(
     )
 
 
+def drain_outbox_on_mutate(
+    root: Path,
+    *,
+    scope: str = "default",
+    delivery_handler=None,
+) -> dict[str, Any]:
+    """R5 — drain undelivered projection outbox events before mutating authority writes."""
+    if not projection_is_dirty(root, scope=scope):
+        return {"verdict": "pass", "action": "drain-outbox-on-mutate", "drainedCount": 0}
+    return drain_projection_outbox(root, scope=scope, delivery_handler=delivery_handler)
+
+
 def resolve_authority(
     root: Path,
     cfg: dict[str, Any] | None = None,
@@ -83,7 +100,18 @@ def resolve_authority(
         reason = par.REASON_STORE_UNAVAILABLE
     policy = par.policy_for_reason(reason)
     if policy.get("markProjectionDirty"):
-        set_projection_dirty(root, reason=par.REASON_PROJECTION_UNAVAILABLE)
+        ledger = load_projection_ledger(root)
+        append_projection_outbox_event(
+            ledger,
+            aggregate_id=f"authority::{configured}",
+            destination=configured,
+            idempotency_key=f"projection-unavailable:{reason or par.REASON_PROJECTION_UNAVAILABLE}",
+            delivery_status="pending",
+            last_error=par.REASON_PROJECTION_UNAVAILABLE,
+        )
+        from planning_projection_ledger import save_projection_ledger
+
+        save_projection_ledger(root, ledger)
     return AuthorityDecision(
         configured=configured,
         authorityState=str(policy["authorityState"]),
@@ -120,8 +148,12 @@ def apply_write_disposition(
     *,
     write_class: str = "substantive",
     target_backend: str | None = None,
+    root: Path | None = None,
+    delivery_handler=None,
 ) -> dict[str, Any]:
     """Apply write disposition for a write class; records backend write attempts."""
+    if root is not None and write_class != "progress":
+        drain_outbox_on_mutate(root, delivery_handler=delivery_handler)
     backend = target_backend or decision.configured
     record_backend_write(backend, configured=decision.configured, operation=write_class)
     if write_class == "progress":

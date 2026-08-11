@@ -3238,6 +3238,7 @@ def _execute_mechanical_inner(
                     break
             else:
                 save_state(root, state)
+            refresh_batch_integration_head(root, state)
             next_action = (
                 "merge-run-next"
                 if merge_queue_drain_preferred(state)
@@ -3298,6 +3299,8 @@ def _execute_mechanical_inner(
         refresh_batch_integration_head(root, state)
         persist_cursor(root, state, "provision-phase")
         state.update(load_state(root))
+        # Re-refresh after reload — dual state files / stale load can wipe the freeze (PRD 090 ops).
+        refresh_batch_integration_head(root, state)
         clear_batch_integration_head_if_idle(state)
         save_state(root, state)
         return {"executed": "merge-run-next", **data}

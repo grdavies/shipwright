@@ -308,10 +308,21 @@ def append_completion_store_event(
     worktree = planning_paths.git_root(root)
     cfg = load_workflow_config(worktree)
     backend = get_backend(worktree, cfg)
+    # Synthetic operational ledger — not a private PRD body. Pin public visibility so
+    # public issue-store hosts (probe-inconclusive / public) accept the put; local
+    # cache above remains the authoritative read path for terminal prepare.
+    body = (
+        "---\n"
+        "visibility: public\n"
+        "artifactType: completion-log\n"
+        "---\n"
+        + json.dumps({"events": events}, indent=2)
+        + "\n"
+    )
     backend.put(
         "planning-completion-log",
         ".cursor/hooks/state/planning-completion-events.json",
-        json.dumps({"events": events}, indent=2) + "\n",
+        body,
     )
     return {"verdict": "stored", "action": "completion-store-event", "event_count": len(events)}
 
