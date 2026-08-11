@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import zipfile
 from pathlib import Path
 
 DIST_TARGETS = ("dist/cursor", "dist/claude-code")
@@ -88,6 +89,58 @@ def _expects_dist_mirror(rel: str) -> bool:
     return not rel.startswith("scripts/test/")
 
 
+def _resolve_zipapp(root: Path, dist_target: str) -> Path | None:
+    platform_dir = root / dist_target
+    pyz = platform_dir / "shipwright.pyz"
+    if pyz.exists():
+        return pyz.resolve()
+    versioned = sorted(platform_dir.glob("shipwright-*.pyz"))
+    return versioned[-1] if versioned else None
+
+
+def _zipapp_arc_prefix(rel: str) -> str | None:
+    if not rel.startswith("scripts/"):
+        return None
+    return rel[len("scripts/") :]
+
+
+def _zipapp_file_digest(pyz: Path, arcname: str) -> str | None:
+    with zipfile.ZipFile(pyz) as zf:
+        try:
+            return hashlib.sha256(zf.read(arcname)).hexdigest()
+        except KeyError:
+            return None
+
+
+def _zipapp_tree_digest(pyz: Path, arc_prefix: str) -> str:
+    h = hashlib.sha256()
+    with zipfile.ZipFile(pyz) as zf:
+        names = sorted(
+            name
+            for name in zf.namelist()
+            if name.startswith(arc_prefix) and not name.endswith("/")
+        )
+        for name in names:
+            if "__pycache__" in name or name.endswith(".pyc"):
+                continue
+            rel_name = name[len(arc_prefix) :] if arc_prefix else name
+            h.update(rel_name.encode())
+            h.update(zf.read(name))
+    return h.hexdigest()
+
+
+def _zipapp_digest(root: Path, dist_target: str, rel: str) -> str | None:
+    arc = _zipapp_arc_prefix(rel)
+    if arc is None:
+        return None
+    pyz = _resolve_zipapp(root, dist_target)
+    if pyz is None:
+        return None
+    if rel.endswith("/"):
+        return _zipapp_tree_digest(pyz, arc)
+    return _zipapp_file_digest(pyz, arc)
+
+
 def find_stale_distribution_mirrors(root: Path, *, modules: dict[str, list[str]] | None = None) -> list[dict[str, str]]:
     modules = modules or {k: list(v) for k, v in PRD_082_SOURCE_MODULES.items()}
     stale: list[dict[str, str]] = []
@@ -103,6 +156,18 @@ def find_stale_distribution_mirrors(root: Path, *, modules: dict[str, list[str]]
             for target in DIST_TARGETS:
                 mirror = root / target / rel
                 if not mirror.exists():
+                    zip_digest = _zipapp_digest(root, target, rel)
+                    if zip_digest is not None:
+                        if zip_digest != source_digest:
+                            stale.append(
+                                {
+                                    "kind": "zipapp-stale",
+                                    "group": group,
+                                    "path": rel,
+                                    "target": target,
+                                }
+                            )
+                        continue
                     stale.append(
                         {
                             "kind": "mirror-missing",
