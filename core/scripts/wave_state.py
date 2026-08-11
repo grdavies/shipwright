@@ -34,6 +34,12 @@ VALID_PHASE_STATUSES = frozenset(
 TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
 TERMINAL_VERDICTS = frozenset({"running", "complete", "blocked", "rejected", "finalized"})
 
+DELIVER_RUN_INDEX_TXN_ID = "deliver-run-index"
+
+
+class DeliverRunIndexRevisionConflict(RuntimeError):
+    """Raised when the deliver run index revision changed between read and write."""
+
 _COMPLETION_FINALIZE_DEPTH = 0
 _RUN_FINALIZE_DEPTH = 0
 
@@ -1097,33 +1103,62 @@ def discovery_entry_for_run(
     return sanitize_index_entry(entry)
 
 
+def _deliver_index_revision(index: dict[str, Any]) -> int:
+    raw = index.get("revision")
+    try:
+        return int(raw) if raw is not None else 0
+    except (TypeError, ValueError):
+        return 0
+
+
+def _load_deliver_index(index_path: Path) -> dict[str, Any]:
+    try:
+        prior = read_json(index_path)
+    except StateCorruptError:
+        prior = {}
+    runs_list = prior.get("runs")
+    if not isinstance(runs_list, list):
+        prior["runs"] = []
+    return prior
+
+
+def _assert_deliver_index_revision(index_path: Path, expected_revision: int) -> None:
+    current = _deliver_index_revision(_load_deliver_index(index_path))
+    if current != expected_revision:
+        raise DeliverRunIndexRevisionConflict(
+            f"deliver run index revision mismatch: expected {expected_revision}, saw {current}"
+        )
+
+
 def upsert_run_index_discovery(root: Path, run_id: str, state: dict[str, Any]) -> None:
     """Update root runs index with discovery fields only (R20)."""
+    from planning_txn import store_lock
     from wave_run_paths import runs_index_path, sanitize_index_entry
 
     index_path = runs_index_path(root)
-    prior: dict[str, Any] = {}
-    if index_path.is_file():
-        try:
-            prior = read_json(index_path)
-        except StateCorruptError:
-            prior = {}
-    runs_list = prior.get("runs")
-    if not isinstance(runs_list, list):
-        runs_list = []
-    entry = discovery_entry_for_run(root, run_id, state)
-    replaced = False
-    for idx, item in enumerate(runs_list):
-        if isinstance(item, dict) and item.get("runId") == run_id:
-            runs_list[idx] = entry
-            replaced = True
-            break
-    if not replaced:
-        runs_list.append(entry)
-    sanitized = [
-        sanitize_index_entry(item) if isinstance(item, dict) else item for item in runs_list
-    ]
-    write_json(index_path, {"updatedAt": utc_now(), "runs": sanitized})
+    with store_lock(root, DELIVER_RUN_INDEX_TXN_ID):
+        prior = _load_deliver_index(index_path)
+        seen_revision = _deliver_index_revision(prior)
+        runs_list = prior.get("runs")
+        if not isinstance(runs_list, list):
+            runs_list = []
+        entry = discovery_entry_for_run(root, run_id, state)
+        replaced = False
+        for idx, item in enumerate(runs_list):
+            if isinstance(item, dict) and item.get("runId") == run_id:
+                runs_list[idx] = entry
+                replaced = True
+                break
+        if not replaced:
+            runs_list.append(entry)
+        sanitized = [
+            sanitize_index_entry(item) if isinstance(item, dict) else item for item in runs_list
+        ]
+        _assert_deliver_index_revision(index_path, seen_revision)
+        write_json(
+            index_path,
+            {"revision": seen_revision + 1, "updatedAt": utc_now(), "runs": sanitized},
+        )
 
 
 def enumerate_run_scoped_dirs(root: Path) -> list[dict[str, Any]]:
