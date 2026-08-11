@@ -50,7 +50,7 @@ def _copy_dist_platform(src: Path, dest: Path) -> None:
     if dest.exists():
         shutil.rmtree(dest, ignore_errors=True)
     if src.is_dir():
-        shutil.copytree(src, dest)
+        shutil.copytree(src, dest, symlinks=True)
 
 
 def _restore_dist_platforms(repo_root: Path, snap_root: Path) -> None:
@@ -68,7 +68,7 @@ def _dist_session_snapshot(repo_root: Path) -> Generator[Path, None, None]:
     for name in ("cursor", "claude-code"):
         src = repo_root / "dist" / name
         if src.is_dir():
-            shutil.copytree(src, snap_root / name)
+            shutil.copytree(src, snap_root / name, symlinks=True)
     yield snap_root
     shutil.rmtree(snap_root, ignore_errors=True)
 
