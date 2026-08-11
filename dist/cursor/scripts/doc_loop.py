@@ -25,6 +25,7 @@ from wave_target_lock import (
     heartbeat_doc_run_lock,
     release_doc_run_lock,
     release_doc_run_lock_on_terminal_complete,
+    validate_or_acquire_doc_run_lock,
 )
 from wave_transition_receipt import hash_json
 
@@ -55,6 +56,7 @@ MECHANICAL_STAGES = frozenset({"related-work", "freeze-prd", "freeze-tasks", "fe
 HUMAN_STAGES = frozenset({"related-work-checkpoint", "afterTasks-checkpoint"})
 TERMINAL_STAGES = frozenset({"complete"})
 UNREACHABLE_PUBLICATION_STAGES = frozenset({"docs-commit", "docs-pr"})
+NON_IDEMPOTENT_DOC_TRANSITIONS = frozenset({"freeze-prd", "freeze-tasks", "feature-seed"})
 
 
 def utc_now() -> str:
@@ -343,6 +345,270 @@ def apply_final_triage_rescore(root: Path, state: dict[str, Any], outcome: dict[
     return updated
 
 
+def write_pending_doc_receipt(
+    root: Path,
+    run_id: str,
+    source_stage: str,
+    content_hash: str,
+    *,
+    idempotency_key: str | None = None,
+) -> dict[str, Any]:
+    key = idempotency_key or doc_transition_idempotency_key(run_id, source_stage, content_hash)
+    pending_path = doc_pending_receipt_path(root, run_id, key)
+    started_at = utc_now()
+    receipt: dict[str, Any] = {
+        "transitionName": source_stage,
+        "idempotencyKey": key,
+        "sourceStage": source_stage,
+        "inputContentHash": content_hash,
+        "status": "pending",
+        "startedAt": started_at,
+        "timestamp": started_at,
+    }
+    pending_path.parent.mkdir(parents=True, exist_ok=True)
+    write_json(pending_path, receipt)
+    return receipt
+
+
+def read_pending_doc_receipt(root: Path, run_id: str, idempotency_key: str) -> dict[str, Any] | None:
+    pending_path = doc_pending_receipt_path(root, run_id, idempotency_key)
+    if not pending_path.is_file():
+        return None
+    return read_json(pending_path, absent_ok=False)
+
+
+def _inspect_freeze_durability(root: Path, state: dict[str, Any], stage: str) -> dict[str, Any] | None:
+    from check_frozen_lib import (
+        artifact_is_frozen,
+        build_freeze_receipt,
+        content_revision,
+        finalize_durability_verdict,
+        issue_store_separate_project_effective,
+        load_freeze_record,
+        verify_file_store_durability,
+        verify_issue_store_durability,
+    )
+
+    key = "prd" if stage == "freeze-prd" else "tasks"
+    rel = artifact_rel_path(state, key)
+    if not rel:
+        return None
+    path = (root / rel).resolve()
+    if not path.is_file() or not artifact_is_frozen(path):
+        return None
+
+    revision = content_revision(path)
+    owner = f"doc-loop:{state.get('runId')}"
+    unit_ids = state.get("unitIds") or {}
+    existing = load_freeze_record(root, rel)
+    if existing:
+        receipt = build_freeze_receipt(
+            artifact=rel,
+            owner=owner,
+            lifecycle_state="frozen",
+            durability_state="verified",
+            revision=revision,
+            commit_sha=existing.get("commitSha"),
+            store_revision=existing.get("storeRevision"),
+            freeze_record_digest=str(existing.get("revision") or revision),
+            driver_invoked=True,
+            verdict="pass",
+            note="reconciled-freeze-record",
+        )
+        return receipt
+
+    if issue_store_separate_project_effective(root):
+        uid = str(unit_ids.get(key) or "")
+        durability = verify_issue_store_durability(root, uid, rel, revision)
+    else:
+        durability = verify_file_store_durability(root, rel, revision)
+    if durability.get("durabilityState") != "verified":
+        return None
+
+    receipt = build_freeze_receipt(
+        artifact=rel,
+        owner=owner,
+        lifecycle_state="frozen",
+        durability_state="verified",
+        revision=revision,
+        commit_sha=durability.get("commitSha"),
+        store_revision=durability.get("storeRevision"),
+        freeze_record_digest=str(durability.get("freezeRecordDigest") or revision),
+        driver_invoked=True,
+        verdict="pass",
+        note="reconciled-durability-inspect",
+    )
+    return finalize_durability_verdict(receipt, driver_invoked=True)
+
+
+def _inspect_issue_store_publication(root: Path, state: dict[str, Any], stage: str) -> bool:
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    if not issue_store_separate_project_effective(root):
+        return True
+    key = "prd" if stage == "freeze-prd" else "tasks"
+    rel = artifact_rel_path(state, key)
+    unit_ids = state.get("unitIds") or {}
+    uid = str(unit_ids.get(key) or "")
+    if not rel or not uid:
+        return False
+    from planning_store import get_backend
+
+    backend = get_backend(root)
+    verify = backend.verify_frozen_hash(uid, rel)
+    return verify.get("verdict") == "ok"
+
+
+def _inspect_memory_write(root: Path, state: dict[str, Any], stage: str) -> bool:
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    if stage != "freeze-prd" or not issue_store_separate_project_effective(root):
+        return True
+    unit_ids = state.get("unitIds") or {}
+    prd_unit = str(unit_ids.get("prd") or "")
+    prd_rel = artifact_rel_path(state, "prd")
+    if not prd_unit or not prd_rel:
+        return False
+    import doc_link
+
+    text = (root / prd_rel).read_text(encoding="utf-8")
+    fm, _ = doc_link.split_frontmatter(text)
+    if not doc_link.brainstorm_backref(fm):
+        return True
+    from planning_store import get_backend
+
+    backend = get_backend(root)
+    getter = getattr(backend, "get", None)
+    if not callable(getter):
+        return False
+    got = getter(prd_unit, prd_rel)
+    labels = list(getattr(got, "labels", ()) or ())
+    from planning_store_facade import FREEZE_INCOMPLETE_LABEL, FROZEN_LABEL
+
+    if FREEZE_INCOMPLETE_LABEL in labels:
+        return False
+    return FROZEN_LABEL in labels
+
+
+def _inspect_feature_seed_remote_state(root: Path, state: dict[str, Any]) -> dict[str, Any] | None:
+    mode = publication_mode(root)
+    if mode == "separate-project-store-only":
+        return {
+            "verdict": "pass",
+            "action": "feature-seed",
+            "skipped": True,
+            "reason": "separate-project-store-only",
+            "publicationMode": mode,
+            "note": "reconciled-separate-project-store-only",
+        }
+
+    tasks_rel = artifact_rel_path(state, "tasks")
+    if not tasks_rel:
+        return None
+    from wave_spec_seed import branch_has_docs_commit, resolve_target_branch
+
+    try:
+        target_branch, _slug, docs_dir = resolve_target_branch(root, tasks_rel)
+    except SystemExit:
+        return None
+
+    doc_rels: list[str] = []
+    for key in ("prd", "tasks"):
+        rel = artifact_rel_path(state, key)
+        if rel:
+            doc_rels.append(rel)
+    if not branch_has_docs_commit(root, target_branch, doc_rels):
+        return None
+
+    import subprocess
+
+    commit_sha = None
+    if doc_rels:
+        log = subprocess.run(
+            ["git", "log", "-1", "--format=%H", target_branch, "--", *doc_rels],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if log.returncode == 0 and log.stdout.strip():
+            commit_sha = log.stdout.strip()
+
+    receipt = {
+        "transitionName": "feature-seed",
+        "publicationMode": mode,
+        "exitStatus": 0,
+        "remoteState": {"branch": target_branch, "commit": commit_sha, "dryRun": False},
+        "seed": {
+            "verdict": "pass",
+            "action": "spec-seed",
+            "branch": target_branch,
+            "docsDir": str(docs_dir.relative_to(root.resolve())),
+            "skipped": commit_sha is None,
+            "note": "reconciled-remote-state",
+        },
+        "timestamp": utc_now(),
+        "status": "complete",
+        "reconciled": True,
+    }
+    return {
+        "verdict": "pass",
+        "action": "feature-seed",
+        "publicationMode": mode,
+        "receipt": receipt,
+        "seed": receipt["seed"],
+        "reconciled": True,
+    }
+
+
+def _build_freeze_transition_outcome(
+    state: dict[str, Any],
+    stage: str,
+    freeze_receipt: dict[str, Any],
+) -> dict[str, Any]:
+    key = "prd" if stage == "freeze-prd" else "tasks"
+    updated = dict(state)
+    revisions = dict(updated.get("artifactRevisions") or {})
+    revisions[key] = {**freeze_receipt, "frozenAt": utc_now(), "reconciled": True}
+    updated["artifactRevisions"] = revisions
+    updated = advance_stage(updated, stage)
+    updated["reconciled"] = True
+    return updated
+
+
+def _build_feature_seed_transition_outcome(state: dict[str, Any], seed_outcome: dict[str, Any]) -> dict[str, Any]:
+    updated = dict(state)
+    updated["featureSeedReceipt"] = seed_outcome.get("receipt") or seed_outcome
+    updated = advance_stage(updated, "feature-seed")
+    updated["reconciled"] = True
+    return updated
+
+
+def reconcile_pending_doc_transition(
+    root: Path,
+    state: dict[str, Any],
+    source_stage: str,
+    pending_receipt: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Inspect external state for non-idempotent transitions; return apply_fn outcome or None."""
+    _ = pending_receipt
+    if source_stage in {"freeze-prd", "freeze-tasks"}:
+        freeze_receipt = _inspect_freeze_durability(root, state, source_stage)
+        if not freeze_receipt or freeze_receipt.get("verdict") != "pass":
+            return None
+        if not _inspect_issue_store_publication(root, state, source_stage):
+            return None
+        if not _inspect_memory_write(root, state, source_stage):
+            return None
+        return _build_freeze_transition_outcome(state, source_stage, freeze_receipt)
+    if source_stage == "feature-seed":
+        seed_outcome = _inspect_feature_seed_remote_state(root, state)
+        if not seed_outcome or seed_outcome.get("verdict") != "pass":
+            return None
+        return _build_feature_seed_transition_outcome(state, seed_outcome)
+    return None
+
+
 def record_transition_outcome(
     root: Path,
     run_id: str,
@@ -389,14 +655,30 @@ def apply_transition_idempotent(
         outcome = existing.get("outcome") or {}
         return apply_recorded_outcome(state, outcome), existing, True
     pending_path = doc_pending_receipt_path(root, run_id, key)
-    if pending_path.is_file():
+    pending_receipt = read_pending_doc_receipt(root, run_id, key) if pending_path.is_file() else None
+    if pending_receipt and source_stage in NON_IDEMPOTENT_DOC_TRANSITIONS:
+        reconciled_outcome = reconcile_pending_doc_transition(
+            root, state, source_stage, pending_receipt
+        )
+        if reconciled_outcome is not None:
+            receipt = record_transition_outcome(
+                root, run_id, source_stage, content_hash, reconciled_outcome
+            )
+            return apply_recorded_outcome(state, reconciled_outcome), receipt, False
+    elif pending_receipt:
         fail(
             "incomplete doc transition blocks resume",
             exit_code=20,
             halt="doc-loop:incomplete-transition",
             idempotencyKey=key,
         )
-    outcome = apply_fn(state)
+    if not pending_receipt:
+        write_pending_doc_receipt(root, run_id, source_stage, content_hash, idempotency_key=key)
+    try:
+        outcome = apply_fn(state)
+    except Exception:
+        pending_path.unlink(missing_ok=True)
+        raise
     receipt = record_transition_outcome(root, run_id, source_stage, content_hash, outcome)
     return apply_recorded_outcome(state, outcome), receipt, False
 
@@ -517,8 +799,13 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     import subprocess
 
     from wave_spec_seed import resolve_target_branch
+    from wave_spec_seed import (
+        ambiguous_remote_state_default,
+        completion_from_seed_payload,
+    )
     from wave_spec_seed_guard import (
         acquire_doc_to_feature_handoff_lock,
+        assert_handoff_completion_remote_state,
         release_doc_to_feature_handoff_lock,
     )
 
@@ -563,7 +850,7 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
             text=True,
             cwd=str(root),
         )
-        remote_state: dict[str, Any] = {"branch": target_branch, "commit": None, "dryRun": True}
+        remote_state: dict[str, Any] = ambiguous_remote_state_default(target_branch)
         try:
             seed_payload = json.loads(proc.stdout or "{}")
         except json.JSONDecodeError:
@@ -582,26 +869,34 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
                 "seed": seed_payload,
             }
 
-        commit_sha = seed_payload.get("commit")
-        branch = seed_payload.get("branch") or target_branch
-        skipped = seed_payload.get("skipped") is True
-        if commit_sha:
-            verify = subprocess.run(
-                ["git", "merge-base", "--is-ancestor", commit_sha, branch],
-                cwd=str(root),
-                capture_output=True,
-                text=True,
-            )
-            if verify.returncode != 0:
-                return {
-                    "verdict": "fail",
-                    "error": "feature-seed-commit-verify-failed",
-                    "halt": "doc-loop:feature-seed",
-                    "seed": seed_payload,
-                }
-            remote_state = {"branch": branch, "commit": commit_sha, "dryRun": False}
-        elif skipped:
-            remote_state = {"branch": branch, "commit": None, "dryRun": False}
+        completion = completion_from_seed_payload(root, seed_payload)
+        if not completion.get("complete"):
+            return {
+                "verdict": "fail",
+                "error": "feature-seed-incomplete-outcome",
+                "halt": "doc-loop:feature-seed",
+                "completion": completion,
+                "seed": seed_payload,
+            }
+
+        branch = str(completion.get("branch") or seed_payload.get("branch") or target_branch)
+        commit_sha = completion.get("commit")
+        remote_state = {
+            "branch": branch,
+            "commit": commit_sha,
+            "dryRun": False,
+            "completion": completion,
+        }
+        try:
+            assert_handoff_completion_remote_state(remote_state)
+        except PermissionError as exc:
+            return {
+                "verdict": "fail",
+                "error": str(exc),
+                "halt": "doc-loop:feature-seed",
+                "completion": completion,
+                "seed": seed_payload,
+            }
 
         receipt = {
             "transitionName": "feature-seed",
@@ -944,6 +1239,14 @@ def handshake_payload(
     return payload
 
 
+def ensure_doc_run_lease_for_mutation(root: Path, state: dict[str, Any], run_id: str) -> dict[str, Any]:
+    """Validate-or-acquire + heartbeat doc-run lease before mutating resume (PRD 089 R3)."""
+    topic = str(state.get("topic") or "")
+    if not topic:
+        return {"verdict": "fail", "error": "doc-state-missing-topic", "runId": run_id}
+    return validate_or_acquire_doc_run_lock(root, topic, run_id)
+
+
 def cmd_doc_loop(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     consume = has_flag(args, "--consume")
@@ -955,11 +1258,31 @@ def cmd_doc_loop(root: Path, args: list[str]) -> None:
         assert_publication_stage_reachable(publication_stage)
     run_id = resolve_run_id(root, args)
     state = load_doc_state(root, run_id)
+    # Mutating resume: every entry that loads durable state must hold a live lease (R3).
+    # Fresh provision already acquired inside resolve_run_id/--topic; validate heartbeats.
+    if not dry_run:
+        lease = ensure_doc_run_lease_for_mutation(root, state, run_id)
+        if lease.get("verdict") != "pass":
+            fail(
+                lease.get("error", "doc-run lease validate-or-acquire failed"),
+                exit_code=20,
+                halt="doc-run-lock",
+                **{k: v for k, v in lease.items() if k not in ("verdict", "error")},
+            )
     resumed = bool(state.get("verdict") == "running" and state.get("stage") != "triage")
     steps_taken: list[dict[str, Any]] = []
 
     for _ in range(max_steps):
         state = load_doc_state(root, run_id)
+        if not dry_run:
+            lease = ensure_doc_run_lease_for_mutation(root, state, run_id)
+            if lease.get("verdict") != "pass":
+                fail(
+                    lease.get("error", "doc-run lease validate-or-acquire failed"),
+                    exit_code=20,
+                    halt="doc-run-lock",
+                    **{k: v for k, v in lease.items() if k not in ("verdict", "error")},
+                )
         if state.get("verdict") == "halted":
             emit(
                 handshake_payload(

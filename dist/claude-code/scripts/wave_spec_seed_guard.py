@@ -25,6 +25,43 @@ from wave_lock import (
 )
 from wave_state import read_lock_meta, read_run_local_lease, utc_now
 
+VERIFIED_COMPLETION_OUTCOMES = frozenset({"committed", "already-present"})
+
+
+def assert_handoff_completion_remote_state(remote_state: dict[str, Any]) -> None:
+    """Reject ambiguous dryRun defaults — completion requires verified commit outcome (R6)."""
+    if not remote_state:
+        raise PermissionError("feature-seed completion refused: missing remote state")
+    if remote_state.get("dryRun") is True:
+        raise PermissionError(
+            "feature-seed completion refused: ambiguous unflipped dryRun default"
+        )
+    if remote_state.get("dryRun") is None and not remote_state.get("commit"):
+        raise PermissionError(
+            "feature-seed completion refused: ambiguous remote state (no commit, dryRun unset)"
+        )
+    completion = remote_state.get("completion")
+    if isinstance(completion, dict):
+        outcome = completion.get("outcome")
+        if outcome not in VERIFIED_COMPLETION_OUTCOMES:
+            raise PermissionError(
+                f"feature-seed completion refused: outcome {outcome!r} not verified-complete"
+            )
+        if not completion.get("verified"):
+            raise PermissionError("feature-seed completion refused: completion not verified")
+        if not completion.get("commit"):
+            raise PermissionError(
+                "feature-seed completion refused: completion missing commit SHA"
+            )
+        return
+    commit = remote_state.get("commit")
+    if not commit:
+        raise PermissionError("feature-seed completion refused: missing commit SHA")
+    if remote_state.get("dryRun") is not False:
+        raise PermissionError(
+            "feature-seed completion refused: dryRun must be false for verified completion"
+        )
+
 
 def is_doc_loop_run_id(run_id: str) -> bool:
     return run_id.startswith("doc-loop:")

@@ -15,6 +15,8 @@ EXIT_ERROR = 2
 
 BRAINSTORM_KEYS = ("brainstorm", "source_brainstorm")
 PRD_KEYS = ("prd",)
+ORIGIN_VALUES = frozenset({"brainstorm", "request", "issue"})
+ISSUE_REF_KEYS = ("issue", "defect", "planningIssue")
 
 
 def repo_root() -> Path:
@@ -130,10 +132,140 @@ def prd_forward_refs(fm: dict[str, str]) -> list[str]:
     return out
 
 
-def infer_tier_from_rel(rel: str, tier: str | None) -> str:
-    if tier in ("full", "standard"):
-        return tier
+def normalize_doc_link_tier(tier: str | None) -> str:
+    raw = str(tier or "").strip()
+    lowered = raw.lower()
+    if lowered in ("full", "standard", "patch"):
+        return lowered
+    if lowered == "quick":
+        return "patch"
+    for canonical, variants in (
+        ("full", ("full", "Full")),
+        ("standard", ("standard", "Standard")),
+        ("patch", ("patch", "Patch", "quick", "Quick")),
+    ):
+        if raw in variants:
+            return canonical
     return "full"
+
+
+def infer_tier_from_rel(rel: str, tier: str | None) -> str:
+    if tier:
+        return normalize_doc_link_tier(tier)
+    return "full"
+
+
+def effective_origin(fm: dict[str, str], tier: str) -> str:
+    raw = str(fm.get("origin", "")).strip().lower()
+    if raw:
+        return raw
+    norm = normalize_doc_link_tier(tier)
+    if norm == "full":
+        return "brainstorm"
+    if norm == "standard":
+        return "request"
+    return ""
+
+
+def issue_refs_from_frontmatter(fm: dict[str, str]) -> list[str]:
+    refs: list[str] = []
+    for key in ISSUE_REF_KEYS:
+        val = fm.get(key)
+        if val:
+            refs.extend(parse_link_paths(val))
+    planning_issues = fm.get("planningIssues", "")
+    if planning_issues:
+        from planning_store_facade import parse_planning_issues_refs
+
+        refs.extend(parse_planning_issues_refs(planning_issues))
+    return refs
+
+
+def issue_or_defect_resolves(root: Path, ref: str) -> bool:
+    ref = ref.strip().strip("'\"#")
+    if not ref:
+        return False
+    if pah.resolve_repo_file(root, ref) is not None:
+        return True
+    unit_hint = ref if ref.startswith("gap-") else None
+    if pah.artifact_handle_resolves(root, ref, unit_id=unit_hint):
+        return True
+    from host_lib import load_workflow_config
+    from planning_store_facade import issue_get_facade
+
+    cfg = load_workflow_config(root)
+    lookup = issue_get_facade(root, cfg, ref)
+    return lookup.get("verdict") == "ok"
+
+
+def validate_origin_provenance(
+    root: Path,
+    fm: dict[str, str],
+    tier: str,
+) -> list[dict[str, str]]:
+    findings: list[dict[str, str]] = []
+    norm_tier = normalize_doc_link_tier(tier)
+    origin_raw = str(fm.get("origin", "")).strip()
+    origin = origin_raw.lower() if origin_raw else ""
+
+    if origin_raw and origin not in ORIGIN_VALUES:
+        findings.append(
+            {
+                "code": "invalid-origin-value",
+                "message": f"origin must be one of: brainstorm, request, issue (got {origin_raw!r})",
+            }
+        )
+        return findings
+
+    effective = effective_origin(fm, norm_tier)
+
+    if norm_tier == "patch":
+        if not origin:
+            findings.append(
+                {
+                    "code": "missing-origin",
+                    "message": "Patch-tier PRD requires origin: issue",
+                }
+            )
+        elif origin != "issue":
+            findings.append(
+                {
+                    "code": "invalid-origin",
+                    "message": "Patch-tier PRD requires origin: issue",
+                }
+            )
+
+    if norm_tier == "full" and effective != "brainstorm":
+        findings.append(
+            {
+                "code": "invalid-origin",
+                "message": "Full-tier PRD requires origin: brainstorm",
+            }
+        )
+
+    if effective == "issue":
+        refs = issue_refs_from_frontmatter(fm)
+        if not refs:
+            findings.append(
+                {
+                    "code": "missing-issue-ref",
+                    "message": (
+                        "origin: issue requires issue/defect frontmatter "
+                        "(issue:, defect:, planningIssue:, or planningIssues:)"
+                    ),
+                }
+            )
+        else:
+            for target in refs:
+                if not issue_or_defect_resolves(root, target):
+                    findings.append(
+                        {
+                            "code": "dangling-issue-ref",
+                            "message": f"issue/defect reference does not resolve: {target}",
+                        }
+                    )
+
+    return findings
 
 
 def check_prd_content(
@@ -148,16 +280,19 @@ def check_prd_content(
     findings: list[dict[str, str]] = []
     frozen = is_truthy_frozen(fm)
     prd_unit_id = unit_id or fm.get("id") or fm.get("unit-id")
+    norm_tier = normalize_doc_link_tier(fm.get("tier") or tier)
+
+    findings.extend(validate_origin_provenance(root, fm, norm_tier))
 
     back = brainstorm_backref(fm)
-    requires_brainstorm = tier == "full" or frozen
+    requires_brainstorm = norm_tier == "full"
     if requires_brainstorm:
         if not back:
             findings.append(
                 {
                     "code": "missing-brainstorm-backref",
                     "message": (
-                        "Full-tier or frozen PRD requires brainstorm: "
+                        "Full-tier PRD requires brainstorm: "
                         "(or legacy source_brainstorm:) in frontmatter"
                     ),
                 }
@@ -195,7 +330,7 @@ def check_prd_content(
         "verdict": verdict,
         "artifact": "prd",
         "path": rel,
-        "tier": tier,
+        "tier": norm_tier,
         "frozen": frozen,
         "findings": findings,
     }
