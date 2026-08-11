@@ -847,11 +847,11 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
         ambiguous_remote_state_default,
         completion_from_seed_payload,
     )
-    from wave_spec_seed_guard import (
+    from wave_target_lock import (
         acquire_doc_to_feature_handoff_lock,
-        assert_handoff_completion_remote_state,
         release_doc_to_feature_handoff_lock,
     )
+    from wave_spec_seed_guard import assert_handoff_completion_remote_state
 
     run_id = f"doc-loop:{state.get('runId')}"
     try:
@@ -867,6 +867,8 @@ def run_feature_seed(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     if lock_acquire.get("verdict") != "pass":
         error = lock_acquire.get("error") or "handoff-lock-acquire-failed"
         halt = "target-lock-conflict" if error == "target-lock-conflict" else "doc-loop:feature-seed"
+        if error == "remote-lease-conflict":
+            halt = "remote-lease-conflict"
         if lock_acquire.get("holder"):
             holder = lock_acquire["holder"]
             if holder.get("kind") == "target-lock":
