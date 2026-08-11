@@ -355,17 +355,25 @@ The scheduler frontier skips units that cannot run and can **park** units out of
 ---
 date: YYYY-MM-DD
 topic: <kebab-topic>
+origin: brainstorm|request|issue                    # provenance (R1 — tier-conditioned)
 brainstorm: docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md   # Full-tier PRD only (R52)
 prd: docs/prds/<n>-<slug>/<n>-prd-<slug>.md                      # brainstorm forward ref (R53); list when multiple
+issue: <issue-or-defect-ref>                        # Patch-tier (origin: issue) — issue #, key, or gap unit id
 ---
 ```
 
+- **`origin:`** — typed provenance for how the PRD was authored (PRD 089 R1). Allowed values:
+  `brainstorm`, `request`, `issue`. **Full-tier** PRDs require `origin: brainstorm` (implicit when absent).
+  **Standard-tier** PRDs default to `request` when absent. **Patch-tier** (Quick triage) PRDs require
+  `origin: issue` plus a resolvable issue/defect reference.
 - **`brainstorm:`** (canonical) — repo-relative path to the source brainstorm. Required on every **Full-tier** PRD
   at draft time (`/sw-prd` writes it; `/sw-freeze` + `scripts/doc-link-check.py` verify it). Legacy alias:
   `source_brainstorm:` (accepted by the gate only; new PRDs MUST use `brainstorm:`).
 - **`prd:`** — repo-relative path (or YAML list) from a **writable** brainstorm back to derived PRD(s). Written
   when the PRD is created or frozen (`/sw-prd` / `/sw-freeze`); skipped when the brainstorm is already frozen
   (PRD `brainstorm:` remains authoritative).
+- **`issue:`** / **`defect:`** / **`planningIssue:`** — resolvable issue number, provider key, or gap unit id
+  when `origin: issue` (Patch-tier). `planningIssues:` list form is also accepted.
 
 ### Frozen artifact
 
