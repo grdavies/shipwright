@@ -165,17 +165,17 @@ def create_deterministic_zipapp(staging: Path, target: Path) -> None:
     payload = tempfile.NamedTemporaryFile(delete=False)
     payload.close()
     try:
-        with zipfile.ZipFile(payload.name, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        with zipfile.ZipFile(payload.name, "w", compression=zipfile.ZIP_STORED) as zf:
             for path in sorted(staging.rglob("*")):
                 if not path.is_file():
                     continue
                 arcname = path.relative_to(staging).as_posix()
                 info = zipfile.ZipInfo(arcname, ZIPAPP_FIXED_DT)
-                info.compress_type = zipfile.ZIP_DEFLATED
+                info.compress_type = zipfile.ZIP_STORED
                 info.create_system = 3
                 zf.writestr(info, path.read_bytes())
             main_info = zipfile.ZipInfo("__main__.py", ZIPAPP_FIXED_DT)
-            main_info.compress_type = zipfile.ZIP_DEFLATED
+            main_info.compress_type = zipfile.ZIP_STORED
             main_info.create_system = 3
             main_body = (
                 "# -*- coding: utf-8 -*-\n"
