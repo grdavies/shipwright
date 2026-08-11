@@ -127,7 +127,10 @@ def collect_pre_push_diff(root: Path) -> str:
     try:
         unpushed = git_out("rev-list", "HEAD", "--not", "--remotes", cwd=root).strip()
         if unpushed:
-            return git_out("log", "--format=", "-p", *unpushed.split(), cwd=root)
+            shas = [s for s in unpushed.split() if s]
+            if shas:
+                parent = git_out("rev-parse", f"{shas[-1]}^", cwd=root).strip()
+                return git_out("diff", f"{parent}..HEAD", cwd=root)
     except RuntimeError:
         pass
 
@@ -177,6 +180,17 @@ def iter_diff_file_chunks(diff: str) -> Iterator[tuple[str, str]]:
     yield from flush()
 
 
+def diff_added_lines_only(chunk: str) -> str:
+    """Return only lines introduced in a unified diff hunk (pre-push scope)."""
+    added: list[str] = []
+    for line in chunk.splitlines():
+        if line.startswith(("+++", "---", "@@", "diff ")):
+            continue
+        if line.startswith("+"):
+            added.append(line[1:])
+    return "\n".join(added)
+
+
 def scan_diff(diff: str, *, allowlist: dict[str, list[str]]) -> list[Finding]:
     if not diff.strip():
         return []
@@ -185,7 +199,12 @@ def scan_diff(diff: str, *, allowlist: dict[str, list[str]]) -> list[Finding]:
         return scan_text(diff, allowlist=allowlist, path=None)
     findings: list[Finding] = []
     for path, chunk in chunks:
-        findings.extend(scan_text(chunk, allowlist=allowlist, path=path))
+        if "Binary files " in chunk:
+            continue
+        added = diff_added_lines_only(chunk)
+        if not added.strip():
+            continue
+        findings.extend(scan_text(added, allowlist=allowlist, path=path))
     return findings
 
 
