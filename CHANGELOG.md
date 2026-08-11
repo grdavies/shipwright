@@ -780,6 +780,7 @@
 * merge phase end-to-end-absorb-linkage-regression-suite-registration-r5-r6 into feat/prd-freeze-etag-retry-and-absorb-edge-preservation (b104161) <!-- sw-deliver:end-to-end-absorb-linkage-regression-suite-registration-r5-r6 -->
 * merge phase tier-aware-brainstorm-gate-in-doc-link-r1 into feat/prd-doc-loop-tier-correctness-and-repository-context-identity (c529f24) <!-- sw-deliver:tier-aware-brainstorm-gate-in-doc-link-r1 -->
 * merge phase repositorycontext-identity-and-credential-scoping-r4-r5 into feat/prd-doc-loop-tier-correctness-and-repository-context-identity (01f2018) <!-- sw-deliver:repositorycontext-identity-and-credential-scoping-r4-r5 -->
+* merge phase durable-pending-transition-receipts-in-doc-loop-r2 into feat/prd-doc-loop-tier-correctness-and-repository-context-identity (c8c37db) <!-- sw-deliver:durable-pending-transition-receipts-in-doc-loop-r2 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
