@@ -937,7 +937,7 @@ Dry-run (no `--apply`) must not create or update this file. Command surface: `/s
 `scripts/planning_migrate.py` `store-files-to-issues` | `store-issues-to-files`.
 
 ## Planning backend and authority
-> Planning body cache (PRD 091 R1): replicated planning-cache backend lives under `.cursor/sw-planning-cache/planning-bodies/` (migrated from `.cursor/sw-memory/planning-bodies/`); implementation type `ReplicatedPlanningCacheBackend`.
+> Planning body cache (planning-cache rename): replicated planning-cache backend lives under `.cursor/sw-planning-cache/planning-bodies/` (migrated from `.cursor/sw-memory/planning-bodies/`); implementation type `ReplicatedPlanningCacheBackend`.
  (PRD 082 R26/R27)
 
 Authority resolution is **backend-neutral** — `scripts/planning_authority.py` returns `authorityState`

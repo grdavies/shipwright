@@ -491,4 +491,4 @@ Terminal prepare remains gated by `docs-currency-gate` + tasks-currency on bindi
 `wave_deliver.py` / `wave_deliver_loop.py` / `wave_terminal.py` / `wave_run_adopt.py`. Phase acceptance +
 gap-check + live host evidence still precede `merge-enqueue`.
 
-<!-- PRD 091 currency: planning-cache rename / deliver path-anchor -->
+<!-- currency: planning-cache rename / deliver path-anchor -->
