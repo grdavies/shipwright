@@ -343,7 +343,7 @@ python3 scripts/sw_bootstrap.py planning_refusal_ledger_cli.py -- purge --entry-
 `/sw-cleanup` dry-run may enumerate `refusal-ledger-entry` purge candidates; confirm applies the same purge
 semantics. Default ledger layout: `core/sw-reference/layout.md` (Planning backend and authority).
 
-Refusal-ledger writes also feed the projection **outbox** (`planning_projection_ledger.py`, PRD 090 R5) so
+Refusal-ledger writes also feed the projection **outbox** (`planning_projection_ledger.py`) so
 pending projection destinations drain on subsequent authority mutations rather than relying on a single
 in-process attempt.
 
