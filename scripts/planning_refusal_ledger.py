@@ -103,6 +103,7 @@ def record_refusal(
     authority_reason: str | None,
     destination_policy_id: str = DEFAULT_DESTINATION_POLICY_ID,
     destination_policy_version: str = DEFAULT_DESTINATION_POLICY_VERSION,
+    projection_destination: str | None = None,
     cfg: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     cfg = cfg if cfg is not None else load_workflow_config(root)
@@ -149,6 +150,30 @@ def record_refusal(
         max_size_bytes=max_size_bytes,
     )
     still_present = pls.load_entry(entry_root, proposed["entryId"]) is not None
+    outbox_event: dict[str, Any] | None = None
+    if still_present:
+        import planning_projection_ledger as ppl
+
+        ledger = ppl.load_projection_ledger(root)
+        outbox_event = ppl.append_projection_outbox_event(
+            ledger,
+            aggregate_id=proposed["unitId"],
+            destination="refusal-ledger",
+            idempotency_key=proposed["idempotencyKey"],
+            delivery_status="delivered",
+        )
+        proposed["outboxEventId"] = outbox_event.get("eventId")
+        pls.save_entry(entry_root, proposed)
+        if projection_destination:
+            ppl.append_projection_outbox_event(
+                ledger,
+                aggregate_id=proposed["unitId"],
+                destination=projection_destination,
+                idempotency_key=f"{proposed['idempotencyKey']}:projection",
+                delivery_status="pending",
+                last_error=authority_reason,
+            )
+        ppl.save_projection_ledger(root, ledger)
     return {
         "verdict": "ok",
         "action": "record-refusal",
@@ -157,6 +182,7 @@ def record_refusal(
         "path": str(path),
         "eviction": eviction,
         "evictedSelf": not still_present,
+        "outboxEventId": proposed.get("outboxEventId") if still_present else None,
     }
 
 

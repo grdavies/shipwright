@@ -245,7 +245,7 @@ def store_put_gap(
 ) -> dict[str, Any]:
     """Store gap body respecting write disposition for projection writes (R26 phase 8)."""
     import planning_authority as pa
-    from planning_projection_ledger import set_projection_dirty
+    import planning_projection_ledger as ppl
     import planning_refusal_ledger as prl
 
     if not skip_enrichment:
@@ -257,9 +257,9 @@ def store_put_gap(
     decision = pa.resolve_authority(
         root,
         cfg,
-        projection_available=not bool(ledger.get("dirty")),
+        projection_available=not ppl.projection_is_dirty(root),
     )
-    disposition = pa.apply_write_disposition(decision, write_class="projection")
+    disposition = pa.apply_write_disposition(decision, write_class="projection", root=root)
     if disposition.get("verdict") == "refused":
         return {
             "verdict": "refused",
@@ -276,17 +276,18 @@ def store_put_gap(
             intended_body=content,
             authority_state=decision.authorityState,
             authority_reason=decision.reason,
+            projection_destination=decision.configured,
             cfg=cfg,
         )
-        dirty = set_projection_dirty(root, reason=decision.reason or "refuse-ledger")
         return {
             "verdict": "ok",
             "action": "store-put-gap",
             "disposition": "refuse-ledger",
             "ledgered": ledger.get("verdict") == "ok",
-            "projectionDirty": dirty.get("dirty"),
+            "projectionDirty": ppl.projection_is_dirty(root),
             "unitId": unit_id,
             "nonBlocking": True,
+            "outboxEventId": ledger.get("outboxEventId"),
         }
     backend = ps.get_backend(root)
     result = backend.put(unit_id, body_path_rel, content)
