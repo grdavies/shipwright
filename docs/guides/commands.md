@@ -72,6 +72,8 @@ See [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) and
 [`core/skills/deliver/SKILL.md`](../../core/skills/deliver/SKILL.md).
 
 ### Deliver operator surface
+<!-- currency: planning-cache deliver path-anchor (PRD 091) — statePath emission uses relative_under_anchor for macOS /var vs /private/var -->
+
 
 Mechanical list / resume / finalize commands report run identity, target branch, stage, lock holder,
 and `requiresAdoption` **before** any mutation. Operators invoke them via `wave_deliver.py` (or
