@@ -10,6 +10,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -327,9 +328,21 @@ def resolve_task_list_path(root: Path, task_rel: str) -> Path:
     return path
 
 
+# Process-local memo: plan/preflight call this 2–3× per invocation; each miss
+# triggers a full GitHub issue_search (~7 pages) and trips secondary rate limits.
+_UNITS_DERIVED_MEMO: dict[str, tuple[float, tuple[list[pg.GraphUnit], dict[str, pg.GraphUnit]]]] = {}
+_UNITS_DERIVED_MEMO_TTL_S = 60.0
+
+
 def units_with_derived_status(root: Path) -> tuple[list[pg.GraphUnit], dict[str, pg.GraphUnit]]:
     from inflight_signal import read_tuples
     from planning_reconcile import build_derived_map, git_complete_unit_ids
+
+    key = str(pp.git_root(root))
+    now = time.time()
+    hit = _UNITS_DERIVED_MEMO.get(key)
+    if hit is not None and (now - hit[0]) < _UNITS_DERIVED_MEMO_TTL_S:
+        return hit[1]
 
     units = pg.discover_units(root)
     inflight = read_tuples(root)
@@ -353,7 +366,9 @@ def units_with_derived_status(root: Path) -> tuple[list[pg.GraphUnit], dict[str,
             )
         )
     by_id = pg.index_units(overlaid)
-    return overlaid, by_id
+    result = (overlaid, by_id)
+    _UNITS_DERIVED_MEMO[key] = (now, result)
+    return result
 
 
 def resolve_unit(root: Path, task_path: Path) -> pg.GraphUnit | None:
