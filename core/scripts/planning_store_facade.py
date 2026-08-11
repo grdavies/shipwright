@@ -84,7 +84,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from _planning_pkg_loader import load_package  # noqa: E402
+from _planning_pkg_loader import load_package, load_submodule  # noqa: E402
 
 _planning_pkg = load_package()
 BARE_INTEGER_UNIT_ID = _planning_pkg.BARE_INTEGER_UNIT_ID
@@ -140,7 +140,15 @@ ISSUES_PROVIDERS = _BASE_ISSUES_PROVIDERS | (
 # PRD 066 R9/R20 / PRD 086 R2: linear is recognized when the live client is wired;
 # promoted to shipped after recorded stage1-dogfood-gate + oauth-docs-gate evidence.
 DEFERRED_ISSUES_PROVIDERS = frozenset({"gitlab-issues"})
-SHIPPED_ISSUES_PROVIDERS = frozenset({"github-issues", "jira", "linear"})
+# PRD 090 R3 — shipped membership is derived from recorded green conformance evidence.
+_REPO_ROOT = SCRIPT_DIR.parent
+
+
+def resolve_shipped_issues_providers(root: Path | None = None) -> frozenset[str]:
+    return load_submodule("provider_conformance").providers_with_green_conformance(root or _REPO_ROOT)
+
+
+SHIPPED_ISSUES_PROVIDERS = resolve_shipped_issues_providers()
 
 MIN_ISSUES_SCOPES: dict[str, list[str]] = {
     "github-issues": ["repo"],
