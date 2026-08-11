@@ -109,6 +109,10 @@ python3 scripts/ci_plan_gen.py
 python3 scripts/unit_tests/test/test_ci_plan_generation.py  # via run_pytest
 ```
 
+Provider-conformance suites registered in `suite-registry.json` (for example GitHub issues provider
+evidence gates) participate in the same named-plan topology — keep `pr-ci` rows and generated workflows
+aligned when adding conformance coverage.
+
 <!-- suite-registry.json and ci_plan_gen.py are authoritative for plan names above. -->
 
 ## Initialization and doctor checks
