@@ -827,7 +827,7 @@ def utc_now_iso() -> str:
 
 def cmd_tasks_suggest(root: Path, args: list[str]) -> None:
     """Surface durable contention feedback as /sw-tasks re-run suggestions (R16)."""
-    from wave_state import load_deliver_state, resolve_state_path
+    from wave_state import load_deliver_state, relative_under_anchor, resolve_state_path
 
     target = parse_kv(args, "--target")
     task_list = parse_kv(args, "--task-list")
@@ -850,8 +850,8 @@ def cmd_tasks_suggest(root: Path, args: list[str]) -> None:
         {
             "verdict": "pass",
             "action": "tasks-suggest",
-            "statePath": str(
-                resolve_state_path(root, target=target, task_list=task_list).relative_to(root)
+            "statePath": relative_under_anchor(
+                resolve_state_path(root, target=target, task_list=task_list), root
             ),
             "suggestion": fb.get("suggestedTaskListAction")
             or "No contention feedback recorded; nothing to suggest",
