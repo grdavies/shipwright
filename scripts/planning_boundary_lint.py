@@ -107,9 +107,22 @@ def validate_compat_matrix(root: Path) -> dict[str, object]:
             if surface not in flags:
                 missing.append(f"cli-flag:{surface}")
         elif kind == "shim":
-            shim_path = root / surface
-            if not shim_path.is_file():
-                missing.append(f"shim:{surface}")
+            if "#" in surface:
+                pyz_rel, module = surface.split("#", 1)
+                pyz_path = root / pyz_rel
+                module_file = module if module.endswith(".py") else f"{module}.py"
+                if not pyz_path.is_file():
+                    missing.append(f"shim:{surface}")
+                else:
+                    import zipfile
+
+                    with zipfile.ZipFile(pyz_path) as zf:
+                        if module_file not in zf.namelist():
+                            missing.append(f"shim:{surface}")
+            else:
+                shim_path = root / surface
+                if not shim_path.is_file():
+                    missing.append(f"shim:{surface}")
         elif kind == "condition":
             continue
         else:
