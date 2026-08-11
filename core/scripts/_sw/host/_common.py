@@ -158,11 +158,23 @@ def http_request(
     url: str,
     token_env: str,
     body: bytes | None = None,
+    credential: Any | None = None,
 ) -> dict[str, Any]:
-    """Perform HTTP via urllib transport or fixture mock."""
+    """Perform HTTP via urllib transport or fixture mock.
+
+    When ``host.credentialRef`` resolves a broker credential and ``tokenEnv`` is
+    empty, pass that credential through so requests are authenticated. Without
+    this, public-repo GETs succeed briefly then trip the unauthenticated 60/hr
+    GitHub limit and surface as ``rate-limited`` 403s.
+    """
     mocked = mock_transport(root, url)
     if mocked is not None:
         return mocked
+    if credential is None:
+        resolved = resolve_provider(root)
+        maybe = resolved.get("_credentialObject")
+        if maybe is not None:
+            credential = maybe
     buf = io.StringIO()
     with redirect_stdout(buf):
         payload = urllib_request(
@@ -170,6 +182,7 @@ def http_request(
             url=url,
             root=root,
             provider=provider,
+            credential=credential,
             token_env=token_env,
             body=body,
         )

@@ -51,6 +51,10 @@ Projection-only writes may map to `refuse-ledger` under policy — substantive r
 operator-local refusal ledger (`.cursor/sw-refusal-ledger` by default). Reconciling a refused write remains a
 human decision.
 
+Authority mutations drain the durable projection **outbox** (`planning_projection_ledger.py`, PRD 090 R5):
+pending destination events carry derived dirty state and retry across outages without silent fallback to
+another backend.
+
 ## Logging contract (R18)
 
 Store operations log `unitId`, content hash, and backend id only — never body bytes.
