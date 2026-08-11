@@ -399,8 +399,13 @@ scripts/doc-link-check.py	3d8fd64433c4ba60ab136b79abfc1e500db5cae36b5211912ef149
 scripts/doc-review-select.py	79d5b00880aaaac157bced1f076d03c08dfcec72df143e827fe5128cc1e09def
 scripts/doc_format.py	f532db6730414bbe9a18f1855f14c4541af7ffe68e0000c44407da1ddb857cac
 scripts/doc_format_tokenizer.py	68dd6aa39d70bc3dcb9689ec2dd5bf8ac4c5f28671da5e9d89936398d40c13cd
+<<<<<<< HEAD
 scripts/doc_link.py	6235e096b0914c2376d67c1155cb360d964ddd77b9e2e4753aec6b03e99cf0d4
 scripts/doc_loop.py	e10ad0b627b2f5c489ad3e6b77ed07bb5d009d3b8f5247eea5c6c3732dc9138f
+=======
+scripts/doc_link.py	51b6a7d0d17b7d72fb49bbc6dcb34c5ff162e6167772e318d9055a04243ff0f0
+scripts/doc_loop.py	128a05354da8dbb1566ce50a427776e225e139b092a863c34f0272e05b679013
+>>>>>>> feat/prd-doc-loop-tier-correctness-and-repository-context-identity-phase-durable-pending-transition-receipts-in-doc-loop-r2
 scripts/doc_rescore.py	ed69c1e603f669c5b87938854d91fc71991c38b1dce90975fa9e3d85bf84a0fe
 scripts/docs-currency-gate.py	dabd6c2b0a9c932c26d148525b426844c42d15d0a5045bf6945f0f171f7a0c46
 scripts/docs-edit-route.py	81bf9859c24b16e56f4f4a15430ad1d7d367809e0df3491bb1075dde289860fb
