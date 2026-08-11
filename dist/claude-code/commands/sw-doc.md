@@ -66,6 +66,10 @@ python3 scripts/doc_loop.py <root> doc-loop --topic <topic> --tier <Standard|Ful
 
 Resume reads `state.json` + receipts alone — incomplete pending receipts block resume fail-closed.
 
+**Concurrency (PRD 090):** the shared `.cursor/sw-doc-runs/index.json` is updated under
+`planning_txn.store_lock` with monotonic revision (R1). Target and doc-to-feature handoff locks take a
+cross-clone `wave_remote_lease` git-ref CAS (R2) in addition to local exclusion — see `.sw/layout.md`.
+
 ### Stage state machine
 
 Documented stage order (tier-gated `brainstorm` skipped for non-Full; generated from `scripts/doc_workflow_schema.py`):
