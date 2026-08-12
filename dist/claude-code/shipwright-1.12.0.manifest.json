@@ -334,13 +334,16 @@
     "graph/artifact_registry.py",
     "graph/convergence_loop.py",
     "graph/cost_telemetry.py",
+    "graph/crash_replay_harness.py",
     "graph/cutover.py",
+    "graph/dynamic_proposal.py",
     "graph/execution_receipts.py",
     "graph/fanin_policy.py",
     "graph/ir.py",
     "graph/isolation_policy.py",
     "graph/kernel_compiler.py",
     "graph/legacy_adapters.py",
+    "graph/lineage.py",
     "graph/observability.py",
     "graph/resource_pools.py",
     "graph/router_nodes.py",
@@ -666,5 +669,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 663
+  "moduleCount": 666
 }
