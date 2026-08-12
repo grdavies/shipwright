@@ -332,8 +332,11 @@
     "global_plan_lint.py",
     "graph/__init__.py",
     "graph/fanin_policy.py",
+    "graph/ir.py",
     "graph/isolation_policy.py",
     "graph/resource_pools.py",
+    "graph/schema/node_spec.schema.json",
+    "graph/schema/workflow_graph.schema.json",
     "guidelines_validate.py",
     "halt_resume.py",
     "harness_isolation_lint.py",
@@ -649,5 +652,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 646
+  "moduleCount": 649
 }
