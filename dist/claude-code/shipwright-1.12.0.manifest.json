@@ -331,9 +331,12 @@
     "gitignore_generate.py",
     "global_plan_lint.py",
     "graph/__init__.py",
+    "graph/artifact_registry.py",
+    "graph/execution_receipts.py",
     "graph/fanin_policy.py",
     "graph/ir.py",
     "graph/isolation_policy.py",
+    "graph/kernel_compiler.py",
     "graph/resource_pools.py",
     "graph/schema/node_spec.schema.json",
     "graph/schema/workflow_graph.schema.json",
@@ -652,5 +655,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 649
+  "moduleCount": 652
 }
