@@ -176,6 +176,10 @@ class ArtifactRegistry:
             and (path / "metadata.json").is_file()
         )
 
+    def fingerprint(self, artifact_id: str) -> str:
+        """Return the verified content hash used by convergence dedupe."""
+        return self.read(artifact_id).content_hash
+
     def delete(self, artifact_id: str) -> None:
         artifact_dir = self._artifact_dir(artifact_id)
         if not artifact_dir.is_dir():

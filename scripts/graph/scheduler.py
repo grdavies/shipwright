@@ -25,6 +25,7 @@ from graph.isolation_policy import (
     parse_isolation_policy,
 )
 from graph.kernel_compiler import compile_workflow_graph
+from graph.observability import GraphObservability
 from graph.resource_pools import PoolName, ResourcePoolRegistry
 
 
@@ -77,8 +78,15 @@ class SchedulerRun:
     contention_findings: tuple[ContentionFinding, ...]
     pool_snapshot: Mapping[str, Any]
 
+    def observability(self, graph: Mapping[str, Any]) -> GraphObservability:
+        """Create the read-only receipts-backed view for this completed run."""
+        return GraphObservability(graph, self.receipts, run_id=self.run_id)
+
 
 NodeExecutor = Callable[[dict[str, Any]], NodeExecutionResult]
+ConvergenceExecutor = Callable[
+    [dict[str, Any], Mapping[str, int]], NodeExecutionResult
+]
 
 
 def _digest(value: Any) -> str:
@@ -140,10 +148,12 @@ class GraphScheduler:
         *,
         receipts: ExecutionReceiptJournal,
         pools: ResourcePoolRegistry,
+        convergence_executor: ConvergenceExecutor | None = None,
     ) -> None:
         self._executor = executor
         self._receipts = receipts
         self._pools = pools
+        self._convergence_executor = convergence_executor
 
     def run(
         self,
@@ -241,7 +251,13 @@ class GraphScheduler:
             slots = int(node["resources"]["slots"])
             self._pools.acquire(pool, slots=slots)
             try:
-                result = self._executor(dict(node))
+                if node["kind"] == "convergence-loop" and self._convergence_executor:
+                    result = self._convergence_executor(
+                        dict(node),
+                        dict(compiled["loopBounds"][node_id]),
+                    )
+                else:
+                    result = self._executor(dict(node))
             finally:
                 self._pools.release(pool, slots=slots)
             if not isinstance(result, NodeExecutionResult):

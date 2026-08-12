@@ -238,3 +238,12 @@ class ExecutionReceiptJournal:
 
     def list_receipts(self) -> list[dict[str, Any]]:
         return [self._load(path) for path in sorted(self.complete_root.glob("*.json"))]
+
+    def list_run_receipts(self, run_id: str) -> list[dict[str, Any]]:
+        """Return immutable receipts belonging to one scheduler run."""
+        prefix = f"{run_id}:"
+        return [
+            receipt
+            for receipt in self.list_receipts()
+            if str(receipt.get("idempotencyKey", "")).startswith(prefix)
+        ]

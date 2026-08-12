@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from graph.ir import WorkflowGraphValidationError, validate_workflow_graph
+from graph.transform_ops import TRANSFORM_OPERATOR_NAMES
 
 KERNEL_CLASSIFICATION_PATH = (
     Path(__file__).resolve().parents[2]
@@ -126,6 +127,34 @@ def _assert_bounded_loops(
             )
 
 
+def _assert_transform_operators(
+    graph: Mapping[str, Any],
+    transform_operators: Mapping[str, str] | None,
+) -> dict[str, str]:
+    declared = dict(transform_operators or {})
+    transform_nodes = {
+        str(node["id"]) for node in graph["spec"]["nodes"] if node["kind"] == "transform"
+    }
+    unknown_nodes = set(declared) - transform_nodes
+    if unknown_nodes:
+        raise KernelCompilationError(
+            "transform operators reference non-transform node(s): "
+            + ", ".join(sorted(unknown_nodes))
+        )
+    missing = transform_nodes - set(declared)
+    if missing:
+        raise KernelCompilationError(
+            "transform node(s) must declare a closed-catalog operator: "
+            + ", ".join(sorted(missing))
+        )
+    unknown_operators = set(declared.values()) - TRANSFORM_OPERATOR_NAMES
+    if unknown_operators:
+        raise KernelCompilationError(
+            "unknown transform operator(s): " + ", ".join(sorted(unknown_operators))
+        )
+    return {node_id: declared[node_id] for node_id in sorted(declared)}
+
+
 def _assert_gates(
     graph: Mapping[str, Any],
     *,
@@ -155,6 +184,7 @@ def compile_workflow_graph(
     declared_credentials: Iterable[str] = (),
     declared_side_effects: Iterable[str] = (),
     loop_bounds: Mapping[str, Mapping[str, int]] | None = None,
+    transform_operators: Mapping[str, str] | None = None,
     proposed_steps: Sequence[str] | None = None,
 ) -> dict[str, Any]:
     """Validate and compile a graph to a non-executable, kernel-stamped artifact."""
@@ -178,6 +208,9 @@ def compile_workflow_graph(
         declared_side_effects=declared_side_effects,
     )
     _assert_bounded_loops(graph, loop_bounds)
+    registered_transform_operators = _assert_transform_operators(
+        graph, transform_operators
+    )
 
     classification = _classification()
     required_gates = _required_gate_steps(classification)
@@ -200,4 +233,6 @@ def compile_workflow_graph(
         "loopBounds": {
             key: dict(value) for key, value in sorted((loop_bounds or {}).items())
         },
+        "transformOperatorCatalog": sorted(TRANSFORM_OPERATOR_NAMES),
+        "transformOperators": registered_transform_operators,
     }
