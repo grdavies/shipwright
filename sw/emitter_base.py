@@ -14,8 +14,7 @@ EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "communi
 EXCLUDE_DIR_NAMES = {"__pycache__", "test", "tests", "unit_tests", ".git", "node_modules"}
 DEV_TEST_SCRIPT_DIRS = frozenset({"test", "tests", "unit_tests"})
 DEV_ONLY_SCRIPT_RELPATHS = (
-    "scripts/copy-to-core.sh",
-    "scripts/copy-to-core.py",
+    "scripts/core_content_sync.py",
     "scripts/snapshot-tree.sh",
     "scripts/snapshot-tree.py",
     "scripts/model-routing-check.sh",

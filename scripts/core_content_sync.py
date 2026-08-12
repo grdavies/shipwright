@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Refresh core/ workflow copies from repo-root sources (R5).
-
-Replaces ``copy-to-core.sh`` with stdlib JSON parsing and mirror-copy.
-"""
+"""Sync repo-root emittable content into core/ (PRD 091 R4 — scripts ship via zipapp only)."""
 
 from __future__ import annotations
 
@@ -19,9 +16,6 @@ from _sw.cli import build_parser, run_module_main
 
 PROVENANCE_REL = ".sw/build-chain-last-synced.json"
 
-# Repo-local operator state that lives under .sw/ but is never shipped as sw-reference content.
-# `credential-ci-selector.json` carries this repository's account, scope, and endpoint bindings
-# (PRD 080 R6); mirroring it would publish one repo's identity metadata into the plugin payload.
 OPERATOR_LOCAL_SW_FILES = (
     "build-chain-last-synced.json",
     "credential-ci-selector.json",
@@ -125,7 +119,7 @@ def _force_escape_allowed() -> bool:
 
 def _refuse_force_outside_escape() -> None:
     logging_setup.error(
-        "copy-to-core: --force is fixture/CI-only — set SW_BUILD_CHAIN_FORCE=1 in CI or use .sw/ remediation"
+        "core-content-sync: --force is fixture/CI-only — set SW_BUILD_CHAIN_FORCE=1 in CI or use .sw/ remediation"
     )
     raise SystemExit(1)
 
@@ -172,16 +166,16 @@ def check_core_sw_reference_divergence(
 
     if force:
         logging_setup.warning(
-            "copy-to-core: WARNING --force proceeding past core/sw-reference divergence: "
+            "core-content-sync: WARNING --force proceeding past core/sw-reference divergence: "
             + " ".join(diverged)
         )
         return
 
-    logging_setup.error("copy-to-core: refuse core-only divergence (fail-closed):")
+    logging_setup.error("core-content-sync: refuse core-only divergence (fail-closed):")
     for rel in diverged:
         logging_setup.error(f"  - {rel}")
     logging_setup.error(
-        "copy-to-core: copy edits into .sw/ then re-run, or use fixture/CI-only --force"
+        "core-content-sync: copy edits into .sw/ then re-run, or use fixture/CI-only --force"
     )
     raise SystemExit(1)
 
@@ -211,14 +205,14 @@ def check_sw_reference_orphans(core: Path, sw_dir: Path, manifest: dict, *, forc
         return
     if force:
         logging_setup.warning(
-            f"copy-to-core: WARNING --force deleting sw-reference orphans: {' '.join(orphans)}"
+            f"core-content-sync: WARNING --force deleting sw-reference orphans: {' '.join(orphans)}"
         )
         return
-    logging_setup.error("copy-to-core: refuse orphan deletion under core/sw-reference/ (fail-closed):")
+    logging_setup.error("core-content-sync: refuse orphan deletion under core/sw-reference/ (fail-closed):")
     for rel in orphans:
         logging_setup.error(f"  - {rel}")
     logging_setup.error(
-        "copy-to-core: add to coreAuthoredAllowlist, relocate to .sw/, deprecatedAllowlist, or use --force"
+        "core-content-sync: add to coreAuthoredAllowlist, relocate to .sw/, deprecatedAllowlist, or use --force"
     )
     raise SystemExit(1)
 
@@ -243,16 +237,6 @@ def sync(root: Path, *, force: bool = False) -> int:
             continue
         mirror.mirror(src, core / dirname, delete=True)
 
-    roles = manifest.get("roles") or {}
-    core_scripts = roles.get("coreScripts") or {}
-    scripts_excludes = list(core_scripts.get("excludes") or ["test/", "check-frozen.py"])
-    if "*.bak" not in scripts_excludes:
-        scripts_excludes.append("*.bak")
-    mirror.mirror(root / "scripts", core / "scripts", excludes=scripts_excludes, delete=True, purge_excludes=True)
-    frozen = core / "scripts" / "check-frozen.py"
-    if frozen.exists():
-        frozen.unlink()
-
     if sw_reference_input is not None:
         check_sw_reference_orphans(core, sw_reference_input, manifest, force=force)
         excludes = list(manifest.get("coreAuthoredAllowlist", [])) if sw_reference_input.name == ".sw" else []
@@ -260,14 +244,14 @@ def sync(root: Path, *, force: bool = False) -> int:
         mirror.mirror(sw_reference_input, core / "sw-reference", excludes=excludes, delete=True)
 
     _write_provenance(root, _sw_reference_tree_hashes(core / "sw-reference"))
-    logging_setup.info(f"copy-to-core: synced emittable content -> {core}")
+    logging_setup.info(f"core-content-sync: synced emittable content -> {core}")
     return 0
 
 
-def build_parser_copy() -> argparse.ArgumentParser:
+def build_parser_sync() -> argparse.ArgumentParser:
     parser = build_parser(
-        prog="copy-to-core",
-        description="Sync repo-root harness and content dirs into core/ per build-chain-sot.json.",
+        prog="core-content-sync",
+        description="Sync repo-root harness content dirs into core/ per build-chain-sot.json.",
     )
     parser.add_argument(
         "--force",
@@ -278,7 +262,7 @@ def build_parser_copy() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = build_parser_copy()
+    parser = build_parser_sync()
     args = parser.parse_args(argv)
     try:
         return sync(repo_root(), force=args.force)

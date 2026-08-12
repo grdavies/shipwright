@@ -46,14 +46,14 @@ COMPARE="$ROOT/scripts/test/parity-compare.sh"
 FAIL=0
 
 if [ ! -d "$CORE" ]; then
-  echo "FAIL core/ directory missing — run scripts/copy-to-core.sh"
+  echo "FAIL core/ directory missing — run python3 scripts/core_content_sync.py"
   exit 1
 fi
 
-if python3 "$ROOT/scripts/unit_tests/meta/harness_core_scripts_parity.py" >/dev/null 2>&1; then
-  echo "OK  core-scripts-parity wired"
+if python3 "$ROOT/scripts/test/run_pytest.py" "$ROOT/scripts/unit_tests/test_zipapp_manifest_completeness.py" -q >/dev/null 2>&1; then
+  echo "OK  zipapp-manifest-completeness wired"
 else
-  echo "FAIL core-scripts-parity"
+  echo "FAIL zipapp-manifest-completeness"
   FAIL=1
 fi
 

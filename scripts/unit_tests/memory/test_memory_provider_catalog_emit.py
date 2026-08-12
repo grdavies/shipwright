@@ -10,11 +10,11 @@ from pathlib import Path
 
 import pytest
 
-_SPEC = importlib.util.spec_from_file_location("copy_to_core", Path(__file__).resolve().parents[2] / "copy-to-core.py")
+_SPEC = importlib.util.spec_from_file_location("core_content_sync", Path(__file__).resolve().parents[2] / "core_content_sync.py")
 assert _SPEC and _SPEC.loader
-copy_to_core = importlib.util.module_from_spec(_SPEC)
-sys.modules["copy_to_core_emit_test"] = copy_to_core
-_SPEC.loader.exec_module(copy_to_core)
+core_content_sync = importlib.util.module_from_spec(_SPEC)
+sys.modules["core_content_sync_emit_test"] = core_content_sync
+_SPEC.loader.exec_module(core_content_sync)
 
 
 def _golden_path(repo_root: Path) -> Path:
@@ -37,18 +37,18 @@ def test_catalog_emit_matches_golden(repo_root: Path, artifact: str) -> None:
     emit = repo_root / row["emit"]
     assert source.is_file(), f"missing source authority: {row['source']}"
     assert emit.is_file(), f"missing emit mirror: {row['emit']}"
-    assert row["sync"] == "copy-to-core"
+    assert row["sync"] == "core-content-sync"
     assert source.read_bytes() == emit.read_bytes()
     assert _sha256(source) == row["sha256"]
 
 
-def test_copy_to_core_preserves_catalog_emit(repo_root: Path) -> None:
+def test_core_content_sync_preserves_catalog_emit(repo_root: Path) -> None:
     artifact = _load_golden(repo_root)["artifacts"][0]
     source = repo_root / artifact["source"]
     emit = repo_root / artifact["emit"]
     before = emit.read_bytes()
     proc = subprocess.run(
-        [sys.executable, str(repo_root / "scripts/copy-to-core.py")],
+        [sys.executable, str(repo_root / "scripts/core_content_sync.py")],
         cwd=str(repo_root),
         capture_output=True,
         text=True,
@@ -113,7 +113,7 @@ def test_core_only_catalog_orphan_refused(repo_root: Path, tmp_path: Path) -> No
     orphan = tmp_path / "core" / "sw-reference" / "memory-provider-catalog.json"
     orphan.write_text('{"version":1,"providers":{}}\n', encoding="utf-8")
     with pytest.raises(SystemExit) as exc:
-        copy_to_core.check_sw_reference_orphans(
+        core_content_sync.check_sw_reference_orphans(
             tmp_path / "core", tmp_path / ".sw", manifest, force=False
         )
     assert exc.value.code == 1

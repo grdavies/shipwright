@@ -5,7 +5,7 @@
     "core/**"
   ],
   "regenCommands": [
-    "python3 scripts/copy-to-core.py",
+    "python3 scripts/core_content_sync.py",
     "python3 -m sw generate --all"
   ]
 }

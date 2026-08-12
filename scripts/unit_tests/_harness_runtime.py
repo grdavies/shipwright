@@ -44,14 +44,14 @@ _BARE_SCRIPT_RENAMES = {
     "relief-acceptance-check.sh": "relief-acceptance-check.py",
     "spec-rigor-check.sh": "spec-rigor-check.py",
     "traceability-check.sh": "traceability-check.py",
-    "copy-to-core.sh": "copy-to-core.py",
+    "copy-to-core.sh": "core_content_sync.py",
     "host-doctor.sh": "host-doctor.py",
     "stabilize-merge-sync.sh": "stabilize-merge-sync.py",
     "rules-empty.sh": "rules-empty.py",
     "rules-fail.sh": "rules-fail.py",
     "rules-ok.sh": "rules-ok.py",
     "run-gate-fixtures.sh": "scripts/unit_tests/meta/harness_gate.py",
-    "run-core-scripts-parity-fixtures.sh": "scripts/unit_tests/meta/harness_core_scripts_parity.py",
+    "run-zipapp-manifest-completeness-fixtures.sh": "scripts/unit_tests/test_zipapp_manifest_completeness.py",
     "pre-commit-completed-unit.sh": "pre-commit-completed-unit.py",
     "authoring-guard.sh": "authoring-guard.py",
     "rules-*.sh": "rules-*.py",
@@ -130,7 +130,7 @@ content_path() {
 """.strip()
 
 
-_META = frozenset({"emitter", "parity", "claude_golden", "pr_test_plan", "core_scripts_parity", "gate", "inflight_guards_parity", "living_doc"})
+_META = frozenset({"emitter", "parity", "claude_golden", "pr_test_plan", "zipapp_manifest_completeness", "gate", "inflight_guards_parity", "living_doc"})
 _PLANNING = frozenset({"plan_killswitch", "plan_persist", "plan_proposed_parity"})
 
 

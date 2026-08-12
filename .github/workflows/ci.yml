@@ -26,8 +26,8 @@ jobs:
       - name: claude-golden-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_claude_golden.py -q
 
-      - name: core-scripts-parity-fixtures
-        run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_core_scripts_parity.py -q
+      - name: zipapp-manifest-completeness-fixtures
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/test_zipapp_manifest_completeness.py -q
 
       - name: emitter-fixtures
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/meta/test_emitter.py -q

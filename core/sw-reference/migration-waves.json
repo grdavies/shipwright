@@ -581,7 +581,7 @@
           "legacyBasename": "run_compound_completion_fixtures.py"
         },
         {
-          "id": "core-scripts-parity-fixtures",
+          "id": "zipapp-manifest-completeness-fixtures",
           "legacy": "scripts/test/run_core_scripts_parity_fixtures.py",
           "pytestPath": "scripts/unit_tests/meta",
           "kind": "python",

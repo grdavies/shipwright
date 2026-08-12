@@ -83,9 +83,13 @@ check_doc() {
 }
 
 # --- store-emitter-parity (R22) ---
+MANIFEST="$ROOT/dist/cursor/shipwright.manifest.json"
+if [[ ! -f "$MANIFEST" ]]; then
+  python3 "$ROOT/scripts/build_zipapp.py" build --dest "$ROOT/dist/cursor" >/dev/null 2>&1 || bad "store-emitter-parity: zipapp build failed"
+  MANIFEST="$ROOT/dist/cursor/shipwright.manifest.json"
+fi
 for rel in "${SCRIPTS_034[@]}"; do
   if [[ "$rel" == "planning_store.py" ]]; then
-    # Canonical lives at scripts/planning_store_facade.py; scripts/core/dist are shims (R27 phase 14).
     if [[ -f "$ROOT/scripts/planning_store_facade.py" && -f "$ROOT/scripts/$rel" ]] \
       && grep -q "planning-store-shim/v1" "$ROOT/scripts/$rel" \
       && grep -q "planning-store-shim/v1" "$ROOT/core/scripts/$rel"; then
@@ -95,10 +99,10 @@ for rel in "${SCRIPTS_034[@]}"; do
     fi
     continue
   fi
-  if [[ -f "$ROOT/scripts/$rel" && -f "$ROOT/core/scripts/$rel" ]] && cmp -s "$ROOT/scripts/$rel" "$ROOT/core/scripts/$rel"; then
+  if python3 -c "import json,sys; m=json.load(open('$MANIFEST')); sys.exit(0 if '$rel' in m.get('modules',[]) else 1)"; then
     :
   else
-    bad "store-emitter-parity:core/scripts/$rel"
+    bad "store-emitter-parity:zipapp-manifest/$rel"
   fi
 done
 for rel in "${PROVIDERS_034[@]}"; do
@@ -108,7 +112,7 @@ for rel in "${PROVIDERS_034[@]}"; do
     bad "store-emitter-parity:core/providers/planning-store/$rel"
   fi
 done
-[[ "$FAIL" -eq 0 ]] && ok "store-emitter-parity:copy-to-core"
+[[ "$FAIL" -eq 0 ]] && ok "store-emitter-parity:zipapp-manifest"
 
 python3 -c "
 import json
