@@ -332,6 +332,7 @@
     "global_plan_lint.py",
     "graph/__init__.py",
     "graph/artifact_registry.py",
+    "graph/convergence_loop.py",
     "graph/cost_telemetry.py",
     "graph/execution_receipts.py",
     "graph/fanin_policy.py",
@@ -339,12 +340,14 @@
     "graph/isolation_policy.py",
     "graph/kernel_compiler.py",
     "graph/legacy_adapters.py",
+    "graph/observability.py",
     "graph/resource_pools.py",
     "graph/router_nodes.py",
     "graph/scheduler.py",
     "graph/scheduling_modes.py",
     "graph/schema/node_spec.schema.json",
     "graph/schema/workflow_graph.schema.json",
+    "graph/transform_ops.py",
     "graph/typed_dataflow.py",
     "graph/verifier_policies.py",
     "guidelines_validate.py",
@@ -662,5 +665,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 659
+  "moduleCount": 662
 }

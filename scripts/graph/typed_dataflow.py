@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 from graph.artifact_registry import ArtifactRegistry
+from graph.transform_ops import apply_transform
 
 
 class DataflowError(ValueError):
@@ -90,3 +91,18 @@ def unnecessary_edge_report(
         for edge in edges
         if edge.edge_id not in consumed and not edge.required
     )
+
+
+def apply_dispatch_transform(
+    context: DispatchContext,
+    operator: str,
+    *,
+    input_edge_id: str,
+    options: Mapping[str, Any] | None = None,
+) -> Any:
+    """Apply a closed transform to one explicitly declared typed input."""
+    if input_edge_id not in context.inputs:
+        raise DataflowError(
+            f"transform input edge {input_edge_id!r} is not in the dispatch context"
+        )
+    return apply_transform(operator, context.inputs[input_edge_id], options)

@@ -61,6 +61,19 @@ def telemetry_from_receipt(
     )
 
 
+def observability_fields(receipt: Mapping[str, Any]) -> dict[str, Any]:
+    """Project receipt telemetry onto the stable read-only command surface."""
+    telemetry = telemetry_from_receipt(receipt)
+    return {
+        "tokens": telemetry.tokens,
+        "latencyMs": telemetry.latency_ms,
+        "attempts": telemetry.attempts,
+        "retries": telemetry.retries,
+        "verificationSurvived": telemetry.verification_survived,
+        "costPerAcceptedResult": telemetry.cost_per_accepted_result,
+    }
+
+
 def next_model_tier(
     current_tier: str,
     triggers: Iterable[str],
