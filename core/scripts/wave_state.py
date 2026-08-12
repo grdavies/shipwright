@@ -283,7 +283,7 @@ def _write_legacy_breadcrumb(root: Path, *, target: str, scoped_state: Path) -> 
     breadcrumb = {
         "migrated": True,
         "migratedAt": utc_now(),
-        "scopedPath": str(scoped_state.relative_to(root)),
+        "scopedPath": relative_under_anchor(scoped_state, root),
         "target": target,
     }
     legacy.parent.mkdir(parents=True, exist_ok=True)
@@ -316,7 +316,7 @@ def migrate_legacy_state(root: Path, target: str, scoped_state: Path) -> bool:
     breadcrumb = {
         "migrated": True,
         "migratedAt": utc_now(),
-        "scopedPath": str(scoped_state.relative_to(root)),
+        "scopedPath": relative_under_anchor(scoped_state, root),
         "target": target,
         "source_task_list": task_list,
     }
@@ -444,7 +444,7 @@ def enumerate_scoped_runs(root: Path) -> list[dict[str, Any]]:
             runs.append(
                 {
                     "slug": "(legacy)",
-                    "statePath": str(legacy.relative_to(root)),
+                    "statePath": relative_under_anchor(legacy, root),
                     "taskList": data.get("source_task_list"),
                     "verdict": data.get("verdict"),
                     "target": target_branch_from_state(data),
@@ -515,6 +515,21 @@ def path_normalize_anchor(start: Path) -> Path:
 
 # Back-compat alias for in-module callers.
 _path_normalize_anchor = path_normalize_anchor
+
+
+def relative_under_anchor(path: Path, root: Path) -> str:
+    """Return ``path`` relative to the normalized repo anchor.
+
+    macOS maps ``/var`` → ``/private/var`` under ``Path.resolve()``; state paths
+    built via ``_cursor_dir`` are resolved while callers often pass an
+    unresolved root, so bare ``path.relative_to(root)`` raises ValueError.
+    """
+    anchor = path_normalize_anchor(root)
+    resolved = path if path.is_absolute() else (anchor / path)
+    try:
+        return str(resolved.resolve().relative_to(anchor))
+    except ValueError:
+        return str(resolved.resolve().relative_to(root.resolve()))
 
 
 def _cursor_dir(root: Path) -> Path:
@@ -954,7 +969,7 @@ def cmd_resolve_state_path(root: Path, args: list[str]) -> None:
             "verdict": "pass",
             "action": "resolve-state-path",
             "path": str(path),
-            "relative": str(path.relative_to(root)) if path.is_relative_to(root) else str(path),
+            "relative": relative_under_anchor(path, root),
         }
     )
 
@@ -969,7 +984,7 @@ def cmd_resolve_lock_path(root: Path, args: list[str]) -> None:
             "verdict": "pass",
             "action": "resolve-lock-path",
             "path": str(path),
-            "relative": str(path.relative_to(root)),
+            "relative": relative_under_anchor(path, root),
         }
     )
 

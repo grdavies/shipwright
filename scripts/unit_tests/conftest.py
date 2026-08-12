@@ -75,8 +75,26 @@ def _dist_session_snapshot(repo_root: Path) -> Generator[Path, None, None]:
 
 @pytest.fixture(autouse=True)
 def _guard_cursor_worktree_artifacts(repo_root: Path) -> Generator[None, None, None]:
-    """Prevent cross-test pollution when embedded harnesses write under .cursor/."""
-    cursor = repo_root / ".cursor"
+    """Prevent cross-test pollution when embedded harnesses write under .cursor/.
+
+    Resolves the primary repo root via git-common-dir so linked worktrees
+    guard the shared .cursor tree rather than the worktree-local .cursor.
+    """
+    import subprocess as _sp
+
+    proc = _sp.run(
+        ["git", "-C", str(repo_root), "rev-parse", "--git-common-dir"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode == 0 and proc.stdout.strip():
+        common = Path(proc.stdout.strip())
+        if not common.is_absolute():
+            common = (repo_root / common).resolve()
+        primary_root = common.parent.resolve()
+    else:
+        primary_root = repo_root
+    cursor = primary_root / ".cursor"
     snap = _snapshot_cursor_tree(cursor)
     yield
     _restore_cursor_tree(cursor, snap)

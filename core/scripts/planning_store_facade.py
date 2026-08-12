@@ -118,9 +118,10 @@ materialize_missing_result = _planning_pkg.materialize_missing_result
 PlanningStoreBackend = _planning_pkg.PlanningStoreBackend
 
 DEFAULT_BACKEND = "in-repo-public"
-SHIPPED_BACKENDS = frozenset({"in-repo-public", "local-synced", "memory", "issue-store"})
+SHIPPED_BACKENDS = frozenset({"in-repo-public", "local-synced", "planning-cache", "issue-store"})
 DEFERRED_BACKENDS = frozenset({"private-repo", "encryption-at-rest"})
 ALL_BACKENDS = SHIPPED_BACKENDS | DEFERRED_BACKENDS
+BACKEND_CONFIG_ALIASES = {"memory": "planning-cache"}
 
 def _linear_live_client_wired() -> bool:
     """PRD 066 R9 — recognize Linear in ISSUES_PROVIDERS only when live client exists."""
@@ -1054,7 +1055,7 @@ PUT_JOURNAL_PATH = _backends.PUT_JOURNAL_PATH
 InRepoPublicBackend = _backends.InRepoPublicBackend
 IssueStoreBackend = _backends.IssueStoreBackend
 LocalSyncedBackend = _backends.LocalSyncedBackend
-MemoryLocalCacheBackend = _backends.MemoryLocalCacheBackend
+ReplicatedPlanningCacheBackend = _backends.ReplicatedPlanningCacheBackend
 issue_index_key = _backends.issue_index_key
 load_issue_unit_index = _backends.load_issue_unit_index
 load_put_journal = _backends.load_put_journal
@@ -1071,33 +1072,39 @@ FILE_BACKED_STORE_TXN_ID = _common.FILE_BACKED_STORE_TXN_ID
 finalize_materialize_from_get = _common.finalize_materialize_from_get
 
 # Re-export memory round-trip hooks for test monkeypatching (PRD 057 R21b).
-_memory_backend = load_submodule("backends.memory_cache")
+_planning_cache_backend = load_submodule("backends.memory_cache")
 
-_urlopen = _memory_backend._urlopen
-_provider_round_trip_put = _memory_backend._provider_round_trip_put
-_provider_round_trip_get = _memory_backend._provider_round_trip_get
-_recallium_rest_base = _memory_backend._recallium_rest_base
-_is_allowed_recallium_base = _memory_backend._is_allowed_recallium_base
+_urlopen = _planning_cache_backend._urlopen
+_provider_round_trip_put = _planning_cache_backend._provider_round_trip_put
+_provider_round_trip_get = _planning_cache_backend._provider_round_trip_get
+_recallium_rest_base = _planning_cache_backend._recallium_rest_base
+_is_allowed_recallium_base = _planning_cache_backend._is_allowed_recallium_base
 
 
 BACKEND_CLASSES: dict[str, type[PlanningStoreBackend]] = {
     "in-repo-public": InRepoPublicBackend,
     "issue-store": IssueStoreBackend,
     "local-synced": LocalSyncedBackend,
-    "memory": MemoryLocalCacheBackend,
+    "planning-cache": ReplicatedPlanningCacheBackend,
     "private-repo": DeferredBackend,
     "encryption-at-rest": DeferredBackend,
 }
 
 
 def resolve_backend_id(cfg: dict[str, Any], *, override: str | None = None) -> str:
+    if override:
+        override = BACKEND_CONFIG_ALIASES.get(override, override)
     if override and override in ALL_BACKENDS:
         return override
     store = store_section(cfg)
     pinned = store.get("pinnedBackend")
+    if isinstance(pinned, str):
+        pinned = BACKEND_CONFIG_ALIASES.get(pinned, pinned)
     if isinstance(pinned, str) and pinned in ALL_BACKENDS:
         return pinned
     backend = store.get("backend", DEFAULT_BACKEND)
+    if isinstance(backend, str):
+        backend = BACKEND_CONFIG_ALIASES.get(backend, backend)
     if isinstance(backend, str) and backend in ALL_BACKENDS:
         return backend
     return DEFAULT_BACKEND

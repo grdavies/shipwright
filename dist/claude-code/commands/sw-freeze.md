@@ -179,3 +179,5 @@ invoke the shim path; do not import the facade module from workflow commands.
 Freeze durability continues through `planning_store.py` → `planning_store_facade.py` and
 `check_frozen_lib.py` / `check-frozen.py`. No behavior change in this refresh — commit bumps docs-currency
 binding against current freeze helpers.
+
+<!-- currency: planning-cache rename / deliver path-anchor -->
