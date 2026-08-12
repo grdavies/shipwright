@@ -259,6 +259,6 @@ Inventory snapshot: 2026-07-29T08:03:47Z — 154 symbols,
 | --- | --- | --- | --- | --- | --- |
 | shim | `scripts/planning_store.py` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | generated; module-size exempt |
 | shim | `core/scripts/planning_store.py` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | core mirror |
-| shim | `dist/cursor/scripts/planning_store.py` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | cursor dist mirror |
-| shim | `dist/claude-code/scripts/planning_store.py` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | claude-code dist mirror |
+| shim | `dist/cursor/shipwright.pyz#planning_store.py` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | cursor zipapp module |
+| shim | `dist/claude-code/shipwright.pyz#planning_store.py` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | claude-code zipapp module |
 | condition | `compat-removal-milestone` | 15 | compat-removal | zero-inventoried-imports-across-enforced-trees | measurable removal gate |

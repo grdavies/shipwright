@@ -35,13 +35,13 @@ SHIM_EXEMPTIONS: tuple[dict[str, str], ...] = (
         "milestone": COMPAT_REMOVAL_MILESTONE,
     },
     {
-        "path": "dist/cursor/scripts/planning_store.py",
+        "path": "dist/cursor/shipwright.pyz#planning_store.py",
         "reason": "generated-compat-shim",
         "expiresWith": "compat-removal-milestone",
         "milestone": COMPAT_REMOVAL_MILESTONE,
     },
     {
-        "path": "dist/claude-code/scripts/planning_store.py",
+        "path": "dist/claude-code/shipwright.pyz#planning_store.py",
         "reason": "generated-compat-shim",
         "expiresWith": "compat-removal-milestone",
         "milestone": COMPAT_REMOVAL_MILESTONE,

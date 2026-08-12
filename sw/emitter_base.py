@@ -9,7 +9,7 @@ import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "scripts", "communication")
+EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "communication")
 
 EXCLUDE_DIR_NAMES = {"__pycache__", "test", "tests", "unit_tests", ".git", "node_modules"}
 DEV_TEST_SCRIPT_DIRS = frozenset({"test", "tests", "unit_tests"})
@@ -90,6 +90,64 @@ class EmitterBase(ABC):
     @abstractmethod
     def emit(self, core_root: Path, repo_root: Path, dest: Path) -> None:
         """Write the full platform tree to dest."""
+
+    def emit_zipapp_runtime(self, repo_root: Path, dest: Path) -> None:
+        """Build shipwright.pyz and install the per-host thin shim (PRD 091 R3)."""
+        import sys
+
+        scripts_dir = repo_root / "scripts"
+        if str(scripts_dir) not in sys.path:
+            sys.path.insert(0, str(scripts_dir))
+        from build_zipapp import build_archive  # noqa: WPS433
+
+        build_archive(repo_root, dest)
+        shim_dir = dest / "scripts"
+        shim_dir.mkdir(parents=True, exist_ok=True)
+        shim_path = shim_dir / "sw-run.py"
+        shim_path.write_text(self.render_zipapp_shim(), encoding="utf-8")
+        shim_path.chmod(0o755)
+
+    def render_zipapp_shim(self) -> str:
+        env_name = self.plugin_root_env_name()
+        return f'''#!/usr/bin/env python3
+"""Thin host shim — invoke Shipwright scripts via the versioned zipapp."""
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+_PLUGIN_ROOT_ENV = "{env_name}"
+
+
+def _resolve_pyz(plugin_root: Path) -> Path:
+    stable = plugin_root / "shipwright.pyz"
+    if stable.is_file():
+        return stable
+    candidates = sorted(plugin_root.glob("shipwright-*.pyz"))
+    if not candidates:
+        raise FileNotFoundError(f"no shipwright.pyz under {{plugin_root}}")
+    return candidates[-1]
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print("usage: sw-run.py <script.py> [args...]", file=sys.stderr)
+        return 2
+    plugin_root = Path(
+        os.environ.get(_PLUGIN_ROOT_ENV, Path(__file__).resolve().parent.parent)
+    )
+    pyz = _resolve_pyz(plugin_root)
+    env = os.environ.copy()
+    env.setdefault(_PLUGIN_ROOT_ENV, str(plugin_root))
+    cmd = [sys.executable, str(pyz), *sys.argv[1:]]
+    return subprocess.call(cmd, env=env)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+'''
 
     def copy_emittable_content(self, core_root: Path, dest: Path) -> list[str]:
         """Copy verbatim core subtrees; return relative paths written."""

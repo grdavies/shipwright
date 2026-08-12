@@ -127,13 +127,25 @@ else
 fi
 
 for dist in "$ROOT/dist/cursor" "$ROOT/dist/claude-code"; do
-  for rel in "${SCRIPTS_035[@]}"; do
-    if [[ ! -f "$dist/scripts/$rel" ]]; then
-      bad "emitter-freshness-035: missing $dist/scripts/$rel"
-    elif ! cmp -s "$ROOT/core/scripts/$rel" "$dist/scripts/$rel"; then
-      bad "emitter-freshness-035: drift $dist/scripts/$rel vs core/scripts/$rel"
-    fi
-  done
+  if [[ ! -f "$dist/shipwright.pyz" ]]; then
+    bad "emitter-freshness-035: missing $dist/shipwright.pyz"
+  fi
+  if [[ ! -f "$dist/scripts/sw-run.py" ]]; then
+    bad "emitter-freshness-035: missing $dist/scripts/sw-run.py"
+  fi
+  if find "$dist/scripts" -type f ! -name sw-run.py 2>/dev/null | grep -q .; then
+    bad "emitter-freshness-035: unexpected scripts tree under $dist/scripts (zipapp-only)"
+  fi
+  python3 - "$dist/shipwright.pyz" "${SCRIPTS_035[@]}" <<'PY' || bad "emitter-freshness-035: zipapp module check"
+import sys, zipfile
+pyz, *modules = sys.argv[1:]
+with zipfile.ZipFile(pyz) as zf:
+    names = set(zf.namelist())
+    for mod in modules:
+        rel = mod if mod.endswith(".py") else f"{mod}.py"
+        if rel not in names:
+            raise SystemExit(f"missing {rel} in {pyz}")
+PY
   for rel in "${SW_REFERENCE[@]}"; do
     if [[ ! -f "$dist/core/sw-reference/$rel" ]]; then
       bad "emitter-freshness-035: missing $dist/core/sw-reference/$rel"

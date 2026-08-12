@@ -74,9 +74,18 @@ for p in (Path('$ROOT/.sw/config.schema.json'), Path('$ROOT/core/sw-reference/co
 
 $GEN generate --all >/dev/null 2>&1 || bad "emitter-parity-planning-autonomy: generate failed"
 for dist in "$ROOT/dist/cursor" "$ROOT/dist/claude-code"; do
-  for rel in "${SCRIPTS_033[@]}"; do
-    [[ -f "$dist/scripts/$rel" ]] || bad "emitter-parity-planning-autonomy: missing $dist/scripts/$rel"
-  done
+  [[ -f "$dist/shipwright.pyz" ]] || bad "emitter-parity-planning-autonomy: missing $dist/shipwright.pyz"
+  [[ -f "$dist/scripts/sw-run.py" ]] || bad "emitter-parity-planning-autonomy: missing $dist/scripts/sw-run.py"
+  python3 - "$dist/shipwright.pyz" "${SCRIPTS_033[@]}" <<'PY' || bad "emitter-parity-planning-autonomy: zipapp modules"
+import sys, zipfile
+pyz, *modules = sys.argv[1:]
+with zipfile.ZipFile(pyz) as zf:
+    names = set(zf.namelist())
+    for mod in modules:
+        rel = mod if mod.endswith(".py") else f"{mod}.py"
+        if rel not in names:
+            raise SystemExit(f"missing {rel} in {pyz}")
+PY
   for schema in .sw/config.schema.json core/sw-reference/config.schema.json; do
   if [[ -f "$dist/$schema" ]]; then
     python3 -c "import json; json.load(open('$dist/$schema'))" || bad "emitter-parity-planning-autonomy: invalid $dist/$schema"

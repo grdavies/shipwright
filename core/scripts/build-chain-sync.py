@@ -38,7 +38,7 @@ def _snapshot_dist(root: Path, dest: Path) -> None:
     dest.mkdir(parents=True, exist_ok=True)
     for d in _dist_dirs(root):
         if d.is_dir():
-            shutil.copytree(d, dest / d.name, dirs_exist_ok=True)
+            shutil.copytree(d, dest / d.name, dirs_exist_ok=True, symlinks=True)
 
 
 def _restore_dist_snapshot(root: Path, snap: Path) -> None:
@@ -49,7 +49,7 @@ def _restore_dist_snapshot(root: Path, snap: Path) -> None:
         if dst.exists():
             shutil.rmtree(dst, ignore_errors=True)
         if src.is_dir():
-            shutil.copytree(src, dst)
+            shutil.copytree(src, dst, symlinks=True)
 
 
 

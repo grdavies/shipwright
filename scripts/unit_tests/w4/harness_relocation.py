@@ -62,6 +62,10 @@ fi
 # dist depth 3) — require presence + marker, not byte identity (PRD 082 R27).
 while IFS=$'\t' read -r path hash; do
   [ -n "$path" ] || continue
+  if [ "$path" = "scripts/sw-run.py" ]; then
+    # Emitter-generated zipapp shim — dist-only, not mirrored under core/scripts/.
+    continue
+  fi
   core_file="$CORE/$path"
   if [ ! -f "$core_file" ]; then
     echo "FAIL relocation-coverage missing core/$path"
