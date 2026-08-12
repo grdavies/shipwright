@@ -12,12 +12,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from sw_hook_util import (
+    ensure_plugin_scripts_importable,
     filter_rules_by_allowlist,
     guardrails_enforce_before_submit,
     guardrails_require_rule_class,
     load_allowlist,
     load_config,
     memory_provider_marker_path,
+    plugin_scripts_sys_path_entries,
     resolve_memory_provider,
     rules_script_for_provider,
     synthetic_config_from_marker,
@@ -39,11 +41,7 @@ _HOOK_ADAPTER_CONTEXT_KEYS = ("SW_WORKSPACE_ROOT",)
 
 
 def _ensure_credentials_importable(plugin_root: Path) -> None:
-    scripts = plugin_root / "scripts"
-    if scripts.is_dir():
-        entry = str(scripts)
-        if entry not in sys.path:
-            sys.path.insert(0, entry)
+    ensure_plugin_scripts_importable(plugin_root)
 
 
 def _is_path_under_plugin(path: Path, plugin_root: Path) -> bool:
@@ -84,10 +82,8 @@ def _resolve_rules_script_override(plugin_root: Path) -> Path | None:
 
 def _pythonpath_for_plugin(plugin_root: Path) -> str:
     entries: list[str] = []
-    scripts = plugin_root / "scripts"
-    if scripts.is_dir():
-        entries.append(str(scripts))
-    entries.append(str(plugin_root))
+    entries.extend(plugin_scripts_sys_path_entries(plugin_root))
+    entries.append(str(plugin_root.resolve()))
     if os.environ.get("SW_HARNESS", "").strip() == "1":
         repo_root = plugin_root.parent.parent
         for rel in ("scripts", "scripts/test", "scripts/unit_tests"):
