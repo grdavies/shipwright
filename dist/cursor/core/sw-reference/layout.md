@@ -953,6 +953,8 @@ There is no silent substitution to a different backend id.
 Reconciling a refused write after inspection is a **human decision** — ledger export surfaces operator-runnable
 record commands only; purge is journaled and does not replay refused writes.
 
+**Fail-closed remote sync (PRD 091 R2):** when `planning.store.backend` is `planning-cache` and `scripts/planning_authority.py` `has_configured_remote_planning_authority` is true, `ReplicatedPlanningCacheBackend` sync failures route into the projection outbox as blocking dirty/refused state (no silent local-only degrade). With no remote authority configured, local-only operation continues unchanged.
+
 **Projection outbox (PRD 090 R5):** `scripts/planning_projection_ledger.py` records durable outbox delivery
 events with derived dirty state. Mutating authority calls drain pending outbox destinations; refusal-ledger
 writes map onto outbox destinations so projection catch-up survives outages/retries without silent drop.

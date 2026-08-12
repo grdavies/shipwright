@@ -51,6 +51,8 @@ Projection-only writes may map to `refuse-ledger` under policy — substantive r
 operator-local refusal ledger (`.cursor/sw-refusal-ledger` by default). Reconciling a refused write remains a
 human decision.
 
+**Fail-closed remote sync (PRD 091 R2):** `has_configured_remote_planning_authority` detects a configured remote sync endpoint for the planning-cache backend. Sync failure then surfaces via the projection outbox as blocking dirty/refused state; absence of remote authority preserves local-only behavior with no new failure.
+
 Authority mutations drain the durable projection **outbox** (`planning_projection_ledger.py`, PRD 090 R5):
 pending destination events carry derived dirty state and retry across outages without silent fallback to
 another backend.
