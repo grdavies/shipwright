@@ -89,10 +89,10 @@
       "ciShard": 1
     },
     {
-      "id": "zipapp-manifest-completeness-fixtures",
+      "id": "core-scripts-parity-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
-        "scripts/unit_tests/test_zipapp_manifest_completeness.py",
+        "scripts/unit_tests/meta",
         "-q"
       ],
       "classification": "required",

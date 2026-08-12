@@ -79,27 +79,27 @@ else
 fi
 
 
-# --- ci-yml-includes-zipapp-manifest-completeness (R5) ---
-if grep -q 'test_zipapp_manifest_completeness.py' "$ROOT/.github/workflows/ci.yml"; then
-  ok "ci-yml-includes-zipapp-manifest-completeness"
+# --- ci-yml-includes-core-scripts-parity (R5) ---
+if grep -q 'test_core_scripts_parity.py' "$ROOT/.github/workflows/ci.yml"; then
+  ok "ci-yml-includes-core-scripts-parity"
 else
-  bad "ci-yml-includes-zipapp-manifest-completeness"
+  bad "ci-yml-includes-core-scripts-parity"
 fi
 
-# --- verify-test-registers-zipapp-manifest-completeness (R6) ---
+# --- verify-test-registers-core-scripts-parity (R6) ---
 if python3 -c "
 import json
 m=json.load(open('$ROOT/core/sw-reference/pr-test-plan.manifest.json'))
 ids=[f['id'] for f in m.get('fixtures',[])]
-assert 'zipapp-manifest-completeness-fixtures' in ids
-match=[f for f in m['fixtures'] if f['id']=='zipapp-manifest-completeness-fixtures'][0]
+assert 'core-scripts-parity-fixtures' in ids
+match=[f for f in m['fixtures'] if f['id']=='core-scripts-parity-fixtures'][0]
 assert match['script']=='scripts/test/run_pytest.py'
 args=match.get('args') or []
-assert any('test_zipapp_manifest_completeness' in str(a) for a in args)
+assert any('test_core_scripts_parity' in str(a) for a in args)
 "; then
-  ok "verify-test-registers-zipapp-manifest-completeness"
+  ok "verify-test-registers-core-scripts-parity"
 else
-  bad "verify-test-registers-zipapp-manifest-completeness"
+  bad "verify-test-registers-core-scripts-parity"
 fi
 
 

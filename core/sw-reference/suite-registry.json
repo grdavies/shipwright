@@ -239,7 +239,7 @@
       "pytestPath": "scripts/unit_tests/w4"
     },
     {
-      "id": "zipapp-manifest-completeness-fixtures",
+      "id": "core-scripts-parity-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
         "ci-yml",
@@ -247,7 +247,7 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-pytest-required-shard-1",
-      "pytestPath": "scripts/unit_tests",
+      "pytestPath": "scripts/unit_tests/meta",
       "ciShard": 1
     },
     {
