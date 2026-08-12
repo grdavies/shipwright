@@ -330,6 +330,10 @@
     "gitignore-generate.py",
     "gitignore_generate.py",
     "global_plan_lint.py",
+    "graph/__init__.py",
+    "graph/fanin_policy.py",
+    "graph/isolation_policy.py",
+    "graph/resource_pools.py",
     "guidelines_validate.py",
     "halt_resume.py",
     "harness_isolation_lint.py",
@@ -645,5 +649,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 642
+  "moduleCount": 646
 }
