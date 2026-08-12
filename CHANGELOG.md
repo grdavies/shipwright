@@ -798,6 +798,7 @@
 * merge phase wave-d-authoritative-scheduler-r9 into feat/prd-graph-engineering-runtime-first-program (1e6a251) <!-- sw-deliver:wave-d-authoritative-scheduler-r9 -->
 * merge phase wave-e-scheduler-dependent-capabilities-r10-r11-r13-r15-r16-r17 into feat/prd-graph-engineering-runtime-first-program (dc74120) <!-- sw-deliver:wave-e-scheduler-dependent-capabilities-r10-r11-r13-r15-r16-r17 -->
 * merge phase wave-f-second-order-capabilities-r12-r14-r21 into feat/prd-graph-engineering-runtime-first-program (3f55c4a) <!-- sw-deliver:wave-f-second-order-capabilities-r12-r14-r21 -->
+* merge phase wave-g-cutover-r18 into feat/prd-graph-engineering-runtime-first-program (638e5c3) <!-- sw-deliver:wave-g-cutover-r18 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
