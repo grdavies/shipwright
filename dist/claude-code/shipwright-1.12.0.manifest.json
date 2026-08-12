@@ -338,6 +338,7 @@
     "graph/isolation_policy.py",
     "graph/kernel_compiler.py",
     "graph/resource_pools.py",
+    "graph/scheduler.py",
     "graph/schema/node_spec.schema.json",
     "graph/schema/workflow_graph.schema.json",
     "guidelines_validate.py",
@@ -655,5 +656,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 652
+  "moduleCount": 653
 }
