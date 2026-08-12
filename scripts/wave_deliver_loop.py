@@ -2794,7 +2794,10 @@ def _execute_mechanical_inner(
             "reclaimed": bool(data.get("reclaimed")),
         }
         save_state(root, state)
-        persist_cursor(root, state, "state-init")
+        # When phases already exist (re-acquire after lock loss), skip back to run-init.
+        # Queuing state-init after a mutation-class nextAction violates R19 precedence.
+        next_after_lock = "state-init" if not state.get("phases") else "base-capture"
+        persist_cursor(root, state, next_after_lock)
         # Keep executed/action after **data so target-lock payload cannot overwrite them.
         return {**data, "target": target, "executed": "lock-acquire", "action": "lock-acquire"}
 
