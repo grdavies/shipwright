@@ -50,7 +50,7 @@ def _copy_dist_platform(src: Path, dest: Path) -> None:
     if dest.exists():
         shutil.rmtree(dest, ignore_errors=True)
     if src.is_dir():
-        shutil.copytree(src, dest)
+        shutil.copytree(src, dest, symlinks=True)
 
 
 def _restore_dist_platforms(repo_root: Path, snap_root: Path) -> None:
@@ -68,15 +68,33 @@ def _dist_session_snapshot(repo_root: Path) -> Generator[Path, None, None]:
     for name in ("cursor", "claude-code"):
         src = repo_root / "dist" / name
         if src.is_dir():
-            shutil.copytree(src, snap_root / name)
+            shutil.copytree(src, snap_root / name, symlinks=True)
     yield snap_root
     shutil.rmtree(snap_root, ignore_errors=True)
 
 
 @pytest.fixture(autouse=True)
 def _guard_cursor_worktree_artifacts(repo_root: Path) -> Generator[None, None, None]:
-    """Prevent cross-test pollution when embedded harnesses write under .cursor/."""
-    cursor = repo_root / ".cursor"
+    """Prevent cross-test pollution when embedded harnesses write under .cursor/.
+
+    Resolves the primary repo root via git-common-dir so linked worktrees
+    guard the shared .cursor tree rather than the worktree-local .cursor.
+    """
+    import subprocess as _sp
+
+    proc = _sp.run(
+        ["git", "-C", str(repo_root), "rev-parse", "--git-common-dir"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode == 0 and proc.stdout.strip():
+        common = Path(proc.stdout.strip())
+        if not common.is_absolute():
+            common = (repo_root / common).resolve()
+        primary_root = common.parent.resolve()
+    else:
+        primary_root = repo_root
+    cursor = primary_root / ".cursor"
     snap = _snapshot_cursor_tree(cursor)
     yield
     _restore_cursor_tree(cursor, snap)

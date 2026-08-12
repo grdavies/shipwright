@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified build-chain sync (PRD 060 R12 — generate → golden → copy-to-core)."""
+"""Unified build-chain sync (PRD 060 R12 — generate → golden → core content sync)."""
 from __future__ import annotations
 
 import hashlib
@@ -38,7 +38,7 @@ def _snapshot_dist(root: Path, dest: Path) -> None:
     dest.mkdir(parents=True, exist_ok=True)
     for d in _dist_dirs(root):
         if d.is_dir():
-            shutil.copytree(d, dest / d.name, dirs_exist_ok=True)
+            shutil.copytree(d, dest / d.name, dirs_exist_ok=True, symlinks=True)
 
 
 def _restore_dist_snapshot(root: Path, snap: Path) -> None:
@@ -49,7 +49,7 @@ def _restore_dist_snapshot(root: Path, snap: Path) -> None:
         if dst.exists():
             shutil.rmtree(dst, ignore_errors=True)
         if src.is_dir():
-            shutil.copytree(src, dst)
+            shutil.copytree(src, dst, symlinks=True)
 
 
 
@@ -65,7 +65,7 @@ def _run_generate_pipeline(root: Path, *, capture: bool = False) -> int:
     kwargs = {"cwd": str(root), "capture_output": capture}
     if subprocess.run([sys.executable, "-m", "sw", "generate", "--all"], **kwargs).returncode != 0:
         return 1
-    if subprocess.run([sys.executable, str(root / "scripts/copy-to-core.py")], **kwargs).returncode != 0:
+    if subprocess.run([sys.executable, str(root / "scripts/core_content_sync.py")], **kwargs).returncode != 0:
         return 1
     if _refresh_planning_store_shims(root) != 0:
         return 1
@@ -92,7 +92,7 @@ def main(argv=None):
         fail = 0
         for cmd in (
             [sys.executable, str(root / "scripts/build-chain-sot-lint.py")],
-            [sys.executable, str(root / "scripts/test/run_pytest.py"), "scripts/unit_tests/meta/test_core_scripts_parity.py", "-q"],
+            [sys.executable, str(root / "scripts/test/run_pytest.py"), "scripts/unit_tests/test_zipapp_manifest_completeness.py", "-q"],
             [sys.executable, str(root / "scripts/test/run_pytest.py"), "scripts/unit_tests/meta/test_parity.py", "-q"],
         ):
             if subprocess.run(cmd, cwd=str(root), capture_output=True).returncode != 0:

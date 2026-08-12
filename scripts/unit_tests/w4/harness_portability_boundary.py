@@ -46,7 +46,7 @@ bad() { echo "FAIL $1"; FAIL=1; }
 EXAMPLE="$ROOT/core/sw-reference/workflow.config.example.json"
 SW_EXAMPLE="$ROOT/.sw/workflow.config.example.json"
 DIST_CURSOR="$ROOT/dist/cursor"
-DEV_SCRIPTS=(copy-to-core.py snapshot-tree.py model-routing-check.py)
+DEV_SCRIPTS=(core_content_sync.py snapshot-tree.py model-routing-check.py)
 CLOSED_SWREF=(
   config.schema.json
   layout.md

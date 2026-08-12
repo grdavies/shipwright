@@ -5,7 +5,7 @@ Proves, fully offline and deterministically (fake Recallium REST transport
 via `planning_store._urlopen` monkeypatch, no network, no live server):
 
 1. **Zero: no provider configured stays local-cache-only (21a unchanged)** —
-   `MemoryLocalCacheBackend.put`/`get` round-trip content byte-exact through
+   `ReplicatedPlanningCacheBackend.put`/`get` round-trip content byte-exact through
    the gitignored local cache alone when no memory provider is configured,
    `providerRoundTrip: false` / `providerRoundTripReason: provider-not-configured`
    is recorded, and no network call is attempted.
@@ -23,11 +23,11 @@ via `planning_store._urlopen` monkeypatch, no network, no live server):
    `_is_allowed_recallium_base` rejects it and the round-trip degrades to
    `provider-rest-base-unavailable`, never raising and never leaking the
    body to an untrusted host.
-5. **Exceptions: a provider outage degrades to the R21a local cache, not a
-   failure** — a connection-refused/timeout transport still yields a `put()`
-   verdict of `ok` served from the local cache (`providerRoundTripReason`
-   starts with `provider-unreachable:`), and a subsequent `get()` still
-   returns the exact content from the local cache.
+5. **Exceptions: provider outage behavior depends on remote authority (PRD 091 R2)** —
+   with no memory provider configured, a transport outage still degrades to the R21a
+   local cache. With recallium + loopback REST configured, the same outage routes
+   into the projection outbox as a blocking dirty state (fail-closed) while still
+   writing the local cache.
 6. **Interfaces: `exists()` also consults the provider when the local cache
    is absent** — mirrors the `get()` recovery path so callers relying on
    `exists()` for a fresh checkout are not falsely told a unit is missing.
@@ -59,7 +59,7 @@ if str(SCRIPTS) not in sys.path:
 import planning_store as ps  # noqa: E402
 
 RECALLIUM_CFG = {
-    "planning": {"store": {"backend": "memory"}},
+    "planning": {"store": {"backend": "planning-cache"}},
     "memory": {
         "provider": "recallium",
         "project": "roundtrip-fixture",
@@ -67,7 +67,7 @@ RECALLIUM_CFG = {
     },
 }
 
-NO_PROVIDER_CFG = {"planning": {"store": {"backend": "memory"}}}
+NO_PROVIDER_CFG = {"planning": {"store": {"backend": "planning-cache"}}}
 
 
 class _FakeResponse:
@@ -124,10 +124,10 @@ def _seed_provider_catalog(tmp_root: Path) -> None:
     dest.write_text(catalog_src.read_text(encoding="utf-8"), encoding="utf-8")
 
 
-def _new_backend(tmp_root: Path, cfg: dict) -> "ps.MemoryLocalCacheBackend":
+def _new_backend(tmp_root: Path, cfg: dict) -> "ps.ReplicatedPlanningCacheBackend":
     (tmp_root / ".cursor").mkdir(parents=True, exist_ok=True)
     _seed_provider_catalog(tmp_root)
-    return ps.MemoryLocalCacheBackend(tmp_root, cfg)
+    return ps.ReplicatedPlanningCacheBackend(tmp_root, cfg)
 
 
 def check_zero_no_provider_stays_local_cache_only() -> dict:
@@ -221,7 +221,7 @@ def check_many_cross_machine_recovery_through_provider() -> dict:
 
 def check_boundary_ssrf_guard_blocks_non_loopback_base() -> dict:
     disallowed_cfg = {
-        "planning": {"store": {"backend": "memory"}},
+        "planning": {"store": {"backend": "planning-cache"}},
         "memory": {
             "provider": "recallium",
             "project": "roundtrip-fixture",
@@ -261,12 +261,12 @@ def check_boundary_ssrf_guard_blocks_non_loopback_base() -> dict:
     }
 
 
-def check_exceptions_provider_outage_degrades_to_local_cache() -> dict:
+def check_exceptions_no_remote_authority_outage_degrades_to_local_cache() -> dict:
     original = ps._urlopen
     ps._urlopen = UnreachableTransport().urlopen
     try:
         with tempfile.TemporaryDirectory() as tmp:
-            backend = _new_backend(Path(tmp), RECALLIUM_CFG)
+            backend = _new_backend(Path(tmp), NO_PROVIDER_CFG)
             put_result = backend.put("005-exceptions", "x", "outage content")
             got = backend.get("005-exceptions", "x")
     finally:
@@ -274,14 +274,40 @@ def check_exceptions_provider_outage_degrades_to_local_cache() -> dict:
     ok = (
         put_result.verdict == "ok"
         and put_result.notice is not None
-        and "provider-unreachable:" in put_result.notice
+        and "R21a local cache" in put_result.notice
         and got.verdict == "ok"
         and got.content == "outage content"
     )
     return {
-        "name": "exceptions-provider-outage-degrades-to-local-cache",
+        "name": "exceptions-no-remote-authority-outage-degrades-to-local-cache",
         "ok": ok,
         "detail": f"putNotice={put_result.notice!r} getVerdict={got.verdict} contentMatch={got.content == 'outage content'}",
+    }
+
+
+def check_exceptions_remote_authority_outage_marks_projection_dirty() -> dict:
+    import planning_projection_ledger as ppl
+
+    original = ps._urlopen
+    ps._urlopen = UnreachableTransport().urlopen
+    try:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            backend = _new_backend(root, RECALLIUM_CFG)
+            put_result = backend.put("005b-exceptions", "x", "outage content")
+            dirty = ppl.projection_is_dirty(root)
+    finally:
+        ps._urlopen = original
+    ok = (
+        put_result.verdict == "ok"
+        and put_result.notice is not None
+        and "projection dirty (fail-closed)" in put_result.notice
+        and dirty is True
+    )
+    return {
+        "name": "exceptions-remote-authority-outage-marks-projection-dirty",
+        "ok": ok,
+        "detail": f"putNotice={put_result.notice!r} projectionDirty={dirty}",
     }
 
 
@@ -332,7 +358,8 @@ def main() -> int:
         check_one_successful_round_trip_is_real(),
         check_many_cross_machine_recovery_through_provider(),
         check_boundary_ssrf_guard_blocks_non_loopback_base(),
-        check_exceptions_provider_outage_degrades_to_local_cache(),
+        check_exceptions_no_remote_authority_outage_degrades_to_local_cache(),
+        check_exceptions_remote_authority_outage_marks_projection_dirty(),
         check_interfaces_exists_consults_provider_when_cache_absent(),
         check_simple_never_written_is_clean_missing(),
     ]

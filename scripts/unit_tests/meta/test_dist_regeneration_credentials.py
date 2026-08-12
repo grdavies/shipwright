@@ -42,7 +42,11 @@ def test_o_credential_dist_drift_is_detected(repo_root: Path, tmp_path: Path) ->
     assert gen.generate_all(repo_root) == 0
     rel_paths = gen.credential_affected_rel_paths(repo_root)
     assert rel_paths
-    target_rel = next(rel for rel in rel_paths if (repo_root / "core" / rel).is_file())
+    target_rel = next(
+        rel
+        for rel in rel_paths
+        if (repo_root / "core" / rel).is_file() and rel.startswith("commands/")
+    )
     dist_path = repo_root / "dist" / "cursor" / target_rel
     original = dist_path.read_bytes()
     dist_path.write_bytes(original + b"\n")
@@ -58,7 +62,11 @@ def test_m_regenerate_restores_credential_dist_parity(repo_root: Path) -> None:
     gen = _load_generate_all(repo_root)
     assert gen.generate_all(repo_root) == 0
     rel_paths = gen.credential_affected_rel_paths(repo_root)
-    target_rel = next(rel for rel in rel_paths if (repo_root / "core" / rel).is_file())
+    target_rel = next(
+        rel
+        for rel in rel_paths
+        if (repo_root / "core" / rel).is_file() and rel.startswith("commands/")
+    )
     dist_path = repo_root / "dist" / "cursor" / target_rel
     original = dist_path.read_bytes()
     dist_path.write_bytes(original + b"\n")
@@ -76,7 +84,11 @@ def test_e_sw_generate_all_fails_on_residual_drift(
     gen = _load_generate_all(repo_root)
     assert gen.generate_all(repo_root) == 0
     rel_paths = gen.credential_affected_rel_paths(repo_root)
-    target_rel = next(rel for rel in rel_paths if (repo_root / "core" / rel).is_file())
+    target_rel = next(
+        rel
+        for rel in rel_paths
+        if (repo_root / "core" / rel).is_file() and rel.startswith("commands/")
+    )
     dist_path = repo_root / "dist" / "claude-code" / target_rel
     original = dist_path.read_bytes()
     dist_path.write_bytes(original + b"# drift\n")

@@ -936,7 +936,9 @@ Bidirectional file ⇄ issue migration records durable per-artifact state under 
 Dry-run (no `--apply`) must not create or update this file. Command surface: `/sw-migrate` /
 `scripts/planning_migrate.py` `store-files-to-issues` | `store-issues-to-files`.
 
-## Planning backend and authority (PRD 082 R26/R27)
+## Planning backend and authority
+> Planning body cache (planning-cache rename): replicated planning-cache backend lives under `.cursor/sw-planning-cache/planning-bodies/` (migrated from `.cursor/sw-memory/planning-bodies/`); implementation type `ReplicatedPlanningCacheBackend`.
+ (PRD 082 R26/R27)
 
 Authority resolution is **backend-neutral** — `scripts/planning_authority.py` returns `authorityState`
 (`online` | `read-only` | `blocked`), `writeDisposition`, and `reason` for the **configured** backend only.
@@ -950,6 +952,8 @@ There is no silent substitution to a different backend id.
 
 Reconciling a refused write after inspection is a **human decision** — ledger export surfaces operator-runnable
 record commands only; purge is journaled and does not replay refused writes.
+
+**Fail-closed remote sync (PRD 091 R2):** when `planning.store.backend` is `planning-cache` and `scripts/planning_authority.py` `has_configured_remote_planning_authority` is true, `ReplicatedPlanningCacheBackend` sync failures route into the projection outbox as blocking dirty/refused state (no silent local-only degrade). With no remote authority configured, local-only operation continues unchanged.
 
 **Projection outbox (PRD 090 R5):** `scripts/planning_projection_ledger.py` records durable outbox delivery
 events with derived dirty state. Mutating authority calls drain pending outbox destinations; refusal-ledger

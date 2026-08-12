@@ -39,8 +39,8 @@ def _local_synced_cfg(sync_dir: Path) -> dict:
     }
 
 
-def _memory_cfg() -> dict:
-    return {"version": 1, "planning": {"store": {"backend": "memory"}}}
+def _planning_cache_cfg() -> dict:
+    return {"version": 1, "planning": {"store": {"backend": "planning-cache"}}}
 
 
 def _assert_generic_contract(backend: PlanningStoreBackend) -> None:
@@ -87,8 +87,8 @@ def test_local_synced_backend_round_trips(tmp_path: Path) -> None:
     _round_trip(backend, tmp_path, tmp_path / "out/body.md")
 
 
-def test_memory_backend_round_trips(tmp_path: Path) -> None:
-    backend = backends.MemoryLocalCacheBackend(tmp_path, _memory_cfg())
+def test_planning_cache_backend_round_trips(tmp_path: Path) -> None:
+    backend = backends.ReplicatedPlanningCacheBackend(tmp_path, _planning_cache_cfg())
     _round_trip(backend, tmp_path, tmp_path / "out/body.md")
 
 
@@ -101,7 +101,7 @@ def test_backend_classes_match_planning_store() -> None:
     assert ps.InRepoPublicBackend is backends.InRepoPublicBackend
     assert ps.IssueStoreBackend is backends.IssueStoreBackend
     assert ps.LocalSyncedBackend is backends.LocalSyncedBackend
-    assert ps.MemoryLocalCacheBackend is backends.MemoryLocalCacheBackend
+    assert ps.ReplicatedPlanningCacheBackend is backends.ReplicatedPlanningCacheBackend
 
 
 def test_get_backend_factory_uses_adapters(tmp_path: Path) -> None:
