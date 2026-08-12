@@ -793,6 +793,7 @@
 * merge phase fail-closed-remote-sync-failure-mode-r2 into feat/prd-planning-cache-rename-and-canonical-runtime-packaging (2fd22ec) <!-- sw-deliver:fail-closed-remote-sync-failure-mode-r2 -->
 * merge phase build-manifest-completeness-check-r4 into feat/prd-planning-cache-rename-and-canonical-runtime-packaging (05ba79b) <!-- sw-deliver:build-manifest-completeness-check-r4 -->
 * merge phase wave-a-foundations-terminology-pools-fan-in-isolation-r1-r6-r7-r8 into feat/prd-graph-engineering-runtime-first-program (ac8c804) <!-- sw-deliver:wave-a-foundations-terminology-pools-fan-in-isolation-r1-r6-r7-r8 -->
+* merge phase wave-b-runtime-ir-r2 into feat/prd-graph-engineering-runtime-first-program (57b38e5) <!-- sw-deliver:wave-b-runtime-ir-r2 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
