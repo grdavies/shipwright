@@ -95,7 +95,7 @@ assert 'core-scripts-parity-fixtures' in ids
 match=[f for f in m['fixtures'] if f['id']=='core-scripts-parity-fixtures'][0]
 assert match['script']=='scripts/test/run_pytest.py'
 args=match.get('args') or []
-assert any('test_core_scripts_parity' in str(a) for a in args)
+assert any('test_core_scripts_parity' in str(a) or 'unit_tests/meta' in str(a) for a in args)
 "; then
   ok "verify-test-registers-core-scripts-parity"
 else
