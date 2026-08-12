@@ -23,8 +23,9 @@ PROJECTION_ARTIFACT_TYPES = frozenset(
 )
 OUTBOX_DELIVERY_STATUSES = frozenset({"pending", "delivered", "failed"})
 OUTBOX_DESTINATIONS = frozenset(
-    {"refusal-ledger", "linear", "github-projects", "projection-checkpoint"}
+    {"refusal-ledger", "linear", "github-projects", "projection-checkpoint", "planning-cache"}
 )
+REPLICATED_CACHE_SYNC_DESTINATION = "planning-cache"
 
 OutboxDeliveryHandler = Callable[[Path, dict[str, Any], str], dict[str, Any]]
 _OUTBOX_DELIVERY_HANDLER: OutboxDeliveryHandler | None = None
@@ -232,6 +233,12 @@ def _default_outbox_delivery_handler(
         return {"verdict": "fail", "error": "projection-entry-missing", "deliveryStatus": "pending"}
     if destination == "projection-checkpoint":
         return {"verdict": "pass", "deliveryStatus": "delivered"}
+    if destination == REPLICATED_CACHE_SYNC_DESTINATION:
+        return {
+            "verdict": "fail",
+            "error": "replicated-cache-sync-pending",
+            "deliveryStatus": "pending",
+        }
     return {"verdict": "fail", "error": "unsupported-outbox-destination", "deliveryStatus": "pending"}
 
 
@@ -526,6 +533,40 @@ def projection_ledger_checkpoint(root: Path, *, scope: str = "default") -> dict[
         "checkpointGeneration": gen,
         "path": str(path),
         "entryCount": len(ledger.get("entries") or {}),
+    }
+
+
+def record_replicated_cache_sync_failure(
+    root: Path,
+    *,
+    unit_id: str,
+    operation: str,
+    sync_reason: str,
+    body_path: str | None = None,
+    scope: str = "default",
+) -> dict[str, Any]:
+    """PRD 091 R2 — route replicated-cache remote sync failure into durable outbox (PRD 090 R5)."""
+    ledger = load_projection_ledger(root, scope=scope)
+    aggregate_id = f"planning-cache::{unit_id}"
+    idem_basis = "\0".join((unit_id.strip(), operation.strip(), sync_reason.strip(), body_path or ""))
+    idempotency_key = hashlib.sha256(idem_basis.encode("utf-8")).hexdigest()
+    event = append_projection_outbox_event(
+        ledger,
+        aggregate_id=aggregate_id,
+        destination=REPLICATED_CACHE_SYNC_DESTINATION,
+        idempotency_key=idempotency_key,
+        delivery_status="pending",
+        last_error=sync_reason,
+    )
+    ledger["dirtyAt"] = _utc_now_iso()
+    path = save_projection_ledger(root, ledger, scope=scope)
+    return {
+        "verdict": "fail",
+        "action": "record-replicated-cache-sync-failure",
+        "dirty": True,
+        "dirtyReason": ledger.get("dirtyReason"),
+        "event": event,
+        "path": str(path),
     }
 
 
