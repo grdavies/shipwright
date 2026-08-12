@@ -66,12 +66,42 @@ _MARKER_PATHS = (".cursor/sw-memory.provider", "sw-memory.provider")
 _DEFAULT_IN_REPO_STORE = ".cursor/sw-memory"
 
 
-def _ensure_scripts_importable(plugin_root: Path) -> None:
+def resolve_plugin_pyz(plugin_root: Path) -> Path | None:
+    """Return the versioned Shipwright zipapp under ``plugin_root`` when present (PRD 091)."""
+    stable = plugin_root / "shipwright.pyz"
+    if stable.is_file():
+        return stable.resolve()
+    candidates = sorted(p for p in plugin_root.glob("shipwright-*.pyz") if p.is_file())
+    if not candidates:
+        return None
+    return candidates[-1].resolve()
+
+
+def plugin_scripts_sys_path_entries(plugin_root: Path) -> list[str]:
+    """Ordered import roots for plugin scripts: zipapp first, then loose ``scripts/``.
+
+    Post-PRD 091 installs ship modules in ``shipwright.pyz`` with only ``scripts/sw-run.py``
+    as a thin shim. Self-repo / harness layouts still expose a full loose ``scripts/`` tree.
+    """
+    entries: list[str] = []
+    pyz = resolve_plugin_pyz(plugin_root)
+    if pyz is not None:
+        entries.append(str(pyz))
     scripts = plugin_root / "scripts"
     if scripts.is_dir():
-        entry = str(scripts)
+        entries.append(str(scripts.resolve()))
+    return entries
+
+
+def ensure_plugin_scripts_importable(plugin_root: Path) -> None:
+    """Insert zipapp + scripts roots on ``sys.path`` (zipapp wins when both exist)."""
+    for entry in reversed(plugin_scripts_sys_path_entries(plugin_root)):
         if entry not in sys.path:
             sys.path.insert(0, entry)
+
+
+def _ensure_scripts_importable(plugin_root: Path) -> None:
+    ensure_plugin_scripts_importable(plugin_root)
 
 
 def validate_hook_provider(plugin_root: Path, provider_id: str) -> bool:
