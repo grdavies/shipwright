@@ -1,7 +1,4 @@
-# Graph-domain terminology (PRD 092 / R1)
-
-> Canonical guide path (issue-store): `docs/guides/graph-domain-terminology.md`.
-> Task file path under `docs/prds/` stays planning-store only — not tracked in git.
+# Graph-domain terminology
 
 Locked vocabulary for the WorkflowGraph cutover. Three **runtime** domains are distinct from
 issue-store / planning hierarchy.
@@ -10,9 +7,9 @@ issue-store / planning hierarchy.
 
 | Domain | Definition | Authority |
 | --- | --- | --- |
-| **Planning graph** | Durable dependency graph of planning units (PRDs, tasks, gaps) used for scheduling eligibility and absorb edges. | Planning store / `planning-graph` — **not** the execution runtime. |
-| **Execution graph** | Runnable `WorkflowGraph` of nodes + edges that the scheduler dispatches under resource pools, fan-in, and isolation policy. | Runtime IR (`scripts/graph/`) — Wave B+ |
-| **Artifact / provenance graph** | Hash-addressed artifacts and per-node receipts linking inputs → outputs → verification evidence. | Artifact registry + execution receipts (R4/R5) |
+| **Planning graph** | Durable dependency graph of planning units (product docs, tasks, gaps) used for scheduling eligibility and absorb edges. | Planning store / planning-graph — **not** the execution runtime. |
+| **Execution graph** | Runnable `WorkflowGraph` of nodes + edges that the scheduler dispatches under resource pools, fan-in, and isolation policy. | Runtime IR under `scripts/graph/` |
+| **Artifact / provenance graph** | Hash-addressed artifacts and per-node receipts linking inputs → outputs → verification evidence. | Artifact registry + execution receipts |
 
 ## Explicit non-domains
 
@@ -32,7 +29,7 @@ issue-store / planning hierarchy.
 | `isolation policy` | Per-node write/read isolation: `none` \| `process` \| `worktree` \| `container` \| `remote`. |
 | `degraded verdict` | Visible non-success coverage outcome; **halt-by-default** unless an explicit override is recorded. |
 
-## Distinguisher (R1 acceptance)
+## Distinguisher
 
 - Planning graph answers: *what may be scheduled next as a planning unit?*
 - Execution graph answers: *what nodes run, in what order, under which pools/isolation?*
