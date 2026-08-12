@@ -334,6 +334,7 @@
     "graph/artifact_registry.py",
     "graph/convergence_loop.py",
     "graph/cost_telemetry.py",
+    "graph/cutover.py",
     "graph/execution_receipts.py",
     "graph/fanin_policy.py",
     "graph/ir.py",
@@ -665,5 +666,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 662
+  "moduleCount": 663
 }
