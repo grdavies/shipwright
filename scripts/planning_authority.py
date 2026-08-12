@@ -72,6 +72,22 @@ def drain_outbox_on_mutate(
     return drain_projection_outbox(root, scope=scope, delivery_handler=delivery_handler)
 
 
+def has_configured_remote_planning_authority(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> bool:
+    """PRD 091 R2 — True when planning-cache has a configured remote sync authority (PRD 082 stack)."""
+    cfg = cfg if cfg is not None else load_workflow_config(root)
+    configured = ps.resolve_backend_id(cfg)
+    if configured != "planning-cache":
+        return False
+    from _planning_pkg_loader import load_submodule
+
+    memory_cache = load_submodule("backends.memory_cache")
+    backend = memory_cache.ReplicatedPlanningCacheBackend(root, cfg)
+    return backend._provider_rest_base() is not None
+
+
 def resolve_authority(
     root: Path,
     cfg: dict[str, Any] | None = None,

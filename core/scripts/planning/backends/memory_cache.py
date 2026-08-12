@@ -163,8 +163,11 @@ class ReplicatedPlanningCacheBackend(PlanningStoreBackend):
       success, before falling back to `missing`.
     - Any provider outage, timeout, non-2xx response, disallowed/unconfigured REST
       base, or non-`recallium` provider degrades to the R21a local-cache-only
-      behavior — never a hard failure. See `_provider_round_trip_put`/`_get` and
-      `_is_allowed_recallium_base`.
+      behavior when **no** remote planning authority is configured (PRD 091 R2.3).
+      When a remote authority *is* configured (`planning_authority.has_configured_remote_planning_authority`),
+      sync failures are routed into the durable projection outbox
+      (`planning_projection_ledger.record_replicated_cache_sync_failure`) as a
+      blocking dirty state instead of a silent local-only degrade notice (R2.2).
     - Round-trip bodies use a dedicated `/planning-bodies/<unitId>` REST resource,
       not the semantically-indexed memory-note REST collection: a full planning
       body is not a distilled memory note, and indexing raw bodies alongside them
@@ -206,6 +209,35 @@ class ReplicatedPlanningCacheBackend(PlanningStoreBackend):
         if provider != "recallium":
             return f"provider-not-round-trippable:{provider}"
         return "provider-rest-base-unavailable"
+
+    def _has_configured_remote_planning_authority(self) -> bool:
+        import planning_authority as pa
+
+        return pa.has_configured_remote_planning_authority(self.root, self.cfg)
+
+    def _record_sync_failure_if_needed(
+        self,
+        unit_id: str,
+        operation: str,
+        sync_reason: str,
+        *,
+        body_path: str | None = None,
+    ) -> dict[str, Any] | None:
+        if sync_reason == "ok":
+            return None
+        if operation in {"get", "exists"} and sync_reason == "provider-not-found":
+            return None
+        if not self._has_configured_remote_planning_authority():
+            return None
+        from planning_projection_ledger import record_replicated_cache_sync_failure
+
+        return record_replicated_cache_sync_failure(
+            self.root,
+            unit_id=unit_id,
+            operation=operation,
+            sync_reason=sync_reason,
+            body_path=body_path,
+        )
 
     def _local_cache_dir_path(self) -> Path:
         return self.root / ".cursor" / "sw-planning-cache" / "planning-bodies" / self.memory_project()
@@ -313,11 +345,18 @@ class ReplicatedPlanningCacheBackend(PlanningStoreBackend):
         self._write_cache_file(
             unit_id, body_path, redacted, provider_round_trip=round_trip_ok, round_trip_reason=round_trip_reason
         )
-        notice = (
-            "provider round-trip ok (recallium); local cache also updated"
-            if round_trip_ok
-            else f"provider round-trip unavailable ({round_trip_reason}) -- served from R21a local cache"
-        )
+        sync_failure = self._record_sync_failure_if_needed(unit_id, "put", round_trip_reason, body_path=body_path)
+        if sync_failure is not None:
+            notice = (
+                f"remote sync failed ({round_trip_reason}); local cache updated; "
+                "projection dirty (fail-closed)"
+            )
+        elif round_trip_ok:
+            notice = "provider round-trip ok (recallium); local cache also updated"
+        else:
+            notice = (
+                f"provider round-trip unavailable ({round_trip_reason}) -- served from R21a local cache"
+            )
         log_operation("put", unit_id, body_path, redacted, self.backend_id, notice=notice)
         return StoreResult(
             "ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted), notice=notice
@@ -348,6 +387,7 @@ class ReplicatedPlanningCacheBackend(PlanningStoreBackend):
                 return StoreResult(
                     "ok", unit_id, body_path, self.backend_id, content=redacted, hash=content_hash(redacted), notice=notice
                 )
+            self._record_sync_failure_if_needed(unit_id, "get", reason, body_path=body_path)
 
         return StoreResult("missing", unit_id, body_path, self.backend_id, reason="not-found")
 
@@ -356,8 +396,11 @@ class ReplicatedPlanningCacheBackend(PlanningStoreBackend):
         if not present:
             base = self._provider_rest_base()
             if base is not None:
-                ok, _reason, _content = _provider_round_trip_get(base, self.memory_project(), unit_id)
-                present = ok
+                ok, reason, _content = _provider_round_trip_get(base, self.memory_project(), unit_id)
+                if ok:
+                    present = True
+                else:
+                    self._record_sync_failure_if_needed(unit_id, "exists", reason, body_path=body_path)
         log_operation("exists", unit_id, body_path, None, self.backend_id)
         return StoreResult("ok" if present else "missing", unit_id, body_path, self.backend_id, reason=None if present else "not-found")
 
