@@ -42,7 +42,7 @@ GENERATOR_OUTPUT_GLOBS: tuple[str, ...] = (
 
 GENERATE_INVOCATION_MARKERS: tuple[str, ...] = (
     "python3 -m sw generate",
-    "copy-to-core",
+    "core-content-sync",
     "generate --all",
 )
 
@@ -243,7 +243,7 @@ def expand_generator_contention_paths(
     content: str,
     root: Path,
 ) -> dict[str, list[str]]:
-    """Treat generate/copy-to-core phases as touching the full generator-output set (R9)."""
+    """Treat generate/core-content-sync phases as touching the full generator-output set (R9)."""
     expanded: dict[str, list[str]] = {}
     gen_paths = full_generator_output_touch_set(root)
     for phase_id, paths in phase_files.items():

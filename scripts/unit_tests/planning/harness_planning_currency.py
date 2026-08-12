@@ -78,28 +78,34 @@ PLANNING_SCRIPTS=(
   planning-privacy-guard.py
 )
 
-# --- copy-to-core-parity (R25) ---
-if bash "$ROOT/scripts/copy-to-core.py" >/dev/null 2>&1 && \
-   python3 "$ROOT/scripts/unit_tests/meta/harness_core_scripts_parity.py" >/dev/null 2>&1; then
-  ok "copy-to-core-parity"
+# --- zipapp-manifest-parity (R25) ---
+if python3 "$ROOT/scripts/core_content_sync.py" >/dev/null 2>&1 && \
+   python3 "$ROOT/scripts/test/run_pytest.py" "$ROOT/scripts/unit_tests/test_zipapp_manifest_completeness.py" -q >/dev/null 2>&1; then
+  ok "zipapp-manifest-parity"
 else
-  bad "copy-to-core-parity"
+  bad "zipapp-manifest-parity"
+fi
+
+MANIFEST="$ROOT/dist/cursor/shipwright.manifest.json"
+if [[ ! -f "$MANIFEST" ]]; then
+  python3 "$ROOT/scripts/build_zipapp.py" build --dest "$ROOT/dist/cursor" >/dev/null 2>&1 || bad "zipapp-manifest-parity: zipapp build failed"
+  MANIFEST="$ROOT/dist/cursor/shipwright.manifest.json"
 fi
 
 for rel in "${PLANNING_SCRIPTS[@]}"; do
-  if [[ -f "$ROOT/scripts/$rel" && -f "$ROOT/core/scripts/$rel" ]] && cmp -s "$ROOT/scripts/$rel" "$ROOT/core/scripts/$rel"; then
+  if python3 -c "import json,sys; m=json.load(open('$MANIFEST')); sys.exit(0 if '$rel' in m.get('modules',[]) else 1)"; then
     :
   else
-    bad "copy-to-core-parity: core/scripts/$rel"
+    bad "zipapp-manifest-parity: missing $rel in zipapp manifest"
     break
   fi
 done
-[[ "$FAIL" -eq 0 ]] && ok "copy-to-core-parity: planning scripts mirrored"
+[[ "$FAIL" -eq 0 ]] && ok "zipapp-manifest-parity: planning scripts in zipapp manifest"
 
-if [[ -f "$ROOT/core/scripts/copy-to-core.py" ]] && cmp -s "$ROOT/scripts/copy-to-core.py" "$ROOT/core/scripts/copy-to-core.py"; then
-  ok "copy-to-core-parity: core/scripts/copy-to-core.py"
+if [[ -f "$ROOT/scripts/core_content_sync.py" ]]; then
+  ok "zipapp-manifest-parity: core_content_sync.py present"
 else
-  bad "copy-to-core-parity: core/scripts/copy-to-core.py"
+  bad "zipapp-manifest-parity: core_content_sync.py"
 fi
 
 # --- emitter-freshness-planning-artifacts (R25) ---

@@ -21,7 +21,7 @@ PY
 check "$ROOT/scripts/_sw/cli.py" cli
 check "$ROOT/scripts/_sw/run.py" run
 check "$ROOT/scripts/install.py" install
-check "$ROOT/scripts/copy-to-core.py" copy-to-core
+check "$ROOT/scripts/core_content_sync.py" core-content-sync
 check "$ROOT/scripts/dep-import-guard.py" dep-import-guard
 check "$ROOT/scripts/zero-shell-guard.py" zero-shell-guard
 exit $FAIL

@@ -50,32 +50,32 @@ else
   bad "build-chain-sot-lint"
 fi
 
-# --- copy-to-core-orphan-fail-closed (R3) ---
+# --- core-content-sync-orphan-fail-closed (R3) ---
 TMP_ORPHAN="$ROOT/core/sw-reference/.fixture-orphan-sot.json"
 trap 'rm -f "$TMP_ORPHAN"' EXIT
 
 touch "$TMP_ORPHAN"
-if bash "$ROOT/scripts/copy-to-core.sh" >/dev/null 2>&1; then
-  bad "copy-to-core-orphan-fail-closed: expected non-zero exit on orphan"
+if python3 "$ROOT/scripts/core_content_sync.py" >/dev/null 2>&1; then
+  bad "core-content-sync-orphan-fail-closed: expected non-zero exit on orphan"
 else
-  ok "copy-to-core-orphan-fail-closed"
+  ok "core-content-sync-orphan-fail-closed"
 fi
 rm -f "$TMP_ORPHAN"
 
-# --- copy-to-core-orphan-force (R16) ---
+# --- core-content-sync-orphan-force (R16) ---
 touch "$TMP_ORPHAN"
-if bash "$ROOT/scripts/copy-to-core.sh" --force >/dev/null 2>&1; then
-  ok "copy-to-core-orphan-force"
+if python3 "$ROOT/scripts/core_content_sync.py" --force >/dev/null 2>&1; then
+  ok "core-content-sync-orphan-force"
 else
-  bad "copy-to-core-orphan-force"
+  bad "core-content-sync-orphan-force"
 fi
 rm -f "$TMP_ORPHAN"
 
-# --- copy-to-core-manifest-driven (R4/R13) ---
-if bash "$ROOT/scripts/copy-to-core.sh" >/dev/null 2>&1; then
-  ok "copy-to-core-manifest-driven"
+# --- core-content-sync-manifest-driven (R4/R13) ---
+if python3 "$ROOT/scripts/core_content_sync.py" >/dev/null 2>&1; then
+  ok "core-content-sync-manifest-driven"
 else
-  bad "copy-to-core-manifest-driven"
+  bad "core-content-sync-manifest-driven"
 fi
 
 

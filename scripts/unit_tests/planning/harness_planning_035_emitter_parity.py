@@ -67,24 +67,30 @@ CONTENT_035=(
   skills/visibility/references/emission-points.md
 )
 
-# --- copy-to-core-parity-035 (R20) ---
-if bash "$ROOT/scripts/copy-to-core.sh" >/dev/null 2>&1; then
+# --- zipapp-manifest-parity-035 (R20) ---
+if python3 "$ROOT/scripts/core_content_sync.py" >/dev/null 2>&1; then
   :
 else
-  bad "copy-to-core-parity-035: copy-to-core.sh failed"
+  bad "zipapp-manifest-parity-035: core_content_sync.py failed"
 fi
 
-if python3 "$ROOT/scripts/unit_tests/meta/harness_core_scripts_parity.py" >/dev/null 2>&1; then
-  ok "copy-to-core-parity-035: core-scripts parity"
+if python3 "$ROOT/scripts/test/run_pytest.py" "$ROOT/scripts/unit_tests/test_zipapp_manifest_completeness.py" -q >/dev/null 2>&1; then
+  ok "zipapp-manifest-parity-035: zipapp manifest completeness"
 else
-  bad "copy-to-core-parity-035: core-scripts parity"
+  bad "zipapp-manifest-parity-035: zipapp manifest completeness"
+fi
+
+MANIFEST="$ROOT/dist/cursor/shipwright.manifest.json"
+if [[ ! -f "$MANIFEST" ]]; then
+  python3 "$ROOT/scripts/build_zipapp.py" build --dest "$ROOT/dist/cursor" >/dev/null 2>&1 || bad "zipapp-manifest-parity-035: zipapp build failed"
+  MANIFEST="$ROOT/dist/cursor/shipwright.manifest.json"
 fi
 
 for rel in "${SCRIPTS_035[@]}"; do
-  if [[ -f "$ROOT/scripts/$rel" && -f "$ROOT/core/scripts/$rel" ]] && cmp -s "$ROOT/scripts/$rel" "$ROOT/core/scripts/$rel"; then
+  if python3 -c "import json,sys; m=json.load(open('$MANIFEST')); sys.exit(0 if '$rel' in m.get('modules',[]) else 1)"; then
     :
   else
-    bad "copy-to-core-parity-035: scripts/$rel not mirrored in core/scripts/"
+    bad "zipapp-manifest-parity-035: missing $rel in zipapp manifest"
     break
   fi
 done

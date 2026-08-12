@@ -65,18 +65,24 @@ GUARD_SCHEMAS=(
   inflight-tuple.schema.json
 )
 
-# --- inflight-guards-copy-to-core-parity (R16) ---
-if python3 "$ROOT/scripts/copy-to-core.py" >/dev/null 2>&1; then
+# --- inflight-guards-zipapp-manifest-parity (R16) ---
+if python3 "$ROOT/scripts/test/run_pytest.py" "$ROOT/scripts/unit_tests/test_zipapp_manifest_completeness.py" -q >/dev/null 2>&1; then
   :
 else
-  bad "inflight-guards-copy-to-core-parity: copy-to-core.py failed"
+  bad "inflight-guards-zipapp-manifest-parity: zipapp manifest completeness failed"
+fi
+
+MANIFEST="$ROOT/dist/cursor/shipwright.manifest.json"
+if [[ ! -f "$MANIFEST" ]]; then
+  python3 "$ROOT/scripts/build_zipapp.py" build --dest "$ROOT/dist/cursor" >/dev/null 2>&1 || bad "inflight-guards-zipapp-manifest-parity: zipapp build failed"
+  MANIFEST="$ROOT/dist/cursor/shipwright.manifest.json"
 fi
 
 for rel in "${GUARD_SCRIPTS[@]}"; do
-  if [[ -f "$ROOT/scripts/$rel" && -f "$ROOT/core/scripts/$rel" ]] && cmp -s "$ROOT/scripts/$rel" "$ROOT/core/scripts/$rel"; then
+  if python3 -c "import json,sys; m=json.load(open('$MANIFEST')); sys.exit(0 if '$rel' in m.get('modules',[]) else 1)"; then
     :
   else
-    bad "inflight-guards-copy-to-core-parity: scripts/$rel not mirrored in core/scripts/"
+    bad "inflight-guards-zipapp-manifest-parity: missing $rel in zipapp manifest"
     break
   fi
 done
@@ -103,7 +109,7 @@ for rel in "${GUARD_SCHEMAS[@]}"; do
   fi
 done
 
-[[ "$FAIL" -eq 0 ]] && ok "inflight-guards-copy-to-core-parity"
+[[ "$FAIL" -eq 0 ]] && ok "inflight-guards-zipapp-manifest-parity"
 
 # --- inflight-guards-emitter-freshness (R16) ---
 $GEN generate --all >/dev/null 2>&1 || bad "inflight-guards-emitter-freshness: generate failed"
