@@ -795,6 +795,7 @@
 * merge phase wave-a-foundations-terminology-pools-fan-in-isolation-r1-r6-r7-r8 into feat/prd-graph-engineering-runtime-first-program (ac8c804) <!-- sw-deliver:wave-a-foundations-terminology-pools-fan-in-isolation-r1-r6-r7-r8 -->
 * merge phase wave-b-runtime-ir-r2 into feat/prd-graph-engineering-runtime-first-program (57b38e5) <!-- sw-deliver:wave-b-runtime-ir-r2 -->
 * merge phase wave-c-core-substrate-kernel-compiler-artifact-registry-receipts-r3-r4-r5 into feat/prd-graph-engineering-runtime-first-program (7a4d647) <!-- sw-deliver:wave-c-core-substrate-kernel-compiler-artifact-registry-receipts-r3-r4-r5 -->
+* merge phase wave-d-authoritative-scheduler-r9 into feat/prd-graph-engineering-runtime-first-program (1e6a251) <!-- sw-deliver:wave-d-authoritative-scheduler-r9 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
