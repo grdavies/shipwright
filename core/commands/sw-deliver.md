@@ -490,5 +490,7 @@ re-run prepare; do not skip the gate.
 Terminal prepare remains gated by `docs-currency-gate` + tasks-currency on bindings to
 `wave_deliver.py` / `wave_deliver_loop.py` / `wave_terminal.py` / `wave_run_adopt.py`. Phase acceptance +
 gap-check + live host evidence still precede `merge-enqueue`.
+On resume after target-lock reacquisition, `deliver-loop` preserves an already-materialized phase map and
+skips duplicate state initialization before continuing from the durable cursor.
 
 <!-- currency: planning-cache rename / deliver path-anchor -->
