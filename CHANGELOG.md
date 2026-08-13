@@ -792,6 +792,15 @@
 * merge phase zipapp-packaging-of-scripts-r3 into feat/prd-planning-cache-rename-and-canonical-runtime-packaging (528b8cb) <!-- sw-deliver:zipapp-packaging-of-scripts-r3 -->
 * merge phase fail-closed-remote-sync-failure-mode-r2 into feat/prd-planning-cache-rename-and-canonical-runtime-packaging (2fd22ec) <!-- sw-deliver:fail-closed-remote-sync-failure-mode-r2 -->
 * merge phase build-manifest-completeness-check-r4 into feat/prd-planning-cache-rename-and-canonical-runtime-packaging (05ba79b) <!-- sw-deliver:build-manifest-completeness-check-r4 -->
+* merge phase wave-a-foundations-terminology-pools-fan-in-isolation-r1-r6-r7-r8 into feat/prd-graph-engineering-runtime-first-program (ac8c804) <!-- sw-deliver:wave-a-foundations-terminology-pools-fan-in-isolation-r1-r6-r7-r8 -->
+* merge phase wave-b-runtime-ir-r2 into feat/prd-graph-engineering-runtime-first-program (57b38e5) <!-- sw-deliver:wave-b-runtime-ir-r2 -->
+* merge phase wave-c-core-substrate-kernel-compiler-artifact-registry-receipts-r3-r4-r5 into feat/prd-graph-engineering-runtime-first-program (7a4d647) <!-- sw-deliver:wave-c-core-substrate-kernel-compiler-artifact-registry-receipts-r3-r4-r5 -->
+* merge phase wave-d-authoritative-scheduler-r9 into feat/prd-graph-engineering-runtime-first-program (1e6a251) <!-- sw-deliver:wave-d-authoritative-scheduler-r9 -->
+* merge phase wave-e-scheduler-dependent-capabilities-r10-r11-r13-r15-r16-r17 into feat/prd-graph-engineering-runtime-first-program (dc74120) <!-- sw-deliver:wave-e-scheduler-dependent-capabilities-r10-r11-r13-r15-r16-r17 -->
+* merge phase wave-f-second-order-capabilities-r12-r14-r21 into feat/prd-graph-engineering-runtime-first-program (3f55c4a) <!-- sw-deliver:wave-f-second-order-capabilities-r12-r14-r21 -->
+* merge phase wave-g-cutover-r18 into feat/prd-graph-engineering-runtime-first-program (638e5c3) <!-- sw-deliver:wave-g-cutover-r18 -->
+* merge phase wave-h-post-cutover-capabilities-r19-r22-r23 into feat/prd-graph-engineering-runtime-first-program (8747c14) <!-- sw-deliver:wave-h-post-cutover-capabilities-r19-r22-r23 -->
+* merge phase wave-i-saved-workflow-template-library-r20 into feat/prd-graph-engineering-runtime-first-program (186f5d2) <!-- sw-deliver:wave-i-saved-workflow-template-library-r20 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

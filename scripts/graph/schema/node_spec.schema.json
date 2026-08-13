@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipwright.dev/schemas/graph/node_spec.schema.json",
+  "title": "Shipwright NodeSpec",
+  "description": "Version 1 alpha node definition for the WorkflowGraph runtime IR.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "kind",
+    "resources",
+    "isolation",
+    "verification"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,62}$"
+    },
+    "kind": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,62}$"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "step": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pool",
+        "slots",
+        "timeoutSeconds"
+      ],
+      "properties": {
+        "pool": {
+          "enum": [
+            "code-writers",
+            "read-only-reviewers",
+            "web-research",
+            "provider-api"
+          ]
+        },
+        "slots": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "isolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "writeScope"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "none",
+            "process",
+            "worktree",
+            "container",
+            "remote"
+          ]
+        },
+        "writeScope": {
+          "enum": [
+            "none",
+            "read-only",
+            "scoped",
+            "worktree"
+          ]
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "strategy"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "strategy": {
+          "enum": [
+            "mechanical",
+            "evidence",
+            "judgment",
+            "synthesis"
+          ]
+        }
+      }
+    }
+  }
+}
