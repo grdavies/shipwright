@@ -801,6 +801,15 @@
 * merge phase wave-g-cutover-r18 into feat/prd-graph-engineering-runtime-first-program (638e5c3) <!-- sw-deliver:wave-g-cutover-r18 -->
 * merge phase wave-h-post-cutover-capabilities-r19-r22-r23 into feat/prd-graph-engineering-runtime-first-program (8747c14) <!-- sw-deliver:wave-h-post-cutover-capabilities-r19-r22-r23 -->
 * merge phase wave-i-saved-workflow-template-library-r20 into feat/prd-graph-engineering-runtime-first-program (186f5d2) <!-- sw-deliver:wave-i-saved-workflow-template-library-r20 -->
+* merge phase absorbs-write-path-merge-into-sw-edges-r1-r13 into feat/planning-store-absorb-cleanup-verify-gaps (04eed5e) <!-- sw-deliver:absorbs-write-path-merge-into-sw-edges-r1-r13 -->
+* merge phase cleanup-fail-closed-target-shapes-r10-r11-r12-r15 into feat/planning-store-absorb-cleanup-verify-gaps (7c2b865) <!-- sw-deliver:cleanup-fail-closed-target-shapes-r10-r11-r12-r15 -->
+* merge phase absorbs-read-path-edges-authoritative-r2-r14 into feat/planning-store-absorb-cleanup-verify-gaps (20f984e) <!-- sw-deliver:absorbs-read-path-edges-authoritative-r2-r14 -->
+* merge phase verify-no-baseline-baseline-runtime-refuse-r7-r8-r9-r12-r17 into feat/planning-store-absorb-cleanup-verify-gaps (7a7509e) <!-- sw-deliver:verify-no-baseline-baseline-runtime-refuse-r7-r8-r9-r12-r17 -->
+* merge phase absorbs-merge-linkage-r3-r4-r5-r6 into feat/planning-store-absorb-cleanup-verify-gaps (c3bceca) <!-- sw-deliver:absorbs-merge-linkage-r3-r4-r5-r6 -->
+* merge phase absorbs-regression-fixtures-r12 into feat/planning-store-absorb-cleanup-verify-gaps (de5eef9) <!-- sw-deliver:absorbs-regression-fixtures-r12 -->
+* merge phase docs-currency-layout-core-refs-r16 into feat/planning-store-absorb-cleanup-verify-gaps (21979af) <!-- sw-deliver:docs-currency-layout-core-refs-r16 -->
+* merge phase doctor-absorb-asymmetry-r18 into feat/planning-store-absorb-cleanup-verify-gaps (51337d7) <!-- sw-deliver:doctor-absorb-asymmetry-r18 -->
+* merge phase docs-currency-verification-workflows-r16 into feat/planning-store-absorb-cleanup-verify-gaps (52122b0) <!-- sw-deliver:docs-currency-verification-workflows-r16 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

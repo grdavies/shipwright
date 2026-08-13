@@ -428,6 +428,19 @@ region and archive view; deliver writes `inFlight` only. `/sw-deliver next` and 
 fail closed on unmet prerequisites (`planning.autonomy` soft-enforces priority on explicit `--task-list`).
 Legacy `GAP-BACKLOG.md` is a read-only projection during cutover — gap capture writes canonical gap units.
 
+**Hybrid PRD absorbs:** under issue-store, PRD-side `absorbs:` survives put→get as durable
+`sw-edges` entries with `rel: absorbs` — not as raw YAML on the operator body and not as label-only discovery.
+Put compose merges absorbs into the existing edge set and preserves native links; read parses the fence before
+strip with edges authoritative over truncated labels. Linkage (`record_absorb_linkage`) writes PRD-side absorbs
+before gap-side puts; revision conflicts refetch+remerge — never resubmit stale bytes.
+
+**Deliver `target` shapes:** run-state `target` may be either a feature-branch string
+(`feat/<slug>`) or an object `{"branch":"feat/<slug>", ...}`. All branch resolution — cleanup enumeration,
+scoped in-flight protection, adopt breadcrumbs, merge enqueue — routes through `target_branch_from_state()`;
+ad-hoc `(state.get("target") or {}).get("branch")` on those paths is prohibited. An unresolvable migration
+breadcrumb or missing target **widens** in-flight protection (fail closed) rather than narrowing scope to a
+stale slug — see `/sw-cleanup` scoped-run rules in `core/commands/sw-cleanup.md`.
+
 
 **Doc frontmatter traceability:** Full-tier PRDs carry `brainstorm:` in frontmatter; writable brainstorms
 may gain `prd:` forward links. `/sw-freeze` verifies resolvable linkage before freeze.
@@ -1055,6 +1068,20 @@ Phase-mode `/sw-deliver` reliability contracts (–):
 | Absorb close-out | Plugin consumability delivery gaps discoverable via PRD `absorbs` / `sw-edges` or `planningIssues` + gap `absorbed-by` provenance; verify with `python3 scripts/planning_gap_capture.py <root> verify-absorb-closeout-073`. |
 
 Resume after halt: `/sw-deliver run` from the orchestrator worktree (or `/sw-deliver run --issue <n>` under issue-store).
+
+### Verify no-baseline evidence matrix (planning#641 / #642)
+
+Planning issues **#641** and **#642** share one `no-baseline` verification class. Before closing
+either issue, the suite partition below must return a conclusive verdict without a logged override —
+committed baselines plus runtime harness refuse, not isolation alone.
+
+| Planning issue | Tracking unit | Suite partition | Signal hash | Root cause | Remediation |
+| --- | --- | --- | --- | --- | --- |
+| #641 | verify-override follow-up (641) | `scripts/unit_tests/w4/harness_improvement.py` verify-evidence attribution cases | `3b1b69a5e7ff67fe5e52c3e4a6d6347b` | verify/gate failure without attribution baseline → `inconclusiveClass: no-baseline` | Committed baselines under `scripts/test/fixtures/verify-evidence/baselines/planning-641-642/`; pass `--restore-committed-baseline` to `verify-evidence.py` when callers omit `--baseline-*` |
+| #642 | verify-override follow-up (642) | *(shared with #641 — same partition)* | *(shared)* | *(shared)* | Runtime refuse: `capture_verify_override` / `override-add` refuse live issue-store writes under harness unless `SW_ALLOW_LIVE_PLANNING_STORE=1`; static lint remains defense-in-depth |
+
+Recurrence on an existing verify-override unit increments `.cursor/hooks/state/verify-override-recurrence/<signature>.json`
+so operators see repeat signal without a duplicate tracking unit.
 
 **Conductor recovery:** when `mergeJournal` is abandoned on halt, `preserve_merge_queue_on_halt` keeps
 `mergeQueue` replayable while clearing the journal. When `phase-provision` previously failed on noisy

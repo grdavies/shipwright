@@ -445,6 +445,50 @@ copy under `.sw-worktrees/**/.cursor/`. `wave_compound.py record-premerge` and
 Pre-resync backups land beside the materialized destination as `*.pre-resync.bak`. Planning query cache
 state: `.cursor/hooks/state/planning-query-cache.json`.
 
+### Deliver `target` shapes + cleanup reads (PRD 094 R10–R11/R15)
+
+Run-scoped and legacy slug-scoped deliver state carry the integration/feature branch under `target` in
+**either** shape — readers must not assume an object:
+
+| Shape | Example | Resolver |
+| --- | --- | --- |
+| String branch | `"target": "feat/<slug>"` | `wave_state.target_branch_from_state` |
+| Object branch | `"target": {"type": "feat", "slug": "<slug>", "branch": "feat/<slug>"}` | same helper (`branch` field) |
+
+`cleanup_lib.resolve_deliver_state`, scoped-run enumeration (`enumerate_scoped_runs`), and inflight
+protection route **all** target reads through `target_branch_from_state` — never ad-hoc
+`.get("branch")` on a dict-only assumption. Migration breadcrumbs may carry a string `target` while
+`scopedPath` points at a stale scoped file; unresolvable breadcrumb + live non-terminal verdict widens
+in-flight protection fail-closed (R11/R15) — `/sw-cleanup` dry-run protects those paths instead of
+enumerating with `AttributeError`.
+
+### Absorbs serialization (issue-store, PRD 094 R1–R2/R13–R14)
+
+Under `planning.store.backend: issue-store`, portable `absorbs:` frontmatter is **not** a second edge
+store. On `put`, `planning_canonical.resolve_put_edge_projection` unions `rel: absorbs` edges into the
+fenced `sw-edges` block (preserving existing edges and native link projections). On `get`, parsers read
+`sw-edges` **before** structural-key strip; the body fence is authoritative over label projection on
+conflict. Normative block shape and hash rules: `core/sw-reference/canonical-serialization.md`
+(`sw-edges` section). Gap-capture absorb linkage (`planning_gap_capture.record_absorb_linkage`) uses the
+same merge path — PRD-side absorbs put must not drop native links.
+
+### Verify `no-baseline` evidence matrix (planning#641 / #642, PRD 094 R7/R17)
+
+Planning issues **#641** and **#642** share one `no-baseline` verification partition
+(`verify_evidence_lib.NO_BASELINE_EVIDENCE_MATRIX`, partition id `planning-641-642`). Before closing
+either issue, the suite partition must return a **conclusive** verdict without a logged override —
+committed baselines plus runtime harness refuse, not isolation alone.
+
+| Planning issue | Tracking unit | Suite partition | Signal hash | Root cause | Remediation |
+| --- | --- | --- | --- | --- | --- |
+| #641 | verify-override follow-up (641) | `scripts/unit_tests/w4/harness_improvement.py` verify-evidence attribution cases | `3b1b69a5e7ff67fe5e52c3e4a6d6347b` | verify/gate failure without attribution baseline → `inconclusiveClass: no-baseline` | Committed baselines under `scripts/test/fixtures/verify-evidence/baselines/planning-641-642/`; pass `--restore-committed-baseline` to `verify-evidence.py` when callers omit `--baseline-*` |
+| #642 | verify-override follow-up (642) | *(shared with #641 — same partition)* | *(shared)* | *(shared)* | Runtime refuse: `capture_verify_override` / `override-add` refuse live issue-store writes under harness unless `SW_ALLOW_LIVE_PLANNING_STORE=1`; static lint remains defense-in-depth |
+
+Recurrence on an existing verify-override unit increments
+`.cursor/hooks/state/verify-override-recurrence/<signature>.json` so operators see repeat signal without a
+duplicate tracking unit. Operator workflow detail also lives in `docs/guides/workflows.md` (absorb
+close-out + verify sections).
+
 ## Operator worktree contract (PRD 049 R1)
 
 Single authority for which checkout owns implementation versus conductor runtime during `/sw-deliver`.

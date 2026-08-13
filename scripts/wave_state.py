@@ -427,7 +427,7 @@ def enumerate_scoped_runs(root: Path) -> list[dict[str, Any]]:
                 "statePath": str(path.relative_to(anchor)),
                 "taskList": state.get("source_task_list"),
                 "verdict": state.get("verdict"),
-                "target": (state.get("target") or {}).get("branch"),
+                "target": target_branch_from_state(state),
                 "lockHeld": lock_path.is_file() and bool(lock_meta),
                 "lockHolder": lock_meta or None,
             }

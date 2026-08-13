@@ -180,4 +180,4 @@ Freeze durability continues through `planning_store.py` → `planning_store_faca
 `check_frozen_lib.py` / `check-frozen.py`. No behavior change in this refresh — commit bumps docs-currency
 binding against current freeze helpers.
 
-<!-- currency: planning-cache rename / deliver path-anchor -->
+<!-- currency: prd-094 terminal docs-currency refresh (planning_store / check-frozen bindings) -->

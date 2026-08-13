@@ -159,6 +159,9 @@ class IssueStoreBackend(PlanningStoreBackend):
         )
 
     def _canonical_content_from_record(self, record: Any, unit_id: str) -> str:
+        full_body = _ps().reassemble_body(record.body, record.comments)
+        # PRD 094 R2 — parse sw-edges before strip; edges authoritative over labels on read.
+        sw_edges_block = _ps().parse_edges_block(full_body)
         operator_content = self._extract_content(record)
         if _ps().has_raw_yaml_frontmatter(operator_content):
             return operator_content
@@ -167,6 +170,7 @@ class IssueStoreBackend(PlanningStoreBackend):
                 list(record.labels),
                 operator_content,
                 unit_id=unit_id,
+                sw_edges_block=sw_edges_block,
             )
         return operator_content
 
@@ -394,22 +398,16 @@ class IssueStoreBackend(PlanningStoreBackend):
         self,
         existing: Any | None,
         store_content: str,
+        *,
+        canonical_content: str | None = None,
     ) -> tuple[str, list[dict[str, Any]] | None, list[dict[str, Any]] | None]:
-        """Preserve or prefer sw-edges on put (PRD 093 R3/R4)."""
-        content_edges = _ps().parse_edges_block(store_content)
-        if content_edges is not None:
-            edges = list(content_edges.get("edges") or [])
-            native_links = list(content_edges.get("native") or [])
-            stripped = _ps().strip_markers_and_edges(store_content)
-            return stripped, edges, native_links
-        if existing is not None:
-            existing_edges = _ps().parse_edges_block(existing.body)
-            native_links = list(existing.native_links or [])
-            if existing_edges is not None or native_links:
-                edges = list((existing_edges or {}).get("edges") or [])
-                stripped = _ps().strip_markers_and_edges(store_content)
-                return stripped, edges, native_links
-        return store_content, None, None
+        """Merge absorbs into sw-edges on put; preserve native links (PRD 094 R1/R13)."""
+        return _ps().resolve_put_edge_projection(
+            store_content=store_content,
+            canonical_content=canonical_content,
+            existing_body=existing.body if existing is not None else None,
+            existing_native_links=list(existing.native_links or []) if existing is not None else None,
+        )
 
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
         _ps().reject_bare_integer_unit_id(unit_id)
@@ -428,7 +426,9 @@ class IssueStoreBackend(PlanningStoreBackend):
         title = self._issue_title(artifact_type, unit_id, content)
         labels = self._labels_for(artifact_type, unit_id, content)
         store_content = _ps().operator_body_from_canonical(content) if _ps().has_raw_yaml_frontmatter(content) else content
-        store_content, put_edges, put_native_links = self._resolve_put_edge_projection(existing, store_content)
+        store_content, put_edges, put_native_links = self._resolve_put_edge_projection(
+            existing, store_content, canonical_content=content
+        )
         body = _ps().compose_issue_body(
             self.project_key,
             artifact_type,

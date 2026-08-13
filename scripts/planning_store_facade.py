@@ -249,6 +249,7 @@ from planning_canonical import (  # noqa: E402
     reconcile_edges,
     reassemble_body,
     require_artifact_type,
+    resolve_put_edge_projection,
     rewrite_chunk_manifest_ids,
     strip_markers_and_edges,
     canonical_content_from_operator,
@@ -2672,6 +2673,141 @@ def doctor_absorb_pollution(
     return payload
 
 
+def _prd_side_absorbs_gap(
+    prd_fm: dict[str, str],
+    edges: dict[str, Any] | None,
+    gap_unit_id: str,
+) -> bool:
+    """True when PRD frontmatter or sw-edges declares an absorbs edge for ``gap_unit_id``."""
+    from planning_gap_capture import gap_absorb_target_match
+
+    absorbs = _parse_absorbs_targets(prd_fm.get("absorbs", ""))
+    if any(gap_absorb_target_match(item, gap_unit_id) for item in absorbs):
+        return True
+    for edge in (edges or {}).get("edges") or []:
+        if not isinstance(edge, dict):
+            continue
+        target = str(edge.get("target", "")).strip()
+        rel = str(edge.get("rel") or edge.get("relationship") or "").strip().lower()
+        if rel == "absorbs" and gap_absorb_target_match(target, gap_unit_id):
+            return True
+    return False
+
+
+def _gap_absorbed_by_unit_id(gap_fm: dict[str, str]) -> str:
+    return str(gap_fm.get("absorbed-by") or gap_fm.get("absorbed_by") or "").strip()
+
+
+def _resolve_gap_absorption_frontmatter(
+    gap_record: Any,
+    gap_unit_id: str,
+    full_body: str,
+) -> dict[str, str]:
+    """Resolve gap frontmatter including hybrid sw-frontmatter-extra (PRD 094 R18)."""
+    pmis = _migrate_issue_store()
+    if has_raw_yaml_frontmatter(full_body):
+        raw_content = strip_markers_and_edges(full_body)
+        return pmis.parse_frontmatter_fields(raw_content)
+    if is_hybrid_operator_body(full_body):
+        hybrid = frontmatter_from_labels(
+            list(getattr(gap_record, "labels", []) or []),
+            unit_id=gap_unit_id,
+            operator_body=full_body,
+        )
+        fm = {key: _fm_field_as_str(hybrid.get(key)) for key in hybrid}
+        stripped = strip_markers_and_edges(full_body)
+        if stripped.startswith("---"):
+            yaml_fm = pmis.parse_frontmatter_fields(stripped)
+            for key, value in yaml_fm.items():
+                if value:
+                    fm[key] = value
+        return fm
+    raw_content = strip_markers_and_edges(full_body)
+    return pmis.parse_frontmatter_fields(raw_content)
+
+
+def _doctor_absorb_asymmetry_check_gap(
+    backend: IssueStoreBackend,
+    gap_unit_id: str,
+    gap_record: Any,
+    prd_cache: dict[str, tuple[dict[str, str], dict[str, Any]] | None],
+    asymmetries: list[dict[str, str]],
+) -> None:
+    full_body = reassemble_body(gap_record.body, gap_record.comments)
+    gap_fm = _resolve_gap_absorption_frontmatter(gap_record, gap_unit_id, full_body)
+    prd_unit_id = _gap_absorbed_by_unit_id(gap_fm)
+    if not prd_unit_id:
+        return
+
+    if prd_unit_id not in prd_cache:
+        prd_record = None
+        prd_unit = ""
+        for candidate in _prd_unit_id_alias_candidates(prd_unit_id):
+            body_path = _default_body_path(candidate, "prd")
+            prd_record = _lookup_issue_record(backend, candidate, body_path)
+            if prd_record is not None and _record_artifact_type(prd_record) == "prd":
+                prd_unit = candidate
+                break
+        if prd_record is None:
+            prd_cache[prd_unit_id] = None
+        else:
+            prd_body = reassemble_body(prd_record.body, prd_record.comments)
+            prd_fm, edges = _resolve_prd_absorption_context(prd_record, prd_unit, prd_body)
+            prd_cache[prd_unit_id] = (prd_fm, edges)
+
+    cached = prd_cache.get(prd_unit_id)
+    if cached is None:
+        asymmetries.append(
+            {
+                "gapUnitId": gap_unit_id,
+                "prdUnitId": prd_unit_id,
+                "reason": "prd-not-found",
+            }
+        )
+        return
+
+    prd_fm, edges = cached
+    if not _prd_side_absorbs_gap(prd_fm, edges, gap_unit_id):
+        asymmetries.append(
+            {
+                "gapUnitId": gap_unit_id,
+                "prdUnitId": prd_unit_id,
+                "reason": "gap-absorbed-by-without-prd-absorbs",
+            }
+        )
+
+
+def doctor_absorb_asymmetry(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Report PRD/gap asymmetry where gap ``absorbed-by`` lacks PRD-side absorbs (PRD 094 R18)."""
+    pmis = _migrate_issue_store()
+    if not pmis.issue_store_effective(root, cfg):
+        return {"verdict": "pass", "action": "doctor-absorb-asymmetry", "skipped": True}
+    backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(backend, IssueStoreBackend):
+        return {"verdict": "pass", "action": "doctor-absorb-asymmetry", "skipped": True}
+    key_result = pmis.validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        return {"verdict": "fail", "action": "doctor-absorb-asymmetry", "error": key_result.get("error")}
+
+    asymmetries: list[dict[str, str]] = []
+    prd_cache: dict[str, tuple[dict[str, str], dict[str, Any]] | None] = {}
+    for record in pmis.list_gap_issue_records(root, cfg):
+        unit_id = str(getattr(record, "unit_id", "") or "")
+        if not unit_id:
+            continue
+        _doctor_absorb_asymmetry_check_gap(backend, unit_id, record, prd_cache, asymmetries)
+
+    if asymmetries:
+        return {
+            "verdict": "fail",
+            "action": "doctor-absorb-asymmetry",
+            "error": "absorb-asymmetry",
+            "asymmetries": asymmetries,
+            "resumeCommand": "python3 scripts/planning_store.py doctor",
+        }
+    return {"verdict": "pass", "action": "doctor-absorb-asymmetry", "checks": ["no-asymmetry"]}
+
+
 def close_parent_epic_if_complete(
     root: Path,
     cfg: dict[str, Any],
@@ -3286,6 +3422,12 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         return pollution
     if pollution.get("checks"):
         checks.extend(pollution.get("checks", []))
+
+    asymmetry = doctor_absorb_asymmetry(root, cfg)
+    if asymmetry.get("verdict") == "fail":
+        return asymmetry
+    if asymmetry.get("checks"):
+        checks.extend(asymmetry.get("checks", []))
 
     if not checks and skipped_reasons:
         return {

@@ -73,6 +73,8 @@ _EXPORTED_NAMES = (
     'content_hash',
     'cycle_sharing_notice',
     'discover_absorbed_units_anchored',
+    'doctor',
+    'doctor_absorb_asymmetry',
     'doctor_absorb_linkage_066',
     'doctor_absorb_pollution',
     'doctor_issues_provider_stub',

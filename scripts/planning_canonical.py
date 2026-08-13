@@ -401,6 +401,12 @@ STRUCTURAL_FRONTMATTER_KEYS = (
     "tags",
 )
 
+# Keys stripped from sw-frontmatter-extra on read (PRD 094 R2/R14) — same set as
+# operator_body_from_canonical write-side structural projection.
+STRUCTURAL_EXTRA_FILTER_KEYS = frozenset(STRUCTURAL_FRONTMATTER_KEYS) | frozenset(
+    {"id", "title", "type", "status", "visibility"}
+)
+
 
 def unit_id_label(unit_id: str) -> str:
     return f"{UNIT_LABEL_PREFIX}{quote(unit_id, safe='')}"
@@ -615,7 +621,12 @@ def is_hybrid_operator_body(content: str) -> bool:
 def strip_hybrid_operator_body(content: str) -> str:
     stripped = FRONTMATTER_EXTRA_MARKER.sub("", content)
     stripped = stripped.replace(HYBRID_FRONTMATTER_MARKER, "")
-    return normalize_body(stripped)
+    return strip_markers_and_edges(stripped)
+
+
+def filter_structural_keys_from_extra(extra: dict[str, Any]) -> dict[str, Any]:
+    """PRD 094 R2/R14 — drop structural keys erroneously stored in sw-frontmatter-extra."""
+    return {k: v for k, v in extra.items() if k not in STRUCTURAL_EXTRA_FILTER_KEYS}
 
 
 def _extra_frontmatter_from_operator(operator_body: str) -> dict[str, Any]:
@@ -626,10 +637,44 @@ def _extra_frontmatter_from_operator(operator_body: str) -> dict[str, Any]:
         data = json.loads(match.group(1))
     except json.JSONDecodeError:
         return {}
-    return data if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        return {}
+    return filter_structural_keys_from_extra(data)
 
 
-def frontmatter_from_labels(labels: list[str], *, unit_id: str | None = None, operator_body: str = "") -> dict[str, Any]:
+def frontmatter_edges_from_sw_edges(sw_edges: dict[str, Any] | None) -> dict[str, Any]:
+    """Read-side projection of portable sw-edges into frontmatter edge keys (PRD 094 R2/R14)."""
+    if not sw_edges:
+        return {}
+    edge_list = sw_edges.get("edges")
+    if not isinstance(edge_list, list):
+        return {}
+    by_rel: dict[str, list[str]] = {}
+    for edge in edge_list:
+        if not isinstance(edge, dict):
+            continue
+        rel = str(edge.get("rel") or edge.get("type") or "").strip()
+        if rel not in EDGE_LABEL_PREFIXES:
+            continue
+        target_raw = edge.get("target")
+        targets = target_raw if isinstance(target_raw, list) else [target_raw]
+        for target in targets:
+            target_str = str(target).strip()
+            if target_str:
+                by_rel.setdefault(rel, []).append(target_str)
+    fm: dict[str, Any] = {}
+    for rel, targets in by_rel.items():
+        fm[rel] = targets if len(targets) > 1 else targets[0]
+    return fm
+
+
+def frontmatter_from_labels(
+    labels: list[str],
+    *,
+    unit_id: str | None = None,
+    operator_body: str = "",
+    sw_edges_block: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """R20/R21 read-side -- rebuild frontmatter from provider-native labels."""
     fm: dict[str, Any] = {}
     artifact_type = artifact_type_from_labels(labels)
@@ -655,6 +700,10 @@ def frontmatter_from_labels(labels: list[str], *, unit_id: str | None = None, op
         edges = edges_from_labels(labels, rel)
         if edges:
             fm[rel] = edges if len(edges) > 1 else edges[0]
+    # PRD 094 R2/R14 — sw-edges authoritative over label projection on conflict.
+    sw_fm = frontmatter_edges_from_sw_edges(sw_edges_block)
+    for rel, value in sw_fm.items():
+        fm[rel] = value
     fm.update(_extra_frontmatter_from_operator(operator_body))
     return fm
 
@@ -664,9 +713,17 @@ def canonical_content_from_operator(
     operator_body: str,
     *,
     unit_id: str | None = None,
+    sw_edges_block: dict[str, Any] | None = None,
 ) -> str:
     """R20 -- agents receive full canonical content (frontmatter + body) on `get`."""
-    fm = frontmatter_from_labels(labels, unit_id=unit_id, operator_body=operator_body)
+    if sw_edges_block is None:
+        sw_edges_block = parse_edges_block(operator_body)
+    fm = frontmatter_from_labels(
+        labels,
+        unit_id=unit_id,
+        operator_body=operator_body,
+        sw_edges_block=sw_edges_block,
+    )
     body = strip_hybrid_operator_body(operator_body)
     if not fm:
         return normalize_body(body)
@@ -806,6 +863,107 @@ def reconcile_edges(
     }
 
 
+def parse_absorbs_targets(raw: Any) -> list[str]:
+    """Normalize an ``absorbs`` frontmatter value to a deduped target list."""
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return [str(item).strip() for item in raw if str(item).strip()]
+    value = str(raw).strip()
+    if not value:
+        return []
+    if value.startswith("["):
+        try:
+            parsed = json.loads(value.replace("'", '"'))
+        except json.JSONDecodeError:
+            parsed = [part.strip().strip("'\"") for part in value.strip("[]").split(",") if part.strip()]
+        if isinstance(parsed, list):
+            return [str(item).strip() for item in parsed if str(item).strip()]
+    return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def parse_absorbs_from_canonical_content(content: str) -> list[str]:
+    """Read absorbs targets from canonical YAML frontmatter (PRD 094 R1)."""
+    fm, _ = split_frontmatter(content)
+    if not fm:
+        return []
+    return parse_absorbs_targets(fm.get("absorbs"))
+
+
+def absorbs_rel_edges(targets: list[str]) -> list[dict[str, Any]]:
+    return [{"rel": "absorbs", "target": target} for target in targets if target]
+
+
+def edge_dedup_key(edge: dict[str, Any]) -> str:
+    rel = str(edge.get("rel") or edge.get("type") or "").strip()
+    target = edge.get("target")
+    if isinstance(target, list):
+        target_key = json.dumps(sorted(str(t) for t in target), sort_keys=True, ensure_ascii=False)
+    else:
+        target_key = str(target).strip()
+    return json.dumps({"rel": rel, "target": target_key}, sort_keys=True, ensure_ascii=False)
+
+
+def union_edge_lists(
+    base: list[dict[str, Any]] | None,
+    extra: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for edge in list(base or []) + list(extra or []):
+        if not isinstance(edge, dict):
+            continue
+        key = edge_dedup_key(edge)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(edge)
+    return out
+
+
+def merge_absorbs_into_edge_list(
+    edges: list[dict[str, Any]] | None,
+    absorb_targets: list[str],
+) -> list[dict[str, Any]]:
+    """Union ``rel: absorbs`` edges into an existing edge list (PRD 094 R1/R13)."""
+    return union_edge_lists(edges, absorbs_rel_edges(absorb_targets))
+
+
+def resolve_put_edge_projection(
+    *,
+    store_content: str,
+    canonical_content: str | None = None,
+    existing_body: str | None = None,
+    existing_native_links: list[dict[str, Any]] | None = None,
+) -> tuple[str, list[dict[str, Any]] | None, list[dict[str, Any]] | None]:
+    """Merge absorbs into sw-edges on put; preserve native links (PRD 094 R1/R13)."""
+    absorb_targets = parse_absorbs_from_canonical_content(canonical_content or store_content)
+    content_edges = parse_edges_block(store_content)
+    stripped = strip_markers_and_edges(store_content)
+
+    edges: list[dict[str, Any]] = []
+    native_links: list[dict[str, Any]] = []
+
+    if content_edges is not None:
+        edges = list(content_edges.get("edges") or [])
+        native_links = list(content_edges.get("native") or [])
+        if not native_links and existing_native_links:
+            native_links = list(existing_native_links)
+    elif existing_body is not None:
+        existing_edges = parse_edges_block(existing_body)
+        native_links = list(existing_native_links or [])
+        if existing_edges is not None or native_links:
+            edges = list((existing_edges or {}).get("edges") or [])
+    elif absorb_targets:
+        edges = []
+
+    if not absorb_targets and not edges and not native_links:
+        return store_content, None, None
+
+    merged_edges = merge_absorbs_into_edge_list(edges, absorb_targets)
+    if not merged_edges and not native_links:
+        return stripped, None, None
+    return stripped, merged_edges, native_links or None
 
 
 _EDGE_REL_TO_NATIVE_TYPE: dict[str, str] = {

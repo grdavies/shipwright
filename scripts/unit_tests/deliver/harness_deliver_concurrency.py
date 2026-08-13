@@ -240,9 +240,10 @@ if [[ $? -eq 0 ]]; then ok no-progress-differentiated-stall-causes; else bad no-
 python3 - <<'PY' "$ROOT"
 import json, sys
 from pathlib import Path
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
 from check_gate_lib import reconcile_stale_in_progress_checks, classify_checks
+from _sw.host._common import map_github_checks
 fixture = Path(sys.argv[1]) / 'scripts/test/fixtures/deliver-concurrency/stale-in-progress-success-checks.json'
 checks = json.loads(fixture.read_text())
 reconciled, settled = reconcile_stale_in_progress_checks(checks, ttl_seconds=60, now=datetime.now(timezone.utc))
@@ -250,6 +251,31 @@ assert settled, settled
 classified = classify_checks(reconciled, neutral_pass=True, allowlist=[])
 pending = [c['name'] for c in classified if c['class'] == 'pending']
 assert not pending, pending
+# Conclusion SUCCESS settles immediately — even when startedAt is "now" (no TTL wait).
+fresh = [{
+    "name": "fresh-success",
+    "state": "IN_PROGRESS",
+    "conclusion": "SUCCESS",
+    "startedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+}]
+fresh_out, fresh_settled = reconcile_stale_in_progress_checks(
+    fresh, ttl_seconds=600, now=datetime.now(timezone.utc)
+)
+assert fresh_settled == ["fresh-success"], fresh_settled
+assert fresh_out[0]["state"] == "SUCCESS"
+# map_github_checks: definitive conclusion wins over transient in_progress status
+mapped = map_github_checks(json.dumps({
+    "check_runs": [{
+        "name": "advisory-shard",
+        "status": "in_progress",
+        "conclusion": "success",
+        "started_at": (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat().replace("+00:00", "Z"),
+        "html_url": "https://example.test/job",
+        "app": {"slug": "github-actions"},
+    }]
+}))
+assert mapped and mapped[0]["state"] == "SUCCESS", mapped
+assert mapped[0]["bucket"] == "pass", mapped
 print("ok")
 PY
 if [[ $? -eq 0 ]]; then ok stale-in-progress-success-check-gate-green; else bad stale-in-progress-success-check-gate-green; fi

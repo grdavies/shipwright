@@ -534,8 +534,13 @@ def reconcile_stale_in_progress_checks(
     ttl_seconds: int,
     now: datetime | None = None,
 ) -> tuple[list[dict[str, Any]], list[str]]:
-    """Settle stale IN_PROGRESS checks whose workflow conclusion is SUCCESS (R11)."""
-    now = now or datetime.now(timezone.utc)
+    """Settle IN_PROGRESS checks whose conclusion is already SUCCESS (R11).
+
+    A definitive ``conclusion=SUCCESS`` is authoritative immediately — do not wait for
+    ``ttl_seconds``. The ``ttl_seconds`` / ``now`` parameters are retained for call-site
+    compatibility and for future workflow-level signals that lack a per-check conclusion.
+    """
+    _ = (ttl_seconds, now)
     settled: list[str] = []
     out: list[dict[str, Any]] = []
     for item in checks:
@@ -545,12 +550,9 @@ def reconcile_stale_in_progress_checks(
         state = str(row.get("state") or "").upper()
         conclusion = str(row.get("conclusion") or "").upper()
         if state in PENDING_STATES and conclusion == "SUCCESS":
-            started = _parse_iso8601(str(row.get("startedAt") or ""))
-            age_seconds = (now - started).total_seconds() if started else float("inf")
-            if age_seconds >= float(ttl_seconds):
-                row["state"] = "SUCCESS"
-                row["staleInProgressSettled"] = True
-                settled.append(str(row.get("name") or "check"))
+            row["state"] = "SUCCESS"
+            row["staleInProgressSettled"] = True
+            settled.append(str(row.get("name") or "check"))
         out.append(row)
     return out, settled
 
