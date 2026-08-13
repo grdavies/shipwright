@@ -26,6 +26,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--pr-context", choices=["on", "off", "auto"], default="auto")
     parser.add_argument("--behavioral-status", default=None)
     parser.add_argument("--claims-status", default=None)
+    parser.add_argument(
+        "--restore-committed-baseline",
+        action="store_true",
+        help="Restore committed baseline for planning#641/#642 partition when --baseline-* omitted (PRD 094 R7)",
+    )
+    parser.add_argument(
+        "--partition-id",
+        default=vel.DEFAULT_NO_BASELINE_PARTITION,
+        help="No-baseline partition id for committed baseline restore",
+    )
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
     verdict, code = vel.compute_and_record(
@@ -39,6 +49,8 @@ def main(argv: list[str] | None = None) -> int:
         pr_context=args.pr_context,
         behavioral_status_path=Path(args.behavioral_status) if args.behavioral_status else None,
         claims_status_path=Path(args.claims_status) if args.claims_status else None,
+        partition_id=args.partition_id,
+        restore_committed_baseline=args.restore_committed_baseline,
     )
     print(json.dumps(verdict, ensure_ascii=False, indent=2))
     return code

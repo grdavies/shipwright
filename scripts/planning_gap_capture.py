@@ -45,6 +45,7 @@ SUBSTANTIAL_MIN_RECURRENCE = 2
 DEFAULT_MAX_TERMINAL_CAPTURES = 3
 VERIFY_OVERRIDE_CLASSES = frozenset({"no-baseline", "unattributed"})
 VERIFY_OVERRIDE_SOURCE = "verify-override"
+VERIFY_OVERRIDE_RECURRENCE_REL = ".cursor/hooks/state/verify-override-recurrence"
 
 GAP_DRAFT_INBOX_REL = ".cursor/sw-gap-draft-inbox"
 DEFAULT_DRAFT_STALE_DAYS = 14
@@ -491,6 +492,38 @@ def verify_override_signature(
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
 
 
+def _verify_override_recurrence_path(root: Path, signature: str) -> Path:
+    return pp.git_root(root) / VERIFY_OVERRIDE_RECURRENCE_REL / f"{signature}.json"
+
+
+def record_verify_override_recurrence(
+    root: Path,
+    *,
+    signature: str,
+    unit_id: str,
+) -> int:
+    """Increment visible recurrence counter for an existing verify-override gap (PRD 094 R8)."""
+    path = _verify_override_recurrence_path(root, signature)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    prior = 1
+    if path.is_file():
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(doc, dict):
+                prior = int(doc.get("recurrence") or 1)
+        except (json.JSONDecodeError, OSError, TypeError, ValueError):
+            prior = 1
+    current = prior + 1
+    payload = {
+        "signature": signature,
+        "unitId": unit_id,
+        "recurrence": current,
+        "updatedAt": utc_now(),
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return current
+
+
 def _gap_tags_from_frontmatter(fm: dict[str, Any]) -> list[str]:
     tags = fm.get("tags")
     if isinstance(tags, list):
@@ -552,6 +585,8 @@ def capture_verify_override(
     dry_run: bool = False,
 ) -> dict[str, Any]:
     """Auto-file durable follow-up gap for verify/ship overrides (PRD 060 R8–R9)."""
+    import harness_isolation_lint as hil
+
     inconclusive = str(override.get("inconclusiveClass") or "").strip().lower()
     if inconclusive not in VERIFY_OVERRIDE_CLASSES:
         return {
@@ -566,12 +601,21 @@ def capture_verify_override(
     )
     existing = find_open_gap_by_signal(root, signature)
     if existing:
+        recurrence = record_verify_override_recurrence(
+            root,
+            signature=signature,
+            unit_id=existing,
+        )
         return {
             "action": "reused",
             "unitId": existing,
             "signature": signature,
             "deduped": True,
+            "recurrence": recurrence,
         }
+    refusal = hil.refuse_live_planning_store_write("capture_verify_override")
+    if refusal:
+        return {**refusal, "action": "refused"}
     redacted_reason = redact_override_reason(str(override.get("reason") or ""))
     who = str(override.get("who") or "unknown").strip()
     title = f"Verify override follow-up: {inconclusive}"
