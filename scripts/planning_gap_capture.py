@@ -1024,19 +1024,191 @@ def _parse_absorbs_frontmatter(raw: str) -> list[str]:
     return ps._parse_absorbs_targets(raw or "")
 
 
-def _merge_prd_absorbs_frontmatter(content: str, gap_unit_id: str) -> tuple[str, bool]:
-    from gap_backlog import update_frontmatter_field
+class AbsorbLinkageRevisionConflict(Exception):
+    """Revision-conflict during absorb-linkage put (PRD 094 R6)."""
+
+    def __init__(self, **detail: Any) -> None:
+        self.detail = detail
+        super().__init__("revision-conflict")
+
+
+def _absorb_target_present(targets: list[str], gap_unit_id: str) -> bool:
+    return any(gap_absorb_target_match(item, gap_unit_id) for item in targets)
+
+
+def _canonicalize_absorb_targets(targets: list[str]) -> list[str]:
+    """Alias-normalized dedupe preserving first-seen order (PRD 094 R4)."""
+    out: list[str] = []
+    for candidate in targets:
+        candidate = candidate.strip()
+        if not candidate or _absorb_target_present(out, candidate):
+            continue
+        out.append(candidate)
+    return out
+
+
+def _absorb_sets_semantically_equal(left: list[str], right: list[str]) -> bool:
+    left_norm = _canonicalize_absorb_targets(left)
+    right_norm = _canonicalize_absorb_targets(right)
+    if len(left_norm) != len(right_norm):
+        return False
+    return all(_absorb_target_present(right_norm, item) for item in left_norm)
+
+
+def _collect_absorb_targets_from_content(content: str) -> list[str]:
+    """Collect absorb targets from YAML frontmatter and sw-edges (PRD 094 R3/R4)."""
+    from planning_canonical import parse_edges_block
     from planning_migrate_issue_store import parse_frontmatter_fields
 
+    targets: list[str] = []
     fm = parse_frontmatter_fields(content)
-    absorbs = _parse_absorbs_frontmatter(fm.get("absorbs", ""))
-    if any(_gap_matches_absorb_target(item, gap_unit_id) for item in absorbs):
-        return content, False
-    absorbs.append(gap_unit_id)
-    new_content = update_frontmatter_field(
-        content, "absorbs", "[" + ", ".join(absorbs) + "]"
+    for item in _parse_absorbs_frontmatter(fm.get("absorbs", "")):
+        targets = _canonicalize_absorb_targets(targets + [item])
+    edges = parse_edges_block(content)
+    if edges:
+        for edge in edges.get("edges") or []:
+            if not isinstance(edge, dict):
+                continue
+            rel = str(edge.get("rel") or edge.get("relationship") or "").strip().lower()
+            if rel != "absorbs":
+                continue
+            target = str(edge.get("target") or "").strip()
+            if target:
+                targets = _canonicalize_absorb_targets(targets + [target])
+    return targets
+
+
+def _apply_absorb_targets_to_content(content: str, absorb_targets: list[str]) -> str:
+    """Merge absorbs into canonical frontmatter and durable sw-edges (PRD 094 R3)."""
+    from gap_backlog import update_frontmatter_field
+    from planning_canonical import (
+        build_edges_block,
+        merge_absorbs_into_edge_list,
+        parse_edges_block,
+        strip_markers_and_edges,
     )
-    return new_content, True
+    from planning_migrate_issue_store import parse_frontmatter_fields
+
+    targets = _canonicalize_absorb_targets(absorb_targets)
+    new_content = content
+    fm = parse_frontmatter_fields(content)
+    if fm or content.startswith("---"):
+        new_content = update_frontmatter_field(
+            new_content,
+            "absorbs",
+            "[" + ", ".join(targets) + "]",
+        )
+    edges_block = parse_edges_block(content)
+    if edges_block is not None:
+        edges = list(edges_block.get("edges") or [])
+        native = list(edges_block.get("native") or [])
+        merged_edges = merge_absorbs_into_edge_list(edges, targets)
+        body_without_edges = strip_markers_and_edges(new_content)
+        new_content = body_without_edges.rstrip() + "\n\n" + build_edges_block(merged_edges, native)
+    return new_content
+
+
+def _merge_prd_absorbs_frontmatter(content: str, gap_unit_id: str) -> tuple[str, bool]:
+    """Hybrid-safe absorb merge with semantic ``changed`` (PRD 094 R3/R4)."""
+    before = _collect_absorb_targets_from_content(content)
+    if _absorb_target_present(before, gap_unit_id):
+        return content, False
+    after = _canonicalize_absorb_targets(before + [gap_unit_id])
+    if _absorb_sets_semantically_equal(before, after):
+        return content, False
+    return _apply_absorb_targets_to_content(content, after), True
+
+
+def _remerge_prd_absorbs(content: str, gap_unit_ids: list[str]) -> tuple[str, bool]:
+    updated = content
+    changed_any = False
+    for gap_unit_id in gap_unit_ids:
+        updated, changed = _merge_prd_absorbs_frontmatter(updated, gap_unit_id)
+        changed_any = changed_any or changed
+    return updated, changed_any
+
+
+def _backend_put_capture_conflict(
+    backend: Any,
+    unit_id: str,
+    body_path: str,
+    content: str,
+) -> ps.StoreResult:
+    """Issue-store put that surfaces revision-conflict instead of exiting (PRD 094 R6)."""
+    conflict: dict[str, Any] = {}
+
+    original_fail = ps.fail
+
+    def _capturing_fail(error: str, exit_code: int = 2, **extra: Any) -> None:
+        code = str(extra.get("code") or error or "").strip()
+        if code == "revision-conflict" or error == "revision-conflict":
+            conflict.update(extra)
+            conflict["error"] = error
+            raise AbsorbLinkageRevisionConflict(**conflict)
+        original_fail(error, exit_code, **extra)
+
+    ps.fail = _capturing_fail  # type: ignore[method-assign]
+    try:
+        return backend.put(unit_id, body_path, content)
+    finally:
+        ps.fail = original_fail  # type: ignore[method-assign]
+
+
+def _put_absorb_linkage_unit(
+    backend: Any,
+    unit_id: str,
+    body_path: str,
+    content: str,
+    *,
+    remerge: Callable[[str], tuple[str, bool]] | None = None,
+) -> ps.StoreResult | dict[str, Any]:
+    """Put with refetch+remerge on revision-conflict (PRD 094 R6)."""
+    current = content
+    for attempt in range(ABSORB_LINKAGE_MAX_RETRIES):
+        try:
+            result = _backend_put_capture_conflict(backend, unit_id, body_path, current)
+        except AbsorbLinkageRevisionConflict as exc:
+            if attempt + 1 >= ABSORB_LINKAGE_MAX_RETRIES:
+                return {
+                    "verdict": "fail",
+                    "error": "revision-conflict-retry-exhausted",
+                    "unitId": unit_id,
+                    "detail": exc.detail,
+                }
+            refetch = backend.get(unit_id, body_path)
+            if refetch.verdict != "ok" or not refetch.content:
+                return {
+                    "verdict": "fail",
+                    "error": "refetch-failed-after-conflict",
+                    "unitId": unit_id,
+                }
+            if remerge is not None:
+                current, _ = remerge(refetch.content)
+            else:
+                current = refetch.content
+            continue
+        if result.verdict in ("ok", "deferred"):
+            return result
+        reason = str(result.reason or "")
+        if reason == "revision-conflict" and attempt + 1 < ABSORB_LINKAGE_MAX_RETRIES:
+            refetch = backend.get(unit_id, body_path)
+            if refetch.verdict != "ok" or not refetch.content:
+                return {
+                    "verdict": "fail",
+                    "error": "refetch-failed-after-conflict",
+                    "unitId": unit_id,
+                }
+            if remerge is not None:
+                current, _ = remerge(refetch.content)
+            else:
+                current = refetch.content
+            continue
+        return result
+    return {
+        "verdict": "fail",
+        "error": "put-retry-exhausted",
+        "unitId": unit_id,
+    }
 
 
 def _merge_gap_absorb_schedule(
@@ -1171,8 +1343,6 @@ def record_absorb_linkage(
     backend = ps.get_backend(root, cfg, override="issue-store")
     prd_fetch = backend.get(prd_unit_id, prd_body_path)
     prd_content = prd_fetch.content if prd_fetch.verdict == "ok" and prd_fetch.content else None
-    if prd_content is None and resolved_prd.is_file():
-        prd_content = resolved_prd.read_text(encoding="utf-8")
     if not prd_content:
         return {
             "verdict": "fail",
@@ -1216,9 +1386,9 @@ def record_absorb_linkage(
         "updates": {},
         "skipped": skipped,
     }
-    prd_updated = prd_content
-    prd_changed_any = False
+    prd_updated, prd_changed_any = _remerge_prd_absorbs(prd_content, gap_targets)
 
+    gap_schedules: list[dict[str, Any]] = []
     for gap_unit_id in gap_targets:
         gap_body_path = ps._default_body_path(gap_unit_id, "gap")
         gap_fetch = backend.get(gap_unit_id, gap_body_path)
@@ -1237,63 +1407,94 @@ def record_absorb_linkage(
                 if resolved == gap_unit_id:
                     issue_ref = ref if ref.startswith("planning#") else f"planning#{ref.lstrip('#')}"
                     break
-        prd_updated, prd_changed = _merge_prd_absorbs_frontmatter(prd_updated, gap_unit_id)
-        prd_changed_any = prd_changed_any or prd_changed
-        gap_updated, gap_changed = _merge_gap_absorb_schedule(
-            gap_content,
-            prd_unit_id=prd_unit_id,
-            prd_number=prd_num,
-            planning_issue=issue_ref,
+        gap_schedules.append(
+            {
+                "gapUnitId": gap_unit_id,
+                "bodyPath": gap_body_path,
+                "issueRef": issue_ref,
+            }
         )
-        gap_put_ok = False
-        for attempt in range(ABSORB_LINKAGE_MAX_RETRIES):
-            if gap_changed:
-                put_gap = backend.put(gap_unit_id, gap_body_path, gap_updated)
-                if put_gap.verdict not in ("ok", "deferred"):
-                    if attempt + 1 >= ABSORB_LINKAGE_MAX_RETRIES:
-                        return {
-                            "verdict": "fail",
-                            "action": "record-absorb-linkage",
-                            "error": "gap-put-failed",
-                            "gapUnitId": gap_unit_id,
-                            "reason": put_gap.reason,
-                        }
-                    continue
-                results["updates"].setdefault("gaps", {})[gap_unit_id] = {"changed": True}
-            gap_fetch_after = backend.get(gap_unit_id, gap_body_path)
-            if gap_fetch_after.verdict == "ok" and gap_fetch_after.content:
-                sync_gap_issue_labels(root, gap_unit_id, gap_fetch_after.content, cfg)
-            gap_put_ok = True
-            break
-        if not gap_put_ok:
+
+    if prd_changed_any:
+        prd_put = _put_absorb_linkage_unit(
+            backend,
+            prd_unit_id,
+            prd_body_path,
+            prd_updated,
+            remerge=lambda body: _remerge_prd_absorbs(body, gap_targets),
+        )
+        if isinstance(prd_put, dict):
             return {
                 "verdict": "fail",
                 "action": "record-absorb-linkage",
-                "error": "gap-put-retry-exhausted",
-                "gapUnitId": gap_unit_id,
+                "error": prd_put.get("error", "prd-put-failed"),
+                "prdUnitId": prd_unit_id,
+                "detail": prd_put,
             }
-
-    if prd_changed_any:
-        for attempt in range(ABSORB_LINKAGE_MAX_RETRIES):
-            put_prd = backend.put(prd_unit_id, prd_body_path, prd_updated)
-            if put_prd.verdict in ("ok", "deferred"):
-                results["updates"]["prd"] = {"changed": True, "hash": put_prd.hash}
-                break
-            if attempt + 1 >= ABSORB_LINKAGE_MAX_RETRIES:
-                return {
-                    "verdict": "fail",
-                    "action": "record-absorb-linkage",
-                    "error": "prd-put-failed",
-                    "reason": put_prd.reason,
-                }
+        if prd_put.verdict not in ("ok", "deferred"):
+            return {
+                "verdict": "fail",
+                "action": "record-absorb-linkage",
+                "error": "prd-put-failed",
+                "reason": prd_put.reason,
+            }
+        results["updates"]["prd"] = {"changed": True, "hash": prd_put.hash}
     else:
         results["updates"]["prd"] = {"changed": False}
 
-    for gap_unit_id in gap_targets:
-        gap_body_path = ps._default_body_path(gap_unit_id, "gap")
+    for schedule in gap_schedules:
+        gap_unit_id = str(schedule["gapUnitId"])
+        gap_body_path = str(schedule["bodyPath"])
+        issue_ref = str(schedule["issueRef"])
         gap_fetch = backend.get(gap_unit_id, gap_body_path)
-        if gap_fetch.verdict == "ok" and gap_fetch.content:
-            sync_gap_issue_labels(root, gap_unit_id, gap_fetch.content, cfg)
+        gap_content = gap_fetch.content if gap_fetch.verdict == "ok" and gap_fetch.content else None
+        if not gap_content:
+            return {
+                "verdict": "fail",
+                "action": "record-absorb-linkage",
+                "error": "gap-unit-missing",
+                "gapUnitId": gap_unit_id,
+            }
+
+        def _remerge_gap(body: str, *, _issue_ref: str = issue_ref) -> tuple[str, bool]:
+            return _merge_gap_absorb_schedule(
+                body,
+                prd_unit_id=prd_unit_id,
+                prd_number=prd_num,
+                planning_issue=_issue_ref,
+            )
+
+        gap_updated, gap_changed = _remerge_gap(gap_content)
+        if not gap_changed:
+            results["updates"].setdefault("gaps", {})[gap_unit_id] = {"changed": False}
+            continue
+        gap_put = _put_absorb_linkage_unit(
+            backend,
+            gap_unit_id,
+            gap_body_path,
+            gap_updated,
+            remerge=_remerge_gap,
+        )
+        if isinstance(gap_put, dict):
+            return {
+                "verdict": "fail",
+                "action": "record-absorb-linkage",
+                "error": gap_put.get("error", "gap-put-failed"),
+                "gapUnitId": gap_unit_id,
+                "detail": gap_put,
+            }
+        if gap_put.verdict not in ("ok", "deferred"):
+            return {
+                "verdict": "fail",
+                "action": "record-absorb-linkage",
+                "error": "gap-put-failed",
+                "gapUnitId": gap_unit_id,
+                "reason": gap_put.reason,
+            }
+        results["updates"].setdefault("gaps", {})[gap_unit_id] = {"changed": True}
+        gap_fetch_after = backend.get(gap_unit_id, gap_body_path)
+        if gap_fetch_after.verdict == "ok" and gap_fetch_after.content:
+            sync_gap_issue_labels(root, gap_unit_id, gap_fetch_after.content, cfg)
 
     refresh_gap_backlog_projection(root, cfg, apply=True)
     return {"verdict": "ok", "action": "record-absorb-linkage", **results}

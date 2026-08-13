@@ -58,10 +58,24 @@ def run_check_gate(root: Path, pr: str | None) -> tuple[int, dict[str, Any]]:
     if pr:
         cmd.append(pr)
     proc = subprocess.run(cmd, cwd=str(root), text=True, capture_output=True)
+    raw = (proc.stdout or "").strip()
     try:
-        gate = json.loads(proc.stdout.strip() or "{}")
+        gate = json.loads(raw or "{}")
     except json.JSONDecodeError:
-        gate = {"verdict": "blocked", "reason": proc.stderr.strip() or "invalid gate output"}
+        err = (proc.stderr or "").strip() or raw[:500] or "invalid gate output"
+        gate = {
+            "verdict": "blocked",
+            "reason": err,
+            "reasonCode": "checks-unavailable",
+            "parseError": True,
+            "gateExitCode": proc.returncode,
+        }
+    if not isinstance(gate, dict):
+        gate = {"verdict": "blocked", "reason": "non-object gate output", "parseError": True}
+    # Surface empty/failed polls — do not look like "no pending checks".
+    if proc.returncode not in (0, 10, 20, 30) and "reasonCode" not in gate:
+        gate.setdefault("reasonCode", "checks-unavailable")
+        gate.setdefault("reason", (proc.stderr or "").strip() or f"check-gate exit {proc.returncode}")
     return proc.returncode, gate
 
 
