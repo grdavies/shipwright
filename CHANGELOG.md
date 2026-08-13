@@ -806,6 +806,7 @@
 * merge phase absorbs-read-path-edges-authoritative-r2-r14 into feat/planning-store-absorb-cleanup-verify-gaps (20f984e) <!-- sw-deliver:absorbs-read-path-edges-authoritative-r2-r14 -->
 * merge phase verify-no-baseline-baseline-runtime-refuse-r7-r8-r9-r12-r17 into feat/planning-store-absorb-cleanup-verify-gaps (7a7509e) <!-- sw-deliver:verify-no-baseline-baseline-runtime-refuse-r7-r8-r9-r12-r17 -->
 * merge phase absorbs-merge-linkage-r3-r4-r5-r6 into feat/planning-store-absorb-cleanup-verify-gaps (c3bceca) <!-- sw-deliver:absorbs-merge-linkage-r3-r4-r5-r6 -->
+* merge phase absorbs-regression-fixtures-r12 into feat/planning-store-absorb-cleanup-verify-gaps (de5eef9) <!-- sw-deliver:absorbs-regression-fixtures-r12 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
