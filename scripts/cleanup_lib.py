@@ -721,6 +721,7 @@ def enumerate_cleanup(root: Path) -> Report:
 
 
 _APPLY_KIND_ORDER = {"worktree": 0, "run-state": 1, "refusal-ledger-entry": 2, "remote": 3, "branch": 4}
+# PRD 095: orphan-worktree kind inserts between worktree (0) and run-state (1) — see enumerate_orphan_worktrees
 
 
 def _apply_sort_key(item: Item) -> tuple[int, str]:
