@@ -803,6 +803,7 @@
 * merge phase wave-i-saved-workflow-template-library-r20 into feat/prd-graph-engineering-runtime-first-program (186f5d2) <!-- sw-deliver:wave-i-saved-workflow-template-library-r20 -->
 * merge phase absorbs-write-path-merge-into-sw-edges-r1-r13 into feat/planning-store-absorb-cleanup-verify-gaps (04eed5e) <!-- sw-deliver:absorbs-write-path-merge-into-sw-edges-r1-r13 -->
 * merge phase cleanup-fail-closed-target-shapes-r10-r11-r12-r15 into feat/planning-store-absorb-cleanup-verify-gaps (7c2b865) <!-- sw-deliver:cleanup-fail-closed-target-shapes-r10-r11-r12-r15 -->
+* merge phase absorbs-read-path-edges-authoritative-r2-r14 into feat/planning-store-absorb-cleanup-verify-gaps (20f984e) <!-- sw-deliver:absorbs-read-path-edges-authoritative-r2-r14 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
