@@ -1,9 +1,21 @@
 #!/usr/bin/env python3
-"""Enumeration and safe cleanup for merged branches, stale worktrees, deliver run-state (R28–R34, R56)."""
+"""Enumeration and safe cleanup for merged branches, stale worktrees, deliver run-state (R28–R34, R56).
+
+Orphan worktrees (PRD 095): directories under ``.sw-worktrees/`` absent from ``git worktree list``.
+
+- ``enumerate_orphan_worktrees(root)`` — direct children only; skips symlinks and registered paths;
+  surfaces ``volume_inaccessible`` on ``OSError`` from ``iterdir``.
+- ``_classify_orphan(path)`` — evaluation order **ghost → park → husk**:
+  ghost (no ``.git``), park (name matches ``r'\\.park-\\d+$'``), husk (``.git`` present, unregistered).
+- Report kind ``orphan-worktree`` — listed in dry-run ``would_remove``; apply uses leaves-first
+  ``os.scandir`` walk (never shell-recursive delete or ``shutil.rmtree``); park-class always
+  requires confirm (SC6).
+"""
 from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 
 from host_invoke import host_verb
@@ -231,6 +243,9 @@ def can_autonomous_apply(root: Path, report: Report) -> tuple[bool, str]:
     for item in report.would_remove:
         if item.kind == "branch" and item.name in (current, default):
             return False, f"would remove protected branch {item.name}"
+    for item in report.would_remove:
+        if item.kind == "orphan-worktree" and item.reason == "park":
+            return False, f"park-class orphan {item.name!r} requires operator confirmation (SC6)"
     return True, "ok"
 
 
@@ -588,6 +603,78 @@ def parse_worktrees(root: Path) -> list[dict[str, str]]:
     return [e for e in entries if e.get("path") and e["path"] != top]
 
 
+_PARK_SUFFIX_RE = re.compile(r"\.park-\d+$")
+
+
+def _classify_orphan(path: Path) -> str:
+    """Classify orphan worktree path: ghost (no .git) → park (.park-N suffix) → husk (.git present)."""
+    if not (path / ".git").exists():
+        return "ghost"
+    if _PARK_SUFFIX_RE.search(path.name):
+        return "park"
+    return "husk"
+
+
+def _safe_tree_remove(path: Path) -> None:
+    """Leaves-first directory removal with symlink safety. No-op if path is already absent.
+
+    Raises OSError on I/O failure so callers can emit partial_removal_error (R3).
+    """
+    if not path.exists() and not path.is_symlink():
+        return
+
+    def _remove(p: Path) -> None:
+        if p.is_symlink():
+            os.unlink(p)
+            return
+        if p.is_dir():
+            with os.scandir(p) as it:
+                for entry in it:
+                    _remove(Path(entry.path))
+            p.rmdir()
+            return
+        os.unlink(p)
+
+    _remove(path)
+
+
+def enumerate_orphan_worktrees(root: Path) -> list[tuple[Path, str]]:
+    """Return (path, classification) for each orphan dir under .sw-worktrees.
+
+    Raises OSError (tagged volume_inaccessible) if .sw-worktrees cannot be listed.
+    Skips symlinks, non-dirs, git-registered paths, and adopt-pending paths.
+    """
+    registered = {Path(wt["path"]).resolve() for wt in parse_worktrees(root)}
+    sw_worktrees = root / ".sw-worktrees"
+    if not sw_worktrees.is_dir():
+        return []
+
+    deliver_view = resolve_deliver_state(root)
+    stall_name = str((deliver_view.state or {}).get("_stallWorktreeName") or "")
+
+    try:
+        children = list(sw_worktrees.iterdir())
+    except OSError:
+        raise  # volume_inaccessible — caller must catch and surface
+
+    result: list[tuple[Path, str]] = []
+    for child in children:
+        if child.is_symlink():
+            continue
+        if not child.is_dir():
+            continue
+        if child.resolve() in registered:
+            continue
+        # skip provisioning-in-progress directories
+        if stall_name and child.name == stall_name:
+            continue
+        if (sw_worktrees / (".sw-provisioning-" + child.name)).exists():
+            continue
+        result.append((child, _classify_orphan(child)))
+
+    return result
+
+
 def enumerate_refusal_ledger(report: Report, root: Path) -> None:
     """Enumerate operator-local refusal ledger entries for dry-run cleanup (PRD 082 R26)."""
     cfg = load_workflow_config(root)
@@ -686,6 +773,15 @@ def enumerate_cleanup(root: Path) -> Report:
         else:
             report.would_remove.append(Item("worktree", path, "detached-stale", "no branch"))
 
+    # Orphan worktrees: directories under .sw-worktrees absent from git's registered worktree list
+    try:
+        for orphan_path, classification in enumerate_orphan_worktrees(root):
+            report.would_remove.append(
+                Item("orphan-worktree", str(orphan_path), classification, f"classification={classification}")
+            )
+    except OSError as exc:
+        report.errors.append(f"orphan-worktree enumeration aborted: volume_inaccessible — {exc}")
+
     from wave_state import resolve_state_path
 
     _protect_inflight_scoped_runs(report, root)
@@ -720,7 +816,8 @@ def enumerate_cleanup(root: Path) -> Report:
     return report
 
 
-_APPLY_KIND_ORDER = {"worktree": 0, "run-state": 1, "refusal-ledger-entry": 2, "remote": 3, "branch": 4}
+_APPLY_KIND_ORDER = {"worktree": 0, "orphan-worktree": 1, "run-state": 2, "refusal-ledger-entry": 3, "remote": 4, "branch": 5}
+# PRD 095: orphan-worktree (1) inserted between worktree (0) and run-state (2)
 
 
 def _apply_sort_key(item: Item) -> tuple[int, str]:
@@ -753,6 +850,43 @@ def apply_report(root: Path, report: Report) -> Report:
                     continue
                 git(root, "worktree", "prune")
                 report.removed.append(item)
+            elif item.kind == "orphan-worktree":
+                path = Path(item.name)
+                # race guard: re-check not in git's registered worktrees at apply time
+                registered_now = {Path(wt["path"]).resolve() for wt in parse_worktrees(root)}
+                if path.resolve() in registered_now:
+                    report.protected.append(
+                        Item("orphan-worktree", item.name, "protected", "registered-at-remove-time")
+                    )
+                    continue
+                # provisioning sentinel guard
+                sentinel = path.parent / (".sw-provisioning-" + path.name)
+                if sentinel.exists():
+                    report.protected.append(
+                        Item("orphan-worktree", item.name, "protected", "provisioning-in-progress")
+                    )
+                    continue
+                # path accessibility check
+                try:
+                    path.stat()
+                except OSError as exc:
+                    report.errors.append(f"orphan-worktree {item.name}: inaccessible — {exc}")
+                    continue
+                try:
+                    _safe_tree_remove(path)
+                    if item.reason == "husk":
+                        git(root, "worktree", "prune", "--expire", "now")
+                    report.removed.append(item)
+                except OSError as exc:
+                    report.protected.append(
+                        Item(
+                            "orphan-worktree",
+                            item.name,
+                            "partial_removal_error",
+                            str(exc),
+                        )
+                    )
+                    report.errors.append(f"orphan-worktree {item.name}: {exc}")
             elif item.kind == "run-state":
                 protected, inflight_reason = _run_state_item_protected(root, item.name)
                 if protected:

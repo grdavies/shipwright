@@ -810,6 +810,11 @@
 * merge phase docs-currency-layout-core-refs-r16 into feat/planning-store-absorb-cleanup-verify-gaps (21979af) <!-- sw-deliver:docs-currency-layout-core-refs-r16 -->
 * merge phase doctor-absorb-asymmetry-r18 into feat/planning-store-absorb-cleanup-verify-gaps (51337d7) <!-- sw-deliver:doctor-absorb-asymmetry-r18 -->
 * merge phase docs-currency-verification-workflows-r16 into feat/planning-store-absorb-cleanup-verify-gaps (52122b0) <!-- sw-deliver:docs-currency-verification-workflows-r16 -->
+* merge phase setup-and-audit into feat/tasks-095 (e7668ff) <!-- sw-deliver:setup-and-audit -->
+* merge phase core-implementation into feat/tasks-095 (df1bdbb) <!-- sw-deliver:core-implementation -->
+* merge phase safety-gate-verification into feat/tasks-095 (bb6bc4d) <!-- sw-deliver:safety-gate-verification -->
+* merge phase testing into feat/tasks-095 (31e28bf) <!-- sw-deliver:testing -->
+* merge phase docs-and-polish into feat/tasks-095 (744497e) <!-- sw-deliver:docs-and-polish -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
