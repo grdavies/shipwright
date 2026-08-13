@@ -20,6 +20,35 @@ from host_lib import remote_name
 EXECUTE_SUB_BRANCH_ROLE = "execute-sub-branch"
 
 
+def _safe_tree_remove(path: Path) -> None:
+    """Leaves-first directory removal with symlink safety. No-op if path is already absent.
+
+    Mirrors cleanup_lib._safe_tree_remove for use in teardown without heavyweight imports.
+    """
+    if not path.exists() and not path.is_symlink():
+        return
+
+    def _remove(p: Path) -> None:
+        if p.is_symlink():
+            os.unlink(p)
+            return
+        try:
+            with os.scandir(p) as it:
+                for entry in it:
+                    _remove(Path(entry.path))
+        except OSError:
+            pass
+        try:
+            p.rmdir()
+        except OSError:
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+
+    _remove(path)
+
+
 def strip_jsonc(text: str) -> str:
     """Strip // line and /* */ block comments outside JSON strings."""
     out: list[str] = []
@@ -423,10 +452,17 @@ def cmd_provision(argv: list[str]) -> int:
         return 12
 
     subprocess.run(["git", "-C", str(top), "fetch", remote_name(cfg), parent], check=False)
-    subprocess.run(
-        ["git", "-C", str(top), "worktree", "add", "-b", new_branch, str(wt_path), parent],
-        check=True,
-    )
+    # TR7: sentinel guards cleanup enumeration during the provisioning window
+    sentinel = wt_root / (".sw-provisioning-" + name)
+    sentinel.touch()
+    try:
+        subprocess.run(
+            ["git", "-C", str(top), "worktree", "add", "-b", new_branch, str(wt_path), parent],
+            check=True,
+        )
+    except Exception:
+        sentinel.unlink(missing_ok=True)
+        raise
 
     port = allocate_port(cfg)
     db_strategy = str(cfg.get("worktree", {}).get("scaffold", {}).get("dbStrategy", "schema-prefix"))
@@ -465,8 +501,10 @@ def cmd_provision(argv: list[str]) -> int:
     )
     if init_proc.returncode != 0:
         print(init_proc.stderr.strip() or init_proc.stdout.strip() or "shipwright-state init failed", file=sys.stderr)
+        sentinel.unlink(missing_ok=True)
         return init_proc.returncode or 2
 
+    sentinel.unlink(missing_ok=True)
     print(
         json.dumps(
             {
@@ -525,6 +563,8 @@ def cmd_teardown(argv: list[str]) -> int:
     if proc.returncode != 0:
         return proc.returncode
     subprocess.run(["git", "-C", str(top), "worktree", "prune"], check=False)
+    # TR7: safe residual tree-walk after confirmed worktree removal (no-op if already absent)
+    _safe_tree_remove(wt_path)
     print(
         json.dumps(
             {
