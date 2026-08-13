@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-12T02:28:45Z",
+  "generatedAt": "2026-08-13T09:48:59Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -6463,46 +6463,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/verification-gate/SKILL.md:96:verify-baseline.py",
+      "id": "core/skills/verification-gate/SKILL.md:138:verify-baseline.py",
       "tree": "core/skills",
       "file": "core/skills/verification-gate/SKILL.md",
-      "line": 96,
+      "line": 138,
       "column": 8,
       "script": "verify-baseline.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/verification-gate/SKILL.md:113:claims_audit.py",
+      "id": "core/skills/verification-gate/SKILL.md:155:claims_audit.py",
       "tree": "core/skills",
       "file": "core/skills/verification-gate/SKILL.md",
-      "line": 113,
+      "line": 155,
       "column": 12,
       "script": "claims_audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/verification-gate/SKILL.md:117:claims_audit.py",
+      "id": "core/skills/verification-gate/SKILL.md:159:claims_audit.py",
       "tree": "core/skills",
       "file": "core/skills/verification-gate/SKILL.md",
-      "line": 117,
+      "line": 159,
       "column": 12,
       "script": "claims_audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/verification-gate/SKILL.md:126:behavioral_anomaly_check.py",
+      "id": "core/skills/verification-gate/SKILL.md:168:behavioral_anomaly_check.py",
       "tree": "core/skills",
       "file": "core/skills/verification-gate/SKILL.md",
-      "line": 126,
+      "line": 168,
       "column": 49,
       "script": "behavioral_anomaly_check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/verification-gate/SKILL.md:168:sw_bootstrap.py",
+      "id": "core/skills/verification-gate/SKILL.md:210:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/verification-gate/SKILL.md",
-      "line": 168,
+      "line": 210,
       "column": 34,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -6607,10 +6607,10 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/canonical-serialization.md:76:test/run_planning_store_fixtures.py",
+      "id": "core/sw-reference/canonical-serialization.md:93:test/run_planning_store_fixtures.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/canonical-serialization.md",
-      "line": 76,
+      "line": 93,
       "column": 9,
       "script": "test/run_planning_store_fixtures.py",
       "classification": "self-repo-only"
@@ -12178,46 +12178,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:96:verify-baseline.py",
+      "id": "dist/claude-code/skills/verification-gate/SKILL.md:138:verify-baseline.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 96,
+      "line": 138,
       "column": 8,
       "script": "verify-baseline.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:113:claims_audit.py",
+      "id": "dist/claude-code/skills/verification-gate/SKILL.md:155:claims_audit.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 113,
+      "line": 155,
       "column": 12,
       "script": "claims_audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:117:claims_audit.py",
+      "id": "dist/claude-code/skills/verification-gate/SKILL.md:159:claims_audit.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 117,
+      "line": 159,
       "column": 12,
       "script": "claims_audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:126:behavioral_anomaly_check.py",
+      "id": "dist/claude-code/skills/verification-gate/SKILL.md:168:behavioral_anomaly_check.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 126,
+      "line": 168,
       "column": 49,
       "script": "behavioral_anomaly_check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:168:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/verification-gate/SKILL.md:210:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 168,
+      "line": 210,
       "column": 34,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -17578,46 +17578,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/verification-gate/SKILL.md:96:verify-baseline.py",
+      "id": "dist/cursor/skills/verification-gate/SKILL.md:138:verify-baseline.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/verification-gate/SKILL.md",
-      "line": 96,
+      "line": 138,
       "column": 8,
       "script": "verify-baseline.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/verification-gate/SKILL.md:113:claims_audit.py",
+      "id": "dist/cursor/skills/verification-gate/SKILL.md:155:claims_audit.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/verification-gate/SKILL.md",
-      "line": 113,
+      "line": 155,
       "column": 12,
       "script": "claims_audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/verification-gate/SKILL.md:117:claims_audit.py",
+      "id": "dist/cursor/skills/verification-gate/SKILL.md:159:claims_audit.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/verification-gate/SKILL.md",
-      "line": 117,
+      "line": 159,
       "column": 12,
       "script": "claims_audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/verification-gate/SKILL.md:126:behavioral_anomaly_check.py",
+      "id": "dist/cursor/skills/verification-gate/SKILL.md:168:behavioral_anomaly_check.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/verification-gate/SKILL.md",
-      "line": 126,
+      "line": 168,
       "column": 49,
       "script": "behavioral_anomaly_check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/verification-gate/SKILL.md:168:sw_bootstrap.py",
+      "id": "dist/cursor/skills/verification-gate/SKILL.md:210:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/verification-gate/SKILL.md",
-      "line": 168,
+      "line": 210,
       "column": 34,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -18712,172 +18712,172 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:445:wave_terminal.py",
+      "id": "docs/guides/workflows.md:458:wave_terminal.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 445,
+      "line": 458,
       "column": 9,
       "script": "wave_terminal.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:455:gap-check-gate.py",
+      "id": "docs/guides/workflows.md:468:gap-check-gate.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 455,
+      "line": 468,
       "column": 9,
       "script": "gap-check-gate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:574:planning_migrate.py",
+      "id": "docs/guides/workflows.md:587:planning_migrate.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 574,
+      "line": 587,
       "column": 43,
       "script": "planning_migrate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:613:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:626:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 613,
+      "line": 626,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:614:planning_hierarchy.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/workflows.md",
-      "line": 614,
-      "column": 8,
-      "script": "planning_hierarchy.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/workflows.md:615:planning_hierarchy.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/workflows.md",
-      "line": 615,
-      "column": 8,
-      "script": "planning_hierarchy.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/workflows.md:627:planning_cross_project_recall.py",
+      "id": "docs/guides/workflows.md:627:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
       "line": 627,
+      "column": 8,
+      "script": "planning_hierarchy.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/workflows.md:628:planning_hierarchy.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/workflows.md",
+      "line": 628,
+      "column": 8,
+      "script": "planning_hierarchy.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/workflows.md:640:planning_cross_project_recall.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/workflows.md",
+      "line": 640,
       "column": 8,
       "script": "planning_cross_project_recall.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:659:planning_store.py",
+      "id": "docs/guides/workflows.md:672:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 659,
+      "line": 672,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:815:planning-graph.py",
+      "id": "docs/guides/workflows.md:828:planning-graph.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 815,
+      "line": 828,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:816:planning-graph.py",
+      "id": "docs/guides/workflows.md:829:planning-graph.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 816,
+      "line": 829,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:837:planning_linear_client.py",
+      "id": "docs/guides/workflows.md:850:planning_linear_client.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 837,
+      "line": 850,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:870:planning_store.py",
+      "id": "docs/guides/workflows.md:883:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 870,
+      "line": 883,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:871:planning_store.py",
+      "id": "docs/guides/workflows.md:884:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 871,
+      "line": 884,
       "column": 53,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:882:build-chain-sync.py",
+      "id": "docs/guides/workflows.md:895:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 882,
+      "line": 895,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:903:wave.py",
+      "id": "docs/guides/workflows.md:916:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 903,
+      "line": 916,
       "column": 25,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:982:planning_store.py",
+      "id": "docs/guides/workflows.md:995:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 982,
+      "line": 995,
       "column": 12,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:983:planning_store.py",
+      "id": "docs/guides/workflows.md:996:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 983,
+      "line": 996,
       "column": 32,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:985:planning_cutover.py",
+      "id": "docs/guides/workflows.md:998:planning_cutover.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 985,
+      "line": 998,
       "column": 12,
       "script": "planning_cutover.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1055:planning_gap_capture.py",
+      "id": "docs/guides/workflows.md:1068:planning_gap_capture.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1055,
+      "line": 1068,
       "column": 173,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"

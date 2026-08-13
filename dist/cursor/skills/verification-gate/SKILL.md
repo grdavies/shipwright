@@ -77,7 +77,8 @@ python3 scripts/verify-evidence.py \
   [--pr-context on|off|auto] \
   [--review-status "$RUN_DIR/sw-review.status.json"] \
   [--baseline-verify /path/to/baseline.verify.json] \
-  [--baseline-gate /path/to/baseline.gate.json]
+  [--baseline-gate /path/to/baseline.gate.json] \
+  [--restore-committed-baseline]
 ```
 
 `--pr-context auto` (default) derives gate requirement from offline signals: upstream divergence, CI env
@@ -95,14 +96,14 @@ mandatory control — not an alternative to baseline restoration.
 
 ### Evidence matrix (planning#641 / #642)
 
-Single shared partition (`planning-641-642`, decision D4). Machine-readable rows live in
-`scripts/verify_evidence_lib.py` (`NO_BASELINE_EVIDENCE_MATRIX`):
+Single shared partition (`planning-641-642`, decision D4). Machine-readable rows live in the
+verify-evidence library (`NO_BASELINE_EVIDENCE_MATRIX`):
 
 | Field | Value |
 | --- | --- |
 | Planning issues | #641, #642 |
 | Gap units | gap-263, gap-264 |
-| Suite partition | `scripts/unit_tests/w4/harness_improvement.py` verify-evidence attribution cases |
+| Suite partition | harness improvement verify-evidence attribution cases |
 | Signal hash | `3b1b69a5e7ff67fe5e52c3e4a6d6347b` |
 | Root cause | verify/gate failure without attribution baseline → `inconclusiveClass: no-baseline` |
 
@@ -110,16 +111,9 @@ Operator matrix copy: `docs/guides/workflows.md` **Verify no-baseline evidence m
 
 ### Committed baseline restore (R7)
 
-When callers omit `--baseline-verify` / `--baseline-gate`, `verify-evidence.py` may restore committed
-fixtures for a known partition:
-
-```bash
-python3 scripts/verify-evidence.py \
-  --verify-status "$RUN_DIR/sw-verify.status.json" \
-  --restore-committed-baseline
-```
-
-Committed paths (repo-relative):
+When callers omit `--baseline-verify` / `--baseline-gate`, pass **`--restore-committed-baseline`**
+to the canonical `verify-evidence.py` invocation above — it loads committed fixtures for partition
+`planning-641-642`:
 
 - `scripts/test/fixtures/verify-evidence/baselines/planning-641-642/verify-baseline.json`
 - `scripts/test/fixtures/verify-evidence/baselines/planning-641-642/gate-baseline.json`
@@ -132,8 +126,8 @@ duplicate gap.
 ### Runtime harness refuse (R9)
 
 `capture_verify_override` and `override-add` **runtime-refuse** live issue-store writes when executing under
-harness/test unless the operator sets `SW_ALLOW_LIVE_PLANNING_STORE=1`. Static call-site lint
-(`scripts/harness_isolation_lint.py`) remains defense-in-depth; runtime refuse is authoritative.
+harness/test unless the operator sets `SW_ALLOW_LIVE_PLANNING_STORE=1`. Static call-site harness isolation
+lint remains defense-in-depth; runtime refuse is authoritative.
 
 ## Baseline contract
 
