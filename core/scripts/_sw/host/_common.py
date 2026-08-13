@@ -511,12 +511,19 @@ def map_github_checks(body_text: str) -> list[dict[str, Any]]:
     for run in runs:
         status = str(run.get("status") or "").upper()
         conclusion = str(run.get("conclusion") or "").upper()
-        if status in ("QUEUED", "IN_PROGRESS", "PENDING"):
-            state = "IN_PROGRESS"
-        elif conclusion == "SUCCESS" or (status == "COMPLETED" and conclusion in ("SUCCESS", "NEUTRAL", "SKIPPED")):
-            state = "SUCCESS" if conclusion != "NEUTRAL" else "NEUTRAL"
-        elif conclusion in ("FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"):
+        # Prefer definitive conclusion over transient status. GitHub (and `gh pr checks`)
+        # can leave status=in_progress while conclusion is already SUCCESS, which would
+        # otherwise yellow-stall the gate until stale-TTL reconciliation.
+        if conclusion in ("SUCCESS", "SKIPPED"):
+            state = "SUCCESS" if conclusion == "SUCCESS" else "SKIPPED"
+        elif conclusion == "NEUTRAL":
+            state = "NEUTRAL"
+        elif conclusion in ("FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED", "STARTUP_FAILURE"):
             state = "FAILURE"
+        elif status in ("QUEUED", "IN_PROGRESS", "PENDING"):
+            state = "IN_PROGRESS"
+        elif status == "COMPLETED" and conclusion in ("SUCCESS", "NEUTRAL", "SKIPPED"):
+            state = "SUCCESS" if conclusion != "NEUTRAL" else "NEUTRAL"
         else:
             state = conclusion or status or "PENDING"
         entry = {
