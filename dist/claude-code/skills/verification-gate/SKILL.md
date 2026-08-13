@@ -87,6 +87,54 @@ fixtures for determinism.
 Prints verdict JSON to stdout. Exit code mirrors verdict (`0` / `10` / `20`). Schema:
 `references/verdict-schema.json`.
 
+## No-baseline remediation (PRD 094 R7–R9/R17)
+
+The `no-baseline` class is **benign for ship** (log+continue) but must not remain the steady-state for
+known partitions. Product remediation restores conclusive attribution; harness isolation is an additional
+mandatory control — not an alternative to baseline restoration.
+
+### Evidence matrix (planning#641 / #642)
+
+Single shared partition (`planning-641-642`, decision D4). Machine-readable rows live in
+`scripts/verify_evidence_lib.py` (`NO_BASELINE_EVIDENCE_MATRIX`):
+
+| Field | Value |
+| --- | --- |
+| Planning issues | #641, #642 |
+| Gap units | gap-263, gap-264 |
+| Suite partition | `scripts/unit_tests/w4/harness_improvement.py` verify-evidence attribution cases |
+| Signal hash | `3b1b69a5e7ff67fe5e52c3e4a6d6347b` |
+| Root cause | verify/gate failure without attribution baseline → `inconclusiveClass: no-baseline` |
+
+Operator matrix copy: `docs/guides/workflows.md` **Verify no-baseline evidence matrix**.
+
+### Committed baseline restore (R7)
+
+When callers omit `--baseline-verify` / `--baseline-gate`, `verify-evidence.py` may restore committed
+fixtures for a known partition:
+
+```bash
+python3 scripts/verify-evidence.py \
+  --verify-status "$RUN_DIR/sw-verify.status.json" \
+  --restore-committed-baseline
+```
+
+Committed paths (repo-relative):
+
+- `scripts/test/fixtures/verify-evidence/baselines/planning-641-642/verify-baseline.json`
+- `scripts/test/fixtures/verify-evidence/baselines/planning-641-642/gate-baseline.json`
+
+After restore, the partition MUST return a conclusive pass/fail verdict without a logged override (R8).
+Recurrence on an existing verify-override unit increments
+`.cursor/hooks/state/verify-override-recurrence/<signature>.json` — visible repeat signal without a
+duplicate gap.
+
+### Runtime harness refuse (R9)
+
+`capture_verify_override` and `override-add` **runtime-refuse** live issue-store writes when executing under
+harness/test unless the operator sets `SW_ALLOW_LIVE_PLANNING_STORE=1`. Static call-site lint
+(`scripts/harness_isolation_lint.py`) remains defense-in-depth; runtime refuse is authoritative.
+
 ## Baseline contract
 
 Capture baseline **before** the change (merge base or pre-change head) at a **caller-owned canonical path**

@@ -65,6 +65,23 @@ Portable edges live in a fenced block:
 The body block is **authoritative on conflict**; native links/sub-issues are reconciled on read.
 Divergence beyond tolerance fails closed (`edge-divergence`).
 
+### PRD absorbs projection (PRD 094 R1/R13/R14)
+
+Hybrid-operator PRD bodies do **not** persist raw YAML `absorbs:` on the stored body. Absorb targets
+project into the `sw-edges` payload as `{"rel":"absorbs","target":"<unit-id>"}` entries (alias-normalized,
+order-insensitive on read).
+
+| Rule | Behavior |
+| --- | --- |
+| Write path | New absorbs edges **merge into** the existing `edges[]` set; pre-existing `depends` / `blocks` / other rels and `native[]` links are preserved — never replaced by an absorbs-only fence |
+| Read path | Parse `sw-edges` **before** marker strip; edges are authoritative over truncated discovery labels |
+| Label cap | `MAX_EDGE_LABELS_PER_RELATION` may truncate label projection only — the fence remains the durable graph |
+| Structural keys | `absorbs`, `depends`, `blocks`, `amends`, `extends`, `supersedes` MUST NOT appear in `sw-frontmatter-extra` on write or override edges on read |
+
+Put→get round-trip must preserve the full absorb target set (including counts above the label cap) with
+no silent drop. `record_absorb_linkage` merges through the same hybrid path; semantic `changed` compares
+alias-normalized sets, not byte identity.
+
 ## Hash
 
 `canonical_hash = sha256(canonical_form).hexdigest()` — full 64-char digest (distinct from 16-char
