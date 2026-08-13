@@ -1056,6 +1056,20 @@ Phase-mode `/sw-deliver` reliability contracts (–):
 
 Resume after halt: `/sw-deliver run` from the orchestrator worktree (or `/sw-deliver run --issue <n>` under issue-store).
 
+### Verify no-baseline evidence matrix (planning#641 / #642)
+
+PRD 094 decision **D4** treats planning#641 and planning#642 as one shared `no-baseline` class
+(gap-263 / gap-264). Before closing either gap, the partition below must be conclusive without a
+logged override — committed baselines plus runtime harness refuse, not isolation alone.
+
+| Planning issue | Gap unit | Suite partition | Signal hash | Root cause | Remediation |
+| --- | --- | --- | --- | --- | --- |
+| #641 | gap-263 | `scripts/unit_tests/w4/harness_improvement.py` verify-evidence attribution cases | `3b1b69a5e7ff67fe5e52c3e4a6d6347b` | verify/gate failure without attribution baseline → `inconclusiveClass: no-baseline` | Committed baselines under `scripts/test/fixtures/verify-evidence/baselines/planning-641-642/`; `verify_evidence_lib.resolve_committed_baseline_paths` restores them when callers omit `--baseline-*` |
+| #642 | gap-264 | *(shared with #641 — same partition)* | *(shared)* | *(shared)* | Runtime refuse: `capture_verify_override` / `override-add` refuse live issue-store writes under harness unless `SW_ALLOW_LIVE_PLANNING_STORE=1`; static lint remains defense-in-depth |
+
+Recurrence on an existing verify-override gap increments `.cursor/hooks/state/verify-override-recurrence/<signature>.json`
+so operators see repeat signal without a duplicate gap unit.
+
 **Conductor recovery:** when `mergeJournal` is abandoned on halt, `preserve_merge_queue_on_halt` keeps
 `mergeQueue` replayable while clearing the journal. When `phase-provision` previously failed on noisy
 stdout, re-run `/sw-deliver run` — provision now records durable `phaseWorktrees.path`/`name` from the

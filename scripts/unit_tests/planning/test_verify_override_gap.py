@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+import harness_isolation_lint as hil
 import planning_gap_capture as pgc
 
 
@@ -33,6 +34,7 @@ def test_verify_override_signature_stable_excludes_reason() -> None:
 def test_capture_verify_override_create_and_reuse(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     root = tmp_path
     _init_repo(root)
+    monkeypatch.setenv(hil.LIVE_STORE_OPERATOR_FLAG, "1")
     written: dict[str, str] = {}
 
     def fake_put(r: Path, unit_id: str, body_path_rel: str, content: str) -> None:

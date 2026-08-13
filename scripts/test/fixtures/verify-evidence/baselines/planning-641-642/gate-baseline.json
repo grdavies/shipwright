@@ -1,0 +1,6 @@
+{
+  "verdict": "red",
+  "failingChecks": [
+    "ci/test"
+  ]
+}

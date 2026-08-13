@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Harness isolation lint — shared config, baseline I/O, planning-store pollution (PRD 060 R14–R15, 063 R10)."""
+"""Harness isolation lint — shared config, baseline I/O, planning-store pollution (PRD 060 R14–R15, 063 R10, 094 R9)."""
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 REMEDIATION = "python3 scripts/harness_isolation_lint.py --check"
 OPT_OUT_PREFIX = "harness-isolation-opt-out:"
 MANIFEST_REL = "core/sw-reference/harness-roots-manifest.json"
 PLANNING_STORE_MARKERS = ("override-add", "capture_verify_override", "store_put_gap")
+LIVE_STORE_OPERATOR_FLAG = "SW_ALLOW_LIVE_PLANNING_STORE"
 ISOLATION_MARKERS = (
     "$TMP", "$FIXTURES", "mktemp", "tempfile", "tmp_path", "monkeypatch",
     "fake_put", "harness-isolation-opt-out:", "SW_HARNESS", "OV_TMP",
@@ -20,6 +23,39 @@ ISOLATION_MARKERS = (
 def emit(obj: dict, exit_code: int = 0) -> None:
     print(json.dumps(obj, ensure_ascii=False, indent=2))
     sys.exit(exit_code)
+
+
+def is_harness_execution() -> bool:
+    """True when running under harness/pytest (runtime probe — not source-text lint)."""
+    if os.environ.get("SW_HARNESS") == "1":
+        return True
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return True
+    if os.environ.get("SW_TEST_SCOPE"):
+        return True
+    return False
+
+
+def live_planning_store_writes_permitted() -> bool:
+    """Explicit operator flag for non-harness live issue-store writes (PRD 094 R9)."""
+    return os.environ.get(LIVE_STORE_OPERATOR_FLAG) == "1"
+
+
+def refuse_live_planning_store_write(operation: str) -> dict[str, Any] | None:
+    """Runtime refuse live planning-store writes under harness unless operator flag (R9)."""
+    if not is_harness_execution():
+        return None
+    if live_planning_store_writes_permitted():
+        return None
+    return {
+        "verdict": "refused",
+        "action": operation,
+        "error": "harness-runtime-refuse-live-planning-store",
+        "remediation": (
+            f"Harness execution refused live issue-store write; set {LIVE_STORE_OPERATOR_FLAG}=1 "
+            "only for explicit operator actions outside test isolation."
+        ),
+    }
 
 
 def has_opt_out(text: str) -> bool:

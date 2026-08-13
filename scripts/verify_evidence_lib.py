@@ -1,6 +1,7 @@
 """Deterministic verification-gate verdict computation (IM1 / U1; plan 005)."""
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -9,6 +10,77 @@ from typing import Any
 import evidence_read as er
 
 VERDICT_EXIT = {"verified": 0, "inconclusive": 10, "not-verified": 20}
+
+# PRD 094 R7/R17 — shared no-baseline class for planning#641/#642 (decision D4).
+NO_BASELINE_EVIDENCE_MATRIX: dict[str, dict[str, Any]] = {
+    "planning-641-642": {
+        "planningIssues": ["641", "642"],
+        "gapUnits": ["gap-263", "gap-264"],
+        "partition": (
+            "scripts/unit_tests/w4/harness_improvement.py verify-evidence cases "
+            "(verify/gate failure attribution without caller baseline)"
+        ),
+        "signalHash": "3b1b69a5e7ff67fe5e52c3e4a6d6347b",
+        "rootCause": (
+            "verify or gate failure present without a committed attribution baseline; "
+            "ship chain returned inconclusiveClass no-baseline instead of a conclusive verdict"
+        ),
+        "baselineVerifyRel": "baselines/planning-641-642/verify-baseline.json",
+        "baselineGateRel": "baselines/planning-641-642/gate-baseline.json",
+    },
+}
+
+FIXTURES_VERIFY_EVIDENCE_REL = Path("scripts") / "test" / "fixtures" / "verify-evidence"
+DEFAULT_NO_BASELINE_PARTITION = "planning-641-642"
+
+
+def evidence_matrix_entries() -> list[dict[str, Any]]:
+    """Return the planning#641/#642 evidence matrix rows (PRD 094 R17)."""
+    rows: list[dict[str, Any]] = []
+    for partition_id, entry in NO_BASELINE_EVIDENCE_MATRIX.items():
+        row = {"partitionId": partition_id, **entry}
+        row["signalHash"] = partition_signal_hash(partition_id)
+        rows.append(row)
+    return rows
+
+
+def partition_signal_hash(partition_id: str = DEFAULT_NO_BASELINE_PARTITION) -> str:
+    entry = NO_BASELINE_EVIDENCE_MATRIX[partition_id]
+    raw = f"{partition_id}|{entry['partition']}|{entry['rootCause']}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
+
+
+def committed_baseline_root(root: Path) -> Path:
+    return root / FIXTURES_VERIFY_EVIDENCE_REL
+
+
+def resolve_committed_baseline_paths(
+    root: Path,
+    *,
+    baseline_verify_path: Path | None,
+    baseline_gate_path: Path | None,
+    partition_id: str = DEFAULT_NO_BASELINE_PARTITION,
+) -> tuple[Path | None, Path | None]:
+    """Restore committed baselines for a known no-baseline partition when caller omitted paths (R7)."""
+    if baseline_verify_path is not None or baseline_gate_path is not None:
+        return baseline_verify_path, baseline_gate_path
+    entry = NO_BASELINE_EVIDENCE_MATRIX.get(partition_id)
+    if not entry:
+        return None, None
+    fixture_root = committed_baseline_root(root)
+    verify = fixture_root / str(entry["baselineVerifyRel"])
+    gate = fixture_root / str(entry["baselineGateRel"])
+    return (
+        verify if verify.is_file() else None,
+        gate if gate.is_file() else None,
+    )
+
+
+def partition_conclusive_without_override(verdict: dict[str, Any]) -> bool:
+    """True when verification-gate returned a conclusive class (not no-baseline) (R8)."""
+    if str(verdict.get("verdict")) != "inconclusive":
+        return True
+    return str(verdict.get("inconclusiveClass") or "") != "no-baseline"
 
 
 def _status_from_verify(doc: dict[str, Any] | None) -> str:
@@ -135,7 +207,16 @@ def compute_verdict(
     baseline_gate_path: Path | None = None,
     require_gate: bool = False,
     pr_context: str = "auto",
+    root: Path | None = None,
+    partition_id: str = DEFAULT_NO_BASELINE_PARTITION,
 ) -> dict[str, Any]:
+    if root is not None:
+        baseline_verify_path, baseline_gate_path = resolve_committed_baseline_paths(
+            root,
+            baseline_verify_path=baseline_verify_path,
+            baseline_gate_path=baseline_gate_path,
+            partition_id=partition_id,
+        )
     gate_required = require_gate or pr_context_requires_gate(pr_context)
     verify_doc, verify_kind = _read_dimension(verify_path)
     gate_doc, gate_kind = _read_dimension(gate_path) if gate_required or gate_path else (None, "missing")
@@ -342,9 +423,10 @@ def compute_and_record(
     *,
     behavioral_status_path: Path | None = None,
     claims_status_path: Path | None = None,
+    partition_id: str = DEFAULT_NO_BASELINE_PARTITION,
     **kwargs: Any,
 ) -> tuple[dict[str, Any], int]:
-    verdict = compute_verdict(**kwargs)
+    verdict = compute_verdict(root=root, partition_id=partition_id, **kwargs)
     behavioral = load_behavioral_status(behavioral_status_path)
     if behavioral is None and behavioral_status_path is None:
         run_dir = kwargs.get("verify_path")
