@@ -848,14 +848,14 @@ def apply_report(root: Path, report: Report) -> Report:
                 registered_now = {Path(wt["path"]).resolve() for wt in parse_worktrees(root)}
                 if path.resolve() in registered_now:
                     report.protected.append(
-                        Item("orphan-worktree", item.name, "protected", "re-registered at apply time")
+                        Item("orphan-worktree", item.name, "protected", "registered-at-remove-time")
                     )
                     continue
                 # provisioning sentinel guard
                 sentinel = path.parent / (".sw-provisioning-" + path.name)
                 if sentinel.exists():
                     report.protected.append(
-                        Item("orphan-worktree", item.name, "protected", "provisioning in progress")
+                        Item("orphan-worktree", item.name, "protected", "provisioning-in-progress")
                     )
                     continue
                 # path accessibility check
