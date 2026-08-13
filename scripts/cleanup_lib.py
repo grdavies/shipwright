@@ -605,7 +605,10 @@ def _classify_orphan(path: Path) -> str:
 
 
 def _safe_tree_remove(path: Path) -> None:
-    """Leaves-first directory removal with symlink safety. No-op if path is already absent."""
+    """Leaves-first directory removal with symlink safety. No-op if path is already absent.
+
+    Raises OSError on I/O failure so callers can emit partial_removal_error (R3).
+    """
     if not path.exists() and not path.is_symlink():
         return
 
@@ -613,19 +616,13 @@ def _safe_tree_remove(path: Path) -> None:
         if p.is_symlink():
             os.unlink(p)
             return
-        try:
+        if p.is_dir():
             with os.scandir(p) as it:
                 for entry in it:
                     _remove(Path(entry.path))
-        except OSError:
-            pass
-        try:
             p.rmdir()
-        except OSError:
-            try:
-                os.unlink(p)
-            except OSError:
-                pass
+            return
+        os.unlink(p)
 
     _remove(path)
 
@@ -870,6 +867,14 @@ def apply_report(root: Path, report: Report) -> Report:
                         git(root, "worktree", "prune", "--expire", "now")
                     report.removed.append(item)
                 except OSError as exc:
+                    report.protected.append(
+                        Item(
+                            "orphan-worktree",
+                            item.name,
+                            "partial_removal_error",
+                            str(exc),
+                        )
+                    )
                     report.errors.append(f"orphan-worktree {item.name}: {exc}")
             elif item.kind == "run-state":
                 protected, inflight_reason = _run_state_item_protected(root, item.name)
