@@ -1,6 +1,7 @@
 ---
+
 name: conductor
-description: Shared autonomous orchestration contract for self-continuation, legitimate halts, parallel phase dispatch, and durable-state resumption. Use when running /sw-deliver, /sw-ship, /sw-doc, /sw-debug, or /sw-feedback orchestrators. Does not re-author loop logic inline.
+description: Conductor guardrails — legitimate halts only, no nested dispatch, durable-state authority. USE WHEN running /sw-deliver or any orchestrator that adopts the conductor contract. Shared autonomous orchestration contract for self-continuation, legitimate halts, parallel phase dispatch, and durable-state resumption. Use when running /sw-deliver, /sw-ship, /sw-doc, /sw-debug, or /sw-feedback orchestrators. Does not re-author loop logic inline.
 metadata:
   shipwright-capability:
     version: 1
@@ -13,6 +14,7 @@ metadata:
       skill: conductor
       selectionFamily: subagent-dispatch
 ---
+
 # Conductor contract
 
 Single referenced primitive for agent-native orchestration (PRD 009 R1). Orchestrators (`/sw-deliver` pilot;

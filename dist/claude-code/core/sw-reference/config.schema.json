@@ -1,0 +1,2284 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/grdavies/shipwright/.sw/config.schema.json",
+  "title": "shipwright workflow.config.json",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "projectId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Stable repository project identity slug (PRD 080 R1). Required for credential broker pairing and scope checks."
+    },
+    "defaultBaseBranch": {
+      "type": "string",
+      "default": "main"
+    },
+    "stateFile": {
+      "type": "string",
+      "default": ".git/shipwright.json",
+      "description": "Per-worktree workflow state file path (lives in the worktree gitdir)."
+    },
+    "agentsFile": {
+      "type": "string",
+      "default": "AGENTS.md"
+    },
+    "prdsDir": {
+      "type": "string",
+      "default": "docs/prds",
+      "description": "Legacy PRD directory alias; defaults to docs/prds until planningDir cutover (R7)."
+    },
+    "decisionsDir": {
+      "type": "string",
+      "default": "docs/decisions"
+    },
+    "tasksDir": {
+      "type": "string",
+      "default": "docs/prds",
+      "description": "Frozen task-list directory alias; defaults to prdsDir until migration cutover (R7)."
+    },
+    "doc": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Documentation pipeline behavior after task-list freeze.",
+      "properties": {
+        "afterTasks": {
+          "type": "string",
+          "enum": [
+            "stop",
+            "confirm",
+            "auto"
+          ],
+          "default": "confirm",
+          "description": "Doc\u2192implementation boundary after /sw-tasks freeze: stop halts; confirm prompts before dispatch; auto dispatches the implementation loop."
+        },
+        "loop": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Doc-loop driver tuning (PRD 081 R11).",
+          "properties": {
+            "drainMechanical": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true (default), doc-loop drains mechanical stages in-process until awaitAgent, awaitHuman, or halt."
+            },
+            "maxStepsPerInvocation": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 8,
+              "description": "Mechanical step budget per doc-loop invocation before continuation re-invoke."
+            }
+          }
+        }
+      }
+    },
+    "delegation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Sub-agent dispatch policy gate mode for orchestrators and atomic commands.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "bind-only",
+            "heuristic",
+            "default"
+          ],
+          "default": "heuristic",
+          "description": "heuristic allows documented inline heuristics for small/mechanical steps while binding non-trivial Task spawns. bind-only is stricter; default mode remains gated until Phase 2 live acceptance (DL-9)."
+        }
+      }
+    },
+    "orchestration": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Cross-orchestrator plan-policy kill-switch (PRD 022 R29). Default canonical is byte-identical to today; proposed is fixture-only until PRD 023/024 adoption.",
+      "properties": {
+        "planPolicy": {
+          "type": "string",
+          "enum": [
+            "canonical",
+            "proposed"
+          ],
+          "default": "proposed",
+          "description": "proposed = guideline latitude on /sw-deliver (kernel envelope unchanged); canonical = validated proposals must match canonical chain/waves. Recorded mode on persisted plans is honored on resume over live config."
+        }
+      }
+    },
+    "deliver": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "/sw-deliver phase-mode orchestrator settings.",
+      "properties": {
+        "phaseAckCadence": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "Pause for human acknowledgment after every K phase merges into <type>/<slug>. 0 = off."
+        },
+        "baseBranchType": {
+          "type": "string",
+          "enum": [
+            "feat",
+            "fix",
+            "docs",
+            "hotfix",
+            "release"
+          ],
+          "description": "Optional override for phase-mode base branch type (<type>/<slug>). When omitted, resolved from release-please-config.json or task-list frontmatter."
+        },
+        "remediation": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Bounded auto-remediation before a blocked phase halts clean (R8/R11).",
+          "properties": {
+            "maxAttempts": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 2,
+              "description": "Per-phase stabilize/remediation attempts before consolidated blocker halt."
+            }
+          }
+        },
+        "watchdog": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Driver liveness and per-phase timeout watchdog (R46).",
+          "properties": {
+            "phaseTimeoutMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 240,
+              "description": "In-flight phase exceeds this duration \u2192 consolidated blocker."
+            },
+            "stalenessClassifier": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Multi-signal phase staleness classifier (PRD 064 R32).",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true
+                },
+                "stuckThresholdMinutes": {
+                  "type": "number",
+                  "minimum": 1,
+                  "default": 30
+                },
+                "workingThresholdMinutes": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "default": 5
+                },
+                "waitingOnHumanBoost": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1,
+                  "default": 0.35
+                }
+              }
+            }
+          }
+        },
+        "autonomy": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Conductor autonomy mode and run-level budgets (TR15, TR20 / R13, R42).",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "supervised",
+                "autonomous"
+              ],
+              "default": "autonomous",
+              "description": "autonomous = minimal legitimate-halt set (default hands-off); supervised adds per-phase acknowledgement halts."
+            },
+            "maxRunMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1440,
+              "description": "Run-level wall-clock ceiling; exceeded \u2192 clean consolidated halt (R42)."
+            },
+            "maxIterations": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 500,
+              "description": "Run-level deliver-loop iteration ceiling; complements maxRunMinutes (R42)."
+            }
+          }
+        },
+        "terminal": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Terminal path autonomy after all phases green-merged (PRD 013 A1 R24).",
+          "properties": {
+            "autonomy": {
+              "type": "string",
+              "enum": [
+                "supervised",
+                "auto"
+              ],
+              "default": "supervised",
+              "description": "auto runs retrospective \u2192 PR \u2192 watch/stabilize hands-off; supervised preserves halts."
+            }
+          }
+        },
+        "loop": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Deliver-loop driver tuning (PRD 062 R7).",
+          "properties": {
+            "drainMechanical": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true (default), deliver-loop drains mechanical actions in-process until awaitAgent, awaitInFlight, or halt. When false, one mechanical step per invocation."
+            },
+            "maxStepsPerInvocation": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 12,
+              "description": "Mechanical drain step budget per deliver-loop invocation; exhaustion emits verdict continue, not halt (PRD 081 R22)."
+            }
+          }
+        },
+        "targetLock": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Target-branch exclusion lock staleness (PRD 081 R19).",
+          "properties": {
+            "staleSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 300,
+              "description": "Heartbeat age after which a target-lock holder is stale (ship-lease predicate)."
+            }
+          }
+        }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "/sw-cleanup apply autonomy (PRD 013 A1 R25\u2013R26).",
+      "properties": {
+        "autonomy": {
+          "type": "string",
+          "enum": [
+            "confirm",
+            "auto"
+          ],
+          "default": "confirm",
+          "description": "auto applies dry-run wouldRemove when merge is deterministic and safe; confirm preserves human ack."
+        }
+      }
+    },
+    "compound": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "/sw-retrospective compounding autonomy (R10). Gates approval prompts only \u2014 never memory or rule-class safety.",
+      "properties": {
+        "autonomy": {
+          "type": "string",
+          "enum": [
+            "supervised",
+            "auto"
+          ],
+          "default": "supervised",
+          "description": "supervised preserves retro/compound approval and did-you-merge prompts; auto runs the pre-merge chain hands-off when the terminal PR is green but never bypasses fail-closed memory (R7) or rule-class human gates (R8)."
+        }
+      }
+    },
+    "configuredWith": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Stamp written by /sw-init recording plugin + schema versions at configuration time (R32).",
+      "properties": {
+        "shipwrightVersion": {
+          "type": "string"
+        },
+        "schemaVersion": {
+          "type": "string"
+        }
+      }
+    },
+    "verify": {
+      "type": "object",
+      "description": "Shell commands run during /sw-phase-verify (repo-specific).",
+      "additionalProperties": false,
+      "properties": {
+        "allowUnconfigured": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, vacuous/placeholder verify commands do not hard-block under /sw-deliver or autonomous mode (R28/DL-13)."
+        },
+        "test": {
+          "type": "string",
+          "description": "Phase-scope verify command (default deliver path)."
+        },
+        "fullTest": {
+          "type": "string",
+          "description": "Full verify command for CI, pre-merge, and widen-triggered post-merge."
+        },
+        "watchdog": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Wall-clock budget for full verify manifest loop (PRD 055 R31).",
+          "properties": {
+            "maxMinutes": {
+              "type": "number",
+              "minimum": 0.01,
+              "default": 120,
+              "description": "Halt full verify with consolidated resume report when exceeded."
+            }
+          }
+        }
+      }
+    },
+    "verifyE2e": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional smoke/E2E verify adapter (providers/verify/). Runs only when enabled.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, /sw-verify invokes scripts/verify-e2e.py after static verify.* commands."
+        },
+        "provider": {
+          "type": "string",
+          "default": "none",
+          "description": "Adapter id under providers/verify/<id>.py. Use \"none\" to skip."
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional affected routes hint for smoke scoping (adapter-specific)."
+        }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "AI code-review provider selection. Credentials are never stored here \u2014 use env/secret store at runtime.",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "default": "none",
+          "description": "Active review adapter id (must match providers/review/<name>.md and providers/review/<name>.py). Use \"none\" to disable review gating. CodeRabbit is opt-in."
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Deprecated \u2014 use review.provider:\"none\" instead. When false, review gating is disabled (gate state off, non-blocking). Equivalent to provider:\"none\"."
+        },
+        "local": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Local multi-agent code review (phase 1 of /sw-review) before external provider.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "When false, skip local review phase and proceed to external provider only."
+            },
+            "provider": {
+              "type": "string",
+              "enum": [
+                "ce-code-review",
+                "native",
+                "none"
+              ],
+              "default": "native",
+              "description": "Local adapter id under providers/code-review/<id>.md. Use \"none\" to disable."
+            },
+            "apply": {
+              "type": "string",
+              "enum": [
+                "off",
+                "surface",
+                "auto"
+              ],
+              "default": "auto",
+              "description": "Auto-apply policy for eligible local findings. surface = review only; off = disable apply."
+            },
+            "ui": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Native panel UI/UX reviewer enrichment (opt-in).",
+              "properties": {
+                "enrich": {
+                  "type": "string",
+                  "enum": [
+                    "off",
+                    "ui-ux-pro-max",
+                    "vercel-web-guidelines"
+                  ],
+                  "default": "off",
+                  "description": "Optional external design enrichment. Default off = native WCAG checklist only."
+                }
+              }
+            },
+            "grouping": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "off"
+              ],
+              "default": "auto",
+              "description": "Passed to ce-code-review as grouping:auto|off."
+            },
+            "gate": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Severity gate for validated local findings. Default rollout is surface-only (haltOn empty).",
+              "properties": {
+                "surface": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "P0",
+                      "P1",
+                      "P2",
+                      "P3"
+                    ]
+                  },
+                  "default": [
+                    "P0",
+                    "P1",
+                    "P2",
+                    "P3"
+                  ],
+                  "description": "Severities to log/surface before phase 2."
+                },
+                "haltOn": {
+                  "type": "array",
+                  "items": {
+                    "enum": [
+                      "P0",
+                      "P1",
+                      "P2",
+                      "P3"
+                    ]
+                  },
+                  "default": [],
+                  "description": "Validated severities that halt /sw-ship. Empty = surface-only rollout."
+                }
+              }
+            }
+          }
+        },
+        "providers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "description": "Ordered heterogeneous review adapter ids (supersedes scalar review.provider; scalar coerced to single-element array)."
+        }
+      },
+      "required": [
+        "provider"
+      ]
+    },
+    "coderabbit": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "CodeRabbit-specific settings for the gate and review adapter. API keys are env-sourced only.",
+      "properties": {
+        "noDefer": {
+          "type": "boolean",
+          "default": true
+        },
+        "reviewGraceMinutes": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 15,
+          "description": "Minutes after push before treating absent review signal as settled (gate grace window)."
+        }
+      }
+    },
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "enum": [
+            "all",
+            "required"
+          ],
+          "default": "all",
+          "description": "Whether the gate evaluates all checks or required checks only."
+        },
+        "treatNeutralAsPass": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, NEUTRAL check conclusions count as pass unless the check name is on neutralAllowlist."
+        },
+        "neutralAllowlist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Check names that remain blocking even when treatNeutralAsPass is true."
+        },
+        "watch": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxWaitMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 20
+            },
+            "pollSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 45
+            }
+          }
+        }
+      }
+    },
+    "ci": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Shipwright-CI-only settings (PRD 016/018). Not part of generic user verify.",
+      "properties": {
+        "prTestPlanManifest": {
+          "type": "string",
+          "description": "Path to pr-test-plan.manifest.json for CI generator and check-gate (dev/plugin repos)."
+        }
+      }
+    },
+    "worktree": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-work-item worktree scaffold and parallelism ceiling.",
+      "properties": {
+        "parallelCeiling": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 4,
+          "description": "Max active worktrees before recombination is required."
+        },
+        "scaffold": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Opt-in web-app worktree scaffold (local ports/DB). Omit for non-web repos; defaults apply only when set (PRD 018 R15).",
+          "properties": {
+            "portRangeStart": {
+              "type": "integer",
+              "default": 9100
+            },
+            "portRangeEnd": {
+              "type": "integer",
+              "default": 9199
+            },
+            "dbStrategy": {
+              "enum": [
+                "schema-prefix",
+                "isolated-db",
+                "shared"
+              ],
+              "default": "schema-prefix"
+            },
+            "dbTemplate": {
+              "type": "string",
+              "description": "Optional DSN/template for isolated-db strategy."
+            }
+          }
+        }
+      }
+    },
+    "intraPhase": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Within-phase Task fan-out budget (PRD 023 R15). Does not consume wave ceiling slots.",
+      "properties": {
+        "parallelBudget": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 2,
+          "description": "Max concurrent intra-phase Task workers per phase executor."
+        },
+        "harnessLimit": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 8,
+          "description": "Platform active-subagent ceiling for global cap accounting."
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Durable memory provider selection and project binding. API credentials are env-sourced only.",
+      "properties": {
+        "credentialRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Non-secret credential selector reference for memory provider auth (PRD 080 R1). Preferred over tokenEnv."
+        },
+        "tokenEnv": {
+          "type": "string",
+          "deprecated": true,
+          "description": "DEPRECATED (one release): environment variable name for memory provider auth. Prefer memory.credentialRef; credentialRef wins when both are set."
+        },
+        "provider": {
+          "type": "string",
+          "default": "in-repo",
+          "description": "Active memory adapter id. Membership and adapter integrity are validated against memory-provider-catalog.json and providers/<id>.md + providers/<id>-rules.py (registration validator at config write, startup, and guardrail preflight) \u2014 not schema-closed."
+        },
+        "sourceOfTruth": {
+          "type": "string",
+          "enum": [
+            "repo",
+            "memory",
+            "auto"
+          ],
+          "default": "auto",
+          "description": "Authoritative store for decision-class records only. When the key is present, auto derives from provider (external\u2192memory, in-repo/none\u2192repo). When the key is omitted, repo-authoritative providers resolve to repo; memory-authoritative providers fail closed until decision bodies are exported and the knob is set explicitly (see memory_sot.py migration gate). Explicit auto preserves today\u2019s behavior and does not trigger migration."
+        },
+        "inRepo": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "In-repo markdown store settings (when memory.provider is in-repo).",
+          "properties": {
+            "storeDir": {
+              "type": "string",
+              "default": ".cursor/sw-memory",
+              "description": "Committed store root (memories/ and rules/ live beneath)."
+            },
+            "commitMode": {
+              "type": "string",
+              "enum": [
+                "committed",
+                "local"
+              ],
+              "default": "committed",
+              "description": "Where non-rule memories write. Rule-class files are always committed under storeDir/rules/."
+            }
+          }
+        },
+        "mempalace": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "MemPalace provider settings (when memory.provider is mempalace). Local-only palace in v1.",
+          "properties": {
+            "palacePath": {
+              "type": "string",
+              "description": "Local filesystem path to the MemPalace palace directory. Remote URLs are rejected in v1."
+            },
+            "rulesRoom": {
+              "type": "string",
+              "default": "rules",
+              "description": "Room reserved for hook rule-fetch only; excluded from ordinary memory search."
+            },
+            "searchExcludeRooms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "default": [
+                "transcripts"
+              ],
+              "description": "Rooms excluded from default search / memory-preflight (retrieval control only)."
+            },
+            "ruleCacheTtlSec": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300,
+              "description": "TTL for atomic rule-fetch cache under .cursor/ state."
+            },
+            "failClosed": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true, rule-fetch / palace unreachable fails closed for submit enforcement."
+            },
+            "redactOnWrite": {
+              "type": "boolean",
+              "default": true,
+              "description": "Apply redaction before palace writes (required for transcripts room)."
+            },
+            "ruleFetchCommand": {
+              "type": "string",
+              "description": "Optional exact-executable override for rule-fetch after allowlist + fixed-argv validation."
+            },
+            "supportedPackage": {
+              "type": "string",
+              "default": "mempalace>=3.6.0,<4.0.0",
+              "description": "Supported MemPalace package range for install docs and preflight probes (no auto-install)."
+            }
+          }
+        },
+        "basicMemory": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Basic Memory provider settings (when memory.provider is basic-memory). Dual-mode local|cloud \u2014 mode is required for non-default use; no silent cross-mode fallback.",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "local",
+                "cloud"
+              ],
+              "default": "local",
+              "description": "Explicit transport mode. local = loopback/local MCP + on-disk project; cloud = allowlisted cloud.basicmemory.com + env token. Runtime must not auto-promote or degrade across modes."
+            },
+            "projectPath": {
+              "type": "string",
+              "description": "Local mode: filesystem path to the basic-memory project directory."
+            },
+            "mcpLaunch": {
+              "type": "string",
+              "description": "Local mode: optional MCP launch command/stdio settings for the basic-memory server."
+            },
+            "apiBase": {
+              "type": "string",
+              "default": "https://cloud.basicmemory.com",
+              "description": "Cloud mode: MCP/API base URL. Must remain on the allowlisted Basic Memory Cloud host."
+            },
+            "tokenEnv": {
+              "type": "string",
+              "default": "BASIC_MEMORY_API_KEY",
+              "description": "Cloud mode: environment variable name for the bearer token (bmc_\u2026). Never embed tokens in config bodies."
+            },
+            "workspace": {
+              "type": "string",
+              "description": "Optional cloud workspace identifier."
+            },
+            "project": {
+              "type": "string",
+              "description": "Optional project name/slug for basic-memory scoping."
+            },
+            "projectId": {
+              "type": "string",
+              "description": "Optional cloud project id when distinct from project name."
+            },
+            "memoriesDirectory": {
+              "type": "string",
+              "default": "memories",
+              "description": "Directory name for memory notes within the project."
+            },
+            "rulesDirectory": {
+              "type": "string",
+              "default": "rules",
+              "description": "Directory reserved for hook rule-fetch content."
+            },
+            "ruleCacheTtlSec": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300,
+              "description": "TTL for atomic mode-partitioned rule-fetch cache under .cursor/ state."
+            },
+            "failClosed": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true, rule-fetch / unreachable configured mode fails closed for submit enforcement."
+            },
+            "redactOnWrite": {
+              "type": "boolean",
+              "default": true,
+              "description": "Apply redaction before basic-memory writes."
+            },
+            "ruleFetchCommand": {
+              "type": "string",
+              "description": "Optional exact-executable override for rule-fetch after allowlist + fixed-argv validation."
+            },
+            "supportedPackage": {
+              "type": "string",
+              "default": "basic-memory>=0.22.0,<1.0.0",
+              "description": "Supported basic-memory package range for install docs and preflight probes (no auto-install)."
+            }
+          }
+        },
+        "obsidian": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Obsidian provider settings (when memory.provider is obsidian). Local REST API MCP on loopback only. vaultPath is realpath-confined: resolved absolute paths must stay under the configured vault root; traversal and symlink escapes are rejected. Install recipes document Obsidian + Local REST API plugin enablement — adapters never auto-install either.",
+          "properties": {
+            "vaultPath": {
+              "type": "string",
+              "description": "Absolute filesystem path to the Obsidian vault root. Must be an absolute path; runtime resolves realpath and confines all note/path ids under this root."
+            },
+            "mcpBaseUrl": {
+              "type": "string",
+              "default": "http://127.0.0.1:27123",
+              "description": "Local REST API MCP/HTTP base URL. Loopback only (127.0.0.1 / ::1 / localhost); non-loopback hosts are rejected."
+            },
+            "tokenEnv": {
+              "type": "string",
+              "default": "OBSIDIAN_API_KEY",
+              "description": "Environment variable name for the Local REST API bearer token. Never embed tokens in config bodies."
+            },
+            "memoriesDirectory": {
+              "type": "string",
+              "default": "memories",
+              "description": "Vault-relative directory for ordinary memory notes (project folders live beneath)."
+            },
+            "rulesDirectory": {
+              "type": "string",
+              "default": "rules",
+              "description": "Vault-relative directory reserved for hook rule-fetch; excluded from ordinary memory search."
+            },
+            "ruleCacheTtlSec": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300,
+              "description": "TTL for atomic rule-fetch cache under .cursor/ state."
+            },
+            "failClosed": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true, rule-fetch / Obsidian-or-Local-REST-API unreachable fails closed for submit enforcement."
+            },
+            "redactOnWrite": {
+              "type": "boolean",
+              "default": true,
+              "description": "Apply redaction before Obsidian note writes."
+            },
+            "ruleFetchCommand": {
+              "type": "string",
+              "description": "Optional exact-executable override for rule-fetch after allowlist + fixed-argv validation."
+            }
+          }
+        },
+        "project": {
+          "type": "string",
+          "description": "Memory project scope key (e.g. repo name)."
+        },
+        "defaultScope": {
+          "enum": [
+            "project",
+            "global"
+          ],
+          "default": "project"
+        },
+        "connection": {
+          "type": "object",
+          "description": "Non-secret connection hints. For recallium, restBaseUrl points at the local REST API.",
+          "properties": {
+            "restBaseUrl": {
+              "type": "string",
+              "default": "http://localhost:8001"
+            }
+          }
+        },
+        "autoSync": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Controls the stop hook that schedules /sw-memory-sync distillation runs.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "minTurns": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 10
+            },
+            "minMinutes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 120
+            }
+          }
+        },
+        "guardrails": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Fail-closed guardrail hook policy.",
+          "properties": {
+            "enforceBeforeSubmit": {
+              "type": "boolean",
+              "default": true,
+              "description": "When false, beforeSubmitPrompt guardrail enforcement is disabled for this repo."
+            },
+            "requireRuleClass": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, block until at least one allowlisted rule-class memory exists. Default false \u2014 empty memory is normal for new repos."
+            },
+            "allowEmptyRules": {
+              "type": "boolean",
+              "default": true,
+              "description": "Deprecated \u2014 use requireRuleClass (inverted). When false, equivalent to requireRuleClass:true."
+            }
+          }
+        },
+        "playbooks": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Confidence-scored playbook primary injection (PRD 064 R27-R28, R33).",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "injectMinConfidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.75
+            },
+            "activeMinConfidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.6
+            },
+            "promoteMinSuccessRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.8
+            },
+            "promoteMinUsage": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 5
+            },
+            "demoteMaxSuccessRate": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.4
+            },
+            "demoteMinUsage": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 5
+            },
+            "confidenceStep": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.05
+            }
+          }
+        }
+      },
+      "required": [
+        "provider",
+        "project"
+      ]
+    },
+    "models": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Per-tier model map and role assignment. Policy tiers (cheap/build/mid/deep) map to concrete platform model IDs; agent frontmatter uses inherit or dispatch IDs only. Validated by scripts/model-tier-check.py.",
+      "properties": {
+        "tiers": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Tier name \u2192 concrete model id (e.g. deep, build, mid, cheap)."
+        },
+        "aliases": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Frontmatter alias \u2192 tier name (e.g. fast \u2192 cheap)."
+        },
+        "roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "builder": {
+              "type": "string",
+              "description": "Tier name for builder role."
+            },
+            "reviewer": {
+              "type": "string",
+              "description": "Tier name for reviewer role floor."
+            }
+          }
+        },
+        "routing": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Semantic tier routing for sw-* commands and skills (not communication intensity).",
+          "properties": {
+            "commands": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": [
+                  "cheap",
+                  "build",
+                  "mid",
+                  "deep",
+                  "inherit"
+                ]
+              }
+            },
+            "skills": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": [
+                  "cheap",
+                  "build",
+                  "mid",
+                  "deep",
+                  "inherit"
+                ]
+              }
+            },
+            "agents": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": [
+                  "cheap",
+                  "build",
+                  "mid",
+                  "deep"
+                ]
+              },
+              "description": "Agent or native-panel specialist id \u2192 semantic tier (no inherit)."
+            }
+          }
+        }
+      }
+    },
+    "communication": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Task-gated caveman communication intensity for orchestration chat.",
+      "properties": {
+        "defaultIntensity": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "lite",
+            "full",
+            "ultra"
+          ],
+          "default": "full"
+        },
+        "routing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "commands": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "lite",
+                  "full",
+                  "ultra",
+                  "inherit"
+                ]
+              }
+            },
+            "skills": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "lite",
+                  "full",
+                  "ultra",
+                  "inherit"
+                ]
+              }
+            },
+            "agents": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": [
+                  "normal",
+                  "lite",
+                  "full",
+                  "ultra",
+                  "inherit"
+                ]
+              },
+              "description": "Agent id \u2192 caveman intensity. Used after command/skill routing during delegated Task binding."
+            }
+          }
+        }
+      }
+    },
+    "invariantsFile": {
+      "type": "string",
+      "description": "Optional path to non-negotiable repo constraints surfaced to reviewers (ref-relative)."
+    },
+    "invariantsOptional": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, missing/unreadable invariants on a ref logs override instead of blocking that review."
+    },
+    "host": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Git host/forge provider selection and API transport settings (PRD 026).",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": [
+            "github",
+            "gitlab",
+            "bitbucket",
+            "none"
+          ],
+          "description": "Active host adapter id. Auto-detected from remote URL when omitted."
+        },
+        "remote": {
+          "type": "string",
+          "default": "origin",
+          "description": "Git remote name for host operations."
+        },
+        "credentialRef": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Non-secret credential selector reference for host transport (PRD 080 R1). Preferred over tokenEnv."
+        },
+        "tokenEnv": {
+          "type": "string",
+          "deprecated": true,
+          "description": "DEPRECATED (one release): environment variable name holding the API token. Prefer host.credentialRef; credentialRef wins when both are set."
+        },
+        "baseUrl": {
+          "type": "string",
+          "description": "Optional web base URL for self-hosted instances."
+        },
+        "apiBaseUrl": {
+          "type": "string",
+          "description": "Optional REST API base URL override."
+        },
+        "rateLimit": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Shared rate-limit retry policy for host HTTP transport.",
+          "properties": {
+            "maxAttempts": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 5
+            },
+            "baseBackoffMs": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1000
+            },
+            "capBackoffMs": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 60000
+            },
+            "maxCumulativeWaitMs": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300000
+            },
+            "jitter": {
+              "type": "boolean",
+              "default": true
+            },
+            "nearLimitThreshold": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 5
+            },
+            "mutatingMinDelayMs": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1000
+            }
+          }
+        }
+      }
+    },
+    "planningDir": {
+      "type": "string",
+      "default": "docs/planning",
+      "description": "Canonical planning-unit home (R5). Legacy prdsDir/tasksDir aliases retain docs/prds until migration cutover."
+    },
+    "planning": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Planning-unit guard, visibility profile, and inFlight signal settings (PRD 032/034).",
+      "properties": {
+        "inFlight": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Committed inFlight tuple reconcile and staleness policy.",
+          "properties": {
+            "stalenessTtlHours": {
+              "type": "number",
+              "minimum": 0,
+              "default": 72,
+              "description": "Auto-clear orphan tuples when branch is missing, run-id is absent from the registry, and porcelain deliver state is missing or older than this TTL (R4)."
+            }
+          }
+        },
+        "autonomy": {
+          "type": "string",
+          "enum": [
+            "maintenance-only",
+            "full-conductor"
+          ],
+          "default": "full-conductor",
+          "description": "Planning autonomy posture (PRD 035 R19): full-conductor elevates gap/absorption-class decisions under bounded conductor limits; maintenance-only runs mechanical bookkeeping autonomously and gates content decisions. PRD 033 soft-enforces scheduler priority on explicit --task-list."
+        },
+        "visibilityProfile": {
+          "type": "string",
+          "enum": [
+            "all-private",
+            "specs-public",
+            "all-public"
+          ],
+          "default": "specs-public",
+          "description": "Repo-level default visibility profile when a unit omits visibility (PRD 034 R1). Public-repo-aware resolution may select all-private at init (R3)."
+        },
+        "privacyAck": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "First-run privacy acknowledgement for public remotes (PRD 034 R3).",
+          "properties": {
+            "required": {
+              "type": "boolean",
+              "default": false,
+              "description": "True when a public origin remote requires ack before the first tracked spec commit."
+            },
+            "ackedAt": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "ISO-8601 timestamp when the operator acknowledged the privacy notice."
+            },
+            "recordedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "reason": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "releaseGrouping": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Release/milestone grouping for issue-store planning units (PRD 045 R26/R71). Inert when backend != issue-store.",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "milestone",
+                "iteration",
+                "label"
+              ],
+              "default": "milestone",
+              "description": "Provider-native grouping when issue-milestone capability is present; flat-label fallback (label mode) when absent."
+            },
+            "labelPrefix": {
+              "type": "string",
+              "default": "sw:release:",
+              "description": "Flat-label prefix for label-mode fallback when issue-milestone verb is unavailable (R71)."
+            }
+          }
+        },
+        "store": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Planning unit body store backend selection (PRD 034 R5/R18).",
+          "properties": {
+            "backend": {
+              "type": "string",
+              "enum": [
+                "in-repo-public",
+                "local-synced",
+                "memory",
+                "private-repo",
+                "encryption-at-rest",
+                "issue-store"
+              ],
+              "default": "in-repo-public",
+              "description": "Active planning.store backend for unit bodies."
+            },
+            "pinnedBackend": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "in-repo-public",
+                "local-synced",
+                "memory",
+                "private-repo",
+                "encryption-at-rest",
+                "issue-store",
+                null
+              ],
+              "description": "Run-pinned backend override (PRD 034 R7)."
+            },
+            "localSynced": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "description": "Operator-local directory for local/synced bodies (R16)."
+                },
+                "allowlist": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Optional extra allowed roots beyond the operator home."
+                }
+              }
+            },
+            "requestBudget": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "maxCalls": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "maxPaginationDepth": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "alertThreshold": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 1.0
+                  },
+                  "cacheTtlSeconds": {
+                    "type": "integer",
+                    "minimum": 30
+                  }
+                }
+              },
+              "description": "Per-provider derived-view request budget + cache TTL (PRD 046 R81/R93)."
+            },
+            "issuesProvider": {
+              "type": "string",
+              "enum": [
+                "none",
+                "github-issues",
+                "gitlab-issues",
+                "jira",
+                "linear"
+              ],
+              "description": "Issue-backed planning provider when backend is issue-store (PRD 043)."
+            },
+            "projectKey": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "description": "Namespaced planning project key for issue-store isolation (PRD 043 R42)."
+            },
+            "storeLocation": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "same-repo",
+                    "separate-project"
+                  ]
+                },
+                "owner": {
+                  "type": "string"
+                },
+                "repo": {
+                  "type": "string"
+                }
+              }
+            },
+            "issues": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Issue-store credential contract. Under storeLocation.mode separate-project, operators MUST supply SW_PLANNING_ISSUES_TOKEN locally and as a GitHub Actions secret for merge-boundary close-out (scripts/closeout_ci.py, scripts/deliver_closeout.py). The default repo GITHUB_TOKEN is not used for cross-repo planning-project mutations.",
+              "properties": {
+                "credentialRef": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Non-secret credential selector reference for planning-store issue mutations (PRD 080 R1). Preferred over tokenEnv."
+                },
+                "tokenEnv": {
+                  "type": "string",
+                  "deprecated": true,
+                  "description": "DEPRECATED (one release): canonical env var name for planning-project issue mutations. Prefer planning.store.issues.credentialRef; credentialRef wins when both are set. Distinct from host.tokenEnv."
+                },
+                "rateLimit": {
+                  "type": "object"
+                },
+                "teamKey": {
+                  "type": "string",
+                  "description": "Linear Team key/name (PRD 066 R11); preferred operator-facing Team id."
+                },
+                "teamId": {
+                  "type": "string",
+                  "description": "Linear GraphQL Team id (PRD 066 R11)."
+                },
+                "authMode": {
+                  "type": "string",
+                  "enum": [
+                    "api-key",
+                    "oauth"
+                  ],
+                  "description": "Linear auth mode (PRD 066 R23); default api-key."
+                },
+                "oauthSharedCiException": {
+                  "type": "boolean",
+                  "description": "Explicit exception allowing authMode:oauth via shared CI secret (PRD 066 R23)."
+                },
+                "credentialContract": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Operator-facing cross-repo credential contract (PRD 070 R16/R27/R29). Required when storeLocation.mode is separate-project. Set SW_PLANNING_ISSUES_TOKEN in operator shell and in the deliver-closeout workflow secret; rotate per rotationPolicy; misnamed or missing env fails config lint and close-out auth surfaces a resumeCommand.",
+                  "properties": {
+                    "envVar": {
+                      "type": "string",
+                      "const": "SW_PLANNING_ISSUES_TOKEN",
+                      "description": "Fixed env var for planning-project issue write in grdavies/planning (or configured owner/repo). Used by .github/workflows/deliver-closeout.yml mutate step and scripts/closeout_ci.py \u2014 never substitute GITHUB_TOKEN."
+                    },
+                    "scope": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Human-readable least-privilege scope summary (issues write on the planning project only)."
+                    },
+                    "leastPrivilege": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Operator note: cross-repo token is distinct from host.tokenEnv and must not rely on the default repo GITHUB_TOKEN."
+                    },
+                    "rotationPolicy": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "cadenceDays",
+                        "expiryDays",
+                        "owner",
+                        "procedure"
+                      ],
+                      "properties": {
+                        "cadenceDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Recommended rotation cadence in days."
+                        },
+                        "expiryDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "description": "Maximum token lifetime in days before mandatory rotation."
+                        },
+                        "owner": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Named owner for credential rotation and incident response."
+                        },
+                        "procedure": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Rotation and expiry procedure for operators and CI secret stores."
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "envVar",
+                    "scope",
+                    "leastPrivilege",
+                    "rotationPolicy"
+                  ]
+                }
+              }
+            },
+            "operatorProjection": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Operator browse projection config (PRD 061 R11/R11a).",
+              "properties": {
+                "githubProjects": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": true
+                    },
+                    "ownerLogin": {
+                      "type": "string"
+                    },
+                    "projectNumber": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "projectId": {
+                      "type": "string"
+                    },
+                    "programMode": {
+                      "type": "string",
+                      "enum": [
+                        "project-per-program",
+                        "field"
+                      ],
+                      "description": "PRD 066 R18 program discriminator mode. Status-only is not R1(4)-complete."
+                    },
+                    "fieldMap": {
+                      "type": "object"
+                    },
+                    "budget": {
+                      "type": "object",
+                      "properties": {
+                        "maxCalls": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "maxPaginationDepth": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "cacheTtlSeconds": {
+                          "type": "integer",
+                          "minimum": 30
+                        }
+                      }
+                    }
+                  }
+                },
+                "linear": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Linear operator browse projection config (PRD 066 R16).",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": true,
+                      "description": "When false, Linear projection browse is skipped (R21 non-regression path)."
+                    },
+                    "initiativeSubstitute": {
+                      "type": "string",
+                      "enum": [
+                        "substitute-views",
+                        "skip"
+                      ],
+                      "default": "substitute-views",
+                      "description": "R7 degradation when Initiative workspace capability is absent."
+                    },
+                    "cycleSharingNotice": {
+                      "type": "boolean",
+                      "default": true,
+                      "description": "Emit loud notice when Cycle wave shares cadence with Milestones (R8)."
+                    },
+                    "budget": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "maxCalls": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "maxComplexityPoints": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "maxPaginationDepth": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "cacheTtlSeconds": {
+                          "type": "integer",
+                          "minimum": 30
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "refusalLedger": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Operator-local refusal ledger bounds (PRD 082 R26). Storage is gitignored; bodies never committed.",
+          "properties": {
+            "path": {
+              "type": "string",
+              "default": ".cursor/sw-refusal-ledger",
+              "description": "Gitignored cursor-local directory for append-only refusal records (0600 files, 0700 directories)."
+            },
+            "ttlSeconds": {
+              "type": "integer",
+              "minimum": 3600,
+              "default": 2592000,
+              "description": "Per-entry TTL before journaled oldest-first eviction (default 30 days)."
+            },
+            "maxSizeBytes": {
+              "type": "integer",
+              "minimum": 1048576,
+              "default": 52428800,
+              "description": "Total on-disk ledger size bound before eviction (default 50 MiB)."
+            }
+          }
+        },
+        "fullConductor": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Bounded full-conductor limits when planning.autonomy is full-conductor (PRD 035 R8/R23).",
+          "properties": {
+            "confidenceThreshold": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "default": 0.85,
+              "description": "Minimum proposal confidence before auto-deciding gap/absorption edges."
+            },
+            "mutationBudget": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 5,
+              "description": "Per-session autonomous graph mutation cap; halt + human resume when exhausted."
+            },
+            "undoWindowSeconds": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300,
+              "description": "Reversible undo window before reconciler materializes an auto-decided absorption."
+            }
+          }
+        }
+      }
+    },
+    "verifyMutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional mutation-testing hook (contract-only; advisory by default).",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, run scripts/verify_mutation.py after green (advisory)."
+        },
+        "provider": {
+          "type": "string",
+          "default": "none",
+          "description": "Provider id for documentation/telemetry; no built-in provider ships in PRD 039."
+        },
+        "command": {
+          "type": "string",
+          "description": "Shell command to run mutation tests (repo-defined)."
+        },
+        "excludeList": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Paths or globs excluded from mutation (forwarded via SW_MUTATION_EXCLUDE)."
+        }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Structural-quality harness (PRD 039). Default none preserves loop behavior.",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "default": "none",
+          "description": "Quality adapter id under providers/quality/<id>.py (none = no-op)."
+        },
+        "blockingTier": {
+          "type": "string",
+          "enum": [
+            "quick",
+            "standard",
+            "full"
+          ],
+          "description": "When change triage tier >= this value, a poor verdict blocks via check-gate (unset = advisory only)."
+        }
+      }
+    },
+    "tasks": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Task authoring and phase sizing (PRD 040).",
+      "properties": {
+        "sizing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "thresholds": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "filesTouched": {
+                  "$ref": "#/definitions/sizingThresholdPair"
+                },
+                "traceabilityScenarios": {
+                  "$ref": "#/definitions/sizingThresholdPair"
+                },
+                "subTaskCount": {
+                  "$ref": "#/definitions/sizingThresholdPair"
+                },
+                "distinctDirs": {
+                  "$ref": "#/definitions/sizingThresholdPair"
+                },
+                "depFanOut": {
+                  "$ref": "#/definitions/sizingThresholdPair"
+                }
+              }
+            },
+            "minPhaseFiles": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 2
+            },
+            "minPhaseScenarios": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 1
+            },
+            "maxPhaseCount": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 13
+            }
+          }
+        }
+      }
+    },
+    "rca": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "RCA fan-out settings (PRD 064 R1/R2). Default off \u2014 single-context loop unchanged.",
+      "properties": {
+        "fanout": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, D5-gated multi-hypothesis fan-out may run; default false."
+            },
+            "min_hypotheses": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 3,
+              "description": "Fan-out when single-context pass yields fewer ranked hypotheses."
+            },
+            "ambiguity_trigger": {
+              "type": "boolean",
+              "default": true,
+              "description": "Fan-out when ambiguity markers fire (D5)."
+            },
+            "max_width": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4,
+              "default": 4,
+              "description": "Max parallel clean-context generators (hard cap 4)."
+            }
+          }
+        }
+      }
+    },
+    "recurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Cross-run failure recurrence escalation (PRD 041 R22/R23). Unset = disabled (backward compatible).",
+      "properties": {
+        "threshold": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3,
+          "description": "Escalate when signature count >= threshold across >=2 distinct runs."
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When false, escalation is disabled even if threshold is set."
+        }
+      }
+    },
+    "inefficiency": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Process inefficiency scanner (PRD 041 R25/R26). Default enabled on greenfield init (PRD 069 R10).",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, inefficiency scanner runs on deliver/retro surfaces."
+        },
+        "thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "slowTestSeconds": {
+              "type": "number",
+              "minimum": 0,
+              "default": 30,
+              "description": "Flag per-test durations at or above this threshold (JUnit XML)."
+            },
+            "slowCiJobSeconds": {
+              "type": "number",
+              "minimum": 0,
+              "default": 300,
+              "description": "Flag CI job durations at or above this threshold."
+            }
+          }
+        },
+        "allowlist": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "manualSteps": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Manual commands excluded from repeated-step detection."
+            }
+          }
+        }
+      }
+    },
+    "execute": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Execute-tier sub-task orchestration (PRD 053 R32, R35). Default-on; escape hatch execute.enabled: false.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, multi-sub-task phases use execute-plan fan-out before sw-verify."
+        },
+        "subBranchCeiling": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "default": null,
+          "description": "Max concurrent execute sub-branches; null resolves to intraPhase.parallelBudget."
+        },
+        "maxExpansionDepth": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 2,
+          "description": "Runtime recursive expansion depth cap (R11)."
+        },
+        "sizing": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "thresholds": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "filesTouched": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 3
+                },
+                "distinctDirs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 2
+                },
+                "traceabilityScenarios": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "default": 2
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "contextCompression": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Task-dispatch context compression (PRD 058 gap-083 R26). Default off.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "thresholdTokens": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 8000
+        },
+        "strategies": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "json": {
+              "type": "string",
+              "enum": [
+                "compress",
+                "path-reference",
+                "passthrough"
+              ],
+              "default": "compress"
+            },
+            "diff": {
+              "type": "string",
+              "enum": [
+                "compress",
+                "path-reference",
+                "passthrough"
+              ],
+              "default": "path-reference"
+            },
+            "log": {
+              "type": "string",
+              "enum": [
+                "compress",
+                "path-reference",
+                "passthrough"
+              ],
+              "default": "compress"
+            },
+            "prose": {
+              "type": "string",
+              "enum": [
+                "compress",
+                "path-reference",
+                "passthrough"
+              ],
+              "default": "compress"
+            }
+          }
+        }
+      }
+    },
+    "loopHealth": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Downstream-cost diagnostic metrics (PRD 041 R29). Read-only \u2014 never gates merge.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "staleInboxDays": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 14
+        }
+      }
+    },
+    "loop": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Self-improving loop auto-propose driver (PRD 041 R27/R30).",
+      "properties": {
+        "autoPropose": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "maxPerDay": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 5
+            },
+            "dedupWindow": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 3600
+            },
+            "cooldownMinutes": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 30
+            },
+            "maxOpenMetaUnits": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 10
+            },
+            "scheduler": {
+              "type": "string",
+              "enum": [
+                "manual",
+                "scheduled"
+              ],
+              "default": "manual"
+            }
+          }
+        }
+      }
+    },
+    "tournament": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Bounded tournament primitive (PRD 064 R5/R6). Default off.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, brainstorm divergence may run tournament selection."
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 8,
+          "default": 3,
+          "description": "Isolated attempt count (default 3)."
+        },
+        "cost_ceiling": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0,
+          "description": "Advisory USD cap; 0 = unset."
+        }
+      }
+    },
+    "gapCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "gap-check extensions (PRD 064 R8).",
+      "properties": {
+        "ruleVerifierSweep": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Opt-in per-rule repeat-violation verifier sweep."
+            }
+          }
+        }
+      }
+    },
+    "dispatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Dispatch binding extensions (PRD 064 R10\u2013R12).",
+      "properties": {
+        "unregisteredParentModelTier": {
+          "type": "string",
+          "enum": [
+            "cheap",
+            "build",
+            "mid",
+            "deep"
+          ],
+          "description": "Fallback parent tier when session model is unmapped."
+        },
+        "complexityProbe": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Optional within-band tier probe (R11). Default disabled.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "bandFloor": {
+              "type": "string",
+              "enum": [
+                "cheap",
+                "build",
+                "mid",
+                "deep"
+              ],
+              "default": "cheap"
+            },
+            "bandCeiling": {
+              "type": "string",
+              "enum": [
+                "cheap",
+                "build",
+                "mid",
+                "deep"
+              ],
+              "default": "deep"
+            }
+          }
+        },
+        "tokenBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Advisory token budget on dispatch records (R12 / D2).",
+          "properties": {
+            "advisory": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 32000
+            }
+          }
+        }
+      }
+    },
+    "notebook": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Local /sw-note capture under .cursor/sw-notebook/, outside the planning store (PRD 067 R33/R34).",
+      "properties": {
+        "sessionIndex": {
+          "type": "boolean",
+          "default": false,
+          "description": "Opt-in session-start injection of a distilled, redacted index of open notebook items. On redact failure, injection is skipped entirely (never raw)."
+        }
+      }
+    },
+    "stabilizeLoop": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opt-in stabilize-loop extensions (PRD 064 R31).",
+      "properties": {
+        "sameStageEscalation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "escalateAfterFailures": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 2
+            },
+            "personaFallback": {
+              "type": "string",
+              "default": "adversarial"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "sizingThresholdPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "small",
+        "medium"
+      ],
+      "properties": {
+        "small": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "medium": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "planning": {
+            "type": "object",
+            "properties": {
+              "store": {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "const": "issue-store"
+                  },
+                  "storeLocation": {
+                    "type": "object",
+                    "properties": {
+                      "mode": {
+                        "const": "separate-project"
+                      }
+                    },
+                    "required": [
+                      "mode"
+                    ]
+                  }
+                },
+                "required": [
+                  "backend",
+                  "storeLocation"
+                ]
+              }
+            },
+            "required": [
+              "store"
+            ]
+          }
+        },
+        "required": [
+          "planning"
+        ]
+      },
+      "then": {
+        "properties": {
+          "planning": {
+            "type": "object",
+            "properties": {
+              "store": {
+                "type": "object",
+                "properties": {
+                  "issues": {
+                    "type": "object",
+                    "required": [
+                      "tokenEnv",
+                      "credentialContract"
+                    ],
+                    "properties": {
+                      "tokenEnv": {
+                        "const": "SW_PLANNING_ISSUES_TOKEN"
+                      },
+                      "credentialContract": {
+                        "type": "object",
+                        "properties": {
+                          "envVar": {
+                            "const": "SW_PLANNING_ISSUES_TOKEN"
+                          }
+                        },
+                        "required": [
+                          "envVar"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "issues"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}
