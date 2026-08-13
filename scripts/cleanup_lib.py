@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
-"""Enumeration and safe cleanup for merged branches, stale worktrees, deliver run-state (R28–R34, R56)."""
+"""Enumeration and safe cleanup for merged branches, stale worktrees, deliver run-state (R28–R34, R56).
+
+Orphan worktrees (PRD 095): directories under ``.sw-worktrees/`` absent from ``git worktree list``.
+
+- ``enumerate_orphan_worktrees(root)`` — direct children only; skips symlinks and registered paths;
+  surfaces ``volume_inaccessible`` on ``OSError`` from ``iterdir``.
+- ``_classify_orphan(path)`` — evaluation order **ghost → park → husk**:
+  ghost (no ``.git``), park (name matches ``r'\\.park-\\d+$'``), husk (``.git`` present, unregistered).
+- Report kind ``orphan-worktree`` — listed in dry-run ``would_remove``; apply uses leaves-first
+  ``os.scandir`` walk (never shell-recursive delete or ``shutil.rmtree``); park-class always
+  requires confirm (SC6).
+"""
 from __future__ import annotations
 
 import json
