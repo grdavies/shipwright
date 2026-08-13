@@ -108,3 +108,136 @@ def test_harness_improvement_override_block_passes_lint(repo_root: Path) -> None
 
     path = repo_root / "scripts/unit_tests/w4/harness_improvement.py"
     assert hil.scan_file(repo_root, path) is None
+
+
+def test_evidence_matrix_641_642(repo_root: Path) -> None:
+    """Evidence matrix maps planning#641/#642 to partition, signal hash, root cause."""
+    import verify_evidence_lib as vel
+
+    rows = vel.evidence_matrix_entries()
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["planningIssues"] == ["641", "642"]
+    assert row["gapUnits"] == ["gap-263", "gap-264"]
+    assert "harness_improvement" in row["partition"]
+    assert row["signalHash"] == vel.partition_signal_hash()
+    assert "no-baseline" in row["rootCause"]
+
+
+def test_no_baseline_partition_conclusive(repo_root: Path) -> None:
+    """Committed baseline makes the #641/#642 partition conclusive without override."""
+    import verify_evidence_lib as vel
+
+    fixture_root = repo_root / "scripts" / "test" / "fixtures" / "verify-evidence"
+    verify_fail = fixture_root / "verify-fail.json"
+    gate_red = fixture_root / "gate-red.json"
+
+    without = vel.compute_verdict(
+        verify_path=verify_fail,
+        gate_path=gate_red,
+        require_gate=True,
+        pr_context="off",
+    )
+    assert without["verdict"] == "inconclusive"
+    assert without.get("inconclusiveClass") == "no-baseline"
+
+    with_baseline = vel.compute_verdict(
+        verify_path=verify_fail,
+        gate_path=gate_red,
+        require_gate=True,
+        pr_context="off",
+        root=repo_root,
+        restore_committed_baseline=True,
+    )
+    assert vel.partition_conclusive_without_override(with_baseline)
+    assert with_baseline.get("inconclusiveClass") != "no-baseline"
+
+
+def test_override_runtime_refuse_live_store(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Harness refuses live issue-store writes unless operator flag is set."""
+    _init_repo(tmp_path)
+    monkeypatch.setenv("SW_HARNESS", "1")
+    monkeypatch.delenv(hil.LIVE_STORE_OPERATOR_FLAG, raising=False)
+
+    out = pgc.capture_verify_override(
+        tmp_path,
+        {"inconclusiveClass": "no-baseline", "reason": "harness probe"},
+    )
+    assert out["action"] == "refused"
+    assert out["error"] == "harness-runtime-refuse-live-planning-store"
+
+    monkeypatch.setenv(hil.LIVE_STORE_OPERATOR_FLAG, "1")
+    written: dict[str, str] = {}
+
+    def fake_put(r: Path, unit_id: str, body_path_rel: str, content: str) -> None:
+        path = r / body_path_rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        written[unit_id] = content
+
+    monkeypatch.setattr(pgc, "store_put_gap", fake_put)
+    allowed = pgc.capture_verify_override(
+        tmp_path,
+        {"inconclusiveClass": "no-baseline", "reason": "operator flag"},
+    )
+    assert allowed["action"] == "created"
+
+
+def test_no_baseline_no_duplicate_gap_visible_recurrence(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reuse surfaces recurrence without minting a duplicate tracking unit."""
+    _init_repo(tmp_path)
+    monkeypatch.setenv(hil.LIVE_STORE_OPERATOR_FLAG, "1")
+    written: dict[str, str] = {}
+
+    def fake_put(r: Path, unit_id: str, body_path_rel: str, content: str) -> None:
+        path = r / body_path_rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        written[unit_id] = content
+
+    monkeypatch.setattr(pgc, "store_put_gap", fake_put)
+    override = {"inconclusiveClass": "no-baseline", "reason": "first"}
+    first = pgc.capture_verify_override(tmp_path, override, unit_id="094-prd-x", pr_number=1)
+    second = pgc.capture_verify_override(tmp_path, override, unit_id="094-prd-x", pr_number=1)
+    assert first["action"] == "created"
+    assert second["action"] == "reused"
+    assert second["unitId"] == first["unitId"]
+    assert second.get("recurrence", 1) >= 2
+    assert len(written) == 1
+
+
+def test_verify_no_baseline_acceptance(repo_root: Path) -> None:
+    """verify-evidence CLI accepts committed baseline restore for the partition."""
+    import verify_evidence_lib as vel
+
+    fixture_root = repo_root / "scripts" / "test" / "fixtures" / "verify-evidence"
+    script = repo_root / "scripts" / "verify-evidence.py"
+    proc = subprocess.run(
+        [
+            "python3",
+            str(script),
+            "--root",
+            str(repo_root),
+            "--verify-status",
+            str(fixture_root / "verify-fail.json"),
+            "--gate-json",
+            str(fixture_root / "gate-red.json"),
+            "--require-gate",
+            "--pr-context",
+            "off",
+            "--restore-committed-baseline",
+        ],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    verdict = json.loads(proc.stdout)
+    assert proc.returncode == vel.VERDICT_EXIT["inconclusive"]
+    assert verdict.get("inconclusiveClass") != "no-baseline"
