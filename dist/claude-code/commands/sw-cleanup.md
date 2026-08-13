@@ -52,12 +52,24 @@ Dry-run by default; deletions only after explicit confirmation.
    (journaled eviction). **Reconciling a refused write is a human decision** — cleanup never replays
    refused mutations automatically.
 
-6. **Scoped in-flight protection (PRD 062 R10/R11)** — deliver run-state enumeration scopes inflight checks
-   to the **active run/worktree** (`_run_in_active_scope` + `_scoped_run_inflight`). Unrelated scoped runs with
-   terminal verdicts do not block orchestrator cleanup. Non-terminal verdicts protected: `running`, `blocked`,
-   `halted`, `watching` (shared `RESUMABLE_DELIVER_VERDICTS` constant). Dry-run is **terminal-class only** for
-   `cleanup.autonomy: auto` — autonomous apply deletes only when deliver `verdict` ∈ `{complete, rejected}` and
-   merge detection is not `indeterminate`.
+6. **Scoped in-flight protection (PRD 062 R10/R11; PRD 094 R10–R11/R15)** — deliver run-state enumeration
+   scopes inflight checks to the **active run/worktree** (`_run_in_active_scope` + `_scoped_run_inflight`).
+   Unrelated scoped runs with terminal verdicts do not block orchestrator cleanup. Non-terminal verdicts
+   protected: `running`, `blocked`, `halted`, `watching` (shared `RESUMABLE_DELIVER_VERDICTS` constant).
+
+   **String-or-object `target` (R10):** scoped state may record `target` as a feature branch string
+   (`"feat/<slug>"`) or an object with a `branch` field. Enumeration and inflight checks route through
+   `wave_state.target_branch_from_state` — never assume dict-only shape (string targets must not raise
+   `AttributeError` during cleanup dry-run).
+
+   **Breadcrumb fail-closed (R11/R15):** legacy migration breadcrumbs (`migrated: true` on
+   `sw-deliver-state.json` with `scopedPath`) widen protection when the followed scoped file is missing,
+   still a breadcrumb, or points at a stale branch while a **live** non-terminal scoped run exists on another
+   target. Unresolvable breadcrumb scoped files are protected as `run-state` candidates rather than pruned
+   silently.
+
+   Dry-run is **terminal-class only** for `cleanup.autonomy: auto` — autonomous apply deletes only when
+   deliver `verdict` ∈ `{complete, rejected}` and merge detection is not `indeterminate`.
 
 7. **Autonomous apply (R25/R26)** — when `cleanup.autonomy` is `auto` in
    `.cursor/workflow.config.json`, a deterministic post-merge path may apply the dry-run `wouldRemove` set

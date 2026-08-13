@@ -128,7 +128,25 @@ key, else its first H1 heading, else a plain `<type>: <unit-id>` fallback — ne
 **Body stays authoritative for content.** Labels are an *additive* discovery/read-performance projection —
 the doc's own frontmatter block and the authoritative `sw-edges` body fence are unchanged and still fully
 embedded in the issue body (edge labels are a search aid only; `sw-edges` is the source of truth for edge
-reads, same precedence as native links above). Read/discover paths (`planning_github_client.py`,
+reads, same precedence as native links above).
+
+### Absorbs serialization (PRD 094 R1–R2/R13–R14)
+
+Portable `absorbs:` frontmatter is merged into the canonical `sw-edges` fence on every `put` — not stored as a
+parallel edge channel:
+
+1. **Put** — `planning_canonical.resolve_put_edge_projection` reads `absorbs` from canonical YAML,
+   unions `rel: absorbs` edges into the existing `sw-edges` list, and preserves native link projections
+   (`planning/backends/issues.py` mirrors the same path).
+2. **Read** — parsers extract `sw-edges` **before** structural-key strip; on conflict the body fence wins
+   over label projection (one-release fallback still reads legacy label-only issues).
+3. **Hash** — canonical content-hash includes the normalized `sw-edges` payload per
+   `core/sw-reference/canonical-serialization.md`.
+
+Gap-capture absorb linkage (`planning_gap_capture.record_absorb_linkage`) and PRD-side absorbs puts use the
+same merge helper; revision conflicts refetch+remerge fail-closed without a silent local-only put.
+
+Read/discover paths (`planning_github_client.py`,
 `planning_jira_client.py`, `planning_discover.py`) prefer the label projection and fall back to the pre-R11
 body-marker/frontmatter parse for one release, so issues written before R11 remain fully readable without a
 migration step.
