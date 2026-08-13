@@ -48,6 +48,18 @@ never `main`; verdict-independent (commit failure warns; stamp still completes).
 
 Initialized from the phase-mode plan via `scripts/wave.py state init --plan .cursor/sw-deliver-plan.json`:
 
+**`target` shapes (PRD 094 R10–R11/R15):** readers use `wave_state.target_branch_from_state` — never assume
+object-only storage. Both forms are valid on scoped state, run-scoped `state.json`, and migration breadcrumbs:
+
+| Shape | Example | Notes |
+| --- | --- | --- |
+| String branch | `"target": "feat/<slug>"` | Legacy + breadcrumb-friendly; enumeration must not call `.get("branch")` blindly |
+| Object branch | `"target": {"type": "feat", "slug": "<slug>", "branch": "feat/<slug>"}` | Plan init default; `branch` is authoritative for locks/scoped paths |
+
+`/sw-cleanup` inflight protection and `cleanup_lib.resolve_deliver_state` route through the same helper.
+Breadcrumb `sw-deliver-state.json` may carry a string `target` while `scopedPath` still points at a stale
+scoped file — unresolvable targets widen protection fail-closed instead of pruning live runs.
+
 ```json
 {
   "verdict": "running",
