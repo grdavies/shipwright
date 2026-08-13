@@ -53,6 +53,7 @@ def test_no_baseline_partition_conclusive(repo_root: Path) -> None:
         require_gate=True,
         pr_context="off",
         root=repo_root,
+        restore_committed_baseline=True,
     )
     assert vel.partition_conclusive_without_override(with_baseline)
     assert with_baseline.get("inconclusiveClass") != "no-baseline"
@@ -134,6 +135,7 @@ def test_verify_no_baseline_acceptance(repo_root: Path) -> None:
             "--require-gate",
             "--pr-context",
             "off",
+            "--restore-committed-baseline",
         ],
         cwd=repo_root,
         capture_output=True,

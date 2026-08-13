@@ -209,8 +209,9 @@ def compute_verdict(
     pr_context: str = "auto",
     root: Path | None = None,
     partition_id: str = DEFAULT_NO_BASELINE_PARTITION,
+    restore_committed_baseline: bool = False,
 ) -> dict[str, Any]:
-    if root is not None:
+    if restore_committed_baseline and root is not None:
         baseline_verify_path, baseline_gate_path = resolve_committed_baseline_paths(
             root,
             baseline_verify_path=baseline_verify_path,
@@ -424,9 +425,15 @@ def compute_and_record(
     behavioral_status_path: Path | None = None,
     claims_status_path: Path | None = None,
     partition_id: str = DEFAULT_NO_BASELINE_PARTITION,
+    restore_committed_baseline: bool = False,
     **kwargs: Any,
 ) -> tuple[dict[str, Any], int]:
-    verdict = compute_verdict(root=root, partition_id=partition_id, **kwargs)
+    verdict = compute_verdict(
+        root=root,
+        partition_id=partition_id,
+        restore_committed_baseline=restore_committed_baseline,
+        **kwargs,
+    )
     behavioral = load_behavioral_status(behavioral_status_path)
     if behavioral is None and behavioral_status_path is None:
         run_dir = kwargs.get("verify_path")
