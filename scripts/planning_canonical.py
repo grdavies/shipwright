@@ -806,6 +806,107 @@ def reconcile_edges(
     }
 
 
+def parse_absorbs_targets(raw: Any) -> list[str]:
+    """Normalize an ``absorbs`` frontmatter value to a deduped target list."""
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return [str(item).strip() for item in raw if str(item).strip()]
+    value = str(raw).strip()
+    if not value:
+        return []
+    if value.startswith("["):
+        try:
+            parsed = json.loads(value.replace("'", '"'))
+        except json.JSONDecodeError:
+            parsed = [part.strip().strip("'\"") for part in value.strip("[]").split(",") if part.strip()]
+        if isinstance(parsed, list):
+            return [str(item).strip() for item in parsed if str(item).strip()]
+    return [part.strip() for part in value.split(",") if part.strip()]
+
+
+def parse_absorbs_from_canonical_content(content: str) -> list[str]:
+    """Read absorbs targets from canonical YAML frontmatter (PRD 094 R1)."""
+    fm, _ = split_frontmatter(content)
+    if not fm:
+        return []
+    return parse_absorbs_targets(fm.get("absorbs"))
+
+
+def absorbs_rel_edges(targets: list[str]) -> list[dict[str, Any]]:
+    return [{"rel": "absorbs", "target": target} for target in targets if target]
+
+
+def edge_dedup_key(edge: dict[str, Any]) -> str:
+    rel = str(edge.get("rel") or edge.get("type") or "").strip()
+    target = edge.get("target")
+    if isinstance(target, list):
+        target_key = json.dumps(sorted(str(t) for t in target), sort_keys=True, ensure_ascii=False)
+    else:
+        target_key = str(target).strip()
+    return json.dumps({"rel": rel, "target": target_key}, sort_keys=True, ensure_ascii=False)
+
+
+def union_edge_lists(
+    base: list[dict[str, Any]] | None,
+    extra: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for edge in list(base or []) + list(extra or []):
+        if not isinstance(edge, dict):
+            continue
+        key = edge_dedup_key(edge)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(edge)
+    return out
+
+
+def merge_absorbs_into_edge_list(
+    edges: list[dict[str, Any]] | None,
+    absorb_targets: list[str],
+) -> list[dict[str, Any]]:
+    """Union ``rel: absorbs`` edges into an existing edge list (PRD 094 R1/R13)."""
+    return union_edge_lists(edges, absorbs_rel_edges(absorb_targets))
+
+
+def resolve_put_edge_projection(
+    *,
+    store_content: str,
+    canonical_content: str | None = None,
+    existing_body: str | None = None,
+    existing_native_links: list[dict[str, Any]] | None = None,
+) -> tuple[str, list[dict[str, Any]] | None, list[dict[str, Any]] | None]:
+    """Merge absorbs into sw-edges on put; preserve native links (PRD 094 R1/R13)."""
+    absorb_targets = parse_absorbs_from_canonical_content(canonical_content or store_content)
+    content_edges = parse_edges_block(store_content)
+    stripped = strip_markers_and_edges(store_content)
+
+    edges: list[dict[str, Any]] = []
+    native_links: list[dict[str, Any]] = []
+
+    if content_edges is not None:
+        edges = list(content_edges.get("edges") or [])
+        native_links = list(content_edges.get("native") or [])
+        if not native_links and existing_native_links:
+            native_links = list(existing_native_links)
+    elif existing_body is not None:
+        existing_edges = parse_edges_block(existing_body)
+        native_links = list(existing_native_links or [])
+        if existing_edges is not None or native_links:
+            edges = list((existing_edges or {}).get("edges") or [])
+    elif absorb_targets:
+        edges = []
+
+    if not absorb_targets and not edges and not native_links:
+        return store_content, None, None
+
+    merged_edges = merge_absorbs_into_edge_list(edges, absorb_targets)
+    if not merged_edges and not native_links:
+        return stripped, None, None
+    return stripped, merged_edges, native_links or None
 
 
 _EDGE_REL_TO_NATIVE_TYPE: dict[str, str] = {
