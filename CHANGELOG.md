@@ -812,6 +812,7 @@
 * merge phase docs-currency-verification-workflows-r16 into feat/planning-store-absorb-cleanup-verify-gaps (52122b0) <!-- sw-deliver:docs-currency-verification-workflows-r16 -->
 * merge phase setup-and-audit into feat/tasks-095 (e7668ff) <!-- sw-deliver:setup-and-audit -->
 * merge phase core-implementation into feat/tasks-095 (df1bdbb) <!-- sw-deliver:core-implementation -->
+* merge phase safety-gate-verification into feat/tasks-095 (bb6bc4d) <!-- sw-deliver:safety-gate-verification -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
