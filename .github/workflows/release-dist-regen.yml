@@ -27,13 +27,15 @@ jobs:
       - name: Regenerate dist/
         run: python3 -m sw generate --all
 
-      - name: Assert breaking release targets 1.0.0
+      - name: Assert breaking release targets major X.0.0
         run: |
           VERSION="$(tr -d '[:space:]' < version.txt)"
           CURRENT_SECTION="$(awk '/^## \[/ { if (++n > 1) exit } { print }' CHANGELOG.md)"
-          if echo "$CURRENT_SECTION" | grep -qiE '^### .*BREAKING CHANGES' && [ "$VERSION" != "1.0.0" ]; then
-            echo "Breaking release must compute exactly 1.0.0, got ${VERSION}"
-            exit 1
+          if echo "$CURRENT_SECTION" | grep -qiE '^### .*BREAKING CHANGES'; then
+            if ! echo "$VERSION" | grep -qE '^[1-9][0-9]*\.0\.0$'; then
+              echo "Breaking release must compute a major X.0.0, got ${VERSION}"
+              exit 1
+            fi
           fi
 
       - name: Commit refreshed dist/
