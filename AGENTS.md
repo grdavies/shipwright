@@ -14,3 +14,4 @@ allowlisted rules at session start; promote or edit rules only through `/sw-memo
 | Topic | Rule id | Path |
 | --- | --- | --- |
 | Mock realism (PRD 039 R10) | `mock-realism` | `.cursor/sw-memory/rules/mock-realism.md` |
+| Orphan worktree cleanup (PRD 095) | — | `scripts/cleanup_lib.py` (`enumerate_orphan_worktrees`, `_classify_orphan`; ghost → park → husk) |
