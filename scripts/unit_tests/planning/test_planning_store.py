@@ -42,10 +42,15 @@ def test_planning_store_harness_present(repo_root: Path) -> None:
 # --- PRD 094 R1/R13 absorbs put edge projection (folded to avoid workflow regen) ---
 from planning_canonical import (
     build_edges_block,
+    canonical_content_from_operator,
     operator_body_from_canonical,
+    parse_absorbs_from_canonical_content,
     parse_edges_block,
     reconcile_edges,
     resolve_put_edge_projection,
+    type_label,
+    unit_id_label,
+    edge_labels_for,
 )
 from planning_store import IssueStoreBackend, _default_body_path
 
@@ -163,3 +168,69 @@ def test_put_merges_absorbs_with_existing_edges_and_native(
     assert body_edges.get("native") == native_links
     reconciled = reconcile_edges(body_edges, record.native_links)
     assert reconciled.get("native") == native_links
+
+
+def test_read_edges_authoritative_over_labels_and_extra_filter() -> None:
+    """R2/R14 — sw-edges wins over stale labels; structural keys stripped from extra."""
+    prd_unit = "094-prd-read-edges-auth"
+    gap_sw = "gap-from-sw-edges"
+    gap_label = "gap-from-label-only"
+    labels = [
+        type_label("prd"),
+        unit_id_label(prd_unit),
+        "sw:status:open",
+        "sw:visibility:public",
+    ]
+    labels.extend(edge_labels_for("absorbs", [gap_label]))
+    sw_edges = build_edges_block([{"rel": "absorbs", "target": gap_sw}], [])
+    operator = (
+        "<!-- sw-hybrid-frontmatter -->\n"
+        + (
+            "<!-- sw-frontmatter-extra: "
+            + '{"absorbs": ["gap-from-extra"], "customNote": "keep-me", "status": "draft"}'
+            + " -->\n"
+        )
+        + "# PRD read edges authoritative\n"
+        + sw_edges
+    )
+    canonical = canonical_content_from_operator(labels, operator, unit_id=prd_unit)
+    absorbs = parse_absorbs_from_canonical_content(canonical)
+    assert gap_sw in absorbs
+    assert gap_label not in absorbs
+    assert "gap-from-extra" not in absorbs
+    assert "customNote: keep-me" in canonical
+    assert "status: draft" not in canonical
+
+
+def test_absorbs_put_get_roundtrip_above_label_cap(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R2 — >20 absorbs round-trip via sw-edges (label projection capped at 20)."""
+    monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
+    root = tmp_path
+    _init_repo(root)
+    project_key = "absorbs-cap-094"
+    cfg = _issue_store_cfg(project_key)
+    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+
+    prd_unit = "094-prd-absorbs-cap"
+    backend = IssueStoreBackend(root, cfg)
+    prd_path = _default_body_path(prd_unit, "prd")
+    gap_targets = [f"gap-cap-{i:02d}" for i in range(25)]
+    absorbs_yaml = ", ".join(gap_targets)
+    canonical = (
+        f"---\n"
+        f"id: {prd_unit}\n"
+        f"type: prd\n"
+        f"status: open\n"
+        f"visibility: public\n"
+        f"absorbs: [{absorbs_yaml}]\n"
+        f"---\n"
+        f"# PRD above cap absorbs\n"
+    )
+    assert backend.put(prd_unit, prd_path, canonical).verdict == "ok"
+
+    got = backend.get(prd_unit, prd_path)
+    assert got.verdict == "ok" and got.content
+    roundtrip_absorbs = parse_absorbs_from_canonical_content(got.content)
+    assert set(roundtrip_absorbs) == set(gap_targets)
