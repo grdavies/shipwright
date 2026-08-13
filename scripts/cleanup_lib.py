@@ -140,13 +140,26 @@ def _prefer_orchestrator_state(root_state: dict[str, Any], orch_state: dict[str,
 
 def resolve_deliver_state(repo_root: Path) -> DeliverStateView:
     """Canonical deliver state lives at repo-root scoped path only (PRD 013 R28)."""
-    from wave_state import _read_state_optional, enumerate_scoped_runs, resolve_state_path
+    from wave_state import (
+        _is_migration_breadcrumb,
+        _read_state_optional,
+        _run_scoped_path_from_breadcrumb,
+        enumerate_scoped_runs,
+        resolve_state_path,
+    )
 
     repo_root = repo_root.resolve()
     stale_roots: list[Path] = []
 
     state_path = resolve_state_path(repo_root)
     state = _read_state_optional(state_path)
+    if state and _is_migration_breadcrumb(state):
+        followed = _run_scoped_path_from_breadcrumb(repo_root, state)
+        if followed:
+            followed_state = _read_state_optional(followed)
+            if followed_state:
+                state_path = followed
+                state = followed_state
     if not state:
         runs = enumerate_scoped_runs(repo_root)
         for run in runs:
@@ -293,13 +306,31 @@ def _all_deliver_runs(repo_root: Path) -> list[dict[str, Any]]:
 
 
 def _scoped_run_inflight(repo_root: Path, run: dict[str, Any]) -> tuple[bool, str]:
-    from wave_state import _is_migration_breadcrumb, _read_state_optional
+    from wave_state import (
+        _is_migration_breadcrumb,
+        _read_state_optional,
+        _run_scoped_path_from_breadcrumb,
+        _scoped_path_from_breadcrumb,
+    )
 
     state_path = repo_root / run["statePath"]
     state = _read_state_optional(state_path)
-    if _is_migration_breadcrumb(state):
-        return False, ""
     label = str(run.get("slug") or run.get("runId") or "unknown")
+    if _is_migration_breadcrumb(state):
+        followed = _run_scoped_path_from_breadcrumb(repo_root, state) or _scoped_path_from_breadcrumb(
+            repo_root, state
+        )
+        if followed:
+            followed_state = _read_state_optional(followed)
+            if followed_state and not _is_migration_breadcrumb(followed_state):
+                state = followed_state
+            elif not followed_state:
+                return True, f"migration breadcrumb unresolvable ({label})"
+        else:
+            bc_target = state.get("target")
+            if isinstance(bc_target, str) and _slug_from_target(bc_target):
+                return True, f"migration breadcrumb without live state ({label})"
+            return True, f"migration breadcrumb unresolvable ({label})"
     if run.get("lockHeld"):
         return True, f"deliver lock present ({label})"
     verdict = str(state.get("verdict") or run.get("verdict") or "")
@@ -317,6 +348,8 @@ def _slug_from_target(target: str) -> str | None:
 
 
 def _active_scope_slugs(repo_root: Path, view: DeliverStateView) -> set[str]:
+    from wave_state import _is_migration_breadcrumb, _read_state_optional, legacy_paths, target_branch_from_state
+
     active: set[str] = set()
     current = current_branch(repo_root)
     if current:
@@ -329,12 +362,37 @@ def _active_scope_slugs(repo_root: Path, view: DeliverStateView) -> set[str]:
             if parent_slug:
                 active.add(parent_slug)
     if not active:
-        target = (view.state.get("target") or {}).get("branch")
-        if isinstance(target, str):
+        target = target_branch_from_state(view.state)
+        if target:
             target_slug = _slug_from_target(target)
             if target_slug:
                 active.add(target_slug)
+    legacy = legacy_paths(repo_root)["state"]
+    if legacy.is_file():
+        leg = _read_state_optional(legacy)
+        if _is_migration_breadcrumb(leg):
+            bc_target = leg.get("target")
+            if isinstance(bc_target, str):
+                bc_slug = _slug_from_target(bc_target)
+                if bc_slug:
+                    active.add(bc_slug)
     return active
+
+
+def _breadcrumb_widens_inflight_scope(repo_root: Path) -> bool:
+    from wave_state import _is_migration_breadcrumb, _read_state_optional, legacy_paths, resolve_state_path
+
+    for path in (resolve_state_path(repo_root), legacy_paths(repo_root)["state"]):
+        state = _read_state_optional(path)
+        if _is_migration_breadcrumb(state):
+            return True
+    cursor = repo_root / ".cursor"
+    if cursor.is_dir():
+        for path in cursor.glob("sw-deliver-state.*.json"):
+            state = _read_state_optional(path)
+            if _is_migration_breadcrumb(state):
+                return True
+    return False
 
 
 def _run_slug(run: dict[str, Any]) -> str | None:
@@ -359,10 +417,11 @@ def deliver_inflight(repo_root: Path) -> tuple[bool, str]:
     view = resolve_deliver_state(repo_root)
     stale = _stale_state_rel_paths(view, repo_root)
     active_slugs = _active_scope_slugs(repo_root, view)
+    widen = _breadcrumb_widens_inflight_scope(repo_root)
     for run in _all_deliver_runs(repo_root):
         if run.get("statePath") in stale:
             continue
-        if not _run_in_active_scope(run, active_slugs):
+        if not widen and not _run_in_active_scope(run, active_slugs):
             continue
         inflight, reason = _scoped_run_inflight(repo_root, run)
         if inflight:
