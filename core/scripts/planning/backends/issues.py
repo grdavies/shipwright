@@ -159,6 +159,9 @@ class IssueStoreBackend(PlanningStoreBackend):
         )
 
     def _canonical_content_from_record(self, record: Any, unit_id: str) -> str:
+        full_body = _ps().reassemble_body(record.body, record.comments)
+        # PRD 094 R2 — parse sw-edges before strip; edges authoritative over labels on read.
+        sw_edges_block = _ps().parse_edges_block(full_body)
         operator_content = self._extract_content(record)
         if _ps().has_raw_yaml_frontmatter(operator_content):
             return operator_content
@@ -167,6 +170,7 @@ class IssueStoreBackend(PlanningStoreBackend):
                 list(record.labels),
                 operator_content,
                 unit_id=unit_id,
+                sw_edges_block=sw_edges_block,
             )
         return operator_content
 

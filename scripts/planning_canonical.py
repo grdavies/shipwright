@@ -401,6 +401,12 @@ STRUCTURAL_FRONTMATTER_KEYS = (
     "tags",
 )
 
+# Keys stripped from sw-frontmatter-extra on read (PRD 094 R2/R14) — same set as
+# operator_body_from_canonical write-side structural projection.
+STRUCTURAL_EXTRA_FILTER_KEYS = frozenset(STRUCTURAL_FRONTMATTER_KEYS) | frozenset(
+    {"id", "title", "type", "status", "visibility"}
+)
+
 
 def unit_id_label(unit_id: str) -> str:
     return f"{UNIT_LABEL_PREFIX}{quote(unit_id, safe='')}"
@@ -615,7 +621,12 @@ def is_hybrid_operator_body(content: str) -> bool:
 def strip_hybrid_operator_body(content: str) -> str:
     stripped = FRONTMATTER_EXTRA_MARKER.sub("", content)
     stripped = stripped.replace(HYBRID_FRONTMATTER_MARKER, "")
-    return normalize_body(stripped)
+    return strip_markers_and_edges(stripped)
+
+
+def filter_structural_keys_from_extra(extra: dict[str, Any]) -> dict[str, Any]:
+    """PRD 094 R2/R14 — drop structural keys erroneously stored in sw-frontmatter-extra."""
+    return {k: v for k, v in extra.items() if k not in STRUCTURAL_EXTRA_FILTER_KEYS}
 
 
 def _extra_frontmatter_from_operator(operator_body: str) -> dict[str, Any]:
@@ -626,10 +637,44 @@ def _extra_frontmatter_from_operator(operator_body: str) -> dict[str, Any]:
         data = json.loads(match.group(1))
     except json.JSONDecodeError:
         return {}
-    return data if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        return {}
+    return filter_structural_keys_from_extra(data)
 
 
-def frontmatter_from_labels(labels: list[str], *, unit_id: str | None = None, operator_body: str = "") -> dict[str, Any]:
+def frontmatter_edges_from_sw_edges(sw_edges: dict[str, Any] | None) -> dict[str, Any]:
+    """Read-side projection of portable sw-edges into frontmatter edge keys (PRD 094 R2/R14)."""
+    if not sw_edges:
+        return {}
+    edge_list = sw_edges.get("edges")
+    if not isinstance(edge_list, list):
+        return {}
+    by_rel: dict[str, list[str]] = {}
+    for edge in edge_list:
+        if not isinstance(edge, dict):
+            continue
+        rel = str(edge.get("rel") or edge.get("type") or "").strip()
+        if rel not in EDGE_LABEL_PREFIXES:
+            continue
+        target_raw = edge.get("target")
+        targets = target_raw if isinstance(target_raw, list) else [target_raw]
+        for target in targets:
+            target_str = str(target).strip()
+            if target_str:
+                by_rel.setdefault(rel, []).append(target_str)
+    fm: dict[str, Any] = {}
+    for rel, targets in by_rel.items():
+        fm[rel] = targets if len(targets) > 1 else targets[0]
+    return fm
+
+
+def frontmatter_from_labels(
+    labels: list[str],
+    *,
+    unit_id: str | None = None,
+    operator_body: str = "",
+    sw_edges_block: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """R20/R21 read-side -- rebuild frontmatter from provider-native labels."""
     fm: dict[str, Any] = {}
     artifact_type = artifact_type_from_labels(labels)
@@ -655,6 +700,10 @@ def frontmatter_from_labels(labels: list[str], *, unit_id: str | None = None, op
         edges = edges_from_labels(labels, rel)
         if edges:
             fm[rel] = edges if len(edges) > 1 else edges[0]
+    # PRD 094 R2/R14 — sw-edges authoritative over label projection on conflict.
+    sw_fm = frontmatter_edges_from_sw_edges(sw_edges_block)
+    for rel, value in sw_fm.items():
+        fm[rel] = value
     fm.update(_extra_frontmatter_from_operator(operator_body))
     return fm
 
@@ -664,9 +713,17 @@ def canonical_content_from_operator(
     operator_body: str,
     *,
     unit_id: str | None = None,
+    sw_edges_block: dict[str, Any] | None = None,
 ) -> str:
     """R20 -- agents receive full canonical content (frontmatter + body) on `get`."""
-    fm = frontmatter_from_labels(labels, unit_id=unit_id, operator_body=operator_body)
+    if sw_edges_block is None:
+        sw_edges_block = parse_edges_block(operator_body)
+    fm = frontmatter_from_labels(
+        labels,
+        unit_id=unit_id,
+        operator_body=operator_body,
+        sw_edges_block=sw_edges_block,
+    )
     body = strip_hybrid_operator_body(operator_body)
     if not fm:
         return normalize_body(body)
