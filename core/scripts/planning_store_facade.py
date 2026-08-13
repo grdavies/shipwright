@@ -249,6 +249,7 @@ from planning_canonical import (  # noqa: E402
     reconcile_edges,
     reassemble_body,
     require_artifact_type,
+    resolve_put_edge_projection,
     rewrite_chunk_manifest_ids,
     strip_markers_and_edges,
     canonical_content_from_operator,
