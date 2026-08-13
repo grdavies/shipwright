@@ -8,7 +8,8 @@ Orphan worktrees (PRD 095): directories under ``.sw-worktrees/`` absent from ``g
 - ``_classify_orphan(path)`` — evaluation order **ghost → park → husk**:
   ghost (no ``.git``), park (name matches ``r'\\.park-\\d+$'``), husk (``.git`` present, unregistered).
 - Report kind ``orphan-worktree`` — listed in dry-run ``would_remove``; apply uses leaves-first
-  ``os.scandir`` walk (no ``rm -rf`` / ``shutil.rmtree``); park-class always requires confirm (SC6).
+  ``os.scandir`` walk (never shell-recursive delete or ``shutil.rmtree``); park-class always
+  requires confirm (SC6).
 """
 from __future__ import annotations
 
