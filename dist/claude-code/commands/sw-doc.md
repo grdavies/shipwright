@@ -411,3 +411,12 @@ memory payloads.
 `wave_spec_seed_guard.py`, invokes `wave_spec_seed.py` with `remoteState.dryRun: false`, then releases
 the lock. `separate-project-store-only` remains skipped. Driver entrypoints stay `doc_loop.py` —
 unreachable publication stages (`docs-commit` / `docs-pr`) unchanged.
+
+## Graph compilation (PRD 269 R3/R17)
+
+`/sw-doc`, `/sw-debug`, and `/sw-feedback` intents compile onto the same **WorkflowGraph** IR and
+dispatch through **GraphScheduler** (`scripts/graph/legacy_adapters.py` →
+`orchestrator_plan_to_workflow_graph` / `doc_plan_to_workflow_graph`, then
+`compile_orchestrator_graph`). User-facing command names stay `/sw-doc`, `/sw-debug`, and
+`/sw-feedback` — no graph-prefixed slash commands and no parallel operator UX. Graph `runId` is the
+generic run identity already used by deliver status/explain.

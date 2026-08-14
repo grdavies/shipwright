@@ -71,6 +71,53 @@ checks do not collapse into public-API rate-limit 403s.
 | `deliver-loop` | Durable state-machine driver: plan → provision → dispatch → merge → terminal; resumes from state (R1–R5) |
 | `run` | Alias for `deliver-loop` on a frozen task list (phase-mode) |
 | `promote` | Human-gated dependency-ordered promotion with per-candidate pre-merge validation |
+| `explain-plan` / `--explain-plan` | Read-only WorkflowGraph plan summary (PRD 269 R10/R12/R17) — see **Graph execution runtime** |
+
+## Graph execution runtime (PRD 269 R17)
+
+Phase-mode and multi-feature deliver compile onto the shared **WorkflowGraph** IR and dispatch through
+`GraphScheduler` (`scripts/graph/`). Operator UX stays on existing `/sw-deliver` / `/sw-status` surfaces —
+**no** `/sw-graph-*` (or other graph-prefixed) slash commands are introduced.
+
+### `--explain-plan` (read-only)
+
+```bash
+python3 scripts/wave_deliver.py <root> --explain-plan [--task-list <path>|--plan <path>|--graph-json <path>] [--compact] [--text]
+# equivalents:
+python3 scripts/wave_deliver.py <root> explain-plan …
+python3 scripts/wave_deliver.py <root> plan --explain-plan …
+python3 scripts/wave_deliver.py <root> run --explain-plan …   # prefers explain over mutation
+```
+
+Emits node count, parallel branches, `maxConcurrency`, estimated model mix, human gates, and an
+estimated/measured/omitted critical path. Refuses `--write` / `--persist`. Default JSON; `--text` for
+plain text; `--compact` embeds/shortens the text summary.
+
+### Generic `runId`
+
+Every compiled graph carries a generic graph `runId` in `metadata.runId`, mapped from the deliver
+`runId` (or orchestrator id / safety lock owner when that is the durable key). Receipts, in-flight
+intents, and status/explain queries index by that same `runId` — not a second graph-specific identity.
+
+### Cutover stages
+
+Graph ownership advances through dogfood-gated stages in `scripts/graph/cutover.py`:
+
+| Stage | Value | Gate highlight |
+| --- | --- | --- |
+| Dogfood | `dogfood` | Internal-only runs; parity + coverage evidence |
+| Limited scope | `limited-scope` | Requires live status/explain before promotion |
+| Full ownership | `full-ownership` | Named authorizer + recorded promotion evidence |
+
+Cutover never drops the human merge gate or invents a parallel operator command surface.
+
+### Serial-equivalent `maxConcurrency: 1`
+
+`resourceLimits.maxConcurrency: 1` is the tested serial-equivalent mitigation lane (and the default when
+a transient explain-plan is built from a task list). Cache remains independently disableable. Raising
+concurrency is a scheduling-mode / cutover concern — not a new slash command.
+
+Live progress and per-node explain live on `/sw-status` (see that command), not on new graph commands.
 
 ## Scope
 
