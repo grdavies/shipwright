@@ -858,6 +858,7 @@
 * merge phase cutover-evidence-serial-equivalent-mode-and-full-ownership-gate-r4 into feat/graph-execution-engine (7234cb8) <!-- sw-deliver:cutover-evidence-serial-equivalent-mode-and-full-ownership-gate-r4 -->
 * merge phase operator-command-documentation-r17 into feat/graph-execution-engine (b6f865f) <!-- sw-deliver:operator-command-documentation-r17 -->
 * merge phase guide-and-layout-documentation-r17 into feat/graph-execution-engine (97c980c) <!-- sw-deliver:guide-and-layout-documentation-r17 -->
+* merge phase configuration-schema-skills-and-rules-documentation-r17 into feat/graph-execution-engine (1df7979) <!-- sw-deliver:configuration-schema-skills-and-rules-documentation-r17 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
