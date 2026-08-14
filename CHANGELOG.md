@@ -856,6 +856,7 @@
 * merge phase orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 into feat/graph-execution-engine (b7419fa) <!-- sw-deliver:orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 -->
 * merge phase orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 into feat/graph-execution-engine (38d560b) <!-- sw-deliver:orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 -->
 * merge phase cutover-evidence-serial-equivalent-mode-and-full-ownership-gate-r4 into feat/graph-execution-engine (7234cb8) <!-- sw-deliver:cutover-evidence-serial-equivalent-mode-and-full-ownership-gate-r4 -->
+* merge phase operator-command-documentation-r17 into feat/graph-execution-engine (b6f865f) <!-- sw-deliver:operator-command-documentation-r17 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
