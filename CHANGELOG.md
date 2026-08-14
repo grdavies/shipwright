@@ -1,5 +1,34 @@
 # Changelog
 
+## [2.0.0](https://github.com/grdavies/shipwright/compare/v1.12.0...v2.0.0) (2026-08-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* force a major version bump for the next release-please cut (post-1.12 planning-store / deliver integrity work).
+
+### Features
+
+* freeze ETag retry and absorb-edge preservation (PRD 093) ([#779](https://github.com/grdavies/shipwright/issues/779)) ([dd8ff88](https://github.com/grdavies/shipwright/commit/dd8ff88cf9311e68d7c2e3668770ee5c57dabcb2))
+* prd 089 doc-loop tier correctness and repository context identity ([#786](https://github.com/grdavies/shipwright/issues/786)) ([7c98641](https://github.com/grdavies/shipwright/commit/7c9864165ad5fb8f8451a389caed1b6fa532ccf8))
+* **prd-90:** prd doc loop concurrency and coordination hardening ([#792](https://github.com/grdavies/shipwright/issues/792)) ([cd160e1](https://github.com/grdavies/shipwright/commit/cd160e1a426a7e99fc1f920f095d0399749d4237))
+* **prd-91:** prd planning cache rename and canonical runtime packaging ([#798](https://github.com/grdavies/shipwright/issues/798)) ([4d06551](https://github.com/grdavies/shipwright/commit/4d065519bea9383d40a15698fbd4eb15606915ee))
+* **prd-92:** prd graph engineering runtime first program ([#809](https://github.com/grdavies/shipwright/issues/809)) ([4beb08e](https://github.com/grdavies/shipwright/commit/4beb08ea43b2baa2e4f96a6b9d2159b7b020d944))
+* **prd-94:** planning-store absorb hybrid integrity, verify no-baseline follow-up, and cleanup ([#819](https://github.com/grdavies/shipwright/issues/819)) ([b6296a2](https://github.com/grdavies/shipwright/commit/b6296a2a1bbeb1d13d04d465b163aefbe8fac6f8))
+* **prd-95:** cleanup orphan husks under `.sw-worktrees` ([#827](https://github.com/grdavies/shipwright/issues/827)) ([92efe19](https://github.com/grdavies/shipwright/commit/92efe191700ad21bd5ce79da7acfcf9a390dfb6b))
+
+
+### Bug Fixes
+
+* **ci:** allow BREAKING releases at any major X.0.0 ([#829](https://github.com/grdavies/shipwright/issues/829)) ([949de38](https://github.com/grdavies/shipwright/commit/949de3816deeb874f5d67c516b7c8762b4ecd31e))
+* **hooks:** import scripts from zipapp in guardrail path ([#799](https://github.com/grdavies/shipwright/issues/799)) ([1ae2b81](https://github.com/grdavies/shipwright/commit/1ae2b81b3849bfbe8dc8413869e4a64d09dba65a))
+* **planning:** memoize units_with_derived_status for rate-limit relief ([#793](https://github.com/grdavies/shipwright/issues/793)) ([3d5079a](https://github.com/grdavies/shipwright/commit/3d5079a7ca07b5294ba867d4e2a793f2085de6d4))
+
+
+### Miscellaneous
+
+* bump next release to 2.0.0 ([#821](https://github.com/grdavies/shipwright/issues/821)) ([29d68b7](https://github.com/grdavies/shipwright/commit/29d68b7c323bb22f8bd0be0e85c0d936ea0d22c0))
+
 ## [1.12.0](https://github.com/grdavies/shipwright/compare/v1.11.0...v1.12.0) (2026-08-03)
 
 
