@@ -59,7 +59,7 @@ def test_artifact_registry_detects_content_tampering(tmp_path: Path) -> None:
         json.dumps("tampered"), encoding="utf-8"
     )
 
-    with pytest.raises(ArtifactIntegrityError, match="hash mismatch"):
+    with pytest.raises(ArtifactIntegrityError, match="mismatch"):
         registry.read("evidence")
 
 

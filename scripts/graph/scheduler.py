@@ -8,6 +8,7 @@ from collections.abc import Callable, Mapping, Sequence, Set
 from dataclasses import dataclass, field
 from typing import Any
 
+from graph.artifact_registry import PurityViolationError
 from graph.execution_receipts import ExecutionReceiptJournal
 from graph.fanin_policy import (
     FanInMode,
@@ -26,6 +27,7 @@ from graph.isolation_policy import (
     parse_isolation_policy,
 )
 from graph.kernel_compiler import compile_workflow_graph
+from graph.lineage import CacheKeyMaterial, compute_cache_key
 from graph.observability import GraphObservability
 from graph.resource_pools import (
     PoolExhausted,
@@ -64,6 +66,18 @@ class NodeExecutionResult:
     tokens: int = 0
     duration_ms: int = 0
     coverage: Mapping[str, Any] = field(default_factory=dict)
+    wrote: bool = False
+    retry_only: bool = False
+    prompt_version: str = "default"
+    model_version: str = "default"
+    tool_configuration: Mapping[str, Any] = field(default_factory=dict)
+    policy_version: str = "default"
+    credential_capabilities: tuple[str, ...] = ()
+    scope_identity: str = "default"
+    repository_identity: str = "default"
+    trust_domain: str = "default"
+    tool_binary_identity: str = "default"
+    repo_state_identity: str = "default"
 
     @property
     def success(self) -> bool:
@@ -182,11 +196,15 @@ class GraphScheduler:
         receipts: ExecutionReceiptJournal,
         pools: ResourcePoolRegistry,
         convergence_executor: ConvergenceExecutor | None = None,
+        cache_enabled: bool = True,
+        cache_identity: Mapping[str, Any] | None = None,
     ) -> None:
         self._executor = executor
         self._receipts = receipts
         self._pools = pools
         self._convergence_executor = convergence_executor
+        self._cache_enabled = cache_enabled
+        self._cache_identity = dict(cache_identity or {})
 
     def _validate_slot_requests(self, graph: Mapping[str, Any]) -> None:
         """Compile-time reject when slots exceed the effective pool limit."""
@@ -295,6 +313,75 @@ class GraphScheduler:
             ready.sort(key=source_order.__getitem__)
             return ready
 
+        def _execution(node: Mapping[str, Any]) -> Mapping[str, Any]:
+            raw = node.get("execution") or {}
+            if isinstance(raw, Mapping) and raw.get("purity") and raw.get("cache"):
+                return raw
+            return {"purity": "mutating", "cache": "disabled"}
+
+        def _input_hashes_for(node_id: str) -> list[str]:
+            return [
+                output_hashes[item]
+                for item in predecessors[node_id]
+                if item in output_hashes
+            ]
+
+        def _identity_fields(result: NodeExecutionResult | None = None) -> dict[str, Any]:
+            base = {
+                "prompt_version": "default",
+                "model_version": "default",
+                "tool_configuration": {},
+                "policy_version": "default",
+                "credential_capabilities": (),
+                "scope_identity": "default",
+                "repository_identity": "default",
+                "trust_domain": "default",
+                "tool_binary_identity": "default",
+                "repo_state_identity": "default",
+            }
+            base.update(self._cache_identity)
+            if result is not None:
+                base.update(
+                    {
+                        "prompt_version": result.prompt_version,
+                        "model_version": (
+                            result.model_version
+                            if result.model_version != "default"
+                            else result.model
+                        ),
+                        "tool_configuration": dict(result.tool_configuration),
+                        "policy_version": result.policy_version,
+                        "credential_capabilities": tuple(result.credential_capabilities),
+                        "scope_identity": result.scope_identity,
+                        "repository_identity": result.repository_identity,
+                        "trust_domain": result.trust_domain,
+                        "tool_binary_identity": result.tool_binary_identity,
+                        "repo_state_identity": result.repo_state_identity,
+                    }
+                )
+                # Explicit scheduler identity wins over result defaults.
+                base.update(self._cache_identity)
+            return base
+
+        def _cache_key_for(node: Mapping[str, Any], result: NodeExecutionResult | None = None) -> str:
+            identity = _identity_fields(result)
+            return compute_cache_key(
+                CacheKeyMaterial(
+                    node_definition=dict(node),
+                    input_hashes=_input_hashes_for(str(node["id"])),
+                    prompt_version=str(identity["prompt_version"]),
+                    model_version=str(identity["model_version"]),
+                    tool_configuration=dict(identity["tool_configuration"]),
+                    policy_version=str(identity["policy_version"]),
+                    credential_capabilities=tuple(identity["credential_capabilities"]),
+                    scope_identity=str(identity["scope_identity"]),
+                    repository_identity=str(identity["repository_identity"]),
+                    trust_domain=str(identity["trust_domain"]),
+                    tool_binary_identity=str(identity["tool_binary_identity"]),
+                    repo_state_identity=str(identity["repo_state_identity"]),
+                )
+            )
+
         def complete_replay(node_id: str, fanin: FanInResult) -> bool:
             idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
             try:
@@ -319,10 +406,67 @@ class GraphScheduler:
             pending.discard(node_id)
             return True
 
+        def try_cache_hit(node_id: str, fanin: FanInResult) -> bool:
+            if not self._cache_enabled:
+                return False
+            node = by_id[node_id]
+            if _execution(node).get("cache") != "content-addressed":
+                return False
+            # Probe with scheduler identity (same fields used when indexing hits).
+            cache_key = _cache_key_for(node)
+            reusable = self._receipts.lookup_reusable_by_cache_key(cache_key)
+            if reusable is None:
+                return False
+            idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
+            receipt = self._receipts.record_cache_hit(
+                node_id,
+                idempotency_key,
+                source=reusable,
+                cache_key=cache_key,
+            )
+            stored_hashes = receipt.get("outputHashes") or []
+            output_hash = str(stored_hashes[0]) if stored_hashes else None
+            if output_hash is not None:
+                output_hashes[node_id] = output_hash
+            outcomes[node_id] = NodeOutcome(node_id, success=True)
+            persisted_receipts.append(receipt)
+            node_runs[node_id] = NodeRun(
+                node_id=node_id,
+                verdict="pass",
+                dispatched=False,
+                fanin=fanin,
+                output_hash=output_hash,
+                reason="cache-hit",
+            )
+            pending.discard(node_id)
+            return True
+
         def execute_node(node_id: str, fanin: FanInResult, *, pool: PoolName, slots: int) -> None:
             """Execute with pool slots already acquired by the caller."""
             node = by_id[node_id]
             expected = predecessors[node_id]
+            execution = _execution(node)
+            idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
+            intent_payload = {
+                "model": "pending",
+                "attempts": 1,
+                "tokens": 0,
+                "durationMs": 0,
+                "inputHashes": _input_hashes_for(node_id),
+                "outputHashes": [],
+                "verdict": "pending",
+                "coverage": {},
+            }
+            if execution.get("purity") == "mutating":
+                self._receipts.begin(node_id, idempotency_key, intent_payload)
+                self._receipts.save_inflight_snapshot(
+                    run_id,
+                    {
+                        "poolSnapshot": self._pools.snapshot(),
+                        "parked": [],
+                        "inflight": [node_id],
+                    },
+                )
             try:
                 if node["kind"] == "convergence-loop" and self._convergence_executor:
                     result = self._convergence_executor(
@@ -337,6 +481,11 @@ class GraphScheduler:
             if not isinstance(result, NodeExecutionResult):
                 raise SchedulerError(
                     f"executor returned invalid result for node {node_id}"
+                )
+
+            if execution.get("purity") == "read-only" and result.wrote:
+                raise PurityViolationError(
+                    f"read-only node {node_id} produced writes; failing closed"
                 )
 
             output_hash = _digest(result.output)
@@ -354,10 +503,26 @@ class GraphScheduler:
                 "verdict": result.verdict,
                 "coverage": dict(result.coverage),
             }
+            if result.retry_only:
+                payload["retryOnly"] = True
+            cache_key = None
+            if (
+                self._cache_enabled
+                and execution.get("cache") == "content-addressed"
+                and result.success
+                and not result.retry_only
+            ):
+                cache_key = _cache_key_for(node, result)
+            # Replace pending intent with the final payload when begin() was used.
+            if execution.get("purity") == "mutating":
+                partial_path = self._receipts.partial_path(node_id, idempotency_key)
+                if partial_path.is_file():
+                    partial_path.unlink(missing_ok=True)
             receipt = self._receipts.record(
                 node_id,
-                f"{run_id}:{graph_hash}:{node_id}",
+                idempotency_key,
                 payload,
+                cache_key=cache_key,
             )
             persisted_receipts.append(receipt)
             output_hashes[node_id] = output_hash
@@ -390,6 +555,9 @@ class GraphScheduler:
                     break
                 fanin = fanin_for(node_id)
                 if complete_replay(node_id, fanin):
+                    replayed += 1
+                    continue
+                if try_cache_hit(node_id, fanin):
                     replayed += 1
                     continue
                 node = by_id[node_id]

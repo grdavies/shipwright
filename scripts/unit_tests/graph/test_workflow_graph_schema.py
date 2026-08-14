@@ -95,7 +95,9 @@ def test_schema_files_accept_versioned_workflow_and_node() -> None:
     )
     assert workflow_schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert node_schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
-    validate_node_spec(valid_node())
+    normalized = validate_node_spec(valid_node())
+    assert normalized["execution"]["purity"] == "mutating"
+    assert normalized["execution"]["cache"] == "disabled"
     validate_workflow_graph(valid_graph())
 
 
