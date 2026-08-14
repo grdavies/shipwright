@@ -200,6 +200,7 @@ class ExecutionReceiptJournal:
             self.complete_root,
             self.quarantine_root,
             self.cache_index_root,
+            self.run_dir,
         ):
             if not directory.is_dir():
                 continue
@@ -209,12 +210,6 @@ class ExecutionReceiptJournal:
                         total += path.stat().st_size
                     except OSError:
                         continue
-        for sibling in (self.pool_snapshot_path(), self.telemetry_path()):
-            if sibling.is_file():
-                try:
-                    total += sibling.stat().st_size
-                except OSError:
-                    continue
         return total
 
     def _enforce_ceiling(self, upcoming_bytes: int = 0) -> None:
@@ -222,7 +217,7 @@ class ExecutionReceiptJournal:
             return
         if self._size_bytes() + upcoming_bytes > self.size_ceiling_bytes:
             raise ReceiptStoreFull(
-                f"receipt store would exceed size ceiling "
+                f"receipt store exceeds size ceiling "
                 f"({self.size_ceiling_bytes} bytes)"
             )
 

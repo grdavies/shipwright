@@ -257,7 +257,7 @@ def _intent_payload(
 
 
 class GraphScheduler:
-    """Execute validated graphs via a ready-set dispatch loop (PRD 269 R1/R2/R16)."""
+    """Execute validated graphs via a ready-set dispatch loop (PRD 269 R1/R2/R6/R16)."""
 
     def __init__(
         self,
@@ -266,21 +266,21 @@ class GraphScheduler:
         receipts: ExecutionReceiptJournal,
         pools: ResourcePoolRegistry,
         convergence_executor: ConvergenceExecutor | None = None,
-        cache_enabled: bool = True,
-        cache_identity: Mapping[str, Any] | None = None,
         lease_releaser: LeaseReleaser | None = None,
         compensation: CompensationHook | None = None,
         clock: Clock | None = None,
+        cache_enabled: bool = True,
+        cache_identity: Mapping[str, Any] | None = None,
     ) -> None:
         self._executor = executor
         self._receipts = receipts
         self._pools = pools
         self._convergence_executor = convergence_executor
-        self._cache_enabled = cache_enabled
-        self._cache_identity = dict(cache_identity or {})
         self._lease_releaser = lease_releaser
         self._compensation = compensation
         self._clock = clock or time.monotonic
+        self._cache_enabled = cache_enabled
+        self._cache_identity = dict(cache_identity or {})
         self._cancel_requested: CancelMode | None = None
 
     def request_cancel(
@@ -499,6 +499,30 @@ class GraphScheduler:
             ready.sort(key=source_order.__getitem__)
             return ready
 
+        def complete_replay(node_id: str, fanin: FanInResult) -> bool:
+            idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
+            try:
+                existing_receipt = self._receipts.get(node_id, idempotency_key)
+            except KeyError:
+                return False
+            stored_hashes = existing_receipt.get("outputHashes") or []
+            output_hash = str(stored_hashes[0]) if stored_hashes else None
+            if output_hash is not None:
+                output_hashes[node_id] = output_hash
+            succeeded = existing_receipt.get("verdict") == "pass"
+            outcomes[node_id] = NodeOutcome(node_id, success=succeeded)
+            persisted_receipts.append(existing_receipt)
+            node_runs[node_id] = NodeRun(
+                node_id=node_id,
+                verdict=str(existing_receipt.get("verdict") or "fail"),
+                dispatched=False,
+                fanin=fanin,
+                output_hash=output_hash,
+                reason="replayed complete receipt",
+            )
+            pending.discard(node_id)
+            return True
+
         def _execution(node: Mapping[str, Any]) -> Mapping[str, Any]:
             raw = node.get("execution") or {}
             if isinstance(raw, Mapping) and raw.get("purity") and raw.get("cache"):
@@ -512,8 +536,10 @@ class GraphScheduler:
                 if item in output_hashes
             }
 
-        def _identity_fields(result: NodeExecutionResult | None = None) -> dict[str, Any]:
-            base = {
+        def _identity_fields(
+            result: NodeExecutionResult | None = None,
+        ) -> dict[str, Any]:
+            base: dict[str, Any] = {
                 "prompt_version": "default",
                 "model_version": "default",
                 "tool_configuration": {},
@@ -537,7 +563,9 @@ class GraphScheduler:
                         ),
                         "tool_configuration": dict(result.tool_configuration),
                         "policy_version": result.policy_version,
-                        "credential_capabilities": tuple(result.credential_capabilities),
+                        "credential_capabilities": tuple(
+                            result.credential_capabilities
+                        ),
                         "scope_identity": result.scope_identity,
                         "repository_identity": result.repository_identity,
                         "trust_domain": result.trust_domain,
@@ -549,7 +577,9 @@ class GraphScheduler:
                 base.update(self._cache_identity)
             return base
 
-        def _cache_key_for(node: Mapping[str, Any], result: NodeExecutionResult | None = None) -> str:
+        def _cache_key_for(
+            node: Mapping[str, Any], result: NodeExecutionResult | None = None
+        ) -> str:
             identity = _identity_fields(result)
             return compute_cache_key(
                 CacheKeyMaterial(
@@ -576,37 +606,12 @@ class GraphScheduler:
                 )
             )
 
-        def complete_replay(node_id: str, fanin: FanInResult) -> bool:
-            idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
-            try:
-                existing_receipt = self._receipts.get(node_id, idempotency_key)
-            except KeyError:
-                return False
-            stored_hashes = existing_receipt.get("outputHashes") or []
-            output_hash = str(stored_hashes[0]) if stored_hashes else None
-            if output_hash is not None:
-                output_hashes[node_id] = output_hash
-            succeeded = existing_receipt.get("verdict") == "pass"
-            outcomes[node_id] = NodeOutcome(node_id, success=succeeded)
-            persisted_receipts.append(existing_receipt)
-            node_runs[node_id] = NodeRun(
-                node_id=node_id,
-                verdict=str(existing_receipt.get("verdict") or "fail"),
-                dispatched=False,
-                fanin=fanin,
-                output_hash=output_hash,
-                reason="replayed complete receipt",
-            )
-            pending.discard(node_id)
-            return True
-
         def try_cache_hit(node_id: str, fanin: FanInResult) -> bool:
             if not self._cache_enabled:
                 return False
             node = by_id[node_id]
             if _execution(node).get("cache") != "content-addressed":
                 return False
-            # Probe with scheduler identity (same fields used when indexing hits).
             cache_key = _cache_key_for(node)
             reusable = self._receipts.lookup_reusable_by_cache_key(cache_key)
             if reusable is None:
@@ -635,6 +640,7 @@ class GraphScheduler:
             pending.discard(node_id)
             return True
 
+
         def execute_node(
             node_id: str,
             fanin: FanInResult,
@@ -645,8 +651,6 @@ class GraphScheduler:
             """Execute with pool slots already acquired and begin() intent written."""
             node = by_id[node_id]
             expected = predecessors[node_id]
-            execution = _execution(node)
-            idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
             timeout_seconds = int(node["resources"]["timeoutSeconds"])
             node_started = self._clock()
             try:
@@ -679,17 +683,12 @@ class GraphScheduler:
                     f"executor returned invalid result for node {node_id}"
                 )
 
-            if execution.get("purity") == "read-only" and result.wrote:
-                raise PurityViolationError(
-                    f"read-only node {node_id} produced writes; failing closed"
-                )
-
             # Honor declared timeout against reported duration as well.
             if result.duration_ms > timeout_seconds * 1000:
                 reason = f"timeoutSeconds={timeout_seconds}"
                 receipt = self._receipts.finish(
                     node_id,
-                    idempotency_key,
+                    f"{run_id}:{graph_hash}:{node_id}",
                     {
                         "model": result.model,
                         "attempts": result.attempts,
@@ -722,6 +721,12 @@ class GraphScheduler:
                 flush_snapshot()
                 return
 
+            execution = _execution(node)
+            if execution.get("purity") == "read-only" and result.wrote:
+                raise PurityViolationError(
+                    f"read-only node {node_id} produced writes; failing closed"
+                )
+
             output_hash = _digest(result.output)
             payload = {
                 "model": result.model,
@@ -747,9 +752,9 @@ class GraphScheduler:
                 and not result.retry_only
             ):
                 cache_key = _cache_key_for(node, result)
-            receipt = self._receipts.record(
+            receipt = self._receipts.finish(
                 node_id,
-                idempotency_key,
+                f"{run_id}:{graph_hash}:{node_id}",
                 payload,
                 cache_key=cache_key,
             )
