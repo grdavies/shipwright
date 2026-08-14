@@ -23,6 +23,7 @@ from graph.dynamic_proposal import (  # noqa: E402
     ProposalBudget,
     evaluate_dynamic_proposal,
 )
+from graph.ir import validate_workflow_graph  # noqa: E402
 from graph.lineage import (  # noqa: E402
     ArtifactLineageView,
     edge_reduction_advisory,
@@ -97,7 +98,7 @@ def test_dynamic_proposal_rejects_to_canonical_and_accepts_guarded_graph() -> No
     )
     assert fallback.verdict == "canonical-fallback"
     assert fallback.used_fallback is True
-    assert fallback.graph == canonical
+    assert fallback.graph == validate_workflow_graph(canonical)
     assert "unknown node kind" in fallback.reason
 
     accepted = evaluate_dynamic_proposal(

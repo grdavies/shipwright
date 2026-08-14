@@ -98,14 +98,77 @@ def _validate_schema(
             _validate_schema(child, schema["items"], path=f"{path}.{index}")
 
 
-def validate_node_spec(document: Mapping[str, Any]) -> dict[str, Any]:
+def default_execution_for_isolation(isolation: Mapping[str, Any]) -> dict[str, str]:
+    """Derive trusted execution defaults from isolation.writeScope (R6/R15)."""
+    write_scope = str(isolation.get("writeScope") or "none")
+    if write_scope in ("none", "read-only"):
+        return {"purity": "read-only", "cache": "content-addressed"}
+    return {"purity": "mutating", "cache": "disabled"}
+
+
+def normalize_node_execution(
+    node: Mapping[str, Any],
+    *,
+    trusted_template: bool = True,
+) -> dict[str, Any]:
+    """Apply execution defaults and strip untrusted purity/cache overrides (R15)."""
+    detached = json.loads(json.dumps(node))
+    isolation = detached.get("isolation") or {}
+    defaults = default_execution_for_isolation(
+        isolation if isinstance(isolation, Mapping) else {}
+    )
+    raw = detached.get("execution")
+    if not isinstance(raw, Mapping):
+        detached["execution"] = defaults
+        return detached
+    if not trusted_template:
+        # Untrusted payloads may not set security-relevant execution fields.
+        detached["execution"] = defaults
+        return detached
+    purity = str(raw.get("purity") or defaults["purity"])
+    cache = str(raw.get("cache") or defaults["cache"])
+    if purity == "mutating" and "cache" not in raw:
+        cache = "disabled"
+    if purity == "mutating" and cache == "content-addressed":
+        node_id = detached.get("id", "<unknown>")
+        raise WorkflowGraphValidationError(
+            f"node {node_id}: mutating nodes must use cache disabled"
+        )
+    trust = raw.get("trust")
+    if isinstance(trust, Mapping) and trust and not raw.get("templateDigest"):
+        node_id = detached.get("id", "<unknown>")
+        raise WorkflowGraphValidationError(
+            f"node {node_id}: execution.trust requires templateDigest from a "
+            "trusted in-repo template"
+        )
+    execution = {"purity": purity, "cache": cache}
+    if raw.get("templateDigest"):
+        execution["templateDigest"] = str(raw["templateDigest"])
+    if isinstance(trust, Mapping) and trust:
+        execution["trust"] = json.loads(json.dumps(trust))
+    detached["execution"] = execution
+    return detached
+
+
+def validate_node_spec(
+    document: Mapping[str, Any],
+    *,
+    trusted_template: bool = True,
+) -> dict[str, Any]:
     """Validate one NodeSpec and return a detached JSON-compatible copy."""
     _, node_schema = _schemas()
     _validate_schema(document, node_schema)
-    return json.loads(json.dumps(document))
+    return normalize_node_execution(
+        json.loads(json.dumps(document)),
+        trusted_template=trusted_template,
+    )
 
 
-def validate_workflow_graph(document: Mapping[str, Any]) -> dict[str, Any]:
+def validate_workflow_graph(
+    document: Mapping[str, Any],
+    *,
+    trusted_template: bool = True,
+) -> dict[str, Any]:
     """Validate schema and graph-level identity constraints."""
     workflow_schema, _ = _schemas()
     _validate_schema(document, workflow_schema)
@@ -121,6 +184,10 @@ def validate_workflow_graph(document: Mapping[str, Any]) -> dict[str, Any]:
                 raise WorkflowGraphValidationError(
                     f"edge {endpoint} references unknown node: {edge[endpoint]}"
                 )
+    detached["spec"]["nodes"] = [
+        normalize_node_execution(node, trusted_template=trusted_template)
+        for node in nodes
+    ]
     return detached
 
 
