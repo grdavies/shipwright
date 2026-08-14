@@ -22,6 +22,7 @@ from graph.isolation_policy import (
     ContentionFinding,
     NodeIsolationClaim,
     analyze_write_contention,
+    contends_with_inflight,
     parse_isolation_policy,
 )
 from graph.kernel_compiler import compile_workflow_graph
@@ -239,14 +240,16 @@ class GraphScheduler:
         max_conc = _max_concurrency(graph)
         self._validate_slot_requests(graph)
 
-        claims = [
-            NodeIsolationClaim(
+        claims_by_id = {
+            node_id: NodeIsolationClaim(
                 node_id=node_id,
                 policy=parse_isolation_policy(by_id[node_id]["isolation"]),
                 write_paths=frozenset((write_paths or {}).get(node_id, set())),
             )
             for node_id in by_id
-        ]
+        }
+        claims = list(claims_by_id.values())
+        # Whole-graph scan for observability; live dispatch gate uses in-flight union.
         contention = tuple(analyze_write_contention(claims))
 
         outcomes: dict[str, NodeOutcome] = {}
@@ -399,6 +402,14 @@ class GraphScheduler:
                         f"node {node_id}: unsatisfiable pool request at dispatch"
                     ) from exc
                 except PoolExhausted:
+                    parked.append(node_id)
+                    continue
+                gate_hits = contends_with_inflight(
+                    claims_by_id[node_id],
+                    [claims_by_id[nid] for nid, _, _, _ in batch],
+                )
+                if gate_hits:
+                    self._pools.release(pool, slots=slots)
                     parked.append(node_id)
                     continue
                 batch.append((node_id, fanin, pool, slots))
