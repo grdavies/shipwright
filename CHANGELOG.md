@@ -850,6 +850,7 @@
 * merge phase write-path-contention-as-a-dispatch-gate-r14 into feat/graph-execution-engine (f9a25b5) <!-- sw-deliver:write-path-contention-as-a-dispatch-gate-r14 -->
 * merge phase purity-cache-key-lineage-and-trust-r6-r7-r15 into feat/graph-execution-engine (481e408) <!-- sw-deliver:purity-cache-key-lineage-and-trust-r6-r7-r15 -->
 * merge phase cancel-compensation-and-durable-in-flight-journal-r13-r16 into feat/graph-execution-engine (06cf7d4) <!-- sw-deliver:cancel-compensation-and-durable-in-flight-journal-r13-r16 -->
+* merge phase single-modelpolicy-including-mid-and-escalation-floors-r8-r9 into feat/graph-execution-engine (e6ace92) <!-- sw-deliver:single-modelpolicy-including-mid-and-escalation-floors-r8-r9 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
