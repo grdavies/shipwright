@@ -133,6 +133,11 @@ def test_telemetry_and_escalation_stay_allowlist_bound() -> None:
             "cheap": "c", "build": "b", "mid": "m", "deep": "d",
         }
     ) == "mid"
+    assert next_model_tier(
+        "build", {"verifier-disagreement"}, allowed_tiers={"cheap", "build", "mid", "deep"}, tiers={
+            "cheap": "c", "build": "b", "mid": "m", "deep": "d",
+        }
+    ) == "deep"
     with pytest.raises(PermissionError):
         next_model_tier(
             "build", {"schema-failure"}, allowed_tiers={"cheap", "build", "mid"}, tiers={
