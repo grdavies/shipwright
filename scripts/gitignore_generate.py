@@ -41,6 +41,7 @@ STATIC_HEAD = """# Shipwright local hook state (machine-local, not shared)
 .cursor/sw-deliver-state.*.json
 .cursor/sw-deliver.lock
 .cursor/sw-deliver-runs/
+.cursor/sw-graph-runs/
 .cursor/sw-doc-runs/
 .cursor/sw-target-locks/
 .cursor/sw-doc-run-locks/
