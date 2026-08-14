@@ -40,6 +40,51 @@ Load `skills/living-status/SKILL.md`.
    (per-phase status, remediation attempt, blocker). Also available via
    `python3 scripts/wave_living_docs.py <root> phase-status-live`.
 
+## Graph live progress and node explain (PRD 269 R11/R17)
+
+When a deliver (or other orchestrator) run is executing on WorkflowGraph, `/sw-status` surfaces live
+node state and per-node explain on the **existing** command — not `/sw-graph-*`. Mechanical entrypoints:
+
+```bash
+# Live progress (JSON default; --format text; --compact for short counts)
+python3 scripts/status_integrity.py graph-progress --run-id <runId> [--graph-json <path>] [--journal-root <path>] [--format json|text] [--compact]
+
+# Per-node explain (blocker hierarchy + canonical next-action)
+python3 scripts/status_integrity.py explain <nodeId> --run-id <runId> [--graph-json <path>] [--journal-root <path>] [--format json|text] [--compact]
+```
+
+### Live states (mutually exclusive)
+
+`completed` · `cached/skipped` · `failed` · `retrying` · `running` · `dependency-blocked` ·
+`pool-queued` · `awaiting-human-gate`
+
+Progress payloads include `runId`, `verdict`, per-state `counts`, ordered `nodes[]`, and a `legend`.
+
+### Blocker hierarchy
+
+Explain orders blockers actionable-first, then passive waits:
+
+| Kind | Class | Meaning |
+| --- | --- | --- |
+| `failed-predecessor` | actionable | Predecessor (or self) failed |
+| `human-gate` | actionable | Awaiting human confirmation / merge gate |
+| `pool-capacity` | passive-wait | Ready but queued/parked on a resource pool |
+| `dependency` | passive-wait | Waiting on unsettled predecessors |
+| `unknown` | passive-wait / actionable | Fallback when no richer classifier applies |
+
+Each explain payload includes `nextAction` (`action`, optional resume `command`, `detail`).
+
+### Compact mode and JSON / plain-text contract
+
+| Flag | Behavior |
+| --- | --- |
+| default `--format json` | Stable JSON object (progress or explain shape) |
+| `--format text` | Deterministic plain-text render (no color-only encoding) |
+| `--compact` | Short text summary; under JSON, embeds a `text` field with the compact render |
+
+Unknown / completed / cached / failed / inaccessible runs have defined empty or degraded payloads from
+`scripts/graph/observability.py` — status never invents a second safety kernel.
+
 **Communication intensity:** ultra
 
 **Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-status`.
