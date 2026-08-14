@@ -209,3 +209,22 @@ Only `python3 scripts/wave.py completion finalize-if-merged` may set `completion
 When `loopHealth.enabled` is true, run `python3 scripts/loop_health.py --stale-alerts` (or read
 `shipwright-loop-health.json` inbox ranking) and surface **stale meta-inbox drafts** older than
 `loopHealth.staleInboxDays` in the status summary. These alerts are diagnostic-only — they do not gate ship or merge.
+
+## Graph execution vs planning graph (PRD 269 R17)
+
+**Planning graph** (`planning-graph.py`) owns durable planning-unit lifecycle, INDEX `derived` regions, and
+gap projections — it is **not** the execution runtime.
+
+**Execution graph** (WorkflowGraph) is the sole production scheduler after cutover. Live execution status
+comes from receipt-backed graph progress — not a second safety kernel and not planning-graph status:
+
+| Surface | Command | Scope |
+| --- | --- | --- |
+| Planning unit status | `planning-graph.py status --unit-id <id>` | Planning store only |
+| Live node progress | `/sw-status` (`graph-progress`) | WorkflowGraph receipts under `.cursor/sw-graph-runs/<runId>/` |
+| Per-node explain | `/sw-status` (`explain <nodeId>`) | Blocker hierarchy for one execution node |
+
+Do not infer execution progress from planning INDEX rows or chat history. Kernel chokepoints
+(verification-gate, check-gate, gap-check, secret-scan) remain single-sourced — graph scheduling does not
+add parallel merge gates. No `/sw-graph-*` slash commands; operator UX extends existing commands only.
+See `docs/guides/commands.md` **Graph execution runtime**.

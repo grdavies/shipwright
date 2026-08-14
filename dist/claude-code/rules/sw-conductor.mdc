@@ -98,3 +98,12 @@ While `verdict: running`:
 - Recovery: `/sw-ship --phase-mode --from <terminal-step>` — not manual JSON edits. Log actor via
   `SW_RECOVERY_ACTOR`; recovery and auto re-emit acquire the per-head ship lease (R16/R17).
 
+## Graph execution UX (PRD 269 R17)
+
+WorkflowGraph is the sole production execution runtime after cutover. Conductor and phase executors surface
+graph progress through **existing commands only** — `/sw-deliver --explain-plan`, `/sw-status`
+(`graph-progress`, `explain <nodeId>`). Never add `/sw-graph-*` slash commands or duplicate the safety
+kernel (`kernel-classification.json` remains single-sourced). Planning-unit status (`planning-graph.py
+status`) is orthogonal to execution-graph receipts under `.cursor/sw-graph-runs/<runId>/`. Generic graph
+`runId` maps from the deliver/orchestrator `runId`.
+

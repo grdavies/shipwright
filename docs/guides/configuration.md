@@ -671,6 +671,42 @@ accept only allowlisted IDs (or mapped aliases); unknown models fail closed with
 `core/sw-reference/models-tiering.md` (Task model allowlist section). Regression:
 `scripts/unit_tests/dispatch/test_task_model_allowlist.py`.
 
+#### ModelPolicy and tier order
+
+Semantic tier **order** is derived solely from `models.tiers` keys via shared `ModelPolicy`
+(`scripts/model_policy_lib.py`) — not from agent frontmatter, private tuples, or routing maps. The canonical
+four-tier vocabulary is `cheap` → `build` → `mid` → `deep`; escalation floors (`schema-failure`,
+`verifier-disagreement` → at least `deep`) and graph cost telemetry read the same policy object.
+
+**Missing `mid` — single preflight:** when `models.tiers` omits `mid`, `dispatch-check.py` emits one advisory
+payload before spawn (`model-policy:missing-mid-defaulted` when `build` exists — `mid` defaults to the build
+concrete id; `model-policy:missing-mid` when neither is present). There is no second silent default path.
+Declare `models.tiers.mid` explicitly in mature repos; `/sw-init` doctor seeds all four tiers from the
+platform catalog.
+
+```bash
+python3 scripts/dispatch-check.py --config .cursor/workflow.config.json --command sw-execute
+# inspect modelPolicyAdvisory in JSON when mid is omitted
+```
+
+Full policy surface: `core/sw-reference/models-tiering.md` (ModelPolicy section).
+
+### Graph execution defaults (`graphExecution.*`)
+
+WorkflowGraph scheduler defaults for compiled orchestrator plans. **Cache and `maxConcurrency` are
+independently tunable** — serial-equivalent `maxConcurrency: 1` does not imply cache on or off.
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `graphExecution.resourceLimits.maxConcurrency` | `1` | Serial-equivalent mitigation lane; raising concurrency is a cutover/scheduling-mode concern |
+| `graphExecution.resourceLimits.maxDurationSeconds` | `86400` | Run-level wall clock for compiled graphs |
+| `graphExecution.cache.enabled` | `true` | Content-addressed node cache; set `false` to disable reuse while keeping `maxConcurrency: 1` |
+
+Compiled `WorkflowGraph` IR carries `spec.resourceLimits.maxConcurrency` per plan; workflow defaults apply when
+the compile target omits limits. Operator surfaces stay on existing commands (`/sw-deliver --explain-plan`,
+`/sw-status` `graph-progress` / `explain`) — no `/sw-graph-*` slash commands. See
+[`commands.md`](commands.md#graph-execution-runtime) and [`graph-domain-terminology.md`](graph-domain-terminology.md).
+
 ### Deliver autonomy (`deliver.autonomy`)
 
 | Key | Default | Meaning |
@@ -1186,6 +1222,9 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `models.routing.commands` | Per `sw-*` command model tier (`inherit` for orchestrators) |
 | `models.routing.skills` | Per skill directory model tier |
 | `models.routing.agents` | Per reviewer/persona/native-panel agent id → semantic tier |
+| `graphExecution.resourceLimits.maxConcurrency` | WorkflowGraph serial-equivalent default (`1`); independently tunable from cache |
+| `graphExecution.resourceLimits.maxDurationSeconds` | Compiled graph wall-clock ceiling (default **86400**) |
+| `graphExecution.cache.enabled` | Content-addressed node cache (default **true**); disable without changing `maxConcurrency` |
 | `deliver.remediation.maxAttempts` | Auto-remediation budget per blocked phase before clean halt (default **2**) |
 | `memory.provider` | Catalog-registered provider id (default `in-repo`; seeded: `recallium`, `mempalace`, `basic-memory`, `obsidian`). Validated by `memory_provider_register.py` — unknown ids rejected |
 | `memory.sourceOfTruth` | `auto` (default), `repo`, or `memory` — authority for **decision** records only (`auto`: external provider → memory, in-repo → repo) |

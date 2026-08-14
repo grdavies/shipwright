@@ -212,3 +212,24 @@ Operator-facing guarantees enforced by CI fixtures (`run_dual_ship_fixtures.py`,
 
 Trust boundaries unchanged (R22): human merge to `main`, secret-scan push chokepoint, scoped deliver
 locks, and frozen-doc CI gates.
+
+## Graph execution status (PRD 269 R17)
+
+After cutover, **WorkflowGraph** (`scripts/graph/`) is the sole production execution runtime for
+`/sw-deliver`, `/sw-doc`, `/sw-debug`, and `/sw-feedback`. Legacy wave/phase plans compile into the same IR —
+not a second live scheduler.
+
+**One safety kernel:** gate classes and kernel chokepoints remain single-sourced in
+`core/sw-reference/kernel-classification.json`. Graph scheduling does not introduce a parallel kernel or
+duplicate merge/verification gates — graph receipts index under `.cursor/sw-graph-runs/<runId>/` while phase
+terminal outcomes still come from `.cursor/sw-deliver-runs/<runId>/phases/<phaseId>/status.json`.
+
+| Operator need | Surface | Notes |
+| --- | --- | --- |
+| Plan summary | `/sw-deliver --explain-plan` | Read-only; refuses `--write` / `--persist` |
+| Live node progress | `/sw-status` (`graph-progress`) | Receipt-backed states — not chat inference |
+| Per-node blockers | `/sw-status` (`explain <nodeId>`) | Actionable-first hierarchy + `nextAction` |
+
+Mechanical delegates: `python3 scripts/status_integrity.py graph-progress --run-id <runId>` and
+`explain <nodeId>`. Generic graph `runId` maps from the deliver/orchestrator `runId`. No `/sw-graph-*`
+slash commands. Domain vocabulary: `docs/guides/graph-domain-terminology.md`.
