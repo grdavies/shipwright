@@ -30,6 +30,7 @@ from graph.isolation_policy import (  # noqa: E402
 from graph.resource_pools import (  # noqa: E402
     PoolExhausted,
     PoolName,
+    PoolRequestUnsatisfiable,
     ResourcePoolRegistry,
 )
 
@@ -246,3 +247,108 @@ def test_owner_token_lease_reentry_mismatch_and_park(tmp_path: Path, monkeypatch
         resolve_node_id(args_b),
     )
     release_ship_lease(root, args_b)
+
+
+def test_fanin_quorum_settle_before_fire_blocks_unsettled() -> None:
+    """R2: quorum/min-coverage admit only after every predecessor settles."""
+    policy = FanInPolicy(
+        mode=FanInMode.QUORUM,
+        minimum_successful=1,
+        on_insufficient_coverage=CoverageAction.HALT,
+    )
+    result = evaluate_fanin(
+        policy,
+        [NodeOutcome("a", True), NodeOutcome("b", True, settled=False)],
+        expected_nodes=["a", "b", "c"],
+    )
+    assert result.halt is True
+    assert "settle-before-fire" in result.reason
+    assert "c" in result.unsettled
+    assert "b" in result.unsettled
+
+
+def test_pool_unsatisfiable_vs_parkable_exhaustion() -> None:
+    """R2: slots > limit reject; slots <= limit but busy → PoolExhausted park."""
+    reg = ResourcePoolRegistry.from_config(
+        limits={"code-writers": 2},
+        hard_ceiling=16,
+    )
+    with pytest.raises(PoolRequestUnsatisfiable) as unsat:
+        reg.acquire(PoolName.CODE_WRITERS, slots=3)
+    assert unsat.value.slots == 3
+    assert unsat.value.limit == 2
+    assert reg.can_satisfy(PoolName.CODE_WRITERS, slots=2) is True
+    assert reg.can_satisfy(PoolName.CODE_WRITERS, slots=3) is False
+    reg.acquire(PoolName.CODE_WRITERS, slots=2)
+    with pytest.raises(PoolExhausted):
+        reg.acquire(PoolName.CODE_WRITERS, slots=1)
+
+
+def test_ready_set_scheduler_serial_equivalent_and_slot_reject(tmp_path: Path) -> None:
+    """R1: maxConcurrency 1 is serial; oversized slots fail before dispatch."""
+    from copy import deepcopy
+
+    from graph.execution_receipts import ExecutionReceiptJournal
+    from graph.scheduler import GraphScheduler, NodeExecutionResult, SchedulerError
+
+    def _node(node_id: str, *, pool: str = "code-writers", slots: int = 1) -> dict:
+        return {
+            "id": node_id,
+            "kind": "command",
+            "target": {"step": f"sw-{node_id}"},
+            "resources": {
+                "pool": pool,
+                "slots": slots,
+                "timeoutSeconds": 300,
+            },
+            "isolation": {"mode": "worktree", "writeScope": "worktree"},
+            "verification": {"required": True, "strategy": "mechanical"},
+        }
+
+    parallel = {
+        "apiVersion": "shipwright.dev/v1alpha1",
+        "kind": "WorkflowGraph",
+        "metadata": {"name": "ready-set"},
+        "spec": {
+            "nodes": [_node("a"), _node("b"), _node("join")],
+            "edges": [
+                {"from": "a", "to": "join", "required": True},
+                {"from": "b", "to": "join", "required": True},
+            ],
+            "resourceLimits": {"maxConcurrency": 1, "maxDurationSeconds": 600},
+            "verification": {"required": True, "failClosed": True},
+        },
+    }
+    order: list[str] = []
+
+    def execute(node: dict) -> NodeExecutionResult:
+        order.append(str(node["id"]))
+        return NodeExecutionResult(verdict="pass", output={"id": node["id"]})
+
+    pools = ResourcePoolRegistry.from_config(
+        limits={"code-writers": 4}, hard_ceiling=16
+    )
+    result = GraphScheduler(
+        execute,
+        receipts=ExecutionReceiptJournal(tmp_path / "receipts"),
+        pools=pools,
+    ).run(
+        parallel,
+        run_id="serial-eq",
+        internal_only=True,
+        write_paths={"a": set(), "b": set(), "join": set()},
+    )
+    assert result.verdict == "pass"
+    assert order == ["a", "b", "join"]
+
+    bad = deepcopy(parallel)
+    bad["spec"]["nodes"][0]["resources"]["slots"] = 4
+    tiny = ResourcePoolRegistry.from_config(
+        limits={"code-writers": 2}, hard_ceiling=16
+    )
+    with pytest.raises(SchedulerError, match="exceed pool"):
+        GraphScheduler(
+            execute,
+            receipts=ExecutionReceiptJournal(tmp_path / "reject"),
+            pools=tiny,
+        ).run(bad, run_id="reject-slots", internal_only=True)
