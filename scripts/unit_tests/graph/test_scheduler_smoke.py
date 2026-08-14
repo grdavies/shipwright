@@ -17,7 +17,6 @@ from graph.kernel_compiler import KernelCompilationError  # noqa: E402
 from graph.resource_pools import ResourcePoolRegistry  # noqa: E402
 from graph.scheduler import (  # noqa: E402
     GraphScheduler,
-    InternalSchedulerDisabled,
     NodeExecutionResult,
 )
 
@@ -76,7 +75,7 @@ def test_internal_scheduler_executes_graph_and_records_receipts(tmp_path: Path) 
     )
     scheduler = GraphScheduler(execute, receipts=journal, pools=pools)
 
-    with pytest.raises(InternalSchedulerDisabled):
+    with pytest.raises(PermissionError, match="internal_only"):
         scheduler.run(valid_graph(), run_id="public-attempt")
     assert dispatched == []
 

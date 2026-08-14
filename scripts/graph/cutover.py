@@ -8,8 +8,14 @@ from enum import Enum
 from typing import Any
 
 from graph.legacy_adapters import compile_legacy_plan
+from graph.observability import READ_ONLY_COMMANDS
 from graph.scheduler import GraphScheduler, SchedulerRun
-from graph.scheduling_modes import SchedulingMode, validate_scheduling_mode
+from graph.scheduling_modes import (
+    ALLOWED_EXTERNAL_AUTHORIZERS,
+    PromotionMetrics,
+    SchedulingMode,
+    validate_scheduling_mode,
+)
 from graph.verifier_policies import VerifierKind, VerifierResult, evaluate_verifiers
 
 
@@ -25,6 +31,11 @@ class CutoverStage(str, Enum):
     DOGFOOD = "dogfood"
     LIMITED = "limited-scope"
     FULL = "full-ownership"
+
+
+def status_explain_is_live() -> bool:
+    """Return True when the read-only status/explain command surface is available."""
+    return "status" in READ_ONLY_COMMANDS and "explain" in READ_ONLY_COMMANDS
 
 
 @dataclass(frozen=True)
@@ -54,6 +65,19 @@ class DogfoodEvidence:
 
 
 @dataclass(frozen=True)
+class PromotionEvidence:
+    """Recorded promotion gate evidence for dogfood → limited → full ownership."""
+
+    from_stage: CutoverStage
+    to_stage: CutoverStage
+    dogfood: DogfoodEvidence
+    status_explain_live: bool
+    metrics: PromotionMetrics | None = None
+    authorizer: str | None = None
+    evidence_ref: str | None = None
+
+
+@dataclass(frozen=True)
 class SafetySnapshot:
     """Legacy-owned orchestration state that cutover must not reinterpret."""
 
@@ -68,6 +92,10 @@ class SafetySnapshot:
         raw = plan.get("safety")
         if not isinstance(raw, Mapping):
             raise CutoverError("cutover requires a legacy safety envelope")
+        return cls.from_safety_mapping(raw)
+
+    @classmethod
+    def from_safety_mapping(cls, raw: Mapping[str, Any]) -> SafetySnapshot:
         snapshot = cls(
             lock_owner=str(raw.get("lockOwner") or ""),
             merge_queue=tuple(str(item) for item in raw.get("mergeQueue") or ()),
@@ -101,6 +129,15 @@ class ParityVerdict:
     reason: str
 
 
+def assert_human_merge_gate_compiles(plan: Mapping[str, Any]) -> None:
+    """Reject plans that attempt to compile with humanMergeGate disabled (R4)."""
+    raw = plan.get("safety")
+    if not isinstance(raw, Mapping):
+        return
+    if raw.get("humanMergeGate") is False:
+        raise CutoverError("cutover cannot remove the human merge gate")
+
+
 def _legacy_steps(plan: Mapping[str, Any], plan_type: str) -> tuple[str, ...]:
     if plan_type == "delivery":
         phases = plan.get("phases")
@@ -131,18 +168,51 @@ class CutoverDriver:
 
     def __init__(self, *, stage: CutoverStage = CutoverStage.DOGFOOD) -> None:
         self.stage = stage
+        self.promotion_evidence: list[PromotionEvidence] = []
 
-    def promote(self, evidence: DogfoodEvidence) -> CutoverStage:
+    def promote(
+        self,
+        evidence: DogfoodEvidence,
+        *,
+        metrics: PromotionMetrics | None = None,
+        authorizer: str | None = None,
+        evidence_ref: str | None = None,
+    ) -> CutoverStage:
         required_runs = 1 if self.stage is CutoverStage.DOGFOOD else 3
         if not evidence.passed or evidence.completed_runs < required_runs:
             raise PermissionError(
                 f"dogfood gate failed for {self.stage.value}: "
                 f"need {required_runs} passing run(s)"
             )
+        live = status_explain_is_live()
         if self.stage is CutoverStage.DOGFOOD:
-            self.stage = CutoverStage.LIMITED
+            if not live:
+                raise PermissionError(
+                    "limited-scope promotion requires status/explain live"
+                )
+            next_stage = CutoverStage.LIMITED
         elif self.stage is CutoverStage.LIMITED:
-            self.stage = CutoverStage.FULL
+            if not authorizer or not evidence_ref:
+                raise PermissionError(
+                    "full-ownership promotion requires named authorizer and evidence"
+                )
+            if authorizer not in ALLOWED_EXTERNAL_AUTHORIZERS:
+                raise PermissionError(f"unrecognized cutover authorizer: {authorizer}")
+            next_stage = CutoverStage.FULL
+        else:
+            raise PermissionError("cutover already at full ownership")
+        self.promotion_evidence.append(
+            PromotionEvidence(
+                from_stage=self.stage,
+                to_stage=next_stage,
+                dogfood=evidence,
+                status_explain_live=live,
+                metrics=metrics,
+                authorizer=authorizer,
+                evidence_ref=evidence_ref,
+            )
+        )
+        self.stage = next_stage
         return self.stage
 
     def _assert_route_allowed(
@@ -199,6 +269,7 @@ class CutoverDriver:
             non_merge_critical=non_merge_critical,
             limited_scope=limited_scope,
         )
+        assert_human_merge_gate_compiles(plan)
         if "safety" in plan and safety != SafetySnapshot.from_plan(plan):
             raise CutoverError("cutover safety state differs from the legacy plan")
         compilation = compile_legacy_plan(plan, plan_type=plan_type)
