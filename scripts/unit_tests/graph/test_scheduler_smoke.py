@@ -316,3 +316,95 @@ def test_pool_park_then_progress_and_unsatisfiable_compile_reject(tmp_path: Path
     # covered by park-then-progress above; explicit raise shape:
     err = SchedulerNoProgress(["a", "b"], reason="pool-parked-no-progress")
     assert err.blocked == ("a", "b")
+
+
+def test_shared_write_serializes_diamond_dispatch(tmp_path: Path) -> None:
+    """R14: isolated reviewers concurrent; shared write path forces serial dispatch."""
+    from graph.isolation_policy import (
+        UNKNOWN_WRITE_PATH,
+        analyze_write_contention,
+        normalize_write_path,
+        paths_overlap,
+        NodeIsolationClaim,
+        parse_isolation_policy,
+    )
+
+    assert paths_overlap("build/out", "build/out/file.txt")
+    assert paths_overlap("build/out/file.txt", "build/out")
+    assert normalize_write_path("") == UNKNOWN_WRITE_PATH
+
+    # Empty mutating claim overlaps everything.
+    mutating = NodeIsolationClaim(
+        "writer",
+        parse_isolation_policy({"mode": "process", "writeScope": "scoped"}),
+        frozenset(),
+    )
+    peer = NodeIsolationClaim(
+        "peer",
+        parse_isolation_policy({"mode": "process", "writeScope": "scoped"}),
+        frozenset({"other/path"}),
+    )
+    findings = analyze_write_contention([mutating, peer])
+    assert findings and findings[0].path == UNKNOWN_WRITE_PATH
+
+    def _node(node_id: str, *, pool: str = "code-writers") -> dict[str, object]:
+        return {
+            "id": node_id,
+            "kind": "command",
+            "target": {"step": f"sw-{node_id}"},
+            "resources": {"pool": pool, "slots": 1, "timeoutSeconds": 300},
+            "isolation": {"mode": "process", "writeScope": "scoped"},
+            "verification": {"required": True, "strategy": "mechanical"},
+        }
+
+    graph = {
+        "apiVersion": "shipwright.dev/v1alpha1",
+        "kind": "WorkflowGraph",
+        "metadata": {"name": "r14-serial"},
+        "spec": {
+            "nodes": [_node("left"), _node("right")],
+            "edges": [],
+            "resourceLimits": {"maxConcurrency": 2, "maxDurationSeconds": 600},
+            "verification": {"required": True, "failClosed": True},
+        },
+    }
+    order: list[str] = []
+
+    def execute(node: dict[str, object]) -> NodeExecutionResult:
+        order.append(str(node["id"]))
+        return NodeExecutionResult(verdict="pass", output=node["id"])
+
+    # Shared write → serial (second parks in batch, runs next loop).
+    shared = GraphScheduler(
+        execute,
+        receipts=ExecutionReceiptJournal(tmp_path / "shared"),
+        pools=ResourcePoolRegistry.from_config(limits={"code-writers": 4}),
+    ).run(
+        graph,
+        run_id="shared-write",
+        internal_only=True,
+        write_paths={"left": {"shared/out.json"}, "right": {"shared/out.json"}},
+    )
+    assert shared.verdict == "pass"
+    assert order == ["left", "right"]
+    assert len(shared.contention_findings) >= 1
+
+    # Isolated reviewers (worktree) may share logical path concurrently.
+    order.clear()
+    for node in graph["spec"]["nodes"]:
+        node["isolation"] = {"mode": "worktree", "writeScope": "worktree"}
+        node["resources"]["pool"] = "read-only-reviewers"
+        node["isolation"] = {"mode": "worktree", "writeScope": "read-only"}
+
+    concurrent = GraphScheduler(
+        execute,
+        receipts=ExecutionReceiptJournal(tmp_path / "concurrent"),
+        pools=ResourcePoolRegistry.from_config(limits={"read-only-reviewers": 4}),
+    ).run(
+        graph,
+        run_id="isolated-reviewers",
+        internal_only=True,
+        write_paths={"left": set(), "right": set()},
+    )
+    assert concurrent.verdict == "pass"
+    assert set(order) == {"left", "right"}
