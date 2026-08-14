@@ -852,6 +852,7 @@
 * merge phase cancel-compensation-and-durable-in-flight-journal-r13-r16 into feat/graph-execution-engine (06cf7d4) <!-- sw-deliver:cancel-compensation-and-durable-in-flight-journal-r13-r16 -->
 * merge phase single-modelpolicy-including-mid-and-escalation-floors-r8-r9 into feat/graph-execution-engine (e6ace92) <!-- sw-deliver:single-modelpolicy-including-mid-and-escalation-floors-r8-r9 -->
 * merge phase graph-status-explain-and-estimated-critical-path-r10-r11-r12 into feat/graph-execution-engine (2833a73) <!-- sw-deliver:graph-status-explain-and-estimated-critical-path-r10-r11-r12 -->
+* merge phase graph-status-explain-and-estimated-critical-path-r10-r11-r12 into feat/graph-execution-engine (66e3569) <!-- sw-deliver:graph-status-explain-and-estimated-critical-path-r10-r11-r12 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
