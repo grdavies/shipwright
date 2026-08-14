@@ -113,6 +113,8 @@ barrier = threading.Barrier(2)
 def contender(tag: str) -> dict:
     barrier.wait(timeout=5)
     lease = acquire_ship_lease(fix, args)
+    if lease.get("verdict") == "park":
+        return {"tag": tag, "lease": "parked", "leaseOut": lease}
     if lease.get("verdict") != "pass":
         return {"tag": tag, "lease": "refused", "leaseOut": lease}
     time.sleep(0.25)
@@ -134,7 +136,13 @@ with ThreadPoolExecutor(max_workers=2) as pool:
         results.append(fut.result())
 
 held = [r for r in results if r.get("lease") == "held"]
-refused = [r for r in results if r.get("lease") == "refused"]
+refused = [r for r in results if r.get("lease") in ("refused", "parked")]
+# R5: foreign-owner contention parks (verdict park) instead of ship-lease-held.
+for r in results:
+    if r.get("lease") == "refused" and (r.get("leaseOut") or {}).get("verdict") == "park":
+        r["lease"] = "parked"
+held = [r for r in results if r.get("lease") == "held"]
+refused = [r for r in results if r.get("lease") in ("refused", "parked")]
 if len(held) != 1 or len(refused) != 1:
     print(json.dumps({"error": "lease-race", "results": results}))
     sys.exit(1)

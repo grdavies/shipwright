@@ -177,3 +177,72 @@ def test_isolation_worktree_vs_readonly() -> None:
         frozenset({"scripts/graph/scheduler.py"}),
     )
     assert analyze_write_contention([wt_a, wt_b]) == []
+
+
+def test_owner_token_lease_reentry_mismatch_and_park(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """R5: matching owner re-enters; foreign release refused; contention parks."""
+    import subprocess
+
+    from wave_lock import (
+        acquire_ship_lease,
+        owner_token_matches,
+        release_ship_lease,
+        resolve_node_id,
+    )
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+    (root / ".cursor" / "sw-deliver-locks").mkdir(parents=True)
+    monkeypatch.chdir(root)
+
+    args_a = [
+        "--integration",
+        "feat/graph-execution-engine",
+        "--phase-branch",
+        "feat/graph-execution-engine-phase-a",
+        "--node-id",
+        "node-a",
+    ]
+    first = acquire_ship_lease(root, args_a)
+    assert first.get("verdict") == "pass"
+    assert first.get("ownerToken", {}).get("nodeId") == "node-a"
+
+    reentry = acquire_ship_lease(root, args_a)
+    assert reentry.get("verdict") == "pass"
+    assert reentry.get("reentrant") is True
+
+    args_b = [
+        "--integration",
+        "feat/graph-execution-engine",
+        "--phase-branch",
+        "feat/graph-execution-engine-phase-a",
+        "--node-id",
+        "node-b",
+    ]
+    parked = acquire_ship_lease(root, args_b)
+    assert parked.get("verdict") == "park"
+    assert parked.get("error") == "ship-lease-parked"
+    assert "ship-lease-held" not in str(parked.get("error"))
+
+    # Foreign owner cannot release — including finalize.
+    foreign = release_ship_lease(root, args_b, finalize=True)
+    assert foreign.get("verdict") == "fail"
+    assert foreign.get("error") == "ship-lease-owner-mismatch"
+
+    # Matching owner releases.
+    released = release_ship_lease(root, args_a)
+    assert released.get("verdict") == "pass"
+
+    # After release, other node can acquire.
+    second = acquire_ship_lease(root, args_b)
+    assert second.get("verdict") == "pass"
+    assert owner_token_matches(
+        {
+            "pid": second["ownerToken"]["pid"],
+            "threadId": second["ownerToken"]["threadId"],
+            "nodeId": "node-b",
+        },
+        resolve_node_id(args_b),
+    )
+    release_ship_lease(root, args_b)
