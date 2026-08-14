@@ -5,10 +5,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
-TIER_ORDER = ("cheap", "build", "deep")
-ESCALATION_TRIGGERS = frozenset(
-    {"schema-failure", "low-confidence", "verifier-disagreement"}
+from model_policy_lib import (
+    ESCALATION_TRIGGERS,
+    ModelPolicy,
+    next_model_tier as policy_next_model_tier,
+    ordered_tiers,
 )
+
+# Public tier order is config-derived via ModelPolicy, not a fixed private tuple.
+TIER_ORDER = ordered_tiers({})
 
 
 @dataclass(frozen=True)
@@ -79,19 +84,23 @@ def next_model_tier(
     triggers: Iterable[str],
     *,
     allowed_tiers: Iterable[str],
+    tiers: Mapping[str, str] | None = None,
 ) -> str:
-    """Escalate one step only for approved triggers and within the configured allowlist."""
-    trigger_set = set(triggers)
-    unknown = trigger_set - ESCALATION_TRIGGERS
-    if unknown:
-        raise ValueError("unsupported escalation trigger(s): " + ", ".join(sorted(unknown)))
-    allowed = tuple(dict.fromkeys(allowed_tiers))
-    if current_tier not in allowed or current_tier not in TIER_ORDER:
-        raise ValueError(f"current tier {current_tier!r} is not allowlisted")
-    if not trigger_set:
-        return current_tier
-    candidate_index = min(TIER_ORDER.index(current_tier) + 1, len(TIER_ORDER) - 1)
-    candidate = TIER_ORDER[candidate_index]
-    if candidate not in allowed:
-        raise PermissionError(f"escalation to {candidate!r} is outside the model-tier allowlist")
-    return candidate
+    """Escalate via shared ModelPolicy; ``tiers`` is ``models.tiers`` from workflow config."""
+    return policy_next_model_tier(
+        current_tier,
+        triggers,
+        allowed_tiers=allowed_tiers,
+        tiers=tiers,
+    )
+
+
+__all__ = [
+    "ESCALATION_TRIGGERS",
+    "ModelPolicy",
+    "NodeCostTelemetry",
+    "TIER_ORDER",
+    "next_model_tier",
+    "observability_fields",
+    "telemetry_from_receipt",
+]
