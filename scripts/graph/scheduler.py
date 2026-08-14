@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import hashlib
 import json
+import time
 from collections.abc import Callable, Mapping, Sequence, Set
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any
 
 from graph.artifact_registry import PurityViolationError
@@ -53,6 +55,22 @@ class SchedulerNoProgress(SchedulerError):
         super().__init__(f"{reason}: blocked={','.join(blocked_ids)}")
         self.blocked = blocked_ids
         self.reason = reason
+
+
+class SchedulerTimeout(SchedulerError):
+    """Raised when node or run duration limits are exceeded."""
+
+
+class CancelMode(str, Enum):
+    """Failure semantics for concurrent in-flight mutating nodes (R16)."""
+
+    CANCEL_AND_DRAIN = "cancel-and-drain"
+    LET_SETTLE = "let-settle"
+
+
+LeaseReleaser = Callable[[str], None]
+CompensationHook = Callable[[str], None]
+Clock = Callable[[], float]
 
 
 @dataclass(frozen=True)
@@ -107,6 +125,7 @@ class SchedulerRun:
     receipts: tuple[dict[str, Any], ...]
     contention_findings: tuple[ContentionFinding, ...]
     pool_snapshot: Mapping[str, Any]
+    cancel_mode: str | None = None
 
     def observability(self, graph: Mapping[str, Any]) -> GraphObservability:
         """Create the read-only receipts-backed view for this completed run."""
@@ -186,8 +205,59 @@ def _max_concurrency(graph: Mapping[str, Any]) -> int:
     return value
 
 
+def _max_duration_seconds(graph: Mapping[str, Any]) -> int | None:
+    limits = graph.get("spec", {}).get("resourceLimits") or {}
+    if "maxDurationSeconds" not in limits:
+        return None
+    try:
+        value = int(limits["maxDurationSeconds"])
+    except (TypeError, ValueError) as exc:
+        raise SchedulerError(
+            f"invalid maxDurationSeconds: {limits['maxDurationSeconds']!r}"
+        ) from exc
+    if value < 1:
+        raise SchedulerError(f"maxDurationSeconds must be >= 1, got {value}")
+    return value
+
+
+def _is_mutating(node: Mapping[str, Any], write_paths: Set[str] | frozenset[str]) -> bool:
+    """Treat scoped/worktree writes or non-empty write paths as mutating (R16)."""
+    execution = node.get("execution") or {}
+    purity = execution.get("purity")
+    if purity == "mutating":
+        return True
+    if purity == "read-only":
+        return False
+    write_scope = str((node.get("isolation") or {}).get("writeScope") or "none")
+    if write_scope in {"scoped", "worktree"}:
+        return True
+    return bool(write_paths)
+
+
+def _intent_payload(
+    *,
+    input_hashes: list[str],
+    mutating: bool,
+    timeout_seconds: int,
+) -> dict[str, Any]:
+    return {
+        "model": "pending",
+        "attempts": 1,
+        "tokens": 0,
+        "durationMs": 0,
+        "inputHashes": input_hashes,
+        "outputHashes": [],
+        "verdict": "running",
+        "coverage": {
+            "intent": True,
+            "mutating": mutating,
+            "timeoutSeconds": timeout_seconds,
+        },
+    }
+
+
 class GraphScheduler:
-    """Execute validated graphs via a ready-set dispatch loop (PRD 269 R1/R2)."""
+    """Execute validated graphs via a ready-set dispatch loop (PRD 269 R1/R2/R16)."""
 
     def __init__(
         self,
@@ -198,6 +268,9 @@ class GraphScheduler:
         convergence_executor: ConvergenceExecutor | None = None,
         cache_enabled: bool = True,
         cache_identity: Mapping[str, Any] | None = None,
+        lease_releaser: LeaseReleaser | None = None,
+        compensation: CompensationHook | None = None,
+        clock: Clock | None = None,
     ) -> None:
         self._executor = executor
         self._receipts = receipts
@@ -205,6 +278,16 @@ class GraphScheduler:
         self._convergence_executor = convergence_executor
         self._cache_enabled = cache_enabled
         self._cache_identity = dict(cache_identity or {})
+        self._lease_releaser = lease_releaser
+        self._compensation = compensation
+        self._clock = clock or time.monotonic
+        self._cancel_requested: CancelMode | None = None
+
+    def request_cancel(
+        self, mode: CancelMode = CancelMode.CANCEL_AND_DRAIN
+    ) -> None:
+        """Request cooperative cancellation with defined failure semantics (R16)."""
+        self._cancel_requested = mode
 
     def _validate_slot_requests(self, graph: Mapping[str, Any]) -> None:
         """Compile-time reject when slots exceed the effective pool limit."""
@@ -231,6 +314,16 @@ class GraphScheduler:
             return parse_fanin_policy(dict(raw_policy))
         return _default_fanin(expected)
 
+    def _release_lease(self, node_id: str) -> None:
+        if self._lease_releaser is None:
+            return
+        self._lease_releaser(node_id)
+
+    def _compensate(self, node_id: str) -> None:
+        if self._compensation is None:
+            return
+        self._compensation(node_id)
+
     def run(
         self,
         document: Mapping[str, Any],
@@ -256,7 +349,10 @@ class GraphScheduler:
         source_order = _source_order(graph)
         policies = fanin_policies or {}
         max_conc = _max_concurrency(graph)
+        max_duration = _max_duration_seconds(graph)
         self._validate_slot_requests(graph)
+        started_at = self._clock()
+        applied_cancel: CancelMode | None = None
 
         claims_by_id = {
             node_id: NodeIsolationClaim(
@@ -275,6 +371,7 @@ class GraphScheduler:
         node_runs: dict[str, NodeRun] = {}
         persisted_receipts: list[dict[str, Any]] = []
         pending = set(by_id)
+        parked_ids: list[str] = []
 
         def fanin_for(node_id: str) -> FanInResult:
             expected = predecessors[node_id]
@@ -283,6 +380,95 @@ class GraphScheduler:
                 policy,
                 (outcomes[item] for item in expected if item in outcomes),
                 expected_nodes=expected,
+            )
+
+        def flush_snapshot(queue: Sequence[str] = ()) -> None:
+            self._receipts.write_pool_snapshot(
+                self._pools.snapshot(),
+                parked=parked_ids,
+                queue=list(queue),
+            )
+
+        def mark_terminal(
+            node_id: str,
+            *,
+            verdict: str,
+            fanin: FanInResult,
+            reason: str,
+            dispatched: bool,
+            output_hash: str | None = None,
+            receipt: dict[str, Any] | None = None,
+        ) -> None:
+            if output_hash is not None:
+                output_hashes[node_id] = output_hash
+            outcomes[node_id] = NodeOutcome(
+                node_id, success=(verdict == "pass")
+            )
+            if receipt is not None:
+                persisted_receipts.append(receipt)
+            node_runs[node_id] = NodeRun(
+                node_id=node_id,
+                verdict=verdict,
+                dispatched=dispatched,
+                fanin=fanin,
+                output_hash=output_hash,
+                reason=reason,
+            )
+            pending.discard(node_id)
+
+        def cancel_node(
+            node_id: str,
+            fanin: FanInResult,
+            *,
+            pool: PoolName | None,
+            slots: int,
+            reason: str,
+        ) -> None:
+            if pool is not None:
+                self._pools.release(pool, slots=slots)
+            idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
+            node = by_id[node_id]
+            mutating = _is_mutating(
+                node, frozenset((write_paths or {}).get(node_id, set()))
+            )
+            timeout_seconds = int(node["resources"]["timeoutSeconds"])
+            intent = _intent_payload(
+                input_hashes=[
+                    output_hashes[item]
+                    for item in predecessors[node_id]
+                    if item in output_hashes
+                ],
+                mutating=mutating,
+                timeout_seconds=timeout_seconds,
+            )
+            # Ensure an intent exists then finish as cancelled (compensation path).
+            try:
+                self._receipts.begin(node_id, idempotency_key, intent)
+            except Exception:
+                pass
+            receipt = self._receipts.finish(
+                node_id,
+                idempotency_key,
+                {
+                    **intent,
+                    "verdict": "cancelled",
+                    "coverage": {
+                        **intent["coverage"],
+                        "intent": False,
+                        "cancelled": True,
+                        "reason": reason,
+                    },
+                },
+            )
+            self._compensate(node_id)
+            self._release_lease(node_id)
+            mark_terminal(
+                node_id,
+                verdict="cancelled",
+                fanin=fanin,
+                reason=reason,
+                dispatched=False,
+                receipt=receipt,
             )
 
         def ready_set() -> list[str]:
@@ -449,33 +635,25 @@ class GraphScheduler:
             pending.discard(node_id)
             return True
 
-        def execute_node(node_id: str, fanin: FanInResult, *, pool: PoolName, slots: int) -> None:
-            """Execute with pool slots already acquired by the caller."""
+        def execute_node(
+            node_id: str,
+            fanin: FanInResult,
+            *,
+            pool: PoolName,
+            slots: int,
+        ) -> None:
+            """Execute with pool slots already acquired and begin() intent written."""
             node = by_id[node_id]
             expected = predecessors[node_id]
             execution = _execution(node)
             idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
-            intent_payload = {
-                "model": "pending",
-                "attempts": 1,
-                "tokens": 0,
-                "durationMs": 0,
-                "inputHashes": _input_hashes_for(node_id),
-                "outputHashes": [],
-                "verdict": "pending",
-                "coverage": {},
-            }
-            if execution.get("purity") == "mutating":
-                self._receipts.begin(node_id, idempotency_key, intent_payload)
-                self._receipts.save_inflight_snapshot(
-                    run_id,
-                    {
-                        "poolSnapshot": self._pools.snapshot(),
-                        "parked": [],
-                        "inflight": [node_id],
-                    },
-                )
+            timeout_seconds = int(node["resources"]["timeoutSeconds"])
+            node_started = self._clock()
             try:
+                if max_duration is not None and (self._clock() - started_at) > max_duration:
+                    raise SchedulerTimeout(
+                        f"run exceeded maxDurationSeconds={max_duration}"
+                    )
                 if node["kind"] == "convergence-loop" and self._convergence_executor:
                     result = self._convergence_executor(
                         dict(node),
@@ -483,7 +661,17 @@ class GraphScheduler:
                     )
                 else:
                     result = self._executor(dict(node))
-            finally:
+                elapsed = self._clock() - node_started
+                if elapsed > timeout_seconds:
+                    raise SchedulerTimeout(
+                        f"node {node_id} exceeded timeoutSeconds={timeout_seconds}"
+                    )
+            except BaseException:
+                self._pools.release(pool, slots=slots)
+                self._release_lease(node_id)
+                flush_snapshot()
+                raise
+            else:
                 self._pools.release(pool, slots=slots)
 
             if not isinstance(result, NodeExecutionResult):
@@ -495,6 +683,44 @@ class GraphScheduler:
                 raise PurityViolationError(
                     f"read-only node {node_id} produced writes; failing closed"
                 )
+
+            # Honor declared timeout against reported duration as well.
+            if result.duration_ms > timeout_seconds * 1000:
+                reason = f"timeoutSeconds={timeout_seconds}"
+                receipt = self._receipts.finish(
+                    node_id,
+                    idempotency_key,
+                    {
+                        "model": result.model,
+                        "attempts": result.attempts,
+                        "tokens": result.tokens,
+                        "durationMs": result.duration_ms,
+                        "inputHashes": [
+                            output_hashes[item]
+                            for item in expected
+                            if item in output_hashes
+                        ],
+                        "outputHashes": [],
+                        "verdict": "fail",
+                        "coverage": {
+                            **dict(result.coverage),
+                            "timeout": True,
+                            "reason": reason,
+                        },
+                    },
+                )
+                self._compensate(node_id)
+                self._release_lease(node_id)
+                mark_terminal(
+                    node_id,
+                    verdict="fail",
+                    fanin=fanin,
+                    reason=reason,
+                    dispatched=True,
+                    receipt=receipt,
+                )
+                flush_snapshot()
+                return
 
             output_hash = _digest(result.output)
             payload = {
@@ -521,11 +747,6 @@ class GraphScheduler:
                 and not result.retry_only
             ):
                 cache_key = _cache_key_for(node, result)
-            # Replace pending intent with the final payload when begin() was used.
-            if execution.get("purity") == "mutating":
-                partial_path = self._receipts.partial_path(node_id, idempotency_key)
-                if partial_path.is_file():
-                    partial_path.unlink(missing_ok=True)
             receipt = self._receipts.record(
                 node_id,
                 idempotency_key,
@@ -543,9 +764,49 @@ class GraphScheduler:
                 output_hash=output_hash,
             )
             pending.discard(node_id)
+            self._release_lease(node_id)
+            flush_snapshot()
 
         # Ready-set loop: re-evaluate after each completion batch (R1).
         while pending:
+            if max_duration is not None and (self._clock() - started_at) > max_duration:
+                for node_id in sorted(pending, key=source_order.__getitem__):
+                    cancel_node(
+                        node_id,
+                        fanin_for(node_id),
+                        pool=None,
+                        slots=0,
+                        reason=f"maxDurationSeconds={max_duration}",
+                    )
+                applied_cancel = CancelMode.CANCEL_AND_DRAIN
+                break
+
+            if self._cancel_requested is CancelMode.CANCEL_AND_DRAIN:
+                for node_id in sorted(pending, key=source_order.__getitem__):
+                    cancel_node(
+                        node_id,
+                        fanin_for(node_id),
+                        pool=None,
+                        slots=0,
+                        reason="cancel-and-drain",
+                    )
+                applied_cancel = CancelMode.CANCEL_AND_DRAIN
+                break
+
+            if self._cancel_requested is CancelMode.LET_SETTLE:
+                # No new admissions once let-settle is requested and nothing is
+                # mid-batch; pending nodes that never started fail the run.
+                applied_cancel = CancelMode.LET_SETTLE
+                for node_id in sorted(pending, key=source_order.__getitem__):
+                    cancel_node(
+                        node_id,
+                        fanin_for(node_id),
+                        pool=None,
+                        slots=0,
+                        reason="let-settle-no-new-admission",
+                    )
+                break
+
             ready = ready_set()
             if not pending:
                 break
@@ -590,7 +851,9 @@ class GraphScheduler:
                     continue
                 batch.append((node_id, fanin, pool, slots))
 
+            parked_ids = list(parked)
             if not batch:
+                flush_snapshot(queue=ready)
                 if replayed:
                     continue
                 if parked:
@@ -600,20 +863,110 @@ class GraphScheduler:
                     reason="no-progress",
                 )
 
-            # Slots held for the whole in-flight batch; release per completion.
+            # Pre-dispatch begin() for every admitted node (mutating intents first).
             for node_id, fanin, pool, slots in batch:
-                execute_node(node_id, fanin, pool=pool, slots=slots)
+                node = by_id[node_id]
+                mutating = _is_mutating(
+                    node, frozenset((write_paths or {}).get(node_id, set()))
+                )
+                timeout_seconds = int(node["resources"]["timeoutSeconds"])
+                intent = _intent_payload(
+                    input_hashes=[
+                        output_hashes[item]
+                        for item in predecessors[node_id]
+                        if item in output_hashes
+                    ],
+                    mutating=mutating,
+                    timeout_seconds=timeout_seconds,
+                )
+                self._receipts.begin(
+                    node_id,
+                    f"{run_id}:{graph_hash}:{node_id}",
+                    intent,
+                )
+            flush_snapshot(queue=[node_id for node_id, _, _, _ in batch])
+
+            # Slots held for the whole in-flight batch; release per completion/crash.
+            for index, (node_id, fanin, pool, slots) in enumerate(batch):
+                # Mid-batch cancel-and-drain: drain remaining without executing.
+                if (
+                    self._cancel_requested is CancelMode.CANCEL_AND_DRAIN
+                    and index > 0
+                ):
+                    applied_cancel = CancelMode.CANCEL_AND_DRAIN
+                    cancel_node(
+                        node_id,
+                        fanin,
+                        pool=pool,
+                        slots=slots,
+                        reason="cancel-and-drain",
+                    )
+                    for rest_id, rest_fanin, rest_pool, rest_slots in batch[index + 1 :]:
+                        cancel_node(
+                            rest_id,
+                            rest_fanin,
+                            pool=rest_pool,
+                            slots=rest_slots,
+                            reason="cancel-and-drain",
+                        )
+                    break
+                try:
+                    execute_node(node_id, fanin, pool=pool, slots=slots)
+                except BaseException:
+                    # Crash compensation: release remaining leases/slots (R16).
+                    for rest_id, _rest_fanin, rest_pool, rest_slots in batch[
+                        index + 1 :
+                    ]:
+                        self._pools.release(rest_pool, slots=rest_slots)
+                        self._release_lease(rest_id)
+                    flush_snapshot()
+                    raise
+                if self._cancel_requested is CancelMode.LET_SETTLE:
+                    applied_cancel = CancelMode.LET_SETTLE
+                    # Finish remaining already-admitted batch (let-settle).
+                    for rest_id, rest_fanin, rest_pool, rest_slots in batch[
+                        index + 1 :
+                    ]:
+                        execute_node(
+                            rest_id, rest_fanin, pool=rest_pool, slots=rest_slots
+                        )
+                    for node_left in sorted(pending, key=source_order.__getitem__):
+                        cancel_node(
+                            node_left,
+                            fanin_for(node_left),
+                            pool=None,
+                            slots=0,
+                            reason="let-settle-no-new-admission",
+                        )
+                    break
 
         leftovers = [node_id for node_id in by_id if node_id not in node_runs]
         if leftovers:
-            raise SchedulerNoProgress(
-                sorted(leftovers, key=source_order.__getitem__),
-                reason="incomplete-nodes",
-            )
+            # Fail closed: every node must terminal or the run fails (R16).
+            for node_id in leftovers:
+                cancel_node(
+                    node_id,
+                    fanin_for(node_id),
+                    pool=None,
+                    slots=0,
+                    reason="incomplete-nodes",
+                )
 
         ordered_runs = tuple(
             node_runs[node_id]
             for node_id in sorted(node_runs, key=source_order.__getitem__)
+        )
+        flush_snapshot()
+        # Persist lightweight telemetry for teardown durability (R13).
+        self._receipts.write_telemetry(
+            {
+                "nodeCount": len(ordered_runs),
+                "cancelled": sum(
+                    1 for item in ordered_runs if item.verdict == "cancelled"
+                ),
+                "failed": sum(1 for item in ordered_runs if item.verdict == "fail"),
+                "passed": sum(1 for item in ordered_runs if item.verdict == "pass"),
+            }
         )
         verdict = (
             "pass"
@@ -628,4 +981,5 @@ class GraphScheduler:
             receipts=tuple(persisted_receipts),
             contention_findings=contention,
             pool_snapshot=self._pools.snapshot(),
+            cancel_mode=None if applied_cancel is None else applied_cancel.value,
         )
