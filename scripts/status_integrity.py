@@ -646,6 +646,167 @@ def derive_terminal_verdict_from_live_evidence(
     return "blocked", gate, pr_number
 
 
+def _load_graph_json(path: str | None) -> dict[str, Any] | None:
+    if not path:
+        return None
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def _resolve_graph_journal(
+    root: Path,
+    run_id: str | None,
+    *,
+    graph_json: str | None,
+    journal_root: str | None,
+) -> tuple[dict[str, Any] | None, Any | None, str | None]:
+    from graph.execution_receipts import ExecutionReceiptJournal, default_store_root
+
+    graph = _load_graph_json(graph_json)
+    if not run_id:
+        return graph, None, "run-id-required"
+    store = Path(journal_root) if journal_root else default_store_root(root)
+    run_receipts = store / run_id / "receipts"
+    if not run_receipts.is_dir():
+        # Also accept a bare journal root already scoped to the run.
+        if (store / "complete").is_dir():
+            run_receipts = store
+        else:
+            return graph, None, "inaccessible:run-journal-missing"
+    try:
+        journal = ExecutionReceiptJournal(run_receipts, run_id=run_id)
+    except (OSError, ValueError) as exc:
+        return graph, None, f"inaccessible:{exc}"
+    return graph, journal, None
+
+
+def cmd_graph_progress(args: argparse.Namespace) -> int:
+    """Live graph progress for /sw-status (PRD 269 R11/R12)."""
+    from graph.observability import (
+        GraphObservability,
+        render_graph_text,
+        run_accessibility,
+    )
+
+    root = Path(args.root).resolve() if args.root else Path.cwd()
+    run_id = args.run_id
+    graph, journal, error = _resolve_graph_journal(
+        root,
+        run_id,
+        graph_json=args.graph_json,
+        journal_root=args.journal_root,
+    )
+    if error == "run-id-required" or graph is None or journal is None:
+        payload = run_accessibility(run_id=run_id, journal=journal, graph=graph)
+        if error and payload.get("verdict") == "unknown":
+            payload["error"] = error
+        elif error and payload.get("verdict") != "inaccessible":
+            payload = {
+                "verdict": "inaccessible" if error.startswith("inaccessible") else "unknown",
+                "runId": run_id,
+                "error": error,
+                "nodes": [],
+                "counts": {},
+            }
+    else:
+        try:
+            obs = GraphObservability.from_receipt_journal(graph, journal, run_id=run_id)
+            payload = obs.live_status()
+        except OSError as exc:
+            payload = run_accessibility(run_id=run_id, journal=None, graph=graph)
+            payload["error"] = f"inaccessible:{exc}"
+
+    if args.format == "text":
+        print(render_graph_text(payload, compact=bool(args.compact), mode="progress"))
+        return 0
+    if args.compact:
+        payload = dict(payload)
+        payload["text"] = render_graph_text(payload, compact=True, mode="progress")
+    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0
+
+
+def cmd_graph_explain(args: argparse.Namespace) -> int:
+    """Node explain for /sw-status explain <node-id> (PRD 269 R11/R12)."""
+    from graph.observability import GraphObservability, ObservabilityError, render_graph_text
+
+    root = Path(args.root).resolve() if args.root else Path.cwd()
+    run_id = args.run_id
+    node_id = args.node_id
+    graph, journal, error = _resolve_graph_journal(
+        root,
+        run_id,
+        graph_json=args.graph_json,
+        journal_root=args.journal_root,
+    )
+    if graph is None:
+        payload = {
+            "nodeId": node_id,
+            "state": "inaccessible" if error else "unknown",
+            "verdict": None,
+            "blockers": [
+                {
+                    "kind": "unknown",
+                    "class": "actionable",
+                    "detail": error or "graph-unavailable",
+                }
+            ],
+            "nextAction": {
+                "action": "none",
+                "command": None,
+                "detail": error or "graph-unavailable",
+            },
+        }
+    elif journal is None:
+        payload = {
+            "nodeId": node_id,
+            "state": "inaccessible",
+            "verdict": None,
+            "blockers": [
+                {
+                    "kind": "unknown",
+                    "class": "actionable",
+                    "detail": error or "journal-unavailable",
+                }
+            ],
+            "nextAction": {
+                "action": "none",
+                "command": None,
+                "detail": error or "journal-unavailable",
+            },
+        }
+    else:
+        try:
+            obs = GraphObservability.from_receipt_journal(graph, journal, run_id=run_id or "")
+            payload = obs.explain(node_id)
+        except ObservabilityError as exc:
+            payload = {
+                "nodeId": node_id,
+                "state": "unknown",
+                "verdict": None,
+                "blockers": [
+                    {
+                        "kind": "unknown",
+                        "class": "actionable",
+                        "detail": str(exc),
+                    }
+                ],
+                "nextAction": {
+                    "action": "none",
+                    "command": None,
+                    "detail": str(exc),
+                },
+            }
+
+    if args.format == "text":
+        print(render_graph_text(payload, compact=bool(args.compact), mode="explain"))
+        return 0
+    if args.compact:
+        payload = dict(payload)
+        payload["text"] = render_graph_text(payload, compact=True, mode="explain")
+    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0
+
+
 def cmd_write(args: argparse.Namespace) -> int:
     gate_obj: Any = None
     if args.gate_json:
@@ -723,6 +884,31 @@ def main(argv: list[str] | None = None) -> int:
     validate_p = sub.add_parser("validate", help="Validate terminal status shape + provenance")
     validate_p.add_argument("--path", required=True)
     validate_p.set_defaults(func=cmd_validate)
+
+    progress_p = sub.add_parser(
+        "graph-progress",
+        help="Live graph progress for /sw-status (PRD 269 R11)",
+    )
+    progress_p.add_argument("--root", default="")
+    progress_p.add_argument("--run-id", default="")
+    progress_p.add_argument("--graph-json")
+    progress_p.add_argument("--journal-root")
+    progress_p.add_argument("--format", choices=("json", "text"), default="json")
+    progress_p.add_argument("--compact", action="store_true")
+    progress_p.set_defaults(func=cmd_graph_progress)
+
+    explain_p = sub.add_parser(
+        "explain",
+        help="Explain a graph node for /sw-status explain <node-id> (PRD 269 R11)",
+    )
+    explain_p.add_argument("node_id")
+    explain_p.add_argument("--root", default="")
+    explain_p.add_argument("--run-id", default="")
+    explain_p.add_argument("--graph-json")
+    explain_p.add_argument("--journal-root")
+    explain_p.add_argument("--format", choices=("json", "text"), default="json")
+    explain_p.add_argument("--compact", action="store_true")
+    explain_p.set_defaults(func=cmd_graph_explain)
 
     ns = parser.parse_args(argv)
     return int(ns.func(ns))
