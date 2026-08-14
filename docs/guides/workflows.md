@@ -295,6 +295,13 @@ merge gate. `/sw-ship`, `/sw-execute`, and the other ship-loop atomics still exi
 invokes them per phase; run them manually only for Quick-tier hotfixes, debugging, or single-phase
 reruns.
 
+**Graph runtime:** after cutover, deliver (and the other orchestrators) compile onto
+**WorkflowGraph** — the sole production execution runtime. Operator status and explain stay on
+`/sw-status`; plan summaries use `/sw-deliver --explain-plan`. Cutover advances
+`dogfood` → `limited-scope` → `full-ownership` without a parallel command surface or dual runtime.
+See [`commands.md` — Graph execution runtime](commands.md#graph-execution-runtime) and
+[`graph-domain-terminology.md`](graph-domain-terminology.md).
+
 ```mermaid
 flowchart TB
 RUN["/sw-deliver run"] --> PF[preflight + plan]

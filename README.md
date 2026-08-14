@@ -16,6 +16,8 @@ on `/sw-deliver` is opt-in only — see [configuration](docs/guides/configuratio
 - **issue-native dev-tracking** — under `issue-store`: gap issues, commit/PR linkage with safe close-on-merge, doc-review via integrity-checked issue comments, and milestone grouping (; inert for file-store users)
 - **issue-derived planning graph** — under `issue-store`: read-only INDEX/living-status from issue labels, epic/sub-issue phase hierarchy with checkbox fallback, redacted cross-project recall, and inFlight tracking-issue safety (; inert for file-store users)
 - **Deliver entry** — `/sw-deliver run` accepts a frozen task-list path, `--unit-id`, or `--issue` (issue-store); `/sw-status` and `planning-graph.py status` report unified unit status (`backlog` | `planned` | `in-progress` | `complete`)
+- **WorkflowGraph runtime** — after cutover, orchestrated deliver and doc/debug/feedback paths dispatch through the shared **WorkflowGraph** IR (`scripts/graph/`); live node progress and per-node explain stay on `/sw-status` and `status_integrity.py` — no graph-prefixed slash commands
+- **Graph runtime** — after cutover, **WorkflowGraph** is the production execution runtime for deliver/doc/debug/feedback (status/explain on existing `sw-` commands; see [graph-domain terminology](docs/guides/graph-domain-terminology.md))
 - **Retrospective closure** — `/sw-retrospective --post-merge` closes linked planning-store units via `planning_store.py close-delivery-units`; gap resolved status transitions only through that loop
 - **Gated ship loop** — verify, review, CI truth, stabilize; *you* merge
 - **Compounding memory** — post-ship retro and durable project learnings
@@ -135,6 +137,9 @@ Full walkthrough and schema: **[configuration](docs/guides/configuration.md)**.
 
 ### Deliver autonomy
 
+After cutover, `/sw-deliver` (and the other orchestrators) compile onto **WorkflowGraph** as the
+**sole production execution runtime** — plan with `--explain-plan`, watch live nodes via `/sw-status`.
+
 `/sw-deliver` runs an **autonomous conductor** by default (`deliver.autonomy.mode: autonomous`): it
 self-continues through phase dispatch, merge, and bookkeeping without per-step re-prompts. The **legitimate halt** set is minimal — terminal merge to `main`, exhausted remediation, destructive/ambiguous git,
 checkpoints (`doc.afterTasks`, supervised mode), phase timeout, external-wait exhaustion, or run-level
@@ -207,9 +212,11 @@ use the guides below.
 | [Getting started](docs/guides/getting-started.md) | Adoption arc and first paths |
 | [Commands](docs/guides/commands.md) | Orchestrators vs atomics (includes `/sw-note` local notebook capture) |
 | [Workflows](docs/guides/workflows.md) | End-to-end flows |
+| [Graph domain terminology](docs/guides/graph-domain-terminology.md) | Planning vs execution graph vocabulary |
 | [Configuration](docs/guides/configuration.md) | `/sw-init` knobs (issue-store providers include Linear) |
 | [Style guide](docs/guides/style-guide.md) | Writing conventions |
 | [Glossary](docs/guides/glossary.md) | Coined terms |
+| [Graph-domain terminology](docs/guides/graph-domain-terminology.md) | WorkflowGraph / planning / provenance domains |
 | [Decision tree](docs/guides/decision-tree.md) | Command routing |
 
 ### Closed reference inventory (pre-removal)
