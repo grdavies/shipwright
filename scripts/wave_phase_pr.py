@@ -240,9 +240,11 @@ def create_or_reuse_phase_pr(
     from wave_lock import acquire_ship_lease, release_ship_lease
 
     acquire_args = ["--integration", integration, "--phase-branch", head]
-    phase_id = os.environ.get("SW_PHASE_ID", "").strip() or phase_slug
-    if phase_id:
-        acquire_args.extend(["--node-id", phase_id])
+    # Graph concurrent nodes pass SW_NODE_ID explicitly (R5). Do not invent a
+    # node id from phase slug — that breaks same-process ship single-flight.
+    node_id = os.environ.get("SW_NODE_ID", "").strip()
+    if node_id:
+        acquire_args.extend(["--node-id", node_id])
     lease = acquire_ship_lease(root, acquire_args)
     if lease.get("verdict") == "park":
         # R5: contention parks the node — do not fail the deliver run.
