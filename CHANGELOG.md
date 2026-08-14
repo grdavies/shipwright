@@ -815,6 +815,7 @@
 * merge phase safety-gate-verification into feat/tasks-095 (bb6bc4d) <!-- sw-deliver:safety-gate-verification -->
 * merge phase testing into feat/tasks-095 (31e28bf) <!-- sw-deliver:testing -->
 * merge phase docs-and-polish into feat/tasks-095 (744497e) <!-- sw-deliver:docs-and-polish -->
+* merge phase debug-fix-fix-release-please-pr-780-ci-regen-dist-1-0-0-only-assert-dist-regen into feat/release-780-regen-dist-major (5ffc279) <!-- sw-deliver:debug-fix-fix-release-please-pr-780-ci-regen-dist-1-0-0-only-assert-dist-regen -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
