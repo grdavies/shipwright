@@ -175,8 +175,10 @@ def test_read_only_registry_write_fails_closed(tmp_path: Path) -> None:
         )
 
 
-def test_receipt_satisfies_cache_hit_rejects_failed_retry_and_mutated() -> None:
-    journal = ExecutionReceiptJournal(Path("/tmp/unused-receipts"))
+def test_receipt_satisfies_cache_hit_rejects_failed_retry_and_mutated(
+    tmp_path: Path,
+) -> None:
+    journal = ExecutionReceiptJournal(tmp_path / "receipts")
     complete = _complete_receipt(journal, "verify", "stable-key")
     assert receipt_satisfies_cache_hit(complete) is True
     assert receipt_is_cache_reusable(complete) is True
