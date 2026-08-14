@@ -671,7 +671,7 @@ accept only allowlisted IDs (or mapped aliases); unknown models fail closed with
 `core/sw-reference/models-tiering.md` (Task model allowlist section). Regression:
 `scripts/unit_tests/dispatch/test_task_model_allowlist.py`.
 
-#### ModelPolicy and tier order (PRD 269 R8/R9)
+#### ModelPolicy and tier order
 
 Semantic tier **order** is derived solely from `models.tiers` keys via shared `ModelPolicy`
 (`scripts/model_policy_lib.py`) — not from agent frontmatter, private tuples, or routing maps. The canonical
@@ -691,7 +691,7 @@ python3 scripts/dispatch-check.py --config .cursor/workflow.config.json --comman
 
 Full policy surface: `core/sw-reference/models-tiering.md` (ModelPolicy section).
 
-### Graph execution defaults (`graphExecution.*`) — PRD 269 R17
+### Graph execution defaults (`graphExecution.*`)
 
 WorkflowGraph scheduler defaults for compiled orchestrator plans. **Cache and `maxConcurrency` are
 independently tunable** — serial-equivalent `maxConcurrency: 1` does not imply cache on or off.
