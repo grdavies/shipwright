@@ -855,6 +855,7 @@
 * merge phase graph-status-explain-and-estimated-critical-path-r10-r11-r12 into feat/graph-execution-engine (66e3569) <!-- sw-deliver:graph-status-explain-and-estimated-critical-path-r10-r11-r12 -->
 * merge phase orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 into feat/graph-execution-engine (b7419fa) <!-- sw-deliver:orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 -->
 * merge phase orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 into feat/graph-execution-engine (38d560b) <!-- sw-deliver:orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 -->
+* merge phase cutover-evidence-serial-equivalent-mode-and-full-ownership-gate-r4 into feat/graph-execution-engine (7234cb8) <!-- sw-deliver:cutover-evidence-serial-equivalent-mode-and-full-ownership-gate-r4 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
