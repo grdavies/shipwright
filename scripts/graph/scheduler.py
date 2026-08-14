@@ -37,6 +37,10 @@ from graph.resource_pools import (
     PoolRequestUnsatisfiable,
     ResourcePoolRegistry,
 )
+from graph.scheduling_modes import (
+    ExternalDispatchAuthorization,
+    authorize_external_dispatch,
+)
 
 
 class SchedulerError(RuntimeError):
@@ -330,15 +334,14 @@ class GraphScheduler:
         *,
         run_id: str,
         internal_only: bool = False,
+        external_authorization: ExternalDispatchAuthorization | None = None,
         fanin_policies: Mapping[str, Mapping[str, Any] | FanInPolicy] | None = None,
         write_paths: Mapping[str, Set[str] | frozenset[str]] | None = None,
         kernel_options: Mapping[str, Any] | None = None,
     ) -> SchedulerRun:
         """Run a graph after all pre-dispatch checks have completed."""
         if not internal_only:
-            raise InternalSchedulerDisabled(
-                "graph scheduler is internal-only until runtime cutover"
-            )
+            authorize_external_dispatch(external_authorization)
 
         compiled = compile_workflow_graph(document, **dict(kernel_options or {}))
         graph = compiled["graph"]

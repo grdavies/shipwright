@@ -15,9 +15,12 @@ if str(_SCRIPTS) not in sys.path:
 from graph.cutover import (  # noqa: E402
     CoverageLossError,
     CutoverDriver,
+    CutoverError,
     CutoverStage,
     DogfoodEvidence,
     SafetySnapshot,
+    assert_human_merge_gate_compiles,
+    status_explain_is_live,
 )
 from graph.execution_receipts import ExecutionReceiptJournal  # noqa: E402
 from graph.kernel_compiler import (  # noqa: E402
@@ -125,8 +128,26 @@ def test_phased_promotion_requires_dogfood_parity_and_coverage() -> None:
             )
         )
 
+    assert status_explain_is_live() is True
     assert driver.promote(DogfoodEvidence.passing(completed_runs=1)) is CutoverStage.LIMITED
-    assert driver.promote(DogfoodEvidence.passing(completed_runs=3)) is CutoverStage.FULL
+    assert driver.promotion_evidence[-1].status_explain_live is True
+    with pytest.raises(PermissionError, match="authorizer"):
+        driver.promote(DogfoodEvidence.passing(completed_runs=3))
+    assert driver.promote(
+        DogfoodEvidence.passing(completed_runs=3),
+        authorizer="cutover-full-ownership-gate",
+        evidence_ref="promotion-evidence-1",
+    ) is CutoverStage.FULL
+    assert driver.promotion_evidence[-1].authorizer == "cutover-full-ownership-gate"
+
+
+def test_human_merge_gate_false_cannot_compile() -> None:
+    plan = _deliver_plan()
+    plan["safety"]["humanMergeGate"] = False
+    with pytest.raises(CutoverError, match="human merge gate"):
+        assert_human_merge_gate_compiles(plan)
+    with pytest.raises(CutoverError, match="human merge gate"):
+        SafetySnapshot.from_plan(plan)
 
 
 @pytest.mark.parametrize(

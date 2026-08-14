@@ -9,6 +9,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from graph.ir import WorkflowGraphValidationError, validate_workflow_graph
+from graph.scheduling_modes import (
+    ExternalDispatchAuthorization,
+    authorize_external_dispatch,
+)
 from graph.transform_ops import TRANSFORM_OPERATOR_NAMES
 
 if TYPE_CHECKING:
@@ -381,6 +385,7 @@ def dispatch_compiled_graph(
     scheduler: GraphScheduler,
     run_id: str,
     internal_only: bool = True,
+    external_authorization: ExternalDispatchAuthorization | None = None,
     **scheduler_options: Any,
 ) -> SchedulerRun:
     """Dispatch a kernel-compiled graph through GraphScheduler (R3 sole path)."""
@@ -399,6 +404,7 @@ def dispatch_compiled_graph(
         graph,
         run_id=graph_run_id,
         internal_only=internal_only,
+        external_authorization=external_authorization,
         kernel_options=kernel_options,
         **scheduler_options,
     )
@@ -410,6 +416,7 @@ def compile_and_dispatch(
     scheduler: GraphScheduler,
     run_id: str,
     internal_only: bool = True,
+    external_authorization: ExternalDispatchAuthorization | None = None,
     kernel_options: Mapping[str, Any] | None = None,
     **scheduler_options: Any,
 ) -> tuple[dict[str, Any], SchedulerRun]:
@@ -420,6 +427,7 @@ def compile_and_dispatch(
         scheduler=scheduler,
         run_id=run_id,
         internal_only=internal_only,
+        external_authorization=external_authorization,
         **scheduler_options,
     )
     return compiled, result

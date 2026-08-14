@@ -18,12 +18,31 @@ from graph.crash_replay_harness import (  # noqa: E402
     CrashPoint,
     CrashReplayHarness,
 )
-from graph.cutover import CutoverStage, DogfoodEvidence  # noqa: E402
+from graph.cutover import (  # noqa: E402
+    CutoverDriver,
+    CutoverStage,
+    DogfoodEvidence,
+    SafetySnapshot,
+)
 from graph.dynamic_proposal import (  # noqa: E402
     ProposalBudget,
     evaluate_dynamic_proposal,
 )
+from graph.execution_receipts import ExecutionReceiptJournal  # noqa: E402
 from graph.ir import validate_workflow_graph  # noqa: E402
+from graph.resource_pools import PoolExhausted, ResourcePoolRegistry  # noqa: E402
+from graph.scheduler import GraphScheduler, NodeExecutionResult  # noqa: E402
+from graph.scheduling_modes import (  # noqa: E402
+    ExternalDispatchAuthorization,
+    MitigationLane,
+    PromotionMetrics,
+    RegressionBudget,
+    SERIAL_EQUIVALENT_MAX_CONCURRENCY,
+    ScheduledItem,
+    authorize_external_dispatch,
+    is_serial_equivalent,
+    serial_equivalent_metrics,
+)
 from graph.lineage import (  # noqa: E402
     ArtifactLineageView,
     edge_reduction_advisory,
@@ -225,3 +244,251 @@ def test_resume_from_durable_evidence_has_no_duplicate_side_effects(
     assert all(count == 1 for count in report.side_effect_counts.values())
     if crash_point is not CrashPoint.MID_NODE:
         assert "prepare" in report.replayed_nodes
+
+
+def _dogfood_plan() -> dict[str, Any]:
+    return {
+        "version": 1,
+        "runId": "dogfood-stress",
+        "phases": [
+            {"id": "prepare", "slug": "prepare"},
+            {"id": "verify", "slug": "verify"},
+        ],
+        "safety": {
+            "lockOwner": "dogfood-stress",
+            "mergeQueue": ["prepare"],
+            "contentionSerialized": ["shared-state"],
+            "resumeCursor": "verify",
+            "humanMergeGate": True,
+        },
+    }
+
+
+def _promotion_budget() -> RegressionBudget:
+    return RegressionBudget(
+        wall_clock_ms=5_000,
+        cache_hit_rate_min=0.0,
+        max_cost=10.0,
+        max_failures=1,
+        max_retries=2,
+        scheduler_overhead_ms=500,
+    )
+
+
+def _metrics_from_run(
+    *,
+    wall_clock_ms: int,
+    cache_hits: int,
+    total_nodes: int,
+    total_cost: float,
+    failures: int,
+    retries: int,
+    scheduler_overhead_ms: int,
+) -> PromotionMetrics:
+    hit_rate = (cache_hits / total_nodes) if total_nodes else 0.0
+    return PromotionMetrics(
+        wall_clock_ms=wall_clock_ms,
+        cache_hit_rate=hit_rate,
+        total_cost=total_cost,
+        failure_count=failures,
+        retry_count=retries,
+        scheduler_overhead_ms=scheduler_overhead_ms,
+    )
+
+
+def test_promotion_evidence_records_metrics_within_budget() -> None:
+    metrics = _metrics_from_run(
+        wall_clock_ms=1200,
+        cache_hits=1,
+        total_nodes=3,
+        total_cost=0.42,
+        failures=0,
+        retries=1,
+        scheduler_overhead_ms=80,
+    )
+    budget = _promotion_budget()
+    assert metrics.within_budget(budget) is True
+
+    driver = CutoverDriver(stage=CutoverStage.DOGFOOD)
+    driver.promote(DogfoodEvidence.passing(completed_runs=1), metrics=metrics)
+    assert driver.promotion_evidence[-1].metrics == metrics
+    driver.promote(
+        DogfoodEvidence.passing(completed_runs=3),
+        metrics=metrics,
+        authorizer="graph-runtime-cutover",
+        evidence_ref="wave-h-promotion",
+    )
+    assert driver.stage is CutoverStage.FULL
+    assert driver.promotion_evidence[-1].evidence_ref == "wave-h-promotion"
+
+
+def test_serial_equivalent_mode_and_cache_disable_without_legacy_adapter(
+    tmp_path: Path,
+) -> None:
+    lane = MitigationLane(cache_enabled=False)
+    assert is_serial_equivalent(lane.max_concurrency)
+    assert lane.max_concurrency == SERIAL_EQUIVALENT_MAX_CONCURRENCY
+
+    graph = _graph()
+    graph["spec"]["resourceLimits"]["maxConcurrency"] = lane.max_concurrency
+    calls: list[str] = []
+
+    def execute(node: dict[str, Any]) -> NodeExecutionResult:
+        calls.append(str(node["id"]))
+        return NodeExecutionResult(
+            verdict="pass",
+            output={"node": node["id"]},
+            model="fixture",
+            duration_ms=5,
+            tokens=10,
+        )
+
+    scheduler = GraphScheduler(
+        execute,
+        receipts=ExecutionReceiptJournal(tmp_path / "serial"),
+        pools=ResourcePoolRegistry(),
+        cache_enabled=lane.cache_enabled,
+    )
+    first = scheduler.run(graph, run_id="serial-a", internal_only=True)
+    second = scheduler.run(graph, run_id="serial-b", internal_only=True)
+    assert first.verdict == "pass"
+    assert second.verdict == "pass"
+    assert calls == ["prepare", "prepare"]
+
+    metrics = serial_equivalent_metrics(
+        [
+            ScheduledItem("prepare", 0, 5),
+            ScheduledItem("prepare", 5, 10),
+        ]
+    )
+    assert metrics.elapsed_ms == metrics.serial_baseline_ms
+
+
+def test_leaving_internal_only_requires_named_authorizer(tmp_path: Path) -> None:
+    graph = _graph()
+    journal = ExecutionReceiptJournal(tmp_path / "receipts")
+    scheduler = GraphScheduler(
+        lambda node: NodeExecutionResult(verdict="pass", output=node["id"]),
+        receipts=journal,
+        pools=ResourcePoolRegistry(),
+    )
+    with pytest.raises(PermissionError, match="authorizer"):
+        scheduler.run(graph, run_id="external", internal_only=False)
+    auth = authorize_external_dispatch(
+        ExternalDispatchAuthorization(
+            authorizer="cutover-full-ownership-gate",
+            evidence_ref="wave-h-external",
+        )
+    )
+    result = scheduler.run(
+        graph,
+        run_id="external",
+        internal_only=False,
+        external_authorization=auth,
+    )
+    assert result.verdict == "pass"
+
+
+def test_dogfood_pool_exhaustion_write_contention_and_cancel(tmp_path: Path) -> None:
+    plan = _dogfood_plan()
+    safety = SafetySnapshot.from_plan(plan)
+    graph = {
+        "apiVersion": "shipwright.dev/v1alpha1",
+        "kind": "WorkflowGraph",
+        "metadata": {"name": "dogfood-stress"},
+        "spec": {
+            "nodes": [
+                {
+                    "id": "prepare",
+                    "kind": "command",
+                    "target": {"step": "prepare"},
+                    "resources": {"pool": "code-writers", "slots": 1, "timeoutSeconds": 30},
+                    "isolation": {"mode": "process", "writeScope": "scoped"},
+                    "verification": {"required": True, "strategy": "mechanical"},
+                },
+                {
+                    "id": "verify",
+                    "kind": "command",
+                    "target": {"step": "verify"},
+                    "resources": {"pool": "code-writers", "slots": 1, "timeoutSeconds": 30},
+                    "isolation": {"mode": "process", "writeScope": "scoped"},
+                    "verification": {"required": True, "strategy": "mechanical"},
+                },
+            ],
+            "edges": [{"from": "prepare", "to": "verify", "required": True}],
+            "resourceLimits": {
+                "maxConcurrency": SERIAL_EQUIVALENT_MAX_CONCURRENCY,
+                "maxDurationSeconds": 120,
+            },
+            "verification": {"required": True, "failClosed": True},
+        },
+    }
+
+    # Pool exhaustion: second acquire blocks until first releases.
+    pools = ResourcePoolRegistry.from_config(limits={"code-writers": 1})
+    from graph.resource_pools import PoolName
+
+    pools.acquire(PoolName.CODE_WRITERS, slots=1)
+    with pytest.raises(PoolExhausted):
+        pools.acquire(PoolName.CODE_WRITERS, slots=1)
+
+    order: list[str] = []
+
+    def execute(node: dict[str, Any]) -> NodeExecutionResult:
+        order.append(str(node["id"]))
+        return NodeExecutionResult(verdict="pass", output=node["id"])
+
+    shared_write = GraphScheduler(
+        execute,
+        receipts=ExecutionReceiptJournal(tmp_path / "contention"),
+        pools=ResourcePoolRegistry.from_config(limits={"code-writers": 4}),
+    ).run(
+        graph,
+        run_id="contention",
+        internal_only=True,
+        write_paths={"prepare": {"shared/out.json"}, "verify": {"shared/out.json"}},
+    )
+    assert shared_write.verdict == "pass"
+    assert order == ["prepare", "verify"]
+    assert shared_write.contention_findings
+
+    cancelled: list[str] = []
+
+    def fail_then_cancel(node: dict[str, Any]) -> NodeExecutionResult:
+        node_id = str(node["id"])
+        cancelled.append(node_id)
+        if node_id == "prepare":
+            cancel_scheduler.request_cancel()
+        return NodeExecutionResult(verdict="pass", output=node_id)
+
+    cancel_scheduler = GraphScheduler(
+        fail_then_cancel,
+        receipts=ExecutionReceiptJournal(tmp_path / "cancel"),
+        pools=ResourcePoolRegistry(),
+    )
+    cancel_result = cancel_scheduler.run(graph, run_id="cancel", internal_only=True)
+    assert cancel_result.verdict == "fail"
+    assert "prepare" in cancelled
+    by_id = {item.node_id: item for item in cancel_result.nodes}
+    assert by_id["verify"].verdict == "cancelled"
+
+    driver = CutoverDriver(stage=CutoverStage.DOGFOOD)
+    legacy = CutoverDriver.run_legacy(
+        plan,
+        plan_type="delivery",
+        safety=safety,
+        executor=lambda _step: "pass",
+    )
+    cutover = driver.run_scheduler(
+        plan,
+        plan_type="delivery",
+        run_id="dogfood-stress",
+        scheduler=GraphScheduler(
+            lambda node: NodeExecutionResult(verdict="pass", output=node["id"]),
+            receipts=ExecutionReceiptJournal(tmp_path / "dogfood"),
+            pools=ResourcePoolRegistry(),
+        ),
+        safety=safety,
+        non_merge_critical=True,
+    )
+    assert CutoverDriver.compare(legacy, cutover).passed is True
