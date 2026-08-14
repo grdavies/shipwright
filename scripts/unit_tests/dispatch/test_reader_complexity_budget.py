@@ -19,6 +19,7 @@ from dispatch_reader_lib import (
 )
 from dispatch_complexity_lib import probe_complexity, clamp_tier
 from dispatch_budget_lib import resolve_token_budget, format_partial_result_handoff
+from model_policy_lib import ModelPolicy
 
 
 def test_reader_boundary_requires_role() -> None:
@@ -53,7 +54,10 @@ def test_complexity_probe_enabled_uses_band() -> None:
 
 
 def test_clamp_tier() -> None:
-    assert clamp_tier("deep", "cheap", "mid") == "mid"
+    policy = ModelPolicy.from_tiers(
+        {"cheap": "a", "build": "b", "mid": "c", "deep": "d"}
+    )
+    assert clamp_tier("deep", "cheap", "mid", policy=policy) == "mid"
 
 
 def test_token_budget_always_advisory() -> None:
