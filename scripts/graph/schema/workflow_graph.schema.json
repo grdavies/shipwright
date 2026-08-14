@@ -32,6 +32,21 @@
         "phaseId": {
           "type": "string",
           "minLength": 1
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "orchestratorType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "durability": {
+          "type": "string",
+          "enum": [
+            "durable",
+            "episodic"
+          ]
         }
       }
     },
