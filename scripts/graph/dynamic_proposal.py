@@ -2,7 +2,8 @@
 """Guarded WorkflowGraph proposals with deterministic canonical fallback."""
 from __future__ import annotations
 
-from collections.abc import Mapping
+import json
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -45,6 +46,116 @@ class ProposalDecision:
     compiled: Mapping[str, Any]
     used_fallback: bool
     reason: str
+
+
+REQUIRED_CAPABILITY_KINDS = frozenset({"gate", "verifier"})
+REQUIRED_CAPABILITY_TOKENS = (
+    "merge-gate",
+    "human-merge-gate",
+    "human-terminal-merge-gate",
+    "credential-broker",
+    "write-isolation-lease",
+    "mechanical-verification",
+    "verification-gate",
+)
+
+
+def is_required_capability_node(node: Mapping[str, Any]) -> bool:
+    """True for merge-gate, verifier, credential-broker, and isolation-lease nodes."""
+    kind = str(node.get("kind") or "")
+    if kind in REQUIRED_CAPABILITY_KINDS:
+        return True
+    node_id = str(node.get("id") or "")
+    step = str((node.get("target") or {}).get("step") or "")
+    blob = f"{node_id} {step}"
+    return any(token in blob for token in REQUIRED_CAPABILITY_TOKENS)
+
+
+def _canonical_bytes(value: Any) -> bytes:
+    return json.dumps(
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+
+
+def host_slot_total(document: Mapping[str, Any]) -> int:
+    """Sum of node resource slots — host-level accounting, not per-pool."""
+    try:
+        nodes = document["spec"]["nodes"]
+        return sum(int(node["resources"]["slots"]) for node in nodes)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("proposal host-slot inputs are malformed") from exc
+
+
+def _assert_required_capability_invariant(
+    proposal: Mapping[str, Any],
+    canonical_graph: Mapping[str, Any],
+) -> None:
+    canonical_nodes = {
+        str(node["id"]): node for node in canonical_graph["spec"]["nodes"]
+    }
+    proposal_nodes = {str(node["id"]): node for node in proposal["spec"]["nodes"]}
+    for node_id, canonical_node in canonical_nodes.items():
+        if not is_required_capability_node(canonical_node):
+            continue
+        proposed = proposal_nodes.get(node_id)
+        if proposed is None:
+            raise ValueError(
+                f"proposal rejected: required-capability node {node_id} missing"
+            )
+        if _canonical_bytes(proposed) != _canonical_bytes(canonical_node):
+            raise ValueError(
+                "proposal rejected: required-capability node "
+                f"{node_id} must stay byte-identical"
+            )
+
+    canonical_slots = host_slot_total(canonical_graph)
+    proposed_slots = host_slot_total(proposal)
+    if proposed_slots > canonical_slots:
+        raise ValueError(
+            f"proposal rejected: host slots {proposed_slots}>{canonical_slots}"
+        )
+
+    canonical_concurrency = int(
+        canonical_graph["spec"]["resourceLimits"]["maxConcurrency"]
+    )
+    proposed_concurrency = int(proposal["spec"]["resourceLimits"]["maxConcurrency"])
+    if proposed_concurrency > canonical_concurrency:
+        raise ValueError(
+            "proposal rejected: concurrency "
+            f"{proposed_concurrency} exceeds host ceiling {canonical_concurrency}"
+        )
+
+
+def admit_host_slot_candidates(
+    candidates: Sequence[Mapping[str, Any]],
+    *,
+    host_slot_ceiling: int,
+) -> list[str]:
+    """Admit, queue, or reject candidates that share one host slot ceiling.
+
+    A single candidate whose demand exceeds the ceiling is rejected. Two
+    otherwise valid candidates that jointly exceed remaining demand are
+    queued rather than silently oversubscribed.
+    """
+    if (
+        not isinstance(host_slot_ceiling, int)
+        or isinstance(host_slot_ceiling, bool)
+        or host_slot_ceiling <= 0
+    ):
+        raise ValueError("host_slot_ceiling must be a positive integer")
+    reserved = 0
+    verdicts: list[str] = []
+    for candidate in candidates:
+        demand = host_slot_total(candidate)
+        if demand > host_slot_ceiling:
+            verdicts.append("rejected")
+            continue
+        if reserved + demand > host_slot_ceiling:
+            verdicts.append("queued")
+            continue
+        reserved += demand
+        verdicts.append("admitted")
+    return verdicts
 
 
 def _assert_budget(document: Mapping[str, Any], budget: ProposalBudget) -> None:
@@ -118,6 +229,7 @@ def evaluate_dynamic_proposal(
     else:
         try:
             _assert_budget(proposal, budget)
+            _assert_required_capability_invariant(proposal, canonical_graph)
             compiled = compile_workflow_graph(proposal, **options)
         except (KernelCompilationError, ValueError) as exc:
             reason = f"proposal rejected: {exc}"

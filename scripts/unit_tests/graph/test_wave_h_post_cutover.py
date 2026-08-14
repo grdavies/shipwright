@@ -26,6 +26,7 @@ from graph.cutover import (  # noqa: E402
 )
 from graph.dynamic_proposal import (  # noqa: E402
     ProposalBudget,
+    admit_host_slot_candidates,
     evaluate_dynamic_proposal,
 )
 from graph.execution_receipts import ExecutionReceiptJournal  # noqa: E402
@@ -92,14 +93,53 @@ def _graph(*, include_replay_nodes: bool = False) -> dict[str, Any]:
     }
 
 
-def _budget() -> ProposalBudget:
+def _budget(*, max_nodes: int = 4, max_edges: int = 4, max_total_slots: int = 4) -> ProposalBudget:
     return ProposalBudget(
-        max_nodes=4,
-        max_edges=4,
+        max_nodes=max_nodes,
+        max_edges=max_edges,
         max_concurrency=4,
         max_duration_seconds=300,
-        max_total_slots=4,
+        max_total_slots=max_total_slots,
     )
+
+
+def _required_capability_graph() -> dict[str, Any]:
+    nodes = [
+        _node("prepare"),
+        _node("mechanical-verification", "verifier"),
+        _node("merge-gate", "gate"),
+        _node("credential-broker"),
+        _node("write-isolation-lease"),
+    ]
+    edges = [
+        {"from": "prepare", "to": "mechanical-verification", "required": True},
+        {"from": "mechanical-verification", "to": "merge-gate", "required": True},
+        {"from": "merge-gate", "to": "credential-broker", "required": True},
+        {"from": "credential-broker", "to": "write-isolation-lease", "required": True},
+    ]
+    return {
+        "apiVersion": "shipwright.dev/v1alpha1",
+        "kind": "WorkflowGraph",
+        "metadata": {"name": "required-capability-fixture"},
+        "spec": {
+            "nodes": nodes,
+            "edges": edges,
+            "resourceLimits": {
+                "maxConcurrency": 2,
+                "maxDurationSeconds": 120,
+            },
+            "verification": {"required": True, "failClosed": True},
+        },
+    }
+
+
+def _green_proposal_kwargs() -> dict[str, Any]:
+    return {
+        "plan_policy": "proposed",
+        "cutover_stage": CutoverStage.FULL,
+        "cutover_evidence": DogfoodEvidence.passing(completed_runs=3),
+        "budget": _budget(max_nodes=8, max_edges=8, max_total_slots=8),
+    }
 
 
 def test_dynamic_proposal_rejects_to_canonical_and_accepts_guarded_graph() -> None:
@@ -492,3 +532,98 @@ def test_dogfood_pool_exhaustion_write_contention_and_cancel(tmp_path: Path) -> 
         non_merge_critical=True,
     )
     assert CutoverDriver.compare(legacy, cutover).passed is True
+
+
+def test_merge_gate_deletion_and_ceiling_bust_rejected_before_shadow() -> None:
+    canonical = _required_capability_graph()
+    kwargs = _green_proposal_kwargs()
+
+    deleted = deepcopy(canonical)
+    deleted["spec"]["nodes"] = [
+        node for node in deleted["spec"]["nodes"] if node["id"] != "merge-gate"
+    ]
+    deleted["spec"]["edges"] = [
+        edge
+        for edge in deleted["spec"]["edges"]
+        if edge["from"] != "merge-gate" and edge["to"] != "merge-gate"
+    ]
+    deleted["spec"]["edges"].append(
+        {"from": "mechanical-verification", "to": "credential-broker", "required": True}
+    )
+
+    deleted_decision = evaluate_dynamic_proposal(
+        deleted,
+        canonical_graph=canonical,
+        **kwargs,
+    )
+    assert deleted_decision.verdict == "canonical-fallback"
+    assert deleted_decision.used_fallback is True
+    assert "merge-gate" in deleted_decision.reason or "required-capability" in deleted_decision.reason
+
+    lowered = deepcopy(canonical)
+    for node in lowered["spec"]["nodes"]:
+        if node["id"] == "merge-gate":
+            node["verification"]["required"] = False
+    lowered_decision = evaluate_dynamic_proposal(
+        lowered,
+        canonical_graph=canonical,
+        **kwargs,
+    )
+    assert lowered_decision.used_fallback is True
+
+    bust = deepcopy(canonical)
+    bust["spec"]["resourceLimits"]["maxConcurrency"] = 3
+    bust_decision = evaluate_dynamic_proposal(
+        bust,
+        canonical_graph=canonical,
+        **kwargs,
+    )
+    assert bust_decision.verdict == "canonical-fallback"
+    assert bust_decision.used_fallback is True
+    assert "concurrency" in bust_decision.reason or "ceiling" in bust_decision.reason
+
+
+def test_required_capability_nodes_stay_byte_identical_and_host_slots_cannot_rise() -> None:
+    canonical = _required_capability_graph()
+    kwargs = _green_proposal_kwargs()
+
+    mutated_lease = deepcopy(canonical)
+    for node in mutated_lease["spec"]["nodes"]:
+        if node["id"] == "write-isolation-lease":
+            node["resources"]["timeoutSeconds"] = 99
+    lease_decision = evaluate_dynamic_proposal(
+        mutated_lease,
+        canonical_graph=canonical,
+        **kwargs,
+    )
+    assert lease_decision.used_fallback is True
+    assert "byte-identical" in lease_decision.reason or "required-capability" in lease_decision.reason
+
+    risen = deepcopy(canonical)
+    risen["spec"]["nodes"][0]["resources"]["slots"] = 2
+    risen_decision = evaluate_dynamic_proposal(
+        risen,
+        canonical_graph=canonical,
+        **kwargs,
+    )
+    assert risen_decision.used_fallback is True
+    assert "slot" in risen_decision.reason
+
+    ceiling = 5
+    first = deepcopy(canonical)
+    second = deepcopy(canonical)
+    second["spec"]["nodes"][0]["target"] = {"step": "sw-prepare-alt"}
+    verdicts = admit_host_slot_candidates(
+        [first, second],
+        host_slot_ceiling=ceiling,
+    )
+    assert verdicts == ["admitted", "queued"]
+
+    oversize = deepcopy(canonical)
+    for node in oversize["spec"]["nodes"]:
+        node["resources"]["slots"] = 4
+    rejected = admit_host_slot_candidates(
+        [oversize],
+        host_slot_ceiling=ceiling,
+    )
+    assert rejected == ["rejected"]
