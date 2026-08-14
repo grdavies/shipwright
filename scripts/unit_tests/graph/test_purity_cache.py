@@ -69,13 +69,13 @@ def test_execution_defaults_and_untrusted_strip() -> None:
 def test_cache_key_independent_of_run_id() -> None:
     material = CacheKeyMaterial(
         node_definition={"id": "review", "runId": "should-not-matter"},
-        input_hashes=["a" * 64],
+        input_hashes={"prompt": "a" * 64},
         prompt_version="p1",
         model_version="m1",
         tool_configuration={"tools": ["pytest"]},
         policy_version="pol1",
-        credential_capabilities=["repo:read"],
-        scope_identity="proj",
+        credential_capability_set=("repo:read",),
+        resolved_scope_identity="proj",
         repository_identity="shipwright",
         trust_domain="in-repo",
         tool_binary_identity="pytest@8",

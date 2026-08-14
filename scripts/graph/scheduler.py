@@ -319,12 +319,12 @@ class GraphScheduler:
                 return raw
             return {"purity": "mutating", "cache": "disabled"}
 
-        def _input_hashes_for(node_id: str) -> list[str]:
-            return [
-                output_hashes[item]
+        def _input_hashes_for(node_id: str) -> dict[str, str]:
+            return {
+                item: output_hashes[item]
                 for item in predecessors[node_id]
                 if item in output_hashes
-            ]
+            }
 
         def _identity_fields(result: NodeExecutionResult | None = None) -> dict[str, Any]:
             base = {
@@ -373,8 +373,16 @@ class GraphScheduler:
                     model_version=str(identity["model_version"]),
                     tool_configuration=dict(identity["tool_configuration"]),
                     policy_version=str(identity["policy_version"]),
-                    credential_capabilities=tuple(identity["credential_capabilities"]),
-                    scope_identity=str(identity["scope_identity"]),
+                    credential_capability_set=tuple(
+                        identity.get("credential_capability_set")
+                        or identity.get("credential_capabilities")
+                        or ()
+                    ),
+                    resolved_scope_identity=str(
+                        identity.get("resolved_scope_identity")
+                        or identity.get("scope_identity")
+                        or "default"
+                    ),
                     repository_identity=str(identity["repository_identity"]),
                     trust_domain=str(identity["trust_domain"]),
                     tool_binary_identity=str(identity["tool_binary_identity"]),
