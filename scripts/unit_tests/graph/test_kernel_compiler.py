@@ -13,7 +13,11 @@ if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
 from graph.kernel_compiler import (  # noqa: E402
+    POLICY_CLASS_IMMUTABLE,
+    POLICY_CLASS_OPTIMIZABLE,
     KernelCompilationError,
+    assert_policy_schema_coverage,
+    classify_policy_field,
     compile_workflow_graph,
 )
 
@@ -113,3 +117,11 @@ def test_gate_removal_or_weakening_is_rejected() -> None:
     weakened["spec"]["nodes"][1]["verification"]["required"] = False
     with pytest.raises(KernelCompilationError, match="weaken"):
         compile_workflow_graph(weakened)
+
+
+def test_every_kernel_compiler_policy_field_is_classified() -> None:
+    assert_policy_schema_coverage()
+    assert classify_policy_field("spec.verification.required") == POLICY_CLASS_IMMUTABLE
+    assert classify_policy_field("spec.resourceLimits.maxConcurrency") == (
+        POLICY_CLASS_OPTIMIZABLE
+    )

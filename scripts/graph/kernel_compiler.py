@@ -2,13 +2,20 @@
 """Compile WorkflowGraph IR through Shipwright's deterministic safety kernel."""
 from __future__ import annotations
 
+import functools
 import hashlib
+import inspect
 import json
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from graph.ir import WorkflowGraphValidationError, validate_workflow_graph
+from graph.ir import (
+    NODE_SCHEMA_PATH,
+    WORKFLOW_SCHEMA_PATH,
+    WorkflowGraphValidationError,
+    validate_workflow_graph,
+)
 from graph.scheduling_modes import (
     ExternalDispatchAuthorization,
     authorize_external_dispatch,
@@ -61,10 +68,222 @@ SECURITY_RELEVANT_PAYLOAD_KEYS = frozenset(
         "slots",
     }
 )
+POLICY_CLASS_OPTIMIZABLE = "optimizable"
+POLICY_CLASS_IMMUTABLE = "immutable"
+_POLICY_CLASSES = frozenset({POLICY_CLASS_OPTIMIZABLE, POLICY_CLASS_IMMUTABLE})
+# Deny-by-default: any field not marked optimizable is immutable. Every schema
+# property and compile_workflow_graph option must have an explicit entry.
+GRAPH_POLICY_FIELD_CLASSIFICATION: dict[str, str] = {
+    "apiVersion": POLICY_CLASS_IMMUTABLE,
+    "kind": POLICY_CLASS_IMMUTABLE,
+    "metadata": POLICY_CLASS_IMMUTABLE,
+    "metadata.name": POLICY_CLASS_OPTIMIZABLE,
+    "metadata.phaseId": POLICY_CLASS_OPTIMIZABLE,
+    "metadata.runId": POLICY_CLASS_IMMUTABLE,
+    "metadata.orchestratorType": POLICY_CLASS_IMMUTABLE,
+    "metadata.durability": POLICY_CLASS_IMMUTABLE,
+    "spec": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes": POLICY_CLASS_OPTIMIZABLE,
+    "spec.edges": POLICY_CLASS_OPTIMIZABLE,
+    "spec.edges[].from": POLICY_CLASS_OPTIMIZABLE,
+    "spec.edges[].to": POLICY_CLASS_OPTIMIZABLE,
+    "spec.edges[].required": POLICY_CLASS_OPTIMIZABLE,
+    "spec.resourceLimits": POLICY_CLASS_IMMUTABLE,
+    "spec.resourceLimits.maxConcurrency": POLICY_CLASS_OPTIMIZABLE,
+    "spec.resourceLimits.maxDurationSeconds": POLICY_CLASS_OPTIMIZABLE,
+    "spec.verification": POLICY_CLASS_IMMUTABLE,
+    "spec.verification.required": POLICY_CLASS_IMMUTABLE,
+    "spec.verification.failClosed": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].id": POLICY_CLASS_OPTIMIZABLE,
+    "spec.nodes[].kind": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].target": POLICY_CLASS_OPTIMIZABLE,
+    "spec.nodes[].target.step": POLICY_CLASS_OPTIMIZABLE,
+    "spec.nodes[].target.data": POLICY_CLASS_OPTIMIZABLE,
+    "spec.nodes[].resources": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].resources.pool": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].resources.slots": POLICY_CLASS_OPTIMIZABLE,
+    "spec.nodes[].resources.timeoutSeconds": POLICY_CLASS_OPTIMIZABLE,
+    "spec.nodes[].isolation": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].isolation.mode": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].isolation.writeScope": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].verification": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].verification.required": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].verification.strategy": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].execution": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].execution.purity": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].execution.cache": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].execution.templateDigest": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].execution.trust": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].execution.trust.trustDomain": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].execution.trust.repositoryIdentity": POLICY_CLASS_IMMUTABLE,
+    "spec.nodes[].execution.trust.toolBinaryIdentity": POLICY_CLASS_IMMUTABLE,
+}
+KERNEL_COMPILER_OPTION_FIELDS: dict[str, str] = {
+    "node_capabilities": POLICY_CLASS_IMMUTABLE,
+    "declared_credentials": POLICY_CLASS_IMMUTABLE,
+    "declared_side_effects": POLICY_CLASS_IMMUTABLE,
+    "loop_bounds": POLICY_CLASS_IMMUTABLE,
+    "transform_operators": POLICY_CLASS_IMMUTABLE,
+    "proposed_steps": POLICY_CLASS_IMMUTABLE,
+    "trusted_template": POLICY_CLASS_IMMUTABLE,
+    "orchestrator": POLICY_CLASS_IMMUTABLE,
+    "data_payloads": POLICY_CLASS_OPTIMIZABLE,
+}
 
 
 class KernelCompilationError(ValueError):
     """Raised when a graph attempts to bypass a safety-kernel constraint."""
+
+
+def _validated_policy_class(value: str, path: str) -> str:
+    if value not in _POLICY_CLASSES:
+        raise KernelCompilationError(
+            f"invalid classification for kernel-compiler policy field {path}: {value}"
+        )
+    return value
+
+
+def _schema_field_paths(
+    schema: Mapping[str, Any],
+    *,
+    prefix: str = "",
+    node_schema: Mapping[str, Any] | None = None,
+) -> set[str]:
+    paths: set[str] = set()
+    if "$ref" in schema and node_schema is not None:
+        return _schema_field_paths(node_schema, prefix=prefix, node_schema=node_schema)
+    properties = schema.get("properties")
+    if not isinstance(properties, Mapping):
+        return paths
+    for name, child in properties.items():
+        path = f"{prefix}.{name}" if prefix else str(name)
+        paths.add(path)
+        if not isinstance(child, Mapping):
+            continue
+        if "$ref" in child and node_schema is not None:
+            paths.update(
+                _schema_field_paths(node_schema, prefix=path, node_schema=node_schema)
+            )
+            continue
+        paths.update(_schema_field_paths(child, prefix=path, node_schema=node_schema))
+        items = child.get("items")
+        if isinstance(items, Mapping):
+            item_prefix = f"{path}[]"
+            if "$ref" in items and node_schema is not None:
+                paths.update(
+                    _schema_field_paths(
+                        node_schema, prefix=item_prefix, node_schema=node_schema
+                    )
+                )
+            else:
+                paths.update(
+                    _schema_field_paths(
+                        items, prefix=item_prefix, node_schema=node_schema
+                    )
+                )
+    return paths
+
+
+def _parent_policy_paths(path: str) -> list[str]:
+    parents: list[str] = []
+    current = path
+    while current:
+        if current.endswith("[]"):
+            current = current[:-2]
+        elif "." in current:
+            current = current.rsplit(".", 1)[0]
+        else:
+            break
+        if current:
+            parents.append(current)
+    return parents
+
+
+def classify_policy_field(path: str) -> str:
+    """Return optimizable or immutable. Unclassified paths fail closed."""
+    if path in GRAPH_POLICY_FIELD_CLASSIFICATION:
+        return _validated_policy_class(GRAPH_POLICY_FIELD_CLASSIFICATION[path], path)
+    if path in KERNEL_COMPILER_OPTION_FIELDS:
+        return _validated_policy_class(KERNEL_COMPILER_OPTION_FIELDS[path], path)
+    for parent in _parent_policy_paths(path):
+        if parent in GRAPH_POLICY_FIELD_CLASSIFICATION:
+            parent_class = GRAPH_POLICY_FIELD_CLASSIFICATION[parent]
+            if parent_class == POLICY_CLASS_OPTIMIZABLE:
+                return POLICY_CLASS_OPTIMIZABLE
+            raise KernelCompilationError(
+                f"unclassified kernel-compiler policy field: {path}"
+            )
+    raise KernelCompilationError(f"unclassified kernel-compiler policy field: {path}")
+
+
+def _compiler_option_names() -> tuple[str, ...]:
+    params = inspect.signature(compile_workflow_graph).parameters
+    return tuple(
+        name
+        for name, param in params.items()
+        if name != "document" and param.kind is not inspect.Parameter.VAR_KEYWORD
+    )
+
+
+def _document_field_paths(value: Any, prefix: str = "") -> set[str]:
+    paths: set[str] = set()
+    if isinstance(value, Mapping):
+        for key, child in value.items():
+            path = f"{prefix}.{key}" if prefix else str(key)
+            paths.add(path)
+            paths.update(_document_field_paths(child, path))
+        return paths
+    if isinstance(value, list):
+        item_prefix = f"{prefix}[]"
+        for item in value:
+            if isinstance(item, (Mapping, list)):
+                paths.update(_document_field_paths(item, item_prefix))
+    return paths
+
+
+def assert_document_policy_fields_classified(document: Mapping[str, Any]) -> None:
+    """Fail closed when a live document carries an unclassified policy field."""
+    for path in sorted(_document_field_paths(document)):
+        classify_policy_field(path)
+
+
+@functools.lru_cache(maxsize=1)
+def assert_policy_schema_coverage() -> None:
+    """CI fails when a schema or compiler option ships without classification."""
+    try:
+        workflow_schema = json.loads(WORKFLOW_SCHEMA_PATH.read_text(encoding="utf-8"))
+        node_schema = json.loads(NODE_SCHEMA_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise KernelCompilationError(
+            f"cannot load workflow schemas for policy classification: {exc}"
+        ) from exc
+    schema_paths = _schema_field_paths(workflow_schema, node_schema=node_schema)
+    classified = set(GRAPH_POLICY_FIELD_CLASSIFICATION)
+    missing = sorted(schema_paths - classified)
+    extra = sorted(classified - schema_paths)
+    if missing or extra:
+        details = []
+        if missing:
+            details.append("unclassified=" + ", ".join(missing))
+        if extra:
+            details.append("unknown=" + ", ".join(extra))
+        raise KernelCompilationError(
+            "kernel-compiler policy field classification drift: "
+            + "; ".join(details)
+        )
+    option_names = set(_compiler_option_names())
+    classified_options = set(KERNEL_COMPILER_OPTION_FIELDS)
+    missing_opts = sorted(option_names - classified_options)
+    extra_opts = sorted(classified_options - option_names)
+    if missing_opts or extra_opts:
+        details = []
+        if missing_opts:
+            details.append("unclassified-options=" + ", ".join(missing_opts))
+        if extra_opts:
+            details.append("unknown-options=" + ", ".join(extra_opts))
+        raise KernelCompilationError(
+            "kernel-compiler option classification drift: " + "; ".join(details)
+        )
 
 
 def _classification() -> dict[str, Any]:
@@ -306,6 +525,9 @@ def compile_workflow_graph(
         )
     except WorkflowGraphValidationError as exc:
         raise KernelCompilationError(str(exc)) from exc
+
+    assert_policy_schema_coverage()
+    assert_document_policy_fields_classified(graph)
 
     sanitized_payloads = sanitize_data_payloads(
         data_payloads or {},
