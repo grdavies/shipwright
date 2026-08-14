@@ -433,6 +433,7 @@
     "migration-parity-shadow.py",
     "migration_pytest_parity.py",
     "model-tier-check.py",
+    "model_policy_lib.py",
     "nightly-failure-notify.py",
     "obsidian_interchange.py",
     "orchestrator_guidelines.py",
@@ -670,5 +671,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 667
+  "moduleCount": 668
 }

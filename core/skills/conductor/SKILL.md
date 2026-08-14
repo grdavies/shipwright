@@ -41,6 +41,25 @@ existing `wave_*.py` primitives behind `scripts/wave.py` — never duplicated in
 
 The conductor **invokes** these commands and interprets their JSON — it does not maintain parallel state.
 
+## Graph execution UX (PRD 269 R17)
+
+WorkflowGraph is the sole production execution runtime after cutover. Operator UX stays on **existing
+commands only** — never invent `/sw-graph-*` slash commands or a parallel status surface.
+
+| Need | Existing command | Mechanical delegate |
+| --- | --- | --- |
+| Pre-run plan summary | `/sw-deliver --explain-plan` | `wave_deliver.py explain-plan` |
+| Live execution progress | `/sw-status` (`graph-progress`) | `status_integrity.py graph-progress --run-id <runId>` |
+| Per-node blockers | `/sw-status` (`explain <nodeId>`) | `status_integrity.py explain <nodeId> --run-id <runId>` |
+| Planning unit lifecycle | `planning-graph.py status --unit-id <id>` | Planning graph — **not** execution |
+
+Graph `metadata.runId` maps from the deliver/orchestrator `runId`; receipts and status index under
+`.cursor/sw-graph-runs/<runId>/`. The deterministic safety kernel (`kernel-classification.json`) is not
+duplicated — graph scheduling compiles into the same gate envelope as wave/phase plans. Serial-equivalent
+`resourceLimits.maxConcurrency: 1` and `graphExecution.cache.enabled` are independently tunable (see
+`docs/guides/configuration.md`). Cutover stages (`dogfood` → `limited-scope` → `full-ownership`) never
+drop the human merge gate.
+
 ## Durable artifacts (resumption — R4)
 
 A fresh agent with no prior chat context resumes from:

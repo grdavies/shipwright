@@ -3,25 +3,19 @@ from __future__ import annotations
 
 from typing import Any
 
-TIER_ORDER = ["cheap", "build", "mid", "deep"]
+from model_policy_lib import ModelPolicy, tier_rank
 
 
-def tier_rank(name: str | None) -> int | None:
-    if not name or name not in TIER_ORDER:
-        return None
-    return TIER_ORDER.index(name)
-
-
-def clamp_tier(tier: str, floor: str, ceiling: str) -> str:
-    floor_rank = tier_rank(floor)
-    ceiling_rank = tier_rank(ceiling)
-    tier_value = tier_rank(tier)
+def clamp_tier(tier: str, floor: str, ceiling: str, *, policy: ModelPolicy) -> str:
+    floor_rank = tier_rank(floor, policy)
+    ceiling_rank = tier_rank(ceiling, policy)
+    tier_value = tier_rank(tier, policy)
     if floor_rank is None or ceiling_rank is None or tier_value is None:
         return tier
     if floor_rank > ceiling_rank:
         floor_rank, ceiling_rank = ceiling_rank, floor_rank
     clamped = max(floor_rank, min(ceiling_rank, tier_value))
-    return TIER_ORDER[clamped]
+    return policy.tier_order[clamped]
 
 
 def load_complexity_probe_config(config: dict[str, Any]) -> dict[str, Any]:
@@ -39,6 +33,7 @@ def probe_complexity(
     config: dict[str, Any],
 ) -> dict[str, Any]:
     """Reuse inline-execute signals; disabled keeps static binding as floor and ceiling."""
+    policy = ModelPolicy.from_config(config)
     probe_cfg = load_complexity_probe_config(config)
     enabled = bool(probe_cfg.get("enabled"))
     if not enabled:
@@ -61,7 +56,7 @@ def probe_complexity(
         raw_choice = static_tier
     else:
         raw_choice = band_ceiling
-    chosen = clamp_tier(raw_choice, band_floor, band_ceiling)
+    chosen = clamp_tier(raw_choice, band_floor, band_ceiling, policy=policy)
 
     return {
         "enabled": True,

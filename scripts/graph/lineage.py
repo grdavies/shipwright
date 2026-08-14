@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
-"""Artifact lineage queries and non-destructive edge-reduction advice."""
+"""Artifact lineage queries, edge-reduction advice, and content-addressed cache keys."""
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+import hashlib
+import hmac
+import json
+import os
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
-from graph.artifact_registry import ArtifactRegistry
+from graph.artifact_registry import ArtifactRegistry, receipt_satisfies_cache_hit
+from graph.execution_receipts import ExecutionReceiptJournal
 from graph.typed_dataflow import TypedEdge
 
 
 class LineageError(ValueError):
     """Raised when durable provenance is missing or internally inconsistent."""
+
+
+class CacheKeyError(LineageError):
+    """Raised when a content-addressed cache key cannot be formed."""
 
 
 @dataclass(frozen=True)
@@ -34,6 +44,83 @@ class LineageRecord:
             "inputArtifacts": list(self.input_artifacts),
             "verificationEvidence": list(self.verification_evidence),
         }
+
+
+@dataclass(frozen=True)
+class CacheKeyMaterial:
+    """Inputs that form a stable, runId-independent content-addressed key (R6)."""
+
+    node_definition: Mapping[str, Any]
+    input_hashes: Mapping[str, str]
+    prompt_version: str
+    model_version: str
+    tool_configuration: Mapping[str, Any]
+    policy_version: str
+    credential_capability_set: tuple[str, ...]
+    resolved_scope_identity: str
+    repository_identity: str
+    trust_domain: str
+    tool_binary_identity: str
+    repo_state_identity: str
+
+    def stable_payload(self) -> dict[str, Any]:
+        node = _canonical_mapping(self.node_definition)
+        node.pop("runId", None)
+        return {
+            "credentialCapabilitySet": list(self.credential_capability_set),
+            "inputHashes": _canonical_mapping(self.input_hashes),
+            "modelVersion": self.model_version,
+            "nodeDefinition": node,
+            "policyVersion": self.policy_version,
+            "promptVersion": self.prompt_version,
+            "repoStateIdentity": self.repo_state_identity,
+            "repositoryIdentity": self.repository_identity,
+            "resolvedScopeIdentity": self.resolved_scope_identity,
+            "toolBinaryIdentity": self.tool_binary_identity,
+            "toolConfiguration": _canonical_mapping(self.tool_configuration),
+            "trustDomain": self.trust_domain,
+        }
+
+
+def _canonical_mapping(value: Mapping[str, Any]) -> dict[str, Any]:
+    return json.loads(
+        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    )
+
+
+def _canonical_bytes(value: Any) -> bytes:
+    return json.dumps(
+        value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ).encode("utf-8")
+
+
+def compute_stable_cache_key(material: CacheKeyMaterial) -> str:
+    """Stable SHA-256 over canonical key material; never includes runId (R6)."""
+    return hashlib.sha256(_canonical_bytes(material.stable_payload())).hexdigest()
+
+
+def compute_cache_key(material: CacheKeyMaterial) -> str:
+    """Alias for compute_stable_cache_key."""
+    return compute_stable_cache_key(material)
+
+
+def keyed_mac(payload: bytes, *, mac_key: bytes) -> str:
+    """Keyed MAC used for cache/receipt integrity (R7) — not unkeyed SHA-256 alone."""
+    if not mac_key:
+        raise CacheKeyError("mac_key is required for integrity")
+    return hmac.new(mac_key, payload, hashlib.sha256).hexdigest()
+
+
+def receipt_is_cache_reusable(receipt: Mapping[str, Any]) -> bool:
+    """Failed, retry-only, mutated, or cache-hit receipts are never reused."""
+    if not isinstance(receipt, Mapping):
+        return False
+    return receipt_satisfies_cache_hit(dict(receipt))
+
+
+def receipt_is_reusable(receipt: Mapping[str, Any]) -> bool:
+    """Backward-compatible alias used by earlier phase scaffolding."""
+    return receipt_is_cache_reusable(receipt)
 
 
 def _receipt_models(
@@ -174,3 +261,129 @@ def edge_reduction_advisory(
                 }
             )
     return tuple(advice)
+
+
+@dataclass(frozen=True)
+class CachedArtifactSnapshot:
+    artifact_id: str
+    schema: str
+    content: Any
+    producing_node: str
+    input_revision: str
+    verification_evidence: tuple[str, ...]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "artifactId": self.artifact_id,
+            "schema": self.schema,
+            "content": self.content,
+            "producingNode": self.producing_node,
+            "inputRevision": self.input_revision,
+            "verificationEvidence": list(self.verification_evidence),
+        }
+
+    @classmethod
+    def from_record(cls, record: Any) -> CachedArtifactSnapshot:
+        return cls(
+            artifact_id=record.artifact_id,
+            schema=record.schema,
+            content=record.content,
+            producing_node=record.producing_node,
+            input_revision=record.input_revision,
+            verification_evidence=tuple(record.verification_evidence),
+        )
+
+
+class ContentAddressedLineageCache:
+    """Run-scoped cache-hit receipts backed by stable, content-addressed entries."""
+
+    def __init__(
+        self,
+        root: str | Path,
+        *,
+        registry: ArtifactRegistry,
+        journal: ExecutionReceiptJournal,
+    ) -> None:
+        self.root = Path(root)
+        self.cache_dir = self.root / "stable-cache"
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self._registry = registry
+        self._journal = journal
+
+    def _entry_path(self, stable_key: str) -> Path:
+        return self.cache_dir / f"{stable_key}.json"
+
+    def store_success(
+        self,
+        *,
+        material: CacheKeyMaterial,
+        source_receipt: Mapping[str, Any],
+        artifacts: Sequence[CachedArtifactSnapshot],
+    ) -> str:
+        """Persist a reusable cache entry from a successful, non-retry execution."""
+        if not receipt_is_cache_reusable(source_receipt):
+            raise LineageError("source receipt is not cache-reusable")
+        stable_key = compute_stable_cache_key(material)
+        entry = {
+            "stableCacheKey": stable_key,
+            "sourceReceipt": _canonical_mapping(source_receipt),
+            "artifacts": [artifact.as_dict() for artifact in artifacts],
+        }
+        encoded = (
+            json.dumps(entry, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            + "\n"
+        ).encode("utf-8")
+        path = self._entry_path(stable_key)
+        with path.open("xb") as handle:
+            handle.write(encoded)
+            handle.flush()
+            os.fsync(handle.fileno())
+        return stable_key
+
+    def _restore_artifacts(self, artifacts: Sequence[Mapping[str, Any]]) -> None:
+        for artifact in artifacts:
+            artifact_id = str(artifact["artifactId"])
+            if artifact_id in self._registry.list_ids():
+                continue
+            self._registry.register(
+                artifact_id=artifact_id,
+                content=artifact["content"],
+                schema=str(artifact["schema"]),
+                producing_node=str(artifact["producingNode"]),
+                input_revision=str(artifact["inputRevision"]),
+                verification_evidence=list(artifact.get("verificationEvidence") or ()),
+            )
+
+    def try_cache_hit(
+        self,
+        *,
+        run_id: str,
+        node_id: str,
+        material: CacheKeyMaterial,
+        receipt_payload: Mapping[str, Any],
+    ) -> dict[str, Any] | None:
+        """Write a run-scoped receipt with cacheHit=true when stable reuse applies."""
+        stable_key = compute_stable_cache_key(material)
+        path = self._entry_path(stable_key)
+        if not path.is_file():
+            return None
+        entry = json.loads(path.read_text(encoding="utf-8"))
+        source_receipt = entry.get("sourceReceipt")
+        if not isinstance(source_receipt, Mapping) or not receipt_is_cache_reusable(
+            source_receipt
+        ):
+            return None
+        artifacts = entry.get("artifacts")
+        if not isinstance(artifacts, list):
+            raise LineageError(f"cache entry {stable_key} has invalid artifacts")
+        self._restore_artifacts(artifacts)
+        hit_payload = {
+            **dict(receipt_payload),
+            "cacheHit": True,
+            "stableCacheKey": stable_key,
+            "restoredArtifacts": [
+                str(artifact["artifactId"]) for artifact in artifacts
+            ],
+        }
+        idempotency_key = f"{run_id}:{stable_key}:{node_id}"
+        return self._journal.record(node_id, idempotency_key, hit_payload)

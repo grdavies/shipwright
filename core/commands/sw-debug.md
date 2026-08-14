@@ -152,3 +152,11 @@ results) must pass `python3 scripts/sw_bootstrap.py memory-redact.py` and be fen
 - Every ingestion edge through `python3 scripts/sw_bootstrap.py memory-redact.py` (R41).
 - RCA hard stops: max 5 iterations, no-progress, rule-of-three, human-decision (R29).
 - Rejected hypotheses invalidated explicitly — no variant-retry spiral.
+
+## Graph compilation (PRD 269 R3/R17)
+
+Debug orchestrator intent compiles to a **WorkflowGraph** (`debug_plan_to_workflow_graph` /
+`orchestrator_plan_to_workflow_graph(..., orchestrator_type="debug")`) and runs on
+**GraphScheduler**. The user-facing command name remains `/sw-debug` — graph execution does not
+introduce `/sw-graph-debug` or rename this entrypoint. Live progress and node explain stay on
+`/sw-status` under the generic graph `runId`.

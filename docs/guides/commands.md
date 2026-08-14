@@ -71,6 +71,36 @@ terminal merge on drift.
 See [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) and
 [`core/skills/deliver/SKILL.md`](../../core/skills/deliver/SKILL.md).
 
+### Graph execution runtime
+
+After cutover, **WorkflowGraph** (`scripts/graph/`) is the **sole production execution runtime** for
+`/sw-deliver`, `/sw-doc`, `/sw-debug`, and `/sw-feedback`. Phase/wave plans and episodic orchestrator
+intents compile onto the same IR; operator UX stays on existing `sw-` commands — **no**
+`/sw-graph-*` slash commands.
+
+| Operator need | Where | Notes |
+| --- | --- | --- |
+| Plan summary / critical path | `/sw-deliver` `--explain-plan` | Read-only; refuses `--write` / `--persist` |
+| Live node progress | `/sw-status` (`graph-progress`) | States: completed, cached/skipped, failed, retrying, running, dependency-blocked, pool-queued, awaiting-human-gate |
+| Per-node blockers | `/sw-status` (`explain <nodeId>`) | Actionable-first hierarchy + canonical `nextAction` |
+| Planning unit lifecycle | `planning-graph.py status --unit-id <id>` | Planning graph only — not WorkflowGraph execution |
+| Cutover stage | `scripts/graph/cutover.py` | `dogfood` → `limited-scope` → `full-ownership`; never drops the human merge gate |
+| Serial-equivalent lane | `resourceLimits.maxConcurrency: 1` | Tested mitigation; cache remains independently disableable |
+
+Mechanical entrypoints (same surfaces `/sw-status` delegates to):
+
+```bash
+python3 scripts/wave_deliver.py <repo> explain-plan [--task-list <path>|--plan <path>|--graph-json <path>] [--compact] [--text]
+python3 scripts/status_integrity.py graph-progress --run-id <runId> [--format json|text] [--compact]
+python3 scripts/status_integrity.py explain <nodeId> --run-id <runId> [--format json|text] [--compact]
+python3 scripts/planning-graph.py status --unit-id <unit-id>   # planning graph — not execution
+```
+
+Receipts, in-flight intents, and status/explain index by the generic graph `runId` (mapped from the
+deliver/orchestrator `runId`). Domain vocabulary:
+[`graph-domain-terminology.md`](graph-domain-terminology.md). Command detail:
+[`sw-deliver.md`](../../core/commands/sw-deliver.md), [`sw-status.md`](../../core/commands/sw-status.md).
+
 ### Deliver operator surface
 <!-- currency: planning-cache deliver path-anchor — statePath emission uses repo-anchor relative paths on macOS -->
 
@@ -373,7 +403,7 @@ in-process attempt.
 | `/sw-worktree` | Isolate work in a git worktree (manual path) |
 | `/sw-start` | Start a phase branch (manual path) |
 | `/sw-execute` | Implement one task slice (manual path) |
-| `/sw-status` | Reconcile PRD status from git facts |
+| `/sw-status` | Reconcile PRD status; live WorkflowGraph progress + node explain |
 | `/sw-memory-sync` | Distill session into durable memory |
 | `/sw-memory-audit` | Audit memory hygiene (read-only) |
 | `/sw-note` | Capture idea/task/note outside the planning store; graduate to gap or brainstorm on confirm |

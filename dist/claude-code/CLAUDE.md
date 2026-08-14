@@ -155,10 +155,19 @@ ambiguity is likely.
 
 ## Model tier floor (R9)
 
-Semantic tiers (`cheap`/`build`/`deep`) live in `workflow.config.json` `models.tiers` only — not in agent
-`model:` frontmatter. Reviewer agents use `model: inherit` or a concrete platform ID. Validated by
-`scripts/model-tier-check.py` (config + concrete models); runtime R9 for `inherit` reviewers is enforced at
-dispatch by `/sw-doc-review` and `rules/sw-subagent-dispatch.mdc`. See `.sw/models-tiering.md`.
+Semantic tiers (`cheap`/`build`/`mid`/`deep`) live in `workflow.config.json` `models.tiers` only — not in agent
+`model:` frontmatter. Tier order is derived solely via shared `ModelPolicy` (`scripts/model_policy_lib.py`);
+missing `mid` has a single `dispatch-check.py` preflight advisory. Reviewer agents use `model: inherit` or a
+concrete platform ID. Validated by `scripts/model-tier-check.py` (config + concrete models); runtime R9 for
+`inherit` reviewers is enforced at dispatch by `/sw-doc-review` and `rules/sw-subagent-dispatch.mdc`. See
+`.sw/models-tiering.md`.
+
+## Graph execution command surface (PRD 269 R17)
+
+WorkflowGraph is the sole production execution runtime after cutover. Operator UX extends **existing**
+`sw-*` commands only — **no** `/sw-graph-*` slash commands, agents, or skills. Live execution progress and
+per-node explain live on `/sw-status`; plan summary on `/sw-deliver --explain-plan`. Planning-unit status
+remains `planning-graph.py status` — distinct from execution graph progress.
 
 ## Planning full-conductor boundary (PRD 035 R9)
 

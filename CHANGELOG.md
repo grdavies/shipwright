@@ -845,6 +845,20 @@
 * merge phase testing into feat/tasks-095 (31e28bf) <!-- sw-deliver:testing -->
 * merge phase docs-and-polish into feat/tasks-095 (744497e) <!-- sw-deliver:docs-and-polish -->
 * merge phase debug-fix-fix-release-please-pr-780-ci-regen-dist-1-0-0-only-assert-dist-regen into feat/release-780-regen-dist-major (5ffc279) <!-- sw-deliver:debug-fix-fix-release-please-pr-780-ci-regen-dist-1-0-0-only-assert-dist-regen -->
+* merge phase owner-token-leases-for-concurrent-dispatch-r5 into feat/graph-execution-engine (9253f7b) <!-- sw-deliver:owner-token-leases-for-concurrent-dispatch-r5 -->
+* merge phase ready-set-scheduler-fan-in-settle-before-fire-and-pool-liveness-r1-r2 into feat/graph-execution-engine (e8adbab) <!-- sw-deliver:ready-set-scheduler-fan-in-settle-before-fire-and-pool-liveness-r1-r2 -->
+* merge phase write-path-contention-as-a-dispatch-gate-r14 into feat/graph-execution-engine (f9a25b5) <!-- sw-deliver:write-path-contention-as-a-dispatch-gate-r14 -->
+* merge phase purity-cache-key-lineage-and-trust-r6-r7-r15 into feat/graph-execution-engine (481e408) <!-- sw-deliver:purity-cache-key-lineage-and-trust-r6-r7-r15 -->
+* merge phase cancel-compensation-and-durable-in-flight-journal-r13-r16 into feat/graph-execution-engine (06cf7d4) <!-- sw-deliver:cancel-compensation-and-durable-in-flight-journal-r13-r16 -->
+* merge phase single-modelpolicy-including-mid-and-escalation-floors-r8-r9 into feat/graph-execution-engine (e6ace92) <!-- sw-deliver:single-modelpolicy-including-mid-and-escalation-floors-r8-r9 -->
+* merge phase graph-status-explain-and-estimated-critical-path-r10-r11-r12 into feat/graph-execution-engine (2833a73) <!-- sw-deliver:graph-status-explain-and-estimated-critical-path-r10-r11-r12 -->
+* merge phase graph-status-explain-and-estimated-critical-path-r10-r11-r12 into feat/graph-execution-engine (66e3569) <!-- sw-deliver:graph-status-explain-and-estimated-critical-path-r10-r11-r12 -->
+* merge phase orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 into feat/graph-execution-engine (b7419fa) <!-- sw-deliver:orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 -->
+* merge phase orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 into feat/graph-execution-engine (38d560b) <!-- sw-deliver:orchestrator-compilation-onto-workflowgraph-with-generic-runid-r3 -->
+* merge phase cutover-evidence-serial-equivalent-mode-and-full-ownership-gate-r4 into feat/graph-execution-engine (7234cb8) <!-- sw-deliver:cutover-evidence-serial-equivalent-mode-and-full-ownership-gate-r4 -->
+* merge phase operator-command-documentation-r17 into feat/graph-execution-engine (b6f865f) <!-- sw-deliver:operator-command-documentation-r17 -->
+* merge phase guide-and-layout-documentation-r17 into feat/graph-execution-engine (97c980c) <!-- sw-deliver:guide-and-layout-documentation-r17 -->
+* merge phase configuration-schema-skills-and-rules-documentation-r17 into feat/graph-execution-engine (1df7979) <!-- sw-deliver:configuration-schema-skills-and-rules-documentation-r17 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

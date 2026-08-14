@@ -28,6 +28,9 @@
         "step": {
           "type": "string",
           "minLength": 1
+        },
+        "data": {
+          "type": "object"
         }
       }
     },
@@ -104,6 +107,46 @@
             "judgment",
             "synthesis"
           ]
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "purity": {
+          "enum": [
+            "read-only",
+            "mutating"
+          ]
+        },
+        "cache": {
+          "enum": [
+            "content-addressed",
+            "disabled"
+          ]
+        },
+        "templateDigest": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "trust": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "trustDomain": {
+              "type": "string",
+              "minLength": 1
+            },
+            "repositoryIdentity": {
+              "type": "string",
+              "minLength": 1
+            },
+            "toolBinaryIdentity": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         }
       }
     }

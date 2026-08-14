@@ -7,8 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from check_gate_lib import cfg_value, load_workflow_config
-
-TIER_ORDER = ["cheap", "build", "mid", "deep"]
+from model_policy_lib import ModelPolicy
 
 DEFAULT_SAME_STAGE_CONFIG: dict[str, Any] = {
     "enabled": True,
@@ -41,17 +40,14 @@ def load_same_stage_config(root: Path) -> SameStageConfig:
     )
 
 
-def tier_rank(name: str | None) -> int | None:
-    if not name or name not in TIER_ORDER:
-        return None
-    return TIER_ORDER.index(name)
+def load_model_policy(root: Path) -> ModelPolicy:
+    workflow = load_workflow_config(root)
+    return ModelPolicy.from_config(workflow)
 
 
-def escalate_tier(current_tier: str) -> str | None:
-    rank = tier_rank(current_tier)
-    if rank is None or rank >= len(TIER_ORDER) - 1:
-        return None
-    return TIER_ORDER[rank + 1]
+def escalate_tier(current_tier: str, *, policy: ModelPolicy | None = None, root: Path | None = None) -> str | None:
+    tier_policy = policy or (load_model_policy(root) if root is not None else ModelPolicy.from_tiers({}))
+    return tier_policy.escalate_one_step(current_tier)
 
 
 def resolve_persona_tier(config: dict[str, Any], persona: str) -> str | None:
@@ -81,7 +77,8 @@ def resolve_escalation(
             "persona": None,
         }
 
-    next_tier = escalate_tier(current_tier)
+    policy = load_model_policy(root)
+    next_tier = escalate_tier(current_tier, policy=policy)
     if next_tier:
         return {
             "escalated": True,

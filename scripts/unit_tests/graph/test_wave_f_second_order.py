@@ -206,10 +206,23 @@ def test_observability_commands_are_receipts_backed_and_read_only() -> None:
     ]
     assert observability.command("critical-path") == {
         "runId": "completed",
+        "omitted": False,
+        "estimated": False,
+        "provenance": ["receipt"],
         "durationMs": 10,
         "nodes": [
-            {"nodeId": "collect", "cumulativeDurationMs": 7},
-            {"nodeId": "verify", "cumulativeDurationMs": 10},
+            {
+                "nodeId": "collect",
+                "cumulativeDurationMs": 7,
+                "durationMs": 7,
+                "provenance": "receipt",
+            },
+            {
+                "nodeId": "verify",
+                "cumulativeDurationMs": 10,
+                "durationMs": 3,
+                "provenance": "receipt",
+            },
         ],
     }
     with pytest.raises(ObservabilityError, match="gated"):

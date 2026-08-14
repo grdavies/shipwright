@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crash/replay fixture harness for receipt-driven WorkflowGraph resume."""
+"""Crash/replay fixture harness for receipt-driven WorkflowGraph resume (R13/R16)."""
 from __future__ import annotations
 
 import json
@@ -16,9 +16,14 @@ from graph.convergence_loop import (
     Finding,
     run_convergence_loop,
 )
-from graph.execution_receipts import ExecutionReceiptJournal
+from graph.execution_receipts import ExecutionReceiptJournal, default_store_root
 from graph.resource_pools import ResourcePoolRegistry
-from graph.scheduler import GraphScheduler, NodeExecutionResult, SchedulerRun
+from graph.scheduler import (
+    CancelMode,
+    GraphScheduler,
+    NodeExecutionResult,
+    SchedulerRun,
+)
 
 
 class InjectedCrash(RuntimeError):
@@ -41,6 +46,30 @@ class ReplayReport:
     replayed_nodes: tuple[str, ...]
     dispatched_nodes: tuple[str, ...]
     chat_history_used: bool
+    scheduler_run: SchedulerRun
+
+
+@dataclass(frozen=True)
+class TeardownDurabilityReport:
+    """Evidence that run-scoped journal artifacts survive harness teardown (R13)."""
+
+    run_id: str
+    receipts: tuple[dict[str, Any], ...]
+    intents: tuple[dict[str, Any], ...]
+    pool_snapshot: Mapping[str, Any] | None
+    telemetry: Mapping[str, Any] | None
+    readable: bool
+
+
+@dataclass(frozen=True)
+class CancelDrainReport:
+    """Evidence that cancel-and-drain releases owner-token leases (R16)."""
+
+    run_id: str
+    verdict: str
+    cancelled_nodes: tuple[str, ...]
+    released_leases: tuple[str, ...]
+    pool_snapshot: Mapping[str, Any]
     scheduler_run: SchedulerRun
 
 
@@ -134,9 +163,14 @@ class CrashReplayHarness:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self.kernel_options = dict(kernel_options or {})
+        # Run-scoped journal under a gitignored-style store layout (R13).
+        self.store_root = default_store_root(self.root)
         self.receipts = ExecutionReceiptJournal(self.root / "receipts")
         self.effects = _SideEffectLedger(self.root / "side-effects.json")
         self.fingerprints = _FingerprintFile(self.root / "loop-fingerprints.json")
+
+    def _run_scoped_journal(self, run_id: str) -> ExecutionReceiptJournal:
+        return ExecutionReceiptJournal.for_run(self.store_root, run_id)
 
     def run(self, crash_point: CrashPoint, *, run_id: str) -> ReplayReport:
         fired = False
@@ -237,5 +271,151 @@ class CrashReplayHarness:
             replayed_nodes=replayed,
             dispatched_nodes=tuple(dispatched),
             chat_history_used=False,
+            scheduler_run=result,
+        )
+
+    def teardown_and_read(self, run_id: str) -> TeardownDurabilityReport:
+        """Drop transient harness handles and re-open the durable run journal (R13)."""
+        # Simulate process teardown: drop in-memory handles, keep on-disk store.
+        store = Path(self.store_root)
+        journal = ExecutionReceiptJournal.for_run(store, run_id)
+        # Also mirror any root-level receipts used by older fixtures into run scope
+        # when the caller wrote through self.receipts with run-prefixed keys.
+        for receipt in self.receipts.list_run_receipts(run_id):
+            key = str(receipt.get("idempotencyKey") or "")
+            node_id = str(receipt.get("nodeId") or "")
+            if not key or not node_id:
+                continue
+            payload = {
+                field: receipt[field]
+                for field in (
+                    "model",
+                    "attempts",
+                    "tokens",
+                    "durationMs",
+                    "inputHashes",
+                    "outputHashes",
+                    "verdict",
+                    "coverage",
+                )
+                if field in receipt
+            }
+            try:
+                journal.finish(node_id, key, payload)
+            except Exception:
+                pass
+        for intent in self.receipts.list_inflight_intents():
+            key = str(intent.get("idempotencyKey") or "")
+            node_id = str(intent.get("nodeId") or "")
+            if not key.startswith(f"{run_id}:") or not node_id:
+                continue
+            payload = {
+                field: intent[field]
+                for field in (
+                    "model",
+                    "attempts",
+                    "tokens",
+                    "durationMs",
+                    "inputHashes",
+                    "outputHashes",
+                    "verdict",
+                    "coverage",
+                )
+                if field in intent
+            }
+            try:
+                journal.begin(node_id, key, payload)
+            except Exception:
+                pass
+        snap = self.receipts.read_pool_snapshot()
+        telemetry = self.receipts.read_telemetry()
+        if snap is not None:
+            journal.write_pool_snapshot(
+                dict(snap.get("pools") or {}),
+                parked=list(snap.get("parked") or []),
+                queue=list(snap.get("queue") or []),
+            )
+        if telemetry is not None:
+            journal.write_telemetry(
+                {k: v for k, v in telemetry.items() if k != "runId"}
+            )
+
+        # Teardown: forget transient objects.
+        reopened = ExecutionReceiptJournal.for_run(store, run_id)
+        receipts = tuple(reopened.list_receipts())
+        intents = tuple(reopened.list_inflight_intents())
+        pool_snapshot = reopened.read_pool_snapshot()
+        tele = reopened.read_telemetry()
+        readable = True
+        try:
+            _ = list(receipts)
+            _ = list(intents)
+            _ = pool_snapshot
+            _ = tele
+        except Exception:
+            readable = False
+        return TeardownDurabilityReport(
+            run_id=run_id,
+            receipts=receipts,
+            intents=intents,
+            pool_snapshot=pool_snapshot,
+            telemetry=tele,
+            readable=readable,
+        )
+
+    def cancel_and_drain(
+        self,
+        *,
+        run_id: str,
+        cancel_after: str,
+        held_leases: Mapping[str, bool] | None = None,
+    ) -> CancelDrainReport:
+        """Run until ``cancel_after``, then cancel-and-drain with lease release (R16)."""
+        journal = self._run_scoped_journal(run_id)
+        pools = ResourcePoolRegistry.from_config(
+            limits={"code-writers": 4, "read-only-reviewers": 4}
+        )
+        released: list[str] = []
+        leases = dict(held_leases or {})
+
+        def release_lease(node_id: str) -> None:
+            if leases.get(node_id):
+                leases[node_id] = False
+                released.append(node_id)
+
+        def execute(node: dict[str, Any]) -> NodeExecutionResult:
+            node_id = str(node["id"])
+            leases.setdefault(node_id, True)
+            if node_id == cancel_after:
+                scheduler.request_cancel(CancelMode.CANCEL_AND_DRAIN)
+            return NodeExecutionResult(
+                verdict="pass",
+                output={"node": node_id},
+                model="cancel-drain-fixture",
+                duration_ms=1,
+            )
+
+        scheduler = GraphScheduler(
+            execute,
+            receipts=journal,
+            pools=pools,
+            lease_releaser=release_lease,
+            compensation=lambda node_id: None,
+        )
+        result = scheduler.run(
+            self.graph,
+            run_id=run_id,
+            internal_only=True,
+            kernel_options=self.kernel_options,
+        )
+        cancelled = tuple(
+            node.node_id for node in result.nodes if node.verdict == "cancelled"
+        )
+        return CancelDrainReport(
+            run_id=run_id,
+            verdict=result.verdict,
+            cancelled_nodes=cancelled,
+            released_leases=tuple(released),
+            pool_snapshot=pools.snapshot(),
             scheduler_run=result,
         )

@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
-"""Durable, hash-verifying registry for WorkflowGraph artifacts."""
+"""Durable, hash-and-MAC-verifying registry for WorkflowGraph artifacts."""
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import os
 import re
 import shutil
 import tempfile
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 _SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+DEFAULT_MAC_KEY = b"shipwright-graph-artifact-mac-v1"
+DEFAULT_RECEIPT_MAC_KEY = b"shipwright-graph-receipt-mac-v1"
 
 
 class ArtifactRegistryError(RuntimeError):
@@ -20,7 +24,11 @@ class ArtifactRegistryError(RuntimeError):
 
 
 class ArtifactIntegrityError(ArtifactRegistryError):
-    """Raised when persisted artifact content no longer matches its hash."""
+    """Raised when persisted artifact content no longer matches its hash/MAC."""
+
+
+class PurityViolationError(ArtifactRegistryError):
+    """Raised when a declared read-only node attempts to write (R15)."""
 
 
 @dataclass(frozen=True)
@@ -30,6 +38,7 @@ class ArtifactRecord:
     artifact_id: str
     schema: str
     content_hash: str
+    content_mac: str
     producing_node: str
     input_revision: str
     verification_evidence: tuple[str, ...]
@@ -40,6 +49,7 @@ class ArtifactRecord:
             "artifactId": self.artifact_id,
             "schema": self.schema,
             "contentHash": self.content_hash,
+            "contentMac": self.content_mac,
             "producingNode": self.producing_node,
             "inputRevision": self.input_revision,
             "verificationEvidence": list(self.verification_evidence),
@@ -62,6 +72,53 @@ def _canonical_content(content: Any) -> bytes:
     return encoded.encode("utf-8")
 
 
+def _content_mac(content_bytes: bytes, *, mac_key: bytes) -> str:
+    return hmac.new(mac_key, content_bytes, hashlib.sha256).hexdigest()
+
+
+def receipt_satisfies_cache_hit(receipt: dict[str, Any]) -> bool:
+    """Return True only when a receipt may authorize a content-addressed cache hit."""
+    if receipt.get("verdict") != "pass":
+        return False
+    if receipt.get("retryOnly"):
+        return False
+    if receipt.get("receiptMutated"):
+        return False
+    if receipt.get("cacheHit"):
+        return False
+    if receipt.get("state") not in (None, "complete"):
+        return False
+    stored_hash = receipt.get("receiptHash")
+    if not isinstance(stored_hash, str):
+        return False
+    source = {
+        key: value
+        for key, value in receipt.items()
+        if key not in {"receiptHash", "receiptMac"}
+    }
+    canonical = (
+        json.dumps(source, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        + "\n"
+    ).encode("utf-8")
+    if stored_hash != hashlib.sha256(canonical).hexdigest():
+        return False
+    stored_mac = receipt.get("receiptMac")
+    if stored_mac is not None:
+        expected_mac = hmac.new(
+            DEFAULT_RECEIPT_MAC_KEY,
+            canonical,
+            hashlib.sha256,
+        ).hexdigest()
+        if stored_mac != expected_mac:
+            return False
+    return True
+
+
+def receipt_is_reusable(receipt: Mapping[str, Any]) -> bool:
+    """Backward-compatible alias for cache reuse checks."""
+    return receipt_satisfies_cache_hit(dict(receipt))
+
+
 def _write_durable(path: Path, payload: bytes) -> None:
     with path.open("xb") as handle:
         handle.write(payload)
@@ -72,9 +129,10 @@ def _write_durable(path: Path, payload: bytes) -> None:
 class ArtifactRegistry:
     """Directory-backed registry using one atomic bundle per artifact."""
 
-    def __init__(self, root: str | Path) -> None:
+    def __init__(self, root: str | Path, *, mac_key: bytes | None = None) -> None:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
+        self._mac_key = mac_key if mac_key is not None else DEFAULT_MAC_KEY
 
     def _artifact_dir(self, artifact_id: str) -> Path:
         return self.root / _validate_id(artifact_id)
@@ -94,17 +152,27 @@ class ArtifactRegistry:
         producing_node: str,
         input_revision: str,
         verification_evidence: list[str] | tuple[str, ...],
+        purity: str | None = None,
     ) -> ArtifactRecord:
-        """Atomically create an artifact bundle; existing ids are immutable."""
+        """Atomically create an artifact bundle; existing ids are immutable.
+
+        Declared read-only producers fail closed and must not register writes (R15).
+        """
+        if purity == "read-only":
+            raise PurityViolationError(
+                f"read-only node {producing_node} cannot register artifact writes"
+            )
         artifact_dir = self._artifact_dir(artifact_id)
         if artifact_dir.exists():
             raise FileExistsError(f"artifact already exists: {artifact_id}")
         content_bytes = _canonical_content(content)
         content_hash = hashlib.sha256(content_bytes).hexdigest()
+        content_mac = _content_mac(content_bytes, mac_key=self._mac_key)
         record = ArtifactRecord(
             artifact_id=artifact_id,
             schema=schema,
             content_hash=content_hash,
+            content_mac=content_mac,
             producing_node=producing_node,
             input_revision=input_revision,
             verification_evidence=tuple(verification_evidence),
@@ -133,7 +201,7 @@ class ArtifactRegistry:
         return record
 
     def read(self, artifact_id: str) -> ArtifactRecord:
-        """Read an artifact only after verifying its persisted content hash."""
+        """Read an artifact only after verifying hash and keyed MAC (R7)."""
         metadata_path = self.metadata_path(artifact_id)
         content_path = self.content_path(artifact_id)
         if not metadata_path.is_file() or not content_path.is_file():
@@ -153,6 +221,13 @@ class ArtifactRegistry:
                 f"artifact {artifact_id} hash mismatch: "
                 f"expected {expected_hash}, got {actual_hash}"
             )
+        expected_mac = metadata.get("contentMac")
+        actual_mac = _content_mac(content_bytes, mac_key=self._mac_key)
+        if not expected_mac or actual_mac != expected_mac:
+            raise ArtifactIntegrityError(
+                f"artifact {artifact_id} MAC mismatch: "
+                f"expected {expected_mac}, got {actual_mac}"
+            )
         if metadata.get("artifactId") != artifact_id:
             raise ArtifactIntegrityError(
                 f"artifact {artifact_id} metadata identity mismatch"
@@ -161,10 +236,23 @@ class ArtifactRegistry:
             artifact_id=artifact_id,
             schema=str(metadata["schema"]),
             content_hash=actual_hash,
+            content_mac=actual_mac,
             producing_node=str(metadata["producingNode"]),
             input_revision=str(metadata["inputRevision"]),
             verification_evidence=tuple(metadata["verificationEvidence"]),
             content=content,
+        )
+
+    def restore_copy(self, artifact_id: str, dest_id: str) -> ArtifactRecord:
+        """Restore a verified artifact under a new id (cache-hit materialization)."""
+        source = self.read(artifact_id)
+        return self.register(
+            artifact_id=dest_id,
+            content=source.content,
+            schema=source.schema,
+            producing_node=source.producing_node,
+            input_revision=source.input_revision,
+            verification_evidence=source.verification_evidence,
         )
 
     def list_ids(self) -> list[str]:

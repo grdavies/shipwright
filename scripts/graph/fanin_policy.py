@@ -138,14 +138,22 @@ def evaluate_fanin(
             )
         return _result("pass", False, "all predecessors settled successfully")
 
-    # quorum / minimum-coverage
+    # quorum / minimum-coverage — settle-before-fire (PRD 269 R2): never admit
+    # while any declared predecessor remains unsettled.
+    if unsettled:
+        return _result(
+            "fail",
+            True,
+            f"unsettled predecessors under {policy.mode.value} settle-before-fire",
+        )
+
     need = int(policy.minimum_successful or 0)
     if len(successful) >= need and not missing_required:
-        if failed or unsettled:
+        if failed:
             return _result(
                 "degraded",
                 False,
-                f"quorum met ({len(successful)}>={need}) with visible failures/unsettled",
+                f"quorum met ({len(successful)}>={need}) with visible failures",
             )
         return _result("pass", False, f"quorum met ({len(successful)}>={need})")
 

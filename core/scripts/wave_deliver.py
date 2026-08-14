@@ -1857,6 +1857,140 @@ def cmd_integration(root: Path, args: list[str]) -> None:
     )
 
 
+def _graph_from_plan_document(plan: dict[str, Any]) -> dict[str, Any]:
+    """Compile a deliver plan document into WorkflowGraph IR (read-only)."""
+    from graph.legacy_adapters import compile_legacy_plan
+
+    if plan.get("kind") == "WorkflowGraph" or plan.get("apiVersion") == "shipwright.dev/v1alpha1":
+        return plan
+    if isinstance(plan.get("graph"), dict):
+        return plan["graph"]
+    phases = plan.get("items") or plan.get("phases")
+    if isinstance(phases, list):
+        payload = {
+            "phases": [
+                {
+                    "id": item.get("id", index),
+                    "slug": item.get("slug") or item.get("name") or item.get("id"),
+                    "name": item.get("title") or item.get("slug") or item.get("id"),
+                }
+                for index, item in enumerate(phases)
+                if isinstance(item, dict)
+            ],
+            "maxConcurrency": (
+                (plan.get("contention") or {}).get("maxConcurrency")
+                or plan.get("maxConcurrency")
+                or 1
+            ),
+            "maxDurationSeconds": plan.get("maxDurationSeconds", 86400),
+            "safety": plan.get("safety")
+            or {"humanMergeGate": True, "lockOwner": "explain-plan", "resumeCursor": "explain"},
+        }
+        return compile_legacy_plan(payload, plan_type="delivery").graph
+    if isinstance(plan.get("steps"), list):
+        return compile_legacy_plan(plan, plan_type="ship").graph
+    fail("explain-plan: plan has no phases/items/steps/graph")
+
+
+def _load_estimates_from_corpus(
+    root: Path, node_ids: list[str]
+) -> dict[str, int]:
+    """Historical per-node duration percentiles from the durable receipt corpus."""
+    from graph.execution_receipts import ExecutionReceiptJournal, default_store_root
+
+    store = default_store_root(root)
+    if not store.is_dir():
+        return {}
+    durations: dict[str, list[int]] = {node_id: [] for node_id in node_ids}
+    try:
+        journal = ExecutionReceiptJournal(store)
+        for receipt in journal.list_receipts():
+            node_id = str(receipt.get("nodeId") or "")
+            if node_id not in durations:
+                continue
+            if receipt.get("state") != "complete":
+                continue
+            durations[node_id].append(int(receipt.get("durationMs") or 0))
+    except OSError:
+        return {}
+    estimates: dict[str, int] = {}
+    for node_id, samples in durations.items():
+        if not samples:
+            continue
+        samples.sort()
+        # p50 historical duration
+        estimates[node_id] = samples[len(samples) // 2]
+    return estimates
+
+
+def cmd_explain_plan(root: Path, args: list[str]) -> None:
+    """Read-only graph plan explanation (PRD 269 R10/R12). Does not mutate run state."""
+    from graph.observability import GraphObservability, render_graph_text
+
+    # Refuse accidental mutation flags; this surface is intentionally read-only.
+    if has_flag(args, "--write") or has_flag(args, "--persist"):
+        fail("explain-plan is read-only; refuse --write/--persist")
+
+    graph_json = parse_kv(args, "--graph-json")
+    plan_path_arg = parse_kv(args, "--plan")
+    task_list = resolve_task_list_arg(root, args)
+    compact = has_flag(args, "--compact")
+    text_only = has_flag(args, "--text")
+
+    plan: dict[str, Any] | None = None
+    if graph_json:
+        graph = json.loads(Path(graph_json).read_text(encoding="utf-8"))
+    else:
+        if plan_path_arg:
+            plan_path = Path(plan_path_arg)
+            if not plan_path.is_absolute():
+                plan_path = root / plan_path
+        elif task_list:
+            # Build a transient plan from the task list without writing PLAN_PATH.
+            task_path = resolve_task_list_path(root, task_list)
+            content = task_path.read_text(encoding="utf-8")
+            phases = parse_phases(content)
+            plan = {
+                "items": [
+                    {
+                        "id": phase["id"],
+                        "slug": phase["slug"],
+                        "title": phase.get("title") or phase["slug"],
+                    }
+                    for phase in phases
+                ],
+                "maxConcurrency": 1,
+                "safety": {
+                    "humanMergeGate": True,
+                    "lockOwner": "explain-plan",
+                    "resumeCursor": "explain",
+                },
+            }
+            plan_path = None
+        else:
+            plan_path = root / ".cursor" / PLAN_PATH_NAME
+        if plan is None:
+            if plan_path is None or not plan_path.is_file():
+                fail(
+                    "explain-plan requires --graph-json, --plan, --task-list, "
+                    "or an existing deliver plan"
+                )
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        graph = _graph_from_plan_document(plan)
+
+    node_ids = [str(node["id"]) for node in graph.get("spec", {}).get("nodes", [])]
+    estimates = _load_estimates_from_corpus(root, node_ids)
+    # Merge declared duration hints already handled inside GraphObservability.
+    obs = GraphObservability(graph, receipts=[], estimated_durations=estimates)
+    payload = obs.explain_plan()
+    if text_only:
+        print(render_graph_text(payload, compact=compact, mode="plan"))
+        sys.exit(0)
+    if compact:
+        payload["text"] = render_graph_text(payload, compact=True, mode="plan")
+    emit(payload, 0)
+
+
 def main() -> None:
     if len(sys.argv) < 3:
         fail("usage: wave_deliver.py <root> <command> [args...]")
@@ -1864,10 +1998,26 @@ def main() -> None:
     cmd = sys.argv[2]
     args = sys.argv[3:]
 
+    # `/sw-deliver --explain-plan ...` — flag form before the subcommand.
+    if cmd == "--explain-plan":
+        cmd_explain_plan(root, args)
+        return
+
     if cmd == "run":
+        if has_flag(args, "--explain-plan"):
+            # Prefer explain over mutation when both are present.
+            filtered = [item for item in args if item != "--explain-plan"]
+            cmd_explain_plan(root, filtered)
+            return
         cmd_run(root, args)
     elif cmd == "plan":
+        if has_flag(args, "--explain-plan"):
+            filtered = [item for item in args if item != "--explain-plan"]
+            cmd_explain_plan(root, filtered)
+            return
         cmd_plan(root, args)
+    elif cmd == "explain-plan":
+        cmd_explain_plan(root, args)
     elif cmd == "preflight":
         cmd_preflight(root, args)
     elif cmd == "schedule":

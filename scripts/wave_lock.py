@@ -314,6 +314,39 @@ def ship_lease_owner_live(meta: dict[str, Any]) -> bool:
     return False
 
 
+def resolve_node_id(args: list[str]) -> str:
+    """Per-node owner token identity for concurrent graph dispatch (PRD 269 R5)."""
+    raw = parse_kv(args, "--node-id") or os.environ.get("SW_NODE_ID", "").strip()
+    return str(raw).strip() if raw else ""
+
+
+def owner_token_from_meta(meta: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "pid": meta.get("pid"),
+        "threadId": meta.get("threadId"),
+        "nodeId": str(meta.get("nodeId") or ""),
+    }
+
+
+def current_owner_token(node_id: str) -> dict[str, Any]:
+    return {
+        "pid": os.getpid(),
+        "threadId": threading.get_ident(),
+        "nodeId": str(node_id or ""),
+    }
+
+
+def owner_token_matches(meta: dict[str, Any], node_id: str) -> bool:
+    """True when lease holder matches pid + thread + nodeId (R5)."""
+    held = owner_token_from_meta(meta)
+    want = current_owner_token(node_id)
+    return (
+        held.get("pid") == want["pid"]
+        and held.get("threadId") == want["threadId"]
+        and held.get("nodeId") == want["nodeId"]
+    )
+
+
 def phase_status_consumable_terminal(root: Path, phase_slug: str | None) -> bool:
     if not phase_slug:
         return False
@@ -376,14 +409,11 @@ def resolve_branches(root: Path, args: list[str]) -> tuple[str, str]:
 def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
     integration, phase_branch = resolve_branches(root, args)
     phase_slug = parse_kv(args, "--phase-slug")
+    node_id = resolve_node_id(args)
     lock_path = lock_path_for(root, integration, phase_branch)
     if lock_path.is_file():
         existing = read_lock_meta(lock_path)
-        if (
-            existing.get("pid") == os.getpid()
-            and existing.get("threadId") == threading.get_ident()
-            and ship_lease_owner_live(existing)
-        ):
+        if owner_token_matches(existing, node_id) and ship_lease_owner_live(existing):
             return {
                 "verdict": "pass",
                 "action": "ship-lease-acquire",
@@ -391,15 +421,18 @@ def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
                 "integrationBranch": integration,
                 "phaseBranch": phase_branch,
                 "lockPath": str(lock_path),
+                "ownerToken": owner_token_from_meta(existing),
             }
     now = utc_now()
     start_token = parse_kv(args, "--start-token") or os.environ.get("SW_SHIP_START_TOKEN") or ""
+    owner = current_owner_token(node_id)
     meta: dict[str, Any] = {
         "kind": "ship-lease",
         "integrationBranch": integration,
         "phaseBranch": phase_branch,
-        "pid": os.getpid(),
-        "threadId": threading.get_ident(),
+        "pid": owner["pid"],
+        "threadId": owner["threadId"],
+        "nodeId": owner["nodeId"],
         "host": lock_host(),
         "startToken": start_token or f"{os.getpid()}-{now}",
         "acquiredAt": now,
@@ -433,6 +466,16 @@ def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
                     "previousHolder": existing,
                 },
             )
+        elif ship_lease_owner_live(existing) and not owner_token_matches(existing, node_id):
+            # R5: concurrent foreign owner parks instead of failing the run.
+            return {
+                "verdict": "park",
+                "action": "ship-lease-acquire",
+                "error": "ship-lease-parked",
+                "holder": existing,
+                "ownerToken": owner,
+                "lockPath": str(lock_path),
+            }
         else:
             return {
                 "verdict": "fail",
@@ -446,6 +489,7 @@ def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
             "event": "ship-lease-acquire",
             "integrationBranch": integration,
             "phaseBranch": phase_branch,
+            "nodeId": node_id,
         },
     )
     return {
@@ -454,22 +498,26 @@ def acquire_ship_lease(root: Path, args: list[str]) -> dict[str, Any]:
         "integrationBranch": integration,
         "phaseBranch": phase_branch,
         "lockPath": str(lock_path),
+        "ownerToken": owner,
     }
 
 
 def release_ship_lease(root: Path, args: list[str], *, finalize: bool = False) -> dict[str, Any]:
     integration, phase_branch = resolve_branches(root, args)
+    node_id = resolve_node_id(args)
     lock_path = lock_path_for(root, integration, phase_branch)
     if not lock_path.is_file():
         return {"verdict": "pass", "action": "ship-lease-release", "note": "no lock file"}
     meta = read_lock_meta(lock_path)
-    holder_pid = meta.get("pid")
-    if (
-        not finalize
-        and isinstance(holder_pid, int)
-        and holder_pid != os.getpid()
-    ):
-        return {"verdict": "fail", "error": "ship-lease-other-pid", "holder": meta}
+    # R5: finalize does not skip ownership — foreign owner never releases.
+    if not owner_token_matches(meta, node_id):
+        return {
+            "verdict": "fail",
+            "error": "ship-lease-owner-mismatch",
+            "holder": meta,
+            "finalize": bool(finalize),
+            "ownerToken": current_owner_token(node_id),
+        }
     lock_path.unlink(missing_ok=True)
     append_log(
         root,
@@ -477,6 +525,8 @@ def release_ship_lease(root: Path, args: list[str], *, finalize: bool = False) -
             "event": "ship-lease-release",
             "integrationBranch": integration,
             "phaseBranch": phase_branch,
+            "nodeId": node_id,
+            "finalize": bool(finalize),
         },
     )
     return {
@@ -489,13 +539,17 @@ def release_ship_lease(root: Path, args: list[str], *, finalize: bool = False) -
 
 def cmd_acquire(root: Path, args: list[str]) -> None:
     out = acquire_ship_lease(root, args)
+    if out.get("verdict") == "park":
+        emit(out)
+        return
     if out.get("verdict") != "pass":
         fail(out.get("error", "ship lease held"), exit_code=20, holder=out.get("holder"))
     emit(out)
 
 
 def cmd_release(root: Path, args: list[str]) -> None:
-    out = release_ship_lease(root, args)
+    finalize = "--finalize" in args
+    out = release_ship_lease(root, args, finalize=finalize)
     if out.get("verdict") != "pass":
         fail(out.get("error", "ship lease release failed"), exit_code=20, holder=out.get("holder"))
     emit(out)
@@ -503,13 +557,13 @@ def cmd_release(root: Path, args: list[str]) -> None:
 
 def cmd_heartbeat(root: Path, args: list[str]) -> None:
     integration, phase_branch = resolve_branches(root, args)
+    node_id = resolve_node_id(args)
     lock_path = lock_path_for(root, integration, phase_branch)
     if not lock_path.is_file():
         fail("ship lease missing", exit_code=20)
     meta = read_lock_meta(lock_path)
-    holder_pid = meta.get("pid")
-    if isinstance(holder_pid, int) and holder_pid != os.getpid():
-        fail("ship lease held by another pid", exit_code=20, holder=meta)
+    if not owner_token_matches(meta, node_id):
+        fail("ship lease held by another owner", exit_code=20, holder=meta)
     ship_steps_raw = parse_kv(args, "--ship-steps")
     if ship_steps_raw:
         try:

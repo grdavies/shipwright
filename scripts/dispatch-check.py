@@ -6,28 +6,22 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 from _sw.cli import run_module_main
 from dispatch_intensity_check import validate_directive_anchor
 from dispatch_reader_lib import evaluate_reader_role, validate_reader_tool_log_file
 from dispatch_complexity_lib import probe_complexity
 from dispatch_budget_lib import resolve_token_budget
+from model_policy_lib import ModelPolicy, ensure_mid_tier, preflight_missing_mid, tier_rank
 from task_model_allowlist_lib import enforce_task_model_allowlist
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-
-TIER_ORDER = ["cheap", "build", "mid", "deep"]
 NATIVE_PANEL_AGENTS = frozenset({
     "correctness", "security", "adversarial", "data-migration", "maintainability",
     "scope-fidelity", "testing", "performance", "api-contract", "reliability",
     "ui-ux", "type-design", "comment-accuracy", "ai-native",
 })
-
-
-def tier_rank(name: str | None) -> int | None:
-    if not name or name not in TIER_ORDER:
-        return None
-    return TIER_ORDER.index(name)
 
 
 def model_to_tier(concrete: str, tiers: dict) -> str | None:
@@ -98,13 +92,14 @@ def resolve_parent_tier(
     tiers: dict,
     *,
     fallback_tier: str | None,
+    policy: ModelPolicy,
 ) -> tuple[str | None, bool, str | None]:
     parent_tier = model_to_tier(parent_model, tiers)
     if parent_tier is not None:
         return parent_tier, False, None
     if not fallback_tier:
         return None, False, None
-    if fallback_tier not in TIER_ORDER:
+    if policy.tier_rank(fallback_tier) is None:
         return None, False, "binding:invalid-fallback-tier"
     return fallback_tier, True, None
 
@@ -122,9 +117,11 @@ def evaluate_dispatch(
     dispatch_id: str | None,
     command_name: str | None,
     skill_name: str | None,
+    policy: ModelPolicy | None = None,
 ) -> dict:
+    tier_policy = policy or ModelPolicy.from_tiers(tiers)
     parent_tier, used_fallback, fallback_err = resolve_parent_tier(
-        parent_model, tiers, fallback_tier=fallback_tier
+        parent_model, tiers, fallback_tier=fallback_tier, policy=tier_policy
     )
     if fallback_err:
         return {
@@ -137,8 +134,8 @@ def evaluate_dispatch(
         }
 
     if requires_parent_tier(agent):
-        parent_rank = tier_rank(parent_tier)
-        builder_rank = tier_rank(builder_tier)
+        parent_rank = tier_rank(parent_tier, tier_policy)
+        builder_rank = tier_rank(builder_tier, tier_policy)
         if parent_rank is None or builder_rank is None:
             return {
                 "verdict": "fail",
@@ -191,6 +188,18 @@ def evaluate_dispatch(
         "dispatchId": dispatch_id or None,
         "override": override,
     }
+
+
+def _normalize_tiers(raw_tiers: dict) -> tuple[dict, ModelPolicy, dict[str, Any] | None]:
+    tiers = {str(k): str(v) for k, v in raw_tiers.items()} if isinstance(raw_tiers, dict) else {}
+    mid_advisory = preflight_missing_mid(tiers)
+    tiers, _ = ensure_mid_tier(tiers)
+    return tiers, ModelPolicy.from_tiers(tiers), mid_advisory
+
+
+def _emit_mid_advisory(advisory: dict[str, Any] | None) -> None:
+    if advisory:
+        print(json.dumps({"action": "dispatch-check", **advisory}), file=sys.stderr)
 
 
 def _run_json_cmd(cmd: list[str]) -> dict:
@@ -301,6 +310,8 @@ def _main_legacy_positional(argv: list[str]) -> int:
         dispatch_cfg = cfg.get("dispatch", {}) if isinstance(cfg, dict) else {}
 
     tiers = models.get("tiers", {}) if isinstance(models, dict) else {}
+    tiers, policy, mid_advisory = _normalize_tiers(tiers)
+    _emit_mid_advisory(mid_advisory)
     roles = models.get("roles", {}) if isinstance(models, dict) else {}
     builder_tier = roles.get("builder", "build")
     fallback_tier = None
@@ -332,6 +343,7 @@ def _main_legacy_positional(argv: list[str]) -> int:
         dispatch_id=dispatch_id or None,
         command_name=command_name or None,
         skill_name=skill_name or None,
+        policy=policy,
     )
     print(json.dumps(result))
     if result.get("verdict") == "fail":
@@ -519,6 +531,8 @@ def main(argv: list[str] | None = None) -> int:
         dispatch_cfg = cfg.get("dispatch", {}) if isinstance(cfg, dict) else {}
 
     tiers = models.get("tiers", {}) if isinstance(models, dict) else {}
+    tiers, policy, mid_advisory = _normalize_tiers(tiers)
+    _emit_mid_advisory(mid_advisory)
     roles = models.get("roles", {}) if isinstance(models, dict) else {}
     builder_tier = roles.get("builder", "build")
     fallback_tier = None
@@ -596,6 +610,7 @@ def main(argv: list[str] | None = None) -> int:
         dispatch_id=dispatch_id,
         command_name=command_name,
         skill_name=skill_name,
+        policy=policy,
     )
     if args.prompt:
         result["intensity"] = intensity

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Named concurrency pools with backpressure (PRD 092 R6)."""
+"""Named concurrency pools with backpressure (PRD 092 R6; PRD 269 R1/R2)."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -23,13 +23,28 @@ DEFAULT_LIMITS: dict[PoolName, int] = {
 
 
 class PoolExhausted(RuntimeError):
-    """Raised when acquire would exceed the configured limit (backpressure)."""
+    """Raised when acquire would exceed the configured limit (backpressure / park)."""
 
-    def __init__(self, pool: PoolName, limit: int, in_use: int) -> None:
-        super().__init__(f"pool exhausted: {pool.value} in_use={in_use} limit={limit}")
+    def __init__(self, pool: PoolName, limit: int, in_use: int, *, slots: int = 1) -> None:
+        super().__init__(
+            f"pool exhausted: {pool.value} in_use={in_use} limit={limit} slots={slots}"
+        )
         self.pool = pool
         self.limit = limit
         self.in_use = in_use
+        self.slots = slots
+
+
+class PoolRequestUnsatisfiable(ValueError):
+    """Raised when requested slots exceed the pool limit (never parkable)."""
+
+    def __init__(self, pool: PoolName, limit: int, slots: int) -> None:
+        super().__init__(
+            f"pool request unsatisfiable: {pool.value} slots={slots} exceed limit={limit}"
+        )
+        self.pool = pool
+        self.limit = limit
+        self.slots = slots
 
 
 @dataclass
@@ -76,13 +91,21 @@ class ResourcePoolRegistry:
             pools[name] = PoolState(limit=limit)
         return cls(hard_ceiling=hard_ceiling, pools=pools)
 
+    def can_satisfy(self, pool: PoolName, *, slots: int = 1) -> bool:
+        """True when the request can ever succeed (slots ≤ limit), regardless of in-use."""
+        if slots < 1:
+            raise ValueError("slots must be >= 1")
+        return slots <= self.pools[pool].limit
+
     def acquire(self, pool: PoolName, *, slots: int = 1) -> None:
         if slots < 1:
             raise ValueError("slots must be >= 1")
         state = self.pools[pool]
+        if slots > state.limit:
+            raise PoolRequestUnsatisfiable(pool, state.limit, slots)
         if state.in_use + slots > state.limit:
             state.waiters += 1
-            raise PoolExhausted(pool, state.limit, state.in_use)
+            raise PoolExhausted(pool, state.limit, state.in_use, slots=slots)
         state.in_use += slots
 
     def release(self, pool: PoolName, *, slots: int = 1) -> None:

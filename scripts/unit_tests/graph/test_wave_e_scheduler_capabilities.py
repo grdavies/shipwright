@@ -124,11 +124,25 @@ def test_telemetry_and_escalation_stay_allowlist_bound() -> None:
     assert telemetry.retries == 1
     assert telemetry.cost_per_accepted_result == pytest.approx(0.1)
     assert next_model_tier(
-        "cheap", {"low-confidence"}, allowed_tiers={"cheap", "build"}
+        "cheap", {"low-confidence"}, allowed_tiers={"cheap", "build", "mid", "deep"}, tiers={
+            "cheap": "c", "build": "b", "mid": "m", "deep": "d",
+        }
     ) == "build"
+    assert next_model_tier(
+        "build", {"low-confidence"}, allowed_tiers={"cheap", "build", "mid", "deep"}, tiers={
+            "cheap": "c", "build": "b", "mid": "m", "deep": "d",
+        }
+    ) == "mid"
+    assert next_model_tier(
+        "build", {"verifier-disagreement"}, allowed_tiers={"cheap", "build", "mid", "deep"}, tiers={
+            "cheap": "c", "build": "b", "mid": "m", "deep": "d",
+        }
+    ) == "deep"
     with pytest.raises(PermissionError):
         next_model_tier(
-            "build", {"schema-failure"}, allowed_tiers={"cheap", "build"}
+            "build", {"schema-failure"}, allowed_tiers={"cheap", "build", "mid"}, tiers={
+                "cheap": "c", "build": "b", "mid": "m", "deep": "d",
+            }
         )
 
 
