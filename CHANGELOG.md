@@ -848,6 +848,7 @@
 * merge phase owner-token-leases-for-concurrent-dispatch-r5 into feat/graph-execution-engine (9253f7b) <!-- sw-deliver:owner-token-leases-for-concurrent-dispatch-r5 -->
 * merge phase ready-set-scheduler-fan-in-settle-before-fire-and-pool-liveness-r1-r2 into feat/graph-execution-engine (e8adbab) <!-- sw-deliver:ready-set-scheduler-fan-in-settle-before-fire-and-pool-liveness-r1-r2 -->
 * merge phase write-path-contention-as-a-dispatch-gate-r14 into feat/graph-execution-engine (f9a25b5) <!-- sw-deliver:write-path-contention-as-a-dispatch-gate-r14 -->
+* merge phase purity-cache-key-lineage-and-trust-r6-r7-r15 into feat/graph-execution-engine (481e408) <!-- sw-deliver:purity-cache-key-lineage-and-trust-r6-r7-r15 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
