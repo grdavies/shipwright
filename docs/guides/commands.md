@@ -71,7 +71,7 @@ terminal merge on drift.
 See [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) and
 [`core/skills/deliver/SKILL.md`](../../core/skills/deliver/SKILL.md).
 
-### Graph execution runtime (PRD 269 R17)
+### Graph execution runtime
 
 After cutover, **WorkflowGraph** (`scripts/graph/`) is the **sole production execution runtime** for
 `/sw-deliver`, `/sw-doc`, `/sw-debug`, and `/sw-feedback`. Phase/wave plans and episodic orchestrator
