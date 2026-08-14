@@ -1,0 +1,307 @@
+{
+  "$schema": "config.schema.json",
+  "projectId": "my-project",
+  "defaultBaseBranch": "main",
+  "stateFile": ".git/shipwright.json",
+  "agentsFile": "AGENTS.md",
+  "planningDir": "docs/planning",
+  "prdsDir": "docs/prds",
+  "decisionsDir": "docs/decisions",
+  "tasksDir": "docs/prds",
+  "doc": {
+    "afterTasks": "confirm"
+  },
+  "delegation": {
+    "mode": "heuristic"
+  },
+  "orchestration": {
+    "planPolicy": "proposed"
+  },
+  "deliver": {
+    "phaseAckCadence": 0,
+    "autonomy": {
+      "mode": "autonomous",
+      "maxRunMinutes": 1440,
+      "maxIterations": 500
+    },
+    "remediation": {
+      "maxAttempts": 2
+    },
+    "watchdog": {
+      "phaseTimeoutMinutes": 240,
+      "stalenessClassifier": {
+        "enabled": true,
+        "stuckThresholdMinutes": 30,
+        "workingThresholdMinutes": 5,
+        "waitingOnHumanBoost": 0.35
+      }
+    },
+    "loop": {
+      "drainMechanical": true
+    }
+  },
+  "compound": {
+    "autonomy": "supervised"
+  },
+  "verify": {
+    "lint": "echo 'configure verify.lint for your repo'",
+    "typecheck": "echo 'configure verify.typecheck for your repo'",
+    "test": "python3 scripts/verify-require-configuration.py"
+  },
+  "verifyE2e": {
+    "enabled": false,
+    "provider": "none",
+    "routes": []
+  },
+  "review": {
+    "provider": "none",
+    "local": {
+      "enabled": true,
+      "provider": "native",
+      "apply": "auto",
+      "grouping": "auto",
+      "ui": {
+        "enrich": "off"
+      },
+      "gate": {
+        "surface": [
+          "P0",
+          "P1",
+          "P2",
+          "P3"
+        ],
+        "haltOn": []
+      }
+    }
+  },
+  "coderabbit": {
+    "noDefer": true,
+    "reviewGraceMinutes": 15
+  },
+  "checks": {
+    "policy": "all",
+    "treatNeutralAsPass": true,
+    "neutralAllowlist": [],
+    "watch": {
+      "maxWaitMinutes": 20,
+      "pollSeconds": 45
+    }
+  },
+  "worktree": {
+    "parallelCeiling": 4
+  },
+  "models": {
+    "tiers": {
+      "cheap": "composer-2.5-fast",
+      "build": "composer-2.5",
+      "mid": "gpt-5.5-medium",
+      "deep": "claude-opus-4-8-thinking-high"
+    },
+    "aliases": {
+      "fast": "cheap"
+    },
+    "roles": {
+      "builder": "build",
+      "reviewer": "build"
+    },
+    "routing": {
+      "commands": {
+        "sw-prd": "deep",
+        "sw-execute": "build",
+        "sw-triage": "cheap",
+        "sw-doc": "inherit"
+      },
+      "skills": {
+        "prd": "deep",
+        "triage": "cheap"
+      },
+      "agents": {
+        "sw-coherence-reviewer": "build",
+        "correctness": "deep"
+      }
+    }
+  },
+  "communication": {
+    "defaultIntensity": "full",
+    "routing": {
+      "commands": {
+        "sw-prd": "lite",
+        "sw-triage": "ultra",
+        "sw-doc-review": "normal",
+        "sw-execute": "full"
+      },
+      "skills": {
+        "doc-review": "normal",
+        "tournament": "ultra"
+      },
+      "agents": {
+        "sw-coherence-reviewer": "full",
+        "correctness": "full",
+        "sw-tournament-attempt": "ultra",
+        "sw-tournament-judge": "ultra",
+        "sw-rule-verifier": "ultra",
+        "sw-rule-skeptic": "ultra"
+      }
+    }
+  },
+  "invariantsFile": "INVARIANTS.md",
+  "memory": {
+    "provider": "in-repo",
+    "project": "my-project",
+    "defaultScope": "project",
+    "inRepo": {
+      "storeDir": ".cursor/sw-memory",
+      "commitMode": "committed"
+    },
+    "connection": {
+      "restBaseUrl": "http://localhost:8001"
+    },
+    "autoSync": {
+      "enabled": true,
+      "minTurns": 10,
+      "minMinutes": 120
+    },
+    "guardrails": {
+      "enforceBeforeSubmit": true,
+      "requireRuleClass": false
+    },
+    "playbooks": {
+      "enabled": true,
+      "injectMinConfidence": 0.75,
+      "activeMinConfidence": 0.6,
+      "promoteMinSuccessRate": 0.8,
+      "promoteMinUsage": 5,
+      "demoteMaxSuccessRate": 0.4,
+      "demoteMinUsage": 5,
+      "confidenceStep": 0.05
+    },
+    "credentialRef": "memory-work"
+  },
+  "planning": {
+    "inFlight": {
+      "stalenessTtlHours": 72
+    },
+    "visibilityProfile": "specs-public",
+    "store": {
+      "backend": "in-repo-public",
+      "operatorProjection": {
+        "githubProjects": {
+          "enabled": true,
+          "ownerLogin": "acme",
+          "projectNumber": 1,
+          "fieldMap": {
+            "status": "Status",
+            "artifactType": "Artifact",
+            "unitId": "Unit",
+            "absorbs": "Absorbs",
+            "brainstormFeed": "Brainstorms",
+            "phaseProgress": "Phases",
+            "program": "Program"
+          },
+          "budget": {
+            "maxCalls": 40,
+            "maxPaginationDepth": 5,
+            "cacheTtlSeconds": 300
+          }
+        },
+        "linear": {
+          "enabled": false,
+          "initiativeSubstitute": "substitute-views",
+          "cycleSharingNotice": true,
+          "budget": {
+            "maxCalls": 40,
+            "maxComplexityPoints": 8000,
+            "cacheTtlSeconds": 300
+          }
+        }
+      },
+      "issues": {
+        "credentialRef": "planning-work",
+        "teamKey": "ENG",
+        "teamId": "team_ENG",
+        "authMode": "api-key"
+      }
+    },
+    "autonomy": "full-conductor",
+    "fullConductor": {
+      "confidenceThreshold": 0.85,
+      "mutationBudget": 10,
+      "undoWindowSeconds": 3600
+    }
+  },
+  "verifyMutation": {
+    "enabled": false,
+    "provider": "none",
+    "excludeList": []
+  },
+  "tasks": {
+    "sizing": {
+      "thresholds": {
+        "filesTouched": {
+          "small": 6,
+          "medium": 10
+        },
+        "traceabilityScenarios": {
+          "small": 3,
+          "medium": 6
+        },
+        "subTaskCount": {
+          "small": 3,
+          "medium": 5
+        },
+        "distinctDirs": {
+          "small": 4,
+          "medium": 6
+        },
+        "depFanOut": {
+          "small": 1,
+          "medium": 2
+        }
+      },
+      "minPhaseFiles": 2,
+      "minPhaseScenarios": 1,
+      "maxPhaseCount": 13
+    }
+  },
+  "recurrence": {
+    "threshold": 3,
+    "enabled": true
+  },
+  "execute": {
+    "enabled": true,
+    "subBranchCeiling": null,
+    "maxExpansionDepth": 2,
+    "sizing": {
+      "thresholds": {
+        "filesTouched": 3,
+        "distinctDirs": 2,
+        "traceabilityScenarios": 2
+      }
+    }
+  },
+  "tournament": {
+    "enabled": false,
+    "n": 3,
+    "cost_ceiling": 0
+  },
+  "gapCheck": {
+    "ruleVerifierSweep": {
+      "enabled": false
+    }
+  },
+  "stabilizeLoop": {
+    "sameStageEscalation": {
+      "enabled": true,
+      "escalateAfterFailures": 2,
+      "personaFallback": "adversarial"
+    }
+  },
+  "inefficiency": {
+    "enabled": true
+  },
+  "host": {
+    "provider": "github",
+    "remote": "origin",
+    "credentialRef": "github-work"
+  }
+}
