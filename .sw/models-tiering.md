@@ -35,6 +35,25 @@ detected platform catalog plus `core/sw-reference/model-routing.defaults.json`.
 | `mid` | Medium reasoning — gaps, simplify, memory-sync, non-high-stakes panel specialists |
 | `deep` | Doc authoring, high-stakes review, adversarial/security personas |
 
+### ModelPolicy (PRD 269 R8/R9)
+
+`ModelPolicy` (`scripts/model_policy_lib.py`) is the **sole** source of semantic tier order at runtime.
+Order is derived from `models.tiers` keys only — never from agent frontmatter, routing maps, or private
+hardcoded tuples. Graph cost telemetry (`scripts/graph/cost_telemetry.py`) and dispatch escalation share
+the same policy object.
+
+**Missing `mid` — single preflight:** when `models.tiers` omits `mid`, `dispatch-check.py` emits one
+advisory before spawn:
+
+| Condition | Advisory | Behavior |
+| --- | --- | --- |
+| `mid` present | — | No advisory |
+| `mid` absent, `build` present | `model-policy:missing-mid-defaulted` | `mid` defaults to the build concrete id for the invocation |
+| `mid` and `build` absent | `model-policy:missing-mid` | Fail-closed remediation — add `models.tiers.mid` or `build` |
+
+There is no second silent default path. `/sw-init` seeds all four tiers from the platform catalog; mature
+repos should declare `mid` explicitly.
+
 - **`cheap` / `build` / `mid` / `deep`** — policy vocabulary only; not valid in agent `model:` frontmatter.
 - **`inherit`** — routing sentinel only (orchestrators `sw-doc`, `sw-ship`, `sw-deliver`, `sw-compound-ship`);
   resolve delegated children via `resolve-model-tier.py --delegate`.
@@ -135,6 +154,21 @@ tool** and `subagentStart` cannot set model. Spike record:
 until the platform supports Task model mutation. Enforcement remains dispatcher + preflight only.
 
 `inherit` reviewers cannot be fully R9-verified in CI — orchestrator must not run doc-review on a sub-`build` parent.
+
+### Graph execution defaults (`graphExecution.*`) — PRD 269 R17
+
+WorkflowGraph scheduler defaults live beside model policy in `workflow.config.json`. **Cache and
+`maxConcurrency` are independently tunable** — serial-equivalent `maxConcurrency: 1` does not imply cache
+on or off.
+
+| Key | Default | Role |
+| --- | --- | --- |
+| `graphExecution.resourceLimits.maxConcurrency` | `1` | Serial-equivalent mitigation lane on the graph scheduler |
+| `graphExecution.resourceLimits.maxDurationSeconds` | `86400` | Compiled graph wall clock |
+| `graphExecution.cache.enabled` | `true` | Content-addressed node cache; disable without changing concurrency |
+
+Operator surfaces: `/sw-deliver --explain-plan`, `/sw-status` (`graph-progress`, `explain <nodeId>`) — no
+`/sw-graph-*` commands. See `docs/guides/configuration.md` and `docs/guides/graph-domain-terminology.md`.
 
 ## Validate
 

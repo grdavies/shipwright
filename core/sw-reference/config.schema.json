@@ -108,6 +108,45 @@
         }
       }
     },
+    "graphExecution": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "WorkflowGraph scheduler defaults (PRD 269 R17). Cache and maxConcurrency are independently tunable.",
+      "properties": {
+        "resourceLimits": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Default resource limits for compiled WorkflowGraph IR when the plan omits spec.resourceLimits.",
+          "properties": {
+            "maxConcurrency": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16,
+              "default": 1,
+              "description": "Serial-equivalent default (1). Independently tunable from graphExecution.cache.enabled."
+            },
+            "maxDurationSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 86400,
+              "description": "Run-level wall clock for compiled graphs."
+            }
+          }
+        },
+        "cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Content-addressed node cache policy. Disable without changing maxConcurrency.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "When false, the graph scheduler does not reuse stable cache entries (serial-equivalent lane may still use maxConcurrency: 1)."
+            }
+          }
+        }
+      }
+    },
     "deliver": {
       "type": "object",
       "additionalProperties": false,
