@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "zipappVersion": "1.12.0",
+  "zipappVersion": "2.0.0",
   "modules": [
     "_planning_pkg_loader.py",
     "_sw/__init__.py",
