@@ -869,6 +869,7 @@
 * merge phase dispatcher-recorded-judgment-independence-r4 into feat/workflow-intelligence-platform (5a43908) <!-- sw-deliver:dispatcher-recorded-judgment-independence-r4 -->
 * merge phase versioned-artifact-schemas-in-the-cache-key-r6 into feat/workflow-intelligence-platform (2db45fc) <!-- sw-deliver:versioned-artifact-schemas-in-the-cache-key-r6 -->
 * merge phase guide-documentation-for-optimizer-and-capability-docs-r8 into feat/workflow-intelligence-platform (116670d) <!-- sw-deliver:guide-documentation-for-optimizer-and-capability-docs-r8 -->
+* merge phase routing-regret-calibrated-to-ready-without-rework-r5 into feat/workflow-intelligence-platform (af90e94) <!-- sw-deliver:routing-regret-calibrated-to-ready-without-rework-r5 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
