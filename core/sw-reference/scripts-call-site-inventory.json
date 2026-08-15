@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-14T20:14:24Z",
+  "generatedAt": "2026-08-15T01:11:20Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -64,118 +64,127 @@
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:51:test/_runner.py",
+      "id": ".github/workflows/ci.yml:42:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 51,
+      "line": 42,
+      "column": 21,
+      "script": "test/run_pytest.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/ci.yml:54:test/_runner.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/ci.yml",
+      "line": 54,
       "column": 40,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:51:test/_runner.py",
+      "id": ".github/workflows/ci.yml:54:test/_runner.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 51,
+      "line": 54,
       "column": 13,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:64:test/_runner.py",
+      "id": ".github/workflows/ci.yml:67:test/_runner.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 64,
+      "line": 67,
       "column": 40,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:64:test/_runner.py",
+      "id": ".github/workflows/ci.yml:67:test/_runner.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 64,
+      "line": 67,
       "column": 13,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:70:nightly-failure-notify.py",
+      "id": ".github/workflows/ci.yml:73:nightly-failure-notify.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 70,
+      "line": 73,
       "column": 37,
       "script": "nightly-failure-notify.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:70:nightly-failure-notify.py",
+      "id": ".github/workflows/ci.yml:73:nightly-failure-notify.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 70,
+      "line": 73,
       "column": 10,
       "script": "nightly-failure-notify.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:89:test/bash-py-invocation-guard.test",
+      "id": ".github/workflows/ci.yml:92:test/bash-py-invocation-guard.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 89,
+      "line": 92,
       "column": 21,
       "script": "test/bash-py-invocation-guard.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:92:test/claims-audit-unit.test",
+      "id": ".github/workflows/ci.yml:95:test/claims-audit-unit.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 92,
+      "line": 95,
       "column": 21,
       "script": "test/claims-audit-unit.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:95:docs-link-check.py",
+      "id": ".github/workflows/ci.yml:98:docs-link-check.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 95,
+      "line": 98,
       "column": 21,
       "script": "docs-link-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:98:test/git-push-secret-scan-chokepoint.test",
+      "id": ".github/workflows/ci.yml:101:test/git-push-secret-scan-chokepoint.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 98,
+      "line": 101,
       "column": 21,
       "script": "test/git-push-secret-scan-chokepoint.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:101:test/rca-fanout-unit.test",
+      "id": ".github/workflows/ci.yml:104:test/rca-fanout-unit.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 101,
+      "line": 104,
       "column": 21,
       "script": "test/rca-fanout-unit.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:104:check_scripts_inventory.py",
+      "id": ".github/workflows/ci.yml:107:check_scripts_inventory.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 104,
+      "line": 107,
       "column": 21,
       "script": "check_scripts_inventory.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:107:test/skills-spec-guard.test",
+      "id": ".github/workflows/ci.yml:110:test/skills-spec-guard.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 107,
+      "line": 110,
       "column": 21,
       "script": "test/skills-spec-guard.test",
       "classification": "self-repo-only"

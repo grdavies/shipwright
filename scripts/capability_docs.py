@@ -717,19 +717,17 @@ def cmd_check(root: Path) -> int:
 
 
 def cmd_regen_check(root: Path) -> int:
-    """Regenerate in place and fail closed on dirty tree or semantic drift."""
+    """Regenerate in place and fail closed on dirty tree (semantic check is separate)."""
     before_errors = cmd_generate(root)
     if before_errors != 0:
         return before_errors
     clean, diff_detail = _git_generated_paths_clean(root)
-    semantic_errors = validate_conformance_semantics(root, load_registry(root))
     errors: list[str] = []
     if not clean:
         errors.append(
             "working tree changed after in-place capability docs regenerate "
             f"(commit generated outputs): {diff_detail}"
         )
-    errors.extend(semantic_errors)
     payload = {
         "verdict": "ok" if not errors else "fail",
         "action": "capability-docs-regen-check",
