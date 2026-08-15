@@ -37,6 +37,7 @@ from graph.typed_dataflow import (  # noqa: E402
 from graph.verifier_policies import (  # noqa: E402
     VerifierKind,
     VerifierResult,
+    count_independent_judgment_votes,
     evaluate_verifiers,
 )
 
@@ -100,13 +101,108 @@ def test_mechanical_failure_overrides_passing_judgment_quorum() -> None:
     verdict = evaluate_verifiers(
         [
             VerifierResult("tests", VerifierKind.MECHANICAL, False),
-            VerifierResult("review-a", VerifierKind.JUDGMENT, True),
-            VerifierResult("review-b", VerifierKind.JUDGMENT, True),
+            VerifierResult(
+                "review-a",
+                VerifierKind.JUDGMENT,
+                True,
+                dispatch_record={
+                    "dispatch": {
+                        "modelFamily": "family-a",
+                        "persona": "security",
+                        "promptTemplate": "review-v1",
+                        "contextSource": "diff",
+                        "evidenceSource": "receipt",
+                    }
+                },
+            ),
+            VerifierResult(
+                "review-b",
+                VerifierKind.JUDGMENT,
+                True,
+                dispatch_record={
+                    "dispatch": {
+                        "modelFamily": "family-b",
+                        "persona": "design",
+                        "promptTemplate": "review-v2",
+                        "contextSource": "plan",
+                        "evidenceSource": "artifact",
+                    }
+                },
+            ),
         ],
         judgment_quorum=2,
     )
     assert verdict.passed is False
     assert verdict.decisive_kind is VerifierKind.MECHANICAL
+
+
+def _judgment_dispatch(
+    *,
+    model_family: str = "gpt",
+    persona: str = "security",
+    prompt_template: str = "review-v1",
+    context_source: str = "diff",
+    evidence_source: str = "receipt",
+) -> dict[str, object]:
+    return {
+        "dispatch": {
+            "modelFamily": model_family,
+            "persona": persona,
+            "promptTemplate": prompt_template,
+            "contextSource": context_source,
+            "evidenceSource": evidence_source,
+        }
+    }
+
+
+def test_correlated_judgment_votes_fail_quorum_at_two() -> None:
+    shared = _judgment_dispatch()
+    results = [
+        VerifierResult(
+            f"review-{index}",
+            VerifierKind.JUDGMENT,
+            True,
+            dispatch_record=shared,
+        )
+        for index in range(3)
+    ]
+    assert count_independent_judgment_votes(results, passed_only=True) == 1
+    verdict = evaluate_verifiers(results, judgment_quorum=2)
+    assert verdict.passed is False
+    assert verdict.decisive_kind is VerifierKind.JUDGMENT
+    assert verdict.reason == "judgment quorum not reached"
+
+
+def test_self_declared_prompt_does_not_create_independence() -> None:
+    recorded = _judgment_dispatch()
+    results = [
+        VerifierResult(
+            "review-a",
+            VerifierKind.JUDGMENT,
+            True,
+            dispatch_record={
+                **recorded,
+                "payload": {"promptTemplate": "self-declared-a"},
+            },
+        ),
+        VerifierResult(
+            "review-b",
+            VerifierKind.JUDGMENT,
+            True,
+            dispatch_record={
+                **recorded,
+                "payload": {"promptTemplate": "self-declared-b"},
+            },
+        ),
+    ]
+    assert count_independent_judgment_votes(results, passed_only=True) == 1
+
+
+def test_zero_judgment_verifiers_fail_when_quorum_required() -> None:
+    verdict = evaluate_verifiers([], judgment_quorum=1)
+    assert verdict.passed is False
+    assert verdict.decisive_kind is VerifierKind.JUDGMENT
+    assert verdict.reason == "judgment quorum not reached"
 
 
 def test_telemetry_and_escalation_stay_allowlist_bound() -> None:

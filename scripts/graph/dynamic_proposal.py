@@ -92,6 +92,51 @@ _VERIFIER_STRATEGY_TO_CLASS = {
 }
 
 
+def template_required_independent_votes(template: Mapping[str, Any]) -> int:
+    """Read the template-declared independent judgment vote floor."""
+    verification = template.get("spec", {}).get("verification", {})
+    if not isinstance(verification, Mapping):
+        return 0
+    if "requiredIndependentVotes" in verification:
+        return int(verification["requiredIndependentVotes"])
+    count = 0
+    for node in template.get("spec", {}).get("nodes", []):
+        if not isinstance(node, Mapping):
+            continue
+        strategy = str((node.get("verification") or {}).get("strategy") or "")
+        if strategy == VerifierKind.JUDGMENT.value:
+            count += 1
+    return count
+
+
+def _count_judgment_nodes(graph: Mapping[str, Any]) -> int:
+    count = 0
+    for node in graph.get("spec", {}).get("nodes", []):
+        if not isinstance(node, Mapping):
+            continue
+        strategy = str((node.get("verification") or {}).get("strategy") or "")
+        if strategy == VerifierKind.JUDGMENT.value:
+            count += 1
+    return count
+
+
+def assert_judgment_independence_floor(
+    proposal: Mapping[str, Any],
+    *,
+    template: Mapping[str, Any],
+) -> None:
+    """Reject optimizer proposals that drop judgment reviewers below the template floor."""
+    required = template_required_independent_votes(template)
+    if required < 1:
+        return
+    proposed = _count_judgment_nodes(proposal)
+    if proposed < required:
+        raise ValueError(
+            "proposal rejected: judgment reviewers "
+            f"{proposed} below template floor {required}"
+        )
+
+
 def is_required_capability_node(node: Mapping[str, Any]) -> bool:
     """True for merge-gate, verifier, credential-broker, and isolation-lease nodes."""
     kind = str(node.get("kind") or "")
@@ -262,6 +307,10 @@ def evaluate_dynamic_proposal(
         try:
             _assert_budget(proposal, budget)
             _assert_required_capability_invariant(proposal, canonical_graph)
+            assert_judgment_independence_floor(
+                proposal,
+                template=canonical_graph,
+            )
             compiled = compile_workflow_graph(proposal, **options)
         except (KernelCompilationError, ValueError) as exc:
             reason = f"proposal rejected: {exc}"
@@ -675,6 +724,10 @@ def evaluate_shadow_proposal(
     token_cost: float = 0.0,
 ) -> ShadowEvaluationResult:
     """Compile candidate + canonical and run non-mutating shadow scoring."""
+    assert_judgment_independence_floor(
+        proposal,
+        template=canonical_graph,
+    )
     options = dict(kernel_options or {})
     stripped = _strip_proposal_metric_fields(proposal)
     candidate_compiled = compile_workflow_graph(stripped, **options)
