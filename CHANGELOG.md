@@ -884,6 +884,7 @@
 * merge phase single-owning-loop-async-scheduler-size-large into feat/graph-execution-runtime-v2 (91f31ca) <!-- sw-deliver:single-owning-loop-async-scheduler-size-large -->
 * merge phase authenticated-canonical-cache-store-size-large into feat/graph-execution-runtime-v2 (9e123ab) <!-- sw-deliver:authenticated-canonical-cache-store-size-large -->
 * merge phase worktree-integration-barrier-size-medium into feat/graph-execution-runtime-v2 (c958a46) <!-- sw-deliver:worktree-integration-barrier-size-medium -->
+* merge phase quick-sw-ship-graph-parity-size-large into feat/graph-execution-runtime-v2 (f2b5a1d) <!-- sw-deliver:quick-sw-ship-graph-parity-size-large -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
