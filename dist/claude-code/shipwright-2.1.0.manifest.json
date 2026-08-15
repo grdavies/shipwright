@@ -349,6 +349,7 @@
     "graph/legacy_adapters.py",
     "graph/lineage.py",
     "graph/observability.py",
+    "graph/quick_ship_compile.py",
     "graph/resource_pools.py",
     "graph/router_nodes.py",
     "graph/run_ownership.py",
@@ -677,5 +678,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 674
+  "moduleCount": 675
 }

@@ -269,12 +269,23 @@ Before PR create/update, capture a schema-valid `## Decision log` JSON block on 
 ## Ship-loop driver (PRD 065)
 
 Interactive `/sw-ship` and phase-mode `/sw-deliver` dispatch share `scripts/ship_loop.py` — one driver, one
-evidence contract:
+evidence contract. **Quick-tier** work compiles through `scripts/graph/quick_ship_compile.py` to a fixed
+WorkflowGraph declared in `core/sw-reference/kernel-classification.json` (`canonicalPhaseChains.sw-ship`).
+The topology is configuration-declared only — no adaptive PRD 272 capability selection. Operator entry
+remains `/sw-ship`; the graph halts at merge-ready and **never merges**.
 
 | Mode | Entry | Evidence root | Merge pause |
 | --- | --- | --- | --- |
 | Interactive | `/sw-ship` (no `--phase-mode`) | `.cursor/sw-ship-runs/<phase>/` | Retained — "ready to merge — your call" |
 | Phase-mode | `/sw-deliver` `dispatch-ship` / `dispatch-batch` | `.cursor/sw-deliver-runs/<phase>/gate-evidence/` | Suppressed — `merge-ready-green` only |
+
+**Quick graph compile (R7/R27):** before the chain starts, the driver MAY materialize the fixed graph via
+`python3 -c "from graph.quick_ship_compile import compile_quick_ship_graph, QuickShipCompileOptions; ..."`
+or through `ship_loop.py` helpers (`compile_quick_ship_for_phase`). Lifecycle parity:
+`sw-execute` → `sw-verify` → `verification-gate` → `sw-review` → `sw-simplify` → `gap-check` → `sw-commit`
+→ `sw-pr` → `sw-watch-ci` → `sw-stabilize` → `sw-ready` → `sw-tmp-clean`. Review nodes use verifier
+independence floor (distinct judgment vote; no self-review). Verification-gate and ready-gate semantics
+are unconditional whether or not a PR exists yet.
 
 - **Driver delegation** — `wave.py` interactive ship and deliver `dispatch-ship` both invoke
   `ship_loop.py <worktree> drive --phase <slug>`; mechanical steps drain in-process, agent steps surface
