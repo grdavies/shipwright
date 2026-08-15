@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -18,11 +19,26 @@ from _sw.cli import run_module_main
 from planning.provider_conformance import load_conformance_record
 
 REGISTRY_REL = Path("core/sw-reference/capability-registry.json")
+KERNEL_CLASSIFICATION_REL = Path("core/sw-reference/kernel-classification.json")
+MODEL_ROUTING_REL = Path("core/sw-reference/model-routing.defaults.json")
+MATRICES_JSON_REL = Path("core/sw-reference/capability-family-matrices.json")
+MATRICES_MD_REL = Path("core/sw-reference/capability-family-matrices.md")
 ROOT_CAPABILITIES_REL = Path("CAPABILITIES.md")
 ISSUES_CAPABILITIES_REL = Path("core/providers/issues/CAPABILITIES.md")
+GENERATED_PATHS = (
+    ROOT_CAPABILITIES_REL,
+    ISSUES_CAPABILITIES_REL,
+    MATRICES_JSON_REL,
+    MATRICES_MD_REL,
+)
 GENERATOR_BANNER = (
     "Generated from `core/sw-reference/capability-registry.json` via "
     "`scripts/capability_docs.py` — do not edit by hand."
+)
+MATRICES_BANNER = (
+    "Generated from `core/sw-reference/kernel-classification.json` and "
+    "`core/sw-reference/capability-registry.json` via `scripts/capability_docs.py` "
+    "— do not edit by hand."
 )
 MARKER_BEGIN = "<!-- capability-docs:begin registry-derived -->"
 MARKER_END = "<!-- capability-docs:end registry-derived -->"
@@ -61,6 +77,264 @@ def load_registry(root: Path) -> dict[str, Any]:
     if not isinstance(payload, dict) or "families" not in payload:
         raise ValueError(f"invalid capability registry: {path}")
     return payload
+
+
+def load_kernel_classification(root: Path) -> dict[str, Any]:
+    path = root / KERNEL_CLASSIFICATION_REL
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"invalid kernel classification: {path}")
+    return payload
+
+
+def _family_sources(classification: dict[str, Any]) -> dict[str, Any]:
+    sources = classification.get("capabilityFamilySources")
+    if not isinstance(sources, dict):
+        raise ValueError("kernel-classification.json missing capabilityFamilySources")
+    return sources
+
+
+def _load_model_routing(root: Path, sources: dict[str, Any]) -> dict[str, Any]:
+    rel = Path(str(sources.get("modelTiers", {}).get("routingDefaultsPath") or MODEL_ROUTING_REL))
+    path = root / rel
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    routing = payload.get("routing")
+    return routing if isinstance(routing, dict) else {}
+
+
+def _tier_routing_counts(routing: dict[str, Any], tier_order: list[str]) -> dict[str, dict[str, int]]:
+    counts: dict[str, dict[str, int]] = {
+        tier: {"commands": 0, "agents": 0, "skills": 0} for tier in tier_order
+    }
+    for surface, key in (("commands", "commands"), ("agents", "agents"), ("skills", "skills")):
+        block = routing.get(surface)
+        if not isinstance(block, dict):
+            continue
+        for _name, tier in block.items():
+            tier_name = str(tier)
+            if tier_name == "inherit":
+                continue
+            if tier_name not in counts:
+                counts[tier_name] = {"commands": 0, "agents": 0, "skills": 0}
+            counts[tier_name][key] += 1
+    return counts
+
+
+def _command_catalog_rows(classification: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for item in classification.get("planPolicySteps") or []:
+        if not isinstance(item, dict):
+            continue
+        step_id = item.get("id")
+        if not isinstance(step_id, str) or not step_id.strip():
+            continue
+        rows.append(
+            {
+                "id": step_id,
+                "phaseType": str(item.get("phaseType") or ""),
+                "required": bool(item.get("required")),
+            }
+        )
+    rows.sort(key=lambda row: (row["phaseType"], row["id"]))
+    return rows
+
+
+def _workflow_template_rows(root: Path, sources: dict[str, Any]) -> list[dict[str, Any]]:
+    block = sources.get("workflowTemplateVersions") or {}
+    library_version = int(block.get("libraryVersion") or 1)
+    library_root = Path(str(block.get("libraryRoot") or ".sw/workflows"))
+    templates: list[dict[str, Any]] = []
+    root_path = root / library_root
+    if root_path.is_dir():
+        for path in sorted(root_path.glob("*.json")):
+            try:
+                document = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(document, dict):
+                continue
+            templates.append(
+                {
+                    "name": str(document.get("name") or path.stem),
+                    "libraryVersion": int(document.get("libraryVersion") or library_version),
+                    "path": str(path.relative_to(root)),
+                }
+            )
+    return templates
+
+
+def collect_family_matrices(root: Path) -> dict[str, Any]:
+    classification = load_kernel_classification(root)
+    registry = load_registry(root)
+    sources = _family_sources(classification)
+    tier_block = sources.get("modelTiers") or {}
+    tier_order = [str(t) for t in (tier_block.get("tierOrder") or [])]
+    routing = _load_model_routing(root, sources)
+    tier_counts = _tier_routing_counts(routing, tier_order)
+    node_kinds = [
+        {
+            "id": str(row.get("id") or ""),
+            "shadowPolicy": str(row.get("shadowPolicy") or ""),
+        }
+        for row in (sources.get("graphNodeKinds") or {}).get("kinds") or []
+        if isinstance(row, dict) and row.get("id")
+    ]
+    artifact_schemas = [
+        {
+            "id": str(row.get("id") or ""),
+            "title": str(row.get("title") or ""),
+            "schemaPath": str(row.get("schemaPath") or ""),
+            "apiVersion": str(row.get("apiVersion") or ""),
+        }
+        for row in (sources.get("artifactSchemas") or {}).get("schemas") or []
+        if isinstance(row, dict) and row.get("id")
+    ]
+    registry_families = {
+        family_id: [str(row.get("id") or "") for row in _family_rows(registry, family_id)]
+        for family_id in sorted((registry.get("families") or {}).keys())
+    }
+    return {
+        "version": 1,
+        "generator": "scripts/capability_docs.py",
+        "families": {
+            "modelTiers": {
+                "tierOrder": tier_order,
+                "routingCounts": tier_counts,
+            },
+            "graphNodeKinds": node_kinds,
+            "artifactSchemas": artifact_schemas,
+            "commandCatalog": _command_catalog_rows(classification),
+            "workflowTemplateVersions": {
+                "libraryVersion": int(
+                    (sources.get("workflowTemplateVersions") or {}).get("libraryVersion") or 1
+                ),
+                "libraryRoot": str(
+                    (sources.get("workflowTemplateVersions") or {}).get("libraryRoot")
+                    or ".sw/workflows"
+                ),
+                "templates": _workflow_template_rows(root, sources),
+            },
+            "registryFamilies": registry_families,
+        },
+    }
+
+
+def render_family_matrices_md(matrices: dict[str, Any]) -> str:
+    families = matrices.get("families") or {}
+    lines = [
+        "# Capability family matrices",
+        "",
+        "Documentation-only projection of kernel and registry capability families (PRD 270 R8).",
+        MATRICES_BANNER,
+        "",
+        "## Model tiers",
+        "",
+        "| Tier | Commands | Agents | Skills |",
+        "| --- | ---: | ---: | ---: |",
+    ]
+    tier_block = families.get("modelTiers") or {}
+    counts = tier_block.get("routingCounts") or {}
+    for tier in tier_block.get("tierOrder") or []:
+        row = counts.get(tier) or {}
+        lines.append(
+            f"| `{tier}` | {int(row.get('commands') or 0)} | "
+            f"{int(row.get('agents') or 0)} | {int(row.get('skills') or 0)} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Graph node kinds",
+            "",
+            "| Kind | Shadow policy |",
+            "| --- | --- |",
+        ]
+    )
+    for row in families.get("graphNodeKinds") or []:
+        lines.append(f"| `{row['id']}` | {row.get('shadowPolicy') or '—'} |")
+    lines.extend(
+        [
+            "",
+            "## Artifact schemas",
+            "",
+            "| Schema | API version | Path |",
+            "| --- | --- | --- |",
+        ]
+    )
+    for row in families.get("artifactSchemas") or []:
+        lines.append(
+            f"| `{row['id']}` | `{row.get('apiVersion') or '—'}` | `{row.get('schemaPath')}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Command catalog",
+            "",
+            "| Step | Phase type | Required |",
+            "| --- | --- | --- |",
+        ]
+    )
+    for row in families.get("commandCatalog") or []:
+        required = "yes" if row.get("required") else "no"
+        lines.append(f"| `{row['id']}` | `{row.get('phaseType')}` | {required} |")
+    template_block = families.get("workflowTemplateVersions") or {}
+    lines.extend(
+        [
+            "",
+            "## Workflow template versions",
+            "",
+            f"Library version: **{int(template_block.get('libraryVersion') or 1)}**",
+            f" (`{template_block.get('libraryRoot')}`).",
+            "",
+            "| Template | Library version | Path |",
+            "| --- | ---: | --- |",
+        ]
+    )
+    templates = template_block.get("templates") or []
+    if templates:
+        for row in templates:
+            lines.append(
+                f"| `{row.get('name')}` | {int(row.get('libraryVersion') or 1)} | `{row.get('path')}` |"
+            )
+    else:
+        lines.append("| — | — | no checked-in templates |")
+    lines.extend(
+        [
+            "",
+            "## Registry families (planning + issues)",
+            "",
+            "See `CAPABILITIES.md` for shipped/deferred rows derived from `capability-registry.json`.",
+            "",
+        ]
+    )
+    for family_id, row_ids in sorted((families.get("registryFamilies") or {}).items()):
+        joined = ", ".join(f"`{row_id}`" for row_id in row_ids)
+        lines.append(f"- `{family_id}`: {joined}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def validate_matrix_sources(root: Path, classification: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    sources = _family_sources(classification)
+    routing_path = root / str(
+        (sources.get("modelTiers") or {}).get("routingDefaultsPath") or MODEL_ROUTING_REL
+    )
+    if not routing_path.is_file():
+        errors.append(f"missing model tier routing defaults: {routing_path.relative_to(root)}")
+    for row in (sources.get("artifactSchemas") or {}).get("schemas") or []:
+        if not isinstance(row, dict):
+            continue
+        schema_path = root / str(row.get("schemaPath") or "")
+        if not schema_path.is_file():
+            errors.append(f"missing artifact schema file: {schema_path.relative_to(root)}")
+    catalog_source = str((sources.get("commandCatalog") or {}).get("source") or "")
+    if catalog_source != "planPolicySteps":
+        errors.append(
+            f"commandCatalog.source must be planPolicySteps (got {catalog_source!r})"
+        )
+    if not _command_catalog_rows(classification):
+        errors.append("command catalog is empty — planPolicySteps missing")
+    return errors
 
 
 def _family_rows(registry: dict[str, Any], family: str) -> list[dict[str, Any]]:
@@ -289,6 +563,10 @@ def render_issues_capabilities_md(root: Path, registry: dict[str, Any]) -> str:
 
 def validate_conformance_semantics(root: Path, registry: dict[str, Any]) -> list[str]:
     errors: list[str] = []
+    classification_path = root / KERNEL_CLASSIFICATION_REL
+    if classification_path.is_file():
+        classification = load_kernel_classification(root)
+        errors.extend(validate_matrix_sources(root, classification))
     for row in _family_rows(registry, "issues.providers"):
         provider_id = str(row.get("id") or "")
         if not row.get("conformanceGated"):
@@ -305,15 +583,33 @@ def validate_conformance_semantics(root: Path, registry: dict[str, Any]) -> list
             errors.append(
                 f"{provider_id}: registry row is shipped+conformanceGated but conformance is not green"
             )
-    root_md = render_root_capabilities_md(root, registry)
-    if "linear" not in root_md:
+    expected_root = render_root_capabilities_md(root, registry)
+    actual_root_path = root / ROOT_CAPABILITIES_REL
+    actual_root = (
+        actual_root_path.read_text(encoding="utf-8") if actual_root_path.is_file() else ""
+    )
+    actual_matrices_path = root / MATRICES_MD_REL
+    actual_matrices = (
+        actual_matrices_path.read_text(encoding="utf-8")
+        if actual_matrices_path.is_file()
+        else ""
+    )
+    if "`linear`" not in expected_root and _linear_recognized(root):
         errors.append("root CAPABILITIES.md must include linear provider row when recognized")
     elif _linear_recognized(root):
-        linear_row_shipped = "`linear` | **shipped**" in root_md or "`linear` | shipped" in root_md
-        linear_recognized_only = "`linear` | recognized (not shipped)" in root_md
+        linear_row_shipped = "`linear` | **shipped**" in expected_root or "`linear` | shipped" in expected_root
+        linear_recognized_only = "`linear` | recognized (not shipped)" in expected_root
         if derive_shipped_issues_providers(root, registry) >= frozenset({"linear"}):
             if not linear_row_shipped:
                 errors.append("linear: derived shipped but root docs do not render shipped")
+            if "`linear`" not in actual_root:
+                errors.append(
+                    "linear: derived shipped but checked-in CAPABILITIES.md omits linear row"
+                )
+            if actual_matrices and "`linear`" not in actual_matrices:
+                errors.append(
+                    "linear: derived shipped but checked-in capability-family-matrices.md omits linear"
+                )
         elif not linear_recognized_only and not linear_row_shipped:
             errors.append("linear: missing shipped or recognized-not-shipped rendering")
     return errors
@@ -332,11 +628,48 @@ def check_files_fresh(root: Path, registry: dict[str, Any]) -> list[str]:
         errors.append(
             f"stale {ISSUES_CAPABILITIES_REL} (run: python3 scripts/capability_docs.py generate)"
         )
+
+    matrices = collect_family_matrices(root)
+    expected_json = json.dumps(matrices, indent=2, ensure_ascii=False) + "\n"
+    actual_json_path = root / MATRICES_JSON_REL
+    actual_json = (
+        actual_json_path.read_text(encoding="utf-8")
+        if actual_json_path.is_file()
+        else ""
+    )
+    if actual_json != expected_json:
+        errors.append(
+            f"stale {MATRICES_JSON_REL} (run: python3 scripts/capability_docs.py generate)"
+        )
+
+    expected_md = render_family_matrices_md(matrices)
+    actual_md_path = root / MATRICES_MD_REL
+    actual_md = actual_md_path.read_text(encoding="utf-8") if actual_md_path.is_file() else ""
+    if actual_md != expected_md:
+        errors.append(
+            f"stale {MATRICES_MD_REL} (run: python3 scripts/capability_docs.py generate)"
+        )
     return errors
+
+
+def _git_generated_paths_clean(root: Path) -> tuple[bool, str]:
+    rel_paths = [str(path) for path in GENERATED_PATHS]
+    completed = subprocess.run(
+        ["git", "diff", "--exit-code", "--"] + rel_paths,
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode == 0:
+        return True, ""
+    detail = (completed.stdout or completed.stderr or "").strip()
+    return False, detail or "generated capability docs differ from committed files"
 
 
 def cmd_generate(root: Path) -> int:
     registry = load_registry(root)
+    matrices = collect_family_matrices(root)
     (root / ROOT_CAPABILITIES_REL).write_text(
         render_root_capabilities_md(root, registry),
         encoding="utf-8",
@@ -345,7 +678,24 @@ def cmd_generate(root: Path) -> int:
         render_issues_capabilities_md(root, registry),
         encoding="utf-8",
     )
-    print(json.dumps({"verdict": "ok", "action": "capability-docs-generate"}, indent=2))
+    (root / MATRICES_JSON_REL).write_text(
+        json.dumps(matrices, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    (root / MATRICES_MD_REL).write_text(
+        render_family_matrices_md(matrices),
+        encoding="utf-8",
+    )
+    print(
+        json.dumps(
+            {
+                "verdict": "ok",
+                "action": "capability-docs-generate",
+                "families": sorted((matrices.get("families") or {}).keys()),
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
@@ -360,6 +710,27 @@ def cmd_check(root: Path) -> int:
         "deferredBackends": sorted(derive_deferred_backends(registry)),
         "shippedIssuesProviders": sorted(derive_shipped_issues_providers(root, registry)),
         "deferredIssuesProviders": sorted(derive_deferred_issues_providers(root, registry)),
+        "errors": errors,
+    }
+    print(json.dumps(payload, indent=2))
+    return 0 if not errors else 1
+
+
+def cmd_regen_check(root: Path) -> int:
+    """Regenerate in place and fail closed on dirty tree (semantic check is separate)."""
+    before_errors = cmd_generate(root)
+    if before_errors != 0:
+        return before_errors
+    clean, diff_detail = _git_generated_paths_clean(root)
+    errors: list[str] = []
+    if not clean:
+        errors.append(
+            "working tree changed after in-place capability docs regenerate "
+            f"(commit generated outputs): {diff_detail}"
+        )
+    payload = {
+        "verdict": "ok" if not errors else "fail",
+        "action": "capability-docs-regen-check",
         "errors": errors,
     }
     print(json.dumps(payload, indent=2))
@@ -383,7 +754,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "command",
         nargs="?",
-        choices=("generate", "check", "derived"),
+        choices=("generate", "check", "derived", "regen-check"),
         default="check",
     )
     args = parser.parse_args(argv)
@@ -392,6 +763,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_generate(root)
     if args.command == "derived":
         return cmd_derived(root)
+    if args.command == "regen-check":
+        return cmd_regen_check(root)
     return cmd_check(root)
 
 
