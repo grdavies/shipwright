@@ -41,6 +41,15 @@ from graph.scheduling_modes import (
     ExternalDispatchAuthorization,
     authorize_external_dispatch,
 )
+from graph.execution_backend import (
+    ExecutionBackend,
+    HostAdjudicationContext,
+    HostExecutionHints,
+    LocalSyncExecutionBackend,
+    PollPhase,
+    SubmitRequest,
+    adjudicate_terminal_envelope,
+)
 
 
 class SchedulerError(RuntimeError):
@@ -275,8 +284,12 @@ class GraphScheduler:
         clock: Clock | None = None,
         cache_enabled: bool = True,
         cache_identity: Mapping[str, Any] | None = None,
+        backend: ExecutionBackend | None = None,
     ) -> None:
         self._executor = executor
+        self._backend: ExecutionBackend = backend or LocalSyncExecutionBackend(
+            executor, clock=clock
+        )
         self._receipts = receipts
         self._pools = pools
         self._convergence_executor = convergence_executor
@@ -322,6 +335,42 @@ class GraphScheduler:
         if self._lease_releaser is None:
             return
         self._lease_releaser(node_id)
+
+    def _run_via_backend(
+        self,
+        node: Mapping[str, Any],
+        *,
+        idempotency_key: str,
+        input_hashes: list[str],
+        mutating: bool,
+        purity: str,
+        capability_token: str = "",
+    ) -> NodeExecutionResult:
+        """Dispatch through ExecutionBackend; host adjudicates terminal envelopes (R9/R10)."""
+        started = self._clock()
+        request = SubmitRequest(
+            idempotency_key=idempotency_key,
+            node=dict(node),
+            capability_token=capability_token,
+            input_hashes=tuple(input_hashes),
+            host_hints=HostExecutionHints(mutating=mutating, purity=purity),
+        )
+        submit = self._backend.submit(request)
+        handle = submit.handle
+        poll = self._backend.poll(handle)
+        while poll.phase not in (PollPhase.TERMINAL, PollPhase.CANCEL_ACKNOWLEDGED):
+            poll = self._backend.poll(handle)
+        terminal = self._backend.result(handle)
+        host = HostAdjudicationContext(
+            node_id=str(node["id"]),
+            idempotency_key=idempotency_key,
+            mutating=mutating,
+            purity=purity,
+            cache_identity=self._cache_identity,
+            started_at_monotonic=started,
+            input_hashes=tuple(input_hashes),
+        )
+        return adjudicate_terminal_envelope(host, terminal, clock=self._clock).to_node_execution_result()
 
     def _compensate(self, node_id: str) -> None:
         if self._compensation is None:
@@ -656,6 +705,18 @@ class GraphScheduler:
             expected = predecessors[node_id]
             timeout_seconds = int(node["resources"]["timeoutSeconds"])
             node_started = self._clock()
+            node_id = str(node["id"])
+            idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
+            mutating = _is_mutating(
+                node, frozenset((write_paths or {}).get(node_id, set()))
+            )
+            execution = _execution(node)
+            purity = str(execution.get("purity") or ("mutating" if mutating else "read-only"))
+            predecessor_hashes = [
+                output_hashes[item]
+                for item in predecessors[node_id]
+                if item in output_hashes
+            ]
             try:
                 if max_duration is not None and (self._clock() - started_at) > max_duration:
                     raise SchedulerTimeout(
@@ -667,7 +728,13 @@ class GraphScheduler:
                         dict(compiled["loopBounds"][node_id]),
                     )
                 else:
-                    result = self._executor(dict(node))
+                    result = self._run_via_backend(
+                        node,
+                        idempotency_key=idempotency_key,
+                        input_hashes=predecessor_hashes,
+                        mutating=mutating,
+                        purity=purity,
+                    )
                 elapsed = self._clock() - node_started
                 if elapsed > timeout_seconds:
                     raise SchedulerTimeout(
