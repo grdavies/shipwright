@@ -6,10 +6,68 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from graph.convergence_loop import CONVERGENCE_REASON_CODES, ConvergenceResult
 from graph.cost_telemetry import observability_fields
 from graph.execution_receipts import ExecutionReceiptJournal
 
 READ_ONLY_COMMANDS = frozenset({"status", "show", "explain", "critical-path", "live"})
+
+# PRD 270 requirement-area prefixes for stable outcome reason codes.
+PRD_270_REQUIREMENT_AREAS = frozenset({"R1", "R2", "R3", "R4", "R5", "R6", "R7"})
+
+# Canonical next actions keyed by convergence reason code (R7).
+_CONVERGENCE_NEXT_ACTIONS: dict[str, dict[str, Any]] = {
+    "r7.convergence.dry-clean": {
+        "action": "none",
+        "command": None,
+        "detail": "convergence loop settled on a dry-clean round",
+    },
+    "r7.convergence.dry-error": {
+        "action": "inspect-and-rerun",
+        "command": "/sw-status explain {node_id}",
+        "detail": "dry-error halt — inspect round-health attestation and rerun discovery",
+    },
+    "r7.convergence.max-rounds-exceeded": {
+        "action": "resume-with-partial",
+        "command": "/sw-deliver run",
+        "detail": "max_rounds ceiling reached — partial fingerprints preserved; resume or raise budget",
+    },
+    "r7.convergence.token-budget": {
+        "action": "raise-budget-or-accept-partial",
+        "command": "/sw-deliver run",
+        "detail": "token budget stop — outstanding findings may remain; raise budget or accept partial output",
+    },
+    "r7.convergence.finding-budget": {
+        "action": "raise-budget-or-accept-partial",
+        "command": "/sw-deliver run",
+        "detail": "finding budget exhausted — partial fingerprints preserved",
+    },
+    "r7.convergence.marginal-value": {
+        "action": "none",
+        "command": None,
+        "detail": "discretionary marginal-value stop after productive rounds",
+    },
+    "r7.convergence.duplicate-rate": {
+        "action": "none",
+        "command": None,
+        "detail": "discretionary duplicate-rate stop — prior findings show progress",
+    },
+    "r7.convergence.discovery-error": {
+        "action": "inspect-and-rerun",
+        "command": "/sw-status explain {node_id}",
+        "detail": "discovery error — rerun after fixing upstream failure",
+    },
+    "r7.convergence.truncated": {
+        "action": "inspect-and-rerun",
+        "command": "/sw-status explain {node_id}",
+        "detail": "discovery truncated — not dry-clean; widen scope or rerun",
+    },
+    "r7.convergence.rate-limited": {
+        "action": "wait-and-rerun",
+        "command": "/sw-deliver run",
+        "detail": "discovery rate-limited — wait and rerun convergence loop",
+    },
+}
 MUTATING_COMMANDS = frozenset({"retry", "replay"})
 
 # Mutually exclusive live node states (R11), ordered for legend / stable display.
@@ -47,6 +105,136 @@ STATE_LEGEND = {
 
 class ObservabilityError(ValueError):
     """Raised when graph evidence or an observability request is invalid."""
+
+
+@dataclass(frozen=True)
+class OutcomeRecord:
+    """Stable PRD 270 outcome surfaced on status/explain (R7 and extensible R1–R6)."""
+
+    requirement: str
+    reason_code: str
+    verdict: str
+    responsible: dict[str, Any]
+    explanation: str
+    next_action: dict[str, Any]
+    progress_on_prior_findings: tuple[str, ...] = ()
+
+
+def _format_next_action(template: dict[str, Any], *, node_id: str, run_id: str) -> dict[str, Any]:
+    payload = dict(template)
+    command = payload.get("command")
+    if isinstance(command, str):
+        payload["command"] = command.format(node_id=node_id, run_id=run_id)
+    return payload
+
+
+def convergence_outcome_from_result(
+    result: ConvergenceResult,
+    *,
+    node_id: str,
+    run_id: str = "",
+) -> OutcomeRecord:
+    """Map a convergence loop result to a stable R7 outcome record."""
+    if result.reason_code not in CONVERGENCE_REASON_CODES:
+        raise ObservabilityError(f"unknown convergence reason code: {result.reason_code}")
+    template = _CONVERGENCE_NEXT_ACTIONS.get(
+        result.reason_code,
+        {
+            "action": "unknown",
+            "command": None,
+            "detail": result.reason,
+        },
+    )
+    responsible: dict[str, Any] = {
+        "nodeId": node_id,
+        "artifact": "convergence-loop",
+        "rounds": len(result.rounds),
+        "fingerprints": len(result.fingerprints),
+    }
+    if result.partial:
+        responsible["partial"] = True
+    if result.dry_kind:
+        responsible["dryKind"] = result.dry_kind
+    explanation = result.reason
+    if result.reason_code == "r7.convergence.duplicate-rate" and result.progress_on_prior_findings:
+        explanation = (
+            f"{result.reason}; progress on {len(result.progress_on_prior_findings)} "
+            "previously reported finding(s)"
+        )
+    return OutcomeRecord(
+        requirement="R7",
+        reason_code=result.reason_code,
+        verdict=result.verdict,
+        responsible=responsible,
+        explanation=explanation,
+        next_action=_format_next_action(template, node_id=node_id, run_id=run_id),
+        progress_on_prior_findings=result.progress_on_prior_findings,
+    )
+
+
+def outcome_from_coverage(
+    coverage: Mapping[str, Any],
+    *,
+    node_id: str,
+    run_id: str = "",
+) -> OutcomeRecord | None:
+    """Build an outcome record from receipt coverage for any PRD 270 requirement area."""
+    raw = coverage.get("prd270Outcome")
+    if isinstance(raw, Mapping):
+        requirement = str(raw.get("requirement") or "")
+        if requirement not in PRD_270_REQUIREMENT_AREAS:
+            return None
+        reason_code = str(raw.get("reasonCode") or "")
+        verdict = str(raw.get("verdict") or "unknown")
+        responsible = dict(raw.get("responsible") or {"nodeId": node_id})
+        explanation = str(raw.get("explanation") or "")
+        next_action = dict(raw.get("nextAction") or {"action": "unknown", "command": None, "detail": ""})
+        progress = tuple(str(item) for item in raw.get("progressOnPriorFindings") or ())
+        return OutcomeRecord(
+            requirement=requirement,
+            reason_code=reason_code,
+            verdict=verdict,
+            responsible=responsible,
+            explanation=explanation,
+            next_action=next_action,
+            progress_on_prior_findings=progress,
+        )
+    convergence = coverage.get("convergence")
+    if isinstance(convergence, Mapping):
+        try:
+            result = ConvergenceResult(
+                verdict=str(convergence.get("verdict") or "unknown"),
+                reason=str(convergence.get("reason") or ""),
+                reason_code=str(convergence.get("reasonCode") or ""),
+                rounds=tuple(),
+                fingerprints=tuple(str(item) for item in convergence.get("fingerprints") or ()),
+                findings_seen=int(convergence.get("findingsSeen") or 0),
+                tokens_used=int(convergence.get("tokensUsed") or 0),
+                partial=bool(convergence.get("partial")),
+                progress_on_prior_findings=tuple(
+                    str(item) for item in convergence.get("progressOnPriorFindings") or ()
+                ),
+                dry_kind=convergence.get("dryKind"),
+            )
+        except (TypeError, ValueError) as exc:
+            raise ObservabilityError("invalid convergence coverage payload") from exc
+        return convergence_outcome_from_result(result, node_id=node_id, run_id=run_id)
+    return None
+
+
+def outcome_to_payload(record: OutcomeRecord) -> dict[str, Any]:
+    """Serialize an outcome record for status/explain JSON."""
+    payload: dict[str, Any] = {
+        "requirement": record.requirement,
+        "reasonCode": record.reason_code,
+        "verdict": record.verdict,
+        "responsible": dict(record.responsible),
+        "explanation": record.explanation,
+        "nextAction": dict(record.next_action),
+    }
+    if record.progress_on_prior_findings:
+        payload["progressOnPriorFindings"] = list(record.progress_on_prior_findings)
+    return payload
 
 
 @dataclass(frozen=True)
@@ -395,7 +583,14 @@ class GraphObservability:
     def status(self) -> dict[str, Any]:
         live = self.live_status()
         completed = live["counts"]["completed"] + live["counts"]["cached/skipped"]
-        return {
+        outcomes: list[dict[str, Any]] = []
+        for node_id in self._node_ids:
+            receipt = self._receipts.get(node_id) or self._inflight.get(node_id) or {}
+            coverage = receipt.get("coverage") if isinstance(receipt.get("coverage"), Mapping) else {}
+            outcome = outcome_from_coverage(coverage, node_id=node_id, run_id=self._run_id)
+            if outcome is not None:
+                outcomes.append(outcome_to_payload(outcome))
+        payload: dict[str, Any] = {
             "runId": self._run_id,
             "verdict": live["verdict"],
             "nodeCount": live["nodeCount"],
@@ -416,6 +611,9 @@ class GraphObservability:
             "counts": live["counts"],
             "degradedNodes": live["degradedNodes"],
         }
+        if outcomes:
+            payload["outcomes"] = outcomes
+        return payload
 
     def show(self, node_id: str) -> dict[str, Any]:
         if node_id not in self._nodes:
@@ -613,6 +811,12 @@ class GraphObservability:
             "nextAction": self._next_action(node_id, state),
             "degraded": node_id in self._degraded,
         }
+        coverage = receipt.get("coverage") if isinstance(receipt.get("coverage"), Mapping) else {}
+        outcome = outcome_from_coverage(coverage, node_id=node_id, run_id=self._run_id)
+        if outcome is not None:
+            payload["outcome"] = outcome_to_payload(outcome)
+            payload["reasonCode"] = outcome.reason_code
+            payload["nextAction"] = outcome.next_action
         if node_id in self._degraded:
             payload["degradation"] = dict(self._degraded[node_id])
         return payload
@@ -734,6 +938,8 @@ def render_graph_text(
         node_id = payload.get("nodeId", "?")
         state = payload.get("state", "unknown")
         lines.append(f"node={node_id} state={state}")
+        if payload.get("reasonCode"):
+            lines.append(f"reasonCode={payload.get('reasonCode')}")
         if compact:
             next_action = payload.get("nextAction") or {}
             lines.append(
@@ -842,8 +1048,13 @@ __all__ = [
     "LIVE_STATES",
     "MUTATING_COMMANDS",
     "ObservabilityError",
+    "OutcomeRecord",
+    "PRD_270_REQUIREMENT_AREAS",
     "READ_ONLY_COMMANDS",
     "STATE_LEGEND",
+    "convergence_outcome_from_result",
+    "outcome_from_coverage",
+    "outcome_to_payload",
     "render_graph_text",
     "run_accessibility",
 ]
