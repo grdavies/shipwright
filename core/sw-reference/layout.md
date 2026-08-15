@@ -68,6 +68,11 @@ docs/decisions/
 │       │   └── cache-index/
 │       ├── pool-snapshot.json
 │       └── telemetry.json
+├── sw-graph-cache/                  # gitignored authenticated canonical cache (PRD 271 R4/R21)
+│   ├── objects/                     # immutable MAC-stamped cache entries
+│   ├── manifests/                   # atomically published scope manifests
+│   ├── bookkeeping/                 # incremental size accounting (R4c)
+│   └── quarantine/                  # corrupt entries (untrusted-on-read)
 ├── sw-doc-runs/                     # durable /sw-doc driver state (R11)
 │   ├── index.json
 │   └── <runId>/
@@ -153,6 +158,31 @@ so every artifact is indexed under a single `runId` (no full-history scan).
 
 Deliver run-state (`.cursor/sw-deliver-runs/<runId>/`) remains the conductor cursor. Graph receipts are
 a separate namespace keyed by the same generic `runId` — not a second operator identity.
+
+### Authenticated canonical cache store (PRD 271 R4–R6, R21–R26)
+
+Gitignored, self-contained cache distinct from run journals. Default root:
+`.cursor/sw-graph-cache/` (`graph.cache_store.default_cache_root`). Entries are content-addressed,
+MAC-authenticated (broker-resolved per-repo secret), and receipt-visible on hit (`cacheSource: cache`,
+`cacheKey`, `originalRunId`).
+
+```text
+.cursor/sw-graph-cache/                 # gitignored; chmod 0700 when possible
+├── objects/<cacheKey>.json            # immutable entries (entryMac required on read)
+├── manifests/<scope>/current.json     # atomically published manifest per scope
+├── bookkeeping/stats.json             # incremental totalBytes / entryCount (no per-write rglob)
+└── quarantine/                        # corrupt entries — untrusted-on-read
+```
+
+| Concern | Path | Writer | Notes |
+| --- | --- | --- | --- |
+| Store root | `.cursor/sw-graph-cache/` | `CanonicalCacheStore` | Independent ceiling/GC from journals (R4b) |
+| Scope ladder | `graphExecution.cache.scope` | config | Dogfood default `run` (intra-run memoization); `repository` only after R24/R25 green |
+| MAC secret | `graphExecution.cache.credentialRef` | credential broker | Per-repo/machine secret — no source-constant key (R5a/R24) |
+| Run journals | `.cursor/sw-graph-runs/<runId>/receipts/` | `ExecutionReceiptJournal` | Historical records only — no durable cross-run cache index |
+
+**Retention:** cache GC defaults to 30-day retention and a 256 MiB ceiling independent of journal limits
+(`CanonicalCacheStore.gc`); oversize writes fail closed (`CacheStoreFull`).
 
 ### Target-lock and run-local lease paths (PRD 081 R19, R20)
 
