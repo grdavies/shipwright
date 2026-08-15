@@ -864,6 +864,7 @@
 * merge phase capability-registry-and-generated-documentation-r8 into feat/workflow-intelligence-platform (9b70de3) <!-- sw-deliver:capability-registry-and-generated-documentation-r8 -->
 * merge phase promotion-demotion-and-in-run-kill-switch-r2 into feat/workflow-intelligence-platform (576a165) <!-- sw-deliver:promotion-demotion-and-in-run-kill-switch-r2 -->
 * merge phase extra-capability-families-and-in-place-ci-regenerate-r8 into feat/workflow-intelligence-platform (ac4db53) <!-- sw-deliver:extra-capability-families-and-in-place-ci-regenerate-r8 -->
+* merge phase typed-subgraph-composition-with-pinned-fragments-r3 into feat/workflow-intelligence-platform (02dbee8) <!-- sw-deliver:typed-subgraph-composition-with-pinned-fragments-r3 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
