@@ -862,6 +862,7 @@
 * merge phase immutable-versus-optimizable-policy-and-required-capability-invariant-r1 into feat/workflow-intelligence-platform (fc0bf15) <!-- sw-deliver:immutable-versus-optimizable-policy-and-required-capability-invariant-r1 -->
 * merge phase shadow-evaluation-without-mutating-dispatch-r2 into feat/workflow-intelligence-platform (60fee7c) <!-- sw-deliver:shadow-evaluation-without-mutating-dispatch-r2 -->
 * merge phase capability-registry-and-generated-documentation-r8 into feat/workflow-intelligence-platform (9b70de3) <!-- sw-deliver:capability-registry-and-generated-documentation-r8 -->
+* merge phase promotion-demotion-and-in-run-kill-switch-r2 into feat/workflow-intelligence-platform (576a165) <!-- sw-deliver:promotion-demotion-and-in-run-kill-switch-r2 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
