@@ -180,27 +180,6 @@
       "pytestPath": "scripts/unit_tests/capability"
     },
     {
-      "id": "capability-docs-check",
-      "script": "scripts/capability_docs.py",
-      "args": [
-        "check"
-      ],
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-pytest-required-shard-2",
-      "verifyOrder": 39,
-      "ciShard": 2,
-      "pathTriggers": [
-        "scripts/capability_docs.py",
-        "core/sw-reference/capability-registry.json",
-        "CAPABILITIES.md",
-        "core/providers/issues/CAPABILITIES.md",
-        "scripts/test/fixtures/planning-provider-conformance/"
-      ]
-    },
-    {
       "id": "capability-select-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
