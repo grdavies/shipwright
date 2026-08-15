@@ -358,6 +358,7 @@
     "graph/typed_dataflow.py",
     "graph/verifier_policies.py",
     "graph/workflow_library.py",
+    "graph/worktree_integration.py",
     "guidelines_validate.py",
     "halt_resume.py",
     "harness_isolation_lint.py",
@@ -674,5 +675,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 671
+  "moduleCount": 672
 }

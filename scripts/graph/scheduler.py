@@ -53,6 +53,13 @@ from graph.execution_backend import (
     SubmitRequest,
     adjudicate_terminal_envelope,
 )
+from graph.worktree_integration import (
+    IntegrationTransitionResult,
+    WorktreeIntegrationBarrier,
+    WorktreeIntegrationError,
+    extract_worktree_manifest,
+    requires_worktree_integration,
+)
 
 
 class SchedulerError(RuntimeError):
@@ -662,6 +669,10 @@ class GraphScheduler:
         persisted_receipts: list[dict[str, Any]] = []
         pending = set(by_id)
         parked_ids: list[str] = []
+        integration_barrier = WorktreeIntegrationBarrier(
+            source_order, clock=self._clock
+        )
+        awaiting_integration: set[str] = set()
 
         def fanin_for(node_id: str) -> FanInResult:
             expected = predecessors[node_id]
@@ -688,11 +699,14 @@ class GraphScheduler:
             dispatched: bool,
             output_hash: str | None = None,
             receipt: dict[str, Any] | None = None,
+            settled: bool = True,
         ) -> None:
             if output_hash is not None:
                 output_hashes[node_id] = output_hash
             outcomes[node_id] = NodeOutcome(
-                node_id, success=(verdict == "pass")
+                node_id,
+                success=(verdict == "pass"),
+                settled=settled,
             )
             if receipt is not None:
                 persisted_receipts.append(receipt)
@@ -1086,6 +1100,66 @@ class GraphScheduler:
             )
             persisted_receipts.append(receipt)
             _release_inflight(work)
+            claim = claims_by_id[node_id]
+            node_mutating = _is_mutating(
+                node, frozenset((write_paths or {}).get(node_id, set()))
+            )
+            if requires_worktree_integration(claim.policy, mutating=node_mutating):
+                if not result.success:
+                    self._release_lease(node_id)
+                    mark_terminal(
+                        node_id,
+                        verdict=result.verdict,
+                        fanin=fanin,
+                        reason="",
+                        dispatched=True,
+                        output_hash=output_hash,
+                        receipt=receipt,
+                    )
+                    return
+                manifest = None
+                try:
+                    manifest = extract_worktree_manifest(result.coverage)
+                except WorktreeIntegrationError as exc:
+                    reason = str(exc)
+                    self._compensate(node_id)
+                    self._release_lease(node_id)
+                    mark_terminal(
+                        node_id,
+                        verdict="fail",
+                        fanin=fanin,
+                        reason=reason,
+                        dispatched=True,
+                        output_hash=output_hash,
+                        receipt=receipt,
+                    )
+                    return
+                if manifest is None:
+                    self._release_lease(node_id)
+                    mark_terminal(
+                        node_id,
+                        verdict=result.verdict,
+                        fanin=fanin,
+                        reason="",
+                        dispatched=True,
+                        output_hash=output_hash,
+                        receipt=receipt,
+                    )
+                    return
+                integration_barrier.enqueue(node_id, manifest)
+                awaiting_integration.add(node_id)
+                mark_terminal(
+                    node_id,
+                    verdict="pass",
+                    fanin=fanin,
+                    reason="awaiting-worktree-integration",
+                    dispatched=True,
+                    output_hash=output_hash,
+                    receipt=receipt,
+                    settled=False,
+                )
+                _drain_worktree_integration()
+                return
             self._release_lease(node_id)
             mark_terminal(
                 node_id,
@@ -1096,6 +1170,50 @@ class GraphScheduler:
                 output_hash=output_hash,
                 receipt=receipt,
             )
+
+        def _apply_integration_transition(
+            transition: IntegrationTransitionResult,
+        ) -> None:
+            node_id = transition.node_id
+            awaiting_integration.discard(node_id)
+            fanin = fanin_for(node_id)
+            existing = node_runs.get(node_id)
+            if transition.conflict or transition.verdict != "pass":
+                self._compensate(node_id)
+                self._release_lease(node_id)
+                outcomes[node_id] = NodeOutcome(
+                    node_id, success=False, settled=True
+                )
+                if existing is not None:
+                    node_runs[node_id] = NodeRun(
+                        node_id=node_id,
+                        verdict="fail",
+                        dispatched=existing.dispatched,
+                        fanin=fanin,
+                        output_hash=existing.output_hash,
+                        reason=transition.reason,
+                    )
+                return
+            self._release_lease(node_id)
+            outcomes[node_id] = NodeOutcome(
+                node_id, success=True, settled=True
+            )
+            if existing is not None:
+                node_runs[node_id] = NodeRun(
+                    node_id=node_id,
+                    verdict="pass",
+                    dispatched=existing.dispatched,
+                    fanin=fanin,
+                    output_hash=existing.output_hash,
+                    reason=transition.reason,
+                )
+
+        def _drain_worktree_integration() -> None:
+            if not integration_barrier.has_pending():
+                return
+            for transition in integration_barrier.drain():
+                _apply_integration_transition(transition)
+            flush_snapshot()
 
         def _process_completion(event: _CompletionEvent) -> None:
             self._bump_owning_loop()
