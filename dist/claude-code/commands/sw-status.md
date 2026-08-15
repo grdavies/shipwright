@@ -85,6 +85,60 @@ Each explain payload includes `nextAction` (`action`, optional resume `command`,
 Unknown / completed / cached / failed / inaccessible runs have defined empty or degraded payloads from
 `scripts/graph/observability.py` — status never invents a second safety kernel.
 
+## PRD 270 stable reason codes and outcomes (R1–R7)
+
+When a WorkflowGraph run is active, graph status and explain delegate to
+`scripts/graph/observability.py`. Every PRD 270 optimizer, routing, composition, artifact-schema, and
+convergence outcome emits a stable **`reasonCode`**, **`verdict`**, responsible node or artifact,
+**`explanation`**, and canonical **`nextAction`** on the existing `/sw-status` surfaces — not a
+parallel command.
+
+### Outcome payload shape
+
+`explain <nodeId>` promotes graph outcomes onto the explain payload; run-level `status` / `live`
+aggregates `outcomes[]` when present:
+
+| Field | Meaning |
+| --- | --- |
+| `outcome.requirement` | PRD 270 area: `R1`–`R7` |
+| `reasonCode` | Stable dotted code (top-level on explain when an outcome is present) |
+| `verdict` | Outcome verdict (`pass`, `fail`, `halt`, `partial`, …) |
+| `responsible` | Node id, artifact kind, pool, or structured attribution |
+| `explanation` | Human-readable summary |
+| `nextAction` | Canonical operator step: `{ action, command?, detail }` |
+| `progressOnPriorFindings` | When set — duplicate-rate stops must show progress on previously reported findings |
+
+**R1–R6** outcomes are recorded in receipt `coverage.prd270Outcome` by the responsible graph node
+(immutable-policy rejection, shadow refusal, fragment digest mismatch, judgment quorum failure,
+routing-regret calibration, schema-version mismatch, etc.). **R7** convergence outcomes map from
+`coverage.convergence` or an explicit `prd270Outcome` with `requirement: R7`. `/sw-status` surfaces
+codes verbatim — it does not invent alternate reason codes or next actions.
+
+Plain-text explain (`--format text`) includes `reasonCode=` when an outcome is present; compact mode
+echoes `next` and `cmd` from `nextAction`.
+
+### R7 convergence reason codes
+
+Convergence loop outcomes (`scripts/graph/convergence_loop.py`) use the `r7.convergence.*` prefix.
+Canonical `nextAction` values are defined in `scripts/graph/observability.py`:
+
+| `reasonCode` | Typical `verdict` | Canonical `nextAction.action` | Operator detail |
+| --- | --- | --- | --- |
+| `r7.convergence.dry-clean` | `pass` | `none` | Loop settled on a dry-clean round |
+| `r7.convergence.dry-error` | `fail` / `halt` | `inspect-and-rerun` | Round-health attestation failed — not success |
+| `r7.convergence.max-rounds-exceeded` | `halt` | `resume-with-partial` | `max_rounds` ceiling — partial fingerprints preserved |
+| `r7.convergence.token-budget` | `halt` | `raise-budget-or-accept-partial` | Token budget stop with outstanding findings |
+| `r7.convergence.finding-budget` | `halt` | `raise-budget-or-accept-partial` | Finding budget exhausted |
+| `r7.convergence.marginal-value` | `pass` | `none` | Discretionary early stop after productive rounds |
+| `r7.convergence.duplicate-rate` | `pass` | `none` | Discretionary stop — prior findings show progress |
+| `r7.convergence.discovery-error` | `fail` | `inspect-and-rerun` | Discovery errored upstream |
+| `r7.convergence.truncated` | `fail` / `halt` | `inspect-and-rerun` | Discovery truncated — not dry-clean |
+| `r7.convergence.rate-limited` | `halt` | `wait-and-rerun` | Rate-limited — wait and resume deliver run |
+
+Shadow comparison output and digest-bound promotion confirmation on `/sw-deliver`:
+`core/commands/sw-deliver.md` (Workflow optimizer). Term definitions:
+`docs/guides/graph-domain-terminology.md` (`dry-clean`, `dry-error`, `max_rounds`).
+
 **Communication intensity:** ultra
 
 **Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-status`.
