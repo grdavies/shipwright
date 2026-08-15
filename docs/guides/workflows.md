@@ -54,10 +54,10 @@ QK -->|no| DOC[Enter /sw-doc → /sw-deliver run]
 No spec artifacts — no frozen task list, so **`/sw-deliver` does not apply**. Triage routes to the
 manual `/sw-ship` atomics. Quick work compiles to a **fixed WorkflowGraph** (`scripts/graph/quick_ship_compile.py`)
 mirroring `canonicalPhaseChains.sw-ship` — implement → verify → review → gaps → commit → PR → CI →
-stabilize → ready/merge-ready halt. Topology is config-declared only (no PRD 272 adaptive selection);
+stabilize → ready/merge-ready halt. Topology is config-declared only (no adaptive capability selection);
 **never auto-merges**.
 
-#### Quick ship parity matrix (R8)
+#### Quick ship parity matrix
 
 | Concern | With PR | No PR yet | Resume authority |
 | --- | --- | --- | --- |
@@ -69,7 +69,7 @@ stabilize → ready/merge-ready halt. Topology is config-declared only (no PRD 2
 | `--fast` | Skips `gap-check`, `sw-simplify` | Same | Bypass evidence written; mandatory gates unchanged |
 | Legacy substrate | `ship_loop.py` step driver until cutover evidence | Same | Graph compile is observability + scheduler admission |
 
-Rollback: R8 removes the legacy step substrate only after dogfood parity evidence; until then
+Rollback: the legacy step substrate is removed only after dogfood parity evidence; until then
 `ship-steps.json` remains authoritative for resume even when a compiled graph exists.
 
 ```mermaid
