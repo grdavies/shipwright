@@ -18,9 +18,22 @@ from graph.legacy_adapters import (  # noqa: E402
     restore_legacy_plan,
 )
 from graph.router_nodes import (  # noqa: E402
+    HIGH_REGRET_THRESHOLD,
+    MIN_CALIBRATION_SAMPLE,
+    ROUTE_DETERMINISTIC_TRIAGE,
+    ROUTE_FULL_WORKFLOW,
+    ROUTE_QUICK,
+    RouteCalibrationSample,
+    RouteCalibrationTable,
     RouteDecision,
     RouteDecisionJournal,
+    RouteRunOutcome,
+    compute_routing_regret,
+    deterministic_route_for_class,
     hash_route_input,
+    normalize_files_changed,
+    record_routing_regret,
+    select_calibrated_route,
 )
 from graph.scheduling_modes import (  # noqa: E402
     ScheduledItem,
@@ -67,19 +80,19 @@ def test_typed_dataflow_dispatches_least_context_and_reports_advisory(
     registry.register(
         artifact_id="input",
         content={"needed": {"value": 7}, "secret": "not-selected"},
-        schema="example/v1",
+        schema="example@1",
         producing_node="producer",
         input_revision="abc",
         verification_evidence=[],
     )
     edges = [
-        TypedEdge("needed", "producer", "consumer", "input", "example/v1", "/needed"),
+        TypedEdge("needed", "producer", "consumer", "input", "example@1", "/needed"),
         TypedEdge(
             "optional",
             "producer",
             "consumer",
             "missing",
-            "example/v1",
+            "example@1",
             required=False,
         ),
     ]
@@ -92,7 +105,7 @@ def test_typed_dataflow_dispatches_least_context_and_reports_advisory(
     with pytest.raises(DataflowError, match="required artifact"):
         build_dispatch_context(
             "consumer",
-            [TypedEdge("gap", "producer", "consumer", "missing", "example/v1")],
+            [TypedEdge("gap", "producer", "consumer", "missing", "example@1")],
             registry,
         )
 
@@ -263,6 +276,113 @@ def test_router_decision_is_durable_and_complete(tmp_path: Path) -> None:
         "confidence",
         "overrides",
     }
+
+
+def test_over_routed_quick_records_high_regret_and_below_sample_buckets_hold_route() -> None:
+    scope = ("scripts/graph/router_nodes.py",)
+    outcome = RouteRunOutcome(
+        ready_without_rework=False,
+        workflow_depth=ROUTE_FULL_WORKFLOW,
+        retries=3,
+        cost=12.5,
+        declared_scope=scope,
+        files_changed=(
+            "scripts/graph/router_nodes.py",
+            "README.md",
+        ),
+    )
+    assert normalize_files_changed(outcome.files_changed, scope) == (
+        "scripts/graph/router_nodes.py",
+    )
+
+    decision = RouteDecision(
+        router_id="routing",
+        input_hash=hash_route_input({"signal": "small-fix"}),
+        selected_route=ROUTE_QUICK,
+        rule_version="1",
+        classifier_model="cheap-model",
+        confidence=0.96,
+    )
+    regret = compute_routing_regret(
+        decision.selected_route,
+        outcome,
+        confidence=decision.confidence,
+    )
+    assert regret >= HIGH_REGRET_THRESHOLD
+
+    regretted = record_routing_regret(decision, outcome)
+    assert regretted.routing_regret == regret
+
+    allowed = {"cheap", "build", "mid", "deep"}
+    tiers = {"cheap": "c", "build": "b", "mid": "m", "deep": "d"}
+    below_sample_table = RouteCalibrationTable.empty()
+    for index in range(MIN_CALIBRATION_SAMPLE - 1):
+        sample = RouteCalibrationSample(
+            input_hash=f"hash-{index}",
+            selected_route=ROUTE_QUICK,
+            routing_regret=0.1,
+            ready_without_rework=True,
+            cost=1.0,
+        )
+        bucket = below_sample_table.bucket("quick-eligible").with_sample(sample)
+        below_sample_table = below_sample_table.with_bucket(bucket)
+
+    baseline = select_calibrated_route(
+        input_hash=decision.input_hash,
+        confidence=0.96,
+        quick_eligible=True,
+        table=below_sample_table,
+        classifier_tier="cheap",
+        allowed_tiers=allowed,
+        tiers=tiers,
+    )
+    assert baseline.selected_route == ROUTE_DETERMINISTIC_TRIAGE
+    assert baseline.response == "deterministic-triage-fallback"
+
+    assert below_sample_table.bucket("quick-eligible").sample_count < MIN_CALIBRATION_SAMPLE
+
+    after_extra = select_calibrated_route(
+        input_hash=decision.input_hash,
+        confidence=0.96,
+        quick_eligible=True,
+        table=below_sample_table,
+        classifier_tier="cheap",
+        allowed_tiers=allowed,
+        tiers=tiers,
+    )
+    assert after_extra.selected_route == baseline.selected_route
+    assert after_extra.response == baseline.response
+
+    above_sample_table = RouteCalibrationTable.empty()
+    bucket = RouteCalibrationTable.empty().bucket("quick-eligible")
+    for index in range(MIN_CALIBRATION_SAMPLE):
+        bucket = bucket.with_sample(
+            RouteCalibrationSample(
+                input_hash=f"stable-{index}",
+                selected_route=ROUTE_QUICK,
+                routing_regret=0.0,
+                ready_without_rework=True,
+                cost=1.0,
+            )
+        )
+    above_sample_table = above_sample_table.with_bucket(bucket)
+    calibrated = select_calibrated_route(
+        input_hash=decision.input_hash,
+        confidence=0.96,
+        quick_eligible=True,
+        table=above_sample_table,
+        classifier_tier="cheap",
+        allowed_tiers=allowed,
+        tiers=tiers,
+        candidate_costs={ROUTE_QUICK: 1.0, ROUTE_FULL_WORKFLOW: 5.0},
+    )
+    assert calibrated.selected_route == ROUTE_QUICK
+    assert calibrated.mechanical_verification_required
+    assert calibrated.routing_regret_tiebreak_cost == 1.0
+
+    fixed = deterministic_route_for_class("empty-declared-scope")
+    assert fixed["selectedRoute"] == ROUTE_QUICK
+    assert fixed["readyWithoutRework"] is True
 
 
 @pytest.mark.parametrize(
