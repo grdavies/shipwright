@@ -881,6 +881,7 @@
 * merge phase command-documentation-for-shadow-reason-codes-and-confirmation-r8 into feat/workflow-intelligence-platform (2b1cd1a) <!-- sw-deliver:command-documentation-for-shadow-reason-codes-and-confirmation-r8 -->
 * merge phase executionbackend-minimal-contract-size-medium into feat/graph-execution-runtime-v2 (e52c9d7) <!-- sw-deliver:executionbackend-minimal-contract-size-medium -->
 * merge phase executionbackend-minimal-contract-size-medium into feat/graph-execution-runtime-v2 (5325ea1) <!-- sw-deliver:executionbackend-minimal-contract-size-medium -->
+* merge phase single-owning-loop-async-scheduler-size-large into feat/graph-execution-runtime-v2 (91f31ca) <!-- sw-deliver:single-owning-loop-async-scheduler-size-large -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
