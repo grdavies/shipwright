@@ -25,8 +25,18 @@ from graph.dynamic_proposal import (
     evaluate_dynamic_proposal,
 )  # noqa: E402
 from graph.kernel_compiler import compile_workflow_graph  # noqa: E402
+from graph.scheduling_modes import ALLOWED_EXTERNAL_AUTHORIZERS  # noqa: E402
 
 LIBRARY_VERSION = 1
+PLAN_POLICY_CANONICAL = "canonical"
+PLAN_POLICY_PROPOSED = "proposed"
+PROMOTION_SAMPLE_FLOOR = 3
+MAX_PREDICTION_ERROR = 0.25
+ALLOWED_PLAN_POLICY_AUTHORIZERS = ALLOWED_EXTERNAL_AUTHORIZERS | frozenset(
+    {"workflow-library-promotion-gate"}
+)
+DIGEST_CONFIRMATION_COMMANDS = frozenset({"sw-deliver"})
+REQUIRED_INPUT_STRATA = frozenset({"dogfood-deliver", "non-dogfood-deliver"})
 DEFAULT_LIBRARY_ROOT = Path(".sw/workflows")
 _NAME_RE = re.compile(r"^[a-z][a-z0-9-]{0,62}$")
 _PLACEHOLDER_RE = re.compile(r"\$\{([a-z][a-z0-9_-]{0,62})\}")
@@ -47,6 +57,51 @@ _PARAM_TYPES = frozenset({"string", "integer", "boolean"})
 
 class WorkflowLibraryError(ValueError):
     """Raised when a template is unsafe, invalid, or not approved."""
+
+
+@dataclass(frozen=True)
+class PromotionSample:
+    """One run's evidence row for plan-policy promotion."""
+
+    run_id: str
+    stratum: str
+    template_digest: str
+    prediction_error: float
+    required_capability_regression: bool
+    ready_without_rework: bool
+    command: str
+
+
+@dataclass(frozen=True)
+class DigestConfirmation:
+    """Digest-bound human confirmation on an existing operator command."""
+
+    command: str
+    digest: str
+    confirmed_by: str
+    confirmed_at: str
+
+
+@dataclass(frozen=True)
+class PlanPolicyPromotionEvidence:
+    """Integrity-scoped promotion gate inputs."""
+
+    samples: tuple[PromotionSample, ...]
+    authorizer: str
+    confirmation: DigestConfirmation
+    receipts_digest: str | None = None
+    calibration_digest: str | None = None
+
+
+@dataclass(frozen=True)
+class PlanPolicyPromotionVerdict:
+    verdict: str
+    target_policy: str
+    reasons: tuple[str, ...]
+
+    @property
+    def passed(self) -> bool:
+        return self.verdict == "pass"
 
 
 @dataclass(frozen=True)
@@ -397,6 +452,206 @@ def prepare_run(
         compiled=compiled,
         approval=dict(approval),
     )
+
+
+def _promotion_evidence_digest(evidence: PlanPolicyPromotionEvidence) -> str:
+    payload = {
+        "samples": [
+            {
+                "runId": sample.run_id,
+                "stratum": sample.stratum,
+                "templateDigest": sample.template_digest,
+                "predictionError": sample.prediction_error,
+                "requiredCapabilityRegression": sample.required_capability_regression,
+                "readyWithoutRework": sample.ready_without_rework,
+                "command": sample.command,
+            }
+            for sample in evidence.samples
+        ],
+        "authorizer": evidence.authorizer,
+        "confirmation": {
+            "command": evidence.confirmation.command,
+            "digest": evidence.confirmation.digest,
+            "confirmedBy": evidence.confirmation.confirmed_by,
+            "confirmedAt": evidence.confirmation.confirmed_at,
+        },
+        "receiptsDigest": evidence.receipts_digest,
+        "calibrationDigest": evidence.calibration_digest,
+    }
+    return hashlib.sha256(_canonical_bytes(payload)).hexdigest()
+
+
+def gate_plan_policy_promotion(
+    evidence: PlanPolicyPromotionEvidence,
+    *,
+    target_policy: str,
+    template_digest: str,
+) -> PlanPolicyPromotionVerdict:
+    """Fail-closed gate for orchestration.planPolicy proposed then canonical."""
+    reasons: list[str] = []
+    if target_policy not in {PLAN_POLICY_PROPOSED, PLAN_POLICY_CANONICAL}:
+        reasons.append(f"unsupported target policy: {target_policy}")
+
+    sample_count = len(evidence.samples)
+    if sample_count < PROMOTION_SAMPLE_FLOOR:
+        reasons.append(
+            f"sample floor not met: need {PROMOTION_SAMPLE_FLOOR}, have {sample_count}"
+        )
+
+    strata = {sample.stratum for sample in evidence.samples}
+    missing_strata = sorted(REQUIRED_INPUT_STRATA - strata)
+    if missing_strata:
+        reasons.append(
+            "missing input strata: " + ", ".join(missing_strata)
+        )
+
+    for sample in evidence.samples:
+        if sample.prediction_error > MAX_PREDICTION_ERROR:
+            reasons.append(
+                f"prediction error {sample.prediction_error} exceeds "
+                f"bound {MAX_PREDICTION_ERROR} for run {sample.run_id}"
+            )
+        if sample.required_capability_regression:
+            reasons.append(
+                f"required-capability regression on run {sample.run_id}"
+            )
+        if not sample.ready_without_rework:
+            reasons.append(
+                f"run {sample.run_id} did not reach ready without human rework"
+            )
+        if sample.template_digest != template_digest:
+            reasons.append(
+                f"sample digest mismatch on run {sample.run_id}"
+            )
+
+    authorizer = evidence.authorizer.strip()
+    if not authorizer:
+        reasons.append("named authorizer is required")
+    elif authorizer not in ALLOWED_PLAN_POLICY_AUTHORIZERS:
+        reasons.append(f"unrecognized promotion authorizer: {authorizer}")
+
+    confirmation = evidence.confirmation
+    command = confirmation.command.strip().removeprefix("/")
+    if command not in DIGEST_CONFIRMATION_COMMANDS:
+        reasons.append(
+            "digest confirmation must bind an existing command: "
+            + ", ".join(sorted(DIGEST_CONFIRMATION_COMMANDS))
+        )
+    if not confirmation.digest.strip():
+        reasons.append("digest confirmation is required")
+    elif confirmation.digest != template_digest:
+        reasons.append("digest confirmation does not match template digest")
+    if not confirmation.confirmed_by.strip():
+        reasons.append("digest confirmation actor is required")
+
+    if target_policy == PLAN_POLICY_CANONICAL:
+        proposed_samples = [
+            sample
+            for sample in evidence.samples
+            if sample.stratum == "non-dogfood-deliver"
+        ]
+        if not proposed_samples:
+            reasons.append(
+                "canonical promotion requires non-dogfood deliver evidence"
+            )
+
+    verdict = "pass" if not reasons else "fail"
+    return PlanPolicyPromotionVerdict(
+        verdict=verdict,
+        target_policy=target_policy,
+        reasons=tuple(reasons),
+    )
+
+
+def _template_plan_policy(document: Mapping[str, Any]) -> str:
+    promotion = document.get("planPolicyPromotion")
+    if isinstance(promotion, Mapping):
+        stage = str(promotion.get("stage") or PLAN_POLICY_CANONICAL)
+        if stage in {PLAN_POLICY_CANONICAL, PLAN_POLICY_PROPOSED}:
+            return stage
+    return PLAN_POLICY_CANONICAL
+
+
+def promote_template_plan_policy(
+    name: str,
+    evidence: PlanPolicyPromotionEvidence,
+    *,
+    target_policy: str,
+    root: str | Path = DEFAULT_LIBRARY_ROOT,
+    promoted_at: str | None = None,
+) -> Path:
+    """Promote a saved template through proposed then canonical plan policy."""
+    if target_policy not in {PLAN_POLICY_PROPOSED, PLAN_POLICY_CANONICAL}:
+        raise WorkflowLibraryError(f"unsupported plan policy target: {target_policy}")
+    document = load_template(name, root=root)
+    _assert_approved(document)
+    template_digest = _template_digest(document)
+    gate = gate_plan_policy_promotion(
+        evidence,
+        target_policy=target_policy,
+        template_digest=template_digest,
+    )
+    if not gate.passed:
+        raise WorkflowLibraryError(
+            "plan policy promotion gate failed: " + "; ".join(gate.reasons)
+        )
+
+    current = _template_plan_policy(document)
+    if target_policy == PLAN_POLICY_PROPOSED and current == PLAN_POLICY_PROPOSED:
+        raise WorkflowLibraryError("template already promoted to proposed")
+    if target_policy == PLAN_POLICY_CANONICAL and current != PLAN_POLICY_PROPOSED:
+        raise WorkflowLibraryError(
+            "canonical promotion requires an active proposed stage"
+        )
+
+    document["planPolicyPromotion"] = {
+        "stage": target_policy,
+        "promotedAt": promoted_at
+        or datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "authorizer": evidence.authorizer.strip(),
+        "evidenceDigest": _promotion_evidence_digest(evidence),
+        "templateDigest": template_digest,
+        "confirmation": {
+            "command": evidence.confirmation.command.strip().removeprefix("/"),
+            "digest": evidence.confirmation.digest,
+            "confirmedBy": evidence.confirmation.confirmed_by.strip(),
+            "confirmedAt": evidence.confirmation.confirmed_at,
+        },
+        "receiptsDigest": evidence.receipts_digest,
+        "calibrationDigest": evidence.calibration_digest,
+    }
+    if target_policy == PLAN_POLICY_CANONICAL:
+        document["canonicalAdoptedDigest"] = template_digest
+    path = _template_path(Path(root), name)
+    _write_json_atomic(path, document)
+    return path
+
+
+def demote_template_plan_policy(
+    name: str,
+    *,
+    reason: str,
+    actor: str,
+    root: str | Path = DEFAULT_LIBRARY_ROOT,
+    demoted_at: str | None = None,
+) -> Path:
+    """Drop proposed plan policy and revert the template to canonical."""
+    if not reason.strip():
+        raise WorkflowLibraryError("demotion reason is required")
+    if not actor.strip():
+        raise WorkflowLibraryError("demotion actor is required")
+    document = load_template(name, root=root)
+    document["planPolicyPromotion"] = {
+        "stage": PLAN_POLICY_CANONICAL,
+        "demotedAt": demoted_at
+        or datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        "demotedBy": actor.strip(),
+        "reason": reason.strip(),
+    }
+    document.pop("canonicalAdoptedDigest", None)
+    path = _template_path(Path(root), name)
+    _write_json_atomic(path, document)
+    return path
 
 
 def evaluate_saved_template(
