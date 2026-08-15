@@ -207,6 +207,11 @@ local and remote branches, stale worktrees, and completed deliver run-state. Dry
 Adopter docs live under [`docs/guides/`](docs/guides/getting-started.md). The legacy `documentation/` tree was removed;
 use the guides below.
 
+**Capability docs** (`CAPABILITIES.md`, `core/providers/issues/CAPABILITIES.md`, and
+`core/sw-reference/capability-family-matrices.*`) are **generated from the machine-readable registry**
+(`core/sw-reference/capability-registry.json` via `scripts/capability_docs.py`) — edit the registry and
+regenerate; do not hand-edit the markdown.
+
 | Guide | Purpose |
 |-------|---------|
 | [Getting started](docs/guides/getting-started.md) | Adoption arc and first paths |
@@ -214,6 +219,7 @@ use the guides below.
 | [Workflows](docs/guides/workflows.md) | End-to-end flows |
 | [Graph domain terminology](docs/guides/graph-domain-terminology.md) | Planning vs execution graph vocabulary |
 | [Configuration](docs/guides/configuration.md) | `/sw-init` knobs (issue-store providers include Linear) |
+| [`CAPABILITIES.md`](CAPABILITIES.md) | **Generated** from `core/sw-reference/capability-registry.json` — do not edit by hand |
 | [Style guide](docs/guides/style-guide.md) | Writing conventions |
 | [Glossary](docs/guides/glossary.md) | Coined terms |
 | [Graph-domain terminology](docs/guides/graph-domain-terminology.md) | WorkflowGraph / planning / provenance domains |
