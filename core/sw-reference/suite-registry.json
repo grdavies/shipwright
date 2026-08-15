@@ -12,6 +12,27 @@
       "ciJobName": "feat-test-plan-docs-link-check"
     },
     {
+      "id": "capability-docs-regen-check",
+      "script": "scripts/capability_docs.py",
+      "args": [
+        "regen-check"
+      ],
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-capability-docs-regen-check",
+      "pathTriggers": [
+        "scripts/capability_docs.py",
+        "core/sw-reference/kernel-classification.json",
+        "core/sw-reference/capability-registry.json",
+        "core/sw-reference/capability-family-matrices.json",
+        "core/sw-reference/capability-family-matrices.md",
+        "CAPABILITIES.md",
+        "core/providers/issues/CAPABILITIES.md"
+      ]
+    },
+    {
       "id": "scripts-inventory-guard",
       "script": "scripts/check_scripts_inventory.py",
       "lanes": [
@@ -1893,6 +1914,7 @@
       "description": "Always-on PR guard jobs (data-driven; PRD 082 R35).",
       "suiteIds": [
         "docs-link-check",
+        "capability-docs-regen-check",
         "scripts-inventory-guard",
         "bash-py-invocation-guard",
         "git-push-secret-scan-chokepoint",

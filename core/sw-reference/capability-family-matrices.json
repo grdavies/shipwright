@@ -1,0 +1,304 @@
+{
+  "version": 1,
+  "generator": "scripts/capability_docs.py",
+  "families": {
+    "modelTiers": {
+      "tierOrder": [
+        "cheap",
+        "build",
+        "mid",
+        "deep"
+      ],
+      "routingCounts": {
+        "cheap": {
+          "commands": 22,
+          "agents": 7,
+          "skills": 13
+        },
+        "build": {
+          "commands": 6,
+          "agents": 8,
+          "skills": 6
+        },
+        "mid": {
+          "commands": 7,
+          "agents": 10,
+          "skills": 5
+        },
+        "deep": {
+          "commands": 4,
+          "agents": 4,
+          "skills": 3
+        }
+      }
+    },
+    "graphNodeKinds": [
+      {
+        "id": "barrier",
+        "shadowPolicy": "read-only"
+      },
+      {
+        "id": "command",
+        "shadowPolicy": "mutating"
+      },
+      {
+        "id": "convergence-loop",
+        "shadowPolicy": "mutating"
+      },
+      {
+        "id": "gate",
+        "shadowPolicy": "read-only"
+      },
+      {
+        "id": "router",
+        "shadowPolicy": "read-only"
+      },
+      {
+        "id": "transform",
+        "shadowPolicy": "read-only"
+      },
+      {
+        "id": "verifier",
+        "shadowPolicy": "read-only"
+      }
+    ],
+    "artifactSchemas": [
+      {
+        "id": "workflow-graph",
+        "title": "WorkflowGraph",
+        "schemaPath": "scripts/graph/schema/workflow_graph.schema.json",
+        "apiVersion": "shipwright.dev/v1alpha1"
+      },
+      {
+        "id": "node-spec",
+        "title": "NodeSpec",
+        "schemaPath": "scripts/graph/schema/node_spec.schema.json",
+        "apiVersion": "shipwright.dev/v1alpha1"
+      }
+    ],
+    "commandCatalog": [
+      {
+        "id": "enrich",
+        "phaseType": "debug",
+        "required": false
+      },
+      {
+        "id": "memory-prework",
+        "phaseType": "debug",
+        "required": true
+      },
+      {
+        "id": "normalize",
+        "phaseType": "debug",
+        "required": true
+      },
+      {
+        "id": "rca",
+        "phaseType": "debug",
+        "required": true
+      },
+      {
+        "id": "rca-human-decision-halt",
+        "phaseType": "debug",
+        "required": true
+      },
+      {
+        "id": "record",
+        "phaseType": "debug",
+        "required": true
+      },
+      {
+        "id": "route",
+        "phaseType": "debug",
+        "required": true
+      },
+      {
+        "id": "route-confirm-halt",
+        "phaseType": "debug",
+        "required": true
+      },
+      {
+        "id": "triage",
+        "phaseType": "debug",
+        "required": true
+      },
+      {
+        "id": "afterTasks-checkpoint",
+        "phaseType": "doc",
+        "required": true
+      },
+      {
+        "id": "doc-review-halt-gated-auto",
+        "phaseType": "doc",
+        "required": false
+      },
+      {
+        "id": "doc-review-halt-manual",
+        "phaseType": "doc",
+        "required": false
+      },
+      {
+        "id": "spec-rigor",
+        "phaseType": "doc",
+        "required": true
+      },
+      {
+        "id": "sw-brainstorm",
+        "phaseType": "doc",
+        "required": false
+      },
+      {
+        "id": "sw-doc-review",
+        "phaseType": "doc",
+        "required": true
+      },
+      {
+        "id": "sw-freeze",
+        "phaseType": "doc",
+        "required": true
+      },
+      {
+        "id": "sw-prd",
+        "phaseType": "doc",
+        "required": true
+      },
+      {
+        "id": "sw-tasks",
+        "phaseType": "doc",
+        "required": true
+      },
+      {
+        "id": "sw-triage",
+        "phaseType": "doc",
+        "required": true
+      },
+      {
+        "id": "execute-fan-out",
+        "phaseType": "execute",
+        "required": true
+      },
+      {
+        "id": "execute-integrate",
+        "phaseType": "execute",
+        "required": true
+      },
+      {
+        "id": "execute-plan-validate",
+        "phaseType": "execute",
+        "required": true
+      },
+      {
+        "id": "execute-terminal-gate",
+        "phaseType": "execute",
+        "required": true
+      },
+      {
+        "id": "dedup",
+        "phaseType": "feedback",
+        "required": true
+      },
+      {
+        "id": "handoff",
+        "phaseType": "feedback",
+        "required": true
+      },
+      {
+        "id": "hook-trigger-halt",
+        "phaseType": "feedback",
+        "required": false
+      },
+      {
+        "id": "human-confirm-halt",
+        "phaseType": "feedback",
+        "required": true
+      },
+      {
+        "id": "redact",
+        "phaseType": "feedback",
+        "required": true
+      },
+      {
+        "id": "gap-check",
+        "phaseType": "ship",
+        "required": false
+      },
+      {
+        "id": "sw-commit",
+        "phaseType": "ship",
+        "required": true
+      },
+      {
+        "id": "sw-execute",
+        "phaseType": "ship",
+        "required": true
+      },
+      {
+        "id": "sw-pr",
+        "phaseType": "ship",
+        "required": true
+      },
+      {
+        "id": "sw-ready",
+        "phaseType": "ship",
+        "required": true
+      },
+      {
+        "id": "sw-review",
+        "phaseType": "ship",
+        "required": false
+      },
+      {
+        "id": "sw-simplify",
+        "phaseType": "ship",
+        "required": false
+      },
+      {
+        "id": "sw-stabilize",
+        "phaseType": "ship",
+        "required": true
+      },
+      {
+        "id": "sw-tmp-clean",
+        "phaseType": "ship",
+        "required": true
+      },
+      {
+        "id": "sw-tmp-init",
+        "phaseType": "ship",
+        "required": true
+      },
+      {
+        "id": "sw-verify",
+        "phaseType": "ship",
+        "required": true
+      },
+      {
+        "id": "sw-watch-ci",
+        "phaseType": "ship",
+        "required": true
+      }
+    ],
+    "workflowTemplateVersions": {
+      "libraryVersion": 1,
+      "libraryRoot": ".sw/workflows",
+      "templates": []
+    },
+    "registryFamilies": {
+      "issues.providers": [
+        "github-issues",
+        "jira",
+        "gitlab-issues",
+        "linear",
+        "none"
+      ],
+      "planning-store.backends": [
+        "in-repo-public",
+        "local-synced",
+        "memory",
+        "issue-store",
+        "private-repo",
+        "encryption-at-rest"
+      ]
+    }
+  }
+}

@@ -723,5 +723,73 @@
         }
       }
     }
+  },
+  "capabilityFamilySources": {
+    "version": 1,
+    "description": "Authoritative sources for PRD 270 R8 extra capability-family matrices (documentation/data only).",
+    "modelTiers": {
+      "tierOrder": [
+        "cheap",
+        "build",
+        "mid",
+        "deep"
+      ],
+      "routingDefaultsPath": "core/sw-reference/model-routing.defaults.json"
+    },
+    "graphNodeKinds": {
+      "kinds": [
+        {
+          "id": "barrier",
+          "shadowPolicy": "read-only"
+        },
+        {
+          "id": "command",
+          "shadowPolicy": "mutating"
+        },
+        {
+          "id": "convergence-loop",
+          "shadowPolicy": "mutating"
+        },
+        {
+          "id": "gate",
+          "shadowPolicy": "read-only"
+        },
+        {
+          "id": "router",
+          "shadowPolicy": "read-only"
+        },
+        {
+          "id": "transform",
+          "shadowPolicy": "read-only"
+        },
+        {
+          "id": "verifier",
+          "shadowPolicy": "read-only"
+        }
+      ]
+    },
+    "artifactSchemas": {
+      "schemas": [
+        {
+          "id": "workflow-graph",
+          "title": "WorkflowGraph",
+          "schemaPath": "scripts/graph/schema/workflow_graph.schema.json",
+          "apiVersion": "shipwright.dev/v1alpha1"
+        },
+        {
+          "id": "node-spec",
+          "title": "NodeSpec",
+          "schemaPath": "scripts/graph/schema/node_spec.schema.json",
+          "apiVersion": "shipwright.dev/v1alpha1"
+        }
+      ]
+    },
+    "commandCatalog": {
+      "source": "planPolicySteps"
+    },
+    "workflowTemplateVersions": {
+      "libraryVersion": 1,
+      "libraryRoot": ".sw/workflows"
+    }
   }
 }

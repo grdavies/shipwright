@@ -88,6 +88,9 @@ jobs:
       - name: minimum-python bash-py-invocation-guard
         run: python3 scripts/test/bash-py-invocation-guard.test
 
+      - name: minimum-python capability-docs-regen-check
+        run: python3 scripts/capability_docs.py regen-check
+
       - name: minimum-python claims-audit-unit
         run: python3 scripts/test/claims-audit-unit.test
 
