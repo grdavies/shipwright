@@ -58,11 +58,34 @@ class PoolState:
 
 
 @dataclass
+class InflightLeaseRegistry:
+    """Live in-flight pool holds keyed by node id (PRD 271 R19)."""
+
+    holders: dict[str, tuple[PoolName, int]] = field(default_factory=dict)
+
+    def register(self, node_id: str, pool: PoolName, *, slots: int) -> None:
+        self.holders[node_id] = (pool, slots)
+
+    def release(self, node_id: str) -> tuple[PoolName, int] | None:
+        return self.holders.pop(node_id, None)
+
+    def inflight_ids(self) -> frozenset[str]:
+        return frozenset(self.holders)
+
+    def snapshot(self) -> dict[str, dict[str, Any]]:
+        return {
+            node_id: {"pool": pool.value, "slots": slots}
+            for node_id, (pool, slots) in sorted(self.holders.items())
+        }
+
+
+@dataclass
 class ResourcePoolRegistry:
     """In-process registry. Hard ceiling may not exceed ``hard_ceiling`` (harness bound)."""
 
     hard_ceiling: int = 16
     pools: dict[PoolName, PoolState] = field(default_factory=dict)
+    inflight_leases: InflightLeaseRegistry = field(default_factory=InflightLeaseRegistry)
 
     def __post_init__(self) -> None:
         if not self.pools:
@@ -97,7 +120,13 @@ class ResourcePoolRegistry:
             raise ValueError("slots must be >= 1")
         return slots <= self.pools[pool].limit
 
-    def acquire(self, pool: PoolName, *, slots: int = 1) -> None:
+    def acquire(
+        self,
+        pool: PoolName,
+        *,
+        slots: int = 1,
+        node_id: str | None = None,
+    ) -> None:
         if slots < 1:
             raise ValueError("slots must be >= 1")
         state = self.pools[pool]
@@ -107,17 +136,27 @@ class ResourcePoolRegistry:
             state.waiters += 1
             raise PoolExhausted(pool, state.limit, state.in_use, slots=slots)
         state.in_use += slots
+        if node_id is not None:
+            self.inflight_leases.register(node_id, pool, slots=slots)
 
-    def release(self, pool: PoolName, *, slots: int = 1) -> None:
+    def release(
+        self,
+        pool: PoolName,
+        *,
+        slots: int = 1,
+        node_id: str | None = None,
+    ) -> None:
         if slots < 1:
             raise ValueError("slots must be >= 1")
         state = self.pools[pool]
         state.in_use = max(0, state.in_use - slots)
         if state.waiters:
             state.waiters = max(0, state.waiters - 1)
+        if node_id is not None:
+            self.inflight_leases.release(node_id)
 
     def snapshot(self) -> dict[str, Any]:
-        return {
+        base = {
             name.value: {
                 "limit": state.limit,
                 "inUse": state.in_use,
@@ -126,3 +165,7 @@ class ResourcePoolRegistry:
             }
             for name, state in self.pools.items()
         }
+        inflight = self.inflight_leases.snapshot()
+        if inflight:
+            base["inflightLeases"] = inflight
+        return base

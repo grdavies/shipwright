@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import queue
+import threading
 import time
 from collections.abc import Callable, Mapping, Sequence, Set
 from dataclasses import dataclass, field
@@ -43,6 +45,7 @@ from graph.scheduling_modes import (
 )
 from graph.execution_backend import (
     ExecutionBackend,
+    ExecutionHandle,
     HostAdjudicationContext,
     HostExecutionHints,
     LocalSyncExecutionBackend,
@@ -79,6 +82,31 @@ class CancelMode(str, Enum):
 
     CANCEL_AND_DRAIN = "cancel-and-drain"
     LET_SETTLE = "let-settle"
+
+
+@dataclass
+class _InflightWork:
+    """One node admitted and executing on a worker thread."""
+
+    node_id: str
+    fanin: FanInResult
+    pool: PoolName
+    slots: int
+    handle: ExecutionHandle | None = None
+
+
+@dataclass
+class _CompletionEvent:
+    """Marshalled completion from a worker thread to the owning loop (R17)."""
+
+    node_id: str
+    fanin: FanInResult
+    pool: PoolName
+    slots: int
+    result: NodeExecutionResult | None = None
+    error: BaseException | None = None
+    cancelled: bool = False
+    cancel_reason: str = ""
 
 
 LeaseReleaser = Callable[[str], None]
@@ -299,6 +327,14 @@ class GraphScheduler:
         self._cache_enabled = cache_enabled
         self._cache_identity = dict(cache_identity or {})
         self._cancel_requested: CancelMode | None = None
+        self._event_queue: queue.SimpleQueue[_CompletionEvent] = queue.SimpleQueue()
+        self._owning_loop_transitions = 0
+        self._state_owner_thread: int | None = None
+
+    @property
+    def owning_loop_transitions(self) -> int:
+        """Count of scheduler state transitions on the owning loop (tests / R17)."""
+        return self._owning_loop_transitions
 
     def request_cancel(
         self, mode: CancelMode = CancelMode.CANCEL_AND_DRAIN
@@ -376,6 +412,208 @@ class GraphScheduler:
         if self._compensation is None:
             return
         self._compensation(node_id)
+
+    def _assert_owning_loop(self) -> None:
+        owner = self._state_owner_thread
+        if owner is not None and threading.get_ident() != owner:
+            raise SchedulerError("scheduler state mutation off owning loop")
+
+    def _bump_owning_loop(self) -> None:
+        self._assert_owning_loop()
+        self._owning_loop_transitions += 1
+
+    def _inflight_claims(
+        self,
+        inflight: Mapping[str, _InflightWork],
+        claims_by_id: Mapping[str, NodeIsolationClaim],
+    ) -> list[NodeIsolationClaim]:
+        return [claims_by_id[node_id] for node_id in sorted(inflight)]
+
+    def _fence_cancel_handle(
+        self,
+        handle: ExecutionHandle,
+        *,
+        reason: str,
+    ) -> PollPhase:
+        """cancel-requested → ack/terminated before release (R3)."""
+        poll = self._backend.cancel(handle)
+        while poll.phase not in (PollPhase.TERMINAL, PollPhase.CANCEL_ACKNOWLEDGED):
+            poll = self._backend.poll(handle)
+        return poll.phase
+
+    def _run_node_worker(
+        self,
+        node: Mapping[str, Any],
+        *,
+        work: _InflightWork,
+        run_id: str,
+        graph_hash: str,
+        predecessors: Mapping[str, tuple[str, ...]],
+        output_hashes: Mapping[str, str],
+        write_paths: Mapping[str, Set[str] | frozenset[str]] | None,
+        compiled: Mapping[str, Any],
+        started_at: float,
+        max_duration: int | None,
+    ) -> NodeExecutionResult:
+        node_id = str(node["id"])
+        timeout_seconds = int(node["resources"]["timeoutSeconds"])
+        node_started = self._clock()
+        idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
+        mutating = _is_mutating(
+            node, frozenset((write_paths or {}).get(node_id, set()))
+        )
+        execution = node.get("execution") or {}
+        if isinstance(execution, Mapping) and execution.get("purity") and execution.get(
+            "cache"
+        ):
+            exec_blob = execution
+        else:
+            exec_blob = {"purity": "mutating", "cache": "disabled"}
+        purity = str(
+            exec_blob.get("purity") or ("mutating" if mutating else "read-only")
+        )
+        predecessor_hashes = [
+            output_hashes[item]
+            for item in predecessors[node_id]
+            if item in output_hashes
+        ]
+        if max_duration is not None and (self._clock() - started_at) > max_duration:
+            raise SchedulerTimeout(f"run exceeded maxDurationSeconds={max_duration}")
+        if node["kind"] == "convergence-loop" and self._convergence_executor:
+            result = self._convergence_executor(
+                dict(node),
+                dict(compiled["loopBounds"][node_id]),
+            )
+        else:
+            submit = self._backend.submit(
+                SubmitRequest(
+                    idempotency_key=idempotency_key,
+                    node=dict(node),
+                    capability_token="",
+                    input_hashes=tuple(predecessor_hashes),
+                    host_hints=HostExecutionHints(mutating=mutating, purity=purity),
+                )
+            )
+            handle = submit.handle
+            work.handle = handle
+            poll = self._backend.poll(handle)
+            while poll.phase not in (
+                PollPhase.TERMINAL,
+                PollPhase.CANCEL_ACKNOWLEDGED,
+            ):
+                if self._cancel_requested is CancelMode.CANCEL_AND_DRAIN:
+                    self._backend.cancel(handle)
+                poll = self._backend.poll(handle)
+            terminal = self._backend.result(handle)
+            host = HostAdjudicationContext(
+                node_id=node_id,
+                idempotency_key=idempotency_key,
+                mutating=mutating,
+                purity=purity,
+                cache_identity=self._cache_identity,
+                started_at_monotonic=node_started,
+                input_hashes=tuple(predecessor_hashes),
+            )
+            result = adjudicate_terminal_envelope(
+                host, terminal, clock=self._clock
+            ).to_node_execution_result()
+            advisory_ms = int(terminal.report.duration_ms or 0)
+            if advisory_ms > result.duration_ms:
+                result = NodeExecutionResult(
+                    verdict=result.verdict,
+                    output=result.output,
+                    model=result.model,
+                    attempts=result.attempts,
+                    tokens=result.tokens,
+                    duration_ms=advisory_ms,
+                    coverage=dict(result.coverage),
+                    wrote=result.wrote,
+                    retry_only=result.retry_only,
+                    prompt_version=result.prompt_version,
+                    model_version=result.model_version,
+                    tool_configuration=result.tool_configuration,
+                    policy_version=result.policy_version,
+                    credential_capabilities=result.credential_capabilities,
+                    scope_identity=result.scope_identity,
+                    repository_identity=result.repository_identity,
+                    trust_domain=result.trust_domain,
+                    tool_binary_identity=result.tool_binary_identity,
+                    repo_state_identity=result.repo_state_identity,
+                )
+            if poll.phase is PollPhase.CANCEL_ACKNOWLEDGED:
+                result = NodeExecutionResult(
+                    verdict="cancelled",
+                    output=result.output,
+                    model=result.model,
+                    attempts=result.attempts,
+                    tokens=result.tokens,
+                    duration_ms=result.duration_ms,
+                    coverage={
+                        **dict(result.coverage),
+                        "cancelled": True,
+                        "reason": "cancel-acknowledged",
+                    },
+                )
+        elapsed = self._clock() - node_started
+        if elapsed > timeout_seconds:
+            raise SchedulerTimeout(
+                f"node {node_id} exceeded timeoutSeconds={timeout_seconds}"
+            )
+        if not isinstance(result, NodeExecutionResult):
+            raise SchedulerError(
+                f"executor returned invalid result for node {node_id}"
+            )
+        return result
+
+    def _start_worker(
+        self,
+        work: _InflightWork,
+        *,
+        node: Mapping[str, Any],
+        run_id: str,
+        graph_hash: str,
+        predecessors: Mapping[str, tuple[str, ...]],
+        output_hashes: Mapping[str, str],
+        write_paths: Mapping[str, Set[str] | frozenset[str]] | None,
+        compiled: Mapping[str, Any],
+        started_at: float,
+        max_duration: int | None,
+    ) -> None:
+        def _task() -> None:
+            try:
+                result = self._run_node_worker(
+                    node,
+                    work=work,
+                    run_id=run_id,
+                    graph_hash=graph_hash,
+                    predecessors=predecessors,
+                    output_hashes=output_hashes,
+                    write_paths=write_paths,
+                    compiled=compiled,
+                    started_at=started_at,
+                    max_duration=max_duration,
+                )
+                self._event_queue.put(
+                    _CompletionEvent(
+                        node_id=work.node_id,
+                        fanin=work.fanin,
+                        pool=work.pool,
+                        slots=work.slots,
+                        result=result,
+                    )
+                )
+            except BaseException as exc:
+                self._event_queue.put(
+                    _CompletionEvent(
+                        node_id=work.node_id,
+                        fanin=work.fanin,
+                        pool=work.pool,
+                        slots=work.slots,
+                        error=exc,
+                    )
+                )
+
+        threading.Thread(target=_task, daemon=True).start()
 
     def run(
         self,
@@ -477,7 +715,7 @@ class GraphScheduler:
             reason: str,
         ) -> None:
             if pool is not None:
-                self._pools.release(pool, slots=slots)
+                self._pools.release(pool, slots=slots, node_id=node_id)
             idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
             node = by_id[node_id]
             mutating = _is_mutating(
@@ -693,72 +931,50 @@ class GraphScheduler:
             return True
 
 
-        def execute_node(
+        inflight: dict[str, _InflightWork] = {}
+
+        def _release_inflight(work: _InflightWork) -> None:
+            self._pools.release(
+                work.pool, slots=work.slots, node_id=work.node_id
+            )
+
+        def _apply_node_result(
             node_id: str,
             fanin: FanInResult,
-            *,
-            pool: PoolName,
-            slots: int,
+            result: NodeExecutionResult,
+            work: _InflightWork,
         ) -> None:
-            """Execute with pool slots already acquired and begin() intent written."""
+            """Apply a terminal worker result; idempotent when receipt already complete."""
+            idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
+            try:
+                existing = self._receipts.get(node_id, idempotency_key)
+                if existing.get("state") == "complete":
+                    stored_hashes = existing.get("outputHashes") or []
+                    output_hash = str(stored_hashes[0]) if stored_hashes else None
+                    mark_terminal(
+                        node_id,
+                        verdict=str(existing.get("verdict") or "fail"),
+                        fanin=fanin,
+                        reason="replayed complete receipt",
+                        dispatched=True,
+                        output_hash=output_hash,
+                        receipt=existing,
+                    )
+                    _release_inflight(work)
+                    self._release_lease(node_id)
+                    return
+            except KeyError:
+                pass
+
             node = by_id[node_id]
             expected = predecessors[node_id]
             timeout_seconds = int(node["resources"]["timeoutSeconds"])
-            node_started = self._clock()
-            node_id = str(node["id"])
-            idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
-            mutating = _is_mutating(
-                node, frozenset((write_paths or {}).get(node_id, set()))
-            )
-            execution = _execution(node)
-            purity = str(execution.get("purity") or ("mutating" if mutating else "read-only"))
-            predecessor_hashes = [
-                output_hashes[item]
-                for item in predecessors[node_id]
-                if item in output_hashes
-            ]
-            try:
-                if max_duration is not None and (self._clock() - started_at) > max_duration:
-                    raise SchedulerTimeout(
-                        f"run exceeded maxDurationSeconds={max_duration}"
-                    )
-                if node["kind"] == "convergence-loop" and self._convergence_executor:
-                    result = self._convergence_executor(
-                        dict(node),
-                        dict(compiled["loopBounds"][node_id]),
-                    )
-                else:
-                    result = self._run_via_backend(
-                        node,
-                        idempotency_key=idempotency_key,
-                        input_hashes=predecessor_hashes,
-                        mutating=mutating,
-                        purity=purity,
-                    )
-                elapsed = self._clock() - node_started
-                if elapsed > timeout_seconds:
-                    raise SchedulerTimeout(
-                        f"node {node_id} exceeded timeoutSeconds={timeout_seconds}"
-                    )
-            except BaseException:
-                self._pools.release(pool, slots=slots)
-                self._release_lease(node_id)
-                flush_snapshot()
-                raise
-            else:
-                self._pools.release(pool, slots=slots)
 
-            if not isinstance(result, NodeExecutionResult):
-                raise SchedulerError(
-                    f"executor returned invalid result for node {node_id}"
-                )
-
-            # Honor declared timeout against reported duration as well.
             if result.duration_ms > timeout_seconds * 1000:
                 reason = f"timeoutSeconds={timeout_seconds}"
                 receipt = self._receipts.finish(
                     node_id,
-                    f"{run_id}:{graph_hash}:{node_id}",
+                    idempotency_key,
                     {
                         "model": result.model,
                         "attempts": result.attempts,
@@ -779,6 +995,7 @@ class GraphScheduler:
                     },
                 )
                 self._compensate(node_id)
+                _release_inflight(work)
                 self._release_lease(node_id)
                 mark_terminal(
                     node_id,
@@ -788,14 +1005,53 @@ class GraphScheduler:
                     dispatched=True,
                     receipt=receipt,
                 )
-                flush_snapshot()
                 return
 
             execution = _execution(node)
             if execution.get("purity") == "read-only" and result.wrote:
+                _release_inflight(work)
+                self._release_lease(node_id)
                 raise PurityViolationError(
                     f"read-only node {node_id} produced writes; failing closed"
                 )
+
+            if result.verdict == "cancelled":
+                receipt = self._receipts.finish(
+                    node_id,
+                    idempotency_key,
+                    {
+                        "model": result.model,
+                        "attempts": result.attempts,
+                        "tokens": result.tokens,
+                        "durationMs": result.duration_ms,
+                        "inputHashes": [
+                            output_hashes[item]
+                            for item in expected
+                            if item in output_hashes
+                        ],
+                        "outputHashes": [],
+                        "verdict": "cancelled",
+                        "coverage": {
+                            **dict(result.coverage),
+                            "cancelled": True,
+                            "reason": str(
+                                result.coverage.get("reason") or "cancelled"
+                            ),
+                        },
+                    },
+                )
+                self._compensate(node_id)
+                _release_inflight(work)
+                self._release_lease(node_id)
+                mark_terminal(
+                    node_id,
+                    verdict="cancelled",
+                    fanin=fanin,
+                    reason=str(result.coverage.get("reason") or "cancelled"),
+                    dispatched=True,
+                    receipt=receipt,
+                )
+                return
 
             output_hash = _digest(result.output)
             payload = {
@@ -824,196 +1080,255 @@ class GraphScheduler:
                 cache_key = _cache_key_for(node, result)
             receipt = self._receipts.finish(
                 node_id,
-                f"{run_id}:{graph_hash}:{node_id}",
+                idempotency_key,
                 payload,
                 cache_key=cache_key,
             )
             persisted_receipts.append(receipt)
-            output_hashes[node_id] = output_hash
-            outcomes[node_id] = NodeOutcome(node_id, success=result.success)
-            node_runs[node_id] = NodeRun(
-                node_id=node_id,
-                verdict=result.verdict,
-                dispatched=True,
-                fanin=fanin,
-                output_hash=output_hash,
-            )
-            pending.discard(node_id)
+            _release_inflight(work)
             self._release_lease(node_id)
-            flush_snapshot()
+            mark_terminal(
+                node_id,
+                verdict=result.verdict,
+                fanin=fanin,
+                reason="",
+                dispatched=True,
+                output_hash=output_hash,
+                receipt=receipt,
+            )
 
-        # Ready-set loop: re-evaluate after each completion batch (R1).
-        while pending:
-            if max_duration is not None and (self._clock() - started_at) > max_duration:
-                for node_id in sorted(pending, key=source_order.__getitem__):
-                    cancel_node(
-                        node_id,
-                        fanin_for(node_id),
-                        pool=None,
-                        slots=0,
-                        reason=f"maxDurationSeconds={max_duration}",
-                    )
-                applied_cancel = CancelMode.CANCEL_AND_DRAIN
-                break
-
-            if self._cancel_requested is CancelMode.CANCEL_AND_DRAIN:
-                for node_id in sorted(pending, key=source_order.__getitem__):
-                    cancel_node(
-                        node_id,
-                        fanin_for(node_id),
-                        pool=None,
-                        slots=0,
-                        reason="cancel-and-drain",
-                    )
-                applied_cancel = CancelMode.CANCEL_AND_DRAIN
-                break
-
-            if self._cancel_requested is CancelMode.LET_SETTLE:
-                # No new admissions once let-settle is requested and nothing is
-                # mid-batch; pending nodes that never started fail the run.
-                applied_cancel = CancelMode.LET_SETTLE
-                for node_id in sorted(pending, key=source_order.__getitem__):
-                    cancel_node(
-                        node_id,
-                        fanin_for(node_id),
-                        pool=None,
-                        slots=0,
-                        reason="let-settle-no-new-admission",
-                    )
-                break
-
-            ready = ready_set()
-            if not pending:
-                break
-            if not ready:
-                raise SchedulerNoProgress(
-                    sorted(pending, key=source_order.__getitem__),
-                    reason="no-progress",
+        def _process_completion(event: _CompletionEvent) -> None:
+            self._bump_owning_loop()
+            work = inflight.pop(event.node_id, None)
+            if work is None:
+                return
+            node_id = event.node_id
+            fanin = event.fanin
+            if event.error is not None:
+                _release_inflight(work)
+                self._release_lease(node_id)
+                flush_snapshot()
+                if isinstance(event.error, BaseException):
+                    raise event.error
+                raise SchedulerError(str(event.error))
+            if event.cancelled:
+                result = event.result or NodeExecutionResult(
+                    verdict="cancelled",
+                    coverage={
+                        "cancelled": True,
+                        "reason": event.cancel_reason or "cancelled",
+                    },
                 )
+                _apply_node_result(node_id, fanin, result, work)
+                return
+            if event.result is None:
+                _release_inflight(work)
+                self._release_lease(node_id)
+                raise SchedulerError(
+                    f"completion event missing result for node {node_id}"
+                )
+            _apply_node_result(node_id, fanin, event.result, work)
 
-            batch: list[tuple[str, FanInResult, PoolName, int]] = []
-            parked: list[str] = []
-            replayed = 0
-            for node_id in ready:
-                if len(batch) >= max_conc:
-                    break
+        def _cancel_pending(reason: str) -> None:
+            for node_id in sorted(list(pending), key=source_order.__getitem__):
+                if node_id in inflight:
+                    continue
                 fanin = fanin_for(node_id)
-                if complete_replay(node_id, fanin):
-                    replayed += 1
+                if fanin.unsettled or fanin.halt:
                     continue
-                if try_cache_hit(node_id, fanin):
-                    replayed += 1
-                    continue
-                node = by_id[node_id]
-                pool = PoolName(node["resources"]["pool"])
-                slots = int(node["resources"]["slots"])
-                try:
-                    self._pools.acquire(pool, slots=slots)
-                except PoolRequestUnsatisfiable as exc:
-                    raise SchedulerError(
-                        f"node {node_id}: unsatisfiable pool request at dispatch"
-                    ) from exc
-                except PoolExhausted:
-                    parked.append(node_id)
-                    continue
-                gate_hits = contends_with_inflight(
-                    claims_by_id[node_id],
-                    [claims_by_id[nid] for nid, _, _, _ in batch],
-                )
-                if gate_hits:
-                    self._pools.release(pool, slots=slots)
-                    parked.append(node_id)
-                    continue
-                batch.append((node_id, fanin, pool, slots))
-
-            parked_ids = list(parked)
-            if not batch:
-                flush_snapshot(queue=ready)
-                if replayed:
-                    continue
-                if parked:
-                    raise SchedulerNoProgress(parked, reason="pool-parked-no-progress")
-                raise SchedulerNoProgress(
-                    sorted(pending, key=source_order.__getitem__),
-                    reason="no-progress",
-                )
-
-            # Pre-dispatch begin() for every admitted node (mutating intents first).
-            for node_id, fanin, pool, slots in batch:
-                node = by_id[node_id]
-                mutating = _is_mutating(
-                    node, frozenset((write_paths or {}).get(node_id, set()))
-                )
-                timeout_seconds = int(node["resources"]["timeoutSeconds"])
-                intent = _intent_payload(
-                    input_hashes=[
-                        output_hashes[item]
-                        for item in predecessors[node_id]
-                        if item in output_hashes
-                    ],
-                    mutating=mutating,
-                    timeout_seconds=timeout_seconds,
-                )
-                self._receipts.begin(
+                cancel_node(
                     node_id,
-                    f"{run_id}:{graph_hash}:{node_id}",
-                    intent,
+                    fanin,
+                    pool=None,
+                    slots=0,
+                    reason=reason,
                 )
-            flush_snapshot(queue=[node_id for node_id, _, _, _ in batch])
 
-            # Slots held for the whole in-flight batch; release per completion/crash.
-            for index, (node_id, fanin, pool, slots) in enumerate(batch):
-                # Mid-batch cancel-and-drain: drain remaining without executing.
-                if (
-                    self._cancel_requested is CancelMode.CANCEL_AND_DRAIN
-                    and index > 0
-                ):
-                    applied_cancel = CancelMode.CANCEL_AND_DRAIN
-                    cancel_node(
-                        node_id,
-                        fanin,
-                        pool=pool,
-                        slots=slots,
-                        reason="cancel-and-drain",
+        def _fence_inflight_cancels(reason: str) -> None:
+            for work in list(inflight.values()):
+                if work.handle is not None:
+                    self._fence_cancel_handle(work.handle, reason=reason)
+
+        def _try_admit(node_id: str) -> bool:
+            self._bump_owning_loop()
+            if node_id not in pending or node_id in node_runs:
+                return False
+            fanin = fanin_for(node_id)
+            if fanin.unsettled or fanin.halt:
+                return False
+            if complete_replay(node_id, fanin):
+                return True
+            if try_cache_hit(node_id, fanin):
+                return True
+            inflight_claims = self._inflight_claims(inflight, claims_by_id)
+            gate_hits = contends_with_inflight(
+                claims_by_id[node_id], inflight_claims
+            )
+            if gate_hits:
+                if node_id not in parked_ids:
+                    parked_ids.append(node_id)
+                return False
+            node = by_id[node_id]
+            pool = PoolName(node["resources"]["pool"])
+            slots = int(node["resources"]["slots"])
+            try:
+                self._pools.acquire(pool, slots=slots, node_id=node_id)
+            except PoolRequestUnsatisfiable as exc:
+                raise SchedulerError(
+                    f"node {node_id}: unsatisfiable pool request at dispatch"
+                ) from exc
+            except PoolExhausted:
+                if node_id not in parked_ids:
+                    parked_ids.append(node_id)
+                return False
+            mutating = _is_mutating(
+                node, frozenset((write_paths or {}).get(node_id, set()))
+            )
+            timeout_seconds = int(node["resources"]["timeoutSeconds"])
+            intent = _intent_payload(
+                input_hashes=[
+                    output_hashes[item]
+                    for item in predecessors[node_id]
+                    if item in output_hashes
+                ],
+                mutating=mutating,
+                timeout_seconds=timeout_seconds,
+            )
+            self._receipts.begin(
+                node_id,
+                f"{run_id}:{graph_hash}:{node_id}",
+                intent,
+            )
+            work = _InflightWork(
+                node_id=node_id,
+                fanin=fanin,
+                pool=pool,
+                slots=slots,
+            )
+            inflight[node_id] = work
+            parked_ids[:] = [item for item in parked_ids if item != node_id]
+            self._start_worker(
+                work,
+                node=node,
+                run_id=run_id,
+                graph_hash=graph_hash,
+                predecessors=predecessors,
+                output_hashes=output_hashes,
+                write_paths=write_paths,
+                compiled=compiled,
+                started_at=started_at,
+                max_duration=max_duration,
+            )
+            return True
+
+        self._state_owner_thread = threading.get_ident()
+        loop_done = False
+        try:
+            while pending or inflight:
+                self._bump_owning_loop()
+
+                if max_duration is not None and (
+                    self._clock() - started_at
+                ) > max_duration:
+                    _cancel_pending(f"maxDurationSeconds={max_duration}")
+                    _fence_inflight_cancels(
+                        f"maxDurationSeconds={max_duration}"
                     )
-                    for rest_id, rest_fanin, rest_pool, rest_slots in batch[index + 1 :]:
-                        cancel_node(
-                            rest_id,
-                            rest_fanin,
-                            pool=rest_pool,
-                            slots=rest_slots,
-                            reason="cancel-and-drain",
-                        )
-                    break
-                try:
-                    execute_node(node_id, fanin, pool=pool, slots=slots)
-                except BaseException:
-                    # Crash compensation: release remaining leases/slots (R16).
-                    for rest_id, _rest_fanin, rest_pool, rest_slots in batch[
-                        index + 1 :
-                    ]:
-                        self._pools.release(rest_pool, slots=rest_slots)
-                        self._release_lease(rest_id)
-                    flush_snapshot()
-                    raise
-                if self._cancel_requested is CancelMode.LET_SETTLE:
+                    applied_cancel = CancelMode.CANCEL_AND_DRAIN
+                    if not inflight:
+                        loop_done = True
+                        break
+
+                if self._cancel_requested is CancelMode.CANCEL_AND_DRAIN:
+                    _cancel_pending("cancel-and-drain")
+                    _fence_inflight_cancels("cancel-and-drain")
+                    applied_cancel = CancelMode.CANCEL_AND_DRAIN
+                    if not inflight:
+                        loop_done = True
+                        break
+
+                if (
+                    self._cancel_requested is CancelMode.LET_SETTLE
+                    and not inflight
+                ):
                     applied_cancel = CancelMode.LET_SETTLE
-                    # Finish remaining already-admitted batch (let-settle).
-                    for rest_id, rest_fanin, rest_pool, rest_slots in batch[
-                        index + 1 :
-                    ]:
-                        execute_node(
-                            rest_id, rest_fanin, pool=rest_pool, slots=rest_slots
-                        )
-                    for node_left in sorted(pending, key=source_order.__getitem__):
-                        cancel_node(
-                            node_left,
-                            fanin_for(node_left),
-                            pool=None,
-                            slots=0,
-                            reason="let-settle-no-new-admission",
-                        )
+                    _cancel_pending("let-settle-no-new-admission")
+                    loop_done = True
                     break
+
+                drained = False
+                while True:
+                    try:
+                        event = self._event_queue.get_nowait()
+                    except queue.Empty:
+                        break
+                    drained = True
+                    _process_completion(event)
+
+                if loop_done:
+                    break
+
+                if max_duration is not None and (
+                    self._clock() - started_at
+                ) > max_duration:
+                    _cancel_pending(f"maxDurationSeconds={max_duration}")
+                    _fence_inflight_cancels(
+                        f"maxDurationSeconds={max_duration}"
+                    )
+                    applied_cancel = CancelMode.CANCEL_AND_DRAIN
+                    if not inflight:
+                        loop_done = True
+                        break
+                    continue
+
+                if self._cancel_requested is CancelMode.LET_SETTLE:
+                    if inflight:
+                        if not drained:
+                            _process_completion(self._event_queue.get())
+                        continue
+                    applied_cancel = CancelMode.LET_SETTLE
+                    _cancel_pending("let-settle-no-new-admission")
+                    break
+
+                ready = ready_set()
+                admitted = 0
+                if self._cancel_requested not in (
+                    CancelMode.LET_SETTLE,
+                    CancelMode.CANCEL_AND_DRAIN,
+                ):
+                    for node_id in ready:
+                        if len(inflight) >= max_conc:
+                            break
+                        if _try_admit(node_id):
+                            admitted += 1
+
+                flush_snapshot(queue=ready)
+
+                if not pending and not inflight:
+                    break
+
+                if admitted == 0 and inflight:
+                    if not drained:
+                        _process_completion(self._event_queue.get())
+                    continue
+
+                if admitted == 0 and not inflight:
+                    if parked_ids:
+                        raise SchedulerNoProgress(
+                            list(parked_ids), reason="pool-parked-no-progress"
+                        )
+                    raise SchedulerNoProgress(
+                        sorted(pending, key=source_order.__getitem__),
+                        reason="no-progress",
+                    )
+        except BaseException:
+            for work in list(inflight.values()):
+                _release_inflight(work)
+                self._release_lease(work.node_id)
+            flush_snapshot()
+            raise
+        finally:
+            self._state_owner_thread = None
 
         leftovers = [node_id for node_id in by_id if node_id not in node_runs]
         if leftovers:
