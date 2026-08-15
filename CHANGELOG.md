@@ -860,6 +860,7 @@
 * merge phase guide-and-layout-documentation-r17 into feat/graph-execution-engine (97c980c) <!-- sw-deliver:guide-and-layout-documentation-r17 -->
 * merge phase configuration-schema-skills-and-rules-documentation-r17 into feat/graph-execution-engine (1df7979) <!-- sw-deliver:configuration-schema-skills-and-rules-documentation-r17 -->
 * merge phase immutable-versus-optimizable-policy-and-required-capability-invariant-r1 into feat/workflow-intelligence-platform (fc0bf15) <!-- sw-deliver:immutable-versus-optimizable-policy-and-required-capability-invariant-r1 -->
+* merge phase shadow-evaluation-without-mutating-dispatch-r2 into feat/workflow-intelligence-platform (60fee7c) <!-- sw-deliver:shadow-evaluation-without-mutating-dispatch-r2 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
