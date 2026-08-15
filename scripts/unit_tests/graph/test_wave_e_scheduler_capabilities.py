@@ -80,19 +80,19 @@ def test_typed_dataflow_dispatches_least_context_and_reports_advisory(
     registry.register(
         artifact_id="input",
         content={"needed": {"value": 7}, "secret": "not-selected"},
-        schema="example/v1",
+        schema="example@1",
         producing_node="producer",
         input_revision="abc",
         verification_evidence=[],
     )
     edges = [
-        TypedEdge("needed", "producer", "consumer", "input", "example/v1", "/needed"),
+        TypedEdge("needed", "producer", "consumer", "input", "example@1", "/needed"),
         TypedEdge(
             "optional",
             "producer",
             "consumer",
             "missing",
-            "example/v1",
+            "example@1",
             required=False,
         ),
     ]
@@ -105,7 +105,7 @@ def test_typed_dataflow_dispatches_least_context_and_reports_advisory(
     with pytest.raises(DataflowError, match="required artifact"):
         build_dispatch_context(
             "consumer",
-            [TypedEdge("gap", "producer", "consumer", "missing", "example/v1")],
+            [TypedEdge("gap", "producer", "consumer", "missing", "example@1")],
             registry,
         )
 
