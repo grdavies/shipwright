@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.0](https://github.com/grdavies/shipwright/compare/v2.0.0...v2.1.0) (2026-08-15)
+
+
+### Features
+
+* **prd-269:** graph execution engine ([#842](https://github.com/grdavies/shipwright/issues/842)) ([620432e](https://github.com/grdavies/shipwright/commit/620432ebbf344c182449336ebca8661977fcf584))
+* **prd-270:** workflow intelligence platform ([#856](https://github.com/grdavies/shipwright/issues/856)) ([677045e](https://github.com/grdavies/shipwright/commit/677045ef79ad3bd96f86564b7684edb1daff94b2))
+
 ## [2.0.0](https://github.com/grdavies/shipwright/compare/v1.12.0...v2.0.0) (2026-08-14)
 
 
