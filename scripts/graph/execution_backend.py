@@ -506,7 +506,10 @@ class LocalSyncExecutionBackend:
         raw = self._executor(dict(request.node))
         if not isinstance(raw, NodeExecutionResult):
             raise ExecutionBackendError("executor returned invalid NodeExecutionResult")
-        elapsed = max(0, int((self._clock() - started) * 1000))
+        elapsed = max(
+            raw.duration_ms,
+            max(0, int((self._clock() - started) * 1000)),
+        )
         return AdvisoryExecutionReport(
             verdict=raw.verdict,
             output=raw.output,

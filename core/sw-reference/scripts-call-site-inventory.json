@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-15T05:05:19Z",
+  "generatedAt": "2026-08-15T22:19:10Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3250,19 +3250,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:144:sw_bootstrap.py",
+      "id": "core/commands/sw-status.md:97:status_integrity.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 144,
+      "line": 97,
+      "column": 8,
+      "script": "status_integrity.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-status.md:170:sw_bootstrap.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-status.md",
+      "line": 170,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-status.md:152:wave.py",
+      "id": "core/commands/sw-status.md:178:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 152,
+      "line": 178,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -9847,19 +9856,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:144:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-status.md:97:status_integrity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 144,
+      "line": 97,
+      "column": 8,
+      "script": "status_integrity.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-status.md:170:sw_bootstrap.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-status.md",
+      "line": 170,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:152:wave.py",
+      "id": "dist/claude-code/commands/sw-status.md:178:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 152,
+      "line": 178,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -15310,19 +15328,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:144:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-status.md:97:status_integrity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 144,
+      "line": 97,
+      "column": 8,
+      "script": "status_integrity.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-status.md:170:sw_bootstrap.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-status.md",
+      "line": 170,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:152:wave.py",
+      "id": "dist/cursor/commands/sw-status.md:178:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 152,
+      "line": 178,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"

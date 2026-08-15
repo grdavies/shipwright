@@ -349,6 +349,7 @@
     "graph/observability.py",
     "graph/resource_pools.py",
     "graph/router_nodes.py",
+    "graph/run_ownership.py",
     "graph/scheduler.py",
     "graph/scheduling_modes.py",
     "graph/schema/node_spec.schema.json",
@@ -673,5 +674,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 670
+  "moduleCount": 671
 }

@@ -85,6 +85,32 @@ Each explain payload includes `nextAction` (`action`, optional resume `command`,
 Unknown / completed / cached / failed / inaccessible runs have defined empty or degraded payloads from
 `scripts/graph/observability.py` — status never invents a second safety kernel.
 
+## Durable-background graph run ownership (PRD 271 R18/R1b)
+
+WorkflowGraph execution runs are **durable** — they survive chat session detach and operator re-entry.
+Session end does **not** cancel an in-flight graph run; only an explicit operator cancel does.
+
+Mechanical surfaces:
+
+```bash
+# Live progress for a durable run (same as graph-progress above)
+python3 scripts/status_integrity.py graph-progress --run-id <runId> [--journal-root <path>]
+
+# Ownership sidecar (detach / re-entry metadata)
+# <journal-root>/<runId>/ownership.json — written by scripts/graph/run_ownership.py
+```
+
+Operator contract:
+
+| Event | Run behavior |
+| --- | --- |
+| Session detach / chat close | Run continues; ownership record `detached: true` |
+| `/sw-status` re-entry | Reattach session; progress + explain unchanged |
+| Explicit operator cancel | `cancelRequested` on ownership; scheduler cancel fencing |
+
+`/sw-status` deliver-run listing (`reconcile.py deliver-runs`) and graph-progress remain the
+re-entry surfaces — no `/sw-graph-*` commands.
+
 ## PRD 270 stable reason codes and outcomes (R1–R7)
 
 When a WorkflowGraph run is active, graph status and explain delegate to
