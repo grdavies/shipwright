@@ -1457,7 +1457,7 @@ prose lives in [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md
 | --- | --- |
 | **Defined regressions** | Prediction error exceeded, required-capability regression, human rework, metrics over budget, or receipts/calibration digest mismatch → demote template to `canonical` and drop `proposed` |
 | **In-run kill switch** | Operator kill switch (`scripts/graph/cutover.py` `InRunKillSwitch`) takes effect **within the active run**; `effective_plan_policy()` returns `canonical` while active |
-| **Config kill-switch** | Per-repo instant revert via `orchestration.planPolicy: canonical` — composes orthogonally with `deliver.autonomy.mode` (see [Orchestration plan policy](#orchestrationplanpolicy)) |
+| **Config kill-switch** | Per-repo instant revert via `orchestration.planPolicy: canonical` — composes orthogonally with `deliver.autonomy.mode` (see [Orchestration plan policy](#orchestration-plan-policy-orchestrationplanpolicy)) |
 
 Demotion requires a named actor and a triggered regression record; integrity-scoped demotion verifies
 observed receipts/calibration digests against the authorization envelope.
