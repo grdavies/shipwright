@@ -113,6 +113,10 @@ Provider-conformance suites registered in `suite-registry.json` (for example Git
 evidence gates) participate in the same named-plan topology — keep `pr-ci` rows and generated workflows
 aligned when adding conformance coverage.
 
+Capability-doc generation is checked as `capability-docs-fixtures` on the `ci-yml` lane (pytest under
+`scripts/unit_tests/capability`, including in-place regen with no `--update` flag). It is not an
+always-on `pull-request-core` job.
+
 <!-- suite-registry.json and ci_plan_gen.py are authoritative for plan names above. -->
 
 ## Initialization and doctor checks
