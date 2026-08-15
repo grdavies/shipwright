@@ -119,6 +119,58 @@ concurrency is a scheduling-mode / cutover concern — not a new slash command.
 
 Live progress and per-node explain live on `/sw-status` (see that command), not on new graph commands.
 
+## Workflow optimizer: shadow comparison and digest confirmation (PRD 270 R2/R8)
+
+When `orchestration.planPolicy: proposed` is active (pilot opt-in — see **Pilot opt-in** below),
+`/sw-deliver` scores candidate WorkflowGraph layouts in **shadow mode** before any mutating dispatch.
+Shadow is read-only: no credential broker, no outbound adapters, and no write-scoped worktree
+(`scripts/graph/isolation_policy.py`). Operator UX stays on `/sw-deliver` and `/sw-status` — no
+`/sw-graph-*` commands.
+
+### Shadow comparison output
+
+Shadow evaluation (`scripts/graph/dynamic_proposal.py` — `evaluate_shadow_proposal`,
+`run_shadow_evaluation`) compares candidate versus canonical and serializes a `ShadowEvaluationResult`:
+
+| Field | Content |
+| --- | --- |
+| `comparison.candidate` / `comparison.canonical` | Kernel-derived metrics: `predictedLatencyMs`, `predictedCost`, `parallelism`, `nodeCount`, `resourceDemandSlots`, `verificationCoverage` (aggregate + `byVerifierClass`) |
+| `comparison.deltas` | Signed deltas between candidate and canonical for each metric |
+| `records[]` | Per-node shadow dispatch: `mode` (`executed` \| `estimated` \| `refused`), `reason`, predicted vs realized telemetry when executed, `refusedWriteLease` / `refusedCredentials` for mutating kinds |
+
+Proposal-supplied metric fields (including any `shadowScore` payload on the proposal document) are
+**ignored** — scoring uses kernel metrics only. Mutating node kinds are estimated from receipts rather
+than executed; read-only allowlist kinds may execute under `READ_ONLY` / `NONE` isolation. Predicted
+versus realized deltas persist on each record when shadow executes a node.
+
+Shadow outcomes are receipt-backed evidence for promotion gates — not automatic dispatch authority.
+Live progress and per-node explain for the active `runId` remain on `/sw-status` (`graph-progress`,
+`explain <nodeId>`).
+
+### Digest-bound confirmation
+
+Promotion from `proposed` to `canonical` (`scripts/graph/workflow_library.py`
+`gate_plan_policy_promotion`) requires **digest-bound human confirmation** on an existing operator
+command:
+
+| Field | Requirement |
+| --- | --- |
+| `confirmation.command` | Must be `sw-deliver` (sole entry in `DIGEST_CONFIRMATION_COMMANDS`) |
+| `confirmation.digest` | Must match the expanded template digest byte-for-byte |
+| `confirmation.confirmedBy` | Non-empty actor identity |
+| `confirmation.confirmedAt` | Timestamp of the binding confirmation |
+
+The gate is fail-closed and also requires: sample floor (≥3 runs with graph `runId` telemetry), both
+`dogfood-deliver` and `non-dogfood-deliver` input strata, bounded prediction error (default max
+**0.25**), zero required-capability regressions, ready-without-rework on each sample, a named
+allowlisted authorizer, and integrity-scoped receipts/calibration digests. Any template or fragment
+change alters the digest — operator must re-confirm on `/sw-deliver` with the current digest before
+promotion proceeds.
+
+Configuration and demotion/kill-switch detail:
+`docs/guides/configuration.md` (Workflow optimizer and capability registry). Domain terms:
+`docs/guides/graph-domain-terminology.md` (**shadow score**, **fragment pin**).
+
 ## Scope
 
 - Input: frozen task list path, explicit item set, or deliver-plan artifact.

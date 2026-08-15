@@ -7,11 +7,15 @@ import hmac
 import json
 import os
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from graph.artifact_registry import ArtifactRegistry, receipt_satisfies_cache_hit
+from graph.artifact_registry import (
+    ArtifactRegistry,
+    receipt_satisfies_cache_hit,
+    schema_major_cache_component,
+)
 from graph.execution_receipts import ExecutionReceiptJournal
 from graph.typed_dataflow import TypedEdge
 
@@ -62,13 +66,23 @@ class CacheKeyMaterial:
     trust_domain: str
     tool_binary_identity: str
     repo_state_identity: str
+    input_schema_majors: Mapping[str, str] = field(default_factory=dict)
 
     def stable_payload(self) -> dict[str, Any]:
         node = _canonical_mapping(self.node_definition)
         node.pop("runId", None)
+        schema_majors = {
+            key: (
+                value
+                if "@" in value
+                else schema_major_cache_component(value)
+            )
+            for key, value in sorted(self.input_schema_majors.items())
+        }
         return {
             "credentialCapabilitySet": list(self.credential_capability_set),
             "inputHashes": _canonical_mapping(self.input_hashes),
+            "inputSchemaMajors": schema_majors,
             "modelVersion": self.model_version,
             "nodeDefinition": node,
             "policyVersion": self.policy_version,
@@ -102,6 +116,16 @@ def compute_stable_cache_key(material: CacheKeyMaterial) -> str:
 def compute_cache_key(material: CacheKeyMaterial) -> str:
     """Alias for compute_stable_cache_key."""
     return compute_stable_cache_key(material)
+
+
+def input_schema_majors_from_schemas(
+    input_schemas: Mapping[str, str],
+) -> dict[str, str]:
+    """Derive cache-key schema-major components from input artifact schemas."""
+    return {
+        key: schema_major_cache_component(schema)
+        for key, schema in input_schemas.items()
+    }
 
 
 def keyed_mac(payload: bytes, *, mac_key: bytes) -> str:

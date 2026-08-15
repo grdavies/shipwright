@@ -9,8 +9,8 @@ import os
 import re
 import shutil
 import tempfile
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +29,197 @@ class ArtifactIntegrityError(ArtifactRegistryError):
 
 class PurityViolationError(ArtifactRegistryError):
     """Raised when a declared read-only node attempts to write (R15)."""
+
+
+class SchemaVersionError(ArtifactRegistryError):
+    """Raised when artifact schema versions cannot be reconciled."""
+
+
+class SchemaCompatibilityError(SchemaVersionError):
+    """Raised when producer and consumer schemas disagree without an upgrade path."""
+
+
+class ProducerNewerThanConsumerError(SchemaVersionError):
+    """Raised when producer major exceeds consumer major (no implicit downgrade)."""
+
+
+_SCHEMA_AT_RE = re.compile(r"^(.+)@(\d+)(?:\.(\d+))?$")
+_SCHEMA_LEGACY_V_RE = re.compile(r"^(.+)/v(\d+)$")
+
+
+@dataclass(frozen=True)
+class ArtifactSchemaVersion:
+    """Artifact schema identity: name, integer major, optional additive minor."""
+
+    name: str
+    major: int
+    minor: int = 0
+
+    def __post_init__(self) -> None:
+        if self.major < 0 or self.minor < 0:
+            raise ValueError("schema major and minor must be non-negative integers")
+
+    def cache_key_component(self) -> str:
+        """Stable cache-key fragment: schema name plus major only (R6)."""
+        return f"{self.name}@{self.major}"
+
+    def __str__(self) -> str:
+        if self.minor:
+            return f"{self.name}@{self.major}.{self.minor}"
+        return f"{self.name}@{self.major}"
+
+
+SchemaUpgradeTransform = Callable[[Any], Any]
+
+
+@dataclass(frozen=True)
+class RegisteredSchemaUpgrade:
+    """Pure, registered transform between schema majors."""
+
+    schema_name: str
+    from_major: int
+    to_major: int
+    transform: SchemaUpgradeTransform
+    required_fields: frozenset[str] = field(default_factory=frozenset)
+
+    def __post_init__(self) -> None:
+        if self.to_major != self.from_major + 1:
+            raise ValueError("registered upgrades must advance exactly one major")
+        if self.from_major < 0 or self.to_major < 0:
+            raise ValueError("schema majors must be non-negative integers")
+
+
+class SchemaUpgradeRegistry:
+    """Registry of explicit major-version upgrade transforms."""
+
+    def __init__(self) -> None:
+        self._upgrades: dict[tuple[str, int, int], RegisteredSchemaUpgrade] = {}
+
+    def register(self, upgrade: RegisteredSchemaUpgrade) -> None:
+        key = (upgrade.schema_name, upgrade.from_major, upgrade.to_major)
+        if key in self._upgrades:
+            raise ValueError(
+                f"upgrade already registered for {upgrade.schema_name} "
+                f"{upgrade.from_major}->{upgrade.to_major}"
+            )
+        self._upgrades[key] = upgrade
+
+    def get(
+        self, schema_name: str, from_major: int, to_major: int
+    ) -> RegisteredSchemaUpgrade | None:
+        if to_major != from_major + 1:
+            return None
+        return self._upgrades.get((schema_name, from_major, to_major))
+
+
+class SchemaCompatibilityMatrix:
+    """Same-major additive-minor compatibility declarations."""
+
+    def is_compatible(
+        self, consumer: ArtifactSchemaVersion, producer: ArtifactSchemaVersion
+    ) -> bool:
+        if consumer.name != producer.name or consumer.major != producer.major:
+            return False
+        return producer.minor >= consumer.minor
+
+
+def parse_schema(schema: str) -> ArtifactSchemaVersion:
+    """Parse canonical, legacy ``/vN``, or unversioned schema strings."""
+    raw = schema.strip()
+    at_match = _SCHEMA_AT_RE.fullmatch(raw)
+    if at_match:
+        return ArtifactSchemaVersion(
+            at_match.group(1),
+            int(at_match.group(2)),
+            int(at_match.group(3) or 0),
+        )
+    legacy_match = _SCHEMA_LEGACY_V_RE.fullmatch(raw)
+    if legacy_match:
+        return ArtifactSchemaVersion(legacy_match.group(1), int(legacy_match.group(2)), 0)
+    return ArtifactSchemaVersion(raw, 0, 0)
+
+
+def format_schema(version: ArtifactSchemaVersion) -> str:
+    """Render the canonical schema identity string."""
+    return str(version)
+
+
+def canonicalize_schema(schema: str) -> str:
+    """Normalize legacy and unversioned schema strings to canonical form."""
+    return format_schema(parse_schema(schema))
+
+
+def migrate_legacy_schema(schema: str) -> str:
+    """Alias for :func:`canonicalize_schema` (269-270 contract migration)."""
+    return canonicalize_schema(schema)
+
+
+def schema_major_cache_component(schema: str) -> str:
+    """Return ``name@major`` for PRD 269 cache-key material."""
+    return parse_schema(schema).cache_key_component()
+
+
+def _verify_required_fields(content: Any, required_fields: frozenset[str]) -> None:
+    if not required_fields:
+        return
+    if not isinstance(content, Mapping):
+        raise SchemaCompatibilityError("upgrade output must be an object")
+    missing = sorted(field for field in required_fields if field not in content)
+    if missing:
+        raise SchemaCompatibilityError(
+            "upgrade output is missing required fields: " + ", ".join(missing)
+        )
+
+
+def resolve_schema_for_consumer(
+    *,
+    producer_schema: str,
+    consumer_schema: str,
+    content: Any,
+    upgrades: SchemaUpgradeRegistry,
+    matrix: SchemaCompatibilityMatrix | None = None,
+) -> tuple[Any, str]:
+    """Resolve producer content/schema to satisfy a consumer schema identity."""
+    compatibility = matrix or SchemaCompatibilityMatrix()
+    producer = parse_schema(producer_schema)
+    consumer = parse_schema(consumer_schema)
+    if producer.name != consumer.name:
+        raise SchemaCompatibilityError(
+            f"schema name mismatch: producer {producer.name!r}, "
+            f"consumer {consumer.name!r}"
+        )
+    if producer.major == consumer.major:
+        if compatibility.is_compatible(consumer, producer):
+            return content, format_schema(consumer)
+        raise SchemaCompatibilityError(
+            f"incompatible schema minors for {consumer.name}: "
+            f"consumer {consumer.minor}, producer {producer.minor}"
+        )
+    if producer.major > consumer.major:
+        raise ProducerNewerThanConsumerError(
+            f"producer schema {producer} is newer than consumer {consumer}; "
+            "no implicit downgrade"
+        )
+
+    current_major = producer.major
+    current_content = content
+    while current_major < consumer.major:
+        upgrade = upgrades.get(producer.name, current_major, current_major + 1)
+        if upgrade is None:
+            raise SchemaCompatibilityError(
+                f"no registered upgrade for {producer.name} "
+                f"@{current_major} -> @{current_major + 1}"
+            )
+        current_content = upgrade.transform(current_content)
+        _verify_required_fields(current_content, upgrade.required_fields)
+        current_major += 1
+
+    upgraded = ArtifactSchemaVersion(consumer.name, consumer.major, 0)
+    if not compatibility.is_compatible(consumer, upgraded):
+        raise SchemaCompatibilityError(
+            f"upgraded schema {upgraded} does not satisfy consumer {consumer}"
+        )
+    return current_content, format_schema(consumer)
 
 
 @dataclass(frozen=True)
@@ -162,6 +353,7 @@ class ArtifactRegistry:
             raise PurityViolationError(
                 f"read-only node {producing_node} cannot register artifact writes"
             )
+        canonical_schema = canonicalize_schema(schema)
         artifact_dir = self._artifact_dir(artifact_id)
         if artifact_dir.exists():
             raise FileExistsError(f"artifact already exists: {artifact_id}")
@@ -170,7 +362,7 @@ class ArtifactRegistry:
         content_mac = _content_mac(content_bytes, mac_key=self._mac_key)
         record = ArtifactRecord(
             artifact_id=artifact_id,
-            schema=schema,
+            schema=canonical_schema,
             content_hash=content_hash,
             content_mac=content_mac,
             producing_node=producing_node,

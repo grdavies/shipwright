@@ -859,6 +859,18 @@
 * merge phase operator-command-documentation-r17 into feat/graph-execution-engine (b6f865f) <!-- sw-deliver:operator-command-documentation-r17 -->
 * merge phase guide-and-layout-documentation-r17 into feat/graph-execution-engine (97c980c) <!-- sw-deliver:guide-and-layout-documentation-r17 -->
 * merge phase configuration-schema-skills-and-rules-documentation-r17 into feat/graph-execution-engine (1df7979) <!-- sw-deliver:configuration-schema-skills-and-rules-documentation-r17 -->
+* merge phase immutable-versus-optimizable-policy-and-required-capability-invariant-r1 into feat/workflow-intelligence-platform (fc0bf15) <!-- sw-deliver:immutable-versus-optimizable-policy-and-required-capability-invariant-r1 -->
+* merge phase shadow-evaluation-without-mutating-dispatch-r2 into feat/workflow-intelligence-platform (60fee7c) <!-- sw-deliver:shadow-evaluation-without-mutating-dispatch-r2 -->
+* merge phase capability-registry-and-generated-documentation-r8 into feat/workflow-intelligence-platform (9b70de3) <!-- sw-deliver:capability-registry-and-generated-documentation-r8 -->
+* merge phase promotion-demotion-and-in-run-kill-switch-r2 into feat/workflow-intelligence-platform (576a165) <!-- sw-deliver:promotion-demotion-and-in-run-kill-switch-r2 -->
+* merge phase extra-capability-families-and-in-place-ci-regenerate-r8 into feat/workflow-intelligence-platform (ac4db53) <!-- sw-deliver:extra-capability-families-and-in-place-ci-regenerate-r8 -->
+* merge phase typed-subgraph-composition-with-pinned-fragments-r3 into feat/workflow-intelligence-platform (02dbee8) <!-- sw-deliver:typed-subgraph-composition-with-pinned-fragments-r3 -->
+* merge phase adaptive-convergence-with-round-health-attestation-r7 into feat/workflow-intelligence-platform (9ed04c7) <!-- sw-deliver:adaptive-convergence-with-round-health-attestation-r7 -->
+* merge phase dispatcher-recorded-judgment-independence-r4 into feat/workflow-intelligence-platform (5a43908) <!-- sw-deliver:dispatcher-recorded-judgment-independence-r4 -->
+* merge phase versioned-artifact-schemas-in-the-cache-key-r6 into feat/workflow-intelligence-platform (2db45fc) <!-- sw-deliver:versioned-artifact-schemas-in-the-cache-key-r6 -->
+* merge phase guide-documentation-for-optimizer-and-capability-docs-r8 into feat/workflow-intelligence-platform (116670d) <!-- sw-deliver:guide-documentation-for-optimizer-and-capability-docs-r8 -->
+* merge phase routing-regret-calibrated-to-ready-without-rework-r5 into feat/workflow-intelligence-platform (af90e94) <!-- sw-deliver:routing-regret-calibrated-to-ready-without-rework-r5 -->
+* merge phase command-documentation-for-shadow-reason-codes-and-confirmation-r8 into feat/workflow-intelligence-platform (2b1cd1a) <!-- sw-deliver:command-documentation-for-shadow-reason-codes-and-confirmation-r8 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

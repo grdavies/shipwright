@@ -12,6 +12,24 @@
       "ciJobName": "feat-test-plan-docs-link-check"
     },
     {
+      "id": "capability-docs-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "ci-yml"
+      ],
+      "pytestPath": "scripts/unit_tests/capability",
+      "pathTriggers": [
+        "scripts/capability_docs.py",
+        "core/sw-reference/kernel-classification.json",
+        "core/sw-reference/capability-registry.json",
+        "core/sw-reference/capability-family-matrices.json",
+        "core/sw-reference/capability-family-matrices.md",
+        "CAPABILITIES.md",
+        "core/providers/issues/CAPABILITIES.md",
+        "scripts/unit_tests/capability/test_capability_docs.py"
+      ]
+    },
+    {
       "id": "scripts-inventory-guard",
       "script": "scripts/check_scripts_inventory.py",
       "lanes": [

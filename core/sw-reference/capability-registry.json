@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "description": "Machine-readable capability families for planning-store backends and issue-store providers (PRD 270 R8).",
+  "families": {
+    "planning-store.backends": {
+      "rows": [
+        {
+          "id": "in-repo-public",
+          "status": "shipped"
+        },
+        {
+          "id": "local-synced",
+          "status": "shipped"
+        },
+        {
+          "id": "memory",
+          "backendId": "planning-cache",
+          "status": "shipped",
+          "notes": "Config alias `memory` maps to backend id `planning-cache`"
+        },
+        {
+          "id": "issue-store",
+          "status": "shipped"
+        },
+        {
+          "id": "private-repo",
+          "status": "deferred"
+        },
+        {
+          "id": "encryption-at-rest",
+          "status": "deferred"
+        }
+      ]
+    },
+    "issues.providers": {
+      "rows": [
+        {
+          "id": "github-issues",
+          "status": "shipped",
+          "liveAdapter": "planning_github_client.py",
+          "conformanceGated": true,
+          "rateLimitProfile": "github"
+        },
+        {
+          "id": "jira",
+          "status": "shipped",
+          "liveAdapter": "planning_jira_client.py",
+          "conformanceGated": true,
+          "rateLimitProfile": "jira"
+        },
+        {
+          "id": "gitlab-issues",
+          "status": "deferred",
+          "deferralRef": "PRD 057 R7 / D1, gap-039",
+          "liveAdapter": null,
+          "notes": "follow-up unit",
+          "rateLimitProfile": "gitlab"
+        },
+        {
+          "id": "linear",
+          "status": "shipped",
+          "liveAdapter": "planning_linear_client.py",
+          "conformanceGated": true,
+          "recognition": "live-client-wired",
+          "rateLimitProfile": "linear"
+        },
+        {
+          "id": "none",
+          "status": "shipped",
+          "liveAdapter": null,
+          "notes": "file-store fallback",
+          "conformanceGated": false
+        }
+      ]
+    }
+  }
+}
