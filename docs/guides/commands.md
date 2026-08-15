@@ -101,7 +101,7 @@ deliver/orchestrator `runId`). Domain vocabulary:
 [`graph-domain-terminology.md`](graph-domain-terminology.md). Command detail:
 [`sw-deliver.md`](../../core/commands/sw-deliver.md), [`sw-status.md`](../../core/commands/sw-status.md).
 
-### Workflow optimizer policy (PRD 270)
+### Workflow optimizer policy
 
 The graph **optimizer** proposes alternate WorkflowGraph layouts under
 `orchestration.planPolicy: proposed`. It never invents a parallel operator surface — outcomes surface
@@ -116,14 +116,14 @@ only on existing **`/sw-deliver`** and **`/sw-status`** commands (no `/sw-graph-
 | **Promotion / demotion** | `proposed` → `canonical` requires sample floor, strata, bounded prediction error, named authorizer, and digest-bound confirmation on `/sw-deliver`; defined regressions demote back to `canonical` |
 | **In-run kill switch** | Operator kill switch takes effect within the active run and forces `canonical` until cleared |
 
-**Where outcomes appear (PRD 269 surfaces):**
+**Where outcomes appear (graph status and explain surfaces):**
 
 | Need | Surface | Content |
 | --- | --- | --- |
 | Plan comparison (read-only) | `/sw-deliver --explain-plan` | Node count, parallelism, critical path — no shadow mutation |
 | Shadow comparison | `/sw-deliver` (when `proposed` is active) | Predicted latency, cost, parallelism, node count, resource demand, verification coverage; proposal-supplied metric fields are ignored |
 | Live progress | `/sw-status` (`graph-progress`) | Receipt-backed node states for the active `runId` |
-| Stable reason codes + next action | `/sw-status` (`explain <nodeId>`) | Every R1–R7 outcome emits `reasonCode`, `verdict`, responsible node/artifact, explanation, and canonical `nextAction` (convergence codes prefixed `r7.convergence.*`) |
+| Stable reason codes + next action | `/sw-status` (`explain <nodeId>`) | Every optimizer and convergence outcome emits `reasonCode`, `verdict`, responsible node/artifact, explanation, and canonical `nextAction` (convergence codes prefixed `r7.convergence.*`) |
 | Digest-bound promotion confirm | `/sw-deliver` | Human confirmation binds the expanded template digest on an existing operator command |
 
 Mechanical shadow and observability entrypoints (same surfaces `/sw-status` delegates to):
@@ -134,7 +134,7 @@ python3 scripts/status_integrity.py explain <nodeId> --run-id <runId>
 ```
 
 Configuration for promotion evidence, demotion, kill switch, and registry-sourced capability docs:
-[`configuration.md` — Workflow optimizer and capability registry](configuration.md#workflow-optimizer-and-capability-registry-prd-270).
+[`configuration.md` — Workflow optimizer and capability registry](configuration.md#workflow-optimizer-and-capability-registry).
 Composition, convergence, and domain terms:
 [`workflows.md`](workflows.md#typed-fragment-composition-and-adaptive-convergence),
 [`graph-domain-terminology.md`](graph-domain-terminology.md).

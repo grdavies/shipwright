@@ -1427,7 +1427,7 @@ lanes, manifest, workflow, verify bundle, CONTRIBUTING `doc` lane) and
 `python3 scripts/test/run_pr_test_plan_fixtures.py` (manifest/workflow generator parity).
 
 
-## Workflow optimizer and capability registry (PRD 270)
+## Workflow optimizer and capability registry
 
 ### Plan-policy promotion evidence
 
@@ -1438,7 +1438,7 @@ evidence, not automatic authority. The gate (`scripts/graph/workflow_library.py`
 
 | Requirement | Detail |
 | --- | --- |
-| **Sample floor** | At least three runs with PRD 269 `runId` telemetry |
+| **Sample floor** | At least three runs with graph `runId` telemetry |
 | **Input strata** | Both `dogfood-deliver` and `non-dogfood-deliver` strata represented |
 | **Prediction error** | Bounded per sample (default max **0.25**) |
 | **Required-capability** | Zero regressions across samples |

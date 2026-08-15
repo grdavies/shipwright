@@ -308,7 +308,7 @@ Workflow templates under `.sw/workflows/` compose from **typed subgraph fragment
 compiler runs. Convergence loops and shadow evaluation are graph-runtime primitives — operator UX stays
 on `/sw-deliver` and `/sw-status` (no graph-prefixed slash commands).
 
-**Fragment composition (R3):**
+**Fragment composition:**
 
 | Concept | Behavior |
 | --- | --- |
@@ -317,16 +317,16 @@ on `/sw-deliver` and `/sw-status` (no graph-prefixed slash commands).
 | **Required-capability fragments** | Non-skippable; `when:` guards on required-capability fragments read only pre-dispatch mechanical artifacts |
 | **Parent re-approval** | A fragment upgrade changes the expanded digest; unapproved digests cannot dispatch |
 
-**Shadow evaluation (R2):**
+**Shadow evaluation:**
 
 Before a proposed graph can replace canonical dispatch, **shadow mode** scores the candidate against
 canonical using kernel-derived metrics only. Shadow holds no credential broker, no outbound adapter, and
 no write-scoped worktree; mutating node kinds are estimated from receipts rather than executed.
 Proposal-supplied metric fields (including any `shadowScore` payload) are ignored. Outcomes surface on
 `/sw-deliver` (shadow comparison) and `/sw-status` (`explain`) — see
-[`commands.md` — Workflow optimizer policy](commands.md#workflow-optimizer-policy-prd-270).
+[`commands.md` — Workflow optimizer policy](commands.md#workflow-optimizer-policy).
 
-**Adaptive convergence (R7):**
+**Adaptive convergence:**
 
 Bounded discovery loops run until dry, a discretionary stop fires, or a hard ceiling is hit.
 
@@ -337,7 +337,7 @@ Bounded discovery loops run until dry, a discretionary stop fires, or a hard cei
 | **`dry-clean`** | Success only when discovery exited successfully, produced non-empty evidence, and was not truncated or rate-limited (`r7.convergence.dry-clean`) |
 | **`dry-error`** | Halt or fail — truncated, rate-limited, or errored discovery is never treated as converged (`r7.convergence.dry-error` and related codes) |
 
-Stable convergence reason codes and canonical next actions are emitted onto PRD 269 status and explain
+Stable convergence reason codes and canonical next actions are emitted onto graph status and explain
 surfaces via `scripts/graph/observability.py`. Term definitions:
 [`graph-domain-terminology.md`](graph-domain-terminology.md).
 
