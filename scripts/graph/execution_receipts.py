@@ -9,8 +9,9 @@ import os
 import re
 import tempfile
 import time
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from graph.artifact_registry import receipt_is_reusable
 
@@ -27,6 +28,16 @@ _REQUIRED_FIELDS = {
     "verdict",
     "coverage",
 }
+_PROMOTION_EVENT_FIELDS = frozenset(
+    {
+        "eventType",
+        "runId",
+        "planPolicy",
+        "readyWithoutRework",
+        "coverageSufficient",
+        "evidenceAuthority",
+    }
+)
 
 # Default retention / size ceiling for the gitignored run-scoped store (R13).
 DEFAULT_RETENTION_SECONDS = 14 * 24 * 60 * 60
@@ -44,6 +55,171 @@ class ReceiptConflictError(ReceiptJournalError):
 
 class ReceiptStoreFull(ReceiptJournalError):
     """Raised when a write would exceed the configured size ceiling."""
+
+
+@dataclass(frozen=True)
+class RunPromotionEvidence:
+    """PRD 269 runId telemetry used as promotion evidence input."""
+
+    run_id: str
+    receipt_count: int
+    coverage_sufficient: bool
+    ready_without_rework: bool
+    human_rework: bool
+    successful_history: bool
+
+
+@dataclass(frozen=True)
+class PromotionDemotionEvent:
+    """Durable promotion or demotion record bound to engine receipts."""
+
+    event_type: str
+    run_id: str
+    plan_policy: str
+    ready_without_rework: bool
+    coverage_sufficient: bool
+    evidence_authority: bool
+    template_digest: str | None = None
+    authorizer: str | None = None
+    reasons: tuple[str, ...] = ()
+
+    def as_record(self) -> dict[str, Any]:
+        return {
+            "eventType": self.event_type,
+            "runId": self.run_id,
+            "planPolicy": self.plan_policy,
+            "readyWithoutRework": self.ready_without_rework,
+            "coverageSufficient": self.coverage_sufficient,
+            "evidenceAuthority": self.evidence_authority,
+            "templateDigest": self.template_digest,
+            "authorizer": self.authorizer,
+            "reasons": list(self.reasons),
+        }
+
+
+def _calibration_digest(table: Mapping[str, Any]) -> str:
+    return hashlib.sha256(_canonical(dict(table))).hexdigest()
+
+
+def evaluate_run_promotion_evidence(
+    journal: ExecutionReceiptJournal,
+    run_id: str,
+    *,
+    telemetry: Mapping[str, Any] | None = None,
+    calibration_table: Mapping[str, Any] | None = None,
+) -> RunPromotionEvidence:
+    """Collect run-scoped evidence; history is input, not automatic authority."""
+    safe_run_id = sanitize_run_id(run_id)
+    receipts = journal.list_run_receipts(safe_run_id)
+    receipt_count = len(receipts)
+    coverage_sufficient = receipt_count > 0 and all(
+        bool(receipt.get("coverage")) for receipt in receipts
+    )
+    telemetry_payload = dict(telemetry or journal.read_telemetry() or {})
+    human_rework = bool(telemetry_payload.get("humanRework"))
+    terminal_ready = str(telemetry_payload.get("terminalVerdict") or "") == "ready"
+    ready_without_rework = terminal_ready and not human_rework
+    successful_history = all(
+        str(receipt.get("verdict") or "") == "pass" for receipt in receipts
+    )
+    if calibration_table is not None and telemetry_payload.get("calibrationDigest"):
+        expected = _calibration_digest(calibration_table)
+        if expected != telemetry_payload.get("calibrationDigest"):
+            ready_without_rework = False
+    return RunPromotionEvidence(
+        run_id=safe_run_id,
+        receipt_count=receipt_count,
+        coverage_sufficient=coverage_sufficient,
+        ready_without_rework=ready_without_rework,
+        human_rework=human_rework,
+        successful_history=successful_history,
+    )
+
+
+def promotion_evidence_authority(evidence: RunPromotionEvidence) -> bool:
+    """Coverage is necessary but not sufficient without ready-without-rework."""
+    if not evidence.coverage_sufficient:
+        return False
+    if evidence.human_rework:
+        return False
+    return evidence.ready_without_rework
+
+
+def record_promotion_event(
+    journal: ExecutionReceiptJournal,
+    event: PromotionDemotionEvent,
+) -> dict[str, Any]:
+    """Record a promotion event on the engine receipt journal."""
+    if event.event_type != "promotion":
+        raise ValueError("record_promotion_event requires event_type=promotion")
+    return _record_policy_event(journal, event)
+
+
+def record_demotion_event(
+    journal: ExecutionReceiptJournal,
+    event: PromotionDemotionEvent,
+) -> dict[str, Any]:
+    """Record a demotion event on the engine receipt journal."""
+    if event.event_type != "demotion":
+        raise ValueError("record_demotion_event requires event_type=demotion")
+    return _record_policy_event(journal, event)
+
+
+def _record_policy_event(
+    journal: ExecutionReceiptJournal,
+    event: PromotionDemotionEvent,
+) -> dict[str, Any]:
+    missing = sorted(_PROMOTION_EVENT_FIELDS - set(event.as_record()))
+    if missing:
+        raise ValueError("policy event is missing fields: " + ", ".join(missing))
+    payload = {
+        "model": "policy-engine",
+        "attempts": 1,
+        "tokens": {"input": 0, "output": 0},
+        "durationMs": 0,
+        "inputHashes": {"event": hashlib.sha256(event.run_id.encode()).hexdigest()},
+        "outputHashes": {
+            "event": hashlib.sha256(event.event_type.encode()).hexdigest()
+        },
+        "verdict": "pass" if event.evidence_authority else "fail",
+        "coverage": {
+            "policyEvent": True,
+            "coverageSufficient": event.coverage_sufficient,
+            "readyWithoutRework": event.ready_without_rework,
+            "evidenceAuthority": event.evidence_authority,
+        },
+        "policyEvent": event.as_record(),
+    }
+    idempotency_key = f"{event.run_id}:policy:{event.event_type}"
+    return journal.finish(f"policy-{event.event_type}", idempotency_key, payload)
+
+
+def write_calibration_table(
+    journal: ExecutionReceiptJournal,
+    table: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Persist an integrity-scoped calibration table for authorization inputs."""
+    payload = {
+        "runId": journal.run_id,
+        "calibration": dict(table),
+        "calibrationDigest": _calibration_digest(table),
+    }
+    encoded = _canonical(payload)
+    journal._enforce_ceiling(len(encoded))
+    path = journal.run_dir / "calibration-table.json"
+    _atomic_write(path, payload)
+    telemetry = journal.read_telemetry() or {}
+    telemetry["calibrationDigest"] = payload["calibrationDigest"]
+    journal.write_telemetry(telemetry)
+    return payload
+
+
+def receipts_digest(journal: ExecutionReceiptJournal) -> str:
+    """Digest of complete receipts for integrity-scoped authorization."""
+    receipts = journal.list_receipts()
+    return hashlib.sha256(
+        _canonical({"receipts": receipts})
+    ).hexdigest()
 
 
 def _canonical(value: dict[str, Any]) -> bytes:

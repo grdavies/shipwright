@@ -13,6 +13,7 @@ from graph.scheduler import GraphScheduler, SchedulerRun
 from graph.scheduling_modes import (
     ALLOWED_EXTERNAL_AUTHORIZERS,
     PromotionMetrics,
+    RegressionBudget,
     SchedulingMode,
     validate_scheduling_mode,
 )
@@ -31,6 +32,10 @@ class CutoverStage(str, Enum):
     DOGFOOD = "dogfood"
     LIMITED = "limited-scope"
     FULL = "full-ownership"
+
+
+PLAN_POLICY_CANONICAL = "canonical"
+PLAN_POLICY_PROPOSED = "proposed"
 
 
 def status_explain_is_live() -> bool:
@@ -75,6 +80,74 @@ class PromotionEvidence:
     metrics: PromotionMetrics | None = None
     authorizer: str | None = None
     evidence_ref: str | None = None
+
+
+@dataclass(frozen=True)
+class IntegrityScopedInputs:
+    """Receipts and calibration tables verified before authorization."""
+
+    receipts_digest: str
+    calibration_digest: str
+
+
+@dataclass(frozen=True)
+class DemotionRegression:
+    """Defined regressions that demote proposed plan policy back to canonical."""
+
+    prediction_error_exceeded: bool = False
+    required_capability_regression: bool = False
+    human_rework: bool = False
+    metrics_exceeded_budget: bool = False
+    receipts_digest_mismatch: bool = False
+    calibration_digest_mismatch: bool = False
+
+    @property
+    def triggered(self) -> bool:
+        return any(
+            (
+                self.prediction_error_exceeded,
+                self.required_capability_regression,
+                self.human_rework,
+                self.metrics_exceeded_budget,
+                self.receipts_digest_mismatch,
+                self.calibration_digest_mismatch,
+            )
+        )
+
+    def reasons(self) -> tuple[str, ...]:
+        mapping = {
+            "prediction_error_exceeded": self.prediction_error_exceeded,
+            "required_capability_regression": self.required_capability_regression,
+            "human_rework": self.human_rework,
+            "metrics_exceeded_budget": self.metrics_exceeded_budget,
+            "receipts_digest_mismatch": self.receipts_digest_mismatch,
+            "calibration_digest_mismatch": self.calibration_digest_mismatch,
+        }
+        return tuple(name for name, active in mapping.items() if active)
+
+
+@dataclass
+class InRunKillSwitch:
+    """Operator kill switch that takes effect within the active run."""
+
+    active: bool = False
+    activated_by: str = ""
+    activated_at: str = ""
+
+    def activate(self, *, actor: str, activated_at: str) -> None:
+        if not actor.strip():
+            raise CutoverError("kill switch actor is required")
+        self.active = True
+        self.activated_by = actor.strip()
+        self.activated_at = activated_at
+
+
+@dataclass(frozen=True)
+class DemotionRecord:
+    plan_policy: str
+    reasons: tuple[str, ...]
+    actor: str
+    demoted_at: str
 
 
 @dataclass(frozen=True)
@@ -169,6 +242,112 @@ class CutoverDriver:
     def __init__(self, *, stage: CutoverStage = CutoverStage.DOGFOOD) -> None:
         self.stage = stage
         self.promotion_evidence: list[PromotionEvidence] = []
+        self.demotion_records: list[DemotionRecord] = []
+        self.plan_policy = PLAN_POLICY_CANONICAL
+        self.kill_switch = InRunKillSwitch()
+
+    def activate_kill_switch(self, *, actor: str, activated_at: str) -> InRunKillSwitch:
+        """Honor an in-run operator kill switch that takes effect within the run."""
+        self.kill_switch.activate(actor=actor, activated_at=activated_at)
+        self.plan_policy = PLAN_POLICY_CANONICAL
+        return self.kill_switch
+
+    def effective_plan_policy(self) -> str:
+        if self.kill_switch.active:
+            return PLAN_POLICY_CANONICAL
+        return self.plan_policy
+
+    @staticmethod
+    def verify_integrity_scoped_inputs(
+        *,
+        observed_receipts_digest: str,
+        observed_calibration_digest: str,
+        authorization: IntegrityScopedInputs,
+    ) -> bool:
+        return (
+            observed_receipts_digest == authorization.receipts_digest
+            and observed_calibration_digest == authorization.calibration_digest
+        )
+
+    def demote_on_regression(
+        self,
+        regression: DemotionRegression,
+        *,
+        actor: str,
+        demoted_at: str,
+        integrity: IntegrityScopedInputs | None = None,
+        observed_receipts_digest: str | None = None,
+        observed_calibration_digest: str | None = None,
+        metrics: PromotionMetrics | None = None,
+        budget: RegressionBudget | None = None,
+    ) -> DemotionRecord:
+        """Demote proposed plan policy to canonical on defined regressions."""
+        if not actor.strip():
+            raise CutoverError("demotion actor is required")
+        combined = DemotionRegression(
+            prediction_error_exceeded=regression.prediction_error_exceeded,
+            required_capability_regression=regression.required_capability_regression,
+            human_rework=regression.human_rework,
+            metrics_exceeded_budget=(
+                regression.metrics_exceeded_budget
+                or (
+                    metrics is not None
+                    and budget is not None
+                    and not metrics.within_budget(budget)
+                )
+            ),
+            receipts_digest_mismatch=regression.receipts_digest_mismatch,
+            calibration_digest_mismatch=regression.calibration_digest_mismatch,
+        )
+        if integrity is not None:
+            if observed_receipts_digest is None or observed_calibration_digest is None:
+                raise CutoverError(
+                    "integrity-scoped demotion requires observed digests"
+                )
+            if not self.verify_integrity_scoped_inputs(
+                observed_receipts_digest=observed_receipts_digest,
+                observed_calibration_digest=observed_calibration_digest,
+                authorization=integrity,
+            ):
+                combined = DemotionRegression(
+                    prediction_error_exceeded=combined.prediction_error_exceeded,
+                    required_capability_regression=combined.required_capability_regression,
+                    human_rework=combined.human_rework,
+                    metrics_exceeded_budget=combined.metrics_exceeded_budget,
+                    receipts_digest_mismatch=True,
+                    calibration_digest_mismatch=True,
+                )
+        if not combined.triggered:
+            raise CutoverError("demotion requires a defined regression")
+        record = DemotionRecord(
+            plan_policy=PLAN_POLICY_CANONICAL,
+            reasons=combined.reasons(),
+            actor=actor.strip(),
+            demoted_at=demoted_at,
+        )
+        self.plan_policy = PLAN_POLICY_CANONICAL
+        self.demotion_records.append(record)
+        return record
+
+    def promote_plan_policy(
+        self,
+        *,
+        target_policy: str,
+        authorizer: str,
+        promoted_at: str,
+    ) -> str:
+        if target_policy not in {PLAN_POLICY_PROPOSED, PLAN_POLICY_CANONICAL}:
+            raise CutoverError(f"unsupported plan policy target: {target_policy}")
+        if self.kill_switch.active:
+            raise PermissionError("kill switch active; proposed plan policy refused")
+        if target_policy == PLAN_POLICY_CANONICAL and self.plan_policy != PLAN_POLICY_PROPOSED:
+            raise PermissionError("canonical promotion requires proposed stage")
+        if not authorizer.strip():
+            raise PermissionError("plan policy promotion requires named authorizer")
+        if authorizer not in ALLOWED_EXTERNAL_AUTHORIZERS:
+            raise PermissionError(f"unrecognized plan policy authorizer: {authorizer}")
+        self.plan_policy = target_policy
+        return self.plan_policy
 
     def promote(
         self,
