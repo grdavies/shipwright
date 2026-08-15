@@ -142,6 +142,31 @@
               "type": "boolean",
               "default": true,
               "description": "When false, the graph scheduler does not reuse stable cache entries (serial-equivalent lane may still use maxConcurrency: 1)."
+            },
+            "scope": {
+              "type": "string",
+              "enum": [
+                "run",
+                "repository"
+              ],
+              "default": "run",
+              "description": "Dogfood default run (intra-run memoization only). Repository enables cross-run reuse only after MAC authenticity and gate-eligibility gates are green (R5c/R26)."
+            },
+            "credentialRef": {
+              "type": "string",
+              "description": "Broker reference for per-repository cache MAC secret material (R5a/R24). Required for production repository scope."
+            },
+            "maxSizeBytes": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 268435456,
+              "description": "Independent cache store size ceiling in bytes (default 256 MiB)."
+            },
+            "maxAgeSeconds": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 2592000,
+              "description": "Independent cache retention window in seconds (default 30 days)."
             }
           }
         }

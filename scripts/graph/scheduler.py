@@ -43,6 +43,11 @@ from graph.scheduling_modes import (
     ExternalDispatchAuthorization,
     authorize_external_dispatch,
 )
+from graph.cache_store import (
+    CacheScope,
+    CanonicalCacheStore,
+    node_cache_eligible,
+)
 from graph.execution_backend import (
     ExecutionBackend,
     ExecutionHandle,
@@ -312,6 +317,8 @@ class GraphScheduler:
         clock: Clock | None = None,
         cache_enabled: bool = True,
         cache_identity: Mapping[str, Any] | None = None,
+        cache_store: CanonicalCacheStore | None = None,
+        cache_scope: CacheScope = CacheScope.RUN,
         backend: ExecutionBackend | None = None,
     ) -> None:
         self._executor = executor
@@ -326,6 +333,8 @@ class GraphScheduler:
         self._clock = clock or time.monotonic
         self._cache_enabled = cache_enabled
         self._cache_identity = dict(cache_identity or {})
+        self._cache_store = cache_store
+        self._cache_scope = cache_scope
         self._cancel_requested: CancelMode | None = None
         self._event_queue: queue.SimpleQueue[_CompletionEvent] = queue.SimpleQueue()
         self._owning_loop_transitions = 0
@@ -829,18 +838,7 @@ class GraphScheduler:
         def _identity_fields(
             result: NodeExecutionResult | None = None,
         ) -> dict[str, Any]:
-            base: dict[str, Any] = {
-                "prompt_version": "default",
-                "model_version": "default",
-                "tool_configuration": {},
-                "policy_version": "default",
-                "credential_capabilities": (),
-                "scope_identity": "default",
-                "repository_identity": "default",
-                "trust_domain": "default",
-                "tool_binary_identity": "default",
-                "repo_state_identity": "default",
-            }
+            base: dict[str, Any] = {}
             base.update(self._cache_identity)
             if result is not None:
                 base.update(
@@ -863,7 +861,6 @@ class GraphScheduler:
                         "repo_state_identity": result.repo_state_identity,
                     }
                 )
-                # Explicit scheduler identity wins over result defaults.
                 base.update(self._cache_identity)
             return base
 
@@ -875,10 +872,10 @@ class GraphScheduler:
                 CacheKeyMaterial(
                     node_definition=dict(node),
                     input_hashes=_input_hashes_for(str(node["id"])),
-                    prompt_version=str(identity["prompt_version"]),
-                    model_version=str(identity["model_version"]),
-                    tool_configuration=dict(identity["tool_configuration"]),
-                    policy_version=str(identity["policy_version"]),
+                    prompt_version=str(identity.get("prompt_version") or ""),
+                    model_version=str(identity.get("model_version") or ""),
+                    tool_configuration=dict(identity.get("tool_configuration") or {}),
+                    policy_version=str(identity.get("policy_version") or ""),
                     credential_capability_set=tuple(
                         identity.get("credential_capability_set")
                         or identity.get("credential_capabilities")
@@ -887,12 +884,12 @@ class GraphScheduler:
                     resolved_scope_identity=str(
                         identity.get("resolved_scope_identity")
                         or identity.get("scope_identity")
-                        or "default"
+                        or ""
                     ),
-                    repository_identity=str(identity["repository_identity"]),
-                    trust_domain=str(identity["trust_domain"]),
-                    tool_binary_identity=str(identity["tool_binary_identity"]),
-                    repo_state_identity=str(identity["repo_state_identity"]),
+                    repository_identity=str(identity.get("repository_identity") or ""),
+                    trust_domain=str(identity.get("trust_domain") or ""),
+                    tool_binary_identity=str(identity.get("tool_binary_identity") or ""),
+                    repo_state_identity=str(identity.get("repo_state_identity") or ""),
                 )
             )
 
@@ -902,16 +899,22 @@ class GraphScheduler:
             node = by_id[node_id]
             if _execution(node).get("cache") != "content-addressed":
                 return False
+            identity = _identity_fields()
+            if not node_cache_eligible(node, identity):
+                return False
             cache_key = _cache_key_for(node)
-            reusable = self._receipts.lookup_reusable_by_cache_key(cache_key)
-            if reusable is None:
+            hit = None
+            if self._cache_store is not None:
+                hit = self._cache_store.lookup(cache_key, run_id=run_id)
+            if hit is None:
                 return False
             idempotency_key = f"{run_id}:{graph_hash}:{node_id}"
             receipt = self._receipts.record_cache_hit(
                 node_id,
                 idempotency_key,
-                source=reusable,
+                source=hit.source_receipt,
                 cache_key=cache_key,
+                original_run_id=hit.original_run_id,
             )
             stored_hashes = receipt.get("outputHashes") or []
             output_hash = str(stored_hashes[0]) if stored_hashes else None
@@ -1084,6 +1087,56 @@ class GraphScheduler:
                 payload,
                 cache_key=cache_key,
             )
+            if (
+                cache_key
+                and self._cache_store is not None
+                and node_cache_eligible(node, _identity_fields(result))
+            ):
+                material = CacheKeyMaterial(
+                    node_definition=dict(node),
+                    input_hashes=_input_hashes_for(node_id),
+                    prompt_version=str(_identity_fields(result).get("prompt_version") or ""),
+                    model_version=str(_identity_fields(result).get("model_version") or ""),
+                    tool_configuration=dict(
+                        _identity_fields(result).get("tool_configuration") or {}
+                    ),
+                    policy_version=str(_identity_fields(result).get("policy_version") or ""),
+                    credential_capability_set=tuple(
+                        _identity_fields(result).get("credential_capabilities") or ()
+                    ),
+                    resolved_scope_identity=str(
+                        _identity_fields(result).get("scope_identity") or ""
+                    ),
+                    repository_identity=str(
+                        _identity_fields(result).get("repository_identity") or ""
+                    ),
+                    trust_domain=str(_identity_fields(result).get("trust_domain") or ""),
+                    tool_binary_identity=str(
+                        _identity_fields(result).get("tool_binary_identity") or ""
+                    ),
+                    repo_state_identity=str(
+                        _identity_fields(result).get("repo_state_identity") or ""
+                    ),
+                )
+                artifacts = (
+                    {
+                        "artifactId": output_hash,
+                        "schema": "graph/output@v1",
+                        "content": result.output,
+                        "producingNode": node_id,
+                        "inputRevision": output_hash,
+                        "verificationEvidence": [],
+                    },
+                )
+                try:
+                    self._cache_store.put(
+                        material=material,
+                        source_receipt=receipt,
+                        artifacts=artifacts,
+                        run_id=run_id,
+                    )
+                except Exception:
+                    pass
             persisted_receipts.append(receipt)
             _release_inflight(work)
             self._release_lease(node_id)
