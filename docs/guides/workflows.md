@@ -52,7 +52,25 @@ QK -->|no| DOC[Enter /sw-doc → /sw-deliver run]
 ### Quick tier workflow
 
 No spec artifacts — no frozen task list, so **`/sw-deliver` does not apply**. Triage routes to the
-manual `/sw-ship` atomics.
+manual `/sw-ship` atomics. Quick work compiles to a **fixed WorkflowGraph** (`scripts/graph/quick_ship_compile.py`)
+mirroring `canonicalPhaseChains.sw-ship` — implement → verify → review → gaps → commit → PR → CI →
+stabilize → ready/merge-ready halt. Topology is config-declared only (no adaptive capability selection);
+**never auto-merges**.
+
+#### Quick ship parity matrix
+
+| Concern | With PR | No PR yet | Resume authority |
+| --- | --- | --- | --- |
+| Terminal verdict | `merge-ready-green` | `merge-ready-green` | `ship-steps.json` (`currentStep`) |
+| Merge | Never (human gate) | Never (human gate) | `--from <step>` or durable `ship-steps.json` |
+| `verification-gate` | Unconditional | Unconditional | Re-run from `sw-verify` on stale evidence |
+| Ready / `check-gate` | Unconditional | Unconditional | Re-run `sw-stabilize`/`sw-ready` chain tail |
+| `sw-review` independence | Distinct judgment vote required | Same | `--skip-local` records bypass only |
+| `--fast` | Skips `gap-check`, `sw-simplify` | Same | Bypass evidence written; mandatory gates unchanged |
+| Legacy substrate | `ship_loop.py` step driver until cutover evidence | Same | Graph compile is observability + scheduler admission |
+
+Rollback: the legacy step substrate is removed only after dogfood parity evidence; until then
+`ship-steps.json` remains authoritative for resume even when a compiled graph exists.
 
 ```mermaid
 flowchart LR
