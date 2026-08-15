@@ -1427,6 +1427,70 @@ lanes, manifest, workflow, verify bundle, CONTRIBUTING `doc` lane) and
 `python3 scripts/test/run_pr_test_plan_fixtures.py` (manifest/workflow generator parity).
 
 
+## Workflow optimizer and capability registry (PRD 270)
+
+### Plan-policy promotion evidence
+
+Promoting a workflow template from `orchestration.planPolicy: canonical` to `proposed`, then to
+`canonical` as the live default, requires **integrity-scoped evidence** — successful history is
+evidence, not automatic authority. The gate (`scripts/graph/workflow_library.py`
+`gate_plan_policy_promotion`) enforces:
+
+| Requirement | Detail |
+| --- | --- |
+| **Sample floor** | At least three runs with PRD 269 `runId` telemetry |
+| **Input strata** | Both `dogfood-deliver` and `non-dogfood-deliver` strata represented |
+| **Prediction error** | Bounded per sample (default max **0.25**) |
+| **Required-capability** | Zero regressions across samples |
+| **Ready without rework** | Each sample run reached ready without human rework |
+| **Named authorizer** | Allowlisted promotion authorizer id |
+| **Digest confirmation** | Digest-bound human confirmation on `/sw-deliver` matching the template digest |
+| **Integrity digests** | Receipts and calibration tables verified as authorization inputs |
+
+Promotion and demotion events are recorded on engine receipts
+(`scripts/graph/execution_receipts.py`). Operator-facing shadow comparison and digest confirmation
+prose lives in [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) (phase 12).
+
+### Demotion and in-run kill switch
+
+| Control | Effect |
+| --- | --- |
+| **Defined regressions** | Prediction error exceeded, required-capability regression, human rework, metrics over budget, or receipts/calibration digest mismatch → demote template to `canonical` and drop `proposed` |
+| **In-run kill switch** | Operator kill switch (`scripts/graph/cutover.py` `InRunKillSwitch`) takes effect **within the active run**; `effective_plan_policy()` returns `canonical` while active |
+| **Config kill-switch** | Per-repo instant revert via `orchestration.planPolicy: canonical` — composes orthogonally with `deliver.autonomy.mode` (see [Orchestration plan policy](#orchestrationplanpolicy)) |
+
+Demotion requires a named actor and a triggered regression record; integrity-scoped demotion verifies
+observed receipts/calibration digests against the authorization envelope.
+
+### Registry-sourced capability docs
+
+Capability families (issues providers, model tiers, graph node kinds, artifact schemas, command catalog,
+workflow template versions) are declared in **`core/sw-reference/capability-registry.json`** and
+**`core/sw-reference/kernel-classification.json`**. Shipped vs deferred sets are derived from the
+registry — not hand-edited in markdown.
+
+| Artifact | Source |
+| --- | --- |
+| [`CAPABILITIES.md`](../../CAPABILITIES.md) | Root capability matrix (includes `linear` when shipped) |
+| [`core/providers/issues/CAPABILITIES.md`](../../core/providers/issues/CAPABILITIES.md) | Issues-provider slice — cannot drift from registry |
+| [`core/sw-reference/capability-family-matrices.{json,md}`](../../core/sw-reference/capability-family-matrices.json) | Model-tier, node-kind, schema, command, and template-version matrices |
+
+A provider row may render **shipped** only when a referenced green conformance record exists.
+CI regenerates in place and fails on a dirty tree — there is no update flag in CI.
+
+```bash
+# Regenerate locally after registry edits
+python3 scripts/capability_docs.py generate
+
+# CI / pre-commit parity check (default command)
+python3 scripts/capability_docs.py check
+
+# Fail when regenerate would dirty the tree
+python3 scripts/capability_docs.py regen-check
+```
+
+Do not edit generated capability markdown by hand; change the registry and re-run `generate`.
+
 ## Deliver plan-policy pilot
 
 `/sw-deliver` is the live pilot for `orchestration.planPolicy: proposed`. Default stays `canonical`.
