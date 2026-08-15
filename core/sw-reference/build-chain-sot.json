@@ -50,6 +50,7 @@
     "call-site-map.md",
     "canonical-serialization.md",
     "capability-index.json",
+    "capability-registry.json",
     "capability-manifest.md",
     "capability-manifest.schema.json",
     "communication-routing.defaults.json",

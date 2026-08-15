@@ -2,10 +2,8 @@
 
 Authoritative summary of which storage backends and issue-store providers are
 **shipped** (wired to a live adapter) versus **deferred** (recognized but
-fail-closed until a follow-up unit lands the adapter). Sourced from the
-frozensets in `scripts/planning_store.py` (`SHIPPED_BACKENDS`,
-`SHIPPED_ISSUES_PROVIDERS`, `DEFERRED_ISSUES_PROVIDERS`) — keep this table in sync
-with those constants.
+fail-closed until a follow-up unit lands the adapter).
+Generated from `core/sw-reference/capability-registry.json` via `scripts/capability_docs.py` — do not edit by hand.
 
 > **Deferred / fail-closed — `gitlab-issues` (PRD 057 R7 / D1, gap-039).**
 > The GitLab Issues provider is **not shipped**: no live `planning_gitlab_client.py`
@@ -20,7 +18,7 @@ with those constants.
 > > (PRD 057 R7 / D1; gap-039).
 >
 > **Follow-up unit:** a dedicated unit will implement the live GitLab Issues
-> adapter at parity and re-add `gitlab-issues` to `SHIPPED_ISSUES_PROVIDERS`.
+> adapter at parity and re-add `gitlab-issues` to the shipped issues set.
 > Until then, config that names `gitlab-issues` is *recognized* (kept in
 > `ISSUES_PROVIDERS` for validation) but resolves to the
 > `issues-provider-not-shipped` fallback rather than an advertised round-trip.
@@ -42,8 +40,9 @@ with those constants.
 | --- | --- | --- |
 | `github-issues` | **shipped** | `planning_github_client.py` |
 | `jira` | **shipped** | `planning_jira_client.py` |
-| `gitlab-issues` | **deferred / fail-closed** (R7 / D1) | follow-up unit |
-| `none` | shipped (file-store fallback) | — |
+| `gitlab-issues` | **deferred / fail-closed** (PRD 057 R7 / D1, gap-039) | follow-up unit |
+| `linear` | **shipped** | `planning_linear_client.py` |
+| `none` | shipped (file-store fallback) | file-store fallback |
 
 Provider adapter specs live under `core/providers/issues/`. The neutral verb
 contract and per-provider degradation matrix are documented in
