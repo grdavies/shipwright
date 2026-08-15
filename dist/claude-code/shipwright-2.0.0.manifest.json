@@ -196,6 +196,7 @@
     "capability-gateref-guard.py",
     "capability-manifest-lint.py",
     "capability-select.py",
+    "capability_docs.py",
     "capability_index.py",
     "capability_manifest_lint.py",
     "capability_manifest_validate.py",
@@ -671,5 +672,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 668
+  "moduleCount": 669
 }

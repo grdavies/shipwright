@@ -197,15 +197,14 @@ Probe registration state:
 python3 scripts/planning_store.py issues-provider-registration
 ```
 
+<!-- capability-docs:begin registry-derived -->
 ### Linear recognition vs shipped (R9, R20)
 
-| State | `linear` in `ISSUES_PROVIDERS` | `linear` in `SHIPPED_ISSUES_PROVIDERS` | Behavior |
+| State | `linear` in `ISSUES_PROVIDERS` | `linear` in derived shipped set | Behavior |
 | --- | --- | --- | --- |
 | Stub (no live client) | no | no | Config may name `linear`; doctor **refuses** enum-only stub |
-| Recognized (live client wired) | yes | no | Config validates; issue-store **falls back** to file-store |
 | Shipped (post-conformance) | yes | yes | Full live round-trip after conformance + OAuth docs gate |
-
-`linear` promotion to `SHIPPED_ISSUES_PROVIDERS` requires LCD conformance harness green **and**
+`linear` promotion to the derived shipped set requires LCD conformance harness green **and**
 OAuth operator-local storage documented (`core/providers/issues/linear.md` R23).
 
 ### Rate-limit map (R16)
@@ -213,8 +212,8 @@ OAuth operator-local storage documented (`core/providers/issues/linear.md` R23).
 | `issuesProvider` | `issues_http` profile key |
 | --- | --- |
 | `github-issues` | `github` |
-| `gitlab-issues` | `gitlab` |
 | `jira` | `jira` |
+| `gitlab-issues` | `gitlab` |
 | `linear` | `linear` |
 
 Override per-provider budgets via `planning.store.requestBudget.<provider>` (request count +
@@ -225,10 +224,10 @@ complexity for Linear).
 | Provider | Index id | Source |
 | --- | --- | --- |
 | `github-issues` | `provider.providers.issues.github-issues` | `core/providers/issues/github-issues.md` |
-| `gitlab-issues` | `provider.providers.issues.gitlab-issues` | `core/providers/issues/gitlab-issues.md` |
 | `jira` | `provider.providers.issues.jira` | `core/providers/issues/jira.md` |
+| `gitlab-issues` | `provider.providers.issues.gitlab-issues` | `core/providers/issues/gitlab-issues.md` |
 | `linear` | `provider.providers.issues.linear` | `core/providers/issues/linear.md` |
-| `none` | `provider.providers.issues.none` | `core/providers/issues/none.md` |
+<!-- capability-docs:end registry-derived -->
 
 ### Doctor refuses stubs (R20)
 
