@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
+import capability_docs as cd
 import pytest
 
 _PKG = "scripts/unit_tests/capability"
@@ -35,3 +37,36 @@ def test_capability_lint_behavior(repo_root: Path, sw_env: dict[str, str], monke
 def test_capability_lint_harness_present(repo_root: Path) -> None:
     """R16 — harness module must exist (fail-closed if port regresses)."""
     assert (repo_root / _PKG / _HARNESS).is_file()
+
+
+def test_derived_shipped_includes_linear_when_conformance_green(repo_root: Path) -> None:
+    registry = cd.load_registry(repo_root)
+    shipped = cd.derive_shipped_issues_providers(repo_root, registry)
+    assert "linear" in shipped
+    assert "github-issues" in shipped
+    assert "none" in shipped
+
+
+def test_root_capabilities_includes_linear(repo_root: Path) -> None:
+    registry = cd.load_registry(repo_root)
+    rendered = cd.render_root_capabilities_md(repo_root, registry)
+    assert "`linear`" in rendered
+    assert cd.GENERATOR_BANNER in rendered
+
+
+def test_capability_docs_check_passes_on_repo(repo_root: Path) -> None:
+    assert cd.cmd_check(repo_root) == 0
+
+
+def test_conformance_gated_shipped_requires_green_record(
+    repo_root: Path, tmp_path: Path
+) -> None:
+    registry = cd.load_registry(repo_root)
+    fixture_dir = tmp_path / "scripts/test/fixtures/planning-provider-conformance"
+    fixture_dir.mkdir(parents=True)
+    (fixture_dir / "linear.ok.json").write_text(
+        json.dumps({"verdict": "fail", "provider": "linear", "dimensions": {}}),
+        encoding="utf-8",
+    )
+    errors = cd.validate_conformance_semantics(tmp_path, registry)
+    assert any("linear" in err for err in errors)
