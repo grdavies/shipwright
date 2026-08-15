@@ -17,12 +17,16 @@ if str(_SCRIPTS) not in sys.path:
 
 from graph.cutover import CutoverStage, DogfoodEvidence  # noqa: E402
 from graph.dynamic_proposal import ProposalBudget  # noqa: E402
+from graph.ir import WorkflowGraphValidationError, validate_fragment_use_entry  # noqa: E402
 from graph.workflow_library import (  # noqa: E402
+    MAX_EXPANDED_NODES,
     WorkflowLibraryError,
     approve_template,
     evaluate_saved_template,
+    expand_workflow_fragments,
     load_template,
     prepare_run,
+    save_fragment,
     save_template,
 )
 
@@ -77,6 +81,80 @@ def _parameters() -> dict[str, dict[str, Any]]:
             "maximum": 4,
         },
     }
+
+
+def _security_review_subgraph(step: str = "sw-security-reviewer --workspace ${workspace}") -> dict[str, Any]:
+    return {
+        "nodes": [
+            {
+                "id": "review",
+                "kind": "verifier",
+                "target": {"step": step},
+                "resources": {
+                    "pool": "read-only-reviewers",
+                    "slots": 1,
+                    "timeoutSeconds": 30,
+                },
+                "isolation": {
+                    "mode": "none",
+                    "writeScope": "read-only",
+                },
+                "verification": {
+                    "required": True,
+                    "strategy": "judgment",
+                },
+            }
+        ],
+        "edges": [],
+    }
+
+
+def _parent_with_security_review() -> dict[str, Any]:
+    return {
+        "apiVersion": "shipwright.dev/v1alpha1",
+        "kind": "WorkflowGraph",
+        "metadata": {"name": "parent-with-security-review"},
+        "spec": {
+            "uses": [
+                {
+                    "use": "security-review@1",
+                    "prefix": "sec",
+                    "inputs": {"workspace": "${workspace}"},
+                }
+            ],
+            "nodes": [],
+            "edges": [],
+            "resourceLimits": {
+                "maxConcurrency": "${concurrency}",
+                "maxDurationSeconds": 120,
+            },
+            "verification": {"required": True, "failClosed": True},
+        },
+    }
+
+
+def _save_security_review_fragment(
+    library: Path,
+    *,
+    version: int = 1,
+    step: str = "sw-security-reviewer --workspace ${workspace}",
+) -> None:
+    save_fragment(
+        _security_review_subgraph(step),
+        name="security-review",
+        version=version,
+        root=library,
+        parameters={
+            "workspace": {
+                "type": "string",
+                "required": True,
+                "pattern": "^[a-z][a-z0-9-]+$",
+            }
+        },
+        inputs={"workspace": {"type": "string", "required": True}},
+        outputs={"verdict": {"type": "string"}},
+        required_capability=True,
+    )
 
 
 def test_save_approve_run_round_trip_is_parameterized_and_reusable(
@@ -203,7 +281,7 @@ def test_approved_template_enters_guarded_dynamic_proposal_boundary(
 
     decision = evaluate_saved_template(
         "guarded-workflow",
-        values={"workspace": "workspace-one", "concurrency": 2},
+        values={"workspace": "workspace-one", "concurrency": 1},
         canonical_graph=canonical,
         plan_policy="proposed",
         cutover_stage=CutoverStage.FULL,
@@ -220,6 +298,171 @@ def test_approved_template_enters_guarded_dynamic_proposal_boundary(
 
     assert decision.verdict == "accepted"
     assert decision.used_fallback is False
+
+
+def test_parent_security_review_digest_changes_when_fragment_changes(
+    tmp_path: Path,
+) -> None:
+    library = tmp_path / ".sw" / "workflows"
+    _save_security_review_fragment(library)
+    save_template(
+        _parent_with_security_review(),
+        name="parent-security-review",
+        root=library,
+        parameters=_parameters(),
+    )
+    approve_template("parent-security-review", actor="fixture-human", root=library)
+    first = prepare_run(
+        "parent-security-review",
+        values={"workspace": "workspace-one", "concurrency": 2},
+        root=library,
+    )
+    assert any(
+        node["id"] == "sec-review"
+        for node in first.graph["spec"]["nodes"]
+    )
+
+    at_sep = "@"
+    fragment_path = library / "fragments" / f"security-review{at_sep}1.json"
+    fragment = json.loads(fragment_path.read_text(encoding="utf-8"))
+    fragment["graph"]["nodes"][0]["target"]["step"] = (
+        "sw-security-reviewer --workspace ${workspace} --depth deep"
+    )
+    fragment_path.write_text(json.dumps(fragment), encoding="utf-8")
+
+    with pytest.raises(WorkflowLibraryError, match="changed after approval"):
+        prepare_run(
+            "parent-security-review",
+            values={"workspace": "workspace-one", "concurrency": 2},
+            root=library,
+        )
+
+
+def test_unapproved_expanded_digest_cannot_dispatch(tmp_path: Path) -> None:
+    library = tmp_path / ".sw" / "workflows"
+    _save_security_review_fragment(library)
+    save_template(
+        _parent_with_security_review(),
+        name="unapproved-parent",
+        root=library,
+        parameters=_parameters(),
+    )
+    with pytest.raises(WorkflowLibraryError, match="requires human approval"):
+        prepare_run(
+            "unapproved-parent",
+            values={"workspace": "workspace-one", "concurrency": 2},
+            root=library,
+        )
+
+
+def test_self_referential_fragment_fails_at_expansion(tmp_path: Path) -> None:
+    library = tmp_path / ".sw" / "workflows"
+    save_fragment(
+        {
+            "nodes": [],
+            "edges": [],
+            "uses": [
+                {
+                    "use": "loop-fragment@1",
+                    "prefix": "loop",
+                    "inputs": {},
+                }
+            ],
+        },
+        name="loop-fragment",
+        version=1,
+        root=library,
+    )
+    graph = {
+        "apiVersion": "shipwright.dev/v1alpha1",
+        "kind": "WorkflowGraph",
+        "metadata": {"name": "loop-parent"},
+        "spec": {
+            "uses": [
+                {
+                    "use": "loop-fragment@1",
+                    "prefix": "outer",
+                    "inputs": {},
+                }
+            ],
+            "nodes": [],
+            "edges": [],
+            "resourceLimits": {"maxConcurrency": 1, "maxDurationSeconds": 60},
+            "verification": {"required": True, "failClosed": True},
+        },
+    }
+    with pytest.raises(WorkflowLibraryError, match="expansion cycle"):
+        expand_workflow_fragments(
+            graph,
+            root=library,
+            resolved_values={},
+        )
+
+
+def test_expansion_node_ceiling_names_fragment(tmp_path: Path) -> None:
+    library = tmp_path / ".sw" / "workflows"
+    nodes = [
+        {
+            "id": f"node-{index}",
+            "kind": "command",
+            "target": {"step": "sw-run"},
+            "resources": {
+                "pool": "read-only-reviewers",
+                "slots": 1,
+                "timeoutSeconds": 10,
+            },
+            "isolation": {"mode": "none", "writeScope": "read-only"},
+            "verification": {"required": False, "strategy": "mechanical"},
+        }
+        for index in range(MAX_EXPANDED_NODES + 1)
+    ]
+    save_fragment(
+        {"nodes": nodes, "edges": []},
+        name="bulky-fragment",
+        version=1,
+        root=library,
+    )
+    graph = {
+        "apiVersion": "shipwright.dev/v1alpha1",
+        "kind": "WorkflowGraph",
+        "metadata": {"name": "bulky-parent"},
+        "spec": {
+            "uses": [
+                {
+                    "use": "bulky-fragment@1",
+                    "prefix": "bulk",
+                    "inputs": {},
+                }
+            ],
+            "nodes": [],
+            "edges": [],
+            "resourceLimits": {"maxConcurrency": 1, "maxDurationSeconds": 60},
+            "verification": {"required": True, "failClosed": True},
+        },
+    }
+    with pytest.raises(
+        WorkflowLibraryError,
+        match=f"fragment bulky-fragment@1: expanded node ceiling exceeded",
+    ):
+        expand_workflow_fragments(graph, root=library, resolved_values={})
+
+
+def test_model_authored_when_cannot_skip_security_review() -> None:
+    with pytest.raises(
+        WorkflowGraphValidationError,
+        match="model-authored field modelAuthored",
+    ):
+        validate_fragment_use_entry(
+            {
+                "use": "security-review@1",
+                "when": {
+                    "artifact": "mechanical-verification",
+                    "modelAuthored": True,
+                },
+            },
+            location="spec.uses[0]",
+            required_capability=True,
+        )
 
 
 def test_cli_save_approve_run_round_trip(tmp_path: Path) -> None:

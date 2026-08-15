@@ -24,6 +24,10 @@ from graph.dynamic_proposal import (
     ProposalDecision,
     evaluate_dynamic_proposal,
 )  # noqa: E402
+from graph.ir import (  # noqa: E402
+    validate_fragment_use_entry,
+    WorkflowGraphValidationError,
+)  # noqa: E402
 from graph.kernel_compiler import compile_workflow_graph  # noqa: E402
 from graph.scheduling_modes import ALLOWED_EXTERNAL_AUTHORIZERS  # noqa: E402
 
@@ -53,6 +57,11 @@ _LOCAL_PATH_RE = re.compile(
     r"(?:^|[\s='\"])(?:/Users/|/home/|/tmp/|/var/folders/|[A-Za-z]:\\)"
 )
 _PARAM_TYPES = frozenset({"string", "integer", "boolean"})
+_USE_PIN_RE = re.compile(r"^([a-z][a-z0-9-]{0,62})@(\d+)$")
+FRAGMENT_KIND = "WorkflowFragment"
+MAX_FRAGMENT_EXPANSION_DEPTH = 8
+MAX_EXPANDED_NODES = 64
+MAX_EXPANDED_EDGES = 128
 
 
 class WorkflowLibraryError(ValueError):
@@ -105,6 +114,14 @@ class PlanPolicyPromotionVerdict:
 
 
 @dataclass(frozen=True)
+class FragmentExpansionRecord:
+    """One pinned fragment digest recorded during deterministic expansion."""
+
+    use: str
+    digest: str
+
+
+@dataclass(frozen=True)
 class PreparedWorkflow:
     """A rendered, kernel-compiled template ready for scheduler submission."""
 
@@ -129,6 +146,340 @@ def _template_digest(document: Mapping[str, Any]) -> str:
         "name": document.get("name"),
         "parameters": document.get("parameters"),
         "graph": document.get("graph"),
+    }
+    return hashlib.sha256(_canonical_bytes(bound)).hexdigest()
+
+
+def parse_use_pin(pin: str) -> tuple[str, int]:
+    match = _USE_PIN_RE.fullmatch(pin.strip())
+    if not match:
+        raise WorkflowLibraryError(
+            "use pin must match <name>@<version> with a lowercase name"
+        )
+    return match.group(1), int(match.group(2))
+
+
+def _fragment_path(root: Path, name: str, version: int) -> Path:
+    safe_name = _validate_name(name)
+    fragments_root = root / "fragments"
+    if fragments_root.exists() and fragments_root.is_symlink():
+        raise WorkflowLibraryError("workflow fragment root must not be a symlink")
+    return fragments_root / f"{safe_name}@{version}.json"
+
+
+def _fragment_digest(document: Mapping[str, Any]) -> str:
+    bound = {
+        "libraryVersion": document.get("libraryVersion"),
+        "name": document.get("name"),
+        "version": document.get("version"),
+        "parameters": document.get("parameters"),
+        "inputs": document.get("inputs"),
+        "outputs": document.get("outputs"),
+        "requiredCapability": document.get("requiredCapability"),
+        "graph": document.get("graph"),
+    }
+    return hashlib.sha256(_canonical_bytes(bound)).hexdigest()
+
+
+def load_fragment(
+    name: str,
+    version: int,
+    *,
+    root: str | Path = DEFAULT_LIBRARY_ROOT,
+) -> dict[str, Any]:
+    """Load one versioned workflow fragment from the git-reviewable library."""
+    path = _fragment_path(Path(root), name, version)
+    if not path.is_file() or path.is_symlink():
+        raise WorkflowLibraryError(f"fragment not found in workflow library: {name}@{version}")
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkflowLibraryError(
+            f"cannot load fragment {name}@{version}: {exc}"
+        ) from exc
+    if not isinstance(document, dict):
+        raise WorkflowLibraryError("fragment document must be an object")
+    if document.get("libraryVersion") != LIBRARY_VERSION:
+        raise WorkflowLibraryError("unsupported workflow fragment version")
+    if document.get("kind") != FRAGMENT_KIND:
+        raise WorkflowLibraryError("fragment document kind must be WorkflowFragment")
+    if document.get("name") != name or int(document.get("version") or 0) != version:
+        raise WorkflowLibraryError("fragment identity does not match its filename")
+    graph = document.get("graph") or {}
+    _assert_redacted(graph)
+    if document.get("parameters"):
+        _normalize_parameters(graph, document.get("parameters") or {})
+    return document
+
+
+def save_fragment(
+    subgraph: Mapping[str, Any],
+    *,
+    name: str,
+    version: int,
+    root: str | Path = DEFAULT_LIBRARY_ROOT,
+    parameters: Mapping[str, Mapping[str, Any]] | None = None,
+    inputs: Mapping[str, Mapping[str, Any]] | None = None,
+    outputs: Mapping[str, Mapping[str, Any]] | None = None,
+    required_capability: bool = False,
+    replace: bool = False,
+) -> Path:
+    """Save a versioned subgraph fragment for typed composition."""
+    _validate_name(name)
+    if version <= 0:
+        raise WorkflowLibraryError("fragment version must be a positive integer")
+    if not isinstance(subgraph, Mapping):
+        raise WorkflowLibraryError("fragment graph must be an object")
+    detached = json.loads(json.dumps(subgraph))
+    _assert_redacted(detached)
+    normalized_parameters = (
+        _normalize_parameters(detached, parameters) if parameters else {}
+    )
+    path = _fragment_path(Path(root), name, version)
+    if path.exists() and not replace:
+        raise WorkflowLibraryError(f"fragment already exists: {name}@{version}")
+    document = {
+        "libraryVersion": LIBRARY_VERSION,
+        "kind": FRAGMENT_KIND,
+        "name": name,
+        "version": version,
+        "parameters": normalized_parameters,
+        "inputs": dict(inputs or {}),
+        "outputs": dict(outputs or {}),
+        "requiredCapability": bool(required_capability),
+        "graph": detached,
+    }
+    _write_json_atomic(path, document)
+    return path
+
+
+def _subgraph_section(graph: Mapping[str, Any]) -> dict[str, Any]:
+    if "spec" in graph:
+        spec = graph["spec"]
+        if not isinstance(spec, Mapping):
+            raise WorkflowLibraryError("workflow spec must be an object")
+        return dict(spec)
+    return dict(graph)
+
+
+def _prefix_node_id(prefix: str, node_id: str) -> str:
+    safe_prefix = _validate_name(prefix)
+    return f"{safe_prefix}-{node_id}"
+
+
+def _prefix_node(node: Mapping[str, Any], prefix: str) -> dict[str, Any]:
+    detached = json.loads(json.dumps(node))
+    detached["id"] = _prefix_node_id(prefix, str(detached["id"]))
+    return detached
+
+
+def _prefix_edge(edge: Mapping[str, Any], prefix: str) -> dict[str, Any]:
+    detached = json.loads(json.dumps(edge))
+    detached["from"] = _prefix_node_id(prefix, str(detached["from"]))
+    detached["to"] = _prefix_node_id(prefix, str(detached["to"]))
+    return detached
+
+
+def _resolve_fragment_inputs(
+    fragment: Mapping[str, Any],
+    rendered_inputs: Mapping[str, Any],
+) -> dict[str, Any]:
+    specs = fragment.get("parameters") or {}
+    if not specs:
+        return dict(rendered_inputs)
+    return _resolve_values(specs, rendered_inputs)
+
+
+def _check_expansion_limits(
+    *,
+    node_count: int,
+    edge_count: int,
+    fragment_pin: str,
+) -> None:
+    if node_count > MAX_EXPANDED_NODES:
+        raise WorkflowLibraryError(
+            f"fragment {fragment_pin}: expanded node ceiling exceeded "
+            f"({node_count}>{MAX_EXPANDED_NODES})"
+        )
+    if edge_count > MAX_EXPANDED_EDGES:
+        raise WorkflowLibraryError(
+            f"fragment {fragment_pin}: expanded edge ceiling exceeded "
+            f"({edge_count}>{MAX_EXPANDED_EDGES})"
+        )
+
+
+def expand_workflow_fragments(
+    graph: Mapping[str, Any],
+    *,
+    root: str | Path = DEFAULT_LIBRARY_ROOT,
+    resolved_values: Mapping[str, Any],
+    depth: int = 0,
+    stack: tuple[tuple[str, int], ...] = (),
+    digest_mode: bool = False,
+) -> tuple[dict[str, Any], tuple[FragmentExpansionRecord, ...]]:
+    """Expand pinned `use:` fragments into one WorkflowGraph before kernel compile."""
+    if depth > MAX_FRAGMENT_EXPANSION_DEPTH:
+        raise WorkflowLibraryError("fragment expansion depth ceiling exceeded")
+    detached = json.loads(json.dumps(graph))
+    section = _subgraph_section(detached)
+    uses = section.get("uses") or []
+    if not uses:
+        return detached, ()
+
+    if not isinstance(uses, list):
+        raise WorkflowLibraryError("spec.uses must be an array")
+
+    expanded_nodes = list(section.get("nodes") or [])
+    expanded_edges = list(section.get("edges") or [])
+    records: list[FragmentExpansionRecord] = []
+
+    for index, raw_entry in enumerate(uses):
+        if not isinstance(raw_entry, Mapping):
+            raise WorkflowLibraryError(f"spec.uses[{index}] must be an object")
+        use_pin = str(raw_entry.get("use") or "")
+        name, version = parse_use_pin(use_pin)
+        identity = (name, version)
+        if identity in stack:
+            raise WorkflowLibraryError(
+                f"fragment {use_pin}: expansion cycle detected"
+            )
+
+        fragment = load_fragment(name, version, root=root)
+        required_capability = bool(fragment.get("requiredCapability"))
+        location = f"spec.uses[{index}] ({use_pin})"
+        try:
+            validate_fragment_use_entry(
+                raw_entry,
+                location=location,
+                required_capability=required_capability,
+            )
+        except WorkflowGraphValidationError as exc:
+            raise WorkflowLibraryError(str(exc)) from exc
+
+        rendered_inputs = (
+            dict(raw_entry.get("inputs") or {})
+            if digest_mode
+            else _render(raw_entry.get("inputs") or {}, resolved_values)
+        )
+        if digest_mode:
+            fragment_values = {
+                key: str(value)
+                for key, value in rendered_inputs.items()
+            }
+        else:
+            fragment_values = _resolve_fragment_inputs(fragment, rendered_inputs)
+        fragment_graph = (
+            fragment.get("graph") or {}
+            if digest_mode
+            else _render(fragment.get("graph") or {}, fragment_values)
+        )
+        nested_graph = expand_workflow_fragments(
+            fragment_graph,
+            root=root,
+            resolved_values={**dict(resolved_values), **fragment_values},
+            depth=depth + 1,
+            stack=stack + (identity,),
+            digest_mode=digest_mode,
+        )
+        nested_body, nested_records = nested_graph
+        nested_section = _subgraph_section(nested_body)
+        nested_uses = nested_section.get("uses") or []
+        if nested_uses:
+            raise WorkflowLibraryError(
+                f"fragment {use_pin}: nested uses must be expanded before merge"
+            )
+
+        prefix = str(raw_entry.get("prefix") or name)
+        _validate_name(prefix)
+        prefixed_nodes = [
+            _prefix_node(node, prefix)
+            for node in nested_section.get("nodes") or []
+        ]
+        prefixed_edges = [
+            _prefix_edge(edge, prefix)
+            for edge in nested_section.get("edges") or []
+        ]
+
+        candidate_nodes = len(expanded_nodes) + len(prefixed_nodes)
+        candidate_edges = len(expanded_edges) + len(prefixed_edges)
+        _check_expansion_limits(
+            node_count=candidate_nodes,
+            edge_count=candidate_edges,
+            fragment_pin=use_pin,
+        )
+
+        expanded_nodes.extend(prefixed_nodes)
+        expanded_edges.extend(prefixed_edges)
+        records.append(
+            FragmentExpansionRecord(use=use_pin, digest=_fragment_digest(fragment))
+        )
+        records.extend(nested_records)
+
+    section["nodes"] = expanded_nodes
+    section["edges"] = expanded_edges
+    section.pop("uses", None)
+    if "spec" in detached:
+        detached["spec"] = section
+    else:
+        detached.update(section)
+        for key in ("nodes", "edges"):
+            if key in detached and key not in section:
+                detached.pop(key, None)
+        detached.pop("uses", None)
+
+    if digest_mode:
+        metadata = detached.setdefault("metadata", {})
+        if isinstance(metadata, Mapping):
+            metadata["fragmentDigests"] = [
+                {"use": record.use, "digest": record.digest} for record in records
+            ]
+    return detached, tuple(records)
+
+
+def _template_has_uses(document: Mapping[str, Any]) -> bool:
+    graph = document.get("graph") or {}
+    if not isinstance(graph, Mapping):
+        return False
+    section = _subgraph_section(graph)
+    return bool(section.get("uses"))
+
+
+def _approval_digest(
+    document: Mapping[str, Any],
+    *,
+    root: str | Path,
+    resolved_values: Mapping[str, Any],
+) -> str:
+    if _template_has_uses(document):
+        return _expanded_template_digest(
+            document,
+            root=root,
+            resolved_values=resolved_values,
+        )
+    return _template_digest(document)
+
+
+def _expanded_template_digest(
+    document: Mapping[str, Any],
+    *,
+    root: str | Path,
+    resolved_values: Mapping[str, Any],
+) -> str:
+    graph = document.get("graph") or {}
+    expanded, records = expand_workflow_fragments(
+        graph,
+        root=root,
+        resolved_values=resolved_values,
+        digest_mode=True,
+    )
+    bound = {
+        "libraryVersion": document.get("libraryVersion"),
+        "name": document.get("name"),
+        "parameters": document.get("parameters"),
+        "graph": expanded,
+        "fragmentDigests": [
+            {"use": record.use, "digest": record.digest} for record in records
+        ],
     }
     return hashlib.sha256(_canonical_bytes(bound)).hexdigest()
 
@@ -337,6 +688,28 @@ def load_template(
     return document
 
 
+def _approval_resolution(specs: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
+    """Resolve parameters for approval-time expanded digest binding."""
+    resolved: dict[str, Any] = {}
+    for name, spec in specs.items():
+        if "default" in spec:
+            value = spec["default"]
+        elif spec["type"] == "string":
+            pattern = spec.get("pattern")
+            if pattern == "^[a-z][a-z0-9-]+$":
+                value = "fixture-workspace"
+            else:
+                value = "fixture"
+        elif spec["type"] == "integer":
+            value = int(spec.get("minimum", 1))
+        elif spec["type"] == "boolean":
+            value = False
+        else:
+            value = ""
+        resolved[name] = _validate_parameter_value(name, spec, value)
+    return resolved
+
+
 def approve_template(
     name: str,
     *,
@@ -348,23 +721,40 @@ def approve_template(
     if not actor.strip():
         raise WorkflowLibraryError("approval actor is required")
     document = load_template(name, root=root)
+    resolved = _approval_resolution(document["parameters"])
     document["approval"] = {
         "approved": True,
         "approvedBy": actor.strip(),
         "approvedAt": approved_at
         or datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "templateHash": _template_digest(document),
+        "templateHash": _approval_digest(
+            document,
+            root=root,
+            resolved_values=resolved,
+        ),
     }
     path = _template_path(Path(root), name)
     _write_json_atomic(path, document)
     return path
 
 
-def _assert_approved(document: Mapping[str, Any]) -> Mapping[str, Any]:
+def _assert_approved(
+    document: Mapping[str, Any],
+    *,
+    root: str | Path = DEFAULT_LIBRARY_ROOT,
+    resolved_values: Mapping[str, Any] | None = None,
+) -> Mapping[str, Any]:
     approval = document.get("approval")
     if not isinstance(approval, Mapping) or approval.get("approved") is not True:
         raise WorkflowLibraryError("template reuse requires human approval")
-    if approval.get("templateHash") != _template_digest(document):
+    specs = document.get("parameters") or {}
+    approval_resolved = _approval_resolution(specs)
+    expected = _approval_digest(
+        document,
+        root=root,
+        resolved_values=approval_resolved,
+    )
+    if approval.get("templateHash") != expected:
         raise WorkflowLibraryError("template changed after approval; re-approval required")
     if not approval.get("approvedBy") or not approval.get("approvedAt"):
         raise WorkflowLibraryError("template approval record is incomplete")
@@ -441,11 +831,19 @@ def prepare_run(
 ) -> PreparedWorkflow:
     """Render an approved template and compile it through the safety kernel."""
     document = load_template(name, root=root)
-    approval = _assert_approved(document)
     specs = document["parameters"]
     resolved = _resolve_values(specs, values)
+    approval = _assert_approved(
+        document,
+        root=root,
+    )
     graph = _render(document["graph"], resolved)
-    compiled = compile_workflow_graph(graph, **dict(kernel_options or {}))
+    expanded, _records = expand_workflow_fragments(
+        graph,
+        root=root,
+        resolved_values=resolved,
+    )
+    compiled = compile_workflow_graph(expanded, **dict(kernel_options or {}))
     return PreparedWorkflow(
         name=name,
         graph=compiled["graph"],

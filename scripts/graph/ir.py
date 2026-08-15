@@ -13,6 +13,33 @@ WORKFLOW_SCHEMA_PATH = SCHEMA_DIR / "workflow_graph.schema.json"
 NODE_SCHEMA_PATH = SCHEMA_DIR / "node_spec.schema.json"
 PHASE_STEP_PLAN_TARGET = "phase-step-plan"
 
+# Pre-dispatch mechanical artifacts allowed in fragment `when:` guards (R3).
+MECHANICAL_PREDISPATCH_ARTIFACTS = frozenset(
+    {
+        "credential-broker",
+        "gate-evidence",
+        "kernel-compiler",
+        "mechanical-verification",
+        "merge-gate",
+        "phase-step-plan",
+        "verification-gate",
+        "write-isolation-lease",
+    }
+)
+
+# Model-authored payload keys may not appear in `when:` guards (R3).
+MODEL_AUTHORED_WHEN_KEYS = frozenset(
+    {
+        "agentAuthored",
+        "fromModel",
+        "llmOutput",
+        "modelAuthored",
+        "modelField",
+        "modelOutput",
+        "skipReview",
+    }
+)
+
 
 class WorkflowGraphValidationError(ValueError):
     """Raised when a WorkflowGraph or NodeSpec fails closed validation."""
@@ -148,6 +175,56 @@ def normalize_node_execution(
         execution["trust"] = json.loads(json.dumps(trust))
     detached["execution"] = execution
     return detached
+
+
+def validate_when_guard(
+    when: Any,
+    *,
+    required_capability: bool,
+    location: str,
+) -> None:
+    """Fail closed when a fragment guard references model-authored skip inputs."""
+    if when is None:
+        return
+    if not isinstance(when, Mapping):
+        raise WorkflowGraphValidationError(f"{location}: when guard must be an object")
+    if required_capability and when.get("skip"):
+        raise WorkflowGraphValidationError(
+            f"{location}: required-capability fragment is non-skippable"
+        )
+    for key in when:
+        if key in MODEL_AUTHORED_WHEN_KEYS:
+            raise WorkflowGraphValidationError(
+                f"{location}: when guard may not reference model-authored field {key}"
+            )
+        if key.startswith("model") and key not in {"modelTier"}:
+            raise WorkflowGraphValidationError(
+                f"{location}: when guard may not reference model-authored field {key}"
+            )
+    artifact = when.get("artifact")
+    if not isinstance(artifact, str) or artifact not in MECHANICAL_PREDISPATCH_ARTIFACTS:
+        raise WorkflowGraphValidationError(
+            f"{location}: when guard artifact must be a pre-dispatch mechanical artifact"
+        )
+
+
+def validate_fragment_use_entry(
+    entry: Mapping[str, Any],
+    *,
+    location: str,
+    required_capability: bool,
+) -> None:
+    """Validate one typed `use:` entry before fragment expansion."""
+    if not isinstance(entry, Mapping):
+        raise WorkflowGraphValidationError(f"{location}: use entry must be an object")
+    use_pin = entry.get("use")
+    if not isinstance(use_pin, str) or not use_pin:
+        raise WorkflowGraphValidationError(f"{location}: use pin is required")
+    validate_when_guard(
+        entry.get("when"),
+        required_capability=required_capability,
+        location=location,
+    )
 
 
 def validate_node_spec(
