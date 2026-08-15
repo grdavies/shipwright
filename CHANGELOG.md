@@ -879,6 +879,7 @@
 * merge phase guide-documentation-for-optimizer-and-capability-docs-r8 into feat/workflow-intelligence-platform (116670d) <!-- sw-deliver:guide-documentation-for-optimizer-and-capability-docs-r8 -->
 * merge phase routing-regret-calibrated-to-ready-without-rework-r5 into feat/workflow-intelligence-platform (af90e94) <!-- sw-deliver:routing-regret-calibrated-to-ready-without-rework-r5 -->
 * merge phase command-documentation-for-shadow-reason-codes-and-confirmation-r8 into feat/workflow-intelligence-platform (2b1cd1a) <!-- sw-deliver:command-documentation-for-shadow-reason-codes-and-confirmation-r8 -->
+* merge phase executionbackend-minimal-contract-size-medium into feat/graph-execution-runtime-v2 (e52c9d7) <!-- sw-deliver:executionbackend-minimal-contract-size-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
