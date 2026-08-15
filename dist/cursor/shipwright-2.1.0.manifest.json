@@ -338,6 +338,7 @@
     "graph/crash_replay_harness.py",
     "graph/cutover.py",
     "graph/dynamic_proposal.py",
+    "graph/execution_backend.py",
     "graph/execution_receipts.py",
     "graph/fanin_policy.py",
     "graph/ir.py",
@@ -672,5 +673,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 669
+  "moduleCount": 670
 }
