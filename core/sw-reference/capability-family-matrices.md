@@ -83,7 +83,7 @@ Library version: **1**
 
 | Template | Library version | Path |
 | --- | ---: | --- |
-| — | — | no checked-in templates |
+| `lock` | 1 | `.sw/workflows/lock.json` |
 
 ## Registry families (planning + issues)
 
