@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-16T19:01:38Z",
+  "generatedAt": "2026-08-16T19:17:04Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -11602,91 +11602,91 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:208:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:210:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 208,
+      "line": 210,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:239:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:241:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 239,
+      "line": 241,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:244:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:246:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 244,
+      "line": 246,
       "column": 13,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:268:memory-sot.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:270:memory-sot.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 268,
+      "line": 270,
       "column": 8,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:297:in-repo-memory-search.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:299:in-repo-memory-search.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 297,
+      "line": 299,
       "column": 8,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:303:in-repo-memory-search.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:305:in-repo-memory-search.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 303,
+      "line": 305,
       "column": 27,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:343:memory-sot.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:345:memory-sot.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 343,
+      "line": 345,
       "column": 34,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:369:reconcile.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:371:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 369,
+      "line": 371,
       "column": 8,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:372:reconcile.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:374:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 372,
+      "line": 374,
       "column": 32,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:397:planning_cross_project_recall.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:399:planning_cross_project_recall.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 397,
+      "line": 399,
       "column": 8,
       "script": "planning_cross_project_recall.py",
       "classification": "self-repo-only"
@@ -17083,91 +17083,91 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:208:sw_bootstrap.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:210:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 208,
+      "line": 210,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:239:sw_bootstrap.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:241:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 239,
+      "line": 241,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:244:sw_bootstrap.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:246:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 244,
+      "line": 246,
       "column": 13,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:268:memory-sot.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:270:memory-sot.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 268,
+      "line": 270,
       "column": 8,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:297:in-repo-memory-search.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:299:in-repo-memory-search.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 297,
+      "line": 299,
       "column": 8,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:303:in-repo-memory-search.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:305:in-repo-memory-search.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 303,
+      "line": 305,
       "column": 27,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:343:memory-sot.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:345:memory-sot.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 343,
+      "line": 345,
       "column": 34,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:369:reconcile.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:371:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 369,
+      "line": 371,
       "column": 8,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:372:reconcile.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:374:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 372,
+      "line": 374,
       "column": 32,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:397:planning_cross_project_recall.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:399:planning_cross_project_recall.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 397,
+      "line": 399,
       "column": 8,
       "script": "planning_cross_project_recall.py",
       "classification": "self-repo-only"
