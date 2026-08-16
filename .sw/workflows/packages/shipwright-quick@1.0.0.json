@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "kind": "WorkflowPackage",
+  "name": "shipwright-quick",
+  "version": "1.0.0",
+  "dependencies": [
+    "shipwright-review@0.2.0"
+  ],
+  "producer": "shipwright",
+  "graph": {
+    "nodes": [
+      {
+        "id": "run",
+        "kind": "command",
+        "target": {
+          "step": "sw-execute"
+        }
+      }
+    ],
+    "edges": []
+  },
+  "provenance": {
+    "signerKeyId": "shipwright-test",
+    "signature": "06bdf9bafde87713d0b693ae480a9be0af168c6e580a2dd927fa05df345efd8c",
+    "contentDigest": "6a43d80b133e79a7f3449476a805483a369b898cb6df4c0a39a7666b340fff5f"
+  }
+}

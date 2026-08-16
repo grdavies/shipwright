@@ -340,6 +340,23 @@ on `/sw-deliver` and `/sw-status` (no graph-prefixed slash commands).
 | **Required-capability fragments** | Non-skippable; `when:` guards on required-capability fragments read only pre-dispatch mechanical artifacts |
 | **Parent re-approval** | A fragment upgrade changes the expanded digest; unapproved digests cannot dispatch |
 
+**Semver packages, lockfile, and trust (PRD 272 R19–R22):**
+
+Workflow fragments can be published as semver packages under `.sw/workflows/packages/` with pins recorded
+in `.sw/workflows/lock.json`. Discovery of a catalog entry does **not** imply trust — resolution fails
+closed unless the lock digest, signature, and out-of-band trust anchors all match.
+
+| Concept | Behavior |
+| --- | --- |
+| **Producers** | `shipwright` (this repo) and `shipwright-dogfood` publish signed packs |
+| **Consumers** | `shipwright` dogfood path plus `shipwright-sibling-consumer` for cross-repo reuse |
+| **Trust anchors** | Configured only in `.cursor/sw-package-trust-anchors.json` — never from pack, registry, or repo under resolution |
+| **Lock edits** | Digest-level lock diffs require the same human/admin approval as pack approval |
+| **Expansion tuple** | Kernel compile binds `(packDigest, profileId, requirementSetDigest, kernelVersion)`; additive detector injection is admitted without re-approval; weaken/remove requires fresh approval |
+| **Adoption metrics** | Rollout reports reuse count, update friction, and broken-pin rate via `scripts/graph/packages/adoption.py` |
+
+Trust path: **discover → resolve → digest pin → approve(tuple) → compile**.
+
 **Shadow evaluation:**
 
 Before a proposed graph can replace canonical dispatch, **shadow mode** scores the candidate against
@@ -1157,6 +1174,27 @@ so operators see repeat signal without a duplicate tracking unit.
 stdout, re-run `/sw-deliver run` — provision now records durable `phaseWorktrees.path`/`name` from the
 validated JSON tail instead of looping `conductor:no-progress` on null paths.
 
+
+## Workflow packages, trust, and expansion tuples (PRD 272 R19–R22)
+
+Semver workflow packs live under `.sw/workflows/packages/` as signed `WorkflowPackage`
+artifacts. **Discovery does not imply trust** — only lock-pinned, signature-verified packs
+resolve at compile time.
+
+| Surface | Path | Role |
+| --- | --- | --- |
+| Lockfile | `.sw/workflows/lock.json` | Pins digest + signer for each pack and its transitive dependencies |
+| Trust anchors | `.cursor/sw-package-trust-anchors.json` (operator-local) | Out-of-band signer keys; unknown/expired/revoked keys fail closed |
+| Resolver | `scripts/graph/packages/resolver.py` | `discover_packages` lists catalog entries; `resolve_trusted_packages` verifies pins |
+| Expansion tuple | `scripts/graph/packages/approval_tuple.py` | Human approval over `(packDigest, profileId, requirementSetDigest, kernelVersion)` |
+
+Lock edits require the same digest-bound approval record as pack promotion. Additive detector
+injections may proceed without re-approval; any weakening relative to the approved expansion tuple
+requires a fresh approval before `kernel_compiler.compile_workflow_graph` admits the graph.
+
+Named producer (`shipwright-dogfood`) and sibling consumer (`shipwright-sibling-consumer`) adoption
+metrics (`reuseCount`, `updateFrictionSeconds`, `brokenPinRate`) are reported via
+`graph.packages.report_adoption_metrics` for rollout observability.
 
 ## Debug small-fix handoff
 
