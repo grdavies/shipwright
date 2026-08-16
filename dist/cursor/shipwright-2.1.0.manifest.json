@@ -333,6 +333,11 @@
     "global_plan_lint.py",
     "graph/__init__.py",
     "graph/artifact_registry.py",
+    "graph/benchmark/__init__.py",
+    "graph/benchmark/acceptance.py",
+    "graph/benchmark/fake_provider.py",
+    "graph/benchmark/manifest.py",
+    "graph/benchmark/runner.py",
     "graph/cache_mac.py",
     "graph/cache_store.py",
     "graph/convergence_loop.py",
@@ -693,5 +698,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 690
+  "moduleCount": 695
 }
