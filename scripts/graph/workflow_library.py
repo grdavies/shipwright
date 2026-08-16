@@ -18,6 +18,12 @@ _SCRIPTS = Path(__file__).resolve().parent.parent
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
+from graph.absolute_floor import (  # noqa: E402
+    AbsoluteFloorError,
+    assert_anti_ratchet_ceiling,
+    evaluate_after_profile_and_inject,
+    required_capabilities_from_graph,
+)
 from graph.cutover import CutoverStage, DogfoodEvidence  # noqa: E402
 from graph.dynamic_proposal import (
     ProposalBudget,
@@ -964,6 +970,21 @@ def gate_plan_policy_promotion(
     )
 
 
+def _template_graph(document: Mapping[str, Any]) -> Mapping[str, Any]:
+    graph = document.get("graph")
+    if not isinstance(graph, Mapping):
+        raise WorkflowLibraryError("template graph is missing or invalid")
+    return graph
+
+
+def _pinned_reference_capabilities(
+    document: Mapping[str, Any],
+) -> frozenset[str] | None:
+    if not document.get("canonicalAdoptedDigest"):
+        return None
+    return required_capabilities_from_graph(_template_graph(document))
+
+
 def _template_plan_policy(document: Mapping[str, Any]) -> str:
     promotion = document.get("planPolicyPromotion")
     if isinstance(promotion, Mapping):
@@ -997,6 +1018,17 @@ def promote_template_plan_policy(
             "plan policy promotion gate failed: " + "; ".join(gate.reasons)
         )
 
+    pinned_ids = document.get("planPolicyPromotion", {}).get("pinnedRequiredCapabilityIds")
+    if isinstance(pinned_ids, list) and pinned_ids:
+        assert_promotion_anti_ratchet(
+            pinned_reference_graph={
+                "spec": {"nodes": []},
+                "metadata": {"requiredCapabilityIds": pinned_ids},
+            },
+            candidate_graph=_template_graph(document),
+            root=root,
+        )
+
     current = _template_plan_policy(document)
     if target_policy == PLAN_POLICY_PROPOSED and current == PLAN_POLICY_PROPOSED:
         raise WorkflowLibraryError("template already promoted to proposed")
@@ -1023,6 +1055,9 @@ def promote_template_plan_policy(
     }
     if target_policy == PLAN_POLICY_CANONICAL:
         document["canonicalAdoptedDigest"] = template_digest
+        document["planPolicyPromotion"]["pinnedRequiredCapabilityIds"] = sorted(
+            required_capabilities_from_graph(_template_graph(document))
+        )
     path = _template_path(Path(root), name)
     _write_json_atomic(path, document)
     return path
@@ -1055,20 +1090,40 @@ def demote_template_plan_policy(
     return path
 
 
-def required_capabilities_from_graph(graph: Mapping[str, Any]) -> frozenset[str]:
-    """Collect typed required capability ids declared on graph nodes."""
-    caps: set[str] = set()
-    for node in graph["spec"]["nodes"]:
-        metadata = node.get("metadata") or {}
-        cap_id = metadata.get("requiredCapabilityId")
-        if isinstance(cap_id, str) and cap_id:
-            caps.add(cap_id)
-            continue
-        if is_required_capability_node(node):
-            step = str((node.get("target") or {}).get("step") or "")
-            if "auth" in step:
-                caps.add(CAPABILITY_AUTH)
-    return frozenset(caps)
+def apply_profile_to_required_capabilities(
+    *,
+    injected_capability_ids: frozenset[str],
+    profile: str,
+    root: str | Path = ".",
+) -> frozenset[str]:
+    """Apply optimization profile after detector injection and enforce absolute floor."""
+    try:
+        return evaluate_after_profile_and_inject(
+            injected_capability_ids=injected_capability_ids,
+            profile=profile,
+            repo_root=Path(root),
+        )
+    except AbsoluteFloorError as exc:
+        raise WorkflowLibraryError(str(exc)) from exc
+
+
+def assert_promotion_anti_ratchet(
+    *,
+    pinned_reference_graph: Mapping[str, Any],
+    candidate_graph: Mapping[str, Any],
+    root: str | Path = ".",
+) -> None:
+    """Promotion cannot ratchet below pinned reference capability set (R9)."""
+    pinned = required_capabilities_from_graph(pinned_reference_graph)
+    candidate = required_capabilities_from_graph(candidate_graph)
+    try:
+        assert_anti_ratchet_ceiling(
+            pinned_reference=pinned,
+            candidate=candidate,
+            repo_root=Path(root),
+        )
+    except AbsoluteFloorError as exc:
+        raise WorkflowLibraryError(str(exc)) from exc
 
 
 def assert_control_path_preserves_auth(

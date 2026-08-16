@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "description": "Risk-class absolute capability floors and promotion anti-ratchet ceilings (PRD 272 R9). Floors are independent of template, optimization profile, and promotion history.",
+  "floors": {
+    "security": {
+      "minimumCapabilityIds": [
+        "workflow.capability.security-auth-review"
+      ]
+    },
+    "data": {
+      "minimumCapabilityIds": [
+        "workflow.capability.migration-validation"
+      ]
+    },
+    "interface": {
+      "minimumCapabilityIds": [
+        "workflow.capability.api-compatibility"
+      ]
+    },
+    "supply-chain": {
+      "minimumCapabilityIds": [
+        "workflow.capability.dependency-supply-chain"
+      ]
+    },
+    "unclassified": {
+      "minimumCapabilityIds": [
+        "workflow.capability.standard-review"
+      ]
+    }
+  },
+  "antiRatchet": {
+    "maxCapabilityReduction": 0,
+    "description": "Promotion cumulative capability reduction vs pinned reference is bounded; zero means no drops allowed."
+  }
+}
