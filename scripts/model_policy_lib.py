@@ -131,3 +131,76 @@ def next_model_tier(
     if target not in allowed:
         raise PermissionError(f"escalation to {target!r} is outside the model-tier allowlist")
     return target
+
+
+@dataclass(frozen=True)
+class TierRecommendation:
+    """Tier recommendation with exogenous outcome gate (PRD 272 R13)."""
+
+    recommended_tier: str
+    blocked: bool
+    reason: str
+
+
+def recommend_implement_tier(
+    current_tier: str,
+    *,
+    proposed_tier: str,
+    ready_without_rework_rate: float,
+    exogenous: Mapping[str, float],
+    baseline_exogenous: Mapping[str, float],
+    policy: ModelPolicy,
+    allowed_tiers: Iterable[str],
+    hold_detection_config: str,
+) -> TierRecommendation:
+    """Hold detection configuration fixed when comparing implementation tiers (R13)."""
+    allowed = tuple(dict.fromkeys(allowed_tiers))
+    if current_tier not in allowed or proposed_tier not in allowed:
+        return TierRecommendation(
+            recommended_tier=current_tier,
+            blocked=True,
+            reason="tier-not-allowlisted",
+        )
+    current_rank = policy.tier_rank(current_tier)
+    proposed_rank = policy.tier_rank(proposed_tier)
+    if current_rank is None or proposed_rank is None:
+        return TierRecommendation(
+            recommended_tier=current_tier,
+            blocked=True,
+            reason="unknown-tier",
+        )
+
+    if proposed_rank < current_rank:
+        if ready_without_rework_rate >= 1.0 and not exogenous:
+            return TierRecommendation(
+                recommended_tier=current_tier,
+                blocked=True,
+                reason="rwr-alone-insufficient",
+            )
+        if not exogenous:
+            return TierRecommendation(
+                recommended_tier=current_tier,
+                blocked=True,
+                reason="exogenous-signal-required",
+            )
+        for key, value in exogenous.items():
+            baseline = baseline_exogenous.get(key)
+            if baseline is not None and value > baseline:
+                return TierRecommendation(
+                    recommended_tier=current_tier,
+                    blocked=True,
+                    reason=f"exogenous-regression:{key}",
+                )
+
+    if not hold_detection_config:
+        return TierRecommendation(
+            recommended_tier=current_tier,
+            blocked=True,
+            reason="hold-detection-config-required",
+        )
+
+    return TierRecommendation(
+        recommended_tier=proposed_tier,
+        blocked=False,
+        reason="ok",
+    )
