@@ -889,6 +889,7 @@
 * merge phase docs-currency-pack-size-medium into feat/graph-execution-runtime-v2 (bf72cb2) <!-- sw-deliver:docs-currency-pack-size-medium -->
 * merge phase cutover-evidence-per-gap-closeout-size-small into feat/graph-execution-runtime-v2 (ed68b94) <!-- sw-deliver:cutover-evidence-per-gap-closeout-size-small -->
 * merge phase detector-contracts-and-required-capability-injection-size-large into feat/workflow-intelligence-assurance (39a7d7b) <!-- sw-deliver:detector-contracts-and-required-capability-injection-size-large -->
+* merge phase topology-re-detect-reduction-auth-nonskip-size-large into feat/workflow-intelligence-assurance (a652577) <!-- sw-deliver:topology-re-detect-reduction-auth-nonskip-size-large -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
