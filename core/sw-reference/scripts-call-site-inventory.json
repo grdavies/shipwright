@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-16T02:28:20Z",
+  "generatedAt": "2026-08-16T02:34:52Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -7336,271 +7336,271 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:85:wave_deliver.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:99:wave_deliver.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 85,
+      "line": 99,
       "column": 8,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:87:wave_deliver.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:101:wave_deliver.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 87,
+      "line": 101,
       "column": 8,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:88:wave_deliver.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:102:wave_deliver.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 88,
+      "line": 102,
       "column": 8,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:89:wave_deliver.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:103:wave_deliver.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 89,
+      "line": 103,
       "column": 8,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:200:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:214:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 200,
+      "line": 214,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:204:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:218:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 204,
+      "line": 218,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:229:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:243:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 229,
+      "line": 243,
       "column": 60,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:255:planning-graph.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:269:planning-graph.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 255,
+      "line": 269,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:276:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:290:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 276,
+      "line": 290,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:279:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:293:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 279,
+      "line": 293,
       "column": 35,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:318:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:332:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 318,
+      "line": 332,
       "column": 20,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:352:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:366:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 352,
+      "line": 366,
       "column": 43,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:364:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:378:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 364,
+      "line": 378,
       "column": 63,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:369:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:383:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 369,
+      "line": 383,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:370:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:384:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 370,
+      "line": 384,
       "column": 9,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:387:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:401:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 387,
+      "line": 401,
       "column": 13,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:388:unit_tests/deliver/test_prd063_release_completeness.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:402:unit_tests/deliver/test_prd063_release_completeness.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 388,
+      "line": 402,
       "column": 9,
       "script": "unit_tests/deliver/test_prd063_release_completeness.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:389:harness_isolation_lint.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:403:harness_isolation_lint.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 389,
+      "line": 403,
       "column": 28,
       "script": "harness_isolation_lint.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:399:planning_scheduler.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:413:planning_scheduler.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 399,
+      "line": 413,
       "column": 8,
       "script": "planning_scheduler.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:428:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:442:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 428,
+      "line": 442,
       "column": 65,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:434:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:448:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 434,
+      "line": 448,
       "column": 12,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:435:dispatch-check.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:449:dispatch-check.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 435,
+      "line": 449,
       "column": 12,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:438:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:452:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 438,
+      "line": 452,
       "column": 24,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:439:resolve-intensity.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:453:resolve-intensity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 439,
+      "line": 453,
       "column": 28,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:454:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:468:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 454,
+      "line": 468,
       "column": 63,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:480:wave_deliver.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:494:wave_deliver.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 480,
+      "line": 494,
       "column": 32,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:481:wave_deliver.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:495:wave_deliver.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 481,
+      "line": 495,
       "column": 29,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:482:planning_deliver_gate.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:496:planning_deliver_gate.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 482,
+      "line": 496,
       "column": 36,
       "script": "planning_deliver_gate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:524:wave.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:538:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 524,
+      "line": 538,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-deliver.md:527:phase_sizing.py",
+      "id": "dist/claude-code/commands/sw-deliver.md:541:phase_sizing.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-deliver.md",
-      "line": 527,
+      "line": 541,
       "column": 32,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
@@ -9568,30 +9568,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:324:planning_backend_control.py",
+      "id": "dist/claude-code/commands/sw-ship.md:329:planning_backend_control.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 324,
+      "line": 329,
       "column": 8,
       "script": "planning_backend_control.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:325:planning_backend_control.py",
+      "id": "dist/claude-code/commands/sw-ship.md:330:planning_backend_control.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 325,
+      "line": 330,
       "column": 8,
       "script": "planning_backend_control.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/commands/sw-ship.md:340:ship-phase-status.py",
-      "tree": "dist/claude-code/commands",
-      "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 340,
-      "column": 8,
-      "script": "ship-phase-status.py",
       "classification": "self-repo-only"
     },
     {
@@ -9604,19 +9595,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:369:wave.py",
+      "id": "dist/claude-code/commands/sw-ship.md:350:ship-phase-status.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 369,
+      "line": 350,
+      "column": 8,
+      "script": "ship-phase-status.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-ship.md:374:wave.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-ship.md",
+      "line": 374,
       "column": 33,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-ship.md:375:wave.py",
+      "id": "dist/claude-code/commands/sw-ship.md:380:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-ship.md",
-      "line": 375,
+      "line": 380,
       "column": 26,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -9856,28 +9856,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:118:status_integrity.py",
+      "id": "dist/claude-code/commands/sw-status.md:133:status_integrity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 118,
+      "line": 133,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:191:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-status.md:206:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 191,
+      "line": 206,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:199:wave.py",
+      "id": "dist/claude-code/commands/sw-status.md:214:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 199,
+      "line": 214,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -10270,100 +10270,100 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:108:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:122:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 108,
+      "line": 122,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:154:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:168:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 154,
+      "line": 168,
       "column": 27,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:155:doc_loop.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:169:doc_loop.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 155,
+      "line": 169,
       "column": 23,
       "script": "doc_loop.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:159:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:173:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 159,
+      "line": 173,
       "column": 19,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:186:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:200:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 186,
+      "line": 200,
       "column": 72,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:190:dispatch-check.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:204:dispatch-check.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 190,
+      "line": 204,
       "column": 11,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:274:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:288:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 274,
+      "line": 288,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:341:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:355:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 341,
+      "line": 355,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:345:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:359:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 345,
+      "line": 359,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:362:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:376:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 362,
+      "line": 376,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:363:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:377:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 363,
+      "line": 377,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -12808,271 +12808,271 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:85:wave_deliver.py",
+      "id": "dist/cursor/commands/sw-deliver.md:99:wave_deliver.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 85,
+      "line": 99,
       "column": 8,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:87:wave_deliver.py",
+      "id": "dist/cursor/commands/sw-deliver.md:101:wave_deliver.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 87,
+      "line": 101,
       "column": 8,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:88:wave_deliver.py",
+      "id": "dist/cursor/commands/sw-deliver.md:102:wave_deliver.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 88,
+      "line": 102,
       "column": 8,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:89:wave_deliver.py",
+      "id": "dist/cursor/commands/sw-deliver.md:103:wave_deliver.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 89,
+      "line": 103,
       "column": 8,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:200:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:214:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 200,
+      "line": 214,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:204:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:218:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 204,
+      "line": 218,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:229:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:243:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 229,
+      "line": 243,
       "column": 60,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:255:planning-graph.py",
+      "id": "dist/cursor/commands/sw-deliver.md:269:planning-graph.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 255,
+      "line": 269,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:276:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:290:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 276,
+      "line": 290,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:279:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:293:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 279,
+      "line": 293,
       "column": 35,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:318:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:332:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 318,
+      "line": 332,
       "column": 20,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:352:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:366:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 352,
+      "line": 366,
       "column": 43,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:364:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:378:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 364,
+      "line": 378,
       "column": 63,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:369:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:383:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 369,
+      "line": 383,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:370:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:384:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 370,
+      "line": 384,
       "column": 9,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:387:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:401:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 387,
+      "line": 401,
       "column": 13,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:388:unit_tests/deliver/test_prd063_release_completeness.py",
+      "id": "dist/cursor/commands/sw-deliver.md:402:unit_tests/deliver/test_prd063_release_completeness.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 388,
+      "line": 402,
       "column": 9,
       "script": "unit_tests/deliver/test_prd063_release_completeness.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:389:harness_isolation_lint.py",
+      "id": "dist/cursor/commands/sw-deliver.md:403:harness_isolation_lint.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 389,
+      "line": 403,
       "column": 28,
       "script": "harness_isolation_lint.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:399:planning_scheduler.py",
+      "id": "dist/cursor/commands/sw-deliver.md:413:planning_scheduler.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 399,
+      "line": 413,
       "column": 8,
       "script": "planning_scheduler.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:428:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-deliver.md:442:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 428,
+      "line": 442,
       "column": 65,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:434:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:448:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 434,
+      "line": 448,
       "column": 12,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:435:dispatch-check.py",
+      "id": "dist/cursor/commands/sw-deliver.md:449:dispatch-check.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 435,
+      "line": 449,
       "column": 12,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:438:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-deliver.md:452:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 438,
+      "line": 452,
       "column": 24,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:439:resolve-intensity.py",
+      "id": "dist/cursor/commands/sw-deliver.md:453:resolve-intensity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 439,
+      "line": 453,
       "column": 28,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:454:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-deliver.md:468:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 454,
+      "line": 468,
       "column": 63,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:480:wave_deliver.py",
+      "id": "dist/cursor/commands/sw-deliver.md:494:wave_deliver.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 480,
+      "line": 494,
       "column": 32,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:481:wave_deliver.py",
+      "id": "dist/cursor/commands/sw-deliver.md:495:wave_deliver.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 481,
+      "line": 495,
       "column": 29,
       "script": "wave_deliver.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:482:planning_deliver_gate.py",
+      "id": "dist/cursor/commands/sw-deliver.md:496:planning_deliver_gate.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 482,
+      "line": 496,
       "column": 36,
       "script": "planning_deliver_gate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:524:wave.py",
+      "id": "dist/cursor/commands/sw-deliver.md:538:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 524,
+      "line": 538,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-deliver.md:527:phase_sizing.py",
+      "id": "dist/cursor/commands/sw-deliver.md:541:phase_sizing.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-deliver.md",
-      "line": 527,
+      "line": 541,
       "column": 32,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
@@ -15040,30 +15040,21 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:324:planning_backend_control.py",
+      "id": "dist/cursor/commands/sw-ship.md:329:planning_backend_control.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 324,
+      "line": 329,
       "column": 8,
       "script": "planning_backend_control.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:325:planning_backend_control.py",
+      "id": "dist/cursor/commands/sw-ship.md:330:planning_backend_control.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 325,
+      "line": 330,
       "column": 8,
       "script": "planning_backend_control.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/cursor/commands/sw-ship.md:340:ship-phase-status.py",
-      "tree": "dist/cursor/commands",
-      "file": "dist/cursor/commands/sw-ship.md",
-      "line": 340,
-      "column": 8,
-      "script": "ship-phase-status.py",
       "classification": "self-repo-only"
     },
     {
@@ -15076,19 +15067,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:369:wave.py",
+      "id": "dist/cursor/commands/sw-ship.md:350:ship-phase-status.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 369,
+      "line": 350,
+      "column": 8,
+      "script": "ship-phase-status.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-ship.md:374:wave.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-ship.md",
+      "line": 374,
       "column": 33,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-ship.md:375:wave.py",
+      "id": "dist/cursor/commands/sw-ship.md:380:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-ship.md",
-      "line": 375,
+      "line": 380,
       "column": 26,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -15328,28 +15328,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:118:status_integrity.py",
+      "id": "dist/cursor/commands/sw-status.md:133:status_integrity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 118,
+      "line": 133,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:191:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-status.md:206:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 191,
+      "line": 206,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:199:wave.py",
+      "id": "dist/cursor/commands/sw-status.md:214:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 199,
+      "line": 214,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -15742,100 +15742,100 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:106:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:120:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 106,
+      "line": 120,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:152:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:166:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 152,
+      "line": 166,
       "column": 27,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:153:doc_loop.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:167:doc_loop.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 153,
+      "line": 167,
       "column": 23,
       "script": "doc_loop.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:157:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:171:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 157,
+      "line": 171,
       "column": 19,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:184:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:198:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 184,
+      "line": 198,
       "column": 72,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:188:dispatch-check.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:202:dispatch-check.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 188,
+      "line": 202,
       "column": 11,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:272:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:286:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 272,
+      "line": 286,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:339:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:353:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 339,
+      "line": 353,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:343:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:357:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 343,
+      "line": 357,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:360:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:374:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 360,
+      "line": 374,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:361:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:375:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 361,
+      "line": 375,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
