@@ -1177,7 +1177,7 @@ def upsert_run_index_discovery(root: Path, run_id: str, state: dict[str, Any]) -
 
 
 def enumerate_run_scoped_dirs(root: Path) -> list[dict[str, Any]]:
-    from wave_run_paths import runs_root, state_path as run_state_path
+    from wave_run_paths import SAFE_RUN_ID_RE, runs_root, state_path as run_state_path
 
     base = runs_root(root)
     if not base.is_dir():
@@ -1187,6 +1187,10 @@ def enumerate_run_scoped_dirs(root: Path) -> list[dict[str, Any]]:
         if not child.is_dir():
             continue
         run_id = child.name
+        # Skip bookkeeping dirs (_archived, _progress-projections, …) and any
+        # name that is not a valid run id — prefer skip over crashing cleanup.
+        if not SAFE_RUN_ID_RE.match(run_id):
+            continue
         state_file = run_state_path(root, run_id)
         state = _read_state_optional(state_file) if state_file.is_file() else {}
         if state:

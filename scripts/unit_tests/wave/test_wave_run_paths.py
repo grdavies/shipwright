@@ -143,3 +143,27 @@ def test_discovery_entry_is_sanitized(repo: Path) -> None:
     )
     assert "phases" not in entry
     assert "mergeJournal" not in entry
+
+
+def test_enumerate_run_scoped_dirs_skips_invalid_run_ids(repo: Path) -> None:
+    """Bookkeeping dirs under sw-deliver-runs must not crash enumeration."""
+    from wave_run_paths import runs_root
+
+    run_id = mint_run_id(repo)
+    save_run_scoped_state(
+        repo,
+        run_id,
+        {"verdict": "running", "target": {"branch": "feat/demo"}},
+    )
+    base = runs_root(repo)
+    for reserved in ("_archived", "_progress-projections", "_foo"):
+        (base / reserved).mkdir(parents=True, exist_ok=True)
+        (base / reserved / "state.json").write_text("{}", encoding="utf-8")
+
+    entries = enumerate_run_scoped_dirs(repo)
+    ids = {str(e.get("runId") or "") for e in entries}
+    assert run_id in ids
+    assert "_archived" not in ids
+    assert "_progress-projections" not in ids
+    assert "_foo" not in ids
+    assert all(not rid.startswith("_") for rid in ids if rid)
