@@ -224,7 +224,21 @@ comes from receipt-backed graph progress — not a second safety kernel and not 
 | Live node progress | `/sw-status` (`graph-progress`) | WorkflowGraph receipts under `.cursor/sw-graph-runs/<runId>/` |
 | Per-node explain | `/sw-status` (`explain <nodeId>`) | Blocker hierarchy for one execution node |
 
+**Measured attribution (PRD 271 R11/R29):** graph-progress includes `executionMode` (`serial-only` when
+no overlapping execution was observed). Explain promotes `timingAttribution` from append-only
+`timing-events.jsonl` (bookkeeping excluded from execution time). `/sw-deliver --explain-plan` remains
+estimate-only — never measured timing events.
+
 Do not infer execution progress from planning INDEX rows or chat history. Kernel chokepoints
 (verification-gate, check-gate, gap-check, secret-scan) remain single-sourced — graph scheduling does not
 add parallel merge gates. No `/sw-graph-*` slash commands; operator UX extends existing commands only.
 See `docs/guides/commands.md` **Graph execution runtime**.
+
+**Cache provenance (PRD 271 R4/R15):** graph-progress and explain promote `cacheSource`, `cacheKey`, and
+`originalRunId` from receipts when a node reused `.cursor/sw-graph-cache/` — distinct from journal replay under
+`.cursor/sw-graph-runs/<runId>/`.
+
+**Conductor vs scheduler:** deliver/orchestrator conductor fan-out (phases, execute Tasks, merge queue) is not
+`GraphScheduler`. Live execution status always comes from receipt-backed graph surfaces — never from conductor
+cursor alone.
+

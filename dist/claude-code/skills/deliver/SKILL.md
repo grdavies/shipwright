@@ -233,3 +233,17 @@ terminal outcomes still come from `.cursor/sw-deliver-runs/<runId>/phases/<phase
 Mechanical delegates: `python3 scripts/status_integrity.py graph-progress --run-id <runId>` and
 `explain <nodeId>`. Generic graph `runId` maps from the deliver/orchestrator `runId`. No `/sw-graph-*`
 slash commands. Domain vocabulary: `docs/guides/graph-domain-terminology.md`.
+
+### Conductor vs GraphScheduler (PRD 271 R15)
+
+The orchestrator **conductor** (`skills/conductor/SKILL.md`) drives wave/phase **fan-out**, merge queues,
+and in-turn `deliver-loop` / `doc-loop` self-continuation. It is **not** the `GraphScheduler` **owning loop**
+(`scripts/graph/scheduler.py`).
+
+| Layer | Role | Durable state |
+| --- | --- | --- |
+| Conductor | Parallel phase dispatch, intra-phase execute fan-out, merge queue, legitimate halts | `.cursor/sw-deliver-runs/`, `.cursor/sw-deliver-state.*` |
+| `GraphScheduler` | Single owning loop for node admission, pool leases, cancel fencing, cache consult | Receipt journal `.cursor/sw-graph-runs/<runId>/`; cache `.cursor/sw-graph-cache/` |
+
+Node execution delegates through `ExecutionBackend` (`scripts/graph/execution_backend.py`); the host
+adjudicates terminal envelopes. Operator UX stays on existing `sw-*` commands — **no** `/sw-graph-*` family.

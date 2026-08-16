@@ -101,6 +101,11 @@ deliver/orchestrator `runId`). Domain vocabulary:
 [`graph-domain-terminology.md`](graph-domain-terminology.md). Command detail:
 [`sw-deliver.md`](../../core/commands/sw-deliver.md), [`sw-status.md`](../../core/commands/sw-status.md).
 
+**Conductor vs GraphScheduler:** `/sw-deliver` conductor fan-out (parallel phases, merge queue)
+is not the `GraphScheduler` owning loop. Graph node admission, `ExecutionBackend` envelopes, cache consult, and
+timing attribution live under `scripts/graph/` — operator UX stays on existing commands (no `/sw-graph-*`).
+
+
 ### Workflow optimizer policy
 
 The graph **optimizer** proposes alternate WorkflowGraph layouts under

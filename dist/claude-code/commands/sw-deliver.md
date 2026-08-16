@@ -79,6 +79,20 @@ Phase-mode and multi-feature deliver compile onto the shared **WorkflowGraph** I
 `GraphScheduler` (`scripts/graph/`). Operator UX stays on existing `/sw-deliver` / `/sw-status` surfaces —
 **no** `/sw-graph-*` (or other graph-prefixed) slash commands are introduced.
 
+### Conductor vs GraphScheduler (PRD 271 R15)
+
+The orchestrator **conductor** (`skills/conductor/SKILL.md`) drives wave/phase **fan-out**, merge queues,
+and in-turn `deliver-loop` / `doc-loop` self-continuation. It is **not** the `GraphScheduler` **owning loop**
+(`scripts/graph/scheduler.py`).
+
+| Layer | Role | Durable state |
+| --- | --- | --- |
+| Conductor | Parallel phase dispatch, intra-phase execute fan-out, merge queue, legitimate halts | `.cursor/sw-deliver-runs/`, `.cursor/sw-deliver-state.*` |
+| `GraphScheduler` | Single owning loop for node admission, pool leases, cancel fencing, cache consult | Receipt journal `.cursor/sw-graph-runs/<runId>/`; cache `.cursor/sw-graph-cache/` |
+
+Node execution delegates through `ExecutionBackend` (`scripts/graph/execution_backend.py`); the host
+adjudicates terminal envelopes. Operator UX stays on existing `sw-*` commands — **no** `/sw-graph-*` family.
+
 ### `--explain-plan` (read-only)
 
 ```bash

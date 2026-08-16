@@ -32,6 +32,23 @@ from ship_phase_steps import (
     ship_chain_is_complete,
 )
 
+try:
+    from graph.quick_ship_compile import (
+        QUICK_SHIP_PARITY_MATRIX,
+        QuickShipCompileOptions,
+        compile_quick_ship_graph,
+        fixed_quick_ship_steps,
+        graph_step_for_ship_step,
+        resume_step_from_ship_steps,
+    )
+except ImportError:  # pragma: no cover - graph package optional in minimal trees
+    QUICK_SHIP_PARITY_MATRIX = {}
+    QuickShipCompileOptions = None  # type: ignore[misc, assignment]
+    compile_quick_ship_graph = None  # type: ignore[assignment]
+    fixed_quick_ship_steps = None  # type: ignore[assignment]
+    graph_step_for_ship_step = None  # type: ignore[assignment]
+    resume_step_from_ship_steps = None  # type: ignore[assignment]
+
 MECHANICAL_STEPS = frozenset(
     {
         "sw-tmp-init",
@@ -484,6 +501,77 @@ def resolve_run_dir(root: Path, phase: str) -> Path:
     return root / ".cursor" / "sw-deliver-runs" / phase
 
 
+def quick_ship_graph_available() -> bool:
+    return compile_quick_ship_graph is not None
+
+
+def resolve_quick_ship_chain(root: Path) -> list[str]:
+    """Fixed Quick topology from kernel classification — no PRD 272 adaptive selection."""
+    if fixed_quick_ship_steps is None:
+        return authoritative_chain(root, "", None)[0]
+    return fixed_quick_ship_steps(root)
+
+
+def compile_quick_ship_for_phase(
+    root: Path,
+    phase: str,
+    *,
+    run_id: str | None = None,
+    resume_step: str | None = None,
+    has_pr: bool | None = None,
+) -> dict[str, Any] | None:
+    """Compile Quick /sw-ship graph when graph runtime is available (R7)."""
+    if compile_quick_ship_graph is None or QuickShipCompileOptions is None:
+        return None
+    options = QuickShipCompileOptions(
+        run_id=run_id or f"quick-ship-{phase or 'interactive'}",
+        phase_slug=phase,
+        resume_step=resume_step,
+        has_pr=has_pr,
+    )
+    compilation = compile_quick_ship_graph(root, options)
+    return {
+        "graph": compilation.graph,
+        "plan": compilation.source_plan,
+        "parityMatrix": QUICK_SHIP_PARITY_MATRIX,
+        "resumeAuthority": "ship-steps.json",
+    }
+
+
+def resume_authority_step(
+    root: Path,
+    phase: str,
+    doc: dict[str, Any],
+    *,
+    steps_path: Path | None = None,
+) -> str:
+    """ship-steps.json remains sole resume authority; graph is observability-only pre-cutover (R8)."""
+    chain, chain_source, _ = authoritative_chain(root, phase, str(steps_path) if steps_path else None)
+    if chain_source == "persisted-plan":
+        return normalize_step(str(doc.get("currentStep") or (chain[0] if chain else "")))
+    quick_chain = resolve_quick_ship_chain(root)
+    if resume_step_from_ship_steps is not None:
+        return resume_step_from_ship_steps(doc, quick_chain)
+    return normalize_step(str(doc.get("currentStep") or (chain[0] if chain else "")))
+
+
+def parity_matrix_snapshot(*, has_pr: bool | None = None) -> dict[str, Any]:
+    """Expose R8 parity matrix for operator/docs surfaces."""
+    if not QUICK_SHIP_PARITY_MATRIX:
+        return {"available": False}
+    snapshot = {
+        "available": True,
+        "resumeAuthority": QUICK_SHIP_PARITY_MATRIX.get("resumeAuthority"),
+        "paths": QUICK_SHIP_PARITY_MATRIX.get("paths"),
+        "flags": QUICK_SHIP_PARITY_MATRIX.get("flags"),
+        "cutover": QUICK_SHIP_PARITY_MATRIX.get("cutover"),
+    }
+    if has_pr is not None:
+        key = "withPr" if has_pr else "noPr"
+        snapshot["activePath"] = QUICK_SHIP_PARITY_MATRIX["paths"][key]
+    return snapshot
+
+
 def classify_step(step: str) -> str:
     norm = normalize_step(step)
     if norm in AGENT_STEPS:
@@ -528,8 +616,14 @@ def resume_from_durable(root: Path, phase: str, *, steps_path: Path | None = Non
     path = steps_path or resolve_steps_path(root, phase, None)
     doc = ensure_initialized(root, phase, path)
     chain, chain_source, plan = authoritative_chain(root, phase, str(path))
-    current = normalize_step(str(doc.get("currentStep") or (chain[0] if chain else "")))
+    current = resume_authority_step(root, phase, doc, steps_path=path)
     complete = ship_chain_is_complete(root, phase, doc, out=str(path))
+    graph_bundle = compile_quick_ship_for_phase(
+        root,
+        phase,
+        run_id=str(doc.get("runId") or f"quick-ship-{phase}"),
+        resume_step=current,
+    )
     payload: dict[str, Any] = {
         "verdict": "pass",
         "action": "ship-loop-resume",
@@ -540,7 +634,11 @@ def resume_from_durable(root: Path, phase: str, *, steps_path: Path | None = Non
         "chainSource": chain_source,
         "complete": complete,
         "classification": classify_step(current) if current else None,
+        "resumeAuthority": "ship-steps.json",
+        "quickShipGraph": graph_bundle is not None,
     }
+    if graph_bundle:
+        payload["parityMatrix"] = graph_bundle.get("parityMatrix", {}).get("resumeAuthority")
     if plan:
         payload["phasePlanPath"] = str(path.parent / "phase-step-plan.json")
     return payload
@@ -571,7 +669,18 @@ def step_dispatch(root: Path, phase: str, *, steps_path: Path | None = None) -> 
         "classification": kind,
         "chainSource": chain_source,
         "stepsPath": str(path),
+        "resumeAuthority": "ship-steps.json",
+        "parityMatrix": parity_matrix_snapshot(),
     }
+    graph_bundle = compile_quick_ship_for_phase(
+        root,
+        phase,
+        run_id=str(doc.get("runId") or f"quick-ship-{phase}"),
+        resume_step=current,
+    )
+    if graph_bundle:
+        result["quickShipGraph"] = True
+        result["graphStep"] = graph_step_for_ship_step(current) if graph_step_for_ship_step else current
     if kind == "agent":
         result["awaitAgent"] = True
         result["contract"] = build_agent_contract(root, phase, current, run_dir)

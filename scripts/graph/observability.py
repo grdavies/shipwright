@@ -9,6 +9,11 @@ from typing import Any
 from graph.convergence_loop import CONVERGENCE_REASON_CODES, ConvergenceResult
 from graph.cost_telemetry import observability_fields
 from graph.execution_receipts import ExecutionReceiptJournal
+from graph.timing_events import (
+    aggregate_timing_events,
+    causal_critical_path,
+    observed_execution_overlap,
+)
 
 READ_ONLY_COMMANDS = frozenset({"status", "show", "explain", "critical-path", "live"})
 
@@ -354,6 +359,7 @@ class GraphObservability:
         pool_snapshot: Mapping[str, Any] | None = None,
         estimated_durations: Mapping[str, int] | None = None,
         graph_hash: str = "",
+        timing_events: Iterable[Mapping[str, Any]] | None = None,
     ) -> None:
         self._graph = graph
         self._run_id = run_id
@@ -369,6 +375,10 @@ class GraphObservability:
             str(node_id): max(0, int(duration))
             for node_id, duration in (estimated_durations or {}).items()
         }
+        self._timing_events = [
+            dict(item) for item in (timing_events or ()) if isinstance(item, Mapping)
+        ]
+        self._timing_attribution = aggregate_timing_events(self._timing_events)
         try:
             nodes = graph["spec"]["nodes"]
             edges = graph["spec"]["edges"]
@@ -405,6 +415,7 @@ class GraphObservability:
             pool_snapshot=journal.read_pool_snapshot(),
             estimated_durations=estimated_durations,
             graph_hash=graph_hash,
+            timing_events=journal.list_timing_events(),
         )
 
     def _duration_ms(self, node_id: str) -> tuple[int, str]:
@@ -443,6 +454,37 @@ class GraphObservability:
         """Maximum independent width across topological levels."""
         levels = self._topo_levels()
         return max((len(level) for level in levels), default=0)
+
+    def execution_mode(self) -> str:
+        """serial-only when no overlapping execution intervals were observed (R11b/R29)."""
+        if self.max_concurrency() <= 1:
+            return "serial-only"
+        if self._timing_events and observed_execution_overlap(self._timing_events):
+            return "concurrent"
+        if self._timing_attribution:
+            return "serial-only"
+        return "unknown"
+
+    def measured_critical_path(self) -> dict[str, Any]:
+        """Causal wall-clock path from append-only timing events (R11a/R28)."""
+        if not self._timing_attribution:
+            return {
+                "runId": self._run_id,
+                "omitted": True,
+                "reason": "no-timing-events",
+                "estimated": False,
+                "measured": False,
+                "durationMs": 0,
+                "nodes": [],
+            }
+        payload = causal_critical_path(
+            self._node_ids,
+            self._predecessors,
+            self._timing_attribution,
+        )
+        payload["runId"] = self._run_id
+        payload["executionMode"] = self.execution_mode()
+        return payload
 
     def max_concurrency(self) -> int:
         limits = self._graph.get("spec", {}).get("resourceLimits") or {}
@@ -572,6 +614,7 @@ class GraphObservability:
             "queryKey": f"{self._run_id}:{self._graph_hash}" if self._graph_hash else self._run_id,
             "verdict": verdict,
             "nodeCount": len(self._node_ids),
+            "executionMode": self.execution_mode(),
             "counts": {state: counts.get(state, 0) for state in LIVE_STATES},
             "nodes": nodes,
             "failedNodes": failed,
@@ -819,6 +862,10 @@ class GraphObservability:
             payload["nextAction"] = outcome.next_action
         if node_id in self._degraded:
             payload["degradation"] = dict(self._degraded[node_id])
+        attribution = self._timing_attribution.get(node_id)
+        if attribution is not None:
+            payload["timingAttribution"] = attribution.as_payload()
+            payload["serialOnly"] = self.execution_mode() == "serial-only"
         return payload
 
     def critical_path(
@@ -826,7 +873,11 @@ class GraphObservability:
         *,
         estimated_durations: Mapping[str, int] | None = None,
     ) -> dict[str, Any]:
-        """Longest path by duration; omit zero-weight paths when no estimates exist (R10)."""
+        """Longest path by duration; prefer measured timing events when present (R11/R28)."""
+        if self._timing_attribution and not estimated_durations:
+            measured = self.measured_critical_path()
+            if not measured.get("omitted"):
+                return measured
         if estimated_durations:
             for node_id, duration in estimated_durations.items():
                 self._estimated_durations[str(node_id)] = max(0, int(duration))
@@ -886,8 +937,16 @@ class GraphObservability:
         }
 
     def explain_plan(self) -> dict[str, Any]:
-        """Read-only deliver plan summary (R10/R12)."""
-        critical = self.critical_path()
+        """Read-only deliver plan summary — estimate-only, never measured attribution (R10/R29)."""
+        estimated = GraphObservability(
+            self._graph,
+            self._receipts.values(),
+            run_id=self._run_id,
+            estimated_durations=self._estimated_durations,
+            graph_hash=self._graph_hash,
+            timing_events=(),
+        )
+        critical = estimated.critical_path()
         payload: dict[str, Any] = {
             "verdict": "pass",
             "readOnly": True,

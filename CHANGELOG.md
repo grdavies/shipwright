@@ -879,6 +879,15 @@
 * merge phase guide-documentation-for-optimizer-and-capability-docs-r8 into feat/workflow-intelligence-platform (116670d) <!-- sw-deliver:guide-documentation-for-optimizer-and-capability-docs-r8 -->
 * merge phase routing-regret-calibrated-to-ready-without-rework-r5 into feat/workflow-intelligence-platform (af90e94) <!-- sw-deliver:routing-regret-calibrated-to-ready-without-rework-r5 -->
 * merge phase command-documentation-for-shadow-reason-codes-and-confirmation-r8 into feat/workflow-intelligence-platform (2b1cd1a) <!-- sw-deliver:command-documentation-for-shadow-reason-codes-and-confirmation-r8 -->
+* merge phase executionbackend-minimal-contract-size-medium into feat/graph-execution-runtime-v2 (e52c9d7) <!-- sw-deliver:executionbackend-minimal-contract-size-medium -->
+* merge phase executionbackend-minimal-contract-size-medium into feat/graph-execution-runtime-v2 (5325ea1) <!-- sw-deliver:executionbackend-minimal-contract-size-medium -->
+* merge phase single-owning-loop-async-scheduler-size-large into feat/graph-execution-runtime-v2 (91f31ca) <!-- sw-deliver:single-owning-loop-async-scheduler-size-large -->
+* merge phase authenticated-canonical-cache-store-size-large into feat/graph-execution-runtime-v2 (9e123ab) <!-- sw-deliver:authenticated-canonical-cache-store-size-large -->
+* merge phase worktree-integration-barrier-size-medium into feat/graph-execution-runtime-v2 (c958a46) <!-- sw-deliver:worktree-integration-barrier-size-medium -->
+* merge phase quick-sw-ship-graph-parity-size-large into feat/graph-execution-runtime-v2 (f2b5a1d) <!-- sw-deliver:quick-sw-ship-graph-parity-size-large -->
+* merge phase measured-critical-path-attribution-size-medium into feat/graph-execution-runtime-v2 (9d264cc) <!-- sw-deliver:measured-critical-path-attribution-size-medium -->
+* merge phase docs-currency-pack-size-medium into feat/graph-execution-runtime-v2 (bf72cb2) <!-- sw-deliver:docs-currency-pack-size-medium -->
+* merge phase cutover-evidence-per-gap-closeout-size-small into feat/graph-execution-runtime-v2 (ed68b94) <!-- sw-deliver:cutover-evidence-per-gap-closeout-size-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

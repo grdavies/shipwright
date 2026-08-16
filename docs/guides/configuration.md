@@ -1225,6 +1225,10 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `graphExecution.resourceLimits.maxConcurrency` | WorkflowGraph serial-equivalent default (`1`); independently tunable from cache |
 | `graphExecution.resourceLimits.maxDurationSeconds` | Compiled graph wall-clock ceiling (default **86400**) |
 | `graphExecution.cache.enabled` | Content-addressed node cache (default **true**); disable without changing `maxConcurrency` |
+| `graphExecution.cache.scope` | Cache trust scope: `run` (default, intra-run memoization) or `repository` (cross-run reuse — only after MAC + gate-eligibility gates are green) |
+| `graphExecution.cache.credentialRef` | Broker reference for per-repository cache MAC secret (`purpose: graph-cache-mac`) |
+| `graphExecution.cache.maxSizeBytes` | Independent canonical cache ceiling (default **268435456** / 256 MiB) |
+| `graphExecution.cache.maxAgeSeconds` | Independent cache retention window (default **2592000** / 30 days) |
 | `deliver.remediation.maxAttempts` | Auto-remediation budget per blocked phase before clean halt (default **2**) |
 | `memory.provider` | Catalog-registered provider id (default `in-repo`; seeded: `recallium`, `mempalace`, `basic-memory`, `obsidian`). Validated by `memory_provider_register.py` — unknown ids rejected |
 | `memory.sourceOfTruth` | `auto` (default), `repo`, or `memory` — authority for **decision** records only (`auto`: external provider → memory, in-repo → repo) |
@@ -1284,6 +1288,28 @@ python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-doc --dele
 
 Orchestrators (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-retrospective`) route at `inherit` — always resolve the
 delegated child command. Full policy: `.sw/models-tiering.md`.
+
+## Graph execution cache policy
+
+WorkflowGraph content-addressed caching is configured under `graphExecution.cache` and stored separately
+from run journals at `.cursor/sw-graph-cache/` (see `.sw/layout.md`).
+
+`GraphScheduler` owns the single owning loop; node work crosses `ExecutionBackend` with host-authoritative terminal envelopes (`scripts/graph/execution_backend.py`). Orchestrator conductor fan-out is orthogonal — not a substitute for graph concurrency.
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `graphExecution.cache.enabled` | `true` | When `false`, the scheduler does not consult the canonical cache store |
+| `graphExecution.cache.scope` | `run` | `run` = intra-run memoization only (dogfood default). `repository` enables cross-run reuse only after MAC authenticity and gate-eligibility are mechanically green — never document run scope as “cross-run cache”. |
+| `graphExecution.cache.credentialRef` | — | Broker selector ref resolving per-repo MAC material (`purpose: graph-cache-mac`) |
+| `graphExecution.cache.maxSizeBytes` | `268435456` | Independent cache store ceiling (not shared with journal limits) |
+| `graphExecution.cache.maxAgeSeconds` | `2592000` | Independent cache retention window |
+
+**Receipt-visible hits:** cache hits stamp `cacheSource: cache`, `cacheKey`, and `originalRunId` on the
+run-scoped receipt. `/sw-status` graph-progress surfaces reuse from these fields.
+
+**Gate eligibility:** mechanical verify, review, ready-gate, and equivalent gate nodes are non-cacheable.
+Nodes with missing or `"default"` identity components (`repo_state_identity`, `trust_domain`,
+`scope_identity`, `repository_identity`) are cache-ineligible.
 
 ## Capability selection (manifest + selector)
 

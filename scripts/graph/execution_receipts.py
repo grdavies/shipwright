@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from graph.artifact_registry import receipt_is_reusable
+from graph.cache_mac import resolve_cache_mac_key
 
 _SAFE_NODE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
@@ -42,7 +43,17 @@ _PROMOTION_EVENT_FIELDS = frozenset(
 # Default retention / size ceiling for the gitignored run-scoped store (R13).
 DEFAULT_RETENTION_SECONDS = 14 * 24 * 60 * 60
 DEFAULT_SIZE_CEILING_BYTES = 64 * 1024 * 1024
-DEFAULT_MAC_KEY = b"shipwright-graph-receipt-mac-v1"
+
+# Sidecar artifacts may degrade; authoritative receipt bodies fail closed (R12).
+AUTHORITATIVE_RECEIPT_DIRS = frozenset({"partial", "complete"})
+SIDECAR_RECEIPT_NAMES = frozenset(
+    {
+        "pool-snapshot.json",
+        "telemetry.json",
+        "calibration-table.json",
+        "timing-events.jsonl",
+    }
+)
 
 
 class ReceiptJournalError(RuntimeError):
@@ -280,7 +291,8 @@ class ExecutionReceiptJournal:
 
     Prefer :meth:`for_run` so receipts, intents, and pool snapshots are indexed
     under a single ``runId`` directory rather than scanning all history (R13).
-    Content-addressed cache hits and HMAC integrity are phase-4 (R6/R7/R15).
+    Canonical cache entries live under ``.cursor/sw-graph-cache/`` (R4/R21); the
+    run journal no longer embeds a durable cross-run cache index.
     """
 
     def __init__(
@@ -290,6 +302,7 @@ class ExecutionReceiptJournal:
         run_id: str | None = None,
         size_ceiling_bytes: int = DEFAULT_SIZE_CEILING_BYTES,
         mac_key: bytes | None = None,
+        repo_root: str | Path | None = None,
     ) -> None:
         self.root = Path(root)
         self.run_id = run_id
@@ -297,13 +310,18 @@ class ExecutionReceiptJournal:
         self.partial_root = self.root / "partial"
         self.complete_root = self.root / "complete"
         self.quarantine_root = self.root / "quarantine"
-        self.cache_index_root = self.root / "cache-index"
-        self._mac_key = mac_key if mac_key is not None else DEFAULT_MAC_KEY
+        self._repo_root = (
+            Path(repo_root)
+            if repo_root is not None
+            else (self.root.parent.parent if self.root.name == "receipts" else self.root)
+        )
+        self._mac_key = (
+            mac_key if mac_key is not None else resolve_cache_mac_key(self._repo_root)
+        )
         for directory in (
             self.partial_root,
             self.complete_root,
             self.quarantine_root,
-            self.cache_index_root,
         ):
             directory.mkdir(parents=True, exist_ok=True)
         # Restrict to owning user when possible (R13 writable-only-by-owner).
@@ -320,6 +338,7 @@ class ExecutionReceiptJournal:
         *,
         size_ceiling_bytes: int = DEFAULT_SIZE_CEILING_BYTES,
         mac_key: bytes | None = None,
+        repo_root: str | Path | None = None,
     ) -> ExecutionReceiptJournal:
         """Open the per-run journal at ``<store>/<runId>/receipts``."""
         safe = sanitize_run_id(run_id)
@@ -329,11 +348,17 @@ class ExecutionReceiptJournal:
             os.chmod(run_dir, 0o700)
         except OSError:
             pass
+        resolved_repo = (
+            Path(repo_root)
+            if repo_root is not None
+            else Path(store_root).parent.parent
+        )
         return cls(
             run_dir / "receipts",
             run_id=safe,
             size_ceiling_bytes=size_ceiling_bytes,
             mac_key=mac_key,
+            repo_root=resolved_repo,
         )
 
     @property
@@ -348,6 +373,9 @@ class ExecutionReceiptJournal:
 
     def telemetry_path(self) -> Path:
         return self.run_dir / "telemetry.json"
+
+    def timing_events_path(self) -> Path:
+        return self.run_dir / "timing-events.jsonl"
 
     @staticmethod
     def _key(node_id: str, idempotency_key: str) -> str:
@@ -364,18 +392,12 @@ class ExecutionReceiptJournal:
     def complete_path(self, node_id: str, idempotency_key: str) -> Path:
         return self.complete_root / f"{self._key(node_id, idempotency_key)}.json"
 
-    def cache_index_path(self, cache_key: str) -> Path:
-        if not _SAFE_CACHE_KEY.fullmatch(cache_key):
-            raise ValueError(f"invalid cache key: {cache_key!r}")
-        return self.cache_index_root / f"{cache_key}.json"
-
     def _size_bytes(self) -> int:
         total = 0
         for directory in (
             self.partial_root,
             self.complete_root,
             self.quarantine_root,
-            self.cache_index_root,
             self.run_dir,
         ):
             if not directory.is_dir():
@@ -556,7 +578,7 @@ class ExecutionReceiptJournal:
             and completed.get("cacheHit") is not True
             and receipt_is_reusable(completed)
         ):
-            self._index_cache_hit(cache_key, node_id, idempotency_key)
+            pass  # canonical cache store indexes durable reuse (R4/R21)
         return completed
 
     def finish(
@@ -602,42 +624,19 @@ class ExecutionReceiptJournal:
             and completed.get("cacheHit") is not True
             and receipt_is_reusable(completed)
         ):
-            self._index_cache_hit(cache_key, node_id, idempotency_key)
+            pass  # canonical cache store indexes durable reuse (R4/R21)
         return completed
 
     def _index_cache_hit(
         self, cache_key: str, node_id: str, idempotency_key: str
     ) -> None:
-        path = self.cache_index_path(cache_key)
-        payload = {
-            "cacheKey": cache_key,
-            "nodeId": node_id,
-            "idempotencyKey": idempotency_key,
-        }
-        encoded = _canonical(payload)
-        self._enforce_ceiling(len(encoded))
-        _atomic_write(path, payload)
+        """Deprecated: canonical cache store owns durable reuse indexes (R4/R21)."""
+        _ = (cache_key, node_id, idempotency_key)
 
     def lookup_reusable_by_cache_key(self, cache_key: str) -> dict[str, Any] | None:
-        """Return a verified reusable receipt for a stable cache key, or None."""
-        path = self.cache_index_path(cache_key)
-        if not path.is_file():
-            return None
-        try:
-            index = self._load(path)
-        except ReceiptConflictError:
-            return None
-        node_id = str(index.get("nodeId") or "")
-        idempotency_key = str(index.get("idempotencyKey") or "")
-        if not node_id or not idempotency_key:
-            return None
-        try:
-            receipt = self.get(node_id, idempotency_key)
-        except (KeyError, ReceiptConflictError):
-            return None
-        if not receipt_is_reusable(receipt):
-            return None
-        return receipt
+        """Deprecated run-local index — use ``CanonicalCacheStore.lookup`` (R4/R21)."""
+        _ = cache_key
+        return None
 
     def record_cache_hit(
         self,
@@ -646,8 +645,14 @@ class ExecutionReceiptJournal:
         *,
         source: dict[str, Any],
         cache_key: str,
+        original_run_id: str | None = None,
     ) -> dict[str, Any]:
         """Write a run-scoped receipt that restores artifacts from a cache hit (R6)."""
+        source_run = original_run_id or ""
+        if not source_run:
+            idem = str(source.get("idempotencyKey") or "")
+            if ":" in idem:
+                source_run = idem.split(":", 1)[0]
         payload = {
             key: value
             for key, value in source.items()
@@ -660,10 +665,15 @@ class ExecutionReceiptJournal:
                 "receiptMac",
                 "cacheHit",
                 "cacheKey",
+                "cacheSource",
+                "originalRunId",
             }
         }
         payload["cacheHit"] = True
         payload["cacheKey"] = cache_key
+        payload["cacheSource"] = "cache"
+        if source_run:
+            payload["originalRunId"] = source_run
         begun = self.begin(node_id, idempotency_key, payload)
         if begun.get("state") == "complete":
             return begun
@@ -703,11 +713,11 @@ class ExecutionReceiptJournal:
         if digest != hashlib.sha256(_canonical(source)).hexdigest():
             raise ReceiptConflictError("complete receipt hash mismatch")
         expected_mac = receipt.get("receiptMac")
+        if not expected_mac:
+            raise ReceiptConflictError("complete receipt missing receiptMac")
         actual_mac = _receipt_mac(receipt, mac_key=self._mac_key)
-        if expected_mac is not None and expected_mac != actual_mac:
+        if expected_mac != actual_mac:
             raise ReceiptConflictError("complete receipt MAC mismatch")
-        # Legacy receipts without receiptMac still verify via hash; new writes always
-        # stamp MAC. Mutating either hash or MAC fails closed for cache reuse.
         return receipt
 
     def get(self, node_id: str, idempotency_key: str) -> dict[str, Any]:
@@ -779,6 +789,66 @@ class ExecutionReceiptJournal:
         if not path.is_file():
             return None
         return self._safe_load(path)
+
+    def append_timing_event(self, event: dict[str, Any]) -> dict[str, Any]:
+        """Append one host-measured timing interval (PRD 271 R11a — append-only)."""
+        from graph.timing_events import validate_timing_event
+
+        validated = validate_timing_event(event)
+        encoded = (
+            json.dumps(validated, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            + "\n"
+        ).encode("utf-8")
+        self._enforce_ceiling(len(encoded))
+        path = self.timing_events_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("ab") as handle:
+            handle.write(encoded)
+            handle.flush()
+            os.fsync(handle.fileno())
+        return validated
+
+    def list_timing_events(self) -> list[dict[str, Any]]:
+        """Load append-only timing events; corrupt lines are skipped (degradable sidecar)."""
+        path = self.timing_events_path()
+        if not path.is_file():
+            return []
+        events: list[dict[str, Any]] = []
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            return []
+        for line in text.splitlines():
+            if not line.strip():
+                continue
+            try:
+                value = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(value, dict):
+                events.append(value)
+        return events
+
+    def list_quarantined(self) -> list[Path]:
+        """Return quarantined authoritative receipt paths (R12)."""
+        return sorted(self.quarantine_root.glob("*.json"))
+
+    def completeness_blocked(self) -> bool:
+        """Completeness-dependent consumers fail closed when receipts were quarantined (R12)."""
+        return bool(self.list_quarantined())
+
+    def read_sidecar(self, name: str) -> dict[str, Any] | None:
+        """Read a named sidecar; degrades to None on corruption (R12)."""
+        if name not in SIDECAR_RECEIPT_NAMES:
+            raise ValueError(f"unknown sidecar: {name!r}")
+        path = self.run_dir / name
+        if not path.is_file():
+            return None
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        return value if isinstance(value, dict) else None
 
     def gc(
         self,

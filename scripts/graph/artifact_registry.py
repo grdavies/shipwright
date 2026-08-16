@@ -267,7 +267,11 @@ def _content_mac(content_bytes: bytes, *, mac_key: bytes) -> str:
     return hmac.new(mac_key, content_bytes, hashlib.sha256).hexdigest()
 
 
-def receipt_satisfies_cache_hit(receipt: dict[str, Any]) -> bool:
+def receipt_satisfies_cache_hit(
+    receipt: dict[str, Any],
+    *,
+    mac_key: bytes | None = None,
+) -> bool:
     """Return True only when a receipt may authorize a content-addressed cache hit."""
     if receipt.get("verdict") != "pass":
         return False
@@ -294,20 +298,22 @@ def receipt_satisfies_cache_hit(receipt: dict[str, Any]) -> bool:
     if stored_hash != hashlib.sha256(canonical).hexdigest():
         return False
     stored_mac = receipt.get("receiptMac")
-    if stored_mac is not None:
-        expected_mac = hmac.new(
-            DEFAULT_RECEIPT_MAC_KEY,
-            canonical,
-            hashlib.sha256,
-        ).hexdigest()
-        if stored_mac != expected_mac:
-            return False
+    key = mac_key if mac_key is not None else DEFAULT_RECEIPT_MAC_KEY
+    if not stored_mac:
+        return False
+    expected_mac = hmac.new(key, canonical, hashlib.sha256).hexdigest()
+    if stored_mac != expected_mac:
+        return False
     return True
 
 
-def receipt_is_reusable(receipt: Mapping[str, Any]) -> bool:
+def receipt_is_reusable(
+    receipt: Mapping[str, Any],
+    *,
+    mac_key: bytes | None = None,
+) -> bool:
     """Backward-compatible alias for cache reuse checks."""
-    return receipt_satisfies_cache_hit(dict(receipt))
+    return receipt_satisfies_cache_hit(dict(receipt), mac_key=mac_key)
 
 
 def _write_durable(path: Path, payload: bytes) -> None:
