@@ -224,6 +224,11 @@ comes from receipt-backed graph progress — not a second safety kernel and not 
 | Live node progress | `/sw-status` (`graph-progress`) | WorkflowGraph receipts under `.cursor/sw-graph-runs/<runId>/` |
 | Per-node explain | `/sw-status` (`explain <nodeId>`) | Blocker hierarchy for one execution node |
 
+**Measured attribution (PRD 271 R11/R29):** graph-progress includes `executionMode` (`serial-only` when
+no overlapping execution was observed). Explain promotes `timingAttribution` from append-only
+`timing-events.jsonl` (bookkeeping excluded from execution time). `/sw-deliver --explain-plan` remains
+estimate-only — never measured timing events.
+
 Do not infer execution progress from planning INDEX rows or chat history. Kernel chokepoints
 (verification-gate, check-gate, gap-check, secret-scan) remain single-sourced — graph scheduling does not
 add parallel merge gates. No `/sw-graph-*` slash commands; operator UX extends existing commands only.

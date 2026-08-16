@@ -58,7 +58,8 @@ python3 scripts/status_integrity.py explain <nodeId> --run-id <runId> [--graph-j
 `completed` · `cached/skipped` · `failed` · `retrying` · `running` · `dependency-blocked` ·
 `pool-queued` · `awaiting-human-gate`
 
-Progress payloads include `runId`, `verdict`, per-state `counts`, ordered `nodes[]`, and a `legend`.
+Progress payloads include `runId`, `verdict`, per-state `counts`, ordered `nodes[]`, `executionMode`
+(`serial-only` | `concurrent` | `unknown`), and a `legend`.
 
 ### Blocker hierarchy
 
@@ -73,6 +74,26 @@ Explain orders blockers actionable-first, then passive waits:
 | `unknown` | passive-wait / actionable | Fallback when no richer classifier applies |
 
 Each explain payload includes `nextAction` (`action`, optional resume `command`, `detail`).
+When append-only timing events exist, explain also includes `timingAttribution` (per-category
+host-measured waits and execution — bookkeeping excluded from execution time) and `serialOnly`
+when the run observed serial-only execution (`executionMode: serial-only` on progress).
+
+### Measured critical-path attribution (PRD 271 R11/R28/R29)
+
+Host-measured timing is derived from append-only `timing-events.jsonl` under the run journal
+(not reconstructed from final receipts alone). Categories: `fan-in-wait`, `ready`, `queue-wait`,
+`resource-wait`, `contention-wait`, `execution` — plus `bookkeeping` recorded separately and
+**excluded** from node execution attribution (pairs with cache R4c bookkeeping).
+
+| Surface | Attribution |
+| --- | --- |
+| `/sw-status` graph-progress | Live progress + `executionMode` |
+| `/sw-status explain <nodeId>` | Per-node waits + `timingAttribution` |
+| `/sw-deliver --explain-plan` | **Estimate-only** — never measured events (R29) |
+
+Measured critical path uses a causal wall-clock longest-path algorithm over attributed intervals
+(no double-count of overlapping sibling waits). When `maxConcurrency: 1` or no overlapping
+execution intervals were observed, progress and explain label the run `serial-only`.
 
 ### Compact mode and JSON / plain-text contract
 

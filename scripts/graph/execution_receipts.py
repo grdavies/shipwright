@@ -47,7 +47,12 @@ DEFAULT_SIZE_CEILING_BYTES = 64 * 1024 * 1024
 # Sidecar artifacts may degrade; authoritative receipt bodies fail closed (R12).
 AUTHORITATIVE_RECEIPT_DIRS = frozenset({"partial", "complete"})
 SIDECAR_RECEIPT_NAMES = frozenset(
-    {"pool-snapshot.json", "telemetry.json", "calibration-table.json"}
+    {
+        "pool-snapshot.json",
+        "telemetry.json",
+        "calibration-table.json",
+        "timing-events.jsonl",
+    }
 )
 
 
@@ -368,6 +373,9 @@ class ExecutionReceiptJournal:
 
     def telemetry_path(self) -> Path:
         return self.run_dir / "telemetry.json"
+
+    def timing_events_path(self) -> Path:
+        return self.run_dir / "timing-events.jsonl"
 
     @staticmethod
     def _key(node_id: str, idempotency_key: str) -> str:
@@ -781,6 +789,45 @@ class ExecutionReceiptJournal:
         if not path.is_file():
             return None
         return self._safe_load(path)
+
+    def append_timing_event(self, event: dict[str, Any]) -> dict[str, Any]:
+        """Append one host-measured timing interval (PRD 271 R11a — append-only)."""
+        from graph.timing_events import validate_timing_event
+
+        validated = validate_timing_event(event)
+        encoded = (
+            json.dumps(validated, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+            + "\n"
+        ).encode("utf-8")
+        self._enforce_ceiling(len(encoded))
+        path = self.timing_events_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("ab") as handle:
+            handle.write(encoded)
+            handle.flush()
+            os.fsync(handle.fileno())
+        return validated
+
+    def list_timing_events(self) -> list[dict[str, Any]]:
+        """Load append-only timing events; corrupt lines are skipped (degradable sidecar)."""
+        path = self.timing_events_path()
+        if not path.is_file():
+            return []
+        events: list[dict[str, Any]] = []
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            return []
+        for line in text.splitlines():
+            if not line.strip():
+                continue
+            try:
+                value = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(value, dict):
+                events.append(value)
+        return events
 
     def list_quarantined(self) -> list[Path]:
         """Return quarantined authoritative receipt paths (R12)."""

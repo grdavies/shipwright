@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-15T23:35:47Z",
+  "generatedAt": "2026-08-16T00:54:12Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3250,28 +3250,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:97:status_integrity.py",
+      "id": "core/commands/sw-status.md:118:status_integrity.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 97,
+      "line": 118,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:170:sw_bootstrap.py",
+      "id": "core/commands/sw-status.md:191:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 170,
+      "line": 191,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-status.md:178:wave.py",
+      "id": "core/commands/sw-status.md:199:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 178,
+      "line": 199,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -9856,28 +9856,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:97:status_integrity.py",
+      "id": "dist/claude-code/commands/sw-status.md:118:status_integrity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 97,
+      "line": 118,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:170:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-status.md:191:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 170,
+      "line": 191,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:178:wave.py",
+      "id": "dist/claude-code/commands/sw-status.md:199:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 178,
+      "line": 199,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -15328,28 +15328,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:97:status_integrity.py",
+      "id": "dist/cursor/commands/sw-status.md:118:status_integrity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 97,
+      "line": 118,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:170:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-status.md:191:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 170,
+      "line": 191,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:178:wave.py",
+      "id": "dist/cursor/commands/sw-status.md:199:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 178,
+      "line": 199,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
