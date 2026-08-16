@@ -892,6 +892,7 @@
 * merge phase topology-re-detect-reduction-auth-nonskip-size-large into feat/workflow-intelligence-assurance (a652577) <!-- sw-deliver:topology-re-detect-reduction-auth-nonskip-size-large -->
 * merge phase learning-store-admission-exogenous-routing-size-large into feat/workflow-intelligence-assurance (bab9635) <!-- sw-deliver:learning-store-admission-exogenous-routing-size-large -->
 * merge phase absolute-floor-and-anti-ratchet-size-medium into feat/workflow-intelligence-assurance (66fab6b) <!-- sw-deliver:absolute-floor-and-anti-ratchet-size-medium -->
+* merge phase benchmark-harness-size-large into feat/workflow-intelligence-assurance (db2c31f) <!-- sw-deliver:benchmark-harness-size-large -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
