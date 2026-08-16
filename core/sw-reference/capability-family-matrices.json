@@ -281,7 +281,13 @@
     "workflowTemplateVersions": {
       "libraryVersion": 1,
       "libraryRoot": ".sw/workflows",
-      "templates": []
+      "templates": [
+        {
+          "name": "lock",
+          "libraryVersion": 1,
+          "path": ".sw/workflows/lock.json"
+        }
+      ]
     },
     "registryFamilies": {
       "issues.providers": [
@@ -298,6 +304,20 @@
         "issue-store",
         "private-repo",
         "encryption-at-rest"
+      ],
+      "workflow.detectorCoverage": [],
+      "workflow.detectors": [
+        "workflow.detector.migration",
+        "workflow.detector.auth",
+        "workflow.detector.api",
+        "workflow.detector.supply-chain"
+      ],
+      "workflow.requiredCapabilities": [
+        "workflow.capability.migration-validation",
+        "workflow.capability.security-auth-review",
+        "workflow.capability.api-compatibility",
+        "workflow.capability.dependency-supply-chain",
+        "workflow.capability.standard-review"
       ]
     }
   }

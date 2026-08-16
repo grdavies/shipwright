@@ -66,6 +66,12 @@ from graph.worktree_integration import (
     extract_worktree_manifest,
     requires_worktree_integration,
 )
+from graph.detectors.redetect import (
+    RequirementSetSnapshot,
+    RedetectGateVerdict,
+    evaluate_redetect_gate,
+    merge_gate_redetect,
+)
 
 
 class SchedulerError(RuntimeError):
@@ -169,6 +175,15 @@ class NodeRun:
 
 
 @dataclass(frozen=True)
+class RedetectContext:
+    """Optional realized-diff redetect binding for scheduler runs (PRD 272 R4)."""
+
+    changed_paths: tuple[str, ...]
+    dispatched: RequirementSetSnapshot
+    satisfied_capability_ids: frozenset[str]
+
+
+@dataclass(frozen=True)
 class SchedulerRun:
     """Complete deterministic result for one graph run."""
 
@@ -181,6 +196,7 @@ class SchedulerRun:
     pool_snapshot: Mapping[str, Any]
     cancel_mode: str | None = None
     timing_events: tuple[dict[str, Any], ...] = ()
+    redetect: RedetectGateVerdict | None = None
 
     def observability(self, graph: Mapping[str, Any]) -> GraphObservability:
         """Create the read-only receipts-backed view for this completed run."""
@@ -648,6 +664,7 @@ class GraphScheduler:
         fanin_policies: Mapping[str, Mapping[str, Any] | FanInPolicy] | None = None,
         write_paths: Mapping[str, Set[str] | frozenset[str]] | None = None,
         kernel_options: Mapping[str, Any] | None = None,
+        redetect_context: RedetectContext | None = None,
     ) -> SchedulerRun:
         """Run a graph after all pre-dispatch checks have completed."""
         if not internal_only:
@@ -699,6 +716,11 @@ class GraphScheduler:
             source_order, clock=self._clock
         )
         awaiting_integration: set[str] = set()
+        redetect_state = (
+            redetect_context.dispatched if redetect_context is not None else None
+        )
+        redetect_verdict: RedetectGateVerdict | None = None
+        redetect_failure: str | None = None
 
         def fanin_for(node_id: str) -> FanInResult:
             expected = predecessors[node_id]
@@ -1325,10 +1347,42 @@ class GraphScheduler:
                     reason=transition.reason,
                 )
 
+        def _run_barrier_redetect(manifest_paths: tuple[str, ...]) -> None:
+            nonlocal redetect_state, redetect_verdict, redetect_failure
+            if redetect_context is None or redetect_state is None:
+                return
+            combined = tuple(
+                sorted(set(redetect_context.changed_paths + manifest_paths))
+            )
+            verdict = evaluate_redetect_gate(
+                changed_paths=combined,
+                dispatched=redetect_state,
+                satisfied_capability_ids=redetect_context.satisfied_capability_ids,
+                gate="barrier",
+            )
+            redetect_verdict = verdict
+            if verdict.verdict != "pass":
+                redetect_failure = verdict.reason
+                return
+            redetect_state = verdict.dispatched
+
         def _drain_worktree_integration() -> None:
             if not integration_barrier.has_pending():
                 return
-            for transition in integration_barrier.drain():
+            transitions = integration_barrier.drain()
+            history_tail = integration_barrier.history[-len(transitions) :]
+            manifest_paths = tuple(
+                sorted(
+                    {
+                        path
+                        for item in history_tail
+                        for path in item.get("manifestPaths", ())
+                    }
+                )
+            )
+            if manifest_paths:
+                _run_barrier_redetect(manifest_paths)
+            for transition in transitions:
                 _apply_integration_transition(transition)
             flush_snapshot()
 
@@ -1608,8 +1662,18 @@ class GraphScheduler:
         verdict = (
             "pass"
             if all(item.verdict == "pass" for item in ordered_runs)
+            and redetect_failure is None
             else "fail"
         )
+        if redetect_context is not None and redetect_state is not None and redetect_failure is None:
+            final_redetect = merge_gate_redetect(
+                changed_paths=redetect_state.changed_paths,
+                dispatched=redetect_state,
+                satisfied_capability_ids=redetect_context.satisfied_capability_ids,
+            )
+            redetect_verdict = final_redetect
+            if final_redetect.verdict != "pass":
+                verdict = "fail"
         return SchedulerRun(
             run_id=run_id,
             graph_hash=graph_hash,
@@ -1620,4 +1684,5 @@ class GraphScheduler:
             pool_snapshot=self._pools.snapshot(),
             cancel_mode=None if applied_cancel is None else applied_cancel.value,
             timing_events=timing.events,
+            redetect=redetect_verdict,
         )

@@ -19,7 +19,22 @@ and sample prompts. For the high-level overview, see the [README](../../README.m
 
 **Risk floor:** keywords like `auth`, `payment`, `migration`, or `webhook` force **at least Standard**
 even for 1-file changes. **Ambiguity bump:** words like `maybe`, `explore`, or `TBD` push Quick→Standard
-or Standard→Full.
+or Standard→Full. Mechanical scoring and monotonic merge live in `scripts/triage_lib.py` —
+file-count alone (including rename-only churn) is not a sole Full trigger; reductions below the
+mechanical floor require detector no-fire or a recorded human waiver.
+
+### Workflow profiles and budgets
+
+`graphExecution.profiles.optimization` (`fast` | `balanced` | `thorough`) adjusts optional reviewers
+only — **cache**, **loop bounds**, and **resourceLimits** are kernel immutables and rejected in
+profile bodies. Per-node budgets (`graphExecution.budget`) halt fail-closed to **non-ready**;
+required capabilities are never shed to recover budget headroom. See [`INVARIANTS.md`](../../INVARIANTS.md).
+
+### TraceRef / CoverageEdge status
+
+Blocking coverage on `/sw-status` passes only when the correct verifier class attests `pass` at the
+current `headSha`. Advisory evidence is labeled and never satisfies blocking edges —
+`scripts/graph/traceability.py` is the canonical predicate; benchmark acceptance reuses it.
 
 ### Classification flow (`/sw-triage`)
 
@@ -197,6 +212,19 @@ After related-work acknowledgement and before PRD freeze, `/sw-doc` runs `final-
 Escalation never reopens a frozen artifact. Downgrade without justification fails closed with a
 machine-readable `halt` and the current/proposed tier in the payload.
 
+### Profiles, budgets, and traceability
+
+| Concern | Module | Config surface |
+| --- | --- | --- |
+| Optimization profile + budgets | `scripts/graph/profiles.py` | `graphExecution.profiles`, `graphExecution.budget` |
+| TraceRef / CoverageEdge predicates | `scripts/graph/traceability.py` | `/sw-status` graph-progress + explain |
+| Monotonic triage merge | `scripts/triage_lib.py` | `/sw-triage` (`classify` subcommand) |
+
+Kernel immutables (`cache`, `loop_bounds`, `resourceLimits`) cannot be set on workflow profiles —
+budget halt maps to **non-ready**; required capabilities are never shed to recover spend. Tier
+reductions require authorized waiver paths (`human-waiver` or mechanical no-fire) via
+`merge_tier_monotonic`. See `INVARIANTS.md` for the four cross-cutting enforcement paths.
+
 ### Publication sequencing invariants
 
 Publication mode is store-conditioned — the doc driver never reaches standalone `docs-commit` /
@@ -339,6 +367,23 @@ on `/sw-deliver` and `/sw-status` (no graph-prefixed slash commands).
 | **Ceilings** | Static cycle detection plus maximum depth, node, and edge ceilings during expansion — errors name the offending fragment pin |
 | **Required-capability fragments** | Non-skippable; `when:` guards on required-capability fragments read only pre-dispatch mechanical artifacts |
 | **Parent re-approval** | A fragment upgrade changes the expanded digest; unapproved digests cannot dispatch |
+
+**Semver packages, lockfile, and trust:**
+
+Workflow fragments can be published as semver packages under `.sw/workflows/packages/` with pins recorded
+in `.sw/workflows/lock.json`. Discovery of a catalog entry does **not** imply trust — resolution fails
+closed unless the lock digest, signature, and out-of-band trust anchors all match.
+
+| Concept | Behavior |
+| --- | --- |
+| **Producers** | `shipwright` (this repo) and `shipwright-dogfood` publish signed packs |
+| **Consumers** | `shipwright` dogfood path plus `shipwright-sibling-consumer` for cross-repo reuse |
+| **Trust anchors** | Configured only in `.cursor/sw-package-trust-anchors.json` — never from pack, registry, or repo under resolution |
+| **Lock edits** | Digest-level lock diffs require the same human/admin approval as pack approval |
+| **Expansion tuple** | Kernel compile binds `(packDigest, profileId, requirementSetDigest, kernelVersion)`; additive detector injection is admitted without re-approval; weaken/remove requires fresh approval |
+| **Adoption metrics** | Rollout reports reuse count, update friction, and broken-pin rate via `scripts/graph/packages/adoption.py` |
+
+Trust path: **discover → resolve → digest pin → approve(tuple) → compile**.
 
 **Shadow evaluation:**
 
@@ -1157,6 +1202,27 @@ so operators see repeat signal without a duplicate tracking unit.
 stdout, re-run `/sw-deliver run` — provision now records durable `phaseWorktrees.path`/`name` from the
 validated JSON tail instead of looping `conductor:no-progress` on null paths.
 
+
+## Workflow packages, trust, and expansion tuples
+
+Semver workflow packs live under `.sw/workflows/packages/` as signed `WorkflowPackage`
+artifacts. **Discovery does not imply trust** — only lock-pinned, signature-verified packs
+resolve at compile time.
+
+| Surface | Path | Role |
+| --- | --- | --- |
+| Lockfile | `.sw/workflows/lock.json` | Pins digest + signer for each pack and its transitive dependencies |
+| Trust anchors | `.cursor/sw-package-trust-anchors.json` (operator-local) | Out-of-band signer keys; unknown/expired/revoked keys fail closed |
+| Resolver | `scripts/graph/packages/resolver.py` | `discover_packages` lists catalog entries; `resolve_trusted_packages` verifies pins |
+| Expansion tuple | `scripts/graph/packages/approval_tuple.py` | Human approval over `(packDigest, profileId, requirementSetDigest, kernelVersion)` |
+
+Lock edits require the same digest-bound approval record as pack promotion. Additive detector
+injections may proceed without re-approval; any weakening relative to the approved expansion tuple
+requires a fresh approval before `kernel_compiler.compile_workflow_graph` admits the graph.
+
+Named producer (`shipwright-dogfood`) and sibling consumer (`shipwright-sibling-consumer`) adoption
+metrics (`reuseCount`, `updateFrictionSeconds`, `brokenPinRate`) are reported via
+`graph.packages.report_adoption_metrics` for rollout observability.
 
 ## Debug small-fix handoff
 

@@ -202,7 +202,9 @@ v1 records upgrade via `scripts/memory_envelope_upgrade.py`; alias merges persis
 ## Destination-aware redaction (R29/R41 — mandatory before persist/re-inject)
 
 Redaction is **destination-tier aware**. The `--destination` argument is **required** — there is no
-default. Valid tiers: `local`, `committed`, `external`, `cross-project`, `logs`.
+default. Valid tiers: `local`, `committed`, `external`, `cross-project`, `logs`. Learning-store /
+exogenous-routing derivations (PRD 272) must pass the same `scripts/memory_redact.py` chokepoint before
+admission — provenance fields may retain pointers; raw payloads never skip the filter.
 
 ```bash
 python3 scripts/sw_bootstrap.py memory-redact.py --destination external <<'EOF'

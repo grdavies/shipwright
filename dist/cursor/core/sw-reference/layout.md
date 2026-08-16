@@ -541,6 +541,13 @@ When `root` is not a git tree (unit harness fixtures only), anchoring soft-fails
 temp fixture trees can mint run ids without forking `.cursor/sw-deliver-runs/`. Production deliver paths
 still fail closed through `canonical_repo_root` where git presence is mandatory.
 
+**Primary ↔ orchestrator mirror skew (PRD 049/068/069):** `wave_state.sync_canonical_state_read` compares
+repo-root primary state to any orchestrator `.cursor/sw-deliver-state.<slug>.json` mirror. Mirror fresher
+than primary, or skew above `CANONICAL_STATE_SKEW_SECONDS` (300s), fails closed
+(`deliver:canonical-state-desync`). Repair with `wave_state` `state repair-mirror` / 
+`ensure_canonical_state_synced` (auto-repair before terminal/agent steps). Drive `deliver-loop` from the
+orchestrator worktree cwd so hang-desync checks see `orchestratorWorktree.path == root`.
+
 Legacy slug-scoped files (`.cursor/sw-deliver-state.<slug>.json`, `.cursor/sw-deliver-<slug>.lock`) remain
 enumerable for `list` / `resume` until adopted. Orchestrator and phase worktrees read and write through
 `wave_state.resolve_state_path()` / `scoped_paths()` at the git toplevel — never a second authoritative

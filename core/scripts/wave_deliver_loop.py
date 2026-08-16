@@ -1598,7 +1598,9 @@ def ship_loop_env_for_phase(state: dict[str, Any], phase_id: str, slug: str) -> 
             task_list=task_list,
             run_dir=run_dir,
         )
-    return {
+    target = state.get("target") if isinstance(state.get("target"), dict) else {}
+    integration = str((target or {}).get("branch") or "").strip()
+    env = {
         "SW_PHASE_MODE": "1",
         "SW_PHASE_SLUG": slug,
         "SW_RUN_DIR": run_dir,
@@ -1606,6 +1608,9 @@ def ship_loop_env_for_phase(state: dict[str, Any], phase_id: str, slug: str) -> 
         "SW_PHASE_ID": str(phase_id),
         "PYTHONPATH": "scripts",
     }
+    if integration:
+        env["SW_INTEGRATION_BRANCH"] = integration
+    return env
 
 
 def build_ship_dispatch_child_env(
@@ -2794,7 +2799,10 @@ def _execute_mechanical_inner(
             "reclaimed": bool(data.get("reclaimed")),
         }
         save_state(root, state)
-        persist_cursor(root, state, "state-init")
+        # When phases already exist (re-acquire after lock loss), skip back to run-init.
+        # Queuing state-init after a mutation-class nextAction violates R19 precedence.
+        next_after_lock = "state-init" if not state.get("phases") else "base-capture"
+        persist_cursor(root, state, next_after_lock)
         # Keep executed/action after **data so target-lock payload cannot overwrite them.
         return {**data, "target": target, "executed": "lock-acquire", "action": "lock-acquire"}
 
@@ -3039,7 +3047,16 @@ def _execute_mechanical_inner(
             smoke_root = Path(str(wt_path)) if wt_path else root
             from ship_pre_pr_smoke import run_pre_pr_smoke
 
-            smoke_ec, smoke_cause = run_pre_pr_smoke(smoke_root)
+            # Harness-only seed for smoke scoping; durable authority remains deliver state.
+            prev_integration = os.environ.get("SW_INTEGRATION_BRANCH")
+            os.environ["SW_INTEGRATION_BRANCH"] = str(integration)
+            try:
+                smoke_ec, smoke_cause = run_pre_pr_smoke(smoke_root)
+            finally:
+                if prev_integration is None:
+                    os.environ.pop("SW_INTEGRATION_BRANCH", None)
+                else:
+                    os.environ["SW_INTEGRATION_BRANCH"] = prev_integration
             if smoke_ec != 0:
                 run_dir = runs_root(root) / slug
                 run_dir.mkdir(parents=True, exist_ok=True)

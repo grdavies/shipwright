@@ -17,9 +17,13 @@ Deterministic tier classifier for the documentation pipeline. Routes work before
 
 1. Load `skills/triage/SKILL.md` — apply the scoring rubric verbatim.
 2. Gather inputs: file count (user estimate or diff scope), description text, flags.
-3. Score deterministically per the rubric algorithm.
+3. Score deterministically via `python3 scripts/triage_lib.py classify` (or inline import of
+   `triage_lib.classify_triage`) — mechanical set vs advisory rigor merge with max-rigor union.
 4. Report tier, all matched signals, and the recommended next command.
 5. On `--re-score`, note prior Quick classification if promoting.
+
+**Monotonic merge (R25):** reductions below the mechanical floor require R7 authorization
+(detector no-fire or recorded human waiver) — never model narrative or file-count-only rename.
 
 **Communication intensity:** ultra
 

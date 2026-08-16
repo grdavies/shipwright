@@ -32,6 +32,7 @@ from graph.workflow_library import (  # noqa: E402
     PLAN_POLICY_CANONICAL,
     PLAN_POLICY_PROPOSED,
     PlanPolicyPromotionEvidence,
+    PromotionPolicyDocument,
     PromotionSample,
     approve_template,
     demote_template_plan_policy,
@@ -65,6 +66,9 @@ def _samples(template_digest: str) -> tuple[PromotionSample, ...]:
         "required_capability_regression": False,
         "ready_without_rework": True,
         "command": "sw-deliver",
+        "paired_canonical_run_id": "canonical-paired",
+        "confidence": 0.99,
+        "coverage_score": 1.0,
     }
     return (
         PromotionSample(run_id="run-dogfood-1", stratum="dogfood-deliver", **base),
@@ -74,6 +78,14 @@ def _samples(template_digest: str) -> tuple[PromotionSample, ...]:
             stratum="non-dogfood-deliver",
             **base,
         ),
+    )
+
+
+def _test_policy() -> PromotionPolicyDocument:
+    return PromotionPolicyDocument(
+        min_sample_size=3,
+        confidence_level=0.95,
+        demotion_exposure_window_seconds=0,
     )
 
 
@@ -148,12 +160,14 @@ def test_promote_template_plan_policy_proposed_then_canonical(tmp_path: Path) ->
         evidence,
         target_policy=PLAN_POLICY_PROPOSED,
         root=library,
+        policy=_test_policy(),
     )
     promote_template_plan_policy(
         "promotion-workflow",
         evidence,
         target_policy=PLAN_POLICY_CANONICAL,
         root=library,
+        policy=_test_policy(),
     )
 
     loaded = (library / "promotion-workflow.json").read_text(encoding="utf-8")
@@ -170,6 +184,7 @@ def test_demote_template_plan_policy_drops_proposed(tmp_path: Path) -> None:
         evidence,
         target_policy=PLAN_POLICY_PROPOSED,
         root=library,
+        policy=_test_policy(),
     )
     demote_template_plan_policy(
         "promotion-workflow",

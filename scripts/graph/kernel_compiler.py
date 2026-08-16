@@ -20,6 +20,11 @@ from graph.scheduling_modes import (
     ExternalDispatchAuthorization,
     authorize_external_dispatch,
 )
+from graph.packages.approval_tuple import (
+    ExpansionApprovalError,
+    ExpansionTuple,
+    assert_expansion_approved,
+)
 from graph.transform_ops import TRANSFORM_OPERATOR_NAMES
 
 if TYPE_CHECKING:
@@ -128,6 +133,8 @@ KERNEL_COMPILER_OPTION_FIELDS: dict[str, str] = {
     "trusted_template": POLICY_CLASS_IMMUTABLE,
     "orchestrator": POLICY_CLASS_IMMUTABLE,
     "data_payloads": POLICY_CLASS_OPTIMIZABLE,
+    "expansion_approval": POLICY_CLASS_IMMUTABLE,
+    "expansion_tuple": POLICY_CLASS_IMMUTABLE,
 }
 
 
@@ -511,6 +518,8 @@ def compile_workflow_graph(
     trusted_template: bool = True,
     orchestrator: str | None = None,
     data_payloads: Mapping[str, Any] | None = None,
+    expansion_approval: Mapping[str, Any] | None = None,
+    expansion_tuple: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Validate and compile a graph to a non-executable, kernel-stamped artifact.
 
@@ -561,10 +570,33 @@ def compile_workflow_graph(
         proposed_steps=proposed_steps,
     )
 
+    if expansion_tuple is not None:
+        from graph.packages.approval_tuple import (
+            ExpansionApprovalError,
+            ExpansionTuple,
+            assert_expansion_approved,
+        )
+
+        tuple_body = ExpansionTuple(
+            pack_digest=str(expansion_tuple.get("packDigest") or ""),
+            profile_id=str(expansion_tuple.get("profileId") or ""),
+            requirement_set_digest=str(expansion_tuple.get("requirementSetDigest") or ""),
+            kernel_version=str(
+                expansion_tuple.get("kernelVersion") or KERNEL_VERSION
+            ),
+        )
+        try:
+            approval_record = assert_expansion_approved(expansion_approval, tuple_body)
+        except ExpansionApprovalError as exc:
+            raise KernelCompilationError(str(exc)) from exc
+        expansion_metadata = approval_record.to_dict()
+    else:
+        expansion_metadata = None
+
     canonical_graph = json.dumps(
         graph, sort_keys=True, separators=(",", ":"), ensure_ascii=False
     ).encode("utf-8")
-    return {
+    result = {
         "kernelVersion": str(classification.get("kernelVersion", KERNEL_VERSION)),
         "graphHash": hashlib.sha256(canonical_graph).hexdigest(),
         "nodeKinds": sorted(node_kinds),
@@ -581,6 +613,10 @@ def compile_workflow_graph(
         "dataPayloads": sanitized_payloads,
         "safetyKernelCalls": list(required_gates),
     }
+    if expansion_metadata is not None:
+        result["expansionApproval"] = expansion_metadata
+        result["expansionTuple"] = expansion_metadata["expansionTuple"]
+    return result
 
 
 def compile_orchestrator_graph(

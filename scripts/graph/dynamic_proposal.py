@@ -7,6 +7,12 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from graph.absolute_floor import (
+    AbsoluteFloorError,
+    apply_optimization_profile,
+    enforce_absolute_floor,
+    required_capabilities_from_graph,
+)
 from graph.cutover import CutoverStage, DogfoodEvidence
 from graph.isolation_policy import (
     ShadowDispatchDecision,
@@ -19,6 +25,7 @@ from graph.isolation_policy import (
 )
 from graph.kernel_compiler import KernelCompilationError, compile_workflow_graph
 from graph.scheduler import GraphScheduler, NodeExecutionResult
+from graph.detectors.registry import CAPABILITY_AUTH
 from graph.verifier_policies import VerifierKind
 
 
@@ -60,6 +67,10 @@ class ProposalDecision:
 
 
 REQUIRED_CAPABILITY_KINDS = frozenset({"gate", "verifier"})
+IMPLEMENT_NODE_KINDS = frozenset(
+    {"command", "agent", "barrier", "convergence-loop", "router", "transform"}
+)
+AUTH_SECURITY_CAPABILITIES = frozenset({CAPABILITY_AUTH})
 REQUIRED_CAPABILITY_TOKENS = (
     "merge-gate",
     "human-merge-gate",
@@ -90,6 +101,281 @@ _VERIFIER_STRATEGY_TO_CLASS = {
     "judgment": VerifierKind.JUDGMENT.value,
     "synthesis": VerifierKind.SYNTHESIS.value,
 }
+_VERIFIER_STRENGTH = {
+    VerifierKind.MECHANICAL.value: 1,
+    VerifierKind.EVIDENCE.value: 2,
+    VerifierKind.JUDGMENT.value: 3,
+    VerifierKind.SYNTHESIS.value: 4,
+}
+
+_VERIFIER_CLASS_RANK = {
+    VerifierKind.MECHANICAL.value: 0,
+    VerifierKind.EVIDENCE.value: 1,
+    VerifierKind.JUDGMENT.value: 2,
+    VerifierKind.SYNTHESIS.value: 3,
+}
+
+
+@dataclass(frozen=True)
+class CoverageRequirement:
+    """One detected requirement plus acceptance criterion for promotion coverage."""
+
+    capability_id: str
+    acceptance_criterion_id: str
+    required_verifier_class: str
+
+
+@dataclass(frozen=True)
+class CoverageEvidenceRecord:
+    """Executed verifier evidence bound to a headSha for one AC."""
+
+    capability_id: str
+    acceptance_criterion_id: str
+    verifier_class: str
+    passed: bool
+    head_sha: str
+
+
+@dataclass(frozen=True)
+class RequiredCapabilityCoverage:
+    """Coverage over required capabilities and ACs — not kernel verification.required."""
+
+    aggregate: float
+    by_capability_id: Mapping[str, float]
+    by_acceptance_criterion: Mapping[str, float]
+    head_sha: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "aggregate": self.aggregate,
+            "byCapabilityId": dict(self.by_capability_id),
+            "byAcceptanceCriterion": dict(self.by_acceptance_criterion),
+            "headSha": self.head_sha,
+        }
+
+
+def verifier_class_meets_requirement(
+    observed_class: str,
+    required_class: str,
+) -> bool:
+    """True when observed verifier class is at least as strong as required."""
+    observed_rank = _VERIFIER_CLASS_RANK.get(observed_class)
+    required_rank = _VERIFIER_CLASS_RANK.get(required_class)
+    if observed_rank is None or required_rank is None:
+        return False
+    return observed_rank >= required_rank
+
+
+def compute_required_capability_coverage(
+    requirements: Sequence[CoverageRequirement],
+    evidence: Sequence[CoverageEvidenceRecord],
+    *,
+    head_sha: str,
+) -> RequiredCapabilityCoverage:
+    """Measure AC coverage from executed passing verifiers at the current headSha."""
+    normalized_head = head_sha.strip().lower()
+    if not requirements:
+        return RequiredCapabilityCoverage(
+            aggregate=0.0,
+            by_capability_id={},
+            by_acceptance_criterion={},
+            head_sha=normalized_head,
+        )
+
+    by_capability: dict[str, list[float]] = {}
+    by_ac: dict[str, float] = {}
+    for requirement in requirements:
+        covered = False
+        for record in evidence:
+            if record.head_sha.strip().lower() != normalized_head:
+                continue
+            if (
+                record.capability_id != requirement.capability_id
+                or record.acceptance_criterion_id
+                != requirement.acceptance_criterion_id
+            ):
+                continue
+            if not record.passed:
+                continue
+            if verifier_class_meets_requirement(
+                record.verifier_class,
+                requirement.required_verifier_class,
+            ):
+                covered = True
+                break
+        score = 1.0 if covered else 0.0
+        by_ac[requirement.acceptance_criterion_id] = score
+        by_capability.setdefault(requirement.capability_id, []).append(score)
+
+    by_capability_id = {
+        capability_id: sum(scores) / len(scores)
+        for capability_id, scores in sorted(by_capability.items())
+    }
+    aggregate = sum(by_ac.values()) / len(by_ac)
+    return RequiredCapabilityCoverage(
+        aggregate=aggregate,
+        by_capability_id=by_capability_id,
+        by_acceptance_criterion=dict(sorted(by_ac.items())),
+        head_sha=normalized_head,
+    )
+
+
+def measure_verifier_substitution_regression(
+    *,
+    requirements: Sequence[CoverageRequirement],
+    strong_evidence: Sequence[CoverageEvidenceRecord],
+    weak_evidence: Sequence[CoverageEvidenceRecord],
+    head_sha: str,
+) -> float:
+    """Return coverage delta when substituting a weaker verifier arm."""
+    strong = compute_required_capability_coverage(
+        requirements,
+        strong_evidence,
+        head_sha=head_sha,
+    )
+    weak = compute_required_capability_coverage(
+        requirements,
+        weak_evidence,
+        head_sha=head_sha,
+    )
+    return weak.aggregate - strong.aggregate
+
+
+def promotion_coverage_gate(
+    coverage: RequiredCapabilityCoverage,
+    *,
+    regression_ceiling: float = 0.0,
+    reference_aggregate: float = 1.0,
+) -> tuple[bool, str]:
+    """Fail closed when required-capability coverage regresses beyond ceiling."""
+    allowed = reference_aggregate - regression_ceiling
+    if coverage.aggregate + 1e-9 < allowed:
+        return (
+            False,
+            f"coverage aggregate {coverage.aggregate} below allowed {allowed}",
+        )
+    return True, ""
+
+
+def coverage_requirements_from_graph(
+    graph: Mapping[str, Any],
+) -> tuple[CoverageRequirement, ...]:
+    """Derive promotion coverage requirements from a WorkflowGraph."""
+    requirements: list[CoverageRequirement] = []
+    seen: set[tuple[str, str]] = set()
+    for node in graph["spec"]["nodes"]:
+        if not isinstance(node, Mapping):
+            continue
+        cap_id = str((node.get("metadata") or {}).get("requiredCapabilityId") or "")
+        if not cap_id:
+            step = str((node.get("target") or {}).get("step") or "")
+            if "auth" in step:
+                cap_id = CAPABILITY_AUTH
+        if not cap_id:
+            continue
+        strategy = str(
+            (node.get("verification") or {}).get("strategy")
+            or VerifierKind.MECHANICAL.value
+        )
+        ac_id = f"{cap_id}:default"
+        key = (cap_id, ac_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        requirements.append(
+            CoverageRequirement(
+                capability_id=cap_id,
+                acceptance_criterion_id=ac_id,
+                required_verifier_class=strategy,
+            )
+        )
+    for cap_id in sorted(required_capabilities_from_graph(graph)):
+        ac_id = f"{cap_id}:default"
+        key = (cap_id, ac_id)
+        if key in seen:
+            continue
+        default_class = (
+            VerifierKind.JUDGMENT.value
+            if cap_id == CAPABILITY_AUTH
+            else VerifierKind.EVIDENCE.value
+        )
+        requirements.append(
+            CoverageRequirement(
+                capability_id=cap_id,
+                acceptance_criterion_id=ac_id,
+                required_verifier_class=default_class,
+            )
+        )
+    return tuple(requirements)
+
+
+def coverage_evidence_from_graph(
+    graph: Mapping[str, Any],
+    *,
+    head_sha: str = "proposal",
+) -> tuple[CoverageEvidenceRecord, ...]:
+    """Treat declared verifier nodes as executed evidence at the current headSha."""
+    records: list[CoverageEvidenceRecord] = []
+    for node in graph["spec"]["nodes"]:
+        if not isinstance(node, Mapping):
+            continue
+        cap_id = str((node.get("metadata") or {}).get("requiredCapabilityId") or "")
+        if not cap_id:
+            step = str((node.get("target") or {}).get("step") or "")
+            if "auth" in step:
+                cap_id = CAPABILITY_AUTH
+        if not cap_id:
+            continue
+        strategy = str((node.get("verification") or {}).get("strategy") or "")
+        verifier_class = _VERIFIER_STRATEGY_TO_CLASS.get(strategy, strategy)
+        records.append(
+            CoverageEvidenceRecord(
+                capability_id=cap_id,
+                acceptance_criterion_id=f"{cap_id}:default",
+                verifier_class=verifier_class,
+                passed=True,
+                head_sha=head_sha,
+            )
+        )
+    return tuple(records)
+
+
+def compute_graph_capability_coverage(
+    graph: Mapping[str, Any],
+    *,
+    reference_graph: Mapping[str, Any] | None = None,
+    head_sha: str = "proposal",
+) -> RequiredCapabilityCoverage:
+    """Graph-facing wrapper over required-capability coverage semantics."""
+    reference = reference_graph or graph
+    requirements = coverage_requirements_from_graph(reference)
+    return compute_required_capability_coverage(
+        requirements,
+        coverage_evidence_from_graph(graph, head_sha=head_sha),
+        head_sha=head_sha,
+    )
+
+
+def assert_coverage_regression_gate(
+    proposal: Mapping[str, Any],
+    *,
+    canonical_graph: Mapping[str, Any],
+) -> None:
+    """Reject proposals that weaken required-capability verifier coverage."""
+    canonical = compute_graph_capability_coverage(
+        canonical_graph,
+        reference_graph=canonical_graph,
+    )
+    proposed = compute_graph_capability_coverage(
+        proposal,
+        reference_graph=canonical_graph,
+    )
+    ok, reason = promotion_coverage_gate(
+        proposed,
+        reference_aggregate=canonical.aggregate,
+    )
+    if not ok:
+        raise ValueError(f"proposal rejected: coverage regression ({reason})")
 
 
 def template_required_independent_votes(template: Mapping[str, Any]) -> int:
@@ -148,6 +434,118 @@ def is_required_capability_node(node: Mapping[str, Any]) -> bool:
     return any(token in blob for token in REQUIRED_CAPABILITY_TOKENS)
 
 
+def _is_implement_node(node: Mapping[str, Any]) -> bool:
+    kind = str(node.get("kind") or "")
+    if kind in IMPLEMENT_NODE_KINDS:
+        return True
+    return not is_required_capability_node(node) and kind not in {"gate", "verifier"}
+
+
+def _graph_predecessors(graph: Mapping[str, Any]) -> dict[str, set[str]]:
+    preds: dict[str, set[str]] = {
+        str(node["id"]): set() for node in graph["spec"]["nodes"]
+    }
+    for edge in graph["spec"]["edges"]:
+        target = str(edge["to"])
+        source = str(edge["from"])
+        preds.setdefault(target, set()).add(source)
+    return preds
+
+
+def _transitive_predecessors(
+    graph: Mapping[str, Any],
+    node_id: str,
+) -> set[str]:
+    preds = _graph_predecessors(graph)
+    seen: set[str] = set()
+    frontier = set(preds.get(node_id, set()))
+    while frontier:
+        current = frontier.pop()
+        if current in seen:
+            continue
+        seen.add(current)
+        frontier.update(preds.get(current, set()) - seen)
+    return seen
+
+
+def _canonical_inbound_edges(
+    graph: Mapping[str, Any],
+    node_id: str,
+) -> tuple[tuple[str, str, bool], ...]:
+    inbound: list[tuple[str, str, bool]] = []
+    for edge in graph["spec"]["edges"]:
+        if str(edge["to"]) != node_id:
+            continue
+        inbound.append(
+            (
+                str(edge["from"]),
+                str(edge["to"]),
+                bool(edge.get("required", False)),
+            )
+        )
+    return tuple(sorted(inbound))
+
+
+def _required_implement_ancestors(
+    graph: Mapping[str, Any],
+    node_id: str,
+) -> set[str]:
+    by_id = {str(node["id"]): node for node in graph["spec"]["nodes"]}
+    ancestors = _transitive_predecessors(graph, node_id)
+    return {
+        ancestor
+        for ancestor in ancestors
+        if ancestor in by_id and _is_implement_node(by_id[ancestor])
+    }
+
+
+def assert_required_capability_topology(
+    proposal: Mapping[str, Any],
+    canonical_graph: Mapping[str, Any],
+) -> None:
+    """Reachability-scoped required-capability invariant (PRD 272 R3)."""
+    canonical_nodes = {
+        str(node["id"]): node for node in canonical_graph["spec"]["nodes"]
+    }
+    proposal_nodes = {str(node["id"]): node for node in proposal["spec"]["nodes"]}
+    for node_id, canonical_node in canonical_nodes.items():
+        if not is_required_capability_node(canonical_node):
+            continue
+        if node_id not in proposal_nodes:
+            raise ValueError(
+                f"proposal rejected: required-capability node {node_id} missing"
+            )
+        canonical_inbound = _canonical_inbound_edges(canonical_graph, node_id)
+        proposal_inbound = _canonical_inbound_edges(proposal, node_id)
+        if proposal_inbound != canonical_inbound:
+            raise ValueError(
+                "proposal rejected: inbound edges to required-capability node "
+                f"{node_id} are immutable"
+            )
+        required_ancestors = _required_implement_ancestors(canonical_graph, node_id)
+        proposal_ancestors = _transitive_predecessors(proposal, node_id)
+        missing = sorted(required_ancestors - proposal_ancestors)
+        if missing:
+            raise ValueError(
+                "proposal rejected: required-capability node "
+                f"{node_id} lost implement ancestors {missing}"
+            )
+
+
+def assert_auth_capabilities_nonskippable(
+    *,
+    baseline: frozenset[str],
+    proposed: frozenset[str],
+    control_path: str,
+) -> None:
+    """Control paths cannot skip or downgrade auth/security capabilities (R10)."""
+    dropped = (baseline & AUTH_SECURITY_CAPABILITIES) - proposed
+    if dropped:
+        raise ValueError(
+            f"{control_path} cannot skip required auth capabilities: {sorted(dropped)}"
+        )
+
+
 def _canonical_bytes(value: Any) -> bytes:
     return json.dumps(
         value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
@@ -167,6 +565,7 @@ def _assert_required_capability_invariant(
     proposal: Mapping[str, Any],
     canonical_graph: Mapping[str, Any],
 ) -> None:
+    assert_required_capability_topology(proposal, canonical_graph)
     canonical_nodes = {
         str(node["id"]): node for node in canonical_graph["spec"]["nodes"]
     }
@@ -174,11 +573,7 @@ def _assert_required_capability_invariant(
     for node_id, canonical_node in canonical_nodes.items():
         if not is_required_capability_node(canonical_node):
             continue
-        proposed = proposal_nodes.get(node_id)
-        if proposed is None:
-            raise ValueError(
-                f"proposal rejected: required-capability node {node_id} missing"
-            )
+        proposed = proposal_nodes[node_id]
         if _canonical_bytes(proposed) != _canonical_bytes(canonical_node):
             raise ValueError(
                 "proposal rejected: required-capability node "
@@ -279,6 +674,8 @@ def evaluate_dynamic_proposal(
     cutover_evidence: DogfoodEvidence | None,
     budget: ProposalBudget,
     kernel_options: Mapping[str, Any] | None = None,
+    injected_capability_ids: frozenset[str] | None = None,
+    optimization_profile: str = "balanced",
 ) -> ProposalDecision:
     """Select a guarded proposal or compile and return the canonical graph.
 
@@ -306,13 +703,31 @@ def evaluate_dynamic_proposal(
     else:
         try:
             _assert_budget(proposal, budget)
+            assert_coverage_regression_gate(proposal, canonical_graph=canonical_graph)
             _assert_required_capability_invariant(proposal, canonical_graph)
             assert_judgment_independence_floor(
                 proposal,
                 template=canonical_graph,
             )
+            if injected_capability_ids is not None:
+                profile_adjusted = apply_optimization_profile(
+                    injected_capability_ids,
+                    optimization_profile,
+                )
+                enforce_absolute_floor(
+                    injected_capability_ids=injected_capability_ids,
+                    profile_adjusted_capability_ids=profile_adjusted,
+                    profile=optimization_profile,
+                )
+                proposed_caps = required_capabilities_from_graph(proposal)
+                missing = profile_adjusted - proposed_caps
+                if missing:
+                    raise AbsoluteFloorError(
+                        "proposal missing profile-adjusted capabilities: "
+                        f"{sorted(missing)}"
+                    )
             compiled = compile_workflow_graph(proposal, **options)
-        except (KernelCompilationError, ValueError) as exc:
+        except (KernelCompilationError, ValueError, AbsoluteFloorError) as exc:
             reason = f"proposal rejected: {exc}"
         else:
             return ProposalDecision(
@@ -478,26 +893,31 @@ def _verifier_class_for_node(node: Mapping[str, Any]) -> str | None:
 
 def compute_verification_coverage(
     graph: Mapping[str, Any],
+    *,
+    reference_graph: Mapping[str, Any] | None = None,
 ) -> VerificationCoverage:
-    """Coverage from kernel node kinds/strategies; unknown kinds contribute zero."""
-    required_classes: dict[str, int] = {}
-    covered_classes: dict[str, int] = {}
-    for node in graph["spec"]["nodes"]:
-        verifier_class = _verifier_class_for_node(node)
-        if verifier_class is None:
-            continue
-        required_classes[verifier_class] = required_classes.get(verifier_class, 0) + 1
-        if bool((node.get("verification") or {}).get("required")):
-            covered_classes[verifier_class] = covered_classes.get(verifier_class, 0) + 1
-    if not required_classes:
+    """Required-capability coverage mapped into verifier-class buckets."""
+    capability_coverage = compute_graph_capability_coverage(
+        graph,
+        reference_graph=reference_graph or graph,
+    )
+    if not capability_coverage.by_capability_id:
         return VerificationCoverage(aggregate=0.0, by_verifier_class={})
-    by_class = {
-        name: (
-            covered_classes.get(name, 0) / count if count else 0.0
+    by_class: dict[str, float] = {}
+    for node in graph["spec"]["nodes"]:
+        cap_id = str((node.get("metadata") or {}).get("requiredCapabilityId") or "")
+        if not cap_id or cap_id not in capability_coverage.by_capability_id:
+            continue
+        strategy = str((node.get("verification") or {}).get("strategy") or "")
+        verifier_class = _VERIFIER_STRATEGY_TO_CLASS.get(
+            strategy,
+            VerifierKind.MECHANICAL.value,
         )
-        for name, count in sorted(required_classes.items())
-    }
-    aggregate = sum(by_class.values()) / len(by_class)
+        score = capability_coverage.by_capability_id[cap_id]
+        by_class[verifier_class] = min(by_class.get(verifier_class, 1.0), score)
+    aggregate = (
+        sum(by_class.values()) / len(by_class) if by_class else capability_coverage.aggregate
+    )
     return VerificationCoverage(aggregate=aggregate, by_verifier_class=by_class)
 
 

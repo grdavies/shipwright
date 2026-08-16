@@ -32,6 +32,119 @@
         }
       ]
     },
+    "workflow.detectors": {
+      "rows": [
+        {
+          "id": "workflow.detector.migration",
+          "version": "1.0.0",
+          "capabilityId": "workflow.capability.migration-validation",
+          "status": "shipped",
+          "intakeSurfaces": [
+            "db/migrations/**",
+            "supabase/migrations/**",
+            "alembic/**",
+            "**/migrations/*.sql"
+          ]
+        },
+        {
+          "id": "workflow.detector.auth",
+          "version": "1.0.0",
+          "capabilityId": "workflow.capability.security-auth-review",
+          "status": "shipped",
+          "intakeSurfaces": [
+            "**/auth/**",
+            "**/middleware/**",
+            "**/*credentials*",
+            "**/*permission*",
+            "**/*rbac*"
+          ]
+        },
+        {
+          "id": "workflow.detector.api",
+          "version": "1.0.0",
+          "capabilityId": "workflow.capability.api-compatibility",
+          "status": "shipped",
+          "intakeSurfaces": [
+            "**/openapi*.yaml",
+            "**/openapi*.json",
+            "**/routes/**",
+            "**/api/**",
+            "**/schema/**"
+          ]
+        },
+        {
+          "id": "workflow.detector.supply-chain",
+          "version": "1.0.0",
+          "capabilityId": "workflow.capability.dependency-supply-chain",
+          "status": "shipped",
+          "intakeSurfaces": [
+            "package.json",
+            "package-lock.json",
+            "pnpm-lock.yaml",
+            "yarn.lock",
+            "Cargo.lock",
+            "go.sum",
+            "Pipfile.lock",
+            "poetry.lock",
+            "scripts/_sw/depmanifest.json",
+            "scripts/_sw/vendor/**",
+            ".sw/workflows/lock.json",
+            ".github/workflows/**",
+            ".gitmodules",
+            "Dockerfile",
+            "docker-compose*.yml"
+          ]
+        }
+      ]
+    },
+    "workflow.requiredCapabilities": {
+      "rows": [
+        {
+          "id": "workflow.capability.migration-validation",
+          "status": "shipped",
+          "verificationStep": "sw-verify-migration",
+          "riskClass": "data"
+        },
+        {
+          "id": "workflow.capability.security-auth-review",
+          "status": "shipped",
+          "verificationStep": "sw-verify-auth",
+          "riskClass": "security"
+        },
+        {
+          "id": "workflow.capability.api-compatibility",
+          "status": "shipped",
+          "verificationStep": "sw-verify-api-compat",
+          "riskClass": "interface"
+        },
+        {
+          "id": "workflow.capability.dependency-supply-chain",
+          "status": "shipped",
+          "verificationStep": "sw-verify-supply-chain",
+          "riskClass": "supply-chain"
+        },
+        {
+          "id": "workflow.capability.standard-review",
+          "status": "shipped",
+          "verificationStep": "sw-review-standard",
+          "riskClass": "unclassified"
+        }
+      ]
+    },
+    "workflow.detectorCoverage": {
+      "description": "Ecosystem coverage matrix for mechanical detector intake surfaces (PRD 272 R6).",
+      "surfaces": [
+        "package manifests",
+        "vendored trees + depmanifest",
+        "workflow lockfile",
+        "CI workflow pins",
+        "git submodules",
+        "container base images",
+        "database migrations",
+        "auth/permission definitions",
+        "API routes and schemas"
+      ]
+    },
     "issues.providers": {
       "rows": [
         {

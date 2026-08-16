@@ -70,7 +70,8 @@ Before any memory persist or re-injection, run the shared redaction filter on:
 `scripts/memory_redact.py` requires an explicit `--destination` tier (`local` | `committed` | `external` |
 `cross-project` | `logs`) — **no default**. Callers that omit `--destination` must fail closed rather than
 infer a tier. Mandatory removal destinations (`external`, `cross-project`, `logs`) raise when residual
-secret patterns survive substitution.
+secret patterns survive substitution. Derived learning-store admissions and exogenous routing payloads
+use the same filter — no bypass for analytics or graph provenance writes.
 
 Planning and memory emission points bind to destinations via `scripts/planning_visibility.py`
 (`resolve_emission_destination` / `EMISSION_POINT_DESTINATIONS`). Unregistered emission points resolve to

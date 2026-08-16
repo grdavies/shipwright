@@ -54,6 +54,12 @@ def redact(text: str, *, destination: str) -> str:
     return out
 
 
+def redact_learning_derivation(text: str, *, may_egress: bool) -> tuple[str, dict[str, int]]:
+    """Learning-store derivation write path — redact when store may egress (PRD 272 R14)."""
+    destination = "external" if may_egress else "local"
+    return redact_with_postcondition(text, destination=destination)
+
+
 def emit_advisory_warnings(residuals: dict[str, int]) -> None:
     for detector, count in sorted(residuals.items()):
         print(f"warning: residual detector {detector}: {count}", file=sys.stderr)

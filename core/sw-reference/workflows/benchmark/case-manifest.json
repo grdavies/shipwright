@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "manifestId": "prd-272-benchmark-corpus-mvp",
+  "corpusVersion": "2026-08-16",
+  "cases": [
+    {
+      "caseId": "case-bugfix",
+      "workflowType": "bugfix",
+      "tier": "standard",
+      "description": "Representative bugfix workflow benchmark case",
+      "seedPaths": [
+        ".sw/workflows/benchmark/seeds/bugfix-null-guard.json"
+      ],
+      "isolationMode": "process",
+      "cachePolicy": "read-only",
+      "pinDigest": "4e43b0fef48d50c207811021a16bcc2aef9f9a77e7368b93645ac5269cf37608",
+      "repetitions": 1,
+      "holdout": false,
+      "provenance": "benchmark",
+      "requiredVerifierClass": "mechanical"
+    },
+    {
+      "caseId": "case-api-change",
+      "workflowType": "api-change",
+      "tier": "standard",
+      "description": "Representative api-change workflow benchmark case",
+      "seedPaths": [
+        ".sw/workflows/benchmark/seeds/api-route-contract.json"
+      ],
+      "isolationMode": "process",
+      "cachePolicy": "content-addressed",
+      "pinDigest": "b47a894f293f5ae80b4c96f07672fabb65e04bb04b85c9bd55a8c78cb3d2273f",
+      "repetitions": 1,
+      "holdout": false,
+      "provenance": "benchmark",
+      "requiredVerifierClass": "mechanical"
+    },
+    {
+      "caseId": "case-migration",
+      "workflowType": "migration",
+      "tier": "standard",
+      "description": "Representative migration workflow benchmark case",
+      "seedPaths": [
+        ".sw/workflows/benchmark/seeds/migration-schema.json"
+      ],
+      "isolationMode": "process",
+      "cachePolicy": "no-cache",
+      "pinDigest": "c5bbf86db894a974371243b255cca62d116264657faf7055fd305da8b1b40769",
+      "repetitions": 1,
+      "holdout": false,
+      "provenance": "benchmark",
+      "requiredVerifierClass": "mechanical"
+    },
+    {
+      "caseId": "case-security",
+      "workflowType": "security",
+      "tier": "standard",
+      "description": "Representative security workflow benchmark case",
+      "seedPaths": [
+        ".sw/workflows/benchmark/seeds/security-authz.json"
+      ],
+      "isolationMode": "process",
+      "cachePolicy": "read-only",
+      "pinDigest": "22f74578d7860dab0b0c86a684fe7002224c84fba9fcc40bb621126a3495c3c6",
+      "repetitions": 1,
+      "holdout": false,
+      "provenance": "benchmark",
+      "requiredVerifierClass": "mechanical"
+    },
+    {
+      "caseId": "case-refactor",
+      "workflowType": "refactor",
+      "tier": "standard",
+      "description": "Representative refactor workflow benchmark case",
+      "seedPaths": [
+        ".sw/workflows/benchmark/seeds/refactor-extract.json"
+      ],
+      "isolationMode": "process",
+      "cachePolicy": "content-addressed",
+      "pinDigest": "7dafd9229a5a466c911d9b1a9c669a0979e5c68446954db96ee7cbc60c941b61",
+      "repetitions": 1,
+      "holdout": false,
+      "provenance": "benchmark",
+      "requiredVerifierClass": "mechanical"
+    },
+    {
+      "caseId": "case-dependency-update",
+      "workflowType": "dependency-update",
+      "tier": "standard",
+      "description": "Representative dependency-update workflow benchmark case",
+      "seedPaths": [
+        ".sw/workflows/benchmark/seeds/deps-bump.json"
+      ],
+      "isolationMode": "process",
+      "cachePolicy": "no-cache",
+      "pinDigest": "aed4cb4435e42a2a33dfdc13cee0fc6299dbfd87509bcf3c3e1b6b1665563c04",
+      "repetitions": 1,
+      "holdout": false,
+      "provenance": "benchmark",
+      "requiredVerifierClass": "mechanical"
+    },
+    {
+      "caseId": "case-flaky-test",
+      "workflowType": "flaky-test",
+      "tier": "standard",
+      "description": "Representative flaky-test workflow benchmark case",
+      "seedPaths": [
+        ".sw/workflows/benchmark/seeds/flaky-retry.json"
+      ],
+      "isolationMode": "process",
+      "cachePolicy": "read-only",
+      "pinDigest": "29ba4452645cbb8fc5d2b2f08c4329c03c7148279bf6eec50bba8919b79d78d9",
+      "repetitions": 2,
+      "holdout": false,
+      "provenance": "benchmark",
+      "requiredVerifierClass": "mechanical"
+    },
+    {
+      "caseId": "case-docs",
+      "workflowType": "docs",
+      "tier": "standard",
+      "description": "Representative docs workflow benchmark case",
+      "seedPaths": [
+        ".sw/workflows/benchmark/seeds/docs-guide.json"
+      ],
+      "isolationMode": "process",
+      "cachePolicy": "content-addressed",
+      "pinDigest": "367e9da46b407d7fbfec52ddaaea64fdf235145a1e9657b429295b793400f915",
+      "repetitions": 1,
+      "holdout": false,
+      "provenance": "benchmark",
+      "requiredVerifierClass": "mechanical"
+    },
+    {
+      "caseId": "case-multi-component",
+      "workflowType": "multi-component",
+      "tier": "standard",
+      "description": "Representative multi-component workflow benchmark case",
+      "seedPaths": [
+        ".sw/workflows/benchmark/seeds/multi-scheduler.json"
+      ],
+      "isolationMode": "worktree",
+      "cachePolicy": "no-cache",
+      "pinDigest": "a3065dd718a93fdc8de52f704d0ff6edf313c811d4d53189f8d5d9a6fcedfabf",
+      "repetitions": 1,
+      "holdout": true,
+      "provenance": "benchmark",
+      "requiredVerifierClass": "mechanical"
+    }
+  ]
+}

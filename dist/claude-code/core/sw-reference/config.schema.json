@@ -169,6 +169,41 @@
               "description": "Independent cache retention window in seconds (default 30 days)."
             }
           }
+        },
+        "profiles": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Workflow optimization profiles (PRD 272 R23). Kernel immutables (cache, loop bounds, resourceLimits) are rejected — use graphExecution.cache and compiled spec.resourceLimits instead.",
+          "properties": {
+            "optimization": {
+              "type": "string",
+              "enum": [
+                "fast",
+                "balanced",
+                "thorough"
+              ],
+              "default": "balanced",
+              "description": "Optional reviewer depth only — absolute floor enforced separately after profile+inject."
+            }
+          }
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Fail-closed per-node execution budgets (PRD 272 R23). Budget halt maps to non-ready; required capabilities are never shed to recover budget.",
+          "properties": {
+            "maxExecutionsPerNode": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 8,
+              "description": "Per-node retry/execute accounting ceiling before budget halt."
+            },
+            "haltOnExhaustion": {
+              "type": "boolean",
+              "default": true,
+              "description": "When true, budget exhaustion emits non-ready and blocks merge-ready surfaces."
+            }
+          }
         }
       }
     },

@@ -18,16 +18,25 @@ _SCRIPTS = Path(__file__).resolve().parent.parent
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
+from graph.absolute_floor import (  # noqa: E402
+    AbsoluteFloorError,
+    assert_anti_ratchet_ceiling,
+    evaluate_after_profile_and_inject,
+    required_capabilities_from_graph,
+)
 from graph.cutover import CutoverStage, DogfoodEvidence  # noqa: E402
 from graph.dynamic_proposal import (
     ProposalBudget,
     ProposalDecision,
+    assert_auth_capabilities_nonskippable,
     evaluate_dynamic_proposal,
+    is_required_capability_node,
 )  # noqa: E402
 from graph.ir import (  # noqa: E402
     validate_fragment_use_entry,
     WorkflowGraphValidationError,
 )  # noqa: E402
+from graph.detectors.registry import CAPABILITY_AUTH  # noqa: E402
 from graph.kernel_compiler import compile_workflow_graph  # noqa: E402
 from graph.scheduling_modes import ALLOWED_EXTERNAL_AUTHORIZERS  # noqa: E402
 
@@ -35,6 +44,13 @@ LIBRARY_VERSION = 1
 PLAN_POLICY_CANONICAL = "canonical"
 PLAN_POLICY_PROPOSED = "proposed"
 PROMOTION_SAMPLE_FLOOR = 3
+PROMOTION_CONFIDENCE_FLOOR = 0.95
+PROMOTION_READY_WITHOUT_REWORK_FLOOR = 1.0
+PROMOTION_COVERAGE_REGRESSION_CEILING = 0.0
+PROMOTION_SMALL_N_REFUSAL_THRESHOLD = PROMOTION_SAMPLE_FLOOR
+DEFAULT_DEMOTION_EXPOSURE_WINDOW_SECONDS = 3600
+DEFAULT_IN_FLIGHT_RUN_POLICY = "drain"
+ALLOWED_IN_FLIGHT_RUN_POLICIES = frozenset({"drain", "cancel"})
 MAX_PREDICTION_ERROR = 0.25
 ALLOWED_PLAN_POLICY_AUTHORIZERS = ALLOWED_EXTERNAL_AUTHORIZERS | frozenset(
     {"workflow-library-promotion-gate"}
@@ -79,6 +95,10 @@ class PromotionSample:
     required_capability_regression: bool
     ready_without_rework: bool
     command: str
+    paired_canonical_run_id: str = ""
+    confidence: float = 1.0
+    coverage_score: float = 1.0
+    perfect_score: bool = False
 
 
 @dataclass(frozen=True)
@@ -107,10 +127,57 @@ class PlanPolicyPromotionVerdict:
     verdict: str
     target_policy: str
     reasons: tuple[str, ...]
+    policy_digest: str | None = None
 
     @property
     def passed(self) -> bool:
         return self.verdict == "pass"
+
+
+@dataclass(frozen=True)
+class PromotionPolicyDocument:
+    """Approval-gated promotion policy; hard floors may be raised but never lowered."""
+
+    min_sample_size: int
+    confidence_level: float
+    ready_without_rework_floor: float = PROMOTION_READY_WITHOUT_REWORK_FLOOR
+    coverage_regression_ceiling: float = PROMOTION_COVERAGE_REGRESSION_CEILING
+    pairing_required: bool = True
+    demotion_exposure_window_seconds: int = DEFAULT_DEMOTION_EXPOSURE_WINDOW_SECONDS
+    in_flight_run_policy: str = DEFAULT_IN_FLIGHT_RUN_POLICY
+    latency_improvement_floor: float | None = None
+    holdout_fraction: float | None = None
+    multiplicity_correction: str = "bonferroni"
+    evaluation_horizon: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "minSampleSize": self.min_sample_size,
+            "confidenceLevel": self.confidence_level,
+            "readyWithoutReworkFloor": self.ready_without_rework_floor,
+            "coverageRegressionCeiling": self.coverage_regression_ceiling,
+            "pairingRequired": self.pairing_required,
+            "demotionExposureWindowSeconds": self.demotion_exposure_window_seconds,
+            "inFlightRunPolicy": self.in_flight_run_policy,
+            "latencyImprovementFloor": self.latency_improvement_floor,
+            "holdoutFraction": self.holdout_fraction,
+            "multiplicityCorrection": self.multiplicity_correction,
+            "evaluationHorizon": self.evaluation_horizon,
+        }
+
+
+@dataclass(frozen=True)
+class DemotionExposurePolicy:
+    """Demotion exposure window and in-flight run handling."""
+
+    exposure_window_seconds: int
+    in_flight_run_policy: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "exposureWindowSeconds": self.exposure_window_seconds,
+            "inFlightRunPolicy": self.in_flight_run_policy,
+        }
 
 
 @dataclass(frozen=True)
@@ -852,6 +919,81 @@ def prepare_run(
     )
 
 
+def promotion_policy_hard_floors() -> dict[str, int | float]:
+    """Non-configurable lower bounds; configuration may raise but never lower."""
+    return {
+        "minSampleSize": PROMOTION_SAMPLE_FLOOR,
+        "confidenceLevel": PROMOTION_CONFIDENCE_FLOOR,
+        "readyWithoutReworkFloor": PROMOTION_READY_WITHOUT_REWORK_FLOOR,
+        "coverageRegressionCeiling": PROMOTION_COVERAGE_REGRESSION_CEILING,
+        "smallNRefusalThreshold": PROMOTION_SMALL_N_REFUSAL_THRESHOLD,
+    }
+
+
+def validate_promotion_policy_config(policy: PromotionPolicyDocument) -> list[str]:
+    """Refuse policy documents that regress below hard floors."""
+    reasons: list[str] = []
+    floors = promotion_policy_hard_floors()
+    if policy.min_sample_size < int(floors["minSampleSize"]):
+        reasons.append(
+            "min sample size "
+            f"{policy.min_sample_size} below hard floor {floors['minSampleSize']}"
+        )
+    if policy.confidence_level < float(floors["confidenceLevel"]):
+        reasons.append(
+            "confidence level "
+            f"{policy.confidence_level} below hard floor {floors['confidenceLevel']}"
+        )
+    if policy.ready_without_rework_floor < float(floors["readyWithoutReworkFloor"]):
+        reasons.append(
+            "ready-without-rework floor "
+            f"{policy.ready_without_rework_floor} below hard floor "
+            f"{floors['readyWithoutReworkFloor']}"
+        )
+    if policy.coverage_regression_ceiling > float(floors["coverageRegressionCeiling"]):
+        reasons.append(
+            "coverage regression ceiling "
+            f"{policy.coverage_regression_ceiling} above hard floor "
+            f"{floors['coverageRegressionCeiling']}"
+        )
+    if policy.in_flight_run_policy not in ALLOWED_IN_FLIGHT_RUN_POLICIES:
+        reasons.append(
+            "in-flight run policy must be one of: "
+            + ", ".join(sorted(ALLOWED_IN_FLIGHT_RUN_POLICIES))
+        )
+    if policy.demotion_exposure_window_seconds < 0:
+        reasons.append("demotion exposure window must be non-negative")
+    return reasons
+
+
+def promotion_policy_digest(policy: PromotionPolicyDocument) -> str:
+    """Stable digest for an approval-gated promotion policy document."""
+    return hashlib.sha256(_canonical_bytes(policy.to_dict())).hexdigest()
+
+
+def default_promotion_policy() -> PromotionPolicyDocument:
+    """Return the default approval-gated promotion policy at hard floors."""
+    return PromotionPolicyDocument(
+        min_sample_size=PROMOTION_SAMPLE_FLOOR,
+        confidence_level=PROMOTION_CONFIDENCE_FLOOR,
+    )
+
+
+def auto_promote_allowed(sample_count: int) -> bool:
+    """Small-N samples never auto-promote below the hard refusal threshold."""
+    return sample_count >= PROMOTION_SMALL_N_REFUSAL_THRESHOLD
+
+
+def demotion_exposure_policy(
+    policy: PromotionPolicyDocument,
+) -> DemotionExposurePolicy:
+    """Surface demotion exposure window and in-flight handling from policy."""
+    return DemotionExposurePolicy(
+        exposure_window_seconds=policy.demotion_exposure_window_seconds,
+        in_flight_run_policy=policy.in_flight_run_policy,
+    )
+
+
 def _promotion_evidence_digest(evidence: PlanPolicyPromotionEvidence) -> str:
     payload = {
         "samples": [
@@ -863,6 +1005,10 @@ def _promotion_evidence_digest(evidence: PlanPolicyPromotionEvidence) -> str:
                 "requiredCapabilityRegression": sample.required_capability_regression,
                 "readyWithoutRework": sample.ready_without_rework,
                 "command": sample.command,
+                "pairedCanonicalRunId": sample.paired_canonical_run_id,
+                "confidence": sample.confidence,
+                "coverageScore": sample.coverage_score,
+                "perfectScore": sample.perfect_score,
             }
             for sample in evidence.samples
         ],
@@ -884,16 +1030,31 @@ def gate_plan_policy_promotion(
     *,
     target_policy: str,
     template_digest: str,
+    policy: PromotionPolicyDocument | None = None,
 ) -> PlanPolicyPromotionVerdict:
     """Fail-closed gate for orchestration.planPolicy proposed then canonical."""
     reasons: list[str] = []
+    active_policy = policy or PromotionPolicyDocument(
+        min_sample_size=PROMOTION_SAMPLE_FLOOR,
+        confidence_level=PROMOTION_CONFIDENCE_FLOOR,
+    )
+    policy_digest = promotion_policy_digest(active_policy)
+    reasons.extend(validate_promotion_policy_config(active_policy))
+    effective_sample_floor = max(
+        PROMOTION_SAMPLE_FLOOR,
+        active_policy.min_sample_size,
+    )
+    effective_confidence_floor = max(
+        PROMOTION_CONFIDENCE_FLOOR,
+        active_policy.confidence_level,
+    )
     if target_policy not in {PLAN_POLICY_PROPOSED, PLAN_POLICY_CANONICAL}:
         reasons.append(f"unsupported target policy: {target_policy}")
 
     sample_count = len(evidence.samples)
-    if sample_count < PROMOTION_SAMPLE_FLOOR:
+    if sample_count < effective_sample_floor:
         reasons.append(
-            f"sample floor not met: need {PROMOTION_SAMPLE_FLOOR}, have {sample_count}"
+            f"sample floor not met: need {effective_sample_floor}, have {sample_count}"
         )
 
     strata = {sample.stratum for sample in evidence.samples}
@@ -920,6 +1081,30 @@ def gate_plan_policy_promotion(
         if sample.template_digest != template_digest:
             reasons.append(
                 f"sample digest mismatch on run {sample.run_id}"
+            )
+        if sample.confidence < effective_confidence_floor:
+            reasons.append(
+                f"confidence {sample.confidence} below floor "
+                f"{effective_confidence_floor} for run {sample.run_id}"
+            )
+        if active_policy.pairing_required and not sample.paired_canonical_run_id.strip():
+            reasons.append(
+                f"run {sample.run_id} missing mandatory canonical pairing"
+            )
+        if (
+            sample_count < PROMOTION_SMALL_N_REFUSAL_THRESHOLD
+            and sample.perfect_score
+        ):
+            reasons.append(
+                f"small-N perfect score on run {sample.run_id} refused auto-promotion"
+            )
+        if sample.coverage_score < (
+            1.0 - active_policy.coverage_regression_ceiling
+        ):
+            reasons.append(
+                f"coverage regression on run {sample.run_id}: "
+                f"{sample.coverage_score} below ceiling "
+                f"{1.0 - active_policy.coverage_regression_ceiling}"
             )
 
     authorizer = evidence.authorizer.strip()
@@ -958,7 +1143,23 @@ def gate_plan_policy_promotion(
         verdict=verdict,
         target_policy=target_policy,
         reasons=tuple(reasons),
+        policy_digest=policy_digest,
     )
+
+
+def _template_graph(document: Mapping[str, Any]) -> Mapping[str, Any]:
+    graph = document.get("graph")
+    if not isinstance(graph, Mapping):
+        raise WorkflowLibraryError("template graph is missing or invalid")
+    return graph
+
+
+def _pinned_reference_capabilities(
+    document: Mapping[str, Any],
+) -> frozenset[str] | None:
+    if not document.get("canonicalAdoptedDigest"):
+        return None
+    return required_capabilities_from_graph(_template_graph(document))
 
 
 def _template_plan_policy(document: Mapping[str, Any]) -> str:
@@ -977,6 +1178,7 @@ def promote_template_plan_policy(
     target_policy: str,
     root: str | Path = DEFAULT_LIBRARY_ROOT,
     promoted_at: str | None = None,
+    policy: PromotionPolicyDocument | None = None,
 ) -> Path:
     """Promote a saved template through proposed then canonical plan policy."""
     if target_policy not in {PLAN_POLICY_PROPOSED, PLAN_POLICY_CANONICAL}:
@@ -984,14 +1186,30 @@ def promote_template_plan_policy(
     document = load_template(name, root=root)
     _assert_approved(document)
     template_digest = _template_digest(document)
+    active_policy = policy or PromotionPolicyDocument(
+        min_sample_size=PROMOTION_SAMPLE_FLOOR,
+        confidence_level=PROMOTION_CONFIDENCE_FLOOR,
+    )
     gate = gate_plan_policy_promotion(
         evidence,
         target_policy=target_policy,
         template_digest=template_digest,
+        policy=active_policy,
     )
     if not gate.passed:
         raise WorkflowLibraryError(
             "plan policy promotion gate failed: " + "; ".join(gate.reasons)
+        )
+
+    pinned_ids = document.get("planPolicyPromotion", {}).get("pinnedRequiredCapabilityIds")
+    if isinstance(pinned_ids, list) and pinned_ids:
+        assert_promotion_anti_ratchet(
+            pinned_reference_graph={
+                "spec": {"nodes": []},
+                "metadata": {"requiredCapabilityIds": pinned_ids},
+            },
+            candidate_graph=_template_graph(document),
+            root=root,
         )
 
     current = _template_plan_policy(document)
@@ -1008,7 +1226,9 @@ def promote_template_plan_policy(
         or datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "authorizer": evidence.authorizer.strip(),
         "evidenceDigest": _promotion_evidence_digest(evidence),
+        "policyDigest": gate.policy_digest,
         "templateDigest": template_digest,
+        "demotionExposure": demotion_exposure_policy(active_policy).to_dict(),
         "confirmation": {
             "command": evidence.confirmation.command.strip().removeprefix("/"),
             "digest": evidence.confirmation.digest,
@@ -1020,6 +1240,9 @@ def promote_template_plan_policy(
     }
     if target_policy == PLAN_POLICY_CANONICAL:
         document["canonicalAdoptedDigest"] = template_digest
+        document["planPolicyPromotion"]["pinnedRequiredCapabilityIds"] = sorted(
+            required_capabilities_from_graph(_template_graph(document))
+        )
     path = _template_path(Path(root), name)
     _write_json_atomic(path, document)
     return path
@@ -1032,6 +1255,7 @@ def demote_template_plan_policy(
     actor: str,
     root: str | Path = DEFAULT_LIBRARY_ROOT,
     demoted_at: str | None = None,
+    in_flight_runs: int = 0,
 ) -> Path:
     """Drop proposed plan policy and revert the template to canonical."""
     if not reason.strip():
@@ -1039,6 +1263,42 @@ def demote_template_plan_policy(
     if not actor.strip():
         raise WorkflowLibraryError("demotion actor is required")
     document = load_template(name, root=root)
+    promotion = document.get("planPolicyPromotion")
+    if isinstance(promotion, Mapping):
+        exposure = promotion.get("demotionExposure") or {}
+        if not isinstance(exposure, Mapping):
+            exposure = {}
+        window_seconds = int(
+            exposure.get(
+                "exposureWindowSeconds",
+                DEFAULT_DEMOTION_EXPOSURE_WINDOW_SECONDS,
+            )
+        )
+        in_flight_policy = str(
+            exposure.get("inFlightRunPolicy", DEFAULT_IN_FLIGHT_RUN_POLICY)
+        )
+        if in_flight_runs > 0:
+            if in_flight_policy == "drain":
+                raise WorkflowLibraryError(
+                    "demotion blocked: in-flight runs must drain before demotion"
+                )
+            raise WorkflowLibraryError(
+                "demotion blocked: in-flight runs still active"
+            )
+        promoted_at = str(promotion.get("promotedAt") or "")
+        if promoted_at and window_seconds > 0:
+            promoted = datetime.fromisoformat(promoted_at.replace("Z", "+00:00"))
+            demote_time = datetime.fromisoformat(
+                (demoted_at or datetime.now(timezone.utc).isoformat()).replace(
+                    "Z", "+00:00"
+                )
+            )
+            elapsed = (demote_time - promoted).total_seconds()
+            if elapsed < window_seconds:
+                raise WorkflowLibraryError(
+                    "demotion blocked: latency window "
+                    f"{window_seconds}s not elapsed"
+                )
     document["planPolicyPromotion"] = {
         "stage": PLAN_POLICY_CANONICAL,
         "demotedAt": demoted_at
@@ -1050,6 +1310,61 @@ def demote_template_plan_policy(
     path = _template_path(Path(root), name)
     _write_json_atomic(path, document)
     return path
+
+
+def apply_profile_to_required_capabilities(
+    *,
+    injected_capability_ids: frozenset[str],
+    profile: str,
+    root: str | Path = ".",
+) -> frozenset[str]:
+    """Apply optimization profile after detector injection and enforce absolute floor."""
+    try:
+        return evaluate_after_profile_and_inject(
+            injected_capability_ids=injected_capability_ids,
+            profile=profile,
+            repo_root=Path(root),
+        )
+    except AbsoluteFloorError as exc:
+        raise WorkflowLibraryError(str(exc)) from exc
+
+
+def assert_promotion_anti_ratchet(
+    *,
+    pinned_reference_graph: Mapping[str, Any],
+    candidate_graph: Mapping[str, Any],
+    root: str | Path = ".",
+) -> None:
+    """Promotion cannot ratchet below pinned reference capability set (R9)."""
+    pinned = required_capabilities_from_graph(pinned_reference_graph)
+    candidate = required_capabilities_from_graph(candidate_graph)
+    try:
+        assert_anti_ratchet_ceiling(
+            pinned_reference=pinned,
+            candidate=candidate,
+            repo_root=Path(root),
+        )
+    except AbsoluteFloorError as exc:
+        raise WorkflowLibraryError(str(exc)) from exc
+
+
+def assert_control_path_preserves_auth(
+    *,
+    baseline_graph: Mapping[str, Any],
+    adjusted_graph: Mapping[str, Any],
+    control_path: str,
+) -> None:
+    """Profile/budget/cache/demotion/package paths cannot skip auth caps (R10)."""
+    baseline = required_capabilities_from_graph(baseline_graph)
+    proposed = required_capabilities_from_graph(adjusted_graph)
+    try:
+        assert_auth_capabilities_nonskippable(
+            baseline=baseline,
+            proposed=proposed,
+            control_path=control_path,
+        )
+    except ValueError as exc:
+        raise WorkflowLibraryError(str(exc)) from exc
 
 
 def evaluate_saved_template(
@@ -1070,6 +1385,11 @@ def evaluate_saved_template(
         values=values,
         root=root,
         kernel_options=kernel_options,
+    )
+    assert_control_path_preserves_auth(
+        baseline_graph=canonical_graph,
+        adjusted_graph=prepared.graph,
+        control_path="optimizer-proposal",
     )
     return evaluate_dynamic_proposal(
         prepared.graph,

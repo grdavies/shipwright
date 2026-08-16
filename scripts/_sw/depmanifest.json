@@ -2,6 +2,26 @@
   "version": 1,
   "description": "Allowed non-stdlib Python imports beyond the standard library (R12).",
   "allowed": [],
+  "detectorIntakeSurfaces": {
+    "description": "Declared supply-chain intake surfaces for workflow detectors (PRD 272 R2).",
+    "surfaces": [
+      "package.json",
+      "package-lock.json",
+      "pnpm-lock.yaml",
+      "yarn.lock",
+      "Cargo.lock",
+      "go.sum",
+      "Pipfile.lock",
+      "poetry.lock",
+      "scripts/_sw/depmanifest.json",
+      "scripts/_sw/vendor/**",
+      ".sw/workflows/lock.json",
+      ".github/workflows/**",
+      ".gitmodules",
+      "Dockerfile",
+      "docker-compose*.yml"
+    ]
+  },
   "vendored": {
     "pytest": {
       "version": "8.3.5",

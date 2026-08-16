@@ -83,7 +83,7 @@ Library version: **1**
 
 | Template | Library version | Path |
 | --- | ---: | --- |
-| — | — | no checked-in templates |
+| `lock` | 1 | `.sw/workflows/lock.json` |
 
 ## Registry families (planning + issues)
 
@@ -91,3 +91,6 @@ See `CAPABILITIES.md` for shipped/deferred rows derived from `capability-registr
 
 - `issues.providers`: `github-issues`, `jira`, `gitlab-issues`, `linear`, `none`
 - `planning-store.backends`: `in-repo-public`, `local-synced`, `memory`, `issue-store`, `private-repo`, `encryption-at-rest`
+- `workflow.detectorCoverage`: 
+- `workflow.detectors`: `workflow.detector.migration`, `workflow.detector.auth`, `workflow.detector.api`, `workflow.detector.supply-chain`
+- `workflow.requiredCapabilities`: `workflow.capability.migration-validation`, `workflow.capability.security-auth-review`, `workflow.capability.api-compatibility`, `workflow.capability.dependency-supply-chain`, `workflow.capability.standard-review`

@@ -16,12 +16,69 @@ if str(TEST_DIR) not in sys.path:
 
 from _sw.cli import run_module_main
 
+_PHASE_ENV_KEYS = frozenset(
+    {
+        "SW_RUN_DIR",
+        "SW_REPO_ROOT",
+        "SW_INTEGRATION_BRANCH",
+        "SW_TASK_LIST",
+    }
+)
+
+
+def _phase_env_keys() -> list[str]:
+    return [k for k in os.environ if k.startswith("SW_PHASE") or k in _PHASE_ENV_KEYS]
+
+
+def _resolve_integration_branch(root: Path) -> str:
+    """Prefer durable deliver-state target; harness env is fallback only (R4)."""
+    try:
+        from wave_phase_pr import integration_branch
+
+        resolved = integration_branch(root)
+        if isinstance(resolved, str) and resolved.strip():
+            return resolved.strip()
+    except Exception:
+        pass
+    return (os.environ.get("SW_INTEGRATION_BRANCH") or "").strip()
+
+
+def _seed_changed_paths_from_integration(root: Path) -> None:
+    """Prefer integration-branch diff when upstream tracking yields an empty set.
+
+    Phase branches often track themselves (or a tip equal to HEAD), so default
+    ``git_changed_paths`` returns [] and phase smoke widens to full unit_tests.
+    Seed ``SW_CHANGED_PATHS`` from the deliver-state integration branch (or
+    ``SW_INTEGRATION_BRANCH`` harness fallback) before stripping phase-mode env.
+    """
+    if os.environ.get("SW_CHANGED_PATHS", "").strip():
+        return
+    integration = _resolve_integration_branch(root)
+    if not integration:
+        return
+    import test_scope as ts
+
+    paths = ts.git_changed_paths(root, integration)
+    if paths:
+        os.environ["SW_CHANGED_PATHS"] = "\n".join(paths)
+
 
 def run_pre_pr_smoke(root: Path, *, scope: str = "phase") -> tuple[int, str | None]:
     from _runner import run_pytest_scope
 
-    os.environ.setdefault("SW_TEST_SCOPE", scope)
-    ec = run_pytest_scope(root, scope=scope)
+    _seed_changed_paths_from_integration(root)
+    saved = {k: os.environ.get(k) for k in _phase_env_keys()}
+    try:
+        for key in saved:
+            os.environ.pop(key, None)
+        os.environ["SW_TEST_SCOPE"] = scope
+        ec = run_pytest_scope(root, scope=scope)
+    finally:
+        for key, value in saved.items():
+            if value is not None:
+                os.environ[key] = value
+            else:
+                os.environ.pop(key, None)
     if ec == 0:
         return 0, None
     return ec, f"pre-pr-smoke:pytest-exit-{ec}"
