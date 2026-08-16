@@ -203,14 +203,10 @@ Shadow comparison output and digest-bound promotion confirmation on `/sw-deliver
 
 ## Detector evidence and false-positive correction (PRD 272 R8)
 
-Mechanical detector injections surface on `/sw-status` explain and graph-progress payloads
-when `metadata.detectorResults` is present on the active WorkflowGraph. Every injected
-`requiredCapabilityId` MUST show the evidence paths and rule that produced it.
-
-```bash
-# Detector injection explain (JSON default)
-python3 scripts/status_integrity.py explain <nodeId> --run-id <runId> [--format json|text]
-```
+Mechanical detector injections surface on `/sw-status` **graph-progress** and **explain**
+payloads (see **Graph live progress and node explain** above) when `metadata.detectorResults`
+is present on the active WorkflowGraph. Every injected `requiredCapabilityId` MUST show the
+evidence paths and rule that produced it.
 
 | Field | Meaning |
 | --- | --- |
