@@ -23,6 +23,21 @@ from graph.detectors.result import (
     parse_detector_result,
     union_required_capability_ids,
 )
+from graph.detectors.redetect import (
+    RequirementSetSnapshot,
+    RedetectGateVerdict,
+    compute_requirement_set,
+    evaluate_redetect_gate,
+    merge_gate_redetect,
+)
+from graph.detectors.reduction import (
+    HumanWaiver,
+    MechanicalNoFire,
+    ReductionAuthorization,
+    authorize_reduction,
+    mechanical_no_fire_for_paths,
+    record_human_waiver,
+)
 from graph.detectors.runner import run_detectors, summarize_detection
 
 __all__ = [
@@ -46,4 +61,15 @@ __all__ = [
     "run_detectors",
     "summarize_detection",
     "union_required_capability_ids",
+    "RequirementSetSnapshot",
+    "RedetectGateVerdict",
+    "compute_requirement_set",
+    "evaluate_redetect_gate",
+    "merge_gate_redetect",
+    "HumanWaiver",
+    "MechanicalNoFire",
+    "ReductionAuthorization",
+    "authorize_reduction",
+    "mechanical_no_fire_for_paths",
+    "record_human_waiver",
 ]

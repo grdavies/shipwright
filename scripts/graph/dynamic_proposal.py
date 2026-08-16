@@ -19,6 +19,7 @@ from graph.isolation_policy import (
 )
 from graph.kernel_compiler import KernelCompilationError, compile_workflow_graph
 from graph.scheduler import GraphScheduler, NodeExecutionResult
+from graph.detectors.registry import CAPABILITY_AUTH
 from graph.verifier_policies import VerifierKind
 
 
@@ -60,6 +61,10 @@ class ProposalDecision:
 
 
 REQUIRED_CAPABILITY_KINDS = frozenset({"gate", "verifier"})
+IMPLEMENT_NODE_KINDS = frozenset(
+    {"command", "agent", "barrier", "convergence-loop", "router", "transform"}
+)
+AUTH_SECURITY_CAPABILITIES = frozenset({CAPABILITY_AUTH})
 REQUIRED_CAPABILITY_TOKENS = (
     "merge-gate",
     "human-merge-gate",
@@ -148,6 +153,118 @@ def is_required_capability_node(node: Mapping[str, Any]) -> bool:
     return any(token in blob for token in REQUIRED_CAPABILITY_TOKENS)
 
 
+def _is_implement_node(node: Mapping[str, Any]) -> bool:
+    kind = str(node.get("kind") or "")
+    if kind in IMPLEMENT_NODE_KINDS:
+        return True
+    return not is_required_capability_node(node) and kind not in {"gate", "verifier"}
+
+
+def _graph_predecessors(graph: Mapping[str, Any]) -> dict[str, set[str]]:
+    preds: dict[str, set[str]] = {
+        str(node["id"]): set() for node in graph["spec"]["nodes"]
+    }
+    for edge in graph["spec"]["edges"]:
+        target = str(edge["to"])
+        source = str(edge["from"])
+        preds.setdefault(target, set()).add(source)
+    return preds
+
+
+def _transitive_predecessors(
+    graph: Mapping[str, Any],
+    node_id: str,
+) -> set[str]:
+    preds = _graph_predecessors(graph)
+    seen: set[str] = set()
+    frontier = set(preds.get(node_id, set()))
+    while frontier:
+        current = frontier.pop()
+        if current in seen:
+            continue
+        seen.add(current)
+        frontier.update(preds.get(current, set()) - seen)
+    return seen
+
+
+def _canonical_inbound_edges(
+    graph: Mapping[str, Any],
+    node_id: str,
+) -> tuple[tuple[str, str, bool], ...]:
+    inbound: list[tuple[str, str, bool]] = []
+    for edge in graph["spec"]["edges"]:
+        if str(edge["to"]) != node_id:
+            continue
+        inbound.append(
+            (
+                str(edge["from"]),
+                str(edge["to"]),
+                bool(edge.get("required", False)),
+            )
+        )
+    return tuple(sorted(inbound))
+
+
+def _required_implement_ancestors(
+    graph: Mapping[str, Any],
+    node_id: str,
+) -> set[str]:
+    by_id = {str(node["id"]): node for node in graph["spec"]["nodes"]}
+    ancestors = _transitive_predecessors(graph, node_id)
+    return {
+        ancestor
+        for ancestor in ancestors
+        if ancestor in by_id and _is_implement_node(by_id[ancestor])
+    }
+
+
+def assert_required_capability_topology(
+    proposal: Mapping[str, Any],
+    canonical_graph: Mapping[str, Any],
+) -> None:
+    """Reachability-scoped required-capability invariant (PRD 272 R3)."""
+    canonical_nodes = {
+        str(node["id"]): node for node in canonical_graph["spec"]["nodes"]
+    }
+    proposal_nodes = {str(node["id"]): node for node in proposal["spec"]["nodes"]}
+    for node_id, canonical_node in canonical_nodes.items():
+        if not is_required_capability_node(canonical_node):
+            continue
+        if node_id not in proposal_nodes:
+            raise ValueError(
+                f"proposal rejected: required-capability node {node_id} missing"
+            )
+        canonical_inbound = _canonical_inbound_edges(canonical_graph, node_id)
+        proposal_inbound = _canonical_inbound_edges(proposal, node_id)
+        if proposal_inbound != canonical_inbound:
+            raise ValueError(
+                "proposal rejected: inbound edges to required-capability node "
+                f"{node_id} are immutable"
+            )
+        required_ancestors = _required_implement_ancestors(canonical_graph, node_id)
+        proposal_ancestors = _transitive_predecessors(proposal, node_id)
+        missing = sorted(required_ancestors - proposal_ancestors)
+        if missing:
+            raise ValueError(
+                "proposal rejected: required-capability node "
+                f"{node_id} lost implement ancestors {missing}"
+            )
+
+
+def assert_auth_capabilities_nonskippable(
+    *,
+    baseline: frozenset[str],
+    proposed: frozenset[str],
+    control_path: str,
+) -> None:
+    """Control paths cannot skip or downgrade auth/security capabilities (R10)."""
+    dropped = (baseline & AUTH_SECURITY_CAPABILITIES) - proposed
+    if dropped:
+        raise ValueError(
+            f"{control_path} cannot skip required auth capabilities: {sorted(dropped)}"
+        )
+
+
 def _canonical_bytes(value: Any) -> bytes:
     return json.dumps(
         value, sort_keys=True, separators=(",", ":"), ensure_ascii=False
@@ -167,6 +284,7 @@ def _assert_required_capability_invariant(
     proposal: Mapping[str, Any],
     canonical_graph: Mapping[str, Any],
 ) -> None:
+    assert_required_capability_topology(proposal, canonical_graph)
     canonical_nodes = {
         str(node["id"]): node for node in canonical_graph["spec"]["nodes"]
     }
@@ -174,11 +292,7 @@ def _assert_required_capability_invariant(
     for node_id, canonical_node in canonical_nodes.items():
         if not is_required_capability_node(canonical_node):
             continue
-        proposed = proposal_nodes.get(node_id)
-        if proposed is None:
-            raise ValueError(
-                f"proposal rejected: required-capability node {node_id} missing"
-            )
+        proposed = proposal_nodes[node_id]
         if _canonical_bytes(proposed) != _canonical_bytes(canonical_node):
             raise ValueError(
                 "proposal rejected: required-capability node "

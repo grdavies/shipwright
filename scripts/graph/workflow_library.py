@@ -22,13 +22,15 @@ from graph.cutover import CutoverStage, DogfoodEvidence  # noqa: E402
 from graph.dynamic_proposal import (
     ProposalBudget,
     ProposalDecision,
+    assert_auth_capabilities_nonskippable,
     evaluate_dynamic_proposal,
+    is_required_capability_node,
 )  # noqa: E402
 from graph.ir import (  # noqa: E402
     validate_fragment_use_entry,
     WorkflowGraphValidationError,
 )  # noqa: E402
-from graph.kernel_compiler import compile_workflow_graph  # noqa: E402
+from graph.detectors.registry import CAPABILITY_AUTH  # noqa: E402
 from graph.scheduling_modes import ALLOWED_EXTERNAL_AUTHORIZERS  # noqa: E402
 
 LIBRARY_VERSION = 1
@@ -1052,6 +1054,41 @@ def demote_template_plan_policy(
     return path
 
 
+def required_capabilities_from_graph(graph: Mapping[str, Any]) -> frozenset[str]:
+    """Collect typed required capability ids declared on graph nodes."""
+    caps: set[str] = set()
+    for node in graph["spec"]["nodes"]:
+        metadata = node.get("metadata") or {}
+        cap_id = metadata.get("requiredCapabilityId")
+        if isinstance(cap_id, str) and cap_id:
+            caps.add(cap_id)
+            continue
+        if is_required_capability_node(node):
+            step = str((node.get("target") or {}).get("step") or "")
+            if "auth" in step:
+                caps.add(CAPABILITY_AUTH)
+    return frozenset(caps)
+
+
+def assert_control_path_preserves_auth(
+    *,
+    baseline_graph: Mapping[str, Any],
+    adjusted_graph: Mapping[str, Any],
+    control_path: str,
+) -> None:
+    """Profile/budget/cache/demotion/package paths cannot skip auth caps (R10)."""
+    baseline = required_capabilities_from_graph(baseline_graph)
+    proposed = required_capabilities_from_graph(adjusted_graph)
+    try:
+        assert_auth_capabilities_nonskippable(
+            baseline=baseline,
+            proposed=proposed,
+            control_path=control_path,
+        )
+    except ValueError as exc:
+        raise WorkflowLibraryError(str(exc)) from exc
+
+
 def evaluate_saved_template(
     name: str,
     *,
@@ -1070,6 +1107,11 @@ def evaluate_saved_template(
         values=values,
         root=root,
         kernel_options=kernel_options,
+    )
+    assert_control_path_preserves_auth(
+        baseline_graph=canonical_graph,
+        adjusted_graph=prepared.graph,
+        control_path="optimizer-proposal",
     )
     return evaluate_dynamic_proposal(
         prepared.graph,
