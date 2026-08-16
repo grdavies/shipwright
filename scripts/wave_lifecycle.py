@@ -175,7 +175,14 @@ def load_plan(
         rel = plan_rel.strip()
         if rel == GLOBAL_PLAN_REL:
             fail(f"repository-global plan path not allowed: {rel}")
-        path = (root / rel).resolve()
+        # Relative run-scoped plans live under primary `.cursor/` (R28). Resolve
+        # against path_normalize_anchor so orchestrator-cwd deliver-loop finds them.
+        from wave_state import path_normalize_anchor
+        candidate = Path(rel)
+        if candidate.is_absolute():
+            path = candidate.resolve()
+        else:
+            path = (path_normalize_anchor(root) / rel).resolve()
         if not path.is_file():
             fail(f"plan not found: {rel}")
         try:
