@@ -111,7 +111,7 @@
     "graphExecution": {
       "type": "object",
       "additionalProperties": false,
-      "description": "WorkflowGraph scheduler defaults (PRD 269 R17). Cache and maxConcurrency are independently tunable.",
+      "description": "WorkflowGraph scheduler defaults (PRD 269 R17). GraphScheduler owns the single owning loop; node work delegates through ExecutionBackend. Cache and maxConcurrency are independently tunable.",
       "properties": {
         "resourceLimits": {
           "type": "object",
