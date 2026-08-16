@@ -107,3 +107,11 @@ kernel (`kernel-classification.json` remains single-sourced). Planning-unit stat
 status`) is orthogonal to execution-graph receipts under `.cursor/sw-graph-runs/<runId>/`. Generic graph
 `runId` maps from the deliver/orchestrator `runId`.
 
+## Conductor vs GraphScheduler (PRD 271 R15)
+
+Conductor fan-out (parallel phases, intra-phase execute Tasks, merge queue) is **not** `GraphScheduler`.
+The graph scheduler owns WorkflowGraph node admission on a **single owning loop**; node work crosses
+`ExecutionBackend` with host-authoritative envelopes (`scripts/graph/execution_backend.py`). Never
+substitute conductor parallel dispatch for graph concurrency or vice versa.
+
+

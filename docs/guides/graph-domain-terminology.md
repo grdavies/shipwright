@@ -38,6 +38,8 @@ Operator surfaces stay `/sw-deliver` and `/sw-status` (no graph-prefixed slash c
 | `graph-progress` / `explain` | `/sw-status` live progress and per-node blocker hierarchy. |
 | `cutover stage` | Dogfood-gated ownership: `dogfood` → `limited-scope` → `full-ownership`. |
 | `maxConcurrency: 1` | Serial-equivalent mitigation lane on the graph scheduler (not a second runtime). |
+| `ExecutionBackend` | Submit/poll/cancel/result boundary for node work (`scripts/graph/execution_backend.py`). Host adjudicates identity, purity, and timing; backend terminal envelopes are advisory only. |
+| `GraphScheduler` | Single owning loop for WorkflowGraph admission and state transitions — distinct from orchestrator conductor fan-out. |
 | **fragment pin** | Typed `use:` reference `<name>@<version>` to a versioned `WorkflowFragment` in `.sw/workflows/fragments/`; expansion records each pin's digest and fails closed on cycles or ceiling violations. |
 | **shadow score** | Kernel-derived comparison of candidate vs canonical graphs: predicted latency, cost, parallelism, node count, resource demand, and verification coverage (aggregate and per verifier class). Proposal-supplied metric fields are ignored; shadow never mutates dispatch. |
 | **`dry-clean`** | Convergence verdict when a discovery round exited successfully, produced non-empty evidence, and was not truncated or rate-limited. May converge only after round-health attestation passes. Reason code: `r7.convergence.dry-clean`. |
@@ -74,3 +76,7 @@ journal, in-flight intents, pool snapshots, and status/explain queries all index
 
 **Cutover:** `dogfood` → `limited-scope` (requires live status/explain) → `full-ownership` (named
 authorizer). The human merge gate is never removed.
+
+## Conductor vs GraphScheduler (PRD 271 R15)
+
+Orchestrator conductors fan out **phases** and **execute-tier Tasks** — they do not own WorkflowGraph node admission. `GraphScheduler` runs the **single owning loop** for execution-graph state; completions marshal as events on that loop. Parallel phase dispatch and graph concurrency are complementary layers, not duplicate schedulers. Operator surfaces remain `/sw-deliver`, `/sw-ship`, and `/sw-status` — no `/sw-graph-*` commands.

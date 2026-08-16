@@ -61,6 +61,21 @@ python3 scripts/status_integrity.py explain <nodeId> --run-id <runId> [--graph-j
 Progress payloads include `runId`, `verdict`, per-state `counts`, ordered `nodes[]`, `executionMode`
 (`serial-only` | `concurrent` | `unknown`), and a `legend`.
 
+### Cache provenance (PRD 271 R4/R15)
+
+Cache hits are provenance-stamped on receipts and graph-progress — do not infer reuse from chat or from
+run journals alone. The canonical cache store lives at `.cursor/sw-graph-cache/` (distinct from
+`.cursor/sw-graph-runs/<runId>/receipts/`).
+
+| Field | Meaning |
+| --- | --- |
+| `cacheSource` | `cache` when served from the canonical cache store |
+| `cacheKey` | Content-addressed identity for the cache entry |
+| `originalRunId` | Run that first produced the cached artifact (scope ladder applies) |
+
+`/sw-status` graph-progress and explain surface these fields when present. Run-scope dogfood default
+does not treat intra-run memoization as “cross-run cache” — see `graphExecution.cache.scope`.
+
 ### Blocker hierarchy
 
 Explain orders blockers actionable-first, then passive waits:

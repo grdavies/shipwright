@@ -1294,6 +1294,8 @@ delegated child command. Full policy: `.sw/models-tiering.md`.
 WorkflowGraph content-addressed caching is configured under `graphExecution.cache` and stored separately
 from run journals at `.cursor/sw-graph-cache/` (see `.sw/layout.md`).
 
+`GraphScheduler` owns the single owning loop; node work crosses `ExecutionBackend` with host-authoritative terminal envelopes (`scripts/graph/execution_backend.py`). Orchestrator conductor fan-out is orthogonal — not a substitute for graph concurrency.
+
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `graphExecution.cache.enabled` | `true` | When `false`, the scheduler does not consult the canonical cache store |

@@ -274,6 +274,11 @@ WorkflowGraph declared in `core/sw-reference/kernel-classification.json` (`canon
 The topology is configuration-declared only — no adaptive PRD 272 capability selection. Operator entry
 remains `/sw-ship`; the graph halts at merge-ready and **never merges**.
 
+**Quick graph-native (PRD 271 R7/R15):** Quick-tier `/sw-ship` compiles to a fixed WorkflowGraph via
+`quick_ship_compile.py` — same operator entry, no `/sw-graph-*` commands. The deliver **conductor** fans out
+phases on `/sw-deliver`; it is **not** the `GraphScheduler` owning loop for node execution.
+
+
 | Mode | Entry | Evidence root | Merge pause |
 | --- | --- | --- | --- |
 | Interactive | `/sw-ship` (no `--phase-mode`) | `.cursor/sw-ship-runs/<phase>/` | Retained — "ready to merge — your call" |

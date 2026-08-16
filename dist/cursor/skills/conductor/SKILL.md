@@ -60,6 +60,20 @@ duplicated — graph scheduling compiles into the same gate envelope as wave/pha
 `docs/guides/configuration.md`). Cutover stages (`dogfood` → `limited-scope` → `full-ownership`) never
 drop the human merge gate.
 
+## Conductor vs GraphScheduler (PRD 271 R15)
+
+The orchestrator **conductor** drives wave/phase **fan-out**, merge queues, and in-turn `deliver-loop` /
+`doc-loop` self-continuation. It is **not** the `GraphScheduler` **owning loop** (`scripts/graph/scheduler.py`).
+
+| Layer | Role | Durable state |
+| --- | --- | --- |
+| Conductor | Parallel phase dispatch, intra-phase execute fan-out, merge queue, legitimate halts | `.cursor/sw-deliver-runs/`, `.cursor/sw-deliver-state.*` |
+| `GraphScheduler` | Single owning loop for node admission, pool leases, cancel fencing, cache consult | Receipt journal `.cursor/sw-graph-runs/<runId>/`; cache `.cursor/sw-graph-cache/` |
+
+Node execution delegates through `ExecutionBackend` (`scripts/graph/execution_backend.py`); the host
+adjudicates terminal envelopes. Operator UX stays on existing `sw-*` commands — **no** `/sw-graph-*` family.
+
+
 ## Durable artifacts (resumption — R4)
 
 A fresh agent with no prior chat context resumes from:
