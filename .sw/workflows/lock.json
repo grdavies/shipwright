@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "packages": {
+    "shipwright-quick@1.0.0": {
+      "digest": "6a43d80b133e79a7f3449476a805483a369b898cb6df4c0a39a7666b340fff5f",
+      "signerKeyId": "shipwright-test",
+      "dependencies": [
+        "shipwright-review@0.2.0"
+      ]
+    },
+    "shipwright-review@0.2.0": {
+      "digest": "84499993499d67e7f3afafcaa2717d69beb316ccc936eee93fdbd05981879a0d",
+      "signerKeyId": "shipwright-test",
+      "dependencies": []
+    }
+  }
+}

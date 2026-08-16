@@ -281,7 +281,13 @@
     "workflowTemplateVersions": {
       "libraryVersion": 1,
       "libraryRoot": ".sw/workflows",
-      "templates": []
+      "templates": [
+        {
+          "name": "lock",
+          "libraryVersion": 1,
+          "path": ".sw/workflows/lock.json"
+        }
+      ]
     },
     "registryFamilies": {
       "issues.providers": [

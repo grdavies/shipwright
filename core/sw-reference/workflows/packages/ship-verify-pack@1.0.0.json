@@ -1,0 +1,59 @@
+{
+  "dependencies": [],
+  "fragment": {
+    "graph": {
+      "apiVersion": "shipwright.dev/v1alpha1",
+      "kind": "WorkflowGraph",
+      "metadata": {
+        "name": "ship-verify-pack"
+      },
+      "spec": {
+        "edges": [],
+        "nodes": [
+          {
+            "id": "verify",
+            "isolation": {
+              "mode": "worktree",
+              "writeScope": "worktree"
+            },
+            "kind": "command",
+            "resources": {
+              "pool": "code-writers",
+              "slots": 1,
+              "timeoutSeconds": 300
+            },
+            "target": {
+              "step": "sw-verify"
+            },
+            "verification": {
+              "required": true,
+              "strategy": "mechanical"
+            }
+          }
+        ],
+        "resourceLimits": {
+          "maxConcurrency": 1,
+          "maxDurationSeconds": 600
+        },
+        "verification": {
+          "failClosed": true,
+          "required": true
+        }
+      }
+    },
+    "kind": "WorkflowFragment",
+    "libraryVersion": 1,
+    "name": "ship-verify-pack",
+    "requiredCapability": false,
+    "version": 1
+  },
+  "kind": "WorkflowPackage",
+  "name": "ship-verify-pack",
+  "provenance": {
+    "contentDigest": "893d656d02e7860382b78245da301b95ff69c4a6ecd36a43f1b0a958dd840b91",
+    "signature": "569c531f2f16e33fda74055e5e32847846063ae3bfdb3d7c791c1e2cd51034a7",
+    "signerKeyId": "shipwright-ci"
+  },
+  "schemaVersion": 1,
+  "version": "1.0.0"
+}

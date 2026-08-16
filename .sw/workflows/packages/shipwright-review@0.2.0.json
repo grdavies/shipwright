@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "kind": "WorkflowPackage",
+  "name": "shipwright-review",
+  "version": "0.2.0",
+  "dependencies": [],
+  "producer": "shipwright-dogfood",
+  "graph": {
+    "nodes": [
+      {
+        "id": "review",
+        "kind": "verifier",
+        "target": {
+          "step": "sw-review"
+        }
+      }
+    ],
+    "edges": []
+  },
+  "provenance": {
+    "signerKeyId": "shipwright-test",
+    "signature": "66171f607687a322deb9a05d5e7a6b043ec265335be0af2d0e3166bea34743a6",
+    "contentDigest": "84499993499d67e7f3afafcaa2717d69beb316ccc936eee93fdbd05981879a0d"
+  }
+}

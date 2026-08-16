@@ -369,6 +369,13 @@
     "graph/legacy_adapters.py",
     "graph/lineage.py",
     "graph/observability.py",
+    "graph/packages/__init__.py",
+    "graph/packages/adoption.py",
+    "graph/packages/approval_tuple.py",
+    "graph/packages/compile.py",
+    "graph/packages/lockfile.py",
+    "graph/packages/resolver.py",
+    "graph/packages/trust.py",
     "graph/quick_ship_compile.py",
     "graph/resource_pools.py",
     "graph/router_nodes.py",
@@ -699,5 +706,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 696
+  "moduleCount": 703
 }
