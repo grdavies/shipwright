@@ -29,6 +29,13 @@ def repo_root() -> Path:
     return git_root()
 
 
+def redact_learning_derivation(text: str, *, may_egress: bool) -> tuple[str, dict[str, int]]:
+    """Delegate to memory_redact learning derivation helper (PRD 272 R14)."""
+    import memory_redact
+
+    return memory_redact.redact_learning_derivation(text, may_egress=may_egress)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(argv if argv is not None else sys.argv[1:])
     if os.environ.get("SW_HARNESS") == "1" and "--destination" not in args:
