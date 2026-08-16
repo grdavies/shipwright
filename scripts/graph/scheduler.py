@@ -43,6 +43,7 @@ from graph.scheduling_modes import (
     ExternalDispatchAuthorization,
     authorize_external_dispatch,
 )
+from graph.timing_events import TimingCategory, TimingEventRecorder
 from graph.cache_store import (
     CacheScope,
     CanonicalCacheStore,
@@ -179,10 +180,16 @@ class SchedulerRun:
     contention_findings: tuple[ContentionFinding, ...]
     pool_snapshot: Mapping[str, Any]
     cancel_mode: str | None = None
+    timing_events: tuple[dict[str, Any], ...] = ()
 
     def observability(self, graph: Mapping[str, Any]) -> GraphObservability:
         """Create the read-only receipts-backed view for this completed run."""
-        return GraphObservability(graph, self.receipts, run_id=self.run_id)
+        return GraphObservability(
+            graph,
+            self.receipts,
+            run_id=self.run_id,
+            timing_events=self.timing_events,
+        )
 
 
 NodeExecutor = Callable[[dict[str, Any]], NodeExecutionResult]
@@ -659,6 +666,16 @@ class GraphScheduler:
         self._validate_slot_requests(graph)
         started_at = self._clock()
         applied_cancel: CancelMode | None = None
+        timing = TimingEventRecorder(
+            self._receipts,
+            clock=self._clock,
+            run_started_monotonic=started_at,
+        )
+        node_pending_since: dict[str, float] = {
+            node_id: started_at for node_id in by_id
+        }
+        node_fanin_recorded: set[str] = set()
+        node_parked: dict[str, tuple[str, float]] = {}
 
         claims_by_id = {
             node_id: NodeIsolationClaim(
@@ -693,10 +710,14 @@ class GraphScheduler:
             )
 
         def flush_snapshot(queue: Sequence[str] = ()) -> None:
+            bk_start = self._clock()
             self._receipts.write_pool_snapshot(
                 self._pools.snapshot(),
                 parked=parked_ids,
                 queue=list(queue),
+            )
+            timing.record_bookkeeping(
+                int((self._clock() - bk_start) * 1000), detail="pool-snapshot"
             )
 
         def mark_terminal(
@@ -784,6 +805,26 @@ class GraphScheduler:
                 receipt=receipt,
             )
 
+        def _record_park_end(node_id: str) -> None:
+            parked = node_parked.pop(node_id, None)
+            if parked is None:
+                return
+            category_str, park_start = parked
+            duration_ms = int((self._clock() - park_start) * 1000)
+            if duration_ms <= 0:
+                return
+            timing.record_interval(
+                node_id,
+                TimingCategory(category_str),
+                duration_ms=duration_ms,
+                monotonic_start_ms=int((park_start - started_at) * 1000),
+            )
+
+        def _park_node(node_id: str, category: TimingCategory) -> None:
+            if node_id in node_parked:
+                return
+            node_parked[node_id] = (category.value, self._clock())
+
         def ready_set() -> list[str]:
             """Return ready node ids (source-order); record permanent fan-in blocks."""
             ready: list[str] = []
@@ -806,6 +847,20 @@ class GraphScheduler:
                     )
                     blocked_now.append(node_id)
                     continue
+                if node_id not in node_fanin_recorded:
+                    wait_ms = int(
+                        (self._clock() - node_pending_since[node_id]) * 1000
+                    )
+                    if wait_ms > 0:
+                        timing.record_interval(
+                            node_id,
+                            TimingCategory.FANIN_WAIT,
+                            duration_ms=wait_ms,
+                            monotonic_start_ms=int(
+                                (node_pending_since[node_id] - started_at) * 1000
+                            ),
+                        )
+                    node_fanin_recorded.add(node_id)
                 ready.append(node_id)
             for node_id in blocked_now:
                 pending.discard(node_id)
@@ -982,6 +1037,15 @@ class GraphScheduler:
                     return
             except KeyError:
                 pass
+
+            if result.duration_ms > 0:
+                end_mono = int((self._clock() - started_at) * 1000)
+                timing.record_interval(
+                    node_id,
+                    TimingCategory.EXECUTION,
+                    duration_ms=result.duration_ms,
+                    monotonic_start_ms=max(0, end_mono - result.duration_ms),
+                )
 
             node = by_id[node_id]
             expected = predecessors[node_id]
@@ -1327,6 +1391,7 @@ class GraphScheduler:
             fanin = fanin_for(node_id)
             if fanin.unsettled or fanin.halt:
                 return False
+            _record_park_end(node_id)
             if complete_replay(node_id, fanin):
                 return True
             if try_cache_hit(node_id, fanin):
@@ -1336,6 +1401,7 @@ class GraphScheduler:
                 claims_by_id[node_id], inflight_claims
             )
             if gate_hits:
+                _park_node(node_id, TimingCategory.CONTENTION_WAIT)
                 if node_id not in parked_ids:
                     parked_ids.append(node_id)
                 return False
@@ -1349,6 +1415,7 @@ class GraphScheduler:
                     f"node {node_id}: unsatisfiable pool request at dispatch"
                 ) from exc
             except PoolExhausted:
+                _park_node(node_id, TimingCategory.RESOURCE_WAIT)
                 if node_id not in parked_ids:
                     parked_ids.append(node_id)
                 return False
@@ -1365,10 +1432,14 @@ class GraphScheduler:
                 mutating=mutating,
                 timeout_seconds=timeout_seconds,
             )
+            bk_start = self._clock()
             self._receipts.begin(
                 node_id,
                 f"{run_id}:{graph_hash}:{node_id}",
                 intent,
+            )
+            timing.record_bookkeeping(
+                int((self._clock() - bk_start) * 1000), detail="receipt-begin"
             )
             work = _InflightWork(
                 node_id=node_id,
@@ -1392,6 +1463,7 @@ class GraphScheduler:
             )
             return True
 
+        max_observed_inflight = 0
         self._state_owner_thread = threading.get_ident()
         loop_done = False
         try:
@@ -1469,9 +1541,11 @@ class GraphScheduler:
                 ):
                     for node_id in ready:
                         if len(inflight) >= max_conc:
+                            _park_node(node_id, TimingCategory.QUEUE_WAIT)
                             break
                         if _try_admit(node_id):
                             admitted += 1
+                    max_observed_inflight = max(max_observed_inflight, len(inflight))
 
                 flush_snapshot(queue=ready)
 
@@ -1527,6 +1601,8 @@ class GraphScheduler:
                 ),
                 "failed": sum(1 for item in ordered_runs if item.verdict == "fail"),
                 "passed": sum(1 for item in ordered_runs if item.verdict == "pass"),
+                "maxObservedInflight": max_observed_inflight,
+                "timingEventCount": len(timing.events),
             }
         )
         verdict = (
@@ -1543,4 +1619,5 @@ class GraphScheduler:
             contention_findings=contention,
             pool_snapshot=self._pools.snapshot(),
             cancel_mode=None if applied_cancel is None else applied_cancel.value,
+            timing_events=timing.events,
         )
