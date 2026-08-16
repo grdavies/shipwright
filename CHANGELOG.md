@@ -896,6 +896,7 @@
 * merge phase packages-trust-approval-tuple-size-large into feat/workflow-intelligence-assurance (b84ac4c) <!-- sw-deliver:packages-trust-approval-tuple-size-large -->
 * merge phase promotion-policy-and-coverage-semantics-size-large into feat/workflow-intelligence-assurance (2ff558b) <!-- sw-deliver:promotion-policy-and-coverage-semantics-size-large -->
 * merge phase profiles-budgets-traceability-triage-docs-size-large into feat/workflow-intelligence-assurance (43a7d6c) <!-- sw-deliver:profiles-budgets-traceability-triage-docs-size-large -->
+* merge phase label-schema-and-provenance-size-medium into feat/reviewer-effectiveness-calibration (9fce129) <!-- sw-deliver:label-schema-and-provenance-size-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
