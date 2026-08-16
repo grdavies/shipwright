@@ -22,7 +22,6 @@ from graph.scheduling_modes import (
     validate_scheduling_mode,
 )
 from graph.timing_events import observed_execution_overlap
-from graph.verifier_policies import VerifierKind, VerifierResult, evaluate_verifiers
 
 
 class CutoverError(RuntimeError):
@@ -476,18 +475,8 @@ class CutoverDriver:
             validate_scheduling_mode(str(node["kind"]), default_mode)
 
         result = scheduler.run(graph, run_id=run_id, internal_only=True)
-        verification = evaluate_verifiers(
-            [
-                VerifierResult(
-                    verifier_id="cutover-scheduler",
-                    kind=VerifierKind.MECHANICAL,
-                    passed=result.verdict == "pass",
-                    evidence_ref=run_id,
-                )
-            ]
-        )
-        if not verification.passed:
-            raise CutoverError(verification.reason)
+        if result.verdict != "pass":
+            raise CutoverError(f"scheduler cutover run failed: {result.verdict}")
 
         return CutoverRun(
             path="scheduler",
