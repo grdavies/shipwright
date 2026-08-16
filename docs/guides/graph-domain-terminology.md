@@ -77,6 +77,6 @@ journal, in-flight intents, pool snapshots, and status/explain queries all index
 **Cutover:** `dogfood` → `limited-scope` (requires live status/explain) → `full-ownership` (named
 authorizer). The human merge gate is never removed.
 
-## Conductor vs GraphScheduler (PRD 271 R15)
+## Conductor vs GraphScheduler
 
 Orchestrator conductors fan out **phases** and **execute-tier Tasks** — they do not own WorkflowGraph node admission. `GraphScheduler` runs the **single owning loop** for execution-graph state; completions marshal as events on that loop. Parallel phase dispatch and graph concurrency are complementary layers, not duplicate schedulers. Operator surfaces remain `/sw-deliver`, `/sw-ship`, and `/sw-status` — no `/sw-graph-*` commands.

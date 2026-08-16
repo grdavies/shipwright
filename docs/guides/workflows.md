@@ -58,7 +58,7 @@ stabilize → ready/merge-ready halt. Topology is config-declared only (no adapt
 **never auto-merges**.
 
 
-**Conductor vs GraphScheduler (PRD 271 R15):** `/sw-deliver` autonomous conductor fans out phases and drives
+**Conductor vs GraphScheduler:** `/sw-deliver` autonomous conductor fans out phases and drives
 merge queues — it does not replace `GraphScheduler`. WorkflowGraph node execution runs on the graph scheduler's
 single owning loop via `ExecutionBackend`; Quick `/sw-ship` compiles to the same IR. No `/sw-graph-*` commands.
 
