@@ -169,6 +169,7 @@ def load_plan(
     state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     from wave_run_paths import GLOBAL_PLAN_REL
+    from wave_state import path_normalize_anchor
     import wave_run_plan as run_plan
 
     if plan_rel:
@@ -177,7 +178,6 @@ def load_plan(
             fail(f"repository-global plan path not allowed: {rel}")
         # Relative run-scoped plans live under primary `.cursor/` (R28). Resolve
         # against path_normalize_anchor so orchestrator-cwd deliver-loop finds them.
-        from wave_state import path_normalize_anchor
         candidate = Path(rel)
         if candidate.is_absolute():
             path = candidate.resolve()
