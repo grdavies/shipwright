@@ -201,6 +201,26 @@ Shadow comparison output and digest-bound promotion confirmation on `/sw-deliver
 `core/commands/sw-deliver.md` (Workflow optimizer). Term definitions:
 `docs/guides/graph-domain-terminology.md` (`dry-clean`, `dry-error`, `max_rounds`).
 
+## Detector evidence and false-positive correction (PRD 272 R8)
+
+Mechanical detector injections surface on `/sw-status` **graph-progress** and **explain**
+payloads (see **Graph live progress and node explain** above) when `metadata.detectorResults`
+is present on the active WorkflowGraph. Every injected `requiredCapabilityId` MUST show the
+evidence paths and rule that produced it.
+
+| Field | Meaning |
+| --- | --- |
+| `injections[].capabilityId` | Typed `requiredCapabilityId` admitted through compile |
+| `injections[].detectorId` / `detectorVersion` | Source detector id + version |
+| `injections[].ruleId` | Mechanical rule that fired |
+| `injections[].evidencePaths` | Paths/hashes from the realized diff |
+| `overrides[]` | Auditable false-positive corrections (`learning:false-positive-override`) |
+
+False-positive correction is operator-initiated and recorded on the run receipt — overrides are
+labeled learning data and never silently drop mechanical requirements without an auditable record.
+Mechanical re-detect returning `no-fire` with matching diff digest is the only automated reduction
+path (see PRD 272 R7).
+
 **Communication intensity:** ultra
 
 **Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-status`.

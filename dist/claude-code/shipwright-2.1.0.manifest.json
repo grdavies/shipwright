@@ -339,6 +339,16 @@
     "graph/cost_telemetry.py",
     "graph/crash_replay_harness.py",
     "graph/cutover.py",
+    "graph/detectors/__init__.py",
+    "graph/detectors/builtin.py",
+    "graph/detectors/compiler.py",
+    "graph/detectors/coverage.py",
+    "graph/detectors/evidence.py",
+    "graph/detectors/patterns.py",
+    "graph/detectors/registry.py",
+    "graph/detectors/result.py",
+    "graph/detectors/runner.py",
+    "graph/detectors/unclassified.py",
     "graph/dynamic_proposal.py",
     "graph/execution_backend.py",
     "graph/execution_receipts.py",
@@ -679,5 +689,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 676
+  "moduleCount": 686
 }
