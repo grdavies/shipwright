@@ -7,6 +7,12 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from graph.absolute_floor import (
+    AbsoluteFloorError,
+    apply_optimization_profile,
+    enforce_absolute_floor,
+    required_capabilities_from_graph,
+)
 from graph.cutover import CutoverStage, DogfoodEvidence
 from graph.isolation_policy import (
     ShadowDispatchDecision,
@@ -393,6 +399,8 @@ def evaluate_dynamic_proposal(
     cutover_evidence: DogfoodEvidence | None,
     budget: ProposalBudget,
     kernel_options: Mapping[str, Any] | None = None,
+    injected_capability_ids: frozenset[str] | None = None,
+    optimization_profile: str = "balanced",
 ) -> ProposalDecision:
     """Select a guarded proposal or compile and return the canonical graph.
 
@@ -425,8 +433,25 @@ def evaluate_dynamic_proposal(
                 proposal,
                 template=canonical_graph,
             )
+            if injected_capability_ids is not None:
+                profile_adjusted = apply_optimization_profile(
+                    injected_capability_ids,
+                    optimization_profile,
+                )
+                enforce_absolute_floor(
+                    injected_capability_ids=injected_capability_ids,
+                    profile_adjusted_capability_ids=profile_adjusted,
+                    profile=optimization_profile,
+                )
+                proposed_caps = required_capabilities_from_graph(proposal)
+                missing = profile_adjusted - proposed_caps
+                if missing:
+                    raise AbsoluteFloorError(
+                        "proposal missing profile-adjusted capabilities: "
+                        f"{sorted(missing)}"
+                    )
             compiled = compile_workflow_graph(proposal, **options)
-        except (KernelCompilationError, ValueError) as exc:
+        except (KernelCompilationError, ValueError, AbsoluteFloorError) as exc:
             reason = f"proposal rejected: {exc}"
         else:
             return ProposalDecision(
