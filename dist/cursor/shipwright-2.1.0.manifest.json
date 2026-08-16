@@ -356,6 +356,8 @@
     "graph/ir.py",
     "graph/isolation_policy.py",
     "graph/kernel_compiler.py",
+    "graph/learning_consumers.py",
+    "graph/learning_store.py",
     "graph/legacy_adapters.py",
     "graph/lineage.py",
     "graph/observability.py",
@@ -689,5 +691,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 686
+  "moduleCount": 688
 }
