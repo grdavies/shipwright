@@ -93,6 +93,7 @@
     "pr-test-plan.manifest.json",
     "quality-signal.schema.json",
     "root-cause-record.schema.json",
+    "risk-class-floors.json",
     "schemas/",
     "schemas/orchestrator-guideline-pack.schema.json",
     "schemas/orchestrator-step-plan.schema.json",
