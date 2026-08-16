@@ -31,6 +31,7 @@ from graph.ir import (  # noqa: E402
     WorkflowGraphValidationError,
 )  # noqa: E402
 from graph.detectors.registry import CAPABILITY_AUTH  # noqa: E402
+from graph.kernel_compiler import compile_workflow_graph  # noqa: E402
 from graph.scheduling_modes import ALLOWED_EXTERNAL_AUTHORIZERS  # noqa: E402
 
 LIBRARY_VERSION = 1
