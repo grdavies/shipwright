@@ -888,6 +888,7 @@
 * merge phase measured-critical-path-attribution-size-medium into feat/graph-execution-runtime-v2 (9d264cc) <!-- sw-deliver:measured-critical-path-attribution-size-medium -->
 * merge phase docs-currency-pack-size-medium into feat/graph-execution-runtime-v2 (bf72cb2) <!-- sw-deliver:docs-currency-pack-size-medium -->
 * merge phase cutover-evidence-per-gap-closeout-size-small into feat/graph-execution-runtime-v2 (ed68b94) <!-- sw-deliver:cutover-evidence-per-gap-closeout-size-small -->
+* merge phase detector-contracts-and-required-capability-injection-size-large into feat/workflow-intelligence-assurance (39a7d7b) <!-- sw-deliver:detector-contracts-and-required-capability-injection-size-large -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
