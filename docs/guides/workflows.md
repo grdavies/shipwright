@@ -340,7 +340,7 @@ on `/sw-deliver` and `/sw-status` (no graph-prefixed slash commands).
 | **Required-capability fragments** | Non-skippable; `when:` guards on required-capability fragments read only pre-dispatch mechanical artifacts |
 | **Parent re-approval** | A fragment upgrade changes the expanded digest; unapproved digests cannot dispatch |
 
-**Semver packages, lockfile, and trust (PRD 272 R19–R22):**
+**Semver packages, lockfile, and trust:**
 
 Workflow fragments can be published as semver packages under `.sw/workflows/packages/` with pins recorded
 in `.sw/workflows/lock.json`. Discovery of a catalog entry does **not** imply trust — resolution fails
@@ -1175,7 +1175,7 @@ stdout, re-run `/sw-deliver run` — provision now records durable `phaseWorktre
 validated JSON tail instead of looping `conductor:no-progress` on null paths.
 
 
-## Workflow packages, trust, and expansion tuples (PRD 272 R19–R22)
+## Workflow packages, trust, and expansion tuples
 
 Semver workflow packs live under `.sw/workflows/packages/` as signed `WorkflowPackage`
 artifacts. **Discovery does not imply trust** — only lock-pinned, signature-verified packs
