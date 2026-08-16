@@ -30,17 +30,30 @@ def _phase_env_keys() -> list[str]:
     return [k for k in os.environ if k.startswith("SW_PHASE") or k in _PHASE_ENV_KEYS]
 
 
+def _resolve_integration_branch(root: Path) -> str:
+    """Prefer durable deliver-state target; harness env is fallback only (R4)."""
+    try:
+        from wave_phase_pr import integration_branch
+
+        resolved = integration_branch(root)
+        if isinstance(resolved, str) and resolved.strip():
+            return resolved.strip()
+    except Exception:
+        pass
+    return (os.environ.get("SW_INTEGRATION_BRANCH") or "").strip()
+
+
 def _seed_changed_paths_from_integration(root: Path) -> None:
     """Prefer integration-branch diff when upstream tracking yields an empty set.
 
     Phase branches often track themselves (or a tip equal to HEAD), so default
     ``git_changed_paths`` returns [] and phase smoke widens to full unit_tests.
-    When ``SW_INTEGRATION_BRANCH`` is set, seed ``SW_CHANGED_PATHS`` from that
-    two-dot diff before stripping phase-mode env for the harness.
+    Seed ``SW_CHANGED_PATHS`` from the deliver-state integration branch (or
+    ``SW_INTEGRATION_BRANCH`` harness fallback) before stripping phase-mode env.
     """
     if os.environ.get("SW_CHANGED_PATHS", "").strip():
         return
-    integration = (os.environ.get("SW_INTEGRATION_BRANCH") or "").strip()
+    integration = _resolve_integration_branch(root)
     if not integration:
         return
     import test_scope as ts
