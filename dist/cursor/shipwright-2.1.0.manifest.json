@@ -376,6 +376,7 @@
     "graph/packages/lockfile.py",
     "graph/packages/resolver.py",
     "graph/packages/trust.py",
+    "graph/profiles.py",
     "graph/quick_ship_compile.py",
     "graph/resource_pools.py",
     "graph/router_nodes.py",
@@ -385,6 +386,7 @@
     "graph/schema/node_spec.schema.json",
     "graph/schema/workflow_graph.schema.json",
     "graph/timing_events.py",
+    "graph/traceability.py",
     "graph/transform_ops.py",
     "graph/typed_dataflow.py",
     "graph/verifier_policies.py",
@@ -652,6 +654,7 @@
     "tournament_lib.py",
     "traceability-check.py",
     "traceability_bind.py",
+    "triage_lib.py",
     "two_track_lib.py",
     "upgrade-gate.py",
     "validate_descriptor.py",
@@ -706,5 +709,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 703
+  "moduleCount": 706
 }

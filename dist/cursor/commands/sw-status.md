@@ -221,6 +221,45 @@ labeled learning data and never silently drop mechanical requirements without an
 Mechanical re-detect returning `no-fire` with matching diff digest is the only automated reduction
 path (see PRD 272 R7).
 
+## TraceRef and CoverageEdge evidence predicates (PRD 272 R24)
+
+`/sw-status` graph-progress and explain payloads may include `traceRefs` and `coverageEdges`
+serialized from `scripts/graph/traceability.py`. A coverage edge **passes** only when the
+observed verifier class matches the edge binding **at the current `headSha`**. Stale or
+wrong-class evidence is **blocking** when `blocking: true` and **advisory** when `advisory: true`.
+
+| Field | Meaning |
+| --- | --- |
+| `traceRefId` | Stable id from `stable_trace_ref_id(requirementId, verifierClass, headSha)` |
+| `requirementId` | PRD R-ID or AC binding |
+| `verifierClass` | Expected attestation class (`mechanical`, `human`, `agent`, `gate`, `verifier`) |
+| `headSha` | Git head the evidence must match |
+| `blocking` / `advisory` | Whether a failed predicate blocks merge-ready surfaces |
+
+Mechanical evaluation: `evaluate_evidence_predicate` / `evaluate_coverage_edges` in
+`scripts/graph/traceability.py`.
+
+## TraceRef / CoverageEdge evidence predicate (PRD 272 R24)
+
+WorkflowGraph status surfaces include stable `TraceRef` ids and `CoverageEdge` rows when run
+receipts expose verification evidence. Mechanical entrypoint:
+
+```bash
+python3 -m graph.traceability  # library — consumed by status_integrity graph-progress payloads
+```
+
+| Field | Meaning |
+| --- | --- |
+| `traceRefId` | Stable id (`trace:<requirement>:<digest>`) |
+| `requirementId` | Covered requirement / R-id |
+| `headSha` | Git HEAD the evidence attests |
+| `verifierClass` | `mechanical` · `evidence` · `judgment` · `synthesis` |
+| `blocking` / `advisory` | Blocking edges require non-advisory pass at current headSha |
+
+**Predicate:** pass only when `verdict=pass`, `verifierClass` matches the edge requirement, and
+`headSha` equals the run's current HEAD. Stale head or advisory-only rows do **not** satisfy
+blocking coverage — `/sw-status` labels advisory vs blocking on the payload.
+
 **Communication intensity:** ultra
 
 **Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-status`.

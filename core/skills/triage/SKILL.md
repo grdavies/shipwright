@@ -92,7 +92,14 @@ Any match adds +1 to the score:
 4. If ambiguity markers present → bump one tier (Quick→Standard, Standard→Full).
 5. If mixed/insufficient signals (no file count, empty description) → Standard (conservative).
 6. final = max(base tier, floor) using order Quick < Standard < Full.
-7. On --re-score with prior tier Quick and new score > Quick → promote; report misroute recovery.
+7. When advisory rigor is supplied, merge via `scripts/triage_lib.merge_tier_monotonic` (union/max-rigor).
+   Tier reductions require an authorized R7 reduction path — never file-count alone for Full.
+8. On --re-score with prior tier Quick and new score > Quick → promote; report misroute recovery.
+
+Mechanical scoring lives in `scripts/triage_lib.py` (`classify_triage`, `merge_triage_monotonic`).
+**Monotonic merge:** union/max-rigor of mechanical set vs advisory rigor; reductions below the
+mechanical floor require R7 authorization (detector no-fire or human waiver) — file-count alone
+(including rename-only churn) is not a sole Full trigger.
 ```
 
 ## Output contract

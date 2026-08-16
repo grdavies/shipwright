@@ -19,7 +19,22 @@ and sample prompts. For the high-level overview, see the [README](../../README.m
 
 **Risk floor:** keywords like `auth`, `payment`, `migration`, or `webhook` force **at least Standard**
 even for 1-file changes. **Ambiguity bump:** words like `maybe`, `explore`, or `TBD` push Quick→Standard
-or Standard→Full.
+or Standard→Full. Mechanical scoring and monotonic merge live in `scripts/triage_lib.py` —
+file-count alone (including rename-only churn) is not a sole Full trigger; reductions below the
+mechanical floor require detector no-fire or a recorded human waiver.
+
+### Workflow profiles and budgets
+
+`graphExecution.profiles.optimization` (`fast` | `balanced` | `thorough`) adjusts optional reviewers
+only — **cache**, **loop bounds**, and **resourceLimits** are kernel immutables and rejected in
+profile bodies. Per-node budgets (`graphExecution.budget`) halt fail-closed to **non-ready**;
+required capabilities are never shed to recover budget headroom. See [`INVARIANTS.md`](../../INVARIANTS.md).
+
+### TraceRef / CoverageEdge status
+
+Blocking coverage on `/sw-status` passes only when the correct verifier class attests `pass` at the
+current `headSha`. Advisory evidence is labeled and never satisfies blocking edges —
+`scripts/graph/traceability.py` is the canonical predicate; benchmark acceptance reuses it.
 
 ### Classification flow (`/sw-triage`)
 
@@ -196,6 +211,19 @@ After related-work acknowledgement and before PRD freeze, `/sw-doc` runs `final-
 
 Escalation never reopens a frozen artifact. Downgrade without justification fails closed with a
 machine-readable `halt` and the current/proposed tier in the payload.
+
+### Profiles, budgets, and traceability
+
+| Concern | Module | Config surface |
+| --- | --- | --- |
+| Optimization profile + budgets | `scripts/graph/profiles.py` | `graphExecution.profiles`, `graphExecution.budget` |
+| TraceRef / CoverageEdge predicates | `scripts/graph/traceability.py` | `/sw-status` graph-progress + explain |
+| Monotonic triage merge | `scripts/triage_lib.py` | `/sw-triage` (`classify` subcommand) |
+
+Kernel immutables (`cache`, `loop_bounds`, `resourceLimits`) cannot be set on workflow profiles —
+budget halt maps to **non-ready**; required capabilities are never shed to recover spend. Tier
+reductions require authorized waiver paths (`human-waiver` or mechanical no-fire) via
+`merge_tier_monotonic`. See `INVARIANTS.md` for the four cross-cutting enforcement paths.
 
 ### Publication sequencing invariants
 
