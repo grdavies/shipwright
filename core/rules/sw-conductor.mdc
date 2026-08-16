@@ -34,6 +34,8 @@ Load `skills/conductor/SKILL.md` for the full contract. These rules are the alwa
   `wave_*.py` JSON entrypoints.
 - Do not hand-edit `.cursor/sw-deliver-state.json`, phase statuses, or merge journal fields in prose.
 - Phase outcomes come from `.cursor/sw-deliver-runs/<phase-slug>/status.json` only (R19).
+- Profile/budget control paths use `scripts/graph/profiles.py`; traceability predicates use
+  `scripts/graph/traceability.py` — budget halt is non-ready; required caps are never shed (R23).
 
 ## Plan validation (PRD 022)
 
@@ -113,4 +115,16 @@ Conductor fan-out (parallel phases, intra-phase execute Tasks, merge queue) is *
 The graph scheduler owns WorkflowGraph node admission on a **single owning loop**; node work crosses
 `ExecutionBackend` with host-authoritative envelopes (`scripts/graph/execution_backend.py`). Never
 substitute conductor parallel dispatch for graph concurrency or vice versa.
+
+## Workflow intelligence invariants (PRD 272 R26)
+
+Four fail-closed invariants with enforcement paths live in [`INVARIANTS.md`](../../INVARIANTS.md):
+
+1. Required capabilities are never shed (`scripts/graph/profiles.py`, `dynamic_proposal.py`)
+2. Reduction requires detector no-fire or human waiver (`scripts/graph/detectors/`, `scripts/triage_lib.py`)
+3. Absolute floor is profile-independent (`scripts/graph/absolute_floor.py`)
+4. Trace evidence passes only at current headSha (`scripts/graph/traceability.py`, `/sw-status`)
+
+Regenerate registry-derived docs via `python3 scripts/capability_docs.py generate` after
+`capability-registry.json` edits — never hand-edit generated CAPABILITIES regions.
 

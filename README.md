@@ -17,6 +17,7 @@ on `/sw-deliver` is opt-in only — see [configuration](docs/guides/configuratio
 - **issue-derived planning graph** — under `issue-store`: read-only INDEX/living-status from issue labels, epic/sub-issue phase hierarchy with checkbox fallback, redacted cross-project recall, and inFlight tracking-issue safety (; inert for file-store users)
 - **Deliver entry** — `/sw-deliver run` accepts a frozen task-list path, `--unit-id`, or `--issue` (issue-store); `/sw-status` and `planning-graph.py status` report unified unit status (`backlog` | `planned` | `in-progress` | `complete`)
 - **WorkflowGraph runtime** — after cutover, orchestrated deliver and doc/debug/feedback paths dispatch through the shared **WorkflowGraph** IR (`scripts/graph/`); live node progress and per-node explain stay on `/sw-status` and `status_integrity.py` — no graph-prefixed slash commands
+- **Workflow invariants** — `INVARIANTS.md` documents four enforcement-backed guarantees (required-capability nonskip, monotone re-detect, R7 reduction authorization, absolute floor); regenerate `CAPABILITIES.md` via `python3 scripts/capability_docs.py generate`
 - **Graph runtime** — after cutover, **WorkflowGraph** is the production execution runtime for deliver/doc/debug/feedback (status/explain on existing `sw-` commands; see [graph-domain terminology](docs/guides/graph-domain-terminology.md))
 - **Async graph runtime** — `GraphScheduler` single owning loop with concurrent node admission; orchestrator conductor fan-out is orthogonal (not a second scheduler)
 - **Authenticated cache** — `.cursor/sw-graph-cache/` MAC-trusted store separate from run journals; run-scope dogfood default (`graphExecution.cache.scope: run`)
@@ -25,6 +26,7 @@ on `/sw-deliver` is opt-in only — see [configuration](docs/guides/configuratio
 - **Retrospective closure** — `/sw-retrospective --post-merge` closes linked planning-store units via `planning_store.py close-delivery-units`; gap resolved status transitions only through that loop
 - **Gated ship loop** — verify, review, CI truth, stabilize; *you* merge
 - **Compounding memory** — post-ship retro and durable project learnings
+- **Workflow intelligence invariants** — four fail-closed assurance rules with enforcement paths in [`INVARIANTS.md`](INVARIANTS.md); triage monotonic merge in `scripts/triage_lib.py`; TraceRef/CoverageEdge predicates in `scripts/graph/traceability.py`
 
 ```mermaid
 flowchart LR
