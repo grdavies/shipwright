@@ -345,6 +345,8 @@
     "graph/detectors/coverage.py",
     "graph/detectors/evidence.py",
     "graph/detectors/patterns.py",
+    "graph/detectors/redetect.py",
+    "graph/detectors/reduction.py",
     "graph/detectors/registry.py",
     "graph/detectors/result.py",
     "graph/detectors/runner.py",
@@ -689,5 +691,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 686
+  "moduleCount": 688
 }
