@@ -890,6 +890,7 @@
 * merge phase cutover-evidence-per-gap-closeout-size-small into feat/graph-execution-runtime-v2 (ed68b94) <!-- sw-deliver:cutover-evidence-per-gap-closeout-size-small -->
 * merge phase detector-contracts-and-required-capability-injection-size-large into feat/workflow-intelligence-assurance (39a7d7b) <!-- sw-deliver:detector-contracts-and-required-capability-injection-size-large -->
 * merge phase topology-re-detect-reduction-auth-nonskip-size-large into feat/workflow-intelligence-assurance (a652577) <!-- sw-deliver:topology-re-detect-reduction-auth-nonskip-size-large -->
+* merge phase learning-store-admission-exogenous-routing-size-large into feat/workflow-intelligence-assurance (bab9635) <!-- sw-deliver:learning-store-admission-exogenous-routing-size-large -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
