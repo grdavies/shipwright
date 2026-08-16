@@ -57,6 +57,11 @@ mirroring `canonicalPhaseChains.sw-ship` — implement → verify → review →
 stabilize → ready/merge-ready halt. Topology is config-declared only (no adaptive capability selection);
 **never auto-merges**.
 
+
+**Conductor vs GraphScheduler:** `/sw-deliver` autonomous conductor fans out phases and drives
+merge queues — it does not replace `GraphScheduler`. WorkflowGraph node execution runs on the graph scheduler's
+single owning loop via `ExecutionBackend`; Quick `/sw-ship` compiles to the same IR. No `/sw-graph-*` commands.
+
 #### Quick ship parity matrix
 
 | Concern | With PR | No PR yet | Resume authority |

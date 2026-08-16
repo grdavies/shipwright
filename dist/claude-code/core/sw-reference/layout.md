@@ -159,6 +159,8 @@ so every artifact is indexed under a single `runId` (no full-history scan).
 Deliver run-state (`.cursor/sw-deliver-runs/<runId>/`) remains the conductor cursor. Graph receipts are
 a separate namespace keyed by the same generic `runId` — not a second operator identity.
 
+The conductor cursor is **not** the `GraphScheduler` owning loop — phase/wave fan-out and merge queues are conductor concerns; node admission, cache, and timing attribution are graph-scheduler concerns (`scripts/graph/scheduler.py`).
+
 ### Authenticated canonical cache store (PRD 271 R4–R6, R21–R26)
 
 Gitignored, self-contained cache distinct from run journals. Default root:

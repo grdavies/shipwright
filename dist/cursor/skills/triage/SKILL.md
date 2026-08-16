@@ -137,3 +137,15 @@ When implementation reveals scope growth on a Quick-classified item:
 | Conservative default | empty file count | Standard |
 | Override | `--tier full` on 1-file change | Full + override recorded |
 | Misroute | `--re-score`, was Quick, now 6 files | Standard or Full |
+
+## Quick tier and graph-native `/sw-ship` (PRD 271 R7/R15)
+
+Quick-classified work has **no frozen task list** — `/sw-deliver` does not apply. Entry remains
+**`/sw-ship`**: the same operator command compiles Quick work to a fixed WorkflowGraph via
+`scripts/graph/quick_ship_compile.py` (`canonicalPhaseChains.sw-ship` in
+`kernel-classification.json`). Topology is configuration-declared only — no adaptive capability selection.
+
+Graph-native Quick does **not** add `/sw-graph-*` slash commands; live node progress and explain stay on
+`/sw-status`. On misroute (`--re-score` above Quick), route to Standard or Full — do not stretch Quick onto
+multi-phase deliver.
+
