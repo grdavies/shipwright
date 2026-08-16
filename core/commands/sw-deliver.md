@@ -606,4 +606,9 @@ gap-check + live host evidence still precede `merge-enqueue`.
 On resume after target-lock reacquisition, `deliver-loop` preserves an already-materialized phase map and
 skips duplicate state initialization before continuing from the durable cursor.
 
-<!-- currency: planning-cache rename / deliver path-anchor -->
+**Orchestrator cwd (hang-desync):** run `deliver-loop` from `.sw-worktrees/<slug>-orchestrator` (not the
+primary checkout). Repo-root cwd with an orchestrator path under `.sw-worktrees/` trips
+`deliver:orchestrator-cwd-skew`. Primary↔mirror skew uses `wave_state.sync_canonical_state_read` /
+`repair-mirror` before terminal steps.
+
+<!-- currency: orchestrator-cwd skew / canonical-state repair / wave4 closeout -->
