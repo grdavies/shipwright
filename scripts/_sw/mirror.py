@@ -76,21 +76,33 @@ def _purge_excluded(dst: Path, excludes: list[str], rel_prefix: str = "") -> Non
             _purge_excluded(entry, excludes, rel)
 
 
+def matches_exclude_patterns(rel_posix: str, patterns: list[str]) -> bool:
+    """Return whether ``rel_posix`` matches any copy-exclude or purge-target pattern."""
+    return _matches_excludes(rel_posix, patterns)
+
+
 def mirror(
     src: Path,
     dst: Path,
     *,
     excludes: list[str] | None = None,
+    purge_targets: list[str] | None = None,
     delete: bool = True,
     purge_excludes: bool = False,
 ) -> None:
-    """Replicate ``rsync -a --delete`` semantics for directory trees."""
-    excludes = list(excludes or [])
+    """Replicate ``rsync -a --delete`` semantics for directory trees.
+
+    ``excludes`` is the copy-exclude set (skipped during copy and orphan prune).
+    ``purge_targets`` is the destination purge set (removed when ``purge_excludes``
+    is true). When ``purge_targets`` is omitted, purge falls back to ``excludes``.
+    """
+    copy_excludes = list(excludes or [])
+    purge_patterns = list(purge_targets if purge_targets is not None else copy_excludes)
     if not src.is_dir():
         raise FileNotFoundError(f"mirror source not found: {src}")
     dst.mkdir(parents=True, exist_ok=True)
-    _copy_tree(src, dst, excludes)
+    _copy_tree(src, dst, copy_excludes)
     if delete:
-        _prune_orphans(src, dst, excludes)
+        _prune_orphans(src, dst, copy_excludes)
     if purge_excludes:
-        _purge_excluded(dst, excludes)
+        _purge_excluded(dst, purge_patterns)
