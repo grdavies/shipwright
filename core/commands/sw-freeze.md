@@ -177,7 +177,8 @@ invoke the shim path; do not import the facade module from workflow commands.
 ## Currency note
 
 Freeze durability continues through `planning_store.py` → `planning_store_facade.py` and
-`check_frozen_lib.py` / `check-frozen.py`. No behavior change in this refresh — commit bumps docs-currency
-binding against current freeze helpers.
+`check_frozen_lib.py` / `check-frozen.py`. Closeout (`close-delivery-units`) re-pins the newest
+`sw-freeze-record` after frozen state/label mutations so `get` / `verify-frozen-hash` stay
+tamper-clean (PRD 275) — freeze stamp itself unchanged.
 
-<!-- currency: prd-094 terminal docs-currency refresh (planning_store / check-frozen bindings) -->
+<!-- currency: prd-275 closeout freeze re-pin + planning_store / check-frozen bindings -->

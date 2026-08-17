@@ -17,6 +17,7 @@ from .issues_helpers import (
 from .memory_cache import ReplicatedPlanningCacheBackend
 from ..model import StoreResult
 from ..repository import PlanningStoreBackend
+from issues_lib import IssueRevisionConflict
 
 
 def _ps():
@@ -675,6 +676,92 @@ class IssueStoreBackend(PlanningStoreBackend):
             planning_issues=planning_issues or None,
             dry_run=False,
         )
+
+    def repin_freeze_after_close(self, record: Any) -> dict[str, Any]:
+        """Append newest sw-freeze-record for post-close state+labels (PRD 275 R1/R13/R14).
+
+        Idempotent: when the latest freeze hash already matches the current
+        canonical snapshot, returns noop. Failures are typed so closeout can
+        surface not-ready / partial-apply without silent tamper on next get.
+        """
+        if _ps().FROZEN_LABEL not in list(record.labels) and not bool(getattr(record, "locked", False)):
+            return {
+                "verdict": "ok",
+                "action": "skip",
+                "reason": "not-frozen",
+                "unitId": getattr(record, "unit_id", None),
+            }
+        if _ps().FREEZE_INCOMPLETE_LABEL in list(record.labels):
+            return {
+                "verdict": "fail",
+                "error": "freeze-incomplete",
+                "unitId": getattr(record, "unit_id", None),
+            }
+        try:
+            fresh = self._client.issue_get(record.id)
+        except (_ps().IssueTombstone, _ps().IssueTransferred, _ps().IssueBudgetExhausted) as exc:
+            _ps().handle_issue_client_error(exc)
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "verdict": "fail",
+                "error": "repin-fetch-failed",
+                "detail": str(exc),
+                "unitId": getattr(record, "unit_id", None),
+                "partialApply": True,
+            }
+        digest = _ps().canonical_hash(self._record_to_snapshot(fresh))
+        recorded = _ps().parse_freeze_record_hash(fresh.comments)
+        if recorded == digest:
+            return {
+                "verdict": "ok",
+                "action": "noop",
+                "hash": digest,
+                "alreadyPinned": True,
+                "unitId": getattr(fresh, "unit_id", None),
+            }
+        freeze_body = _ps().build_freeze_record_body(digest)
+        try:
+            self._guard_write_secrets(freeze_body, path_hint="sw-freeze-record")
+            self._client.issue_comment(fresh.id, freeze_body, markers=["sw-freeze-record"])
+            after = self._client.issue_get(fresh.id)
+        except IssueRevisionConflict as exc:
+            return {
+                "verdict": "fail",
+                "error": "repin-revision-conflict",
+                "detail": {"expected": exc.expected, "actual": exc.actual},
+                "unitId": getattr(fresh, "unit_id", None),
+                "partialApply": True,
+                "closedOk": True,
+            }
+        except Exception as exc:  # noqa: BLE001
+            return {
+                "verdict": "fail",
+                "error": "repin-append-failed",
+                "detail": str(exc),
+                "unitId": getattr(fresh, "unit_id", None),
+                "partialApply": True,
+                "closedOk": True,
+            }
+        after_hash = _ps().parse_freeze_record_hash(after.comments)
+        current = _ps().canonical_hash(self._record_to_snapshot(after))
+        if after_hash != current or current != digest:
+            return {
+                "verdict": "fail",
+                "error": "repin-hash-mismatch",
+                "recordedHash": after_hash,
+                "currentHash": current,
+                "expectedHash": digest,
+                "unitId": getattr(after, "unit_id", None),
+                "partialApply": True,
+                "closedOk": True,
+            }
+        return {
+            "verdict": "ok",
+            "action": "repin",
+            "hash": digest,
+            "priorHash": recorded,
+            "unitId": getattr(after, "unit_id", None),
+        }
 
     def verify_frozen_hash(self, unit_id: str, body_path: str) -> dict[str, Any]:
         try:

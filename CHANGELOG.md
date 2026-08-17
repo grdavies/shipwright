@@ -907,6 +907,10 @@
 * merge phase dist-freshness-size-medium into feat/sync-build-hygiene (2ac293f) <!-- sw-deliver:dist-freshness-size-medium -->
 * merge phase purge-targets-size-medium into feat/sync-build-hygiene (433f613) <!-- sw-deliver:purge-targets-size-medium -->
 * merge phase docs-and-decisions-size-small into feat/sync-build-hygiene (f6dce65) <!-- sw-deliver:docs-and-decisions-size-small -->
+* merge phase gap-only-resolver-size-medium into feat/planning-closeout-hygiene (2898813) <!-- sw-deliver:gap-only-resolver-size-medium -->
+* merge phase retro-painful-gap-capture-size-medium into feat/planning-closeout-hygiene (45800fa) <!-- sw-deliver:retro-painful-gap-capture-size-medium -->
+* merge phase freeze-re-pin-on-close-size-medium into feat/planning-closeout-hygiene (a27d2c3) <!-- sw-deliver:freeze-re-pin-on-close-size-medium -->
+* merge phase docs-and-decisions-size-small into feat/planning-closeout-hygiene (7942396) <!-- sw-deliver:docs-and-decisions-size-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
