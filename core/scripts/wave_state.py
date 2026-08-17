@@ -1052,6 +1052,62 @@ def save_run_scoped_state(root: Path, run_id: str, state: dict[str, Any]) -> Pat
     return path
 
 
+def ensure_run_scoped_state_mirrored(
+    root: Path,
+    state: dict[str, Any] | None = None,
+    *,
+    task_list: str | None = None,
+) -> dict[str, Any]:
+    """Ensure run-scoped state.json exists before terminal-ship (PRD 276 R1).
+
+    When the run directory has no state file yet, mirror from slug/canonical
+    deliver state (or the provided ``state`` hint). Idempotent when run-scoped
+    state already exists.
+    """
+    from wave_run_paths import RunIdRequiredError, state_path as run_state_path
+    import wave_run_plan as run_plan
+
+    repo_root = _path_normalize_anchor(root)
+    hint = dict(state) if isinstance(state, dict) and state else {}
+    # Prefer a rich slug/canonical payload when the hint is only a runId stub.
+    substantive_keys = {
+        k for k in hint if k not in {"runId", "updatedAt"} and hint.get(k) not in (None, "", {}, [])
+    }
+    if substantive_keys:
+        work = hint
+    else:
+        work = load_deliver_state(repo_root, task_list=task_list) or {}
+        if hint.get("runId") and not work.get("runId"):
+            work["runId"] = hint["runId"]
+    if not work:
+        return {}
+
+    requested_run_id = str(hint.get("runId") or work.get("runId") or "").strip() or None
+    try:
+        if requested_run_id:
+            run_id = requested_run_id
+            work["runId"] = run_id
+        else:
+            run_id = run_plan.ensure_run_id(repo_root, work)
+    except RunIdRequiredError:
+        return work
+
+    path = run_state_path(repo_root, run_id)
+    if path.is_file():
+        existing = load_run_scoped_state(repo_root, run_id)
+        if existing:
+            if isinstance(state, dict):
+                state["runId"] = run_id
+            return existing
+
+    payload = dict(work)
+    payload["runId"] = run_id
+    if isinstance(state, dict):
+        state["runId"] = run_id
+    save_run_scoped_state(repo_root, run_id, payload)
+    return payload
+
+
 def write_run_local_lease(
     root: Path,
     run_id: str,

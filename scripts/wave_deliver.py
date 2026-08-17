@@ -1369,9 +1369,18 @@ def cmd_finalize(root: Path, args: list[str]) -> None:
     )
     if not run_id:
         fail("--run-id or SW_RUN_ID required", exit_code=2, halt="finalize:missing-run-id")
-    from wave_state import load_run_scoped_state
+    from wave_state import ensure_run_scoped_state_mirrored, load_run_scoped_state
 
     state = load_run_scoped_state(root, run_id)
+    if not state:
+        mirrored = ensure_run_scoped_state_mirrored(root)
+        if mirrored and str(mirrored.get("runId") or "") == run_id:
+            state = mirrored
+        else:
+            # Force mirror under the requested run id when slug state exists.
+            slug_state = ensure_run_scoped_state_mirrored(root, {"runId": run_id})
+            if slug_state:
+                state = load_run_scoped_state(root, run_id) or slug_state
     if not state:
         fail(f"run state not found: {run_id}", exit_code=20, halt="finalize:run-not-found")
     payload = wt.finalize_run(
@@ -1384,8 +1393,8 @@ def cmd_finalize(root: Path, args: list[str]) -> None:
         fail(
             payload.get("error", "terminal merge unverified"),
             exit_code=10,
-            halt="finalize:merge-unverified",
-            **{k: v for k, v in payload.items() if k not in ("verdict", "error")},
+            halt=payload.get("halt") or "finalize:merge-unverified",
+            **{k: v for k, v in payload.items() if k not in ("verdict", "error", "halt")},
         )
     emit(payload)
 

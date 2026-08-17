@@ -1090,6 +1090,192 @@ def sync_terminal_state(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     return state
 
 
+# --- Finalize checkpoint ledger (PRD 276 R15) ---------------------------------
+
+FINALIZE_CHECKPOINT_FILENAME = "finalize-checkpoint.json"
+FINALIZE_CHECKPOINT_PHASES = ("release", "projection", "receipt", "immutable")
+FINALIZE_CHECKPOINT_SCHEMA = 1
+
+
+def finalize_checkpoint_path(root: Path, run_id: str) -> Path:
+    from wave_run_paths import run_directory
+
+    return run_directory(root, run_id) / FINALIZE_CHECKPOINT_FILENAME
+
+
+def resume_finalize_command(run_id: str) -> str:
+    return f"python3 scripts/wave.py finalize --run-id {run_id}"
+
+
+def empty_finalize_checkpoint(run_id: str, *, merge_commit: str | None = None) -> dict[str, Any]:
+    phases = {
+        name: {"status": "pending", "at": None, "result": None}
+        for name in FINALIZE_CHECKPOINT_PHASES
+    }
+    payload: dict[str, Any] = {
+        "schemaVersion": FINALIZE_CHECKPOINT_SCHEMA,
+        "runId": run_id,
+        "status": "in-progress",
+        "phases": phases,
+        "lastCompletedPhase": None,
+        "mergeCommit": merge_commit,
+        "resumeCommand": resume_finalize_command(run_id),
+        "updatedAt": utc_now(),
+    }
+    return payload
+
+
+def load_finalize_checkpoint(root: Path, run_id: str) -> dict[str, Any] | None:
+    from wave_json_io import StateCorruptError, read_json
+
+    path = finalize_checkpoint_path(root, run_id)
+    if not path.is_file():
+        return None
+    try:
+        data = read_json(path)
+    except StateCorruptError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def save_finalize_checkpoint(root: Path, run_id: str, checkpoint: dict[str, Any]) -> Path:
+    path = finalize_checkpoint_path(root, run_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = dict(checkpoint)
+    payload["runId"] = run_id
+    payload["updatedAt"] = utc_now()
+    payload.setdefault("resumeCommand", resume_finalize_command(run_id))
+    write_json_file(path, payload)
+    return path
+
+
+def mark_finalize_phase_started(
+    root: Path,
+    run_id: str,
+    phase: str,
+    *,
+    checkpoint: dict[str, Any] | None = None,
+    merge_commit: str | None = None,
+) -> dict[str, Any]:
+    """Write-ahead mark before executing a finalize phase (R15)."""
+    if phase not in FINALIZE_CHECKPOINT_PHASES:
+        raise ValueError(f"unknown finalize phase: {phase}")
+    ckpt = checkpoint or load_finalize_checkpoint(root, run_id) or empty_finalize_checkpoint(
+        run_id, merge_commit=merge_commit
+    )
+    if merge_commit and not ckpt.get("mergeCommit"):
+        ckpt["mergeCommit"] = merge_commit
+    phases = ckpt.setdefault("phases", {})
+    entry = dict(phases.get(phase) or {})
+    entry["status"] = "started"
+    entry["at"] = utc_now()
+    phases[phase] = entry
+    ckpt["status"] = "in-progress"
+    save_finalize_checkpoint(root, run_id, ckpt)
+    return ckpt
+
+
+def mark_finalize_phase_complete(
+    root: Path,
+    run_id: str,
+    phase: str,
+    result: dict[str, Any] | None = None,
+    *,
+    checkpoint: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if phase not in FINALIZE_CHECKPOINT_PHASES:
+        raise ValueError(f"unknown finalize phase: {phase}")
+    ckpt = checkpoint or load_finalize_checkpoint(root, run_id) or empty_finalize_checkpoint(run_id)
+    phases = ckpt.setdefault("phases", {})
+    entry = dict(phases.get(phase) or {})
+    entry["status"] = "complete"
+    entry["at"] = utc_now()
+    if result is not None:
+        entry["result"] = result
+    phases[phase] = entry
+    ckpt["lastCompletedPhase"] = phase
+    if phase == "immutable":
+        ckpt["status"] = "complete"
+    else:
+        ckpt["status"] = "in-progress"
+    save_finalize_checkpoint(root, run_id, ckpt)
+    return ckpt
+
+
+def mark_finalize_phase_failed(
+    root: Path,
+    run_id: str,
+    phase: str,
+    error: str,
+    *,
+    checkpoint: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    ckpt = checkpoint or load_finalize_checkpoint(root, run_id) or empty_finalize_checkpoint(run_id)
+    phases = ckpt.setdefault("phases", {})
+    entry = dict(phases.get(phase) or {})
+    entry["status"] = "failed"
+    entry["at"] = utc_now()
+    entry["error"] = error
+    phases[phase] = entry
+    ckpt["status"] = "failed"
+    ckpt["failedPhase"] = phase
+    ckpt["resumeCommand"] = resume_finalize_command(run_id)
+    save_finalize_checkpoint(root, run_id, ckpt)
+    return ckpt
+
+
+def finalize_phase_complete(checkpoint: dict[str, Any] | None, phase: str) -> bool:
+    if not checkpoint:
+        return False
+    phases = checkpoint.get("phases") or {}
+    entry = phases.get(phase) or {}
+    return entry.get("status") == "complete"
+
+
+def next_finalize_phase(checkpoint: dict[str, Any] | None) -> str | None:
+    """Return the first incomplete finalize phase for resume (R15)."""
+    for phase in FINALIZE_CHECKPOINT_PHASES:
+        if not finalize_phase_complete(checkpoint, phase):
+            return phase
+    return None
+
+
+def partial_finalize_resume_payload(
+    root: Path,
+    run_id: str,
+    checkpoint: dict[str, Any],
+    *,
+    error: str,
+    failed_phase: str | None = None,
+) -> dict[str, Any]:
+    """Typed resume path after partial finalize (PRD 276 R4) — not success."""
+    return {
+        "verdict": "fail",
+        "action": "run-finalize",
+        "error": error,
+        "halt": "finalize:partial",
+        "cause": "finalize:checkpoint-incomplete",
+        "failedPhase": failed_phase or checkpoint.get("failedPhase"),
+        "lastCompletedPhase": checkpoint.get("lastCompletedPhase"),
+        "checkpoint": checkpoint,
+        "checkpointPath": str(finalize_checkpoint_path(root, run_id)),
+        "resumeCommand": checkpoint.get("resumeCommand") or resume_finalize_command(run_id),
+        "note": "release before durable completion is not success; resume from last checkpoint",
+    }
+
+
+def ensure_terminal_ship_run_state(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """Mirror slug→run-scoped state before terminal-ship (PRD 276 R1)."""
+    from wave_state import ensure_run_scoped_state_mirrored
+
+    mirrored = ensure_run_scoped_state_mirrored(root, state)
+    if mirrored:
+        state.setdefault("runId", mirrored.get("runId"))
+        if mirrored.get("runId"):
+            state["runId"] = mirrored["runId"]
+    return mirrored or state
+
+
 def manual_living_doc_reconcile_suggestion(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     """Operator-facing living-doc reconcile suggestion with in-flight cwd guard (PRD 049 R3)."""
     import deliver_cwd_guard
@@ -3772,6 +3958,8 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
             else:
                 if step["action"] in ("retrospective", "terminal-ship"):
                     sync_terminal_state(root, state)
+                    if step["action"] == "terminal-ship":
+                        ensure_terminal_ship_run_state(root, state)
                     save_state(root, state)
                 persist_cursor(root, state, step["action"])
             emit(
