@@ -898,6 +898,7 @@
 * merge phase profiles-budgets-traceability-triage-docs-size-large into feat/workflow-intelligence-assurance (43a7d6c) <!-- sw-deliver:profiles-budgets-traceability-triage-docs-size-large -->
 * merge phase label-schema-and-provenance-size-medium into feat/reviewer-effectiveness-calibration (9fce129) <!-- sw-deliver:label-schema-and-provenance-size-medium -->
 * merge phase learning-store-adapter-and-metadata-persistence-size-medium into feat/reviewer-effectiveness-calibration (f876136) <!-- sw-deliver:learning-store-adapter-and-metadata-persistence-size-medium -->
+* merge phase calibration-cost-and-offline-eval-size-medium into feat/reviewer-effectiveness-calibration (b1128c8) <!-- sw-deliver:calibration-cost-and-offline-eval-size-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
