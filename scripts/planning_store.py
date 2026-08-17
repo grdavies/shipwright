@@ -29,6 +29,7 @@ _EXPORTED_NAMES = (
     'MATERIALIZE_MISSING_FROZEN_BODY',
     'PROJECT_KEY_PATTERN',
     'PUT_INCOMPLETE_LABEL',
+    'PlanningIssueRefResolutionError',
     'R1_BROWSE_CONTRACT',
     'ReplicatedPlanningCacheBackend',
     'SHIPPED_ISSUES_PROVIDERS',

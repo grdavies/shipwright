@@ -1288,9 +1288,20 @@ def _collect_absorb_gap_targets(
             _add(item)
 
     for ref in planning_issues or ps.parse_planning_issues_refs(fm.get("planningIssues", "")):
-        gap_id = ps.resolve_planning_issue_ref_to_gap(root, cfg, ref)
+        skip_meta: dict[str, str] = {}
+        try:
+            gap_id = ps.resolve_planning_issue_ref_to_gap(
+                root, cfg, ref, skip_meta=skip_meta
+            )
+        except ps.PlanningIssueRefResolutionError as exc:
+            return [], [{"ref": exc.ref, "reason": exc.error, **exc.detail}]
         if not gap_id:
-            skipped.append({"ref": ref, "reason": "planning-issue-unresolved"})
+            reason = skip_meta.get("reason", "planning-issue-unresolved")
+            entry: dict[str, str] = {"ref": ref, "reason": reason}
+            for key, value in skip_meta.items():
+                if key != "reason" and value:
+                    entry[key] = value
+            skipped.append(entry)
             continue
         if ps.gap_has_absorb_provenance(root, cfg, gap_id, prd_unit_id, fm):
             _add(gap_id)
@@ -1362,6 +1373,29 @@ def record_absorb_linkage(
         gap_unit_ids=gap_unit_ids,
         planning_issues=issue_refs or None,
     )
+    provider_errors = [
+        item
+        for item in skipped
+        if item.get("reason") in {
+            "issue-capability-error",
+            "issue-budget-exhausted",
+            "lifecycle-tombstone",
+            "issue-transferred",
+            "issue-provider-error",
+            "invalid-project-key",
+            "artifact-type-conflict",
+        }
+    ]
+    if provider_errors:
+        first = provider_errors[0]
+        return {
+            "verdict": "fail",
+            "action": "record-absorb-linkage",
+            "error": str(first.get("reason") or "planning-issue-resolution-failed"),
+            "prdUnitId": prd_unit_id,
+            "planningIssueRef": first.get("ref"),
+            "skipped": skipped,
+        }
     if not gap_targets:
         return {
             "verdict": "skipped",

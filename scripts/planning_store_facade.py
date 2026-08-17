@@ -225,6 +225,16 @@ from issues_lib import (  # noqa: E402
     IssueTransferred,
     IssuesClient,
 )
+
+
+class PlanningIssueRefResolutionError(Exception):
+    """Fail-closed planning issue ref resolution (PRD 275 R15/R16)."""
+
+    def __init__(self, ref: str, error: str, **detail: Any) -> None:
+        self.ref = ref
+        self.error = error
+        self.detail = detail
+        super().__init__(f"{error}: {ref}")
 from planning_canonical import (  # noqa: E402
     ARTIFACT_TYPE_UNRESOLVED,
     FREEZE_INCOMPLETE_LABEL,
@@ -1719,11 +1729,25 @@ def _discover_planning_issues_gaps(
     backend = get_backend(root, cfg, override="issue-store")
     shared_backend = backend if isinstance(backend, IssueStoreBackend) else None
     for ref in refs:
-        gap_id = resolve_planning_issue_ref_to_gap(
-            root, cfg, ref, backend=shared_backend
-        )
+        skip_meta: dict[str, str] = {}
+        try:
+            gap_id = resolve_planning_issue_ref_to_gap(
+                root, cfg, ref, backend=shared_backend, skip_meta=skip_meta
+            )
+        except PlanningIssueRefResolutionError as exc:
+            raise PlanningIssueRefResolutionError(
+                exc.ref,
+                exc.error,
+                prdUnitId=prd_unit_id,
+                **exc.detail,
+            ) from exc
         if not gap_id:
-            skip.append({"ref": ref, "reason": "planning-issue-unresolved"})
+            reason = skip_meta.get("reason", "planning-issue-unresolved")
+            entry: dict[str, str] = {"ref": ref, "reason": reason}
+            for key, value in skip_meta.items():
+                if key != "reason" and value:
+                    entry[key] = value
+            skip.append(entry)
             continue
         if gap_has_absorb_provenance(
             root, cfg, gap_id, prd_unit_id, fm, prd_num=prd_num, edges=edges
@@ -1852,6 +1876,120 @@ def _normalize_planning_issue_ref(ref: str) -> str:
     return ref
 
 
+_PLANNING_ISSUE_TYPE_SOURCES: tuple[str, ...] = (
+    "labels",
+    "record",
+    "marker",
+    "frontmatter",
+)
+
+
+def _planning_issue_artifact_type_evidence(record: Any) -> list[tuple[str, str]]:
+    """Named artifact-type evidence sources for planning issue refs (PRD 275 R16)."""
+    labels = list(getattr(record, "labels", []) or [])
+    evidence: list[tuple[str, str]] = []
+    from_labels = artifact_type_from_labels(labels)
+    if from_labels and is_resolved_artifact_type(from_labels):
+        evidence.append(("labels", from_labels))
+    record_type = str(getattr(record, "artifact_type", "") or "").strip()
+    if record_type and is_resolved_artifact_type(record_type):
+        evidence.append(("record", record_type))
+    body = str(getattr(record, "body", "") or "")
+    from_marker = parse_body_marker(body, MARKER_ARTIFACT_TYPE) or ""
+    if from_marker and is_resolved_artifact_type(from_marker):
+        evidence.append(("marker", from_marker))
+    full_body = reassemble_body(body, getattr(record, "comments", None) or [])
+    stripped = strip_markers_and_edges(full_body)
+    from_content = artifact_type_from_content(stripped) or ""
+    if from_content and is_resolved_artifact_type(from_content):
+        evidence.append(("frontmatter", from_content))
+    return evidence
+
+
+def _resolve_planning_issue_artifact_type(record: Any) -> str:
+    evidence = _planning_issue_artifact_type_evidence(record)
+    if not evidence:
+        return ""
+    types = {artifact_type for _, artifact_type in evidence}
+    if len(types) > 1:
+        raise PlanningIssueRefResolutionError(
+            "",
+            "artifact-type-conflict",
+            sources={source: artifact_type for source, artifact_type in evidence},
+        )
+    return evidence[0][1]
+
+
+def _planning_issue_ref_provider_error(ref: str, exc: Exception) -> PlanningIssueRefResolutionError:
+    if isinstance(exc, IssueCapabilityError):
+        return PlanningIssueRefResolutionError(ref, "issue-capability-error")
+    if isinstance(exc, IssueBudgetExhausted):
+        return PlanningIssueRefResolutionError(ref, "issue-budget-exhausted")
+    if isinstance(exc, IssueTombstone):
+        return PlanningIssueRefResolutionError(ref, "lifecycle-tombstone")
+    if isinstance(exc, IssueTransferred):
+        return PlanningIssueRefResolutionError(ref, "issue-transferred")
+    return PlanningIssueRefResolutionError(ref, "issue-provider-error")
+
+
+def _gap_unit_from_planning_issue_record(
+    record: Any,
+    *,
+    ref: str,
+    skip_meta: dict[str, str] | None,
+) -> str | None:
+    artifact_type = _resolve_planning_issue_artifact_type(record)
+    unit_id = str(getattr(record, "unit_id", "") or "").strip()
+    if artifact_type == "gap" and unit_id:
+        return unit_id
+    if artifact_type and artifact_type != "gap":
+        if skip_meta is not None:
+            skip_meta["reason"] = "planning-issue-nongap"
+            skip_meta["artifactType"] = artifact_type
+        return None
+    if skip_meta is not None:
+        skip_meta["reason"] = "planning-issue-unresolved"
+    return None
+
+
+def _lookup_planning_issue_record_for_ref(
+    client: Any,
+    *,
+    project_key: str,
+    issue_num: int | None,
+    ref: str,
+) -> Any | None:
+    """Resolve a planning issue record for a numeric ref (direct get, then catalog by number)."""
+    if issue_num is not None:
+        getter = getattr(client, "issue_get", None) or getattr(client, "get", None)
+        if callable(getter):
+            try:
+                return getter(str(issue_num))
+            except IssueNotFound:
+                pass
+            except (
+                IssueCapabilityError,
+                IssueBudgetExhausted,
+                IssueTombstone,
+                IssueTransferred,
+            ) as exc:
+                raise _planning_issue_ref_provider_error(ref, exc) from exc
+        search = getattr(client, "issue_search", None)
+        if callable(search):
+            try:
+                for record in search(project_key=project_key):
+                    if int(getattr(record, "number", 0) or 0) == issue_num:
+                        return record
+            except (
+                IssueCapabilityError,
+                IssueBudgetExhausted,
+                IssueTombstone,
+                IssueTransferred,
+            ) as exc:
+                raise _planning_issue_ref_provider_error(ref, exc) from exc
+    return None
+
+
 def resolve_planning_issue_ref_to_gap(
     root: Path,
     cfg: dict[str, Any],
@@ -1859,8 +1997,14 @@ def resolve_planning_issue_ref_to_gap(
     *,
     backend: "IssueStoreBackend | None" = None,
     gap_catalog: list[Any] | None = None,
+    skip_meta: dict[str, str] | None = None,
 ) -> str | None:
-    """Map a planning issue ref to a gap unit id (R7).
+    """Map a planning issue ref to a gap unit id (PRD 275 R4/R5, R7).
+
+    Returns a gap ``unit_id`` only when artifact type evidence resolves to ``gap``.
+    Positive non-gap classification yields ``None`` with ``planning-issue-nongap`` in
+    ``skip_meta`` when provided. Provider/scope/auth failures raise
+    ``PlanningIssueRefResolutionError`` (not-ready) rather than silent skip.
 
     Numeric refs resolve via ``issue_get`` (O(1)) — never a full gap catalog search per
     ref. Catalog search is only the fallback for non-numeric / related-field matching, and
@@ -1875,7 +2019,11 @@ def resolve_planning_issue_ref_to_gap(
         return None
     key_result = pmis.validate_project_key(root, cfg)
     if key_result.get("verdict") != "ok":
-        return None
+        raise PlanningIssueRefResolutionError(
+            ref,
+            "invalid-project-key",
+            message=str(key_result.get("message") or "invalid project key"),
+        )
     project_key = str(key_result["projectKey"])
     normalized = _normalize_planning_issue_ref(ref)
     issue_num = None
@@ -1884,31 +2032,42 @@ def resolve_planning_issue_ref_to_gap(
         issue_num = int(m.group(1))
     client = backend._client
 
-    # Prefer direct get for numeric planning issue refs (avoids rate-limit N+1).
     if issue_num is not None:
-        getter = getattr(client, "issue_get", None) or getattr(client, "get", None)
-        if callable(getter):
-            try:
-                record = getter(str(issue_num))
-            except Exception:
-                record = None
-            if record is not None:
-                unit_id = str(getattr(record, "unit_id", "") or "").strip()
-                if unit_id:
-                    return unit_id
+        record = _lookup_planning_issue_record_for_ref(
+            client,
+            project_key=project_key,
+            issue_num=issue_num,
+            ref=ref,
+        )
+        if record is not None:
+            return _gap_unit_from_planning_issue_record(
+                record, ref=ref, skip_meta=skip_meta
+            )
 
     search = getattr(client, "issue_search", None)
     if not callable(search):
+        if skip_meta is not None:
+            skip_meta["reason"] = "planning-issue-unresolved"
         return None
     records = gap_catalog
     if records is None:
-        records = list(search(project_key=project_key, artifact_type="gap"))
+        try:
+            records = list(search(project_key=project_key, artifact_type="gap"))
+        except (
+            IssueCapabilityError,
+            IssueBudgetExhausted,
+            IssueTombstone,
+            IssueTransferred,
+        ) as exc:
+            raise _planning_issue_ref_provider_error(ref, exc) from exc
     for record in records:
         unit_id = str(getattr(record, "unit_id", "") or "").strip()
         if not unit_id:
             continue
         if issue_num is not None and int(getattr(record, "number", 0) or 0) == issue_num:
-            return unit_id
+            return _gap_unit_from_planning_issue_record(
+                record, ref=ref, skip_meta=skip_meta
+            )
         body = reassemble_body(record.body, record.comments)
         gap_fm = pmis.parse_frontmatter_fields(strip_markers_and_edges(body))
         related = str(gap_fm.get("related") or "")
@@ -1918,7 +2077,11 @@ def resolve_planning_issue_ref_to_gap(
             f"#{issue_num}" if issue_num else "",
         }
         if any(n and n in related for n in needles):
-            return unit_id
+            return _gap_unit_from_planning_issue_record(
+                record, ref=ref, skip_meta=skip_meta
+            )
+    if skip_meta is not None:
+        skip_meta["reason"] = "planning-issue-unresolved"
     return None
 
 
@@ -2158,16 +2321,25 @@ def resolve_delivery_linked_units(
         }
 
     gap_ids, gap_skipped = _gap_closure_evidence(fm, edges, prd_num, root, cfg)
-    gap_ids, gap_skipped = _discover_planning_issues_gaps(
-        root,
-        cfg,
-        prd_unit_id=prd_unit,
-        fm=fm,
-        edges=edges,
-        prd_num=prd_num,
-        delivery_grade=gap_ids,
-        skipped=gap_skipped,
-    )
+    try:
+        gap_ids, gap_skipped = _discover_planning_issues_gaps(
+            root,
+            cfg,
+            prd_unit_id=prd_unit,
+            fm=fm,
+            edges=edges,
+            prd_num=prd_num,
+            delivery_grade=gap_ids,
+            skipped=gap_skipped,
+        )
+    except PlanningIssueRefResolutionError as exc:
+        return {
+            "verdict": "not-ready",
+            "error": exc.error,
+            "prdUnitId": prd_unit,
+            "planningIssueRef": exc.ref,
+            **exc.detail,
+        }
     for gap_id in sorted(gap_ids):
         if gap_id in units:
             continue
