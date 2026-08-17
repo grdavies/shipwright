@@ -213,7 +213,7 @@ Extends `/sw-doc` — no `/sw-plan` command.
 | Autonomy posture | `planning.autonomy` (`maintenance-only` default \| `full-conductor`) |
 | Two-track doc edits | `scripts/docs-edit-route.py` → mechanical `docs-merge.py` or substantive docs worktree + PR |
 | Gap capture from feedback | `/sw-feedback` → `planning_gap_capture.py` (not legacy `GAP-BACKLOG.md`) |
-| Retro painful gap capture | `/sw-retro` → `planning_gap_capture.py retro-capture` (draft); `retro-confirm` / `retro-materialize` per item (PRD 275 D7) |
+| Retro painful gap capture | `/sw-retro` → `planning_gap_capture.py retro-capture` (draft); `retro-confirm` / `retro-materialize` per item |
 
 See [`core/commands/sw-doc.md`](../../core/commands/sw-doc.md) **Planning command surface** and
 [`core/skills/conductor/SKILL.md`](../../core/skills/conductor/SKILL.md) **Bounded planning full-conductor**.
@@ -433,7 +433,7 @@ in-process attempt.
 | [`/sw-retro`](../../core/commands/sw-retro.md) | Post-ship retrospective (report-only) |
 | [`/sw-retrospective`](../../core/commands/sw-retrospective.md) | Consolidated retro → compound → memory-sync chain |
 
-### Retro gap capture — per-item digest-bound confirm (PRD 275, D7)
+### Retro gap capture — per-item digest-bound confirm
 
 When `retrospective.gapCapture.enabled` is true, painful retro items may enter a supervised gap inbox.
 **Human confirmation is per item**, bound to the redacted draft content digest — a batch UI may list
@@ -441,14 +441,14 @@ multiple drafts, but each **materialize** call requires its own matching `--dige
 `signalId`. Confirm and materialize are separate steps; unattended dispatch refuses silent mint.
 
 ```bash
-python3 scripts/planning_gap_capture.py retro-capture --retro-json .cursor/sw-retro-output.json
-python3 scripts/planning_gap_capture.py retro-confirm --signal-id <signalId> --digest <digest>
-python3 scripts/planning_gap_capture.py retro-materialize --signal-id <signalId> --digest <digest>
+python3 scripts/sw_bootstrap.py planning_gap_capture.py -- retro-capture --retro-json .cursor/sw-retro-output.json
+python3 scripts/sw_bootstrap.py planning_gap_capture.py -- retro-confirm --signal-id <signalId> --digest <digest>
+python3 scripts/sw_bootstrap.py planning_gap_capture.py -- retro-materialize --signal-id <signalId> --digest <digest>
 ```
 
 Digest mismatch halts with `retro-gap-digest-mismatch`; materialize without prior confirm halts with
-`retro-gap-ack-required`. See [`/sw-retrospective`](../../core/commands/sw-retrospective.md) (PRD 275)
-and [`configuration.md`](configuration.md#retrospective-gap-capture-prd-275).
+`retro-gap-ack-required`. See [`/sw-retrospective`](../../core/commands/sw-retrospective.md) and
+[`configuration.md`](configuration.md#retrospective-gap-capture).
 
 ## Quick reference — commands you invoke directly
 

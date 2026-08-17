@@ -286,5 +286,5 @@ python3 scripts/planning_gap_capture.py retro-materialize --signal-id <id> --dig
 ```
 
 Route records for audit/resume: `.cursor/hooks/state/retro-gap-routes/<signalId>.json` (see
-[`docs/guides/configuration.md`](../../docs/guides/configuration.md#retrospective-gap-capture-prd-275) and
+[`docs/guides/configuration.md`](../../docs/guides/configuration.md#retrospective-gap-capture) and
 `.sw/layout.md`). Config knobs: `core/sw-reference/config.schema.json` → `retrospective.gapCapture`.
