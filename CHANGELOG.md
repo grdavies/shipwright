@@ -906,6 +906,7 @@
 * merge phase denylist-and-ignore-size-small into feat/sync-build-hygiene (0237bab) <!-- sw-deliver:denylist-and-ignore-size-small -->
 * merge phase dist-freshness-size-medium into feat/sync-build-hygiene (2ac293f) <!-- sw-deliver:dist-freshness-size-medium -->
 * merge phase purge-targets-size-medium into feat/sync-build-hygiene (433f613) <!-- sw-deliver:purge-targets-size-medium -->
+* merge phase docs-and-decisions-size-small into feat/sync-build-hygiene (f6dce65) <!-- sw-deliver:docs-and-decisions-size-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
