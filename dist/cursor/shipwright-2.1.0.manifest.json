@@ -385,6 +385,7 @@
     "graph/reviewer_metrics/cost.py",
     "graph/reviewer_metrics/elo.py",
     "graph/reviewer_metrics/eval_report.py",
+    "graph/reviewer_metrics/export.py",
     "graph/reviewer_metrics/independence.py",
     "graph/reviewer_metrics/label_schema.py",
     "graph/reviewer_metrics/persistence.py",
@@ -614,6 +615,7 @@
     "review-local-resolve.py",
     "review_synthesize.py",
     "reviewer-dispatch-check.py",
+    "reviewer-metrics.py",
     "rule_verification.py",
     "rule_verification_lib.py",
     "rule_verifier_sweep.py",
@@ -722,5 +724,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 719
+  "moduleCount": 721
 }
