@@ -381,7 +381,9 @@
     "graph/resource_pools.py",
     "graph/reviewer_metrics/__init__.py",
     "graph/reviewer_metrics/label_schema.py",
+    "graph/reviewer_metrics/persistence.py",
     "graph/reviewer_metrics/provenance.py",
+    "graph/reviewer_metrics/store_adapter.py",
     "graph/reviewer_metrics/surviving.py",
     "graph/router_nodes.py",
     "graph/run_ownership.py",
@@ -713,5 +715,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 710
+  "moduleCount": 712
 }
