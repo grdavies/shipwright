@@ -1628,7 +1628,7 @@ wave-width distribution (`waveWidth`) used to validate that split suggestions pr
 The scorer (`scripts/phase_sizing.py`, Phase 2+) reads these keys when present; unconfigured repos keep
 backward-compatible defaults from the latest corpus audit.
 
-## Reviewer effectiveness metrics semantics (PRD 273)
+## Reviewer effectiveness metrics semantics
 
 Offline calibration constants — advisory only; no workflow config keys gate live review on these values.
 

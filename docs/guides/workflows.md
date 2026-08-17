@@ -1114,7 +1114,7 @@ Map these semantic keys to Project custom fields (names are defaults; override v
 Living-doc operator cutover (local INDEX/COMPLETION-LOG authority) MUST NOT proceed until
 `projection-gate` reports `ready: true` (pair with `planning_cutover` committed gate).
 
-## Reviewer effectiveness calibration (PRD 273)
+## Reviewer effectiveness calibration
 
 Offline, advisory program for persona×model effectiveness — **non-gating** by design. Live `/sw-review`
 panels, kernel gates, and promotion paths are unchanged by metrics output.
