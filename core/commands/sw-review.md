@@ -227,5 +227,15 @@ Unchanged from prior single-phase flow:
 - API keys from environment only.
 - Do not use `--base` on CodeRabbit (branch review is a separate surface).
 - Emit `sw-review.status.json` under the resolved run dir when phase 2 runs — verification-gate depends on it.
+
+## Reviewer effectiveness capture boundary (PRD 273)
+
+`/sw-review` does **not** consume reviewer-effectiveness ratings for panel selection in v1 — the
+**advisory picker is deferred** (Decision D3). Phase-1 roster selection remains deterministic via
+`scripts/code-review-select.py`; Elo/ranking output is report-only.
+
+When operator labels are ingested for offline calibration (`scripts/reviewer-metrics.py`), contests are
+**same-cohort pairwise** and **draw outcomes are no-ops** (ratings unchanged — Decision D4). Metrics cannot
+authorize, deny, or rank-bind reviewers; see `graph.reviewer_metrics.elo.ELO_GATING_ENABLED` (`false`).
 - Phase 1 does not replace phase-2 status signal.
 - `check-gate.py` remains sole CI oracle — local severity gate is additive.

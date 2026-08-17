@@ -1114,6 +1114,45 @@ Map these semantic keys to Project custom fields (names are defaults; override v
 Living-doc operator cutover (local INDEX/COMPLETION-LOG authority) MUST NOT proceed until
 `projection-gate` reports `ready: true` (pair with `planning_cutover` committed gate).
 
+## Reviewer effectiveness calibration (PRD 273)
+
+Offline, advisory program for persona×model effectiveness — **non-gating** by design. Live `/sw-review`
+panels, kernel gates, and promotion paths are unchanged by metrics output.
+
+### Label ingestion
+
+Operators record exogenous true-positive / false-positive labels through the CLI:
+
+```bash
+python3 scripts/reviewer-metrics.py label \
+  --finding-id <id> --reviewer-id <persona> --verdict tp|fp \
+  --actor <who> --reason <why>
+```
+
+Labels require immutable provenance (`scripts/graph/reviewer_metrics/provenance.py`). Self-authored
+confirmation alone is insufficient; peer agreement without exogenous coupling is rejected
+(`scripts/graph/reviewer_metrics/surviving.py`). Writes pass through `memory-redact.py` before persistence.
+
+### Report interpretation
+
+| Report | Entry | Meaning |
+| --- | --- | --- |
+| Calibration | `graph.reviewer_metrics.calibration` | Confidence vs exogenous true-positive rates over windows |
+| Cost | `graph.reviewer_metrics.cost` | Cost-per-surviving-finding with proxy/unknown handling |
+| Offline eval | `graph.reviewer_metrics.eval_report` | Coverage, unresolved rate, calibration error, ranking stability |
+| Export | `python3 scripts/reviewer-metrics.py export` | Top/bottom pairs + independence warnings — metadata only |
+
+### Uncertainty and non-gating
+
+- **Unlabeled findings are censored** — excluded from Elo losses and negative calibration (not treated as false
+  negatives).
+- **Ranking requires N≥10** reviewers in cohort; below threshold reports `unknown` and never recommends.
+- **Elo is same-cohort pairwise**; draw outcomes are no-ops (ratings unchanged).
+- **Independence warnings are report-only** — they cannot change quorum, verdicts, escalation, or kernel bindings.
+- **Advisory picker deferred** — metrics do not auto-select review panel members in v1.
+
+Authority: `.cursor/sw-learning-store/` via `ReviewerMetricsStoreAdapter` only (see `.sw/layout.md`).
+
 ## Turn-independent deliver ship loop
 
 Phase-mode `/sw-deliver run` drives `/sw-ship` through the durable **ship-loop driver** — not ad-hoc
