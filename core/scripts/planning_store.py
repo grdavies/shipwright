@@ -36,6 +36,7 @@ _EXPORTED_NAMES = (
     'SemanticStatusError',
     'StoreResult',
     '_ISSUES_PROVIDER_TO_BROKER',
+    '_close_issue_store_unit',
     '_contains_raw_transcript',
     '_default_body_path',
     '_fail',
