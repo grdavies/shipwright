@@ -904,6 +904,7 @@
 * merge phase cli-ingest-and-export-size-medium into feat/reviewer-effectiveness-calibration (a888a22) <!-- sw-deliver:cli-ingest-and-export-size-medium -->
 * merge phase docs-np-boundaries-decision-ack-size-small into feat/reviewer-effectiveness-calibration (d35b908) <!-- sw-deliver:docs-np-boundaries-decision-ack-size-small -->
 * merge phase denylist-and-ignore-size-small into feat/sync-build-hygiene (0237bab) <!-- sw-deliver:denylist-and-ignore-size-small -->
+* merge phase dist-freshness-size-medium into feat/sync-build-hygiene (2ac293f) <!-- sw-deliver:dist-freshness-size-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
