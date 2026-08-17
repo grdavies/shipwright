@@ -41,7 +41,7 @@ transcripts. PRD 275 absorb brainstorms:
 Per-item digest (confirm/materialize binding):
 
 ```bash
-python3 -c "import json,sys; from planning_gap_capture import retro_item_digest; print(retro_item_digest(json.load(sys.stdin)))"
+PYTHONPATH=scripts python3 -c "import json,sys; from planning_gap_capture import retro_item_digest; print(retro_item_digest(json.load(sys.stdin)))"
 ```
 
 Pass the printed digest to `retro-confirm` / `retro-materialize` for that `itemId` only.

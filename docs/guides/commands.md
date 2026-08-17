@@ -431,20 +431,6 @@ in-process attempt.
 | [`/sw-memory-audit`](../../core/commands/sw-memory-audit.md) | Read-only memory hygiene audit |
 | [`/sw-compound`](../../core/commands/sw-compound.md) | Distill retro into memories |
 | [`/sw-retro`](../../core/commands/sw-retro.md) | Post-ship retrospective (report-only) |
-
-**Retro gap digest-bound confirm (PRD 275 D7):** when `retrospective.gapCapture.enabled`, each painful
-retro item materializes only after **per-item** digest-bound confirm — batch review UI still confirms one
-digest per `signalId`. Wrong digest fails closed (`retro-gap-digest-mismatch`); unattended materialize is
-refused (`retro-gap-unattended-mint`).
-
-```bash
-python3 scripts/planning_gap_capture.py retro-capture --retro-json "$(cat retro-output.json)"
-python3 scripts/planning_gap_capture.py retro-confirm --signal-id 'retro:<runId>:<itemId>' --digest <per-item-digest>
-python3 scripts/planning_gap_capture.py retro-materialize --signal-id 'retro:<runId>:<itemId>' --digest <same-digest>
-```
-
-Digest derives from the canonical item fields (`kind`, `summary`, `relatedFiles`, `prdRef`, flags) via
-`retro_item_digest` — see `core/skills/retro/references/output-contract.md`.
 | [`/sw-retrospective`](../../core/commands/sw-retrospective.md) | Consolidated retro → compound → memory-sync chain |
 
 ### Retro gap capture — per-item digest-bound confirm (PRD 275, D7)

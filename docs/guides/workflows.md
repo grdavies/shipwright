@@ -530,18 +530,14 @@ are committed on the feature branch; memory writes are not committed. `compound.
 Completion is recorded as `completed-pending-merge` until the human merges; the loop then suggests
 `/sw-cleanup` (dry-run first; agent asks for confirm before applying removals).
 
-**Retro painful → gap capture (PRD 275 D5–D6):** optional supervised path from `/sw-retro` output —
-`retrospective.gapCapture` defaults **disabled** with per-run `maxCapturesPerRun` (overflow operator
-message). Only `kind:painful` items draft to `.cursor/sw-gap-draft-inbox/`; `well` and `change` are
-excluded. Materialization is never in-loop — operators run `planning_gap_capture.py` confirm/materialize
-with per-item digest binding after review (`core/commands/sw-retrospective.md`).
-
 **Retro painful → gap capture (PRD 275, D5–D6):** optional supervised gap drafts from structured retro
 output. **`retrospective.gapCapture.enabled` defaults to `false`** — operators must opt in. When enabled,
-only retro items with **`kind: painful`** auto-draft to the gap inbox; `well` and `change` are excluded.
-**`maxCapturesPerRun`** caps drafts per retrospective invocation; exceeding the cap stops further drafts
-and surfaces an operator message (no silent overflow). Draft → confirm → materialize lifecycle and route
-records are documented in [`configuration.md`](configuration.md#retrospective-gap-capture-prd-275) and
+only retro items with **`kind: painful`** auto-draft to `.cursor/sw-gap-draft-inbox/`; `well` and `change`
+are excluded. **`maxCapturesPerRun`** caps drafts per retrospective invocation; exceeding the cap stops
+further drafts and surfaces an operator message (no silent overflow). Materialization is never in-loop —
+operators run `planning_gap_capture.py` confirm/materialize with per-item digest binding after review.
+Draft → confirm → materialize lifecycle and route records are documented in
+[`configuration.md`](configuration.md#retrospective-gap-capture-prd-275) and
 [`/sw-retrospective`](../../core/commands/sw-retrospective.md). Distinct from terminal
 `deliver.terminal.gapCapture` at deliver completion.
 
