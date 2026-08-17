@@ -911,6 +911,7 @@
 * merge phase retro-painful-gap-capture-size-medium into feat/planning-closeout-hygiene (45800fa) <!-- sw-deliver:retro-painful-gap-capture-size-medium -->
 * merge phase freeze-re-pin-on-close-size-medium into feat/planning-closeout-hygiene (a27d2c3) <!-- sw-deliver:freeze-re-pin-on-close-size-medium -->
 * merge phase docs-and-decisions-size-small into feat/planning-closeout-hygiene (7942396) <!-- sw-deliver:docs-and-decisions-size-small -->
+* merge phase finalize-mirror-and-checkpoint-size-medium into feat/deliver-driver-resilience (5bd23df) <!-- sw-deliver:finalize-mirror-and-checkpoint-size-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
