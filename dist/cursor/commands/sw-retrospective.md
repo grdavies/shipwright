@@ -232,3 +232,59 @@ schema `planning.store.issues.credentialContract`).
 ## Post-merge INDEX safety (A1)
 
 Post-merge compounding uses `completion finalize-if-merged` only. On failure, resume with the printed `resumeCommand` — do **not** fall back to bare `scripts/reconcile.py reconcile` on `main`. Single-unit bookkeeping belongs on a docs branch.
+
+## Planning closeout hygiene (PRD 275)
+
+Absorbs **#697** (freeze re-pin on close), **#706** (gap-only `planningIssues` resolution), and **#700**
+(retro painful → supervised gap capture). Decision log D1–D7 is reflected in retro skill/docs surfaces.
+
+### Absorb traceability (R19)
+
+| Source | Shipped behavior | Primary touchpoints |
+| --- | --- | --- |
+| **#697** freeze re-pin | After `close-delivery-units` mutates a frozen issue, append newest `sw-freeze-record` hash including resulting state+labels; `get` must not tamper-fail solely from close | `scripts/planning/backends/issues.py` (`repin_freeze_after_close`) |
+| **#706** gap-only resolver | `resolve_planning_issue_ref_to_gap` returns a unit id only when artifact type evidence resolves to `gap`; non-gap refs skip without freeze-check | `scripts/planning_store_facade.py` |
+| **#700** retro → gap | Structured `kind:painful` items may emit redacted gap drafts; materialization requires per-item digest-bound human ack | `scripts/planning_gap_capture.py`, config `retrospective.gapCapture` |
+
+### Closeout freeze re-pin (#697, D1)
+
+Post-merge `close-delivery-units` re-pins the canonical freeze hash after close mutations — it does **not**
+weaken integrity by excluding state or labels from the hash. On partial apply (close ok, append failed),
+the JSON report is `verdict: not-ready` with `resumeCommand`; retry is idempotent and repairs stale-hash
+units. Preview: `python3 scripts/planning_store.py close-delivery-units --prd-unit <id> --dry-run`.
+
+### Gap-only `planningIssues` resolution (#706, D2)
+
+Closeout discovery resolves each `planningIssues` ref through `resolve_planning_issue_ref_to_gap`. Only
+positive `artifact_type=gap` classification yields a gap unit id; PRD/tasks numeric self-refs and other
+non-gap artifacts are typed skips without freeze-check. Provider, scope, or auth failures propagate as
+not-ready errors — never silent skips after unresolved provider state.
+
+### Retro painful → gap capture (#700, R20)
+
+When `retrospective.gapCapture.enabled` is true (default **false**), `/sw-retro` structured output may
+feed supervised gap capture after the report-only retro step. This path is **distinct** from terminal
+metric-based `deliver.terminal.gapCapture` — it does not replace or auto-enable terminal gap mint.
+
+**Lifecycle (draft → confirm → materialize):**
+
+| Stage | Operator action | Runtime behavior |
+| --- | --- | --- |
+| **Draft** | Retro completes; optional capture when config enabled | `capture_retro_painful` writes redacted inbox drafts for `kind:painful` only; assigns stable `signalId` / `dedupKey`; records route audit entry |
+| **Confirm** | Operator ack per item (batch UI allowed) | `confirm_retro_gap_draft` persists digest-bound human ack; fails closed on digest mismatch |
+| **Materialize** | Operator confirms mint for one item | `materialize_retro_gap_draft` requires prior confirmed ack + matching digest; unattended/hook dispatch refuses silent mint |
+
+Well/change retro items are excluded. Per-run cap `retrospective.gapCapture.maxCapturesPerRun` stops further
+drafts and surfaces an operator message on overflow — no silent drop.
+
+CLI surface (bootstrap argv in consumer repos):
+
+```bash
+python3 scripts/planning_gap_capture.py retro-capture --retro-json <path>
+python3 scripts/planning_gap_capture.py retro-confirm --signal-id <id> --digest <sha256-prefix>
+python3 scripts/planning_gap_capture.py retro-materialize --signal-id <id> --digest <sha256-prefix>
+```
+
+Route records for audit/resume: `.cursor/hooks/state/retro-gap-routes/<signalId>.json` (see
+[`docs/guides/configuration.md`](../../docs/guides/configuration.md#retrospective-gap-capture-prd-275) and
+`.sw/layout.md`). Config knobs: `core/sw-reference/config.schema.json` → `retrospective.gapCapture`.

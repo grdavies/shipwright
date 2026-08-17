@@ -530,6 +530,12 @@ are committed on the feature branch; memory writes are not committed. `compound.
 Completion is recorded as `completed-pending-merge` until the human merges; the loop then suggests
 `/sw-cleanup` (dry-run first; agent asks for confirm before applying removals).
 
+**Retro painful → gap capture (PRD 275 D5–D6):** optional supervised path from `/sw-retro` output —
+`retrospective.gapCapture` defaults **disabled** with per-run `maxCapturesPerRun` (overflow operator
+message). Only `kind:painful` items draft to `.cursor/sw-gap-draft-inbox/`; `well` and `change` are
+excluded. Materialization is never in-loop — operators run `planning_gap_capture.py` confirm/materialize
+with per-item digest binding after review (`core/commands/sw-retrospective.md`).
+
 **Retro painful → gap capture (PRD 275, D5–D6):** optional supervised gap drafts from structured retro
 output. **`retrospective.gapCapture.enabled` defaults to `false`** — operators must opt in. When enabled,
 only retro items with **`kind: painful`** auto-draft to the gap inbox; `well` and `change` are excluded.
