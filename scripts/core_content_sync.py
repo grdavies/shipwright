@@ -19,6 +19,7 @@ PROVENANCE_REL = ".sw/build-chain-last-synced.json"
 OPERATOR_LOCAL_SW_FILES = (
     "build-chain-last-synced.json",
     "credential-ci-selector.json",
+    "deliver-closeout/",
 )
 
 
