@@ -96,6 +96,7 @@
       "prd": "deep",
       "rca-core": "build",
       "retro": "mid",
+      "ship": "inherit",
       "shipwright-state": "cheap",
       "simplify": "mid",
       "spec-rigor": "cheap",

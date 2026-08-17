@@ -19,7 +19,12 @@ PROVENANCE_REL = ".sw/build-chain-last-synced.json"
 OPERATOR_LOCAL_SW_FILES = (
     "build-chain-last-synced.json",
     "credential-ci-selector.json",
+    "deliver-closeout/",
 )
+
+# Copy-exclude and purge-target sets diverge: allowlisted core-authored paths are
+# copy-skipped but not operator-local purge targets (PRD 274 R12).
+OPERATOR_LOCAL_PURGE_TARGETS = OPERATOR_LOCAL_SW_FILES
 
 
 def repo_root() -> Path:
@@ -189,6 +194,7 @@ def check_sw_reference_orphans(core: Path, sw_dir: Path, manifest: dict, *, forc
 
     allowlist = list(manifest.get("coreAuthoredAllowlist", []))
     deprecated = list(manifest.get("deprecatedAllowlist", []) or [])
+    purge_targets = list(OPERATOR_LOCAL_PURGE_TARGETS)
     orphans: list[str] = []
     for path in sorted(sw_reference.rglob("*")):
         if not path.is_file() and not path.is_dir():
@@ -197,6 +203,8 @@ def check_sw_reference_orphans(core: Path, sw_dir: Path, manifest: dict, *, forc
         if _is_allowlisted(rel, allowlist):
             continue
         if _is_deprecated(rel, deprecated):
+            continue
+        if mirror.matches_exclude_patterns(rel, purge_targets):
             continue
         if _sw_source_has_path(sw_dir, rel):
             continue
@@ -239,9 +247,17 @@ def sync(root: Path, *, force: bool = False) -> int:
 
     if sw_reference_input is not None:
         check_sw_reference_orphans(core, sw_reference_input, manifest, force=force)
-        excludes = list(manifest.get("coreAuthoredAllowlist", [])) if sw_reference_input.name == ".sw" else []
-        excludes.extend(OPERATOR_LOCAL_SW_FILES)
-        mirror.mirror(sw_reference_input, core / "sw-reference", excludes=excludes, delete=True)
+        copy_excludes = list(manifest.get("coreAuthoredAllowlist", [])) if sw_reference_input.name == ".sw" else []
+        copy_excludes.extend(OPERATOR_LOCAL_SW_FILES)
+        purge_targets = list(OPERATOR_LOCAL_PURGE_TARGETS)
+        mirror.mirror(
+            sw_reference_input,
+            core / "sw-reference",
+            excludes=copy_excludes,
+            purge_targets=purge_targets,
+            delete=True,
+            purge_excludes=True,
+        )
 
     _write_provenance(root, _sw_reference_tree_hashes(core / "sw-reference"))
     logging_setup.info(f"core-content-sync: synced emittable content -> {core}")

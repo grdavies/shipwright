@@ -24,6 +24,9 @@ def dist_hash(root: Path) -> str:
         if not d.is_dir():
             continue
         for f in sorted(d.rglob("*")):
+            # Bytecode caches under dist/ are environmental and must not fail freshness.
+            if "__pycache__" in f.parts or f.suffix in {".pyc", ".pyo"}:
+                continue
             if f.is_file():
                 h.update(f.relative_to(root).as_posix().encode())
                 h.update(f.read_bytes())

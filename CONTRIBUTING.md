@@ -83,6 +83,37 @@ python3 scripts/test/run_pytest.py scripts/unit_tests/meta -q
 The emitter freshness gate (`emitter-stale-classification-fails`, capability-index parity) fails when
 committed `dist/` drifts from `core/`.
 
+### Scripts↔dist freshness and ship auto-regen (PRD 274)
+
+Packaged helpers under `scripts/` are mirrored into committed `dist/` zipapps. Editing `scripts/` without
+regenerating `dist/` leaves CI emitter-freshness red until `dist/` is updated.
+
+**Side-effect-free drift check** (local pre-push; does not mutate `dist/`):
+
+```bash
+python3 scripts/dist_freshness.py detect
+# machine-readable: python3 scripts/dist_freshness.py json
+```
+
+On drift, stderr includes the canonical regen command: `python3 -m sw generate --all`.
+
+**Ship path** (before `sw-commit` when scripts↔dist drift is present) — fail closed with that regen
+command; when auto-fixable, regenerate and stage only this invocation's outputs:
+
+```bash
+python3 scripts/dist_freshness_ship.py regen
+```
+
+Refuses overlapping preexisting operator edits under `dist/` (`overlapping-preexisting`) and residual drift
+after regen (`residual-drift`). See `skills/ship/SKILL.md` (D3).
+
+**Operator-local deliver closeout** — closure manifests write to `.sw/deliver-closeout/` (gitignored).
+`core_content_sync` denylists and purges that tree from `core/sw-reference/`; never commit closeout mirrors.
+
+**Build-chain parity before commit** — when the phase diff touches paths in
+`core/sw-reference/build-chain-paths.json`, `/sw-ship` runs `python3 scripts/ship-build-chain-check.py`
+(hard block). Remediate with `python3 scripts/build-chain-sync.py` (not `copy-to-core --force`).
+
 Additional domain suites live under `scripts/unit_tests/` and are run via `scripts/test/run_pytest.py`.
 
 ## CI topology (named plans — PRD 082 R35)

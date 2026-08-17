@@ -312,5 +312,9 @@ issue:99
 # END visibility-generated
 .sw/build-chain-last-synced.json
 
+# PRD 274 R2 — operator-local deliver closeout (never sync/mirror to core)
+.sw/deliver-closeout/
+core/sw-reference/deliver-closeout/
+
 # /sw-note local scratch (never commit)
 .cursor/sw-notebook/
