@@ -21,14 +21,24 @@ from graph.reviewer_metrics.cost import (
     report_cost,
 )
 from graph.reviewer_metrics.eval_report import EvalUncertaintyReport, EvalVerdict, report_eval_uncertainty
+from graph.reviewer_metrics.independence import (
+    CorrelatedPairReport,
+    IndependenceReport,
+    ReviewerAxisIdentity,
+    independence_warnings,
+    score_independence,
+)
 from graph.reviewer_metrics.surviving import SurvivingVerdict, classify_surviving
 
 __all__ = [
     "CalibrationVerdict",
     "CostReport",
     "CostVerdict",
+    "CorrelatedPairReport",
     "EvalUncertaintyReport",
     "EvalVerdict",
+    "IndependenceReport",
+    "ReviewerAxisIdentity",
     "FindingCalibrationInput",
     "FindingCostInput",
     "WindowCalibrationReport",
@@ -42,7 +52,9 @@ __all__ = [
     "SurvivingVerdict",
     "build_metadata_record",
     "classify_surviving",
+    "independence_warnings",
     "report_calibration",
+    "score_independence",
     "report_cost",
     "report_eval_uncertainty",
 ]

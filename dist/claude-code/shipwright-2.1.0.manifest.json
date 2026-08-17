@@ -383,6 +383,7 @@
     "graph/reviewer_metrics/calibration.py",
     "graph/reviewer_metrics/cost.py",
     "graph/reviewer_metrics/eval_report.py",
+    "graph/reviewer_metrics/independence.py",
     "graph/reviewer_metrics/label_schema.py",
     "graph/reviewer_metrics/persistence.py",
     "graph/reviewer_metrics/provenance.py",
@@ -718,5 +719,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 715
+  "moduleCount": 716
 }
