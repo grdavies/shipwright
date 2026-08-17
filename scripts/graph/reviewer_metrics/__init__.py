@@ -29,6 +29,24 @@ from graph.reviewer_metrics.independence import (
     score_independence,
 )
 from graph.reviewer_metrics.surviving import SurvivingVerdict, classify_surviving
+from graph.reviewer_metrics.cohort import CohortIdentity, CohortAction, CohortResolution, cohort_compatible
+from graph.reviewer_metrics.elo import (
+    ContestOutcome,
+    ELO_GATING_ENABLED,
+    EloConfig,
+    LateLabelCorrection,
+    PairwiseContest,
+    ReviewerRating,
+    documented_defaults,
+    recompute_from_contests,
+)
+from graph.reviewer_metrics.ranking import (
+    MIN_RANKING_N,
+    RANKING_GATING_ENABLED,
+    RankingReport,
+    RankingVerdict,
+    rank_reviewers,
+)
 
 __all__ = [
     "CalibrationVerdict",
@@ -57,4 +75,21 @@ __all__ = [
     "score_independence",
     "report_cost",
     "report_eval_uncertainty",
+    "CohortAction",
+    "CohortIdentity",
+    "CohortResolution",
+    "ContestOutcome",
+    "ELO_GATING_ENABLED",
+    "EloConfig",
+    "LateLabelCorrection",
+    "MIN_RANKING_N",
+    "PairwiseContest",
+    "RANKING_GATING_ENABLED",
+    "RankingReport",
+    "RankingVerdict",
+    "ReviewerRating",
+    "cohort_compatible",
+    "documented_defaults",
+    "rank_reviewers",
+    "recompute_from_contests",
 ]
