@@ -384,6 +384,12 @@ migrate regions.
 planning artifact bodies to the code repo; artifacts live as issues and materialize to git-ignored paths
 at deliver time (Phase 3): `planning_store.py freeze` records `sw-freeze-record` hash; `planning_materialize.py provision` verifies hash before materializing frozen task lists to `.cursor/planning-materialized/`.
 
+**Closeout freeze re-pin (PRD 275 / facade):** `close-delivery-units` (via `planning_store_facade` →
+`IssueStoreBackend.repin_freeze_after_close`) appends a newest `sw-freeze-record` after mutating frozen
+issue state/labels to closed/complete so subsequent `get` does not raise `tamper-detected`. Partial
+append failure returns not-ready with idempotent retry repair — state/labels stay inside the integrity
+hash (facade boundary; do not bypass).
+
 **Status precedence:** lifecycle consumers read `derived.status` when populated and fall back to structural
 `status`; gap units (`type: gap`) always use structural status only.
 
