@@ -273,6 +273,8 @@
     "dispatch_intensity_check.py",
     "dispatch_prompt.py",
     "dispatch_reader_lib.py",
+    "dist_freshness.py",
+    "dist_freshness_ship.py",
     "dist_regeneration_082.py",
     "doc-format-normalize.py",
     "doc-link-check.py",
@@ -724,5 +726,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 721
+  "moduleCount": 723
 }
