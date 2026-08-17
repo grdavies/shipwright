@@ -8,9 +8,30 @@ from graph.reviewer_metrics.persistence import (
 )
 from graph.reviewer_metrics.provenance import ActorClass, ProvenanceRecord
 from graph.reviewer_metrics.store_adapter import ReviewerMetricsStoreAdapter
+from graph.reviewer_metrics.calibration import (
+    CalibrationVerdict,
+    FindingCalibrationInput,
+    WindowCalibrationReport,
+    report_calibration,
+)
+from graph.reviewer_metrics.cost import (
+    CostReport,
+    CostVerdict,
+    FindingCostInput,
+    report_cost,
+)
+from graph.reviewer_metrics.eval_report import EvalUncertaintyReport, EvalVerdict, report_eval_uncertainty
 from graph.reviewer_metrics.surviving import SurvivingVerdict, classify_surviving
 
 __all__ = [
+    "CalibrationVerdict",
+    "CostReport",
+    "CostVerdict",
+    "EvalUncertaintyReport",
+    "EvalVerdict",
+    "FindingCalibrationInput",
+    "FindingCostInput",
+    "WindowCalibrationReport",
     "ActorClass",
     "ExogenousLabel",
     "LABEL_SCHEMA_VERSION",
@@ -21,4 +42,7 @@ __all__ = [
     "SurvivingVerdict",
     "build_metadata_record",
     "classify_surviving",
+    "report_calibration",
+    "report_cost",
+    "report_eval_uncertainty",
 ]
