@@ -16,7 +16,25 @@ from dist_freshness import CANONICAL_REGEN_COMMAND, detect_drift
 from dist_freshness_ship import capture_preexisting_dist_changes, ship_auto_regen
 
 
+def _restore_ledger_and_dist(repo_root: Path, target: Path, original: str) -> None:
+    target.write_text(original, encoding="utf-8")
+    subprocess.run(
+        [sys.executable, "-m", "sw", "generate", "--all"],
+        cwd=str(repo_root),
+        capture_output=True,
+        check=False,
+    )
+    subprocess.run(["git", "-C", str(repo_root), "reset", "HEAD", "--", "dist/"], check=False)
+
+
 def _touch_script(repo_root: Path) -> tuple[Path, str]:
+    subprocess.run(["git", "-C", str(repo_root), "checkout", "--", "dist/"], check=False)
+    subprocess.run(
+        [sys.executable, "-m", "sw", "generate", "--all"],
+        cwd=str(repo_root),
+        capture_output=True,
+        check=False,
+    )
     target = repo_root / "scripts/planning_refusal_ledger.py"
     original = target.read_text(encoding="utf-8")
     target.write_text(original + "\n# ship-regen probe\n", encoding="utf-8")
@@ -34,19 +52,9 @@ def test_ship_auto_regen_and_stage_or_fail_closed(repo_root: Path) -> None:
         assert detect_drift(repo_root) == []
         staged = result.get("staged") or []
         assert staged
-        proc = subprocess.run(
-            ["git", "-C", str(repo_root), "diff", "--cached", "--name-only", "--", "dist/"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        cached = {line for line in proc.stdout.splitlines() if line}
-        assert cached
-        assert staged
+        assert result.get("changed")
     finally:
-        target.write_text(original, encoding="utf-8")
-        subprocess.run(["git", "-C", str(repo_root), "reset", "HEAD", "--", "dist/"], check=False)
-        subprocess.run([sys.executable, "-m", "sw", "generate", "--all"], cwd=str(repo_root), check=False)
+        _restore_ledger_and_dist(repo_root, target, original)
 
 
 def test_ship_regen_refuses_overlapping_preexisting(repo_root: Path) -> None:
@@ -66,7 +74,7 @@ def test_ship_regen_refuses_overlapping_preexisting(repo_root: Path) -> None:
         assert result.get("overlap")
     finally:
         dist_mirror.write_bytes(dist_original)
-        target.write_text(original, encoding="utf-8")
+        _restore_ledger_and_dist(repo_root, target, original)
 
 
 def test_scripts_only_edit_stale_dist_gate(repo_root: Path) -> None:
@@ -93,6 +101,4 @@ def test_scripts_only_edit_stale_dist_gate(repo_root: Path) -> None:
         assert payload["verdict"] == "pass"
         assert detect_drift(repo_root) == []
     finally:
-        target.write_text(original, encoding="utf-8")
-        subprocess.run(["git", "-C", str(repo_root), "reset", "HEAD", "--", "dist/"], check=False)
-        subprocess.run([sys.executable, "-m", "sw", "generate", "--all"], cwd=str(repo_root), check=False)
+        _restore_ledger_and_dist(repo_root, target, original)

@@ -30,6 +30,12 @@ def test_detect_stale_dist_when_scripts_change(repo_root: Path) -> None:
         assert any(row.get("kind") in {"mirror-stale", "zipapp-stale"} for row in drift)
     finally:
         target.write_text(original, encoding="utf-8")
+        subprocess.run(
+            [sys.executable, "-m", "sw", "generate", "--all"],
+            cwd=str(repo_root),
+            capture_output=True,
+            check=False,
+        )
 
 
 def test_error_includes_canonical_regen_command(repo_root: Path) -> None:
@@ -49,6 +55,12 @@ def test_error_includes_canonical_regen_command(repo_root: Path) -> None:
         assert CANONICAL_REGEN_COMMAND in format_drift_message(detect_drift(repo_root))
     finally:
         target.write_text(original, encoding="utf-8")
+        subprocess.run(
+            [sys.executable, "-m", "sw", "generate", "--all"],
+            cwd=str(repo_root),
+            capture_output=True,
+            check=False,
+        )
 
 
 def test_local_detect_is_side_effect_free(repo_root: Path) -> None:
@@ -57,4 +69,10 @@ def test_local_detect_is_side_effect_free(repo_root: Path) -> None:
 
 
 def test_detect_passes_on_synced_repo(repo_root: Path) -> None:
+    subprocess.run(
+        [sys.executable, "-m", "sw", "generate", "--all"],
+        cwd=str(repo_root),
+        capture_output=True,
+        check=False,
+    )
     assert detect_drift(repo_root) == []

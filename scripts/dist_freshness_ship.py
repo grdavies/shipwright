@@ -40,24 +40,14 @@ def _dist_tree_digest(root: Path) -> dict[str, str]:
     return out
 
 
+def _is_generated_bundle(rel: str) -> bool:
+    name = Path(rel).name
+    return name.endswith(".pyz") or name.endswith(".manifest.json") or name.startswith("shipwright-")
+
+
 def capture_preexisting_dist_changes(root: Path) -> set[str]:
-    """Return repo-relative dist paths with uncommitted changes before regen."""
-    proc = subprocess.run(
-        ["git", "-C", str(root), "status", "--porcelain", "--", "dist/"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    paths: set[str] = set()
-    for line in proc.stdout.splitlines():
-        if len(line) < 4:
-            continue
-        rel = line[3:].strip()
-        if " -> " in rel:
-            rel = rel.split(" -> ", 1)[1].strip()
-        if rel.startswith("dist/"):
-            paths.add(rel)
-    return paths
+    """Return repo-relative dist paths with operator edits (excludes zipapp bundles)."""
+    return {path for path in _dist_status_paths(root) if not _is_generated_bundle(path)}
 
 
 def run_regen(root: Path) -> int:
@@ -105,6 +95,15 @@ def stage_paths(root: Path, paths: set[str]) -> list[str]:
         )
         if proc.returncode == 0:
             staged.append(rel)
+    if not staged and paths:
+        subprocess.run(["git", "-C", str(root), "add", "-u", "--", "dist/"], check=False)
+        proc = subprocess.run(
+            ["git", "-C", str(root), "diff", "--cached", "--name-only", "--", "dist/"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        staged = [line for line in proc.stdout.splitlines() if line]
     return staged
 
 
