@@ -43,6 +43,31 @@ See `references/rule-adversarial-verification.md`. `promotionReady` is advisory 
 
 Structured output for `/sw-feedback` must conform to `references/output-contract.md`.
 
+## Planning closeout decisions (PRD 275)
+
+These decisions are operator-facing contracts — implementation lives in planning closeout scripts, not in
+this skill's report-only retro step.
+
+### D1 — Re-pin freeze on close (#697)
+
+When post-merge `close-delivery-units` closes a frozen planning issue, the issue-store backend appends the
+newest `sw-freeze-record` hash computed from the **post-close** body including state and labels. Do not
+weaken tamper detection by excluding close mutations from the hash. Partial apply (close succeeded, re-pin
+failed) returns not-ready with `resumeCommand`; retry is idempotent.
+
+### D2 — Gap-only resolver (#706)
+
+`resolve_planning_issue_ref_to_gap` enforces `artifact_type=gap` using named authoritative evidence order
+(labels → native type → body marker → content inference). Conflicting type evidence fails closed. Non-gap
+refs return typed skip without freeze-check; provider/scope/auth failures are not-ready, not silent skip.
+
+### Optional painful → gap handoff (when config enabled)
+
+After emitting structured retro output, when `retrospective.gapCapture.enabled` is true, hand off painful
+items to `python3 scripts/planning_gap_capture.py retro-capture --retro-json <path>` — drafts only.
+Confirm and materialize are separate operator steps with digest-bound ack (see `references/output-contract.md`
+and `/sw-retrospective` PRD 275 section). Default config leaves this path disabled.
+
 ## Guardrails
 
 - Report-only — no `agentsFile`/doctrine edits without approval.

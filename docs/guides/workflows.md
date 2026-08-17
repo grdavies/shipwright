@@ -530,6 +530,17 @@ are committed on the feature branch; memory writes are not committed. `compound.
 Completion is recorded as `completed-pending-merge` until the human merges; the loop then suggests
 `/sw-cleanup` (dry-run first; agent asks for confirm before applying removals).
 
+**Retro painful → gap capture:** optional supervised gap drafts from structured retro
+output. **`retrospective.gapCapture.enabled` defaults to `false`** — operators must opt in. When enabled,
+only retro items with **`kind: painful`** auto-draft to `.cursor/sw-gap-draft-inbox/`; `well` and `change`
+are excluded. **`maxCapturesPerRun`** caps drafts per retrospective invocation; exceeding the cap stops
+further drafts and surfaces an operator message (no silent overflow). Materialization is never in-loop —
+operators run `planning_gap_capture.py` confirm/materialize with per-item digest binding after review.
+Draft → confirm → materialize lifecycle and route records are documented in
+[`configuration.md`](configuration.md#retrospective-gap-capture) and
+[`/sw-retrospective`](../../core/commands/sw-retrospective.md). Distinct from terminal
+`deliver.terminal.gapCapture` at deliver completion.
+
 **Task currency:** frozen task checkboxes may be toggled in-loop; a currency gate blocks the terminal
 merge if checkboxes diverge from the durable ledger.
 

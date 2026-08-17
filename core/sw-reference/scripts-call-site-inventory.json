@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-17T19:16:34Z",
+  "generatedAt": "2026-08-17T19:58:08Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -2681,6 +2681,42 @@
       "column": 37,
       "script": "planning_store.py",
       "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-retrospective.md:254:planning_store.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-retrospective.md",
+      "line": 254,
+      "column": 25,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-retrospective.md:283:planning_gap_capture.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-retrospective.md",
+      "line": 283,
+      "column": 8,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "core/commands/sw-retrospective.md:284:planning_gap_capture.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-retrospective.md",
+      "line": 284,
+      "column": 8,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "core/commands/sw-retrospective.md:285:planning_gap_capture.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-retrospective.md",
+      "line": 285,
+      "column": 8,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
     },
     {
       "id": "core/commands/sw-review.md:116:sw_bootstrap.py",
@@ -6202,6 +6238,15 @@
       "classification": "self-repo-only"
     },
     {
+      "id": "core/skills/retro/SKILL.md:67:planning_gap_capture.py",
+      "tree": "core/skills",
+      "file": "core/skills/retro/SKILL.md",
+      "line": 67,
+      "column": 18,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
+    },
+    {
       "id": "core/skills/retro/references/rule-adversarial-verification.md:9:rule_verification.py",
       "tree": "core/skills",
       "file": "core/skills/retro/references/rule-adversarial-verification.md",
@@ -9370,6 +9415,42 @@
       "classification": "self-repo-only"
     },
     {
+      "id": "dist/claude-code/commands/sw-retrospective.md:254:planning_store.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-retrospective.md",
+      "line": 254,
+      "column": 25,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-retrospective.md:283:planning_gap_capture.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-retrospective.md",
+      "line": 283,
+      "column": 8,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-retrospective.md:284:planning_gap_capture.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-retrospective.md",
+      "line": 284,
+      "column": 8,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-retrospective.md:285:planning_gap_capture.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-retrospective.md",
+      "line": 285,
+      "column": 8,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
+    },
+    {
       "id": "dist/claude-code/commands/sw-review.md:116:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-review.md",
@@ -12068,6 +12149,15 @@
       "column": 8,
       "script": "rule_verification.py",
       "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/retro/SKILL.md:67:planning_gap_capture.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/retro/SKILL.md",
+      "line": 67,
+      "column": 18,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
     },
     {
       "id": "dist/claude-code/skills/retro/references/rule-adversarial-verification.md:9:rule_verification.py",
@@ -14923,6 +15013,42 @@
       "classification": "self-repo-only"
     },
     {
+      "id": "dist/cursor/commands/sw-retrospective.md:254:planning_store.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-retrospective.md",
+      "line": 254,
+      "column": 25,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-retrospective.md:283:planning_gap_capture.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-retrospective.md",
+      "line": 283,
+      "column": 8,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "dist/cursor/commands/sw-retrospective.md:284:planning_gap_capture.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-retrospective.md",
+      "line": 284,
+      "column": 8,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "dist/cursor/commands/sw-retrospective.md:285:planning_gap_capture.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-retrospective.md",
+      "line": 285,
+      "column": 8,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
+    },
+    {
       "id": "dist/cursor/commands/sw-review.md:116:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-review.md",
@@ -17623,6 +17749,15 @@
       "classification": "self-repo-only"
     },
     {
+      "id": "dist/cursor/skills/retro/SKILL.md:67:planning_gap_capture.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/retro/SKILL.md",
+      "line": 67,
+      "column": 18,
+      "script": "planning_gap_capture.py",
+      "classification": "consumer-capable"
+    },
+    {
       "id": "dist/cursor/skills/retro/references/rule-adversarial-verification.md:9:rule_verification.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/retro/references/rule-adversarial-verification.md",
@@ -18343,20 +18478,11 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:238:planning_store.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/commands.md",
-      "line": 238,
-      "column": 52,
-      "script": "planning_store.py",
-      "classification": "self-repo-only"
-    },
-    {
       "id": "docs/guides/commands.md:239:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
       "line": 239,
-      "column": 59,
+      "column": 52,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
@@ -18374,17 +18500,17 @@
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
       "line": 241,
-      "column": 32,
+      "column": 59,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:255:credentials-doctor.py",
+      "id": "docs/guides/commands.md:242:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 255,
-      "column": 70,
-      "script": "credentials-doctor.py",
+      "line": 242,
+      "column": 32,
+      "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
@@ -18392,17 +18518,17 @@
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
       "line": 256,
-      "column": 44,
+      "column": 70,
       "script": "credentials-doctor.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:257:sw-configure.py",
+      "id": "docs/guides/commands.md:257:credentials-doctor.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
       "line": 257,
-      "column": 41,
-      "script": "sw-configure.py",
+      "column": 44,
+      "script": "credentials-doctor.py",
       "classification": "self-repo-only"
     },
     {
@@ -18410,7 +18536,7 @@
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
       "line": 258,
-      "column": 59,
+      "column": 41,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
@@ -18419,7 +18545,7 @@
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
       "line": 259,
-      "column": 40,
+      "column": 59,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
@@ -18428,17 +18554,17 @@
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
       "line": 260,
-      "column": 32,
+      "column": 40,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:269:planning_backend_control.py",
+      "id": "docs/guides/commands.md:261:sw-configure.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 269,
-      "column": 8,
-      "script": "planning_backend_control.py",
+      "line": 261,
+      "column": 32,
+      "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
@@ -18460,49 +18586,49 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:287:credentials-doctor.py",
+      "id": "docs/guides/commands.md:272:planning_backend_control.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 287,
+      "line": 272,
+      "column": 8,
+      "script": "planning_backend_control.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/commands.md:288:credentials-doctor.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 288,
       "column": 19,
       "script": "credentials-doctor.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:331:sw_bootstrap.py",
+      "id": "docs/guides/commands.md:332:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 331,
+      "line": 332,
       "column": 44,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/commands.md:338:sw_bootstrap.py",
+      "id": "docs/guides/commands.md:339:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 338,
+      "line": 339,
       "column": 24,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/commands.md:396:gap-check-gate.py",
+      "id": "docs/guides/commands.md:397:gap-check-gate.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 396,
+      "line": 397,
       "column": 37,
       "script": "gap-check-gate.py",
       "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/commands.md:412:sw_bootstrap.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/commands.md",
-      "line": 412,
-      "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
     },
     {
       "id": "docs/guides/commands.md:413:sw_bootstrap.py",
@@ -18532,19 +18658,55 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/commands.md:472:test/run_dispatch_foundation_fixtures.py",
+      "id": "docs/guides/commands.md:416:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 472,
+      "line": 416,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "docs/guides/commands.md:444:sw_bootstrap.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 444,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "docs/guides/commands.md:445:sw_bootstrap.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 445,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "docs/guides/commands.md:446:sw_bootstrap.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 446,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "docs/guides/commands.md:491:test/run_dispatch_foundation_fixtures.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/commands.md",
+      "line": 491,
       "column": 78,
       "script": "test/run_dispatch_foundation_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/commands.md:472:test/run_fanout_fixtures.py",
+      "id": "docs/guides/commands.md:491:test/run_fanout_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/commands.md",
-      "line": 472,
+      "line": 491,
       "column": 19,
       "script": "test/run_fanout_fixtures.py",
       "classification": "self-repo-only"
@@ -18892,154 +19054,154 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1435:generate-pr-test-plan-ci-workflow.py",
+      "id": "docs/guides/configuration.md:1471:generate-pr-test-plan-ci-workflow.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1435,
+      "line": 1471,
       "column": 8,
       "script": "generate-pr-test-plan-ci-workflow.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1451:test/run_suite_registry_fixtures.py",
+      "id": "docs/guides/configuration.md:1487:test/run_suite_registry_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1451,
+      "line": 1487,
       "column": 49,
       "script": "test/run_suite_registry_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1453:test/run_pr_test_plan_fixtures.py",
+      "id": "docs/guides/configuration.md:1489:test/run_pr_test_plan_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1453,
+      "line": 1489,
       "column": 9,
       "script": "test/run_pr_test_plan_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1509:capability_docs.py",
+      "id": "docs/guides/configuration.md:1545:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1509,
+      "line": 1545,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1512:capability_docs.py",
+      "id": "docs/guides/configuration.md:1548:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1512,
+      "line": 1548,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1515:capability_docs.py",
+      "id": "docs/guides/configuration.md:1551:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1515,
+      "line": 1551,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1531:test/run_pilot_fixtures.py",
+      "id": "docs/guides/configuration.md:1567:test/run_pilot_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1531,
+      "line": 1567,
       "column": 24,
       "script": "test/run_pilot_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1541:test/run_emitter_fixtures.py",
+      "id": "docs/guides/configuration.md:1577:test/run_emitter_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1541,
+      "line": 1577,
       "column": 8,
       "script": "test/run_emitter_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1588:phase_sizing.py",
+      "id": "docs/guides/configuration.md:1624:phase_sizing.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1588,
+      "line": 1624,
       "column": 8,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1602:phase_sizing_corpus.py",
+      "id": "docs/guides/configuration.md:1638:phase_sizing_corpus.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1602,
+      "line": 1638,
       "column": 27,
       "script": "phase_sizing_corpus.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1602:phase_sizing_corpus.py",
+      "id": "docs/guides/configuration.md:1638:phase_sizing_corpus.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1602,
+      "line": 1638,
       "column": 0,
       "script": "phase_sizing_corpus.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1607:test/run_phase_sizing_corpus_fixtures.py",
+      "id": "docs/guides/configuration.md:1643:test/run_phase_sizing_corpus_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1607,
+      "line": 1643,
       "column": 9,
       "script": "test/run_phase_sizing_corpus_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1642:reviewer-metrics.py",
+      "id": "docs/guides/configuration.md:1678:reviewer-metrics.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1642,
+      "line": 1678,
       "column": 23,
       "script": "reviewer-metrics.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1660:test/run_inefficiency_scan_fixtures.py",
+      "id": "docs/guides/configuration.md:1696:test/run_inefficiency_scan_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1660,
+      "line": 1696,
       "column": 24,
       "script": "test/run_inefficiency_scan_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1664:test/run_behavioral_anomaly_fixtures.py",
+      "id": "docs/guides/configuration.md:1700:test/run_behavioral_anomaly_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1664,
+      "line": 1700,
       "column": 9,
       "script": "test/run_behavioral_anomaly_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1675:loop_health.py",
+      "id": "docs/guides/configuration.md:1711:loop_health.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1675,
+      "line": 1711,
       "column": 14,
       "script": "loop_health.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1690:test/run_loop_autonomy_invariant_fixtures.py",
+      "id": "docs/guides/configuration.md:1726:test/run_loop_autonomy_invariant_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1690,
+      "line": 1726,
       "column": 24,
       "script": "test/run_loop_autonomy_invariant_fixtures.py",
       "classification": "self-repo-only"
@@ -19288,190 +19450,190 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:572:wave_terminal.py",
+      "id": "docs/guides/workflows.md:583:wave_terminal.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 572,
+      "line": 583,
       "column": 9,
       "script": "wave_terminal.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:582:gap-check-gate.py",
+      "id": "docs/guides/workflows.md:593:gap-check-gate.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 582,
+      "line": 593,
       "column": 9,
       "script": "gap-check-gate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:701:planning_migrate.py",
+      "id": "docs/guides/workflows.md:712:planning_migrate.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 701,
+      "line": 712,
       "column": 43,
       "script": "planning_migrate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:740:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:751:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 740,
+      "line": 751,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:741:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:752:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 741,
+      "line": 752,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:742:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:753:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 742,
+      "line": 753,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:754:planning_cross_project_recall.py",
+      "id": "docs/guides/workflows.md:765:planning_cross_project_recall.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 754,
+      "line": 765,
       "column": 8,
       "script": "planning_cross_project_recall.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:786:planning_store.py",
+      "id": "docs/guides/workflows.md:797:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 786,
+      "line": 797,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:942:planning-graph.py",
+      "id": "docs/guides/workflows.md:953:planning-graph.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 942,
+      "line": 953,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:943:planning-graph.py",
+      "id": "docs/guides/workflows.md:954:planning-graph.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 943,
+      "line": 954,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:964:planning_linear_client.py",
+      "id": "docs/guides/workflows.md:975:planning_linear_client.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 964,
+      "line": 975,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:997:planning_store.py",
+      "id": "docs/guides/workflows.md:1008:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 997,
+      "line": 1008,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:998:planning_store.py",
+      "id": "docs/guides/workflows.md:1009:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 998,
+      "line": 1009,
       "column": 53,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1009:build-chain-sync.py",
+      "id": "docs/guides/workflows.md:1020:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1009,
+      "line": 1020,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1030:wave.py",
+      "id": "docs/guides/workflows.md:1041:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1030,
+      "line": 1041,
       "column": 25,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1109:planning_store.py",
+      "id": "docs/guides/workflows.md:1120:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1109,
+      "line": 1120,
       "column": 12,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1110:planning_store.py",
+      "id": "docs/guides/workflows.md:1121:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1110,
+      "line": 1121,
       "column": 32,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1112:planning_cutover.py",
+      "id": "docs/guides/workflows.md:1123:planning_cutover.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1112,
+      "line": 1123,
       "column": 12,
       "script": "planning_cutover.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1127:reviewer-metrics.py",
+      "id": "docs/guides/workflows.md:1138:reviewer-metrics.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1127,
+      "line": 1138,
       "column": 8,
       "script": "reviewer-metrics.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1143:reviewer-metrics.py",
+      "id": "docs/guides/workflows.md:1154:reviewer-metrics.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1143,
+      "line": 1154,
       "column": 20,
       "script": "reviewer-metrics.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1221:planning_gap_capture.py",
+      "id": "docs/guides/workflows.md:1232:planning_gap_capture.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1221,
+      "line": 1232,
       "column": 173,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"

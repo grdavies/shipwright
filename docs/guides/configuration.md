@@ -1348,6 +1348,42 @@ Deprecated aliases `/sw-compound-ship` and `/sw-compound` route to it for one re
 Inspect at runtime: `python3 scripts/wave.py retrospective autonomy`. Autonomy never bypasses fail-closed
 memory writes or rule-class human gates.
 
+### Retrospective gap capture
+
+Namespace **`retrospective.gapCapture`** controls supervised draft capture from retro `kind:painful` items.
+This is separate from **`deliver.terminal.gapCapture`** (terminal metric-based gap mint at deliver
+completion).
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `retrospective.gapCapture.enabled` | **`false`** | When true, retro painful items may emit redacted gap inbox drafts only — never auto-mint |
+| `retrospective.gapCapture.maxCapturesPerRun` | **`3`** | Per retrospective run cap; overflow stops drafting and prints an operator message |
+
+Example (opt-in):
+
+```json
+{
+  "retrospective": {
+    "gapCapture": {
+      "enabled": true,
+      "maxCapturesPerRun": 5
+    }
+  }
+}
+```
+
+**Eligibility:** only structured retro items with `kind: painful` are drafted; `well` and `change` are
+excluded. Hook or unattended callers may draft when enabled but materialization always requires persisted
+per-item human acknowledgement bound to the redacted draft digest.
+
+**Route-record layout:** durable audit/resume JSON per captured item lives under
+`.cursor/hooks/state/retro-gap-routes/<signalId>.json` (relative to repo root). Each record tracks
+`signalId`, `dedupKey`, lifecycle `action` (`draft` | `confirmed` | `materialized`), and digest fields.
+See also `.sw/layout.md` (session hook state) and `scripts/planning_gap_capture.py`
+(`RETRO_GAP_ROUTE_REL`).
+
+Schema source: `core/sw-reference/config.schema.json` → `retrospective.gapCapture`.
+
 ## Zero-config fast path
 
 A repo can work without `workflow.config.json` if you commit:
