@@ -67,6 +67,7 @@
       "prd": "lite",
       "rca-core": "full",
       "retro": "lite",
+      "ship": "inherit",
       "shipwright-state": "ultra",
       "simplify": "full",
       "spec-rigor": "normal",

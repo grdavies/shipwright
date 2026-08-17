@@ -723,11 +723,17 @@ also seeds `.sw/` from the emit after mirror so `beforeSubmitPrompt` validates r
 - Apply: omit `--dry-run`; JSON includes `considered`, `closed`, `skipped`, `resumeCommand` when incomplete.
 - Verify override (`no-baseline`/`unattributed`): `override-add` auto-files gap via `capture_verify_override`; identical signature → `action: reused`, else `action: created`.
 
-### Merge-boundary close-out durable state (PRD 070 R10, R19, R29)
+### Merge-boundary close-out durable state (PRD 070 R10, R19, R29; PRD 274 R16)
 
-Machine-readable close-out artifacts live under `.sw/deliver-closeout/` at the repo root (gitignored operator
-runtime — not feature implementation). Written by `scripts/deliver_closeout.py` and read by
-`scripts/closeout_ci.py` / `scripts/wave_terminal.py`.
+Machine-readable close-out artifacts live under **`.sw/deliver-closeout/`** at the repo root — **gitignored
+operator-local runtime** (committed `.gitignore` covers `.sw/deliver-closeout/` and
+`core/sw-reference/deliver-closeout/`). Not feature implementation; never commit closure manifests or PR
+maps from this tree. Written by `scripts/deliver_closeout.py` and read by `scripts/closeout_ci.py` /
+`scripts/wave_terminal.py`.
+
+`core_content_sync` treats `deliver-closeout/` as operator-local: sync **denylists** mirror copy and
+**purges** stale `core/sw-reference/deliver-closeout/` destinations so build-chain sync does not leave
+untacked mirror JSON on `main`.
 
 | Artifact | Path | Writer | Role |
 | --- | --- | --- | --- |

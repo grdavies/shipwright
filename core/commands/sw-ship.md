@@ -54,6 +54,11 @@ Canonical chain is single-sourced from `core/sw-reference/kernel-classification.
   `core/sw-reference/build-chain-paths.json`, run `python3 scripts/ship-build-chain-check.py` (hard block on drift).
   Sync with full `python3 scripts/build-chain-sync.py` when check fails (not `copy-to-core` alone).
   `--force` is never an operator escape.
+- **dist freshness (PRD 274)** — when packaged `scripts/` helpers drift from committed `dist/` zipapps, run
+  side-effect-free `python3 scripts/dist_freshness.py detect` locally; stderr surfaces
+  `python3 -m sw generate --all`. On the ship path before `sw-commit`, prefer
+  `python3 scripts/dist_freshness_ship.py regen` (auto-regen + stage invocation outputs only) per
+  `skills/ship/SKILL.md` (D3); fail closed on overlapping preexisting `dist/` edits or residual drift.
 - **sw-tmp** — at chain start: `python3 scripts/sw_bootstrap.py sw-tmp.py -- clean` then `python3 scripts/sw_bootstrap.py sw-tmp.py -- init` (records
   `runDir` in shipwright-state). At chain end: `python3 scripts/sw_bootstrap.py sw-tmp.py -- clean`. No `trap … EXIT` (markdown-orchestrated
   chain).
@@ -253,6 +258,13 @@ Before dispatching any Task, redact non-config payloads (diff excerpts, CI/revie
 memory-preflight data) via `python3 scripts/sw_bootstrap.py memory-redact.py`, then include only redacted/fenced
 `untrusted_payload` content.
 
+
+## PRD 274 decision acknowledgements (sync + build hygiene)
+
+- **D1** — Cluster deliver-closeout sync denylist, operator-local purge, and scripts↔dist freshness/regen
+  into one hygiene wave (PRD 274) rather than scattered gap-only fixes; ship/docs reference the unified surface.
+- **D2** — Prefer mechanical re-pin fixes (`core_content_sync` denylist/purge, `dist_freshness_ship.py`
+  auto-regen) over docs-only workarounds that tell operators to delete untracked mirror files after each sync.
 
 ## Decision log (required)
 
