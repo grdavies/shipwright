@@ -391,6 +391,31 @@
         }
       }
     },
+    "retrospective": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Post-ship retrospective behavior (PRD 275 R10/R22).",
+      "properties": {
+        "gapCapture": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Supervised gap draft capture from retro kind:painful items (default disabled).",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, retro painful items emit redacted gap drafts (never auto-mint)."
+            },
+            "maxCapturesPerRun": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 3,
+              "description": "Per-run cap on painful retro drafts; overflow surfaces operator message."
+            }
+          }
+        }
+      }
+    },
     "configuredWith": {
       "type": "object",
       "additionalProperties": false,

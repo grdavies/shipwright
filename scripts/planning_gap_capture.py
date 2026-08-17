@@ -49,6 +49,9 @@ VERIFY_OVERRIDE_RECURRENCE_REL = ".cursor/hooks/state/verify-override-recurrence
 
 GAP_DRAFT_INBOX_REL = ".cursor/sw-gap-draft-inbox"
 DEFAULT_DRAFT_STALE_DAYS = 14
+RETRO_GAP_ROUTE_REL = ".cursor/hooks/state/retro-gap-routes"
+RETRO_GAP_KIND = "painful"
+DEFAULT_RETRO_MAX_CAPTURES = 3
 
 GAP_SECTION_PATTERNS: dict[str, re.Pattern[str]] = {
     "problem": re.compile(r"^##\s+Problem\s*$", re.MULTILINE | re.IGNORECASE),
@@ -754,6 +757,309 @@ def classify_pain_item(item: dict[str, Any]) -> str:
     if recurrence >= SUBSTANTIAL_MIN_RECURRENCE:
         return "substantial"
     return "noise"
+
+
+def retro_gap_capture_config(root: Path) -> dict[str, Any]:
+    """``retrospective.gapCapture`` settings (PRD 275 R10/R22), defaulting to disabled."""
+    retrospective = ps.load_workflow_config(root).get("retrospective") or {}
+    cfg = retrospective.get("gapCapture") or {}
+    max_captures = cfg.get("maxCapturesPerRun")
+    if not isinstance(max_captures, int) or max_captures < 0:
+        max_captures = DEFAULT_RETRO_MAX_CAPTURES
+    return {
+        "enabled": cfg.get("enabled") is True,
+        "maxCapturesPerRun": max_captures,
+    }
+
+
+def retro_item_dedup_key(run_id: str, item_id: str) -> str:
+    return f"retro:{run_id}:{item_id}"
+
+
+def retro_item_signal_id(run_id: str, item_id: str) -> str:
+    return retro_item_dedup_key(run_id, item_id)
+
+
+def retro_item_digest(item: dict[str, Any]) -> str:
+    """Deterministic per-item digest for digest-bound human confirm (PRD 275 R23)."""
+    related = item.get("relatedFiles")
+    if not isinstance(related, list):
+        related = []
+    canonical = {
+        "extendsPriorPr": bool(item.get("extendsPriorPr")),
+        "itemId": str(item.get("itemId") or ""),
+        "kind": str(item.get("kind") or ""),
+        "newScope": bool(item.get("newScope")),
+        "prdRef": str(item.get("prdRef") or ""),
+        "relatedFiles": sorted(str(path) for path in related),
+        "summary": str(item.get("summary") or ""),
+    }
+    raw = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
+
+
+def redact_retro_summary(summary: str) -> str:
+    from memory_redact import redact
+    from planning_visibility import resolve_emission_destination
+
+    destination = resolve_emission_destination("reconciler-output")
+    return redact(summary, destination=destination)
+
+
+def retro_gap_route_path(root: Path, signal_id: str) -> Path:
+    safe = re.sub(r"[^a-zA-Z0-9._:-]+", "_", signal_id)
+    return pp.git_root(root) / RETRO_GAP_ROUTE_REL / f"{safe}.json"
+
+
+def record_retro_gap_route(
+    root: Path,
+    *,
+    signal_id: str,
+    dedup_key: str,
+    action: str,
+    digest: str,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Durable route record for retro gap lifecycle audit/resume (PRD 275 R11/R18)."""
+    path = retro_gap_route_path(root, signal_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    record: dict[str, Any] = {
+        "action": action,
+        "dedupKey": dedup_key,
+        "digest": digest,
+        "recordedAt": utc_now(),
+        "signalId": signal_id,
+    }
+    if extra:
+        record.update(extra)
+    history: list[dict[str, Any]] = []
+    if path.is_file():
+        try:
+            prior = writer.load_store(path)
+            if isinstance(prior.get("history"), list):
+                history = [entry for entry in prior["history"] if isinstance(entry, dict)]
+            elif isinstance(prior, dict) and prior.get("action"):
+                history = [prior]
+        except Exception:
+            history = []
+    history.append(record)
+    path.write_text(
+        json.dumps({"history": history, "signalId": signal_id}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    rel = str(path.resolve().relative_to(pp.git_root(root).resolve()))
+    return {"path": rel, "signalId": signal_id}
+
+
+def capture_retro_painful(
+    root: Path,
+    retro_output: dict[str, Any],
+    *,
+    unattended: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Emit ``kind:painful`` retro items into the gap draft inbox only (PRD 275 R8/R21).
+
+    Well/change items are excluded. Drafts are redacted; materialization is never
+    performed here. ``unattended`` callers may only draft — mint is always refused.
+    """
+    _ = unattended
+    cfg = retro_gap_capture_config(root)
+    if not cfg["enabled"]:
+        return {
+            "verdict": "skipped",
+            "reason": "retrospective.gapCapture.enabled is false (default)",
+        }
+    run_id = str(retro_output.get("runId") or "unknown")
+    items = retro_output.get("items")
+    if not isinstance(items, list):
+        items = []
+    max_captures = int(cfg["maxCapturesPerRun"])
+    drafted: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    overflow: list[dict[str, Any]] = []
+    painful_count = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        kind = str(item.get("kind") or "").strip().lower()
+        if kind != RETRO_GAP_KIND:
+            skipped.append(
+                {
+                    "itemId": item.get("itemId"),
+                    "kind": kind or None,
+                    "reason": "kind-excluded",
+                }
+            )
+            continue
+        if painful_count >= max_captures:
+            overflow.append(
+                {
+                    "itemId": item.get("itemId"),
+                    "reason": "cap-reached",
+                }
+            )
+            continue
+        item_id = str(item.get("itemId") or f"item-{painful_count + 1}")
+        signal_id = retro_item_signal_id(run_id, item_id)
+        dedup_key = retro_item_dedup_key(run_id, item_id)
+        digest = retro_item_digest(item)
+        summary = redact_retro_summary(str(item.get("summary") or item_id))
+        title = summary[:120] if summary else item_id
+        draft_path = gap_draft_inbox_path(root, signal_id)
+        if draft_path.is_file():
+            existing = writer.load_store(draft_path)
+            drafted.append(
+                {
+                    "action": "reused-draft",
+                    "dedupKey": dedup_key,
+                    "digest": digest,
+                    "signalId": signal_id,
+                    "status": existing.get("status", "draft"),
+                }
+            )
+            painful_count += 1
+            continue
+        payload = {
+            "dedupKey": dedup_key,
+            "digest": digest,
+            "itemId": item_id,
+            "kind": RETRO_GAP_KIND,
+            "route": "gap-capture",
+            "runId": run_id,
+            "sourceClass": "retro",
+            "summary": summary,
+        }
+        if not dry_run:
+            put_gap_draft(root, signal_id=signal_id, title=title, payload=payload)
+            record_retro_gap_route(
+                root,
+                signal_id=signal_id,
+                dedup_key=dedup_key,
+                action="draft",
+                digest=digest,
+            )
+        drafted.append(
+            {
+                "action": "draft-inbox",
+                "dedupKey": dedup_key,
+                "digest": digest,
+                "path": str(
+                    gap_draft_inbox_path(root, signal_id).resolve().relative_to(pp.git_root(root).resolve())
+                ),
+                "signalId": signal_id,
+            }
+        )
+        painful_count += 1
+    result: dict[str, Any] = {
+        "drafted": drafted,
+        "maxCapturesPerRun": max_captures,
+        "overflow": overflow,
+        "skipped": skipped,
+        "verdict": "pass",
+    }
+    if overflow:
+        result["operatorMessage"] = (
+            f"{len(overflow)} painful retro item(s) omitted — "
+            f"retrospective.gapCapture.maxCapturesPerRun is {max_captures}"
+        )
+    return result
+
+
+def confirm_retro_gap_draft(
+    root: Path,
+    *,
+    signal_id: str,
+    digest: str,
+) -> dict[str, Any]:
+    """Persist digest-bound human ack before materialization (PRD 275 R9/R23)."""
+    draft = load_gap_draft(root, signal_id)
+    expected = str(draft.get("digest") or "")
+    if not expected or digest != expected:
+        fail(
+            "digest-mismatch",
+            halt="retro-gap-digest-mismatch",
+            signalId=signal_id,
+            expectedDigest=expected or None,
+        )
+    if draft.get("status") == "materialized":
+        return {
+            "idempotent": True,
+            "signalId": signal_id,
+            "status": "materialized",
+            "unitId": draft.get("materializedUnitId"),
+        }
+    if draft.get("status") == "confirmed" and draft.get("confirmedDigest") == digest:
+        return {"digest": digest, "idempotent": True, "signalId": signal_id, "status": "confirmed"}
+    draft["status"] = "confirmed"
+    draft["confirmedAt"] = utc_now()
+    draft["confirmedDigest"] = digest
+    path = gap_draft_inbox_path(root, signal_id)
+    path.write_text(json.dumps(draft, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    record_retro_gap_route(
+        root,
+        signal_id=signal_id,
+        dedup_key=str(draft.get("dedupKey") or ""),
+        action="confirmed",
+        digest=digest,
+    )
+    return {"digest": digest, "signalId": signal_id, "status": "confirmed"}
+
+
+def materialize_retro_gap_draft(
+    root: Path,
+    *,
+    signal_id: str,
+    digest: str,
+    problem: str | None = None,
+    context: str | None = None,
+    unattended: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Materialize a confirmed retro gap draft; fail closed without persisted ack."""
+    if unattended:
+        fail("unattended-materialize-refused", halt="retro-gap-unattended-mint")
+    draft = load_gap_draft(root, signal_id)
+    if draft.get("status") == "materialized":
+        return {
+            "idempotent": True,
+            "signalId": signal_id,
+            "status": "materialized",
+            "unitId": draft.get("materializedUnitId"),
+        }
+    if draft.get("status") != "confirmed":
+        fail(
+            "materialize requires persisted human ack",
+            halt="retro-gap-ack-required",
+            signalId=signal_id,
+            status=draft.get("status"),
+        )
+    confirmed_digest = str(draft.get("confirmedDigest") or draft.get("digest") or "")
+    if digest != confirmed_digest:
+        fail(
+            "digest-bound confirm required",
+            halt="retro-gap-digest-mismatch",
+            signalId=signal_id,
+        )
+    title = str(draft.get("title") or signal_id)
+    summary = str(draft.get("summary") or title)
+    out = materialize_gap_draft(
+        root,
+        signal_id=signal_id,
+        problem=problem or title,
+        context=context or f"_Retro painful item (digest {digest})._\n\n{summary}",
+        dry_run=dry_run,
+    )
+    if not dry_run:
+        record_retro_gap_route(
+            root,
+            signal_id=signal_id,
+            dedup_key=str(draft.get("dedupKey") or ""),
+            action="materialized",
+            digest=digest,
+            extra={"unitId": out.get("unitId")},
+        )
+    return {**out, "digest": digest, "status": "materialized"}
 
 
 def terminal_capture(
@@ -1783,6 +2089,15 @@ def parse_flags(rest: list[str]) -> dict[str, Any]:
         elif tok == "--planning-issue" and i + 1 < len(rest):
             out["planning_issue"] = rest[i + 1]
             i += 2
+        elif tok == "--retro-json" and i + 1 < len(rest):
+            out["retro_json"] = rest[i + 1]
+            i += 2
+        elif tok == "--digest" and i + 1 < len(rest):
+            out["digest"] = rest[i + 1]
+            i += 2
+        elif tok == "--unattended":
+            out["unattended"] = True
+            i += 1
         else:
             i += 1
     return out
@@ -1793,7 +2108,7 @@ def main(argv: list[str] | None = None) -> None:
     if len(args) < 2:
         fail(
             "usage: planning_gap_capture.py <repo-root> "
-"<capture|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override|record-absorb-linkage|verify-absorb-closeout-072|verify-absorb-closeout-073> [options]"
+"<capture|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override|retro-capture|retro-confirm|retro-materialize|record-absorb-linkage|verify-absorb-closeout-072|verify-absorb-closeout-073> [options]"
         )
     root = Path(args[0]).resolve()
     command = args[1]
@@ -1893,6 +2208,48 @@ def main(argv: list[str] | None = None) -> None:
             dry_run=bool(flags.get("dry_run")),
         )
         emit({"verdict": "pass", "action": "capture-verify-override", **out})
+        return
+
+    if command == "retro-capture":
+        retro_json = flags.get("retro_json")
+        if not retro_json:
+            fail("--retro-json required for retro-capture")
+        retro_output = json.loads(retro_json)
+        if not isinstance(retro_output, dict):
+            fail("retro-capture requires JSON object")
+        out = capture_retro_painful(
+            root,
+            retro_output,
+            unattended=bool(flags.get("unattended")),
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") in {"pass", "skipped"} else 20)
+        return
+
+    if command == "retro-confirm":
+        signal_id = flags.get("signal_id")
+        digest = flags.get("digest")
+        if not signal_id or not digest:
+            fail("--signal-id and --digest required for retro-confirm")
+        out = confirm_retro_gap_draft(root, signal_id=signal_id, digest=digest)
+        emit({"verdict": "pass", "action": "retro-confirm", **out})
+        return
+
+    if command == "retro-materialize":
+        signal_id = flags.get("signal_id")
+        digest = flags.get("digest")
+        if not signal_id or not digest:
+            fail("--signal-id and --digest required for retro-materialize")
+        out = materialize_retro_gap_draft(
+            root,
+            signal_id=signal_id,
+            digest=digest,
+            problem=flags.get("problem"),
+            context=flags.get("context"),
+            unattended=bool(flags.get("unattended")),
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit({"verdict": "pass", **out})
         return
 
     if command == "refresh-projection":
