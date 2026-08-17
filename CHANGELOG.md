@@ -900,6 +900,7 @@
 * merge phase learning-store-adapter-and-metadata-persistence-size-medium into feat/reviewer-effectiveness-calibration (f876136) <!-- sw-deliver:learning-store-adapter-and-metadata-persistence-size-medium -->
 * merge phase calibration-cost-and-offline-eval-size-medium into feat/reviewer-effectiveness-calibration (b1128c8) <!-- sw-deliver:calibration-cost-and-offline-eval-size-medium -->
 * merge phase independence-scoring-size-small into feat/reviewer-effectiveness-calibration (2425f8b) <!-- sw-deliver:independence-scoring-size-small -->
+* merge phase elo-ladder-size-medium into feat/reviewer-effectiveness-calibration (3e773a6) <!-- sw-deliver:elo-ladder-size-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
