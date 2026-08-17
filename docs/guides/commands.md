@@ -430,6 +430,24 @@ in-process attempt.
 | [`/sw-memory-audit`](../../core/commands/sw-memory-audit.md) | Read-only memory hygiene audit |
 | [`/sw-compound`](../../core/commands/sw-compound.md) | Distill retro into memories |
 | [`/sw-retro`](../../core/commands/sw-retro.md) | Post-ship retrospective (report-only) |
+| [`/sw-retrospective`](../../core/commands/sw-retrospective.md) | Consolidated retro → compound → memory-sync chain |
+
+### Retro gap capture — per-item digest-bound confirm (PRD 275, D7)
+
+When `retrospective.gapCapture.enabled` is true, painful retro items may enter a supervised gap inbox.
+**Human confirmation is per item**, bound to the redacted draft content digest — a batch UI may list
+multiple drafts, but each **materialize** call requires its own matching `--digest` ack for that
+`signalId`. Confirm and materialize are separate steps; unattended dispatch refuses silent mint.
+
+```bash
+python3 scripts/planning_gap_capture.py retro-capture --retro-json .cursor/sw-retro-output.json
+python3 scripts/planning_gap_capture.py retro-confirm --signal-id <signalId> --digest <digest>
+python3 scripts/planning_gap_capture.py retro-materialize --signal-id <signalId> --digest <digest>
+```
+
+Digest mismatch halts with `retro-gap-digest-mismatch`; materialize without prior confirm halts with
+`retro-gap-ack-required`. See [`/sw-retrospective`](../../core/commands/sw-retrospective.md) (PRD 275)
+and [`configuration.md`](configuration.md#retrospective-gap-capture-prd-275).
 
 ## Quick reference — commands you invoke directly
 
