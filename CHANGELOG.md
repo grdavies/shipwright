@@ -901,6 +901,7 @@
 * merge phase calibration-cost-and-offline-eval-size-medium into feat/reviewer-effectiveness-calibration (b1128c8) <!-- sw-deliver:calibration-cost-and-offline-eval-size-medium -->
 * merge phase independence-scoring-size-small into feat/reviewer-effectiveness-calibration (2425f8b) <!-- sw-deliver:independence-scoring-size-small -->
 * merge phase elo-ladder-size-medium into feat/reviewer-effectiveness-calibration (3e773a6) <!-- sw-deliver:elo-ladder-size-medium -->
+* merge phase cli-ingest-and-export-size-medium into feat/reviewer-effectiveness-calibration (a888a22) <!-- sw-deliver:cli-ingest-and-export-size-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
