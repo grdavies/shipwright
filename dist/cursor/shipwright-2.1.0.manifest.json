@@ -379,6 +379,20 @@
     "graph/profiles.py",
     "graph/quick_ship_compile.py",
     "graph/resource_pools.py",
+    "graph/reviewer_metrics/__init__.py",
+    "graph/reviewer_metrics/calibration.py",
+    "graph/reviewer_metrics/cohort.py",
+    "graph/reviewer_metrics/cost.py",
+    "graph/reviewer_metrics/elo.py",
+    "graph/reviewer_metrics/eval_report.py",
+    "graph/reviewer_metrics/export.py",
+    "graph/reviewer_metrics/independence.py",
+    "graph/reviewer_metrics/label_schema.py",
+    "graph/reviewer_metrics/persistence.py",
+    "graph/reviewer_metrics/provenance.py",
+    "graph/reviewer_metrics/ranking.py",
+    "graph/reviewer_metrics/store_adapter.py",
+    "graph/reviewer_metrics/surviving.py",
     "graph/router_nodes.py",
     "graph/run_ownership.py",
     "graph/scheduler.py",
@@ -601,6 +615,7 @@
     "review-local-resolve.py",
     "review_synthesize.py",
     "reviewer-dispatch-check.py",
+    "reviewer-metrics.py",
     "rule_verification.py",
     "rule_verification_lib.py",
     "rule_verifier_sweep.py",
@@ -709,5 +724,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 706
+  "moduleCount": 721
 }

@@ -90,3 +90,10 @@ alignment, glossary links for coined terms, no PRD/R-ID tokens in adopter prose,
 routing where command choice is non-obvious. Fail closed on mechanical lint from
 `scripts/unit_tests/git/harness_ux_polish.py` (user-guide provenance, `documentation/` absent).
 
+## Reviewer effectiveness capture boundary (PRD 273)
+
+Reviewer-effectiveness metadata persistence uses **`.cursor/sw-learning-store/` as the sole v1 authority**
+via `ReviewerMetricsStoreAdapter` (Decision D7). `/sw-doc-review` does not write parallel reviewer-metrics
+stores or promote learnings to standing rules — capture flows through the thin adapter only. See
+`.sw/layout.md` (NP-1) and `scripts/unit_tests/graph/test_reviewer_metrics_no_promotion.py`.
+

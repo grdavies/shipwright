@@ -186,6 +186,30 @@ MAC-authenticated (broker-resolved per-repo secret), and receipt-visible on hit 
 **Retention:** cache GC defaults to 30-day retention and a 256 MiB ceiling independent of journal limits
 (`CanonicalCacheStore.gc`); oversize writes fail closed (`CacheStoreFull`).
 
+### Reviewer effectiveness metrics (PRD 273)
+
+Offline, advisory-only calibration for reviewer personas and models. Metrics **never** gate live review,
+kernel classification, promotion, or panel composition.
+
+| Surface | Canonical path | Writer | Retention |
+| --- | --- | --- | --- |
+| Learning store (sole v1 authority) | `.cursor/sw-learning-store/` | `graph.learning_store.LearningStore` via `ReviewerMetricsStoreAdapter` | Default 90-day retention (`DEFAULT_RETENTION_SECONDS` in `learning_store.py`) |
+| Metadata adapter | `scripts/graph/reviewer_metrics/store_adapter.py` | Append-only `LearningEvent` writes | Gitignored; operator-local |
+| Operator CLI | `scripts/reviewer-metrics.py` | Operator label ingest / export | Delegates to learning store — no parallel SoT |
+
+**NP-1 (no promotion inflation):** reviewer metrics MUST NOT auto-promote learnings to standing rules,
+memory, or kernel classification. The thin adapter maps validated metadata into `.cursor/sw-learning-store`
+only — it does not reimplement generic promotion (#678/#679). See
+`scripts/unit_tests/graph/test_reviewer_metrics_no_promotion.py`.
+
+**NP-3 (no closed-loop optimization):** ratings, calibration, and ranking reports are report-only.
+`ELO_GATING_ENABLED` and `RANKING_GATING_ENABLED` remain `false`; metrics cannot authorize/deny reviewers,
+alter quorum bindings, or change kernel/promotion paths.
+
+**Out of scope (PRD 272):** receipt-derived learning-store schema, promotion pipelines, and graph execution
+runtime concerns belong to PRD 272 — not duplicated here. See `scripts/graph/learning_store.py` and
+`docs/guides/workflows.md` (Reviewer effectiveness calibration).
+
 ### Target-lock and run-local lease paths (PRD 081 R19, R20)
 
 | Lock kind | Directory | Resolver | Journal |

@@ -1628,6 +1628,20 @@ wave-width distribution (`waveWidth`) used to validate that split suggestions pr
 The scorer (`scripts/phase_sizing.py`, Phase 2+) reads these keys when present; unconfigured repos keep
 backward-compatible defaults from the latest corpus audit.
 
+## Reviewer effectiveness metrics semantics
+
+Offline calibration constants — advisory only; no workflow config keys gate live review on these values.
+
+| Constant | Module | Semantics |
+| --- | --- | --- |
+| `MIN_RANKING_N` (10) | `graph.reviewer_metrics.ranking` | Ranking reports `unknown` and suppresses ordering when cohort sample size is below 10; `recommend` stays `false` |
+| Unlabeled → censored | `graph.reviewer_metrics.surviving` | Findings without exogenous labels are censored — excluded from Elo losses and negative calibration |
+| `ELO_GATING_ENABLED` (`false`) | `graph.reviewer_metrics.elo` | Pairwise ratings never authorize/deny reviewers or alter panel composition |
+| `RANKING_GATING_ENABLED` (`false`) | `graph.reviewer_metrics.ranking` | Rankings never bind reviewer selection |
+
+Operator CLI: `python3 scripts/reviewer-metrics.py`. Storage authority: `.cursor/sw-learning-store/` via
+`ReviewerMetricsStoreAdapter` — see `.sw/layout.md` and `docs/guides/workflows.md`.
+
 ## Self-improving loop — inefficiency scanner
 
 Process inefficiency detection. Greenfield default **enabled** (`inefficiency.enabled: true`); opt out by setting `false`.

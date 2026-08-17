@@ -896,6 +896,13 @@
 * merge phase packages-trust-approval-tuple-size-large into feat/workflow-intelligence-assurance (b84ac4c) <!-- sw-deliver:packages-trust-approval-tuple-size-large -->
 * merge phase promotion-policy-and-coverage-semantics-size-large into feat/workflow-intelligence-assurance (2ff558b) <!-- sw-deliver:promotion-policy-and-coverage-semantics-size-large -->
 * merge phase profiles-budgets-traceability-triage-docs-size-large into feat/workflow-intelligence-assurance (43a7d6c) <!-- sw-deliver:profiles-budgets-traceability-triage-docs-size-large -->
+* merge phase label-schema-and-provenance-size-medium into feat/reviewer-effectiveness-calibration (9fce129) <!-- sw-deliver:label-schema-and-provenance-size-medium -->
+* merge phase learning-store-adapter-and-metadata-persistence-size-medium into feat/reviewer-effectiveness-calibration (f876136) <!-- sw-deliver:learning-store-adapter-and-metadata-persistence-size-medium -->
+* merge phase calibration-cost-and-offline-eval-size-medium into feat/reviewer-effectiveness-calibration (b1128c8) <!-- sw-deliver:calibration-cost-and-offline-eval-size-medium -->
+* merge phase independence-scoring-size-small into feat/reviewer-effectiveness-calibration (2425f8b) <!-- sw-deliver:independence-scoring-size-small -->
+* merge phase elo-ladder-size-medium into feat/reviewer-effectiveness-calibration (3e773a6) <!-- sw-deliver:elo-ladder-size-medium -->
+* merge phase cli-ingest-and-export-size-medium into feat/reviewer-effectiveness-calibration (a888a22) <!-- sw-deliver:cli-ingest-and-export-size-medium -->
+* merge phase docs-np-boundaries-decision-ack-size-small into feat/reviewer-effectiveness-calibration (d35b908) <!-- sw-deliver:docs-np-boundaries-decision-ack-size-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
