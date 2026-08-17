@@ -2602,7 +2602,35 @@ def _close_issue_store_unit(
         }
     prior_state = _record_prior_state(record, artifact_type)
     target_labels = _closure_labels_for(record, artifact_type)
-    if _record_is_closed(record, artifact_type):
+    was_closed = _record_is_closed(record, artifact_type)
+    if was_closed:
+        # R13 — already-closed frozen units still get idempotent stale-hash repair.
+        if FROZEN_LABEL in list(record.labels) or bool(record.locked):
+            repin = backend.repin_freeze_after_close(record)
+            if repin.get("verdict") != "ok":
+                return {
+                    "unitId": unit_id,
+                    "artifactType": artifact_type,
+                    "priorState": prior_state,
+                    "resultingState": "complete",
+                    "action": "noop",
+                    "verdict": "fail",
+                    "error": "freeze-repin-failed",
+                    "alreadyClosed": True,
+                    "partialApply": bool(repin.get("partialApply")),
+                    "repin": repin,
+                }
+            return {
+                "unitId": unit_id,
+                "artifactType": artifact_type,
+                "priorState": prior_state,
+                "resultingState": "complete",
+                "action": "noop" if repin.get("action") == "noop" else "repin",
+                "verdict": "pass",
+                "alreadyClosed": True,
+                "hash": repin.get("hash"),
+                "repin": repin,
+            }
         return {
             "unitId": unit_id,
             "artifactType": artifact_type,
@@ -2624,7 +2652,8 @@ def _close_issue_store_unit(
         }
     before_hash = None
     before_body = None
-    if FROZEN_LABEL in list(record.labels) or bool(record.locked):
+    frozen = FROZEN_LABEL in list(record.labels) or bool(record.locked)
+    if frozen:
         before_hash = parse_freeze_record_hash(record.comments)
         before_body = reassemble_body(record.body, record.comments)
     try:
@@ -2652,11 +2681,11 @@ def _close_issue_store_unit(
             "verdict": "fail",
             "error": str(exc),
         }
+    after = backend._client.issue_get(updated.id)
     if before_body is not None:
-        after = backend._client.issue_get(updated.id)
-        after_hash = parse_freeze_record_hash(after.comments)
         after_body = reassemble_body(after.body, after.comments)
-        if before_body != after_body or before_hash != after_hash:
+        # Close may change state/labels (hash) but must not rewrite operator body.
+        if before_body != after_body:
             return {
                 "unitId": unit_id,
                 "artifactType": artifact_type,
@@ -2664,6 +2693,34 @@ def _close_issue_store_unit(
                 "verdict": "fail",
                 "error": "locked-body-mutated",
             }
+    # R1 — re-pin newest freeze hash after close mutation (state+labels in hash).
+    if frozen:
+        repin = backend.repin_freeze_after_close(after)
+        if repin.get("verdict") != "ok":
+            return {
+                "unitId": unit_id,
+                "artifactType": artifact_type,
+                "priorState": prior_state,
+                "resultingState": "complete",
+                "action": "close",
+                "verdict": "fail",
+                "error": "freeze-repin-failed",
+                "partialApply": True,
+                "closedOk": True,
+                "priorHash": before_hash,
+                "repin": repin,
+            }
+        return {
+            "unitId": unit_id,
+            "artifactType": artifact_type,
+            "priorState": prior_state,
+            "resultingState": "complete",
+            "action": "close",
+            "verdict": "pass",
+            "hash": repin.get("hash"),
+            "priorHash": before_hash,
+            "repin": repin,
+        }
     return {
         "unitId": unit_id,
         "artifactType": artifact_type,
