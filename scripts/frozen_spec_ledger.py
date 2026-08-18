@@ -21,6 +21,22 @@ def is_frozen_task_list(text: str) -> bool:
     return fm.get("frozen", "").lower() == "true"
 
 
+def spec_is_frozen(
+    text: str,
+    *,
+    root: Path | None = None,
+    body_path: str | Path | None = None,
+) -> bool:
+    """Frontmatter freeze pin, or issue-store verify-frozen-hash (PRD 043)."""
+    if is_frozen_task_list(text):
+        return True
+    if root is None or body_path is None:
+        return False
+    from planning_materialize import issue_store_frozen_verified
+
+    return bool(issue_store_frozen_verified(root, str(body_path)))
+
+
 def frozen_body_hash(text: str) -> str:
     """Digest of the on-disk frozen body bytes (integrity witness)."""
     return content_hash(text)
@@ -52,10 +68,19 @@ def task_done_in_ledger(ledger_tasks: dict[str, Any], task_ref: str) -> bool:
     return bool(entry.get("done")) if isinstance(entry, dict) else False
 
 
-def effective_task_checkboxes(text: str, ledger_tasks: dict[str, Any]) -> dict[str, bool]:
+def effective_task_checkboxes(
+    text: str,
+    ledger_tasks: dict[str, Any],
+    *,
+    frozen: bool | None = None,
+    root: Path | None = None,
+    body_path: str | Path | None = None,
+) -> dict[str, bool]:
     """Ledger-backed checkbox truth for frozen specs; file parse otherwise (R23)."""
     file_boxes = parse_task_checkboxes(text)
-    if not is_frozen_task_list(text):
+    if frozen is None:
+        frozen = spec_is_frozen(text, root=root, body_path=body_path)
+    if not frozen:
         return file_boxes
     return {ref: task_done_in_ledger(ledger_tasks, ref) for ref in file_boxes}
 

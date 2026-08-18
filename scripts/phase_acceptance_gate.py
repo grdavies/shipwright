@@ -14,9 +14,9 @@ if str(SCRIPT_DIR) not in sys.path:
 import doc_format
 from checkbox_diff import parse_task_checkboxes
 from frozen_spec_ledger import (
-    is_frozen_task_list,
     record_ledger_subtask,
     reject_hashed_body_write,
+    spec_is_frozen,
     task_done_in_ledger,
 )
 
@@ -62,12 +62,19 @@ def phase_id_for_slug(text: str, phase_slug: str) -> str | None:
     return None
 
 
-def phase_refs_checked(text: str, phase_id: str, ledger_tasks: dict[str, Any] | None = None) -> dict[str, bool]:
+def phase_refs_checked(
+    text: str,
+    phase_id: str,
+    ledger_tasks: dict[str, Any] | None = None,
+    *,
+    root: Path | None = None,
+    body_path: str | Path | None = None,
+) -> dict[str, bool]:
     chunk = doc_format.phase_section_text(text, phase_id)
     if not chunk:
         return {}
     refs = parse_task_checkboxes(chunk)
-    if ledger_tasks is not None and is_frozen_task_list(text):
+    if ledger_tasks is not None and spec_is_frozen(text, root=root, body_path=body_path):
         return {ref: task_done_in_ledger(ledger_tasks, ref) for ref in refs}
     return refs
 
@@ -101,7 +108,9 @@ def check_phase_acceptance(
     _check_root, tasks_path = resolved
     text = tasks_path.read_text(encoding="utf-8")
     ledger_tasks = _ledger_tasks(state)
-    refs = phase_refs_checked(text, phase_id, ledger_tasks)
+    refs = phase_refs_checked(
+        text, phase_id, ledger_tasks, root=root, body_path=str(tasks_path)
+    )
     if not refs:
         return True, None
     phase_entry = _phase_ledger_entry(state, phase_slug)
@@ -147,7 +156,7 @@ def record_ref_completion(
         return {"verdict": "fail", "error": f"task file not found: {task_list}"}
 
     text = tasks_path.read_text(encoding="utf-8")
-    if is_frozen_task_list(text):
+    if spec_is_frozen(text, root=root, body_path=str(tasks_path)):
         rejected = reject_hashed_body_write(text, text)
         if rejected:
             return {"verdict": "fail", **rejected}

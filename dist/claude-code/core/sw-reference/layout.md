@@ -399,6 +399,12 @@ migrate regions.
 planning artifact bodies to the code repo; artifacts live as issues and materialize to git-ignored paths
 at deliver time (Phase 3): `planning_store.py freeze` records `sw-freeze-record` hash; `planning_materialize.py provision` verifies hash before materializing frozen task lists to `.cursor/planning-materialized/`.
 
+**Hash-verified freeze for ledger (PRD 277 / `frozen_spec_ledger.spec_is_frozen`):** issue-store
+materialized task lists often keep `status: draft` without `frozen: true` so the recorded freeze hash
+stays byte-stable. Deliver ledger check, phase acceptance, and `effective_task_checkboxes` treat a
+`verify-frozen-hash` pass (`issue_store_frozen_verified`) as frozen — frontmatter pin **or** hash
+verification. Do not toggle checkboxes or add `frozen: true` on those bodies; that breaks the hash.
+
 **Closeout freeze re-pin (PRD 275 / facade):** `close-delivery-units` (via `planning_store_facade` →
 `IssueStoreBackend.repin_freeze_after_close`) appends a newest `sw-freeze-record` after mutating frozen
 issue state/labels to closed/complete so subsequent `get` does not raise `tamper-detected`. Partial

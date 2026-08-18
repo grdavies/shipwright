@@ -10,7 +10,7 @@ declares its capability flags — change no command.
 | Op | Inputs | Returns | Purpose |
 | --- | --- | --- | --- |
 | `load-context` | project, days_back? | rules + recent activity + open tasks | One-shot session warmup. |
-| `rules-load` | scope (project/global) | behavioral rules | Load guardrails (startup, project switch). |
+| `rules-load` | scope (project/global) | behavioral rules | Load guardrails (startup, project switch). **Sole load path** for allowlisted rules — not `search`/`store`. |
 | `search` | query, {filePath?, category?, recentOnly?, scope?, mode?} | ranked memories (summary + id) | Targeted retrieval; excludes `status: superseded`/`resolved`/tombstone by default. |
 | `traverse` | from-id, {edge?, depth?, direction?} | nodes + edges (+ dangling) | Walk `links[]` + inline markdown links; dangling targets tolerated. |
 | `expand` | ids[] | full memory content + backlinks | Fetch full text after a search; includes inbound edges. |
@@ -33,10 +33,31 @@ Each adapter declares these so commands can degrade gracefully:
 | `categoryFilter` | filter search by category | post-filter client-side or skip |
 | `recencyControl` | toggle recency on/off | accept provider default |
 | `rulesAtStartup` | load behavioral rules | rely on `agentsFile` only |
+| `rulesPromote` | `/sw-memory-audit` may write `category: rule` through `providers/<memory.provider>.md` | refuse unapproved rule writes |
+| `rulesLoad` | preflight `rules-load` via the configured adapter | do not substitute `search` or `store` |
+| `rulesRevoke` | revoke updates allowlist **and** inactivates the provider record | stale cache must not serve revoked ids |
 | `tasks` | native task board | use local registry fallback for the phase board |
 | `export` / `import` | neutral JSONL + OKF bundle interchange | provider swap requires manual re-distillation from raw transcripts |
 | `softDelete` | inactivate vs hard delete | treat modify-inactivate as best effort |
 | `semanticSearch` | vector / embedding search | use keyword + frontmatter filtering (`scripts/in-repo-memory-search.py` for in-repo) |
+
+## Provider-aware rule promote and load (PRD 277)
+
+Promote, load, and revoke are **provider-agnostic**. Commands speak `/sw-memory-audit` and
+`memory-preflight` `rules-load` only — they do not branch on `memory.provider`. The configured adapter
+at `providers/<memory.provider>.md` maps the write. Allowlist commit happens only after a verified
+adapter write; a partial failure records `.cursor/sw-memory/needs-reconcile.json` and fail-closes
+subsequent `rules-load`.
+
+Local rule bodies under `.cursor/sw-memory/rules/` are required only for `in-repo`. After an in-repo
+promote, regenerate derived store refs:
+
+```bash
+python3 scripts/in-repo-memory-search.py maintain-derived --store .cursor/sw-memory
+```
+
+That refreshes `index.md` / `log.md`. Non-in-repo providers must not dual-home standing rule bodies
+into that directory.
 
 ## Canonical category map (write contract)
 

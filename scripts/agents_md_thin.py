@@ -8,6 +8,13 @@ import re
 import sys
 from pathlib import Path
 
+from host_lib import load_workflow_config
+from memory_lib import memory_section
+from memory_rules_promote import (
+    RuleWriteRefused,
+    configured_provider,
+)
+
 RULE_STORE_REL = Path(".cursor/sw-memory/rules")
 ALLOWLIST_REL = Path(".cursor/sw-memory-rule-allowlist.json")
 DEFAULT_AGENTS_REL = Path("AGENTS.md")
@@ -58,6 +65,18 @@ def rule_path(root: Path, rule_id: str) -> Path:
     return root / RULE_STORE_REL / f"{rule_id}.md"
 
 
+def active_memory_provider(root: Path) -> str:
+    try:
+        return configured_provider(root)
+    except RuleWriteRefused:
+        cfg = load_workflow_config(root)
+        return str(memory_section(cfg).get("provider") or "in-repo").strip() or "in-repo"
+
+
+def local_rule_bodies_required(provider: str) -> bool:
+    return provider == "in-repo"
+
+
 def audit_agents_md(root: Path, agents_rel: Path = DEFAULT_AGENTS_REL) -> dict[str, object]:
     agents_path = root / agents_rel
     if not agents_path.is_file():
@@ -74,10 +93,16 @@ def audit_agents_md(root: Path, agents_rel: Path = DEFAULT_AGENTS_REL) -> dict[s
 
     missing_rules: list[str] = []
     unlisted_rules: list[str] = []
+    dual_home_bodies: list[str] = []
+    provider = active_memory_provider(root)
+    require_local = local_rule_bodies_required(provider)
     for rule_id in rule_ids:
-        if not rule_path(root, rule_id).is_file():
+        local_body = rule_path(root, rule_id).is_file()
+        if require_local and not local_body:
             missing_rules.append(rule_id)
-        elif allowlist_status == "ok" and allowlist is not None and rule_id not in allowlist:
+        if not require_local and local_body:
+            dual_home_bodies.append(rule_id)
+        if allowlist_status == "ok" and allowlist is not None and rule_id not in allowlist:
             unlisted_rules.append(rule_id)
 
     errors: list[str] = []
@@ -93,9 +118,12 @@ def audit_agents_md(root: Path, agents_rel: Path = DEFAULT_AGENTS_REL) -> dict[s
     return {
         "ok": not errors,
         "agentsPath": str(agents_rel),
+        "provider": provider,
+        "localBodiesRequired": require_local,
         "ruleIds": rule_ids,
         "substantiveLines": offenders,
         "allowlistStatus": allowlist_status,
+        "dualHomeBodies": dual_home_bodies,
         "errors": errors,
     }
 
