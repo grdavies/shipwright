@@ -940,6 +940,7 @@
 * merge phase prefer-run-scoped-adopt-lock-cas-content-hash into feat/deliver-ship-closeout-hardening (b179c8d) <!-- sw-deliver:prefer-run-scoped-adopt-lock-cas-content-hash -->
 * merge phase phase-ship-hygiene-safe-auto-repair into feat/deliver-ship-closeout-hardening (542d480) <!-- sw-deliver:phase-ship-hygiene-safe-auto-repair -->
 * merge phase docs-parity-absorb-acceptance-map into feat/deliver-ship-closeout-hardening (cb92603) <!-- sw-deliver:docs-parity-absorb-acceptance-map -->
+* merge phase assert-helper-audit-sanitize into feat/per-repo-memory-write-binding (b4a4552) <!-- sw-deliver:assert-helper-audit-sanitize -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
