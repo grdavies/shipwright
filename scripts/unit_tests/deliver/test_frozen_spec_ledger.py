@@ -18,6 +18,7 @@ from frozen_spec_ledger import (
     is_frozen_task_list,
     project_checkboxes_from_ledger,
     reject_hashed_body_write,
+    spec_is_frozen,
     task_done_in_ledger,
 )
 from checkbox_diff import parse_task_checkboxes, toggle_checkbox
@@ -105,6 +106,29 @@ def test_direct_hashed_body_write_rejected() -> None:
     rejected = reject_hashed_body_write(FROZEN_TASKS, mutated)
     assert rejected is not None
     assert rejected["error"] == "hashed-body-write-rejected"
+
+
+def test_spec_is_frozen_issue_store_hash(monkeypatch: pytest.MonkeyPatch) -> None:
+    draft = """---
+status: draft
+---
+- [ ] 1.1 First task
+"""
+    assert not is_frozen_task_list(draft)
+    assert not spec_is_frozen(draft)
+    monkeypatch.setattr(
+        "planning_materialize.issue_store_frozen_verified",
+        lambda _root, _path: True,
+    )
+    assert spec_is_frozen(draft, root=Path("."), body_path="docs/prds/x/tasks-x.md")
+    from frozen_spec_ledger import effective_task_checkboxes
+
+    boxes = effective_task_checkboxes(
+        draft,
+        {"1.1": {"done": True}},
+        frozen=True,
+    )
+    assert boxes["1.1"] is True
 
 
 def test_tasks_progress_toggle_records_ledger_not_body(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
