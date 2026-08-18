@@ -57,6 +57,8 @@ def dispatch(argv: list[str]) -> int:
         return _python("wave_deliver_loop.py", root, ["watchdog", *rest])
     if cmd == "ship-lease":
         return _python("wave_lock.py", root, rest)
+    if cmd == "run-lease":
+        return _python("wave_lock.py", root, ["run-lease", *rest])
     if cmd == "target-lock":
         return _python("wave_target_lock.py", root, rest)
     if cmd in ("state", "lock", "journal", "log", "ledger"):

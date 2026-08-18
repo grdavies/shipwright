@@ -45,6 +45,7 @@ STATIC_HEAD = """# Shipwright local hook state (machine-local, not shared)
 .cursor/sw-doc-runs/
 .cursor/sw-target-locks/
 .cursor/sw-doc-run-locks/
+.cursor/sw-deliver-run-locks/
 .cursor/doc-review-runs/
 .cursor/planning-legacy-projection-stamp.json
 
