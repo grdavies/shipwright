@@ -409,14 +409,14 @@ debugging one phase, or when you deliberately skip the orchestrator.
 **Gap-check write (required):** before `merge-ready-green`, the ship chain must persist a binding
 `gap-check.status.json` via `python3 scripts/gap-check-gate.py write pass --phase-slug <slug>`.
 `/sw-ship` phase-mode and `ship-phase-status.py` refuse `merge-ready-green` when gap-check is
-missing or `halt`. Under PRD 278, phase-mode may **auto-repair** `gap-check-missing` when authoritative
+missing or `halt`. Phase-mode may **auto-repair** `gap-check-missing` when authoritative
 evaluation exists for the exact phase HEAD — forged passes without `evaluationProvenance` are refused.
 Status writes route through `status_integrity.write_status_atomic` (provenance stamped, forgery
 fail-closed). See `core/commands/sw-ship.md` **Phase-ship hygiene floors**.
 
-**Closeout hardening (PRD 278):** deliver resume, adopt, and post-merge closure surfaces are documented in
+**Closeout hardening:** deliver resume, adopt, and post-merge closure surfaces are documented in
 `core/commands/sw-deliver.md` **Closeout hardening** (hygiene auto-repair, prefer-run-scoped adopt,
-numeric absorb exactly-one). Absorb acceptance map: `core/sw-reference/layout.md` **PRD 278 closeout surfaces**.
+numeric absorb exactly-one). Absorb acceptance map: `core/sw-reference/layout.md` **Closeout surfaces**.
 
 **Worktree invariant:** never write implementation files on bare `main` — use a worktree + phase
 branch.
