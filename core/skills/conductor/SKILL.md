@@ -420,4 +420,11 @@ Operator acceptance checks: `references/release-acceptance.md`.
 
 Durability and adoption-mode matrix per orchestrator: [references/orchestrator-adoption.md](references/orchestrator-adoption.md).
 
+## PRD 276 decision acknowledgements (driver resilience)
+
+- **D1** — Cluster finalize + orch cwd adopt + exclusive runId lease into one driver-resilience wave
+  (PRD 276) rather than three independent gap fixes; conductor/deliver docs reference the unified surface.
+- **D2** — Prefer validated auto-adopt of a recorded orchestrator worktree over message-only halt when
+  skew is recoverable; path-record alone is insufficient — execution-time identity rebind required.
+
 Reference this skill from orchestrator commands; do not duplicate loop prose.

@@ -1299,3 +1299,14 @@ the existing `sw-` command surface without adding a second pipeline:
 See [commands](commands.md#consult-and-capture) for the full command list and
 [configuration](configuration.md#notebook-session-index) for the notebook session-index opt-in.
 
+## Deliver driver resilience decision acknowledgements
+
+Deliver driver resilience clusters finalize, orch cwd adopt, and exclusive run lease (see
+`core/commands/sw-deliver.md` absorb map). Operator-facing fencing decisions:
+
+- **D4** — **Generation fencing:** stale run-lease reclaim bumps a durable `generation`; writes from a
+  prior generation fail closed so a reclaimed owner cannot corrupt run state after takeover.
+- **D5** — **Local common-dir scope:** exclusive runId leases are anchored to the git common-dir
+  (`.cursor/sw-deliver-run-locks/`). Uncertain ownership and cross-clone reclaim fail closed — they are
+  not remote `wave_remote_lease` CAS locks.
+

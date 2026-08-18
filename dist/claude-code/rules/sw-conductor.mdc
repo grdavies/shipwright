@@ -114,3 +114,9 @@ The graph scheduler owns WorkflowGraph node admission on a **single owning loop*
 `ExecutionBackend` with host-authoritative envelopes (`scripts/graph/execution_backend.py`). Never
 substitute conductor parallel dispatch for graph concurrency or vice versa.
 
+## PRD 276 decision acknowledgements (driver resilience)
+
+- **D3** — Prefer a durable exclusive runId lease (file + generation fencing under
+  `.cursor/sw-deliver-run-locks/`) over heartbeat-only fencing. Heartbeat freshness alone failed under
+  PRD 272-style restart; second adopters halt typed until reclaim or resume.
+
