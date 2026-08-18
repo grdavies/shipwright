@@ -739,6 +739,15 @@ def _resolve_recorded_orch_path(root: Path, state: dict[str, Any]) -> Path | Non
     return path
 
 
+def _looks_like_orchestrator_worktree(path: Path) -> bool:
+    """True for managed ``.sw-worktrees/<slug>-orchestrator`` paths (PRD 276 R5)."""
+    try:
+        parts = path.resolve().parts
+    except OSError:
+        parts = path.parts
+    return ".sw-worktrees" in parts and str(path.name).endswith("-orchestrator")
+
+
 def should_attempt_orch_cwd_adopt(
     root: Path,
     state: dict[str, Any],
@@ -748,9 +757,9 @@ def should_attempt_orch_cwd_adopt(
     """Whether deliver entry should run validated orch cwd adopt (PRD 276 R5/R6/R8).
 
     - Consumable resume → always attempt (missing/invalid → fail-closed R6).
-    - Otherwise attempt only for recoverable skew: managed orch path exists and
-      cwd/root is not already the orch worktree (R5/R8). Stub fixture paths
-      outside managed roots are ignored unless resume is consumable.
+    - Otherwise attempt only for recoverable skew on a managed
+      ``.sw-worktrees/*-orchestrator`` path (R5/R8). Fixture stubs that point at
+      the primary checkout itself are ignored unless resume is consumable.
     """
     orch = state.get("orchestratorWorktree") or {}
     raw_path = orch.get("path")
@@ -766,14 +775,11 @@ def should_attempt_orch_cwd_adopt(
     from wave_state import canonical_repo_root
 
     repo_root = canonical_repo_root(root)
+    if not _looks_like_orchestrator_worktree(path):
+        return False
     if not _path_under_managed_roots(path, repo_root):
         return False
-    if not path.is_dir():
-        # Vanished managed orch — fail closed rather than silent cwd-skew (R6).
-        return True
-    if root.resolve() == path.resolve() or Path.cwd().resolve() == path.resolve():
-        # Already in orch cwd — still rebind identity at execution time (R14).
-        return True
+    # Exists or vanished managed orch — attempt (missing → R6 fail-closed).
     return True
 
 
