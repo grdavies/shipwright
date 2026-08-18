@@ -155,6 +155,20 @@ python3 scripts/planning_store.py close-delivery-units --prd-unit <prd-unit-id> 
 - Under file contention, prefer landing phases 1–2 before later doc-only phases.
 - Issue-store gap units reach **resolved** via this post-merge closure loop (`close-delivery-units`), not from INDEX projection edits alone (see `living-status` timing gate).
 
+### Closeout hardening implications (PRD 278)
+
+Post-merge `close-delivery-units` and pre-merge finalize paths inherit PRD 278 closeout behavior:
+
+| Surface | Retro / finalize impact |
+| --- | --- |
+| Numeric absorb exactly-one (R6–R8) | Bare numeric absorb refs in PRD linkage must map to exactly one eligible open gap before unit close; 0/N>1 → `not-ready` with `resumeCommand` — retry only via printed command |
+| Prefer-run-scoped adopt (R3–R5) | Resume after legacy adoption uses proven run-scoped `plan.json`; foreign global `planHashMismatch` does not block when identity is proven |
+| Phase-ship hygiene (R1–R2) | Per-phase ship auto-repair is independent of retro; forged gap-check passes never satisfy merge-ready or closure evidence |
+
+Packaging stance (D1): PRD 278 is a focused closeout-hardening delivery — not a mega-PRD. Absorb stance
+(D3): #731 dogfood closeout is absorbed by PRD 278; do not amend PRD 276 for the same behavior. Absorb
+acceptance map: `core/sw-reference/layout.md` **PRD 278 closeout surfaces**.
+
 1. Confirm post-merge context (merged PR or explicit user acknowledgment).
 2. Run the same chain; `reconcile` without `--require-merge` may mark INDEX `complete` when appropriate.
 3. **Planning-store closure (PRD 059 R16–R24)** — resolve linked PRD, tasks, brainstorm, and gap
