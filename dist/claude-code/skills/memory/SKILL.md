@@ -25,19 +25,31 @@ config change, never a command edit.
 ## Resolve the provider (first step, always)
 
 1. Read `.cursor/workflow.config.json` → `memory.provider`, `memory.project`, `memory.defaultScope`.
-   When no config exists, check `.cursor/sw-memory.provider` (per-repo marker) — if present, provider is
-   `in-repo` with project = workspace basename. Fall back to documented defaults (`provider: in-repo` when
-   marker present, else `recallium`, `defaultScope: project`).
-2. **Catalog + validator (before adapter or rule-fetch):** resolve the provider id through
+   When no config exists, check `.cursor/sw-memory.provider` (per-repo marker) — if present **and** the
+   marker text is literally `in-repo`, provider is `in-repo` with project = workspace basename.
+2. **Write binding hard-cut (PRD 279 R9–R12 / R14–R17; shared brainstorm numbering with PRD 278):**
+   mutating paths (`/sw-memory-sync` store, ordinary `store`/`import` when `root=` is set) MUST call
+   `scripts/memory_preflight.py` write assert (`assert_write_binding` /
+   `memory_sync_store_path` / `resolve_provider --for-write`) **immediately before** adapter dispatch.
+   Binding is either config `memory.provider` + non-empty `memory.project`, or marker
+   `.cursor/sw-memory.provider` = `in-repo` (basename project only). Unbound writes **refuse closed** with
+   a typed cause (`memory-write-unbound`, `memory-write-marker-remote-needs-project`,
+   `memory-write-project-missing`, `memory-write-global-refused`) and an audit line under
+   `.cursor/sw-memory-write-audit.jsonl`. There is **no** ambient Recallium write default and **no**
+   soft-warn write window. `__global__` is explicit-config only.
+3. **Read / display resolve (D2):** unbound reads/preflight may resolve for display without authorizing
+   writes (`resolve_provider` without `--for-write` → `source=unbound`, `displayGuidance=in-repo`,
+   `writeAuthorized=false`). Do **not** ambient-default display resolve to `recallium` when unbound.
+4. **Catalog + validator (before adapter or rule-fetch):** resolve the provider id through
    `scripts/memory_provider_register.py` against `.sw/memory-provider-catalog.json` (emit:
    `core/sw-reference/memory-provider-catalog.json`). This runs on config write, startup/preflight, and hook
    trust — **unknown, malformed, or unregistered ids fail closed** (no cross-provider fallback).
-3. Load the adapter at `providers/<memory.provider>.md` from the plugin **only after** registration passes.
+5. Load the adapter at `providers/<memory.provider>.md` from the plugin **only after** registration passes.
    It defines the concrete tool calls and declares capability flags.
-4. **Hook / rule-fetch trust:** catalog membership alone does **not** grant hook trust — `capability_trust.py`
+6. **Hook / rule-fetch trust:** catalog membership alone does **not** grant hook trust — `capability_trust.py`
    gates and `validate_registration` must pass before `rules_script_for_provider` resolves the out-of-band
    rules script. There is no silent swap to another provider's rule-fetcher.
-5. **Reachability vs empty:** provider **unreachable** (cannot confirm guardrail state) → degrade per surface
+7. **Reachability vs empty:** provider **unreachable** (cannot confirm guardrail state) → degrade per surface
    contract; hook `beforeSubmitPrompt` **blocks** when opted in. Provider **reachable with zero rule-class
    memories** → **pass** (confirmed empty is normal for greenfield repos).
 
@@ -266,12 +278,15 @@ successful snapshot stamp degrades to the committed snapshot with a warning — 
 
 Store distilled memories per the write contract in `CAPABILITIES.md`:
 
+- **assert write binding first** (PRD 279): `python3 scripts/memory_preflight.py assert-sync-store`
+  (or `resolve-provider --for-write`) — refuse unbound; never ambient-default to Recallium,
 - pick the canonical category (decision / learning / debug / design / code-context / research /
   discussion); never a generic catch-all,
 - set `relatedFiles` + stable tags (`prd-<n>`, `task-<n>`, `surface:<cmd>`),
 - **run `scripts/memory-redact.py` on the payload first** (R41 chokepoint),
 - search before store; `modify` a near-duplicate instead of adding a second,
-- project scope by default; global only on explicit user direction,
+- project scope by default; global only on explicit user direction (`__global__` requires explicit
+  config binding),
 - store the distilled substance, never a raw transcript dump.
 - populate `title` and `description` frontmatter at store time from the distilled first line when omitted (`memory-preflight` write path).
 
