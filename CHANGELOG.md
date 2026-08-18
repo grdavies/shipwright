@@ -943,6 +943,7 @@
 * merge phase assert-helper-audit-sanitize into feat/per-repo-memory-write-binding (b4a4552) <!-- sw-deliver:assert-helper-audit-sanitize -->
 * merge phase write-binding-regression-suite into feat/per-repo-memory-write-binding (fb156c9) <!-- sw-deliver:write-binding-regression-suite -->
 * merge phase unbound-fallback-alignment-hard-cut into feat/per-repo-memory-write-binding (a3a8724) <!-- sw-deliver:unbound-fallback-alignment-hard-cut -->
+* merge phase memory-skill-docs into feat/per-repo-memory-write-binding (362e4c3) <!-- sw-deliver:memory-skill-docs -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
