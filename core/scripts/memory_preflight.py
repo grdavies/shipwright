@@ -23,14 +23,21 @@ from memory_rules_promote import (
     needs_reconcile_path,
 )
 from memory_write_binding import (
+    CAUSE_UNBOUND,
+    IN_REPO_PROVIDER,
     MemoryWriteBinding,
     MemoryWriteBindingError,
     assert_memory_write_binding,
+    resolve_write_binding,
 )
 from sw_resolve_plugin_root import resolve_plugin_root
 
 RulesLoader = Callable[[Path, str], dict[str, Any]]
 MutatingWriter = Callable[[MemoryWriteBinding], dict[str, Any]]
+
+# Display-only alignment when unbound (PRD 279 D2 / R10). Never authorizes writes
+# and MUST NOT ambient-default to Recallium.
+UNBOUND_DISPLAY_GUIDANCE = IN_REPO_PROVIDER
 
 
 class PreflightError(Exception):
@@ -64,6 +71,12 @@ def load_allowlist(root: Path) -> set[str]:
 
 
 def resolve_active_provider(root: Path) -> dict[str, Any]:
+    """Resolve configured provider for rules-load / read preflight.
+
+    Requires an explicit ``memory.provider`` (no ambient Recallium default).
+    Does **not** authorize mutating writes — use ``resolve_provider(..., for_write=True)``
+    or ``assert_write_binding`` before provider dispatch.
+    """
     try:
         provider = configured_provider(root)
     except RuleWriteRefused as exc:
@@ -82,6 +95,79 @@ def resolve_active_provider(root: Path) -> dict[str, Any]:
         "provider": provider,
         "project": str(memory_section(cfg).get("project") or ""),
         "registration": registration,
+        "writeAuthorized": False,
+    }
+
+
+def resolve_provider(
+    root: Path,
+    *,
+    for_write: bool = False,
+    operation: str = "memory-sync",
+    category: str | None = None,
+    cfg: dict[str, Any] | None = None,
+    project_override: str | None = None,
+) -> dict[str, Any]:
+    """Resolve provider with an explicit read vs write posture (PRD 279 R10 / D2).
+
+    - ``for_write=True``: hard-cut assert — unbound refuses with typed cause; never
+      ambient-defaults to Recallium; no soft-warn write window.
+    - ``for_write=False``: display/read resolution only. Unbound returns
+      ``source=unbound`` with ``displayGuidance=in-repo`` (aligns with configuration
+      guidance) and ``writeAuthorized=False``. Never returns ambient ``recallium``.
+    """
+    if for_write:
+        binding = assert_write_binding(
+            root,
+            operation,
+            category,
+            cfg=cfg,
+            project_override=project_override,
+        )
+        return {
+            "verdict": "ok",
+            "op": "resolve-provider",
+            "purpose": "write",
+            "provider": binding.provider,
+            "project": binding.project,
+            "source": binding.source,
+            "writeAuthorized": True,
+            "operation": operation,
+            "category": category,
+        }
+
+    config = cfg if cfg is not None else load_workflow_config(root)
+    binding = resolve_write_binding(root, config)
+    if binding is not None:
+        return {
+            "verdict": "ok",
+            "op": "resolve-provider",
+            "purpose": "read",
+            "provider": binding.provider,
+            "project": binding.project,
+            "source": binding.source,
+            "writeAuthorized": False,
+            "displayGuidance": binding.provider
+            if binding.provider == IN_REPO_PROVIDER
+            else None,
+        }
+
+    # Unbound read/display — align with in-repo guidance; do not ambient-default Recallium.
+    return {
+        "verdict": "ok",
+        "op": "resolve-provider",
+        "purpose": "read",
+        "provider": None,
+        "project": None,
+        "source": "unbound",
+        "writeAuthorized": False,
+        "displayGuidance": UNBOUND_DISPLAY_GUIDANCE,
+        "cause": CAUSE_UNBOUND,
+        "reason": (
+            "repository has no explicit memory binding; reads may continue for display, "
+            "but writes require memory.provider + memory.project or "
+            f".cursor/sw-memory.provider={IN_REPO_PROVIDER!r}"
+        ),
     }
 
 
@@ -292,12 +378,30 @@ def main(argv: list[str] | None = None) -> int:
         help="Assert write binding for /sw-memory-sync store (no provider dispatch)",
     )
     sync_p.add_argument("--category", default="learning")
+    resolve_p = sub.add_parser(
+        "resolve-provider",
+        help="Resolve provider for read (display) or write (hard-cut assert; no ambient Recallium)",
+    )
+    resolve_p.add_argument(
+        "--for-write",
+        action="store_true",
+        help="Hard-cut write resolve — refuse unbound; never ambient-default Recallium",
+    )
+    resolve_p.add_argument("--operation", default="memory-sync")
+    resolve_p.add_argument("--category", default=None)
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
     command = args.command or "rules-load"
     try:
         if command == "assert-sync-store":
             result = memory_sync_store_path(root, category=str(args.category))
+        elif command == "resolve-provider":
+            result = resolve_provider(
+                root,
+                for_write=bool(args.for_write),
+                operation=str(args.operation),
+                category=args.category,
+            )
         else:
             result = preflight(root)
     except MemoryWriteBindingError as exc:
@@ -310,6 +414,7 @@ def main(argv: list[str] | None = None) -> int:
                     "cause": refuse.cause,
                     "operation": refuse.operation,
                     "category": refuse.category,
+                    "writeAuthorized": False,
                 },
                 indent=2,
             )
