@@ -917,6 +917,7 @@
 * merge phase docs-and-decisions-size-small into feat/deliver-driver-resilience (e1636e5) <!-- sw-deliver:docs-and-decisions-size-small -->
 * merge phase promote-and-load-contracts-size-medium into feat/provider-aware-rule-storage (92d9692) <!-- sw-deliver:promote-and-load-contracts-size-medium -->
 * merge phase dual-home-integrity-revoke-size-medium into feat/provider-aware-rule-storage (6916e40) <!-- sw-deliver:dual-home-integrity-revoke-size-medium -->
+* merge phase interchangeability-docs-decisions-size-small into feat/provider-aware-rule-storage (0da7b5d) <!-- sw-deliver:interchangeability-docs-decisions-size-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
