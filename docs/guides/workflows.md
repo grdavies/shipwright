@@ -1299,7 +1299,7 @@ the existing `sw-` command surface without adding a second pipeline:
 See [commands](commands.md#consult-and-capture) for the full command list and
 [configuration](configuration.md#notebook-session-index) for the notebook session-index opt-in.
 
-## PRD 276 decision acknowledgements (driver resilience)
+## Deliver driver resilience decision acknowledgements
 
 Deliver driver resilience clusters finalize, orch cwd adopt, and exclusive run lease (see
 `core/commands/sw-deliver.md` absorb map). Operator-facing fencing decisions:
