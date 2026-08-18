@@ -14,6 +14,7 @@ SCRIPT_DIR = Path(__file__).resolve().parents[2]
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from deliver_finalize_fixtures import seed_proven_run_identity
 from wave_json_io import read_json, write_json
 from wave_run_paths import lease_path, run_directory, state_path
 from wave_state import load_run_scoped_state, write_run_local_lease
@@ -53,7 +54,7 @@ def _seed_run(tmp_path: Path, run_id: str) -> dict:
     )
     projection.parent.mkdir(parents=True, exist_ok=True)
     projection.write_text("# projected\n", encoding="utf-8")
-    return state
+    return seed_proven_run_identity(tmp_path, run_id, state)
 
 
 def test_finalize_after_external_merge_verifies_receipt_and_immutable(
