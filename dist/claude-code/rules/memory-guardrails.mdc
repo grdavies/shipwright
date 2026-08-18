@@ -85,6 +85,13 @@ Named patterns: AWS `AKIA…`, `ghp_…`/PATs, JWTs, `Bearer` headers, PEM priva
 `category: rule` requires human confirmation + provenance metadata. Auto-distilled candidates cannot
 promote without `/sw-memory-audit` approval. Active rules must appear in `.cursor/sw-memory-rule-allowlist.json`.
 
+**D3 — human-gated promotion is unchanged.** Provider-aware storage does not add an automatic promote
+path. `/sw-memory-audit` remains the only approval command; allowlist membership still gates injection.
+
+**D4 — planningIssues are planning-store ids.** Rule-related planning artifacts identify units by
+planning-store ids (for example `277-prd-provider-aware-rule-storage` / `tasks-277-provider-aware-rule-storage`),
+not host issue numbers as the durable identity.
+
 ## Trust boundary (R43)
 
 Memory provider holds project-scoped operational data. Least-privilege API credentials via environment only.

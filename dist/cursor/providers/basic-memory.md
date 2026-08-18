@@ -94,6 +94,13 @@ Cloud hook/CLI auth: `Authorization: Bearer $BASIC_MEMORY_API_KEY` against allow
   only on confirmed purge.
 - `export`/`import` are plugin-side synthesis (not native MCP export tools).
 
+## Rule promote, load, and revoke (PRD 277)
+
+Rule-class writes use `/sw-memory-audit` — not a basic-memory-specific command. Promote routes
+`category: rule` through this adapter; `memory-preflight` loads via `rules-load` (hook
+`providers/basic-memory-rules.py`). Revoke inactivates the note and strips the allowlist; do not
+dual-home bodies under `.cursor/sw-memory/rules/`.
+
 ## Operation mapping
 
 | Abstract op | basic-memory tools | Call shape / notes |

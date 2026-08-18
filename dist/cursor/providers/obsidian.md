@@ -99,6 +99,13 @@ loopback REST with the same credential + host policy as agent ops. Rule cache ke
   frontmatter; hard delete only on confirmed purge.
 - `export`/`import` are plugin-side synthesis (not a native Obsidian export tool).
 
+## Rule promote, load, and revoke (PRD 277)
+
+Rule-class writes use `/sw-memory-audit` — not an Obsidian-specific command. Promote routes `category: rule`
+through this adapter; `memory-preflight` loads via `rules-load` (hook `providers/obsidian-rules.py`).
+Revoke inactivates the vault note and strips the allowlist; do not dual-home bodies under
+`.cursor/sw-memory/rules/`.
+
 ## Operation mapping
 
 | Abstract op | Local REST API / Obsidian surface | Call shape / notes |

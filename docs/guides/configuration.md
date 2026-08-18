@@ -193,6 +193,10 @@ Example operator config:
 Reject examples (config write / hook resolve): `unknown-vendor`, `../traversal`, empty string, or a
 catalog row missing adapter integrity or rules script.
 
+**D7 — revocation is both sides.** Revoking a rule updates `.cursor/sw-memory-rule-allowlist.json`
+**and** inactivates the provider record (soft-delete for `in-repo`; adapter inactivate otherwise).
+Drop the id from `.cursor/sw-memory/rules-cache.json` so `rules-load` cannot serve a stale cached body.
+
 For **in-repo**, choose commit mode:
 - `committed` (default) — store lives in `.cursor/sw-memory/`; PR-reviewable
 - `local` — gitignored at `.cursor/sw-memory-local/`
