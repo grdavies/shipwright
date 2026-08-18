@@ -25,13 +25,16 @@ if str(SCRIPT_DIR) not in sys.path:
 from wave_state import append_log, emit, fail, parse_kv, read_lock_meta, utc_now
 
 SHIP_LEASE_STALE_SECONDS = int(os.environ.get("SW_SHIP_LEASE_STALE_SECONDS", "300"))
+RUN_LEASE_STALE_SECONDS = int(os.environ.get("SW_RUN_LEASE_STALE_SECONDS", "300"))
 LOCKS_DIR_NAME = "sw-deliver-locks"
 TARGET_LOCKS_DIR_NAME = "sw-target-locks"
 DOC_RUN_LOCKS_DIR_NAME = "sw-doc-run-locks"
 DOC_TO_FEATURE_HANDOFF_LOCKS_DIR_NAME = "sw-doc-to-feature-handoff-locks"
+RUN_LEASE_LOCKS_DIR_NAME = "sw-deliver-run-locks"
 TARGET_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
 DOC_RUN_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
 DOC_TO_FEATURE_HANDOFF_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
+RUN_LEASE_JOURNAL_NAME = "reclaim-journal.jsonl"
 SAFE_SLUG_RE = re.compile(r"[^a-zA-Z0-9._-]+")
 
 
@@ -608,9 +611,528 @@ def cmd_status(root: Path, args: list[str]) -> None:
     )
 
 
+# --- Exclusive deliver runId lease (PRD 276 R9–R12, R20, R21) -----------------
+
+
+def run_lease_locks_dir(root: Path) -> Path:
+    """Git-common-dir anchored exclusive run-lease directory (R21)."""
+    repo_root = _canonical_repo_root_for_locks(root)
+    base_raw = repo_root / ".cursor" / RUN_LEASE_LOCKS_DIR_NAME
+    parent_raw = repo_root / ".cursor"
+    if parent_raw.is_symlink():
+        fail("run-lease parent is symlinked", exit_code=20, halt="lock-path-unsafe")
+    if base_raw.is_symlink():
+        fail("run-lease directory is symlinked", exit_code=20, halt="lock-path-unsafe")
+    base = base_raw.resolve()
+    parent = base.parent.resolve()
+    if parent.is_symlink():
+        fail("run-lease parent is symlinked", exit_code=20, halt="lock-path-unsafe")
+    base.mkdir(parents=True, exist_ok=True)
+    return base
+
+
+def run_lease_key_digest(root: Path, run_id: str) -> str:
+    raw = f"{repository_identity(root)}\0deliver-run-lease\0{run_id}".encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()[:32]
+
+
+def run_lease_path_for(root: Path, run_id: str) -> Path:
+    locks = run_lease_locks_dir(root)
+    digest = run_lease_key_digest(root, run_id)
+    safe_run = sanitize_lock_component(run_id.replace(":", "-"))
+    filename = f"{digest}-{safe_run}.lock"
+    path = (locks / filename).resolve()
+    if path.parent != locks:
+        fail("run-lease path escapes locks directory", exit_code=20, halt="lock-path-unsafe")
+    locks_raw = _canonical_repo_root_for_locks(root) / ".cursor" / RUN_LEASE_LOCKS_DIR_NAME
+    if locks_raw.is_symlink():
+        fail("run-lease locks directory is symlinked", exit_code=20, halt="lock-path-unsafe")
+    return path
+
+
+def run_lease_journal_path(root: Path) -> Path:
+    return run_lease_locks_dir(root) / RUN_LEASE_JOURNAL_NAME
+
+
+def append_run_lease_journal(root: Path, entry: dict[str, Any]) -> None:
+    """Append reclaim journal entry; write failure fails takeover closed."""
+    journal = run_lease_journal_path(root)
+    line = json.dumps({**entry, "at": utc_now()}, ensure_ascii=False) + "\n"
+    try:
+        with open(journal, "a", encoding="utf-8") as handle:
+            handle.write(line)
+        os.chmod(journal, 0o600)
+    except OSError as exc:
+        fail(
+            "run-lease journal write failed",
+            exit_code=20,
+            halt="run-lease-journal-write-failed",
+            error=str(exc),
+        )
+
+
+def run_lease_is_stale(meta: dict[str, Any]) -> bool:
+    hb = meta.get("heartbeatAt") or meta.get("acquiredAt")
+    if not isinstance(hb, str):
+        return True
+    try:
+        dt = datetime.strptime(hb, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - dt).total_seconds()
+        return age > RUN_LEASE_STALE_SECONDS
+    except ValueError:
+        return True
+
+
+def run_lease_owner_live(meta: dict[str, Any]) -> bool:
+    """Live when heartbeat fresh OR (same-host and PID still alive)."""
+    if not run_lease_is_stale(meta):
+        return True
+    if meta.get("host") == lock_host() and ship_lease_pid_alive(meta):
+        return True
+    return False
+
+
+def run_lease_ownership_certain(meta: dict[str, Any]) -> bool:
+    """False when host/pid identity is missing or unusable (R21 fail-closed)."""
+    host = meta.get("host")
+    pid = meta.get("pid")
+    if not isinstance(host, str) or not host.strip():
+        return False
+    if not isinstance(pid, int) or pid <= 0:
+        return False
+    return True
+
+
+def _run_lease_generation(meta: dict[str, Any]) -> int:
+    raw = meta.get("generation")
+    try:
+        gen = int(raw) if raw is not None else 0
+    except (TypeError, ValueError):
+        return 0
+    return gen if gen > 0 else 0
+
+
+def _run_lease_resume_command(run_id: str, source_task_list: str | None = None) -> str:
+    if source_task_list:
+        return f"python3 scripts/wave.py deliver-loop --task-list {source_task_list}"
+    return f"python3 scripts/wave.py deliver-loop --run-id {run_id}"
+
+
+def reclaim_stale_run_lease(
+    lock_path: Path,
+    *,
+    root: Path,
+    reclaiming_run_id: str,
+    takeover_reason: str,
+    cross_host_ack: bool = False,
+) -> tuple[bool, int]:
+    """Reclaim stale run lease; bump generation on success (R11/R20).
+
+    Returns (reclaimed, next_generation). Uncertain ownership fails closed (R21).
+    """
+    meta = read_lock_meta(lock_path)
+    if not meta:
+        lock_path.unlink(missing_ok=True)
+        return True, 1
+    if not run_lease_ownership_certain(meta):
+        return False, _run_lease_generation(meta)
+    holder_host = meta.get("host")
+    if holder_host and holder_host != lock_host():
+        # R21 — no automatic cross-clone/cross-host reclaim without explicit ack.
+        if not cross_host_ack:
+            return False, _run_lease_generation(meta)
+        if not run_lease_is_stale(meta):
+            return False, _run_lease_generation(meta)
+    else:
+        if run_lease_owner_live(meta):
+            return False, _run_lease_generation(meta)
+        if not run_lease_is_stale(meta):
+            return False, _run_lease_generation(meta)
+        if ship_lease_pid_alive(meta):
+            return False, _run_lease_generation(meta)
+    prior_gen = _run_lease_generation(meta)
+    next_gen = max(prior_gen, 0) + 1
+    journal_entry = {
+        "kind": "deliver-run-lease-reclaim",
+        "reclaimedOwner": meta.get("owner"),
+        "reclaimedHost": meta.get("host"),
+        "reclaimedPid": meta.get("pid"),
+        "reclaimedAcquiredAt": meta.get("acquiredAt"),
+        "reclaimedHeartbeatAt": meta.get("heartbeatAt"),
+        "reclaimedRunId": meta.get("runId"),
+        "reclaimedGeneration": prior_gen,
+        "nextGeneration": next_gen,
+        "takeoverReason": takeover_reason,
+        "reclaimingRunId": reclaiming_run_id,
+    }
+    append_run_lease_journal(root, journal_entry)
+    lock_path.unlink(missing_ok=True)
+    return True, next_gen
+
+
+def _run_lease_meta(
+    *,
+    run_id: str,
+    generation: int,
+    host: str | None = None,
+    pid: int | None = None,
+) -> dict[str, Any]:
+    now = utc_now()
+    host_val = host or lock_host()
+    pid_val = pid if pid is not None else os.getpid()
+    return {
+        "kind": "deliver-run-lease",
+        "runId": run_id,
+        "generation": int(generation),
+        "owner": f"{host_val}:{pid_val}",
+        "host": host_val,
+        "pid": pid_val,
+        "acquiredAt": now,
+        "heartbeatAt": now,
+    }
+
+
+def acquire_run_lease(
+    root: Path,
+    run_id: str,
+    *,
+    cross_host_ack: bool = False,
+    source_task_list: str | None = None,
+) -> dict[str, Any]:
+    """Acquire exclusive deliver runId lease before mutating run state (R9/R10)."""
+    if not isinstance(run_id, str) or not run_id.strip():
+        return {
+            "verdict": "fail",
+            "error": "run-lease-missing-run-id",
+            "halt": "run-lease-missing-run-id",
+            "resumeCommand": _run_lease_resume_command(run_id or "unknown", source_task_list),
+        }
+    run_id = run_id.strip()
+    lock_path = run_lease_path_for(root, run_id)
+    digest = run_lease_key_digest(root, run_id)
+    if lock_path.is_file():
+        existing = read_lock_meta(lock_path)
+        if (
+            existing.get("runId") == run_id
+            and existing.get("pid") == os.getpid()
+            and existing.get("host") == lock_host()
+            and run_lease_owner_live(existing)
+        ):
+            gen = _run_lease_generation(existing) or 1
+            return {
+                "verdict": "pass",
+                "action": "run-lease-acquire",
+                "reentrant": True,
+                "runId": run_id,
+                "generation": gen,
+                "lockPath": str(lock_path),
+                "lockKeyDigest": digest,
+            }
+    generation = 1
+    meta = _run_lease_meta(run_id=run_id, generation=generation)
+    meta["lockKeyDigest"] = digest
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+
+    def try_acquire(gen: int) -> bool:
+        payload = _run_lease_meta(run_id=run_id, generation=gen)
+        payload["lockKeyDigest"] = digest
+        try:
+            fd = os.open(lock_path, flags, 0o600)
+        except FileExistsError:
+            return False
+        os.write(fd, (json.dumps(payload) + "\n").encode("utf-8"))
+        os.close(fd)
+        return True
+
+    if try_acquire(generation):
+        append_log(
+            root,
+            {
+                "event": "run-lease-acquire",
+                "runId": run_id,
+                "generation": generation,
+            },
+        )
+        return {
+            "verdict": "pass",
+            "action": "run-lease-acquire",
+            "runId": run_id,
+            "generation": generation,
+            "lockPath": str(lock_path),
+            "lockKeyDigest": digest,
+        }
+
+    existing = read_lock_meta(lock_path)
+    reason = "cross-host-ack" if cross_host_ack else "stale-heartbeat-dead-pid"
+    reclaimed, next_gen = reclaim_stale_run_lease(
+        lock_path,
+        root=root,
+        reclaiming_run_id=run_id,
+        takeover_reason=reason,
+        cross_host_ack=cross_host_ack,
+    )
+    if reclaimed and try_acquire(next_gen):
+        append_log(
+            root,
+            {
+                "event": "run-lease-reclaim",
+                "runId": run_id,
+                "generation": next_gen,
+                "previousHolder": existing,
+            },
+        )
+        return {
+            "verdict": "pass",
+            "action": "run-lease-acquire",
+            "reclaimed": True,
+            "runId": run_id,
+            "generation": next_gen,
+            "lockPath": str(lock_path),
+            "lockKeyDigest": digest,
+            "previousHolder": existing,
+        }
+
+    # Live foreign holder or uncertain ownership — typed halt (R10/R21).
+    error = "run-lease-held"
+    halt = "run-lease-held"
+    if existing and not run_lease_ownership_certain(existing):
+        error = "run-lease-ownership-uncertain"
+        halt = "run-lease-ownership-uncertain"
+    elif existing and existing.get("host") and existing.get("host") != lock_host():
+        error = "run-lease-cross-host"
+        halt = "run-lease-cross-host"
+    return {
+        "verdict": "fail",
+        "error": error,
+        "halt": halt,
+        "holder": existing,
+        "lockPath": str(lock_path),
+        "resumeCommand": _run_lease_resume_command(run_id, source_task_list),
+    }
+
+
+def heartbeat_run_lease(root: Path, run_id: str, generation: int) -> dict[str, Any]:
+    """Heartbeat with generation fencing — stale generation fails closed (R20)."""
+    lock_path = run_lease_path_for(root, run_id)
+    if not lock_path.is_file():
+        return {"verdict": "fail", "error": "run-lease-missing", "lockPath": str(lock_path)}
+    meta = read_lock_meta(lock_path)
+    if meta.get("runId") != run_id:
+        return {"verdict": "fail", "error": "run-lease-run-mismatch", "holder": meta}
+    current_gen = _run_lease_generation(meta)
+    if int(generation) != current_gen:
+        return {
+            "verdict": "fail",
+            "error": "run-lease-generation-stale",
+            "halt": "run-lease-generation-stale",
+            "holder": meta,
+            "expectedGeneration": current_gen,
+            "providedGeneration": int(generation),
+        }
+    if meta.get("pid") != os.getpid():
+        return {"verdict": "fail", "error": "run-lease-other-pid", "holder": meta}
+    if meta.get("host") != lock_host():
+        return {"verdict": "fail", "error": "run-lease-other-host", "holder": meta}
+    now = utc_now()
+    meta["heartbeatAt"] = now
+    lock_path.write_text(json.dumps(meta) + "\n", encoding="utf-8")
+    os.chmod(lock_path, 0o600)
+    return {
+        "verdict": "pass",
+        "action": "run-lease-heartbeat",
+        "heartbeatAt": now,
+        "runId": run_id,
+        "generation": current_gen,
+    }
+
+
+def assert_run_lease_write(
+    root: Path,
+    run_id: str,
+    generation: int,
+) -> dict[str, Any]:
+    """Fence a shared-state write: generation must match live lock (R20)."""
+    lock_path = run_lease_path_for(root, run_id)
+    if not lock_path.is_file():
+        return {
+            "verdict": "fail",
+            "error": "run-lease-missing",
+            "halt": "run-lease-missing",
+            "lockPath": str(lock_path),
+            "resumeCommand": _run_lease_resume_command(run_id),
+        }
+    meta = read_lock_meta(lock_path)
+    if not run_lease_ownership_certain(meta):
+        return {
+            "verdict": "fail",
+            "error": "run-lease-ownership-uncertain",
+            "halt": "run-lease-ownership-uncertain",
+            "holder": meta,
+            "resumeCommand": _run_lease_resume_command(run_id),
+        }
+    if meta.get("runId") != run_id:
+        return {
+            "verdict": "fail",
+            "error": "run-lease-run-mismatch",
+            "halt": "run-lease-run-mismatch",
+            "holder": meta,
+            "resumeCommand": _run_lease_resume_command(run_id),
+        }
+    current_gen = _run_lease_generation(meta)
+    if int(generation) != current_gen:
+        return {
+            "verdict": "fail",
+            "error": "run-lease-generation-stale",
+            "halt": "run-lease-generation-stale",
+            "holder": meta,
+            "expectedGeneration": current_gen,
+            "providedGeneration": int(generation),
+            "resumeCommand": _run_lease_resume_command(run_id),
+        }
+    if meta.get("host") != lock_host() or meta.get("pid") != os.getpid():
+        return {
+            "verdict": "fail",
+            "error": "run-lease-held",
+            "halt": "run-lease-held",
+            "holder": meta,
+            "resumeCommand": _run_lease_resume_command(run_id),
+        }
+    if not run_lease_owner_live(meta):
+        return {
+            "verdict": "fail",
+            "error": "run-lease-stale-self",
+            "halt": "run-lease-stale-self",
+            "holder": meta,
+            "resumeCommand": _run_lease_resume_command(run_id),
+        }
+    return {
+        "verdict": "pass",
+        "action": "run-lease-assert-write",
+        "runId": run_id,
+        "generation": current_gen,
+        "lockPath": str(lock_path),
+    }
+
+
+def release_run_lease(root: Path, run_id: str, generation: int | None = None) -> dict[str, Any]:
+    lock_path = run_lease_path_for(root, run_id)
+    if not lock_path.is_file():
+        return {"verdict": "pass", "action": "run-lease-release", "note": "no lock file"}
+    meta = read_lock_meta(lock_path)
+    if meta.get("runId") != run_id:
+        return {"verdict": "fail", "error": "run-lease-run-mismatch", "holder": meta}
+    if meta.get("pid") != os.getpid() or meta.get("host") != lock_host():
+        return {"verdict": "fail", "error": "run-lease-owner-mismatch", "holder": meta}
+    if generation is not None and int(generation) != _run_lease_generation(meta):
+        return {
+            "verdict": "fail",
+            "error": "run-lease-generation-stale",
+            "holder": meta,
+            "expectedGeneration": _run_lease_generation(meta),
+            "providedGeneration": int(generation),
+        }
+    lock_path.unlink(missing_ok=True)
+    append_log(root, {"event": "run-lease-release", "runId": run_id})
+    return {"verdict": "pass", "action": "run-lease-release", "runId": run_id}
+
+
+def status_run_lease(root: Path, run_id: str) -> dict[str, Any]:
+    lock_path = run_lease_path_for(root, run_id)
+    if not lock_path.is_file():
+        return {
+            "verdict": "pass",
+            "action": "run-lease-status",
+            "held": False,
+            "lockPath": str(lock_path),
+        }
+    meta = read_lock_meta(lock_path)
+    return {
+        "verdict": "pass",
+        "action": "run-lease-status",
+        "held": True,
+        "live": run_lease_owner_live(meta),
+        "meta": meta,
+        "generation": _run_lease_generation(meta),
+        "lockPath": str(lock_path),
+    }
+
+
+def cmd_run_lease(root: Path, args: list[str]) -> None:
+    if not args:
+        fail(
+            "usage: wave_lock.py <root> run-lease "
+            "<acquire|release|heartbeat|status|assert-write> --run-id <id> ..."
+        )
+    action = args[0]
+    rest = args[1:]
+    run_id = parse_kv(rest, "--run-id") or os.environ.get("SW_DELIVER_RUN_ID", "")
+    source_task_list = parse_kv(rest, "--task-list")
+    cross_host_ack = "--cross-host-ack" in rest
+    gen_raw = parse_kv(rest, "--generation")
+    generation = int(gen_raw) if gen_raw is not None else None
+
+    if action == "acquire":
+        out = acquire_run_lease(
+            root,
+            str(run_id or ""),
+            cross_host_ack=cross_host_ack,
+            source_task_list=source_task_list,
+        )
+        if out.get("verdict") != "pass":
+            fail(
+                str(out.get("error") or "run-lease-held"),
+                exit_code=20,
+                halt=out.get("halt") or out.get("error"),
+                holder=out.get("holder"),
+                resumeCommand=out.get("resumeCommand"),
+                lockPath=out.get("lockPath"),
+            )
+        emit(out)
+        return
+    if action == "release":
+        out = release_run_lease(root, str(run_id or ""), generation)
+        if out.get("verdict") != "pass":
+            fail(str(out.get("error") or "run-lease-release-failed"), exit_code=20, holder=out.get("holder"))
+        emit(out)
+        return
+    if action == "heartbeat":
+        if generation is None:
+            fail("--generation required for run-lease heartbeat")
+        out = heartbeat_run_lease(root, str(run_id or ""), generation)
+        if out.get("verdict") != "pass":
+            fail(
+                str(out.get("error") or "run-lease-heartbeat-failed"),
+                exit_code=20,
+                halt=out.get("halt") or out.get("error"),
+                holder=out.get("holder"),
+            )
+        emit(out)
+        return
+    if action == "status":
+        emit(status_run_lease(root, str(run_id or "")))
+        return
+    if action == "assert-write":
+        if generation is None:
+            fail("--generation required for run-lease assert-write")
+        out = assert_run_lease_write(root, str(run_id or ""), generation)
+        if out.get("verdict") != "pass":
+            fail(
+                str(out.get("error") or "run-lease-assert-write-failed"),
+                exit_code=20,
+                halt=out.get("halt") or out.get("error"),
+                holder=out.get("holder"),
+                resumeCommand=out.get("resumeCommand"),
+            )
+        emit(out)
+        return
+    fail(f"unknown run-lease subcommand: {action}")
+
+
 def main() -> None:
     if len(sys.argv) < 3:
-        fail("usage: wave_lock.py <root> <acquire|release|heartbeat|status> ...")
+        fail(
+            "usage: wave_lock.py <root> <acquire|release|heartbeat|status|run-lease> ..."
+        )
     root = Path(sys.argv[1]).resolve()
     sub = sys.argv[2]
     rest = sys.argv[3:]
@@ -622,6 +1144,8 @@ def main() -> None:
         cmd_heartbeat(root, rest)
     elif sub == "status":
         cmd_status(root, rest)
+    elif sub == "run-lease":
+        cmd_run_lease(root, rest)
     else:
         fail(f"unknown ship-lease subcommand: {sub}")
 

@@ -1361,7 +1361,105 @@ def load_state(root: Path, task_list: str | None = None) -> dict[str, Any]:
     return load_deliver_state(root, task_list=task_list)
 
 
+def ensure_exclusive_run_lease(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    before_mutation: bool = True,
+) -> dict[str, Any]:
+    """Acquire/refresh exclusive runId lease before mutating run state (PRD 276 R9/R10/R20)."""
+    run_id = state.get("runId")
+    if not isinstance(run_id, str) or not run_id.strip():
+        return {"skipped": True, "reason": "no-run-id"}
+    from wave_lock import (
+        acquire_run_lease,
+        assert_run_lease_write,
+        heartbeat_run_lease,
+    )
+
+    source_task_list = state.get("source_task_list")
+    if isinstance(source_task_list, str):
+        task_list_arg = source_task_list
+    else:
+        task_list_arg = None
+    held = state.get("runLease") if isinstance(state.get("runLease"), dict) else {}
+    held_gen = held.get("generation") if isinstance(held, dict) else None
+    if (
+        isinstance(held, dict)
+        and held.get("runId") == run_id
+        and isinstance(held_gen, int)
+        and held_gen > 0
+    ):
+        fence = assert_run_lease_write(root, run_id, held_gen)
+        if fence.get("verdict") == "pass":
+            hb = heartbeat_run_lease(root, run_id, held_gen)
+            if hb.get("verdict") == "pass":
+                return {
+                    "verdict": "pass",
+                    "action": "run-lease-refresh",
+                    "runId": run_id,
+                    "generation": held_gen,
+                    "beforeMutation": before_mutation,
+                }
+            out = hb
+        else:
+            out = fence
+        # Stale generation / lost lease — try re-acquire (may reclaim).
+        if out.get("error") in (
+            "run-lease-generation-stale",
+            "run-lease-missing",
+            "run-lease-stale-self",
+        ):
+            acquired = acquire_run_lease(
+                root, run_id, source_task_list=task_list_arg
+            )
+            if acquired.get("verdict") == "pass":
+                state["runLease"] = {
+                    "runId": run_id,
+                    "generation": acquired["generation"],
+                    "lockPath": acquired.get("lockPath"),
+                    "acquiredAt": utc_now(),
+                    "reclaimed": bool(acquired.get("reclaimed")),
+                }
+                return {**acquired, "beforeMutation": before_mutation}
+            out = acquired
+        fail(
+            str(out.get("error") or "run-lease-held"),
+            exit_code=20,
+            halt=out.get("halt") or out.get("error") or "run-lease-held",
+            cause=out.get("error") or "run-lease-held",
+            resumeCommand=out.get("resumeCommand")
+            or f"python3 scripts/wave.py deliver-loop --run-id {run_id}",
+            holder=out.get("holder"),
+            lockPath=out.get("lockPath"),
+        )
+
+    acquired = acquire_run_lease(root, run_id, source_task_list=task_list_arg)
+    if acquired.get("verdict") != "pass":
+        fail(
+            str(acquired.get("error") or "run-lease-held"),
+            exit_code=20,
+            halt=acquired.get("halt") or acquired.get("error") or "run-lease-held",
+            cause=acquired.get("error") or "run-lease-held",
+            resumeCommand=acquired.get("resumeCommand")
+            or f"python3 scripts/wave.py deliver-loop --run-id {run_id}",
+            holder=acquired.get("holder"),
+            lockPath=acquired.get("lockPath"),
+        )
+    state["runLease"] = {
+        "runId": run_id,
+        "generation": acquired["generation"],
+        "lockPath": acquired.get("lockPath"),
+        "acquiredAt": utc_now(),
+        "reclaimed": bool(acquired.get("reclaimed")),
+    }
+    return {**acquired, "beforeMutation": before_mutation}
+
+
 def save_state(root: Path, state: dict[str, Any]) -> None:
+    # R9/R20 — exclusive run lease + generation fence before shared-state mutation.
+    if isinstance(state.get("runId"), str) and state.get("runId"):
+        ensure_exclusive_run_lease(root, state, before_mutation=True)
     save_deliver_state(root, state)
 
 
