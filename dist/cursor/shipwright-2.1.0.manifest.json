@@ -469,12 +469,14 @@
     "memory_lib.py",
     "memory_playbook.py",
     "memory_playbook_lib.py",
+    "memory_preflight.py",
     "memory_provider_catalog.py",
     "memory_provider_register.py",
     "memory_redact.py",
     "memory_redact_allowlist.py",
     "memory_redact_patterns.py",
     "memory_redaction_provenance.py",
+    "memory_rules_promote.py",
     "memory_sensitivity.py",
     "memory_sot.py",
     "memory_sot_audit.py",
@@ -726,5 +728,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 723
+  "moduleCount": 725
 }
