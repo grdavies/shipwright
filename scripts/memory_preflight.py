@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Work-start memory preflight: resolve provider, then rules-load only (PRD 277)."""
+"""Work-start memory preflight: resolve provider, rules-load, and write-binding assert (PRD 277/279)."""
 
 from __future__ import annotations
 
@@ -22,9 +22,15 @@ from memory_rules_promote import (
     load_revoked_ids,
     needs_reconcile_path,
 )
+from memory_write_binding import (
+    MemoryWriteBinding,
+    MemoryWriteBindingError,
+    assert_memory_write_binding,
+)
 from sw_resolve_plugin_root import resolve_plugin_root
 
 RulesLoader = Callable[[Path, str], dict[str, Any]]
+MutatingWriter = Callable[[MemoryWriteBinding], dict[str, Any]]
 
 
 class PreflightError(Exception):
@@ -186,13 +192,129 @@ def preflight(root: Path, *, loader: RulesLoader | None = None) -> dict[str, Any
     }
 
 
+def assert_write_binding(
+    root: Path,
+    operation: str,
+    category: str | None = None,
+    *,
+    cfg: dict[str, Any] | None = None,
+    project_override: str | None = None,
+) -> MemoryWriteBinding:
+    """Fail-closed write-binding chokepoint before provider dispatch (PRD 279 R9).
+
+    Mutating callers (including ``/sw-memory-sync`` store) must invoke this
+    immediately before adapter dispatch. Unbound writes raise
+    ``MemoryWriteBindingError`` after audit emission.
+    """
+    return assert_memory_write_binding(
+        root,
+        operation,
+        category,
+        cfg=cfg,
+        project_override=project_override,
+    )
+
+
+def dispatch_mutating_store(
+    root: Path,
+    *,
+    operation: str,
+    category: str | None,
+    writer: MutatingWriter,
+    cfg: dict[str, Any] | None = None,
+    project_override: str | None = None,
+) -> dict[str, Any]:
+    """Assert write binding, then invoke ``writer(binding)`` (no silent unbound fallback)."""
+    binding = assert_write_binding(
+        root,
+        operation,
+        category,
+        cfg=cfg,
+        project_override=project_override,
+    )
+    result = writer(binding)
+    if not isinstance(result, dict):
+        return {
+            "verdict": "ok",
+            "action": operation,
+            "provider": binding.provider,
+            "project": binding.project,
+            "source": binding.source,
+            "category": category,
+            "writerResult": result,
+        }
+    out = dict(result)
+    out.setdefault("verdict", "ok")
+    out.setdefault("action", operation)
+    out["provider"] = binding.provider
+    out["project"] = binding.project
+    out["source"] = binding.source
+    if category is not None:
+        out.setdefault("category", category)
+    return out
+
+
+def memory_sync_store_path(
+    root: Path,
+    *,
+    category: str,
+    writer: MutatingWriter | None = None,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """``/sw-memory-sync`` mutating store entry — assert then dispatch (R9 / D4)."""
+
+    def _default_writer(binding: MemoryWriteBinding) -> dict[str, Any]:
+        return {
+            "verdict": "ok",
+            "action": "memory-sync",
+            "category": category,
+            "bindingSource": binding.source,
+        }
+
+    return dispatch_mutating_store(
+        root,
+        operation="memory-sync",
+        category=category,
+        writer=writer or _default_writer,
+        cfg=cfg,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Resolve provider and load allowlisted rules")
+    parser = argparse.ArgumentParser(
+        description="Resolve provider, load allowlisted rules, and assert write bindings"
+    )
     parser.add_argument("--root", default=".")
+    sub = parser.add_subparsers(dest="command")
+    sub.add_parser("rules-load", help="Resolve provider and load allowlisted rules (default)")
+    sync_p = sub.add_parser(
+        "assert-sync-store",
+        help="Assert write binding for /sw-memory-sync store (no provider dispatch)",
+    )
+    sync_p.add_argument("--category", default="learning")
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
+    command = args.command or "rules-load"
     try:
-        result = preflight(root)
+        if command == "assert-sync-store":
+            result = memory_sync_store_path(root, category=str(args.category))
+        else:
+            result = preflight(root)
+    except MemoryWriteBindingError as exc:
+        refuse = exc.refuse
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "error": refuse.reason,
+                    "cause": refuse.cause,
+                    "operation": refuse.operation,
+                    "category": refuse.category,
+                },
+                indent=2,
+            )
+        )
+        return 20
     except (PreflightError, RegistrationError) as exc:
         cause = getattr(exc, "cause", "preflight-failed")
         print(json.dumps({"verdict": "fail", "error": str(exc), "cause": cause}, indent=2))
