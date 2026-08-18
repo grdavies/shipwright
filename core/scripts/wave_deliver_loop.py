@@ -368,6 +368,9 @@ def _path_under_managed_roots(path: Path, repo_root: Path) -> bool:
     return False
 
 
+ORCH_CWD_ADOPTED_ENV = "SW_DELIVER_ORCH_CWD_ADOPTED"
+
+
 def _orchestrator_lock_reclaimable(root: Path, target: str) -> bool:
     from wave_state import lock_owner_live, read_lock_meta, scoped_paths
 
@@ -378,19 +381,191 @@ def _orchestrator_lock_reclaimable(root: Path, target: str) -> bool:
     return not lock_owner_live(meta)
 
 
-def try_adopt_recorded_orchestrator_worktree(
-    root: Path, state: dict[str, Any], plan: dict[str, Any]
+def _orch_adopt_resume_command(root: Path, state: dict[str, Any]) -> str:
+    from wave_failure import resume_deliver_command
+
+    try:
+        return resume_deliver_command(root, state)
+    except Exception:
+        task_list = state.get("source_task_list")
+        if isinstance(task_list, str) and task_list.strip():
+            return f"/sw-deliver run {task_list.strip()}"
+        return "/sw-deliver run"
+
+
+def _fail_orch_adopt(
+    root: Path,
+    state: dict[str, Any],
+    error: str,
+    *,
+    cause: str,
+    halt: str = "orchestrator-adopt",
+    exit_code: int = 20,
+    **extra: Any,
+) -> None:
+    """Fail-closed orch adopt with typed cause + resumeCommand (PRD 276 R6)."""
+    fail(
+        error,
+        exit_code=exit_code,
+        halt=halt,
+        cause=cause,
+        resumeCommand=_orch_adopt_resume_command(root, state),
+        **extra,
+    )
+
+
+def _git_worktree_registered(repo_root: Path, path: Path) -> bool:
+    """True when *path* appears in ``git worktree list`` (execution-time bind)."""
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "worktree", "list", "--porcelain"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return False
+    resolved = path.resolve()
+    for line in (proc.stdout or "").splitlines():
+        if not line.startswith("worktree "):
+            continue
+        candidate = Path(line.split(" ", 1)[1].strip())
+        try:
+            if candidate.resolve() == resolved:
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def rebind_orch_execution_identity(
+    root: Path,
+    path: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    *,
+    target: str,
 ) -> dict[str, Any]:
-    """Auto-adopt durable orchestratorWorktree on resume (PRD 068 R2)."""
+    """Rebind orch identity at execution time — closes TOCTOU (PRD 276 R14)."""
+    from wave_lifecycle import git_toplevel, orchestrator_worktree_branch
+    from wave_state import canonical_repo_root
+
+    repo_root = canonical_repo_root(root)
+    try:
+        path_common = git_toplevel(path)
+        root_common = git_toplevel(repo_root)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        _fail_orch_adopt(
+            root,
+            state,
+            f"cannot resolve git-common-dir for orch adopt: {exc}",
+            cause="adopt:git-common-dir-unresolved",
+            path=str(path),
+        )
+    if path_common.resolve() != root_common.resolve():
+        _fail_orch_adopt(
+            root,
+            state,
+            "orchestrator worktree git-common-dir mismatch",
+            cause="adopt:git-common-dir-mismatch",
+            path=str(path),
+            pathCommonDir=str(path_common),
+            rootCommonDir=str(root_common),
+        )
+    if not _git_worktree_registered(repo_root, path):
+        _fail_orch_adopt(
+            root,
+            state,
+            "orchestrator path is not a registered git worktree",
+            cause="adopt:worktree-unregistered",
+            path=str(path),
+        )
+    branch = orchestrator_worktree_branch(path)
+    if branch != target:
+        _fail_orch_adopt(
+            root,
+            state,
+            f"orchestrator worktree on {branch!r}, expected {target!r}",
+            cause="adopt:branch-head-mismatch",
+            actual=branch,
+            expected=target,
+            path=str(path),
+        )
+    head_proc = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    head = head_proc.stdout.strip() if head_proc.returncode == 0 else ""
+    if not head:
+        _fail_orch_adopt(
+            root,
+            state,
+            "cannot resolve orchestrator branch HEAD",
+            cause="adopt:branch-head-unresolved",
+            path=str(path),
+        )
+    run_id = state.get("runId") or state.get("scopedRunId")
+    source = state.get("source_task_list") or (plan.get("source_task_list") if plan else None)
+    if not run_id and not source:
+        _fail_orch_adopt(
+            root,
+            state,
+            "cannot rebind run identity for orch adopt",
+            cause="adopt:run-identity-missing",
+            path=str(path),
+        )
+    return {
+        "gitCommonDir": str(path_common.resolve()),
+        "worktreeRegistered": True,
+        "branch": branch,
+        "head": head,
+        "runId": run_id,
+        "source_task_list": source,
+        "reboundAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+
+def _dual_drive_blocks_adopt(
+    state: dict[str, Any], loop_args: list[str] | None, *, fresh_seconds: int = 120
+) -> bool:
+    """True when a fresh driver heartbeat means adopt would mask dual-drive (R7)."""
+    if loop_args is not None and (
+        has_flag(loop_args, "--self-wake") or has_flag(loop_args, "--dry-run")
+    ):
+        return False
+    if state.get("verdict") != "running" or not state.get("phases"):
+        return False
+    hb = state.get("driverHeartbeatAt")
+    if not isinstance(hb, str):
+        return False
+    age = age_seconds(hb)
+    return age is not None and age < fresh_seconds
+
+
+def try_adopt_recorded_orchestrator_worktree(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    *,
+    loop_args: list[str] | None = None,
+    perform_reentry: bool = True,
+) -> dict[str, Any]:
+    """Validated orch cwd adopt with execution-time identity rebind (PRD 276 R5/R6/R13/R14).
+
+    Path-record alone is insufficient: on success this either reports already-in-cwd
+    after identity rebind, or re-enters (chdir + delegateRoot) so further deliver-loop
+    checks run with cwd set to the validated orchestrator worktree.
+    """
     orch = state.get("orchestratorWorktree") or {}
     raw_path = orch.get("path")
     if not isinstance(raw_path, str) or not raw_path.strip():
         return {"adopted": False, "reason": "no-recorded-path"}
     if _is_basename_only_path(raw_path):
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "orchestrator worktree path is basename-only; refusing invent",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-basename-only",
             path=raw_path,
         )
@@ -403,35 +578,35 @@ def try_adopt_recorded_orchestrator_worktree(
     else:
         path = path.resolve()
     if not _path_under_managed_roots(path, repo_root):
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "orchestrator worktree path is outside managed roots",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-unmanaged-path",
             path=str(path),
         )
     if not path.is_dir():
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "recorded orchestrator worktree path is missing",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-path-missing",
             path=str(path),
         )
     target = target_branch_from_state(state) or (plan.get("target") or {}).get("branch")
     if not isinstance(target, str) or not target:
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "cannot resolve target branch for orchestrator adopt",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-missing-target",
         )
     recorded_branch = orch.get("branch")
     if isinstance(recorded_branch, str) and recorded_branch and recorded_branch != target:
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             f"orchestrator worktree branch mismatch: {recorded_branch!r} vs {target!r}",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-branch-mismatch",
             recorded=recorded_branch,
             expected=target,
@@ -439,10 +614,10 @@ def try_adopt_recorded_orchestrator_worktree(
     expected_name = f"{slug_from_target(target)}-orchestrator"
     recorded_name = str(orch.get("name") or "")
     if recorded_name and recorded_name != expected_name and path.name != expected_name:
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "orchestrator worktree slug/name mismatch",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-slug-mismatch",
             expectedName=expected_name,
             recordedName=recorded_name,
@@ -457,39 +632,59 @@ def try_adopt_recorded_orchestrator_worktree(
 
     current = orchestrator_worktree_branch(path)
     if current != target:
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             f"orchestrator worktree on {current!r}, expected {target!r}",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-branch-mismatch",
             actual=current,
             expected=target,
         )
     if orchestrator_worktree_dirty(path):
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             f"orchestrator worktree is dirty: {path}",
-            exit_code=20,
             halt="dirty-orchestrator",
             cause="resume:orchestrator-dirty",
             path=str(path),
         )
     if not _orchestrator_lock_reclaimable(repo_root, target):
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "orchestrator lock held and not reclaimable",
-            exit_code=20,
             halt="orchestrator-lock-held",
             cause="resume:orchestrator-lock-held",
             target=target,
         )
-    if root.resolve() == path.resolve():
-        return {"adopted": False, "reason": "already-in-orchestrator-cwd", "path": str(path)}
-    proc = subprocess.run(
-        ["git", "-C", str(path), "rev-parse", "HEAD"],
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    tip = proc.stdout.strip() if proc.returncode == 0 else ""
+    # R7 — do not auto-adopt when a fresh peer heartbeat indicates dual-drive.
+    if _dual_drive_blocks_adopt(state, loop_args):
+        _fail_orch_adopt(
+            root,
+            state,
+            "driver-heartbeat-fresh-double-adopt",
+            halt="double-drive",
+            cause="adopt:dual-drive-preserved",
+            remediation="wait for driver heartbeat to go stale or use self-wake continuation",
+            driverHeartbeatAt=state.get("driverHeartbeatAt"),
+        )
+
+    identity = rebind_orch_execution_identity(root, path, state, plan, target=target)
+
+    already_cwd = root.resolve() == path.resolve() or Path.cwd().resolve() == path.resolve()
+    adopted_marker = os.environ.get(ORCH_CWD_ADOPTED_ENV, "")
+    if already_cwd or adopted_marker == str(path):
+        return {
+            "adopted": False,
+            "reason": "already-in-orchestrator-cwd",
+            "path": str(path),
+            "identity": identity,
+            "reentry": False,
+            "cwd": str(Path.cwd().resolve()),
+        }
+
+    tip = str(identity.get("head") or "")
     adopt_orchestrator_worktree(
         root,
         top=git_toplevel(repo_root),
@@ -498,11 +693,98 @@ def try_adopt_recorded_orchestrator_worktree(
         target=target,
         tip=tip,
     )
-    return {"adopted": True, "path": str(path), "branch": target, "name": path.name}
+
+    # R13 — validated re-entry: cwd must be set; path-record alone is insufficient.
+    if not perform_reentry:
+        return {
+            "adopted": True,
+            "path": str(path),
+            "branch": target,
+            "name": path.name,
+            "identity": identity,
+            "reentry": False,
+            "cwd": str(Path.cwd().resolve()),
+            "insufficientWithoutReentry": True,
+        }
+
+    os.environ[ORCH_CWD_ADOPTED_ENV] = str(path)
+    os.chdir(path)
+    return {
+        "adopted": True,
+        "path": str(path),
+        "branch": target,
+        "name": path.name,
+        "identity": identity,
+        "reentry": True,
+        "cwd": str(Path.cwd().resolve()),
+        "delegateRoot": str(path),
+    }
+
+
+def _resolve_recorded_orch_path(root: Path, state: dict[str, Any]) -> Path | None:
+    orch = state.get("orchestratorWorktree") or {}
+    raw_path = orch.get("path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return None
+    if _is_basename_only_path(raw_path):
+        return None
+    from wave_state import canonical_repo_root
+
+    repo_root = canonical_repo_root(root)
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = (repo_root / path).resolve()
+    else:
+        path = path.resolve()
+    return path
+
+
+def _looks_like_orchestrator_worktree(path: Path) -> bool:
+    """True for managed ``.sw-worktrees/<slug>-orchestrator`` paths (PRD 276 R5)."""
+    try:
+        parts = path.resolve().parts
+    except OSError:
+        parts = path.parts
+    return ".sw-worktrees" in parts and str(path.name).endswith("-orchestrator")
+
+
+def should_attempt_orch_cwd_adopt(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    resume: dict[str, Any] | None = None,
+) -> bool:
+    """Whether deliver entry should run validated orch cwd adopt (PRD 276 R5/R6/R8).
+
+    - Consumable resume → always attempt (missing/invalid → fail-closed R6).
+    - Otherwise attempt only for recoverable skew on a managed
+      ``.sw-worktrees/*-orchestrator`` path (R5/R8). Fixture stubs that point at
+      the primary checkout itself are ignored unless resume is consumable.
+    """
+    orch = state.get("orchestratorWorktree") or {}
+    raw_path = orch.get("path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return False
+    if resume and resume.get("consumable"):
+        return True
+    if _is_basename_only_path(raw_path):
+        return False
+    path = _resolve_recorded_orch_path(root, state)
+    if path is None:
+        return False
+    from wave_state import canonical_repo_root
+
+    repo_root = canonical_repo_root(root)
+    if not _looks_like_orchestrator_worktree(path):
+        return False
+    if not _path_under_managed_roots(path, repo_root):
+        return False
+    # Exists or vanished managed orch — attempt (missing → R6 fail-closed).
+    return True
 
 
 def apply_resume_entry(root: Path, state: dict[str, Any], plan: dict[str, Any], args: list[str]) -> dict[str, Any]:
-    """Resume short-circuit + orchestrator adopt on deliver-loop entry (PRD 068 R1/R2)."""
+    """Resume short-circuit + orchestrator adopt on deliver-loop entry (PRD 068 R1/R2, PRD 276 R5)."""
     from wave_deliver import evaluate_resume_short_circuit
 
     resume = evaluate_resume_short_circuit(root, args)
@@ -512,11 +794,14 @@ def apply_resume_entry(root: Path, state: dict[str, Any], plan: dict[str, Any], 
             exit_code=20,
             halt=resume.get("cause", "resume-blocked"),
             cause=resume.get("cause"),
+            resumeCommand=_orch_adopt_resume_command(root, state),
             **{k: v for k, v in resume.items() if k not in ("halt", "consumable", "state")},
         )
     adopt: dict[str, Any] = {"adopted": False}
-    if resume.get("consumable") and state.get("orchestratorWorktree"):
-        adopt = try_adopt_recorded_orchestrator_worktree(root, state, plan)
+    if should_attempt_orch_cwd_adopt(root, state, resume=resume):
+        adopt = try_adopt_recorded_orchestrator_worktree(
+            root, state, plan, loop_args=args, perform_reentry=True
+        )
     return {"resume": resume, "orchestratorAdopt": adopt}
 
 def fixture_tree_clean_or_halt(root: Path, state: dict[str, Any]) -> None:
@@ -3836,10 +4121,31 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
     if task_list and resumed:
         entry = apply_resume_entry(root, state, plan, args)
-        if entry.get("orchestratorAdopt", {}).get("adopted"):
+        adopt = entry.get("orchestratorAdopt") or {}
+        # PRD 276 R5/R13 — validated re-entry delegates into orch cwd.
+        if adopt.get("reentry") and adopt.get("delegateRoot"):
+            cmd_deliver_loop(Path(str(adopt["delegateRoot"])), args)
+            return
+        if adopt.get("adopted") or adopt.get("reason") == "already-in-orchestrator-cwd":
+            if adopt.get("path"):
+                root = Path(str(adopt["path"]))
             state = load_state(root, task_list)
             plan, state = resolve_plan_with_adoption(root, state, task_list)
             resumed = bool(state.get("verdict") == "running" and state.get("phases"))
+    elif should_attempt_orch_cwd_adopt(root, state, resume=None):
+        # Non-resume entry from repo root still auto-adopts when orch is recorded (R5/R8).
+        adopt = try_adopt_recorded_orchestrator_worktree(
+            root, state, plan, loop_args=args, perform_reentry=True
+        )
+        if adopt.get("reentry") and adopt.get("delegateRoot"):
+            cmd_deliver_loop(Path(str(adopt["delegateRoot"])), args)
+            return
+        if adopt.get("path") and (
+            adopt.get("adopted") or adopt.get("reason") == "already-in-orchestrator-cwd"
+        ):
+            root = Path(str(adopt["path"]))
+            state = load_state(root, task_list)
+            plan, state = resolve_plan_with_adoption(root, state, task_list)
     if resumed and state.get("phases") and not state.get("planHash"):
         plan, state = resolve_plan_with_adoption(root, state, task_list)
 
