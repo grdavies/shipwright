@@ -232,6 +232,17 @@ Named egress enforcement points (`/sw-memory-sync`, cross-project copy) call
 
 Route all four through this skill + `providers/<memory.provider>.md` — never direct provider tool calls.
 
+### Rule promote integrity (PRD 277 D5–D6)
+
+**D5 — needs-reconcile on partial failure.** `scripts/memory_rules_promote.py` writes through the
+adapter first. Allowlist commit happens only after `verdict: ok`. A failed or incomplete provider write
+records `.cursor/sw-memory/needs-reconcile.json` and **does not** append the rule id to the allowlist.
+`memory-preflight` `rules-load` fail-closes while that file exists (`cause=needs-reconcile`).
+
+**D6 — integrity is id + hash.** Audit approval binds `ruleId` and `contentHash` (SHA-256 of the body).
+A hash or id mismatch refuses the write (`rule-write-hash-mismatch` / `rule-write-id-mismatch`); the
+operator must re-approve the current body.
+
 ## Redaction chokepoint (R41 — mandatory before persist/re-inject)
 
 Before **any** `store`, transcript distillation (`/sw-memory-sync`), or compounding write, pipe content

@@ -10,6 +10,14 @@ Sweep a memory project for hygiene problems and propose fixes. **Read-only by de
 mutates memory until you approve a proposal. Run it before any bulk `/sw-memory-import` so cleanup
 precedes new writes.
 
+**D1 — provider-agnostic.** This command is the sole human gate for `category: rule` on every
+catalog-registered `memory.provider`. Route writes through `providers/<memory.provider>.md`; do not
+invent a per-provider audit command.
+
+**D2 — no dual-home unless in-repo.** Approved rule bodies persist in the configured provider.
+Local `.cursor/sw-memory/rules/<id>.md` files are required only when `memory.provider` is `in-repo`.
+Non-in-repo providers must not copy standing rule text into that directory.
+
 ## Inputs
 
 - Project: `memory.project` from `.cursor/workflow.config.json` (or argument override).

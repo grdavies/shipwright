@@ -140,6 +140,17 @@ Current best understanding of this memory.
   first `update-truth` / truth-bearing `modify` upgrades the layout (lazy, no bulk migration).
 - **Rules** under `rules/` do not require timeline sections.
 
+## Rule promote, load, and revoke (PRD 277)
+
+Rule-class writes use `/sw-memory-audit` — not a provider-specific command. Promote writes committed
+bodies under `.cursor/sw-memory/rules/` through this adapter; `memory-preflight` loads via `rules-load`.
+Revoke soft-deletes the local file (`<id>.md.deleted`), strips the allowlist id, and drops the rules
+cache. After promote, regenerate derived refs:
+
+```bash
+python3 scripts/in-repo-memory-search.py maintain-derived --store .cursor/sw-memory
+```
+
 ## Operation mapping
 
 | Abstract op | Implementation | Call shape |

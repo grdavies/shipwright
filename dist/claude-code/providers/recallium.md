@@ -76,6 +76,12 @@ synthesize neutral interchange by paging `search_memories` + `expand_memories` i
 bundle (per-category markdown, `category` → `type`, redaction via `scripts/memory-redact.py`). Provider
 swaps become bundle round-trips. Treat these as plugin-side, not native MCP ops.
 
+## Rule promote, load, and revoke (PRD 277)
+
+Rule-class writes use `/sw-memory-audit` — not a Recallium-specific command. Promote routes `category: rule`
+through this adapter (`store` / `get_rules`); `memory-preflight` loads via `rules-load`. Revoke inactivates
+the provider record and strips the allowlist; do not dual-home bodies under `.cursor/sw-memory/rules/`.
+
 ## Operation mapping
 
 | Abstract op | Recallium tool | Call shape |

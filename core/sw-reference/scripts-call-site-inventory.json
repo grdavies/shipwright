@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-18T04:13:45Z",
+  "generatedAt": "2026-08-18T08:35:56Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -2107,37 +2107,37 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-memory-audit.md:36:memory-sot-audit.py",
+      "id": "core/commands/sw-memory-audit.md:44:memory-sot-audit.py",
       "tree": "core/commands",
       "file": "core/commands/sw-memory-audit.md",
-      "line": 36,
+      "line": 44,
       "column": 8,
       "script": "memory-sot-audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-memory-audit.md:38:memory-sot-audit.py",
+      "id": "core/commands/sw-memory-audit.md:46:memory-sot-audit.py",
       "tree": "core/commands",
       "file": "core/commands/sw-memory-audit.md",
-      "line": 38,
+      "line": 46,
       "column": 8,
       "script": "memory-sot-audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-memory-audit.md:52:sw_bootstrap.py",
+      "id": "core/commands/sw-memory-audit.md:60:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-memory-audit.md",
-      "line": 52,
+      "line": 60,
       "column": 43,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-memory-audit.md:76:memory-sot.py",
+      "id": "core/commands/sw-memory-audit.md:84:memory-sot.py",
       "tree": "core/commands",
       "file": "core/commands/sw-memory-audit.md",
-      "line": 76,
+      "line": 84,
       "column": 46,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
@@ -3691,84 +3691,48 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/in-repo.md:149:in-repo-memory-search.py",
+      "id": "core/providers/in-repo.md:151:in-repo-memory-search.py",
       "tree": "core/providers",
       "file": "core/providers/in-repo.md",
-      "line": 149,
+      "line": 151,
+      "column": 8,
+      "script": "in-repo-memory-search.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/in-repo.md:160:in-repo-memory-search.py",
+      "tree": "core/providers",
+      "file": "core/providers/in-repo.md",
+      "line": 160,
       "column": 51,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/in-repo.md:150:in-repo-memory-search.py",
+      "id": "core/providers/in-repo.md:161:in-repo-memory-search.py",
       "tree": "core/providers",
       "file": "core/providers/in-repo.md",
-      "line": 150,
+      "line": 161,
       "column": 58,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/in-repo.md:151:in-repo-memory-search.py",
+      "id": "core/providers/in-repo.md:162:in-repo-memory-search.py",
       "tree": "core/providers",
       "file": "core/providers/in-repo.md",
-      "line": 151,
+      "line": 162,
       "column": 50,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/in-repo.md:152:in-repo-memory-search.py",
+      "id": "core/providers/in-repo.md:163:in-repo-memory-search.py",
       "tree": "core/providers",
       "file": "core/providers/in-repo.md",
-      "line": 152,
+      "line": 163,
       "column": 51,
       "script": "in-repo-memory-search.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "core/providers/in-repo.md:153:in-repo-memory-search.py",
-      "tree": "core/providers",
-      "file": "core/providers/in-repo.md",
-      "line": 153,
-      "column": 68,
-      "script": "in-repo-memory-search.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "core/providers/in-repo.md:155:in-repo-memory-search.py",
-      "tree": "core/providers",
-      "file": "core/providers/in-repo.md",
-      "line": 155,
-      "column": 50,
-      "script": "in-repo-memory-search.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "core/providers/in-repo.md:156:in-repo-memory-search.py",
-      "tree": "core/providers",
-      "file": "core/providers/in-repo.md",
-      "line": 156,
-      "column": 45,
-      "script": "in-repo-memory-search.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "core/providers/in-repo.md:158:in-repo-memory-search.py",
-      "tree": "core/providers",
-      "file": "core/providers/in-repo.md",
-      "line": 158,
-      "column": 67,
-      "script": "in-repo-memory-search.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "core/providers/in-repo.md:159:memory_playbook.py",
-      "tree": "core/providers",
-      "file": "core/providers/in-repo.md",
-      "line": 159,
-      "column": 59,
-      "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
@@ -3776,6 +3740,51 @@
       "tree": "core/providers",
       "file": "core/providers/in-repo.md",
       "line": 164,
+      "column": 68,
+      "script": "in-repo-memory-search.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/in-repo.md:166:in-repo-memory-search.py",
+      "tree": "core/providers",
+      "file": "core/providers/in-repo.md",
+      "line": 166,
+      "column": 50,
+      "script": "in-repo-memory-search.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/in-repo.md:167:in-repo-memory-search.py",
+      "tree": "core/providers",
+      "file": "core/providers/in-repo.md",
+      "line": 167,
+      "column": 45,
+      "script": "in-repo-memory-search.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/in-repo.md:169:in-repo-memory-search.py",
+      "tree": "core/providers",
+      "file": "core/providers/in-repo.md",
+      "line": 169,
+      "column": 67,
+      "script": "in-repo-memory-search.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/in-repo.md:170:memory_playbook.py",
+      "tree": "core/providers",
+      "file": "core/providers/in-repo.md",
+      "line": 170,
+      "column": 59,
+      "script": "memory_playbook.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/in-repo.md:175:in-repo-memory-search.py",
+      "tree": "core/providers",
+      "file": "core/providers/in-repo.md",
+      "line": 175,
       "column": 62,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
@@ -4051,10 +4060,10 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/rules/memory-guardrails.mdc:103:memory-sot.py",
+      "id": "core/rules/memory-guardrails.mdc:110:memory-sot.py",
       "tree": "core/rules",
       "file": "core/rules/memory-guardrails.mdc",
-      "line": 103,
+      "line": 110,
       "column": 21,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
@@ -5743,64 +5752,73 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/CAPABILITIES.md:109:in-repo-memory-search.py",
+      "id": "core/skills/memory/CAPABILITIES.md:56:in-repo-memory-search.py",
       "tree": "core/skills",
       "file": "core/skills/memory/CAPABILITIES.md",
-      "line": 109,
+      "line": 56,
       "column": 8,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/CAPABILITIES.md:110:in-repo-memory-search.py",
+      "id": "core/skills/memory/CAPABILITIES.md:130:in-repo-memory-search.py",
       "tree": "core/skills",
       "file": "core/skills/memory/CAPABILITIES.md",
-      "line": 110,
+      "line": 130,
       "column": 8,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/CAPABILITIES.md:180:memory_playbook.py",
+      "id": "core/skills/memory/CAPABILITIES.md:131:in-repo-memory-search.py",
       "tree": "core/skills",
       "file": "core/skills/memory/CAPABILITIES.md",
-      "line": 180,
+      "line": 131,
+      "column": 8,
+      "script": "in-repo-memory-search.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/memory/CAPABILITIES.md:201:memory_playbook.py",
+      "tree": "core/skills",
+      "file": "core/skills/memory/CAPABILITIES.md",
+      "line": 201,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/CAPABILITIES.md:181:memory_playbook.py",
+      "id": "core/skills/memory/CAPABILITIES.md:202:memory_playbook.py",
       "tree": "core/skills",
       "file": "core/skills/memory/CAPABILITIES.md",
-      "line": 181,
+      "line": 202,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/CAPABILITIES.md:182:memory_playbook.py",
+      "id": "core/skills/memory/CAPABILITIES.md:203:memory_playbook.py",
       "tree": "core/skills",
       "file": "core/skills/memory/CAPABILITIES.md",
-      "line": 182,
+      "line": 203,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/CAPABILITIES.md:183:memory_playbook.py",
+      "id": "core/skills/memory/CAPABILITIES.md:204:memory_playbook.py",
       "tree": "core/skills",
       "file": "core/skills/memory/CAPABILITIES.md",
-      "line": 183,
+      "line": 204,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/CAPABILITIES.md:184:memory_playbook.py",
+      "id": "core/skills/memory/CAPABILITIES.md:205:memory_playbook.py",
       "tree": "core/skills",
       "file": "core/skills/memory/CAPABILITIES.md",
-      "line": 184,
+      "line": 205,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
@@ -5887,82 +5905,82 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/memory/SKILL.md:241:sw_bootstrap.py",
+      "id": "core/skills/memory/SKILL.md:252:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
-      "line": 241,
+      "line": 252,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/memory/SKILL.md:246:sw_bootstrap.py",
+      "id": "core/skills/memory/SKILL.md:257:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
-      "line": 246,
+      "line": 257,
       "column": 13,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/memory/SKILL.md:270:memory-sot.py",
+      "id": "core/skills/memory/SKILL.md:281:memory-sot.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
-      "line": 270,
+      "line": 281,
       "column": 8,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/SKILL.md:299:in-repo-memory-search.py",
+      "id": "core/skills/memory/SKILL.md:310:in-repo-memory-search.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
-      "line": 299,
+      "line": 310,
       "column": 8,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/SKILL.md:305:in-repo-memory-search.py",
+      "id": "core/skills/memory/SKILL.md:316:in-repo-memory-search.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
-      "line": 305,
+      "line": 316,
       "column": 27,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/SKILL.md:345:memory-sot.py",
+      "id": "core/skills/memory/SKILL.md:356:memory-sot.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
-      "line": 345,
+      "line": 356,
       "column": 34,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/SKILL.md:371:reconcile.py",
+      "id": "core/skills/memory/SKILL.md:382:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
-      "line": 371,
+      "line": 382,
       "column": 8,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/SKILL.md:374:reconcile.py",
+      "id": "core/skills/memory/SKILL.md:385:reconcile.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
-      "line": 374,
+      "line": 385,
       "column": 32,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/memory/SKILL.md:399:planning_cross_project_recall.py",
+      "id": "core/skills/memory/SKILL.md:410:planning_cross_project_recall.py",
       "tree": "core/skills",
       "file": "core/skills/memory/SKILL.md",
-      "line": 399,
+      "line": 410,
       "column": 8,
       "script": "planning_cross_project_recall.py",
       "classification": "self-repo-only"
@@ -8848,37 +8866,37 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-memory-audit.md:36:memory-sot-audit.py",
+      "id": "dist/claude-code/commands/sw-memory-audit.md:44:memory-sot-audit.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-audit.md",
-      "line": 36,
+      "line": 44,
       "column": 8,
       "script": "memory-sot-audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-memory-audit.md:38:memory-sot-audit.py",
+      "id": "dist/claude-code/commands/sw-memory-audit.md:46:memory-sot-audit.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-audit.md",
-      "line": 38,
+      "line": 46,
       "column": 8,
       "script": "memory-sot-audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-memory-audit.md:52:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-memory-audit.md:60:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-audit.md",
-      "line": 52,
+      "line": 60,
       "column": 43,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-memory-audit.md:76:memory-sot.py",
+      "id": "dist/claude-code/commands/sw-memory-audit.md:84:memory-sot.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-audit.md",
-      "line": 76,
+      "line": 84,
       "column": 46,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
@@ -11665,64 +11683,73 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:109:in-repo-memory-search.py",
+      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:56:in-repo-memory-search.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/CAPABILITIES.md",
-      "line": 109,
+      "line": 56,
       "column": 8,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:110:in-repo-memory-search.py",
+      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:130:in-repo-memory-search.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/CAPABILITIES.md",
-      "line": 110,
+      "line": 130,
       "column": 8,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:180:memory_playbook.py",
+      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:131:in-repo-memory-search.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/CAPABILITIES.md",
-      "line": 180,
+      "line": 131,
+      "column": 8,
+      "script": "in-repo-memory-search.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:201:memory_playbook.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/memory/CAPABILITIES.md",
+      "line": 201,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:181:memory_playbook.py",
+      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:202:memory_playbook.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/CAPABILITIES.md",
-      "line": 181,
+      "line": 202,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:182:memory_playbook.py",
+      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:203:memory_playbook.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/CAPABILITIES.md",
-      "line": 182,
+      "line": 203,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:183:memory_playbook.py",
+      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:204:memory_playbook.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/CAPABILITIES.md",
-      "line": 183,
+      "line": 204,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:184:memory_playbook.py",
+      "id": "dist/claude-code/skills/memory/CAPABILITIES.md:205:memory_playbook.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/CAPABILITIES.md",
-      "line": 184,
+      "line": 205,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
@@ -11809,82 +11836,82 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:241:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:252:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 241,
+      "line": 252,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:246:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:257:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 246,
+      "line": 257,
       "column": 13,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:270:memory-sot.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:281:memory-sot.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 270,
+      "line": 281,
       "column": 8,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:299:in-repo-memory-search.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:310:in-repo-memory-search.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 299,
+      "line": 310,
       "column": 8,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:305:in-repo-memory-search.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:316:in-repo-memory-search.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 305,
+      "line": 316,
       "column": 27,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:345:memory-sot.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:356:memory-sot.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 345,
+      "line": 356,
       "column": 34,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:371:reconcile.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:382:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 371,
+      "line": 382,
       "column": 8,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:374:reconcile.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:385:reconcile.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 374,
+      "line": 385,
       "column": 32,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/memory/SKILL.md:399:planning_cross_project_recall.py",
+      "id": "dist/claude-code/skills/memory/SKILL.md:410:planning_cross_project_recall.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/memory/SKILL.md",
-      "line": 399,
+      "line": 410,
       "column": 8,
       "script": "planning_cross_project_recall.py",
       "classification": "self-repo-only"
@@ -14455,37 +14482,37 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-memory-audit.md:36:memory-sot-audit.py",
+      "id": "dist/cursor/commands/sw-memory-audit.md:44:memory-sot-audit.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-memory-audit.md",
-      "line": 36,
+      "line": 44,
       "column": 8,
       "script": "memory-sot-audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-memory-audit.md:38:memory-sot-audit.py",
+      "id": "dist/cursor/commands/sw-memory-audit.md:46:memory-sot-audit.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-memory-audit.md",
-      "line": 38,
+      "line": 46,
       "column": 8,
       "script": "memory-sot-audit.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-memory-audit.md:52:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-memory-audit.md:60:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-memory-audit.md",
-      "line": 52,
+      "line": 60,
       "column": 43,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-memory-audit.md:76:memory-sot.py",
+      "id": "dist/cursor/commands/sw-memory-audit.md:84:memory-sot.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-memory-audit.md",
-      "line": 76,
+      "line": 84,
       "column": 46,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
@@ -17272,64 +17299,73 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/CAPABILITIES.md:109:in-repo-memory-search.py",
+      "id": "dist/cursor/skills/memory/CAPABILITIES.md:56:in-repo-memory-search.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/CAPABILITIES.md",
-      "line": 109,
+      "line": 56,
       "column": 8,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/CAPABILITIES.md:110:in-repo-memory-search.py",
+      "id": "dist/cursor/skills/memory/CAPABILITIES.md:130:in-repo-memory-search.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/CAPABILITIES.md",
-      "line": 110,
+      "line": 130,
       "column": 8,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/CAPABILITIES.md:180:memory_playbook.py",
+      "id": "dist/cursor/skills/memory/CAPABILITIES.md:131:in-repo-memory-search.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/CAPABILITIES.md",
-      "line": 180,
+      "line": 131,
+      "column": 8,
+      "script": "in-repo-memory-search.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/memory/CAPABILITIES.md:201:memory_playbook.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/memory/CAPABILITIES.md",
+      "line": 201,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/CAPABILITIES.md:181:memory_playbook.py",
+      "id": "dist/cursor/skills/memory/CAPABILITIES.md:202:memory_playbook.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/CAPABILITIES.md",
-      "line": 181,
+      "line": 202,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/CAPABILITIES.md:182:memory_playbook.py",
+      "id": "dist/cursor/skills/memory/CAPABILITIES.md:203:memory_playbook.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/CAPABILITIES.md",
-      "line": 182,
+      "line": 203,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/CAPABILITIES.md:183:memory_playbook.py",
+      "id": "dist/cursor/skills/memory/CAPABILITIES.md:204:memory_playbook.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/CAPABILITIES.md",
-      "line": 183,
+      "line": 204,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/CAPABILITIES.md:184:memory_playbook.py",
+      "id": "dist/cursor/skills/memory/CAPABILITIES.md:205:memory_playbook.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/CAPABILITIES.md",
-      "line": 184,
+      "line": 205,
       "column": 8,
       "script": "memory_playbook.py",
       "classification": "self-repo-only"
@@ -17416,82 +17452,82 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:241:sw_bootstrap.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:252:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 241,
+      "line": 252,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:246:sw_bootstrap.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:257:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 246,
+      "line": 257,
       "column": 13,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:270:memory-sot.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:281:memory-sot.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 270,
+      "line": 281,
       "column": 8,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:299:in-repo-memory-search.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:310:in-repo-memory-search.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 299,
+      "line": 310,
       "column": 8,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:305:in-repo-memory-search.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:316:in-repo-memory-search.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 305,
+      "line": 316,
       "column": 27,
       "script": "in-repo-memory-search.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:345:memory-sot.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:356:memory-sot.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 345,
+      "line": 356,
       "column": 34,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:371:reconcile.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:382:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 371,
+      "line": 382,
       "column": 8,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:374:reconcile.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:385:reconcile.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 374,
+      "line": 385,
       "column": 32,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/memory/SKILL.md:399:planning_cross_project_recall.py",
+      "id": "dist/cursor/skills/memory/SKILL.md:410:planning_cross_project_recall.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/memory/SKILL.md",
-      "line": 399,
+      "line": 410,
       "column": 8,
       "script": "planning_cross_project_recall.py",
       "classification": "self-repo-only"
@@ -18829,415 +18865,415 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:219:memory-decision-snapshot.py",
+      "id": "docs/guides/configuration.md:223:memory-decision-snapshot.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 219,
+      "line": 223,
       "column": 8,
       "script": "memory-decision-snapshot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:623:sw-configure.py",
+      "id": "docs/guides/configuration.md:627:sw-configure.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 623,
+      "line": 627,
       "column": 24,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:663:sw_bootstrap.py",
+      "id": "docs/guides/configuration.md:667:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 663,
+      "line": 667,
       "column": 9,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/configuration.md:664:reviewer-dispatch-check.py",
+      "id": "docs/guides/configuration.md:668:reviewer-dispatch-check.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 664,
+      "line": 668,
       "column": 9,
       "script": "reviewer-dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:688:dispatch-check.py",
+      "id": "docs/guides/configuration.md:692:dispatch-check.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 688,
+      "line": 692,
       "column": 8,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:780:test/run_execute_orchestration_fixtures.py",
+      "id": "docs/guides/configuration.md:784:test/run_execute_orchestration_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 780,
+      "line": 784,
       "column": 24,
       "script": "test/run_execute_orchestration_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:801:dispatch_prompt.py",
+      "id": "docs/guides/configuration.md:805:dispatch_prompt.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 801,
+      "line": 805,
       "column": 9,
       "script": "dispatch_prompt.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:855:planning_visibility.py",
+      "id": "docs/guides/configuration.md:859:planning_visibility.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 855,
+      "line": 859,
       "column": 55,
       "script": "planning_visibility.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:906:planning_store.py",
+      "id": "docs/guides/configuration.md:910:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 906,
+      "line": 910,
       "column": 53,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:954:planning_store.py",
+      "id": "docs/guides/configuration.md:958:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 954,
+      "line": 958,
       "column": 36,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1007:planning_linear_client.py",
+      "id": "docs/guides/configuration.md:1011:planning_linear_client.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1007,
+      "line": 1011,
       "column": 36,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1008:planning_linear_client.py",
+      "id": "docs/guides/configuration.md:1012:planning_linear_client.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1008,
+      "line": 1012,
       "column": 9,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1039:test/run-planning-045-doc-impact-fixtures.sh",
+      "id": "docs/guides/configuration.md:1043:test/run-planning-045-doc-impact-fixtures.sh",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1039,
+      "line": 1043,
       "column": 24,
       "script": "test/run-planning-045-doc-impact-fixtures.sh",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1041:test/run_visibility_fixtures.py",
+      "id": "docs/guides/configuration.md:1045:test/run_visibility_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1041,
+      "line": 1045,
       "column": 24,
       "script": "test/run_visibility_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1044:gitignore-generate.py",
+      "id": "docs/guides/configuration.md:1048:gitignore-generate.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1044,
+      "line": 1048,
       "column": 9,
       "script": "gitignore-generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1047:test/run_planning_visibility_acceptance_fixtures.py",
+      "id": "docs/guides/configuration.md:1051:test/run_planning_visibility_acceptance_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1047,
+      "line": 1051,
       "column": 24,
       "script": "test/run_planning_visibility_acceptance_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1084:planning_request_budget.py",
+      "id": "docs/guides/configuration.md:1088:planning_request_budget.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1084,
+      "line": 1088,
       "column": 63,
       "script": "planning_request_budget.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1086:test/run_pytest.py",
+      "id": "docs/guides/configuration.md:1090:test/run_pytest.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1086,
+      "line": 1090,
       "column": 24,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1106:planning_cutover.py",
+      "id": "docs/guides/configuration.md:1110:planning_cutover.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1106,
+      "line": 1110,
       "column": 18,
       "script": "planning_cutover.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1127:test/run_planning_035_doc_impact_fixtures.py",
+      "id": "docs/guides/configuration.md:1131:test/run_planning_035_doc_impact_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1127,
+      "line": 1131,
       "column": 24,
       "script": "test/run_planning_035_doc_impact_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1157:test/run_fanout_fixtures.py",
+      "id": "docs/guides/configuration.md:1161:test/run_fanout_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1157,
+      "line": 1161,
       "column": 29,
       "script": "test/run_fanout_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1158:test/run_dispatch_foundation_fixtures.py",
+      "id": "docs/guides/configuration.md:1162:test/run_dispatch_foundation_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1158,
+      "line": 1162,
       "column": 39,
       "script": "test/run_dispatch_foundation_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1164:wave.py",
+      "id": "docs/guides/configuration.md:1168:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1164,
+      "line": 1168,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1165:wave.py",
+      "id": "docs/guides/configuration.md:1169:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1165,
+      "line": 1169,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1166:wave.py",
+      "id": "docs/guides/configuration.md:1170:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1166,
+      "line": 1170,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1172:cleanup.py",
+      "id": "docs/guides/configuration.md:1176:cleanup.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1172,
+      "line": 1176,
       "column": 24,
       "script": "cleanup.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1285:sw_bootstrap.py",
+      "id": "docs/guides/configuration.md:1289:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1285,
+      "line": 1289,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/configuration.md:1286:sw_bootstrap.py",
+      "id": "docs/guides/configuration.md:1290:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1286,
+      "line": 1290,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/configuration.md:1348:wave.py",
+      "id": "docs/guides/configuration.md:1352:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1348,
+      "line": 1352,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1471:generate-pr-test-plan-ci-workflow.py",
+      "id": "docs/guides/configuration.md:1475:generate-pr-test-plan-ci-workflow.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1471,
+      "line": 1475,
       "column": 8,
       "script": "generate-pr-test-plan-ci-workflow.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1487:test/run_suite_registry_fixtures.py",
+      "id": "docs/guides/configuration.md:1491:test/run_suite_registry_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1487,
+      "line": 1491,
       "column": 49,
       "script": "test/run_suite_registry_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1489:test/run_pr_test_plan_fixtures.py",
+      "id": "docs/guides/configuration.md:1493:test/run_pr_test_plan_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1489,
+      "line": 1493,
       "column": 9,
       "script": "test/run_pr_test_plan_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1545:capability_docs.py",
+      "id": "docs/guides/configuration.md:1549:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1545,
+      "line": 1549,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1548:capability_docs.py",
+      "id": "docs/guides/configuration.md:1552:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1548,
+      "line": 1552,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1551:capability_docs.py",
+      "id": "docs/guides/configuration.md:1555:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1551,
+      "line": 1555,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1567:test/run_pilot_fixtures.py",
+      "id": "docs/guides/configuration.md:1571:test/run_pilot_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1567,
+      "line": 1571,
       "column": 24,
       "script": "test/run_pilot_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1577:test/run_emitter_fixtures.py",
+      "id": "docs/guides/configuration.md:1581:test/run_emitter_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1577,
+      "line": 1581,
       "column": 8,
       "script": "test/run_emitter_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1624:phase_sizing.py",
+      "id": "docs/guides/configuration.md:1628:phase_sizing.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1624,
+      "line": 1628,
       "column": 8,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1638:phase_sizing_corpus.py",
+      "id": "docs/guides/configuration.md:1642:phase_sizing_corpus.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1638,
+      "line": 1642,
       "column": 27,
       "script": "phase_sizing_corpus.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1638:phase_sizing_corpus.py",
+      "id": "docs/guides/configuration.md:1642:phase_sizing_corpus.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1638,
+      "line": 1642,
       "column": 0,
       "script": "phase_sizing_corpus.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1643:test/run_phase_sizing_corpus_fixtures.py",
+      "id": "docs/guides/configuration.md:1647:test/run_phase_sizing_corpus_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1643,
+      "line": 1647,
       "column": 9,
       "script": "test/run_phase_sizing_corpus_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1678:reviewer-metrics.py",
+      "id": "docs/guides/configuration.md:1682:reviewer-metrics.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1678,
+      "line": 1682,
       "column": 23,
       "script": "reviewer-metrics.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1696:test/run_inefficiency_scan_fixtures.py",
+      "id": "docs/guides/configuration.md:1700:test/run_inefficiency_scan_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1696,
+      "line": 1700,
       "column": 24,
       "script": "test/run_inefficiency_scan_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1700:test/run_behavioral_anomaly_fixtures.py",
+      "id": "docs/guides/configuration.md:1704:test/run_behavioral_anomaly_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1700,
+      "line": 1704,
       "column": 9,
       "script": "test/run_behavioral_anomaly_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1711:loop_health.py",
+      "id": "docs/guides/configuration.md:1715:loop_health.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1711,
+      "line": 1715,
       "column": 14,
       "script": "loop_health.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1726:test/run_loop_autonomy_invariant_fixtures.py",
+      "id": "docs/guides/configuration.md:1730:test/run_loop_autonomy_invariant_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1726,
+      "line": 1730,
       "column": 24,
       "script": "test/run_loop_autonomy_invariant_fixtures.py",
       "classification": "self-repo-only"
