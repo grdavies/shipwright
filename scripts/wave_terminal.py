@@ -1065,7 +1065,21 @@ def run_terminal_prepare_living_docs_gates(
     root: Path, state: dict[str, Any]
 ) -> list[dict[str, Any]]:
     """Run append-terminal + currency gates; degrade recoverable planning failures (R5)."""
+    from phase_ship_hygiene import ensure_orchestrator_gate_manifest_cache
+
+    manifest_repair = ensure_orchestrator_gate_manifest_cache(root, state)
     notices: list[dict[str, Any]] = []
+    if isinstance(manifest_repair, dict) and manifest_repair.get("verdict") == "pass":
+        if manifest_repair.get("action") == "auto-repair-prTestPlan-manifest":
+            notices.append(manifest_repair)
+    elif isinstance(manifest_repair, dict) and manifest_repair.get("verdict") == "fail":
+        fail(
+            "orchestrator pr-test-plan manifest missing",
+            exit_code=1,
+            halt="blocked",
+            cause=manifest_repair.get("cause") or "prTestPlan-manifest-missing",
+            resumeCommand=manifest_repair.get("resumeCommand"),
+        )
     append_notices, append_fatal = run_living_docs_append_terminal(root)
     if append_fatal:
         fail_from_payload(
@@ -1100,7 +1114,7 @@ def run_tasks_currency_gate(root: Path, state: dict[str, Any]) -> None:
     from wave_deliver_loop import load_plan, tasks_currency_ok
 
     plan = load_plan(root, state)
-    ok, cause = tasks_currency_ok(root, state, plan)
+    ok, cause = tasks_currency_ok(root, state, plan, auto_repair=True)
     if not ok:
         fail(
             "task-list currency divergence",

@@ -56,6 +56,11 @@ def test_gap_check_worktree_only_discovery(tmp_git_repo: Path, repo_root: Path) 
                 "binding": True,
                 "head": head,
                 "updatedAt": _utc_now(),
+                "evaluationProvenance": {
+                    "source": "ship-steps",
+                    "evaluationHead": head,
+                    "evaluatedAt": _utc_now(),
+                },
             }
         ),
         encoding="utf-8",

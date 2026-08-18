@@ -85,10 +85,14 @@ def write_status(
     *,
     cause: str | None = None,
     head: str | None = None,
+    evaluation_provenance: dict[str, Any] | None = None,
+    require_evaluation: bool = False,
 ) -> dict[str, Any]:
     # HEAD stamp mirrors ship-phase-status.py status.json writes (PRD 059 R6).
     if not head:
         head = resolve_write_head(path.parent if path.parent.is_dir() else Path.cwd())
+    if verdict == "pass" and require_evaluation and not evaluation_provenance:
+        raise ValueError("gap-check pass requires authoritative evaluation provenance")
     doc: dict[str, Any] = {
         "verdict": verdict,
         "binding": True,
@@ -98,19 +102,38 @@ def write_status(
         doc["head"] = head
     if cause:
         doc["cause"] = cause
+    if evaluation_provenance:
+        doc["evaluationProvenance"] = evaluation_provenance
     return write_status_atomic(path, doc)
 
 
-def deliver_gap_check_ok(root: Path, phase_slug: str, *, require_status: bool = True) -> tuple[bool, str | None]:
+def deliver_gap_check_ok(
+    root: Path,
+    phase_slug: str,
+    *,
+    require_status: bool = True,
+    auto_repair: bool = False,
+) -> tuple[bool, str | None]:
     path, data = discover_gap_check_status(root, phase_slug)
     if data is None:
         if require_status:
+            if auto_repair:
+                from phase_ship_hygiene import try_auto_repair_gap_check_missing
+
+                repair = try_auto_repair_gap_check_missing(root, phase_slug)
+                if repair.get("verdict") == "pass":
+                    return True, None
+                return False, str(repair.get("cause") or "gap-check-missing")
             return False, "gap-check-missing"
         return True, None
     if data.get("verdict") == "halt" and data.get("binding"):
         return False, str(data.get("cause") or "gap-check:halt")
     if data.get("verdict") != "pass" or not data.get("binding"):
         return False, "gap-check-not-pass"
+    from phase_ship_hygiene import is_forged_gap_check_status
+
+    if is_forged_gap_check_status(data):
+        return False, "gap-check-forged-pass"
     return True, None
 
 
