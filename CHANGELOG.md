@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.2.0](https://github.com/grdavies/shipwright/compare/v2.1.0...v2.2.0) (2026-08-18)
+
+
+### Features
+
+* **prd-271:** graph execution runtime v2 ([#865](https://github.com/grdavies/shipwright/issues/865)) ([1b6f7f2](https://github.com/grdavies/shipwright/commit/1b6f7f2baf612829d4cc7a48305f0ea76aa325f1))
+* **prd-272:** workflow intelligence assurance ([#876](https://github.com/grdavies/shipwright/issues/876)) ([ffbbb96](https://github.com/grdavies/shipwright/commit/ffbbb9662065bc661494b304e75ad82720e4061d))
+* **prd-273:** reviewer effectiveness calibration ([#884](https://github.com/grdavies/shipwright/issues/884)) ([8c8775a](https://github.com/grdavies/shipwright/commit/8c8775a41b8381a0ba041bf2feb5eb33fddaf3d0))
+* **prd-274:** sync build hygiene ([#889](https://github.com/grdavies/shipwright/issues/889)) ([5314c81](https://github.com/grdavies/shipwright/commit/5314c8104e8eb07162f0a24ee0666f3f4a3e961a))
+* **prd-275:** planning closeout hygiene ([#894](https://github.com/grdavies/shipwright/issues/894)) ([712578f](https://github.com/grdavies/shipwright/commit/712578f50c8bba8b99a03158a215ab5539f8b5a6))
+* **prd-276:** deliver driver resilience ([#899](https://github.com/grdavies/shipwright/issues/899)) ([e86b4a6](https://github.com/grdavies/shipwright/commit/e86b4a67dadc45db24ed5f6416648f1eaf853e4f))
+* **prd-277:** provider aware rule storage ([#903](https://github.com/grdavies/shipwright/issues/903)) ([8513d33](https://github.com/grdavies/shipwright/commit/8513d332c53a6296efefa3105d9b69de9f651525))
+
+
+### Bug Fixes
+
+* **cleanup:** skip invalid run ids in deliver-run enumeration ([#867](https://github.com/grdavies/shipwright/issues/867)) ([600f698](https://github.com/grdavies/shipwright/commit/600f698ab57f07f82f682111cee30bb2034d54e0))
+
 ## [2.1.0](https://github.com/grdavies/shipwright/compare/v2.0.0...v2.1.0) (2026-08-15)
 
 
