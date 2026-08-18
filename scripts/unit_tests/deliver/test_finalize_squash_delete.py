@@ -53,8 +53,14 @@ def test_finalize_uses_host_pr_merge_when_branch_deleted(tmp_path: Path) -> None
     run_id = "deliver-squash-delete"
     state = _seed_run(tmp_path, run_id)
 
-    # Squash-merge deletes the feature branch tip from the local repo.
+    # Squash-merge lands task-list content on main, then deletes the feature branch.
     subprocess.run(["git", "checkout", "-q", "main"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "merge", "--squash", "feat/squash-demo"],
+        cwd=tmp_path,
+        check=True,
+    )
+    subprocess.run(["git", "commit", "-qm", "squash merge feat/squash-demo"], cwd=tmp_path, check=True)
     subprocess.run(["git", "branch", "-D", "feat/squash-demo"], cwd=tmp_path, check=True)
     gone = subprocess.run(
         ["git", "rev-parse", "feat/squash-demo"],
