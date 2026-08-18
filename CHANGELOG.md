@@ -915,6 +915,7 @@
 * merge phase orch-cwd-adopt-size-medium into feat/deliver-driver-resilience (cb46458) <!-- sw-deliver:orch-cwd-adopt-size-medium -->
 * merge phase exclusive-run-lease-size-medium into feat/deliver-driver-resilience (de7db08) <!-- sw-deliver:exclusive-run-lease-size-medium -->
 * merge phase docs-and-decisions-size-small into feat/deliver-driver-resilience (e1636e5) <!-- sw-deliver:docs-and-decisions-size-small -->
+* merge phase promote-and-load-contracts-size-medium into feat/provider-aware-rule-storage (92d9692) <!-- sw-deliver:promote-and-load-contracts-size-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
