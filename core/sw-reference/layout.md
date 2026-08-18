@@ -635,6 +635,35 @@ conflict. Normative block shape and hash rules: `core/sw-reference/canonical-ser
 (`sw-edges` section). Gap-capture absorb linkage (`planning_gap_capture.record_absorb_linkage`) uses the
 same merge path — PRD-side absorbs put must not drop native links.
 
+### PRD 278 closeout surfaces (R9, R11, D1, D3)
+
+Deliver/ship closeout hardening modules and their `core/scripts/` mirrors (required planning gate
+`core-scripts-parity` when touched):
+
+| Module | Role | Regression |
+| --- | --- | --- |
+| `scripts/phase_ship_hygiene.py` | Safe auto-repair for phase-ship hygiene halts | `test_phase_ship_hygiene_autorepair.py` |
+| `scripts/gap-check-gate.py` | Gap-check gate + hygiene auto-repair hook | same suite |
+| `scripts/wave_deliver.py` / `wave_deliver_loop.py` | Tasks-currency auto-heal | same suite |
+| `scripts/wave_terminal.py` | PR test-plan manifest mirror | same suite |
+| `scripts/wave_run_adopt.py` | Prefer run-scoped plan; lock/CAS + content-hash | `test_wave_run_adopt_prefer_run_scoped.py` |
+| `scripts/planning_store_facade.py` | Numeric absorb → exactly-one open gap | `test_numeric_absorb_closeout.py` |
+
+**Absorb acceptance map** (source issue → requirement cluster):
+
+| Issue | R-IDs | Acceptance |
+| --- | --- | --- |
+| #730 | R1–R2 | Hygiene auto-repair without operator file surgery; forged gap-check refused; frozen-ledger mutation refused |
+| #731 | R3–R5 | Prefer run-scoped plan under foreign global `planHashMismatch`; concurrent lock/CAS |
+| #739 | R6–R8 | Numeric absorb resolves to exactly one eligible open gap; 0/N>1/provider fault → not-ready |
+
+**Decision stance (D1):** PRD 278 is a focused closeout-hardening PRD — two-PRD packaging; no mega-PRD
+delivery bundling unrelated surfaces. **Decision stance (D3):** PRD 278 absorbs #731 dogfood closeout; do
+not amend PRD 276 for the same behavior.
+
+Operator command detail: `core/commands/sw-deliver.md` **Closeout hardening**;
+`core/commands/sw-ship.md` **Phase-ship hygiene floors**.
+
 ### Verify `no-baseline` evidence matrix (planning#641 / #642, PRD 094 R7/R17)
 
 Planning issues **#641** and **#642** share one `no-baseline` verification partition

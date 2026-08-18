@@ -1863,7 +1863,7 @@ def merge_ready_in_flight_phases(
         authorized, _evidence = live_host_evidence_ok(root, status, expected, pr_number)
         if not authorized:
             continue
-        ok, _cause = tasks_currency_ok(root, state, plan)
+        ok, _cause = tasks_currency_ok(root, state, plan, auto_repair=True)
         if not ok:
             continue
         ok, _cause = phase_acceptance_ok(root, state, plan, str(pid), str(slug))
@@ -1913,7 +1913,7 @@ def phase_has_validated_terminal(
     authorized, _ = live_host_evidence_ok(root, status, expected, pr_number)
     if not authorized:
         return False
-    ok, _ = tasks_currency_ok(root, state, plan)
+    ok, _ = tasks_currency_ok(root, state, plan, auto_repair=True)
     if not ok:
         return False
     ok, _ = phase_acceptance_ok(root, state, plan, phase_id, slug)
@@ -2011,7 +2011,7 @@ def in_flight_merge_halt(
                         "cause": sha_cause or "phase-status:stale",
                         "resume": True,
                     }
-        ok, cause = tasks_currency_ok(root, state, plan)
+        ok, cause = tasks_currency_ok(root, state, plan, auto_repair=True)
         if not ok:
             return {
                 "action": "halt-blocked",
@@ -2627,10 +2627,10 @@ def gap_check_gate_ok(
         return False, "gap-check-gate-missing"
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
-    return mod.deliver_gap_check_ok(root, phase_slug, require_status=True)
+    return mod.deliver_gap_check_ok(root, phase_slug, require_status=True, auto_repair=True)
 
 def tasks_currency_ok(
-    root: Path, state: dict[str, Any], plan: dict[str, Any]
+    root: Path, state: dict[str, Any], plan: dict[str, Any], *, auto_repair: bool = False
 ) -> tuple[bool, str | None]:
     resolved = resolve_currency_check(root, state, plan)
     if resolved == (None, None):
@@ -2652,6 +2652,13 @@ def tasks_currency_ok(
     )
     if proc.returncode == 0:
         return True, None
+    if auto_repair:
+        from phase_ship_hygiene import try_auto_repair_tasks_currency_divergence
+
+        repair = try_auto_repair_tasks_currency_divergence(root, state, plan)
+        if repair.get("verdict") == "pass":
+            return True, None
+        return False, str(repair.get("cause") or "tasks-currency-divergence")
     return False, "tasks-currency-divergence"
 
 

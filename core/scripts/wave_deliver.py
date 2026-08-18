@@ -1043,6 +1043,17 @@ def phase_entry_currency_check(
     )
 
 
+def phase_ship_tasks_currency_auto_repair(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+) -> dict[str, Any]:
+    """Phase-ship auto-heal for tasks-currency-divergence (PRD 278 R1/D2)."""
+    from phase_ship_hygiene import try_auto_repair_tasks_currency_divergence
+
+    return try_auto_repair_tasks_currency_divergence(root, state, plan)
+
+
 def resolve_task_list_path(root: Path, task_list: str) -> Path:
     """Resolve frozen task list inside the active worktree (R61, PRD 056 R17-R18)."""
     import planning_materialize as pm

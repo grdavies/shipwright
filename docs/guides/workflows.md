@@ -1230,6 +1230,7 @@ Phase-mode `/sw-deliver` reliability contracts (–):
 | Merge enqueue queue | `merge-enqueue` applies returned `mergeQueue` via `apply_merge_enqueue_result` before `persist_cursor` — stale in-memory state cannot wipe the queue empty. Regression: `scripts/unit_tests/deliver/test_merge_enqueue_persist_reload.py`. |
 | Phase provision stdout | `wave_lifecycle.provision_payload_from_stdout` parses the **last** JSON object from mixed stdout and validates non-empty `path`/`name`; invalid payloads fail closed with captured stdout (no silent `{raw:…}` success). Regression: `scripts/unit_tests/deliver/test_phase_provision_stdout_json.py`. |
 | Absorb close-out | Plugin consumability delivery gaps discoverable via PRD `absorbs` / `sw-edges` or `planningIssues` + gap `absorbed-by` provenance; verify with `python3 scripts/planning_gap_capture.py <root> verify-absorb-closeout-073`. |
+| Closeout hardening | Phase-ship hygiene auto-repair (`phase_ship_hygiene.py`); prefer-run-scoped adopt (`wave_run_adopt.py`); numeric absorb exactly-one (`planning_store_facade.py` closeout). Absorb map: #730 hygiene, #731 adopt, #739 numeric absorb. See `core/commands/sw-deliver.md` **Closeout hardening**. |
 
 Resume after halt: `/sw-deliver run` from the orchestrator worktree (or `/sw-deliver run --issue <n>` under issue-store).
 

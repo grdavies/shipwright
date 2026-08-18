@@ -262,6 +262,7 @@
     "deferred-placeholder-lint.py",
     "deliver_closeout.py",
     "deliver_cwd_guard.py",
+    "deliver_finalize_fixtures.py",
     "deliver_plan_surfacing.py",
     "dep-import-guard.py",
     "deprecated_surface_freshness.py",
@@ -498,6 +499,7 @@
     "orchestrator_step_plan.py",
     "over_mock_scan.py",
     "phase_acceptance_gate.py",
+    "phase_ship_hygiene.py",
     "phase_sizing.py",
     "phase_sizing_corpus.py",
     "phase_staleness_lib.py",
@@ -728,5 +730,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 725
+  "moduleCount": 727
 }

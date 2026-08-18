@@ -1661,6 +1661,234 @@ def _resolve_prd_absorption_context(
     return pmis.parse_frontmatter_fields(raw_content), edges
 
 
+def _is_gap_unit_absorb_target(target: str) -> bool:
+    """True when ``target`` already names a gap unit id (gap-* or contains ``gap``)."""
+    value = target.strip()
+    return bool(value) and ("gap" in value or value.startswith("gap-"))
+
+
+def _is_planning_issue_absorb_ref(target: str) -> bool:
+    """True for bare planning-issue numbers used as absorb targets (gap-309).
+
+    Hybrid PRD ``sw-edges`` often store ``\"691\"`` / ``planning#691`` rather than
+    ``gap-*`` unit ids. Those refs are delivery-grade once resolved via the issue store.
+    """
+    raw = target.strip()
+    if not raw or _is_gap_unit_absorb_target(raw):
+        return False
+    normalized = _normalize_planning_issue_ref(raw)
+    return bool(re.fullmatch(r"(?:planning#|#)?\d+", normalized, flags=re.IGNORECASE))
+
+
+def _iter_numeric_absorb_refs(
+    fm: dict[str, str],
+    edges: dict[str, Any] | None,
+) -> list[str]:
+    """Collect unique numeric / planning# absorb targets from frontmatter + edges."""
+    refs: list[str] = []
+    seen: set[str] = set()
+
+    def _add(raw: str) -> None:
+        value = raw.strip()
+        if not value or not _is_planning_issue_absorb_ref(value):
+            return
+        key = _normalize_planning_issue_ref(value)
+        if key in seen:
+            return
+        seen.add(key)
+        refs.append(value)
+
+    for target in _parse_absorbs_targets(fm.get("absorbs", "")):
+        _add(target)
+    for edge in (edges or {}).get("edges") or []:
+        if not isinstance(edge, dict):
+            continue
+        rel = str(edge.get("rel") or edge.get("relationship") or "depends").strip().lower()
+        if rel != "absorbs":
+            continue
+        _add(str(edge.get("target", "")).strip())
+    return refs
+
+
+def _eligible_open_gap_unit_id(record: Any) -> str | None:
+    """Return gap unit id when ``record`` is an eligible open gap, else ``None``."""
+    from planning_canonical import gap_status_from_labels
+
+    try:
+        artifact_type = _resolve_planning_issue_artifact_type(record)
+    except PlanningIssueRefResolutionError:
+        return None
+    if artifact_type != "gap":
+        return None
+    labels = list(getattr(record, "labels", []) or [])
+    gap_status = gap_status_from_labels(labels)
+    if gap_status == "open":
+        unit_id = str(getattr(record, "unit_id", "") or "").strip()
+        return unit_id or None
+    if gap_status is None and str(getattr(record, "state", "")) == "open":
+        unit_id = str(getattr(record, "unit_id", "") or "").strip()
+        return unit_id or None
+    return None
+
+
+def _collect_eligible_open_gaps_for_numeric_ref(
+    root: Path,
+    cfg: dict[str, Any],
+    ref: str,
+    *,
+    backend: "IssueStoreBackend",
+    gap_catalog: list[Any] | None = None,
+) -> list[str]:
+    """Collect eligible open gap unit ids matching a numeric planning-issue absorb ref."""
+    pmis = _migrate_issue_store()
+    key_result = pmis.validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        raise PlanningIssueRefResolutionError(
+            ref,
+            "invalid-project-key",
+            message=str(key_result.get("message") or "invalid project key"),
+        )
+    project_key = str(key_result["projectKey"])
+    normalized = _normalize_planning_issue_ref(ref)
+    m = re.search(r"(?:planning#|#)?(\d+)$", normalized, re.I)
+    if not m:
+        raise PlanningIssueRefResolutionError(ref, "absorb-ref-invalid")
+    issue_num = int(m.group(1))
+    client = backend._client
+    matches: list[str] = []
+    seen: set[str] = set()
+
+    def _consider(record: Any) -> None:
+        gap_id = _eligible_open_gap_unit_id(record)
+        if gap_id and gap_id not in seen:
+            seen.add(gap_id)
+            matches.append(gap_id)
+
+    record = _lookup_planning_issue_record_for_ref(
+        client,
+        project_key=project_key,
+        issue_num=issue_num,
+        ref=ref,
+    )
+    if record is not None:
+        _consider(record)
+
+    search = getattr(client, "issue_search", None)
+    if not callable(search):
+        return matches
+    records = gap_catalog
+    if records is None:
+        try:
+            records = list(search(project_key=project_key, artifact_type="gap"))
+        except (
+            IssueCapabilityError,
+            IssueBudgetExhausted,
+            IssueTombstone,
+            IssueTransferred,
+        ) as exc:
+            raise _planning_issue_ref_provider_error(ref, exc) from exc
+    needles = {
+        normalized,
+        f"planning#{issue_num}",
+        f"#{issue_num}",
+    }
+    for item in records:
+        unit_id = str(getattr(item, "unit_id", "") or "").strip()
+        if not unit_id:
+            continue
+        if int(getattr(item, "number", 0) or 0) == issue_num:
+            _consider(item)
+            continue
+        body = reassemble_body(item.body, item.comments)
+        gap_fm = pmis.parse_frontmatter_fields(strip_markers_and_edges(body))
+        related = str(gap_fm.get("related") or "")
+        if any(needle and needle in related for needle in needles):
+            _consider(item)
+    return matches
+
+
+def _resolve_numeric_absorb_ref_to_gap(
+    root: Path,
+    cfg: dict[str, Any],
+    ref: str,
+    *,
+    backend: "IssueStoreBackend",
+    gap_catalog: list[Any] | None = None,
+) -> str:
+    """Resolve one numeric absorb ref to exactly one eligible open gap (PRD 278 R6/D5)."""
+    matches = _collect_eligible_open_gaps_for_numeric_ref(
+        root, cfg, ref, backend=backend, gap_catalog=gap_catalog
+    )
+    if not matches:
+        raise PlanningIssueRefResolutionError(ref, "absorb-gap-unresolved")
+    if len(matches) > 1:
+        raise PlanningIssueRefResolutionError(
+            ref,
+            "absorb-gap-ambiguous",
+            candidates=matches,
+        )
+    return matches[0]
+
+
+def _resolve_numeric_absorb_refs_to_gaps(
+    root: Path,
+    cfg: dict[str, Any],
+    refs: list[str],
+    *,
+    backend: "IssueStoreBackend | None" = None,
+    fail_closed: bool = True,
+) -> tuple[set[str], list[dict[str, str]]]:
+    """Resolve bare issue-number absorb refs to gap unit ids (gap-309 / PRD 275 path).
+
+  When ``fail_closed`` is true (closeout default), 0-match and N>1 per ref raise
+  ``PlanningIssueRefResolutionError`` (typed not-ready). Provider/API faults also raise.
+    """
+    delivery_grade: set[str] = set()
+    skipped: list[dict[str, str]] = []
+    if not refs:
+        return delivery_grade, skipped
+    shared = backend
+    if shared is None:
+        candidate = get_backend(root, cfg, override="issue-store")
+        shared = candidate if isinstance(candidate, IssueStoreBackend) else None
+    if shared is None:
+        if fail_closed and refs:
+            raise PlanningIssueRefResolutionError(refs[0], "issue-store-backend-required")
+        return delivery_grade, skipped
+
+    gap_catalog: list[Any] | None = None
+    if len(refs) > 1:
+        client = shared._client
+        search = getattr(client, "issue_search", None)
+        if callable(search):
+            pmis = _migrate_issue_store()
+            key_result = pmis.validate_project_key(root, cfg)
+            if key_result.get("verdict") == "ok":
+                project_key = str(key_result["projectKey"])
+                try:
+                    gap_catalog = list(search(project_key=project_key, artifact_type="gap"))
+                except (
+                    IssueCapabilityError,
+                    IssueBudgetExhausted,
+                    IssueTombstone,
+                    IssueTransferred,
+                ) as exc:
+                    raise _planning_issue_ref_provider_error(refs[0], exc) from exc
+
+    for ref in refs:
+        try:
+            gap_id = _resolve_numeric_absorb_ref_to_gap(
+                root, cfg, ref, backend=shared, gap_catalog=gap_catalog
+            )
+        except PlanningIssueRefResolutionError:
+            if fail_closed:
+                raise
+            skipped.append({"ref": ref, "reason": "absorb-gap-unresolved"})
+            continue
+        delivery_grade.add(gap_id)
+    return delivery_grade, skipped
+
+
 def discover_absorbed_units_anchored(
     fm: dict[str, str],
     edges: dict[str, Any] | None,
@@ -1670,12 +1898,16 @@ def discover_absorbed_units_anchored(
     Uses ``absorbs`` and hybrid ``sw-edges`` absorbs relationships from YAML
     frontmatter or hybrid-operator bodies. Free-text prose mentions and schedule
     labels are never treated as absorbed.
+
+    Gap unit id targets (``gap-*`` / containing ``gap``) are collected here.
+    Bare planning-issue number absorbs are resolved in ``_gap_closure_evidence``
+    via the issue store (gap-309) — this helper stays pure / offline.
     """
     delivery_grade: set[str] = set()
     skipped: list[dict[str, str]] = []
 
     for target in _parse_absorbs_targets(fm.get("absorbs", "")):
-        if "gap" in target or target.startswith("gap-"):
+        if _is_gap_unit_absorb_target(target):
             delivery_grade.add(target)
 
     related_only: set[str] = set()
@@ -1683,7 +1915,7 @@ def discover_absorbed_units_anchored(
         if not isinstance(edge, dict):
             continue
         target = str(edge.get("target", "")).strip()
-        if not target or ("gap" not in target and not target.startswith("gap-")):
+        if not target or not _is_gap_unit_absorb_target(target):
             continue
         rel = str(edge.get("rel") or edge.get("relationship") or "depends").strip().lower()
         if rel == "absorbs":
@@ -1704,9 +1936,20 @@ def _gap_closure_evidence(
     root: Path,
     cfg: dict[str, Any],
 ) -> tuple[set[str], list[dict[str, str]]]:
-    """Classify gap units for closure: delivery-grade vs related-only skip (PRD 060 R6)."""
-    _ = prd_num, root, cfg  # anchored discovery no longer uses schedule-label heuristics (PRD 070 R1)
-    return discover_absorbed_units_anchored(fm, edges)
+    """Classify gap units for closure: delivery-grade vs related-only skip (PRD 060 R6).
+
+    Resolves bare planning-issue absorb targets (``sw-edges`` / ``absorbs``) to gap
+    unit ids through the issue store so closeout does not silently drop them (gap-309).
+    """
+    _ = prd_num  # schedule labels are not anchored absorption markers (PRD 070 R1)
+    delivery_grade, skipped = discover_absorbed_units_anchored(fm, edges)
+    numeric_refs = _iter_numeric_absorb_refs(fm, edges)
+    resolved, resolve_skipped = _resolve_numeric_absorb_refs_to_gaps(
+        root, cfg, numeric_refs, fail_closed=True
+    )
+    delivery_grade |= resolved
+    skipped.extend(resolve_skipped)
+    return delivery_grade, skipped
 
 
 def _discover_planning_issues_gaps(
@@ -2095,7 +2338,11 @@ def gap_has_absorb_provenance(
     prd_num: str | None = None,
     edges: dict[str, Any] | None = None,
 ) -> bool:
-    """True when ``gap_unit_id`` is provenance-bound to ``prd_unit_id`` for closure (R7)."""
+    """True when ``gap_unit_id`` is provenance-bound to ``prd_unit_id`` for closure (R7).
+
+    Accepts gap unit id absorb targets and bare planning-issue number absorbs
+    resolved through the issue store (gap-309).
+    """
     from planning_gap_capture import gap_absorb_target_match
 
     absorbs = _parse_absorbs_targets(prd_fm.get("absorbs", ""))
@@ -2110,9 +2357,17 @@ def gap_has_absorb_provenance(
         if rel == "absorbs" and gap_absorb_target_match(target, gap_unit_id):
             return True
     backend = get_backend(root, cfg, override="issue-store")
-    if isinstance(backend, IssueStoreBackend):
+    shared = backend if isinstance(backend, IssueStoreBackend) else None
+    numeric_refs = _iter_numeric_absorb_refs(prd_fm, edges)
+    if numeric_refs and shared is not None:
+        resolved, _skipped = _resolve_numeric_absorb_refs_to_gaps(
+            root, cfg, numeric_refs, backend=shared, fail_closed=False
+        )
+        if any(gap_absorb_target_match(item, gap_unit_id) for item in resolved):
+            return True
+    if shared is not None:
         gap_path = _default_body_path(gap_unit_id, "gap")
-        gap_fetch = backend.get(gap_unit_id, gap_path)
+        gap_fetch = shared.get(gap_unit_id, gap_path)
         if gap_fetch.verdict == "ok" and gap_fetch.content:
             gap_fm = _migrate_issue_store().parse_frontmatter_fields(gap_fetch.content)
             absorbed_by = str(gap_fm.get("absorbed-by") or gap_fm.get("absorbed_by") or "").strip()
@@ -2320,8 +2575,8 @@ def resolve_delivery_linked_units(
             "bodyPath": _default_body_path(brainstorm_unit, "brainstorm"),
         }
 
-    gap_ids, gap_skipped = _gap_closure_evidence(fm, edges, prd_num, root, cfg)
     try:
+        gap_ids, gap_skipped = _gap_closure_evidence(fm, edges, prd_num, root, cfg)
         gap_ids, gap_skipped = _discover_planning_issues_gaps(
             root,
             cfg,

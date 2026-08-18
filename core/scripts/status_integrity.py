@@ -575,6 +575,14 @@ STATUS_CAUSE_REMEDIATION: dict[str, str] = {
     "gap-check-not-pass": (
         "gap-check must be binding pass; rewrite via gap-check-gate.py write pass"
     ),
+    "gap-check-forged-pass": (
+        "gap-check pass requires evaluationProvenance from authoritative evaluation; "
+        "re-run /sw-ship --phase-mode --from gap-check"
+    ),
+    "prTestPlan-manifest-missing": (
+        "mirror orchestrator .cursor/sw-gate-cache/pr-test-plan.manifest.json from "
+        "core/sw-reference/pr-test-plan.manifest.json or run-scoped gate evidence"
+    ),
 }
 
 

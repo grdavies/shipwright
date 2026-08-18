@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
+import socket
 import sys
+import threading
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from wave_json_io import StateCorruptError, read_json, write_json
 from wave_run_paths import (
@@ -17,16 +21,27 @@ from wave_run_paths import (
     require_run_id,
     state_path,
 )
-from wave_run_plan import compute_plan_hash, persist_plan
+from wave_run_plan import (
+    PlanHashMismatchError,
+    PlanRecordMissingError,
+    compute_plan_hash,
+    persist_plan,
+    verify_plan_hash,
+)
 from wave_state import (
     _is_migration_breadcrumb,
     legacy_paths,
+    lock_owner_live,
     read_lock_meta,
+    reclaim_stale_lock,
     scoped_paths,
     slug_from_target,
     target_branch_from_state,
     utc_now,
 )
+
+ADOPT_LOCK_DIR = ".cursor/sw-deliver-adopt-locks"
+ADOPT_LOCK_STALE_SECONDS = int(os.environ.get("SW_ADOPT_LOCK_STALE_SECONDS", "300"))
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
@@ -48,6 +63,286 @@ def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | No
 
 def has_flag(args: list[str], flag: str) -> bool:
     return flag in args
+
+
+def adopt_lock_path(root: Path, run_id: str) -> Path:
+    from wave_state import path_normalize_anchor
+
+    rid = require_run_id(run_id)
+    safe = rid.replace("/", "_")
+    return (path_normalize_anchor(root) / ADOPT_LOCK_DIR / f"{safe}.lock").resolve()
+
+
+def resume_adopt_command(
+    root: Path, run_id: str, task_list: str | None = None
+) -> str:
+    _ = task_list
+    return (
+        f"python3 scripts/wave_run_adopt.py {root} adopt --run-id {run_id} --confirm"
+    )
+
+
+def compute_task_list_content_hash(root: Path, task_list_rel: str) -> str | None:
+    rel = task_list_rel.strip()
+    if not rel:
+        return None
+    try:
+        import planning_materialize as pm
+        import planning_path_redirect
+
+        pm.ensure_run_entry_materialized(root, rel)
+        _resolved, readable = planning_path_redirect.resolve_readable_path(root, rel)
+        candidate = readable if readable is not None and readable.is_file() else root / rel
+    except Exception:
+        candidate = root / rel
+    if not candidate.is_file():
+        return None
+    from wave_transition_receipt import hash_bytes
+
+    return hash_bytes(candidate.read_bytes())
+
+
+def assess_proven_run_scoped_identity(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    run_id: str | None = None,
+) -> dict[str, Any]:
+    """Return proven run-scoped identity when plan + task-list content-hash bind."""
+    rid_raw = run_id or state.get("runId")
+    try:
+        rid = require_run_id(str(rid_raw) if rid_raw else None)
+    except RunIdRequiredError:
+        return {
+            "proven": False,
+            "halt": "adopt:identity-unproven",
+            "cause": "adopt:run-id-missing",
+            "runId": rid_raw,
+        }
+
+    scoped_state_path = state_path(root, rid)
+    scoped_plan_path = plan_path(root, rid)
+    work_state = dict(state)
+    if scoped_state_path.is_file():
+        on_disk = _read_state_optional(scoped_state_path)
+        if on_disk and not _is_migration_breadcrumb(on_disk):
+            work_state = {**on_disk, **{k: v for k, v in state.items() if v is not None}}
+
+    if not scoped_plan_path.is_file():
+        return {
+            "proven": False,
+            "halt": "adopt:identity-unproven",
+            "cause": "adopt:run-scoped-plan-missing",
+            "runId": rid,
+            "planPath": _rel_path(root, scoped_plan_path),
+        }
+
+    if not work_state.get("planHash"):
+        return {
+            "proven": False,
+            "halt": "adopt:identity-unproven",
+            "cause": "adopt:plan-hash-missing",
+            "runId": rid,
+        }
+
+    if not work_state.get("planPath"):
+        from wave_run_plan import relative_plan_path
+
+        work_state["planPath"] = relative_plan_path(root, rid)
+
+    try:
+        verify_plan_hash(root, rid, work_state)
+    except (PlanHashMismatchError, PlanRecordMissingError) as exc:
+        return {
+            "proven": False,
+            "halt": "adopt:identity-unproven",
+            "cause": f"adopt:{exc}",
+            "runId": rid,
+        }
+
+    task_list = work_state.get("source_task_list")
+    if not isinstance(task_list, str) or not task_list.strip():
+        return {
+            "proven": False,
+            "halt": "adopt:identity-unproven",
+            "cause": "adopt:source-task-list-missing",
+            "runId": rid,
+        }
+
+    computed_tl_hash = compute_task_list_content_hash(root, task_list.strip())
+    if computed_tl_hash is None:
+        return {
+            "proven": False,
+            "halt": "adopt:identity-unproven",
+            "cause": "adopt:task-list-unreadable",
+            "runId": rid,
+            "taskList": task_list.strip(),
+        }
+
+    recorded_tl_hash = work_state.get("sourceTaskListContentHash")
+    if recorded_tl_hash and str(recorded_tl_hash) != computed_tl_hash:
+        return {
+            "proven": False,
+            "halt": "adopt:identity-unproven",
+            "cause": "adopt:task-list-hash-mismatch",
+            "runId": rid,
+            "recordedTaskListHash": recorded_tl_hash,
+            "computedTaskListHash": computed_tl_hash,
+        }
+
+    try:
+        plan = read_json(scoped_plan_path, absent_ok=False)
+    except StateCorruptError as exc:
+        return {
+            "proven": False,
+            "halt": "adopt:identity-unproven",
+            "cause": "adopt:run-scoped-plan-corrupt",
+            "runId": rid,
+            "error": str(exc),
+        }
+
+    return {
+        "proven": True,
+        "runId": rid,
+        "plan": plan,
+        "planHash": work_state.get("planHash"),
+        "sourceTaskListContentHash": computed_tl_hash,
+        "taskList": task_list.strip(),
+        "state": work_state,
+    }
+
+
+def refuse_unproven_identity(
+    root: Path,
+    state: dict[str, Any],
+    assessment: dict[str, Any],
+    *,
+    error: str = "run-scoped identity unproven",
+    **extra: Any,
+) -> None:
+    run_id = str(assessment.get("runId") or state.get("runId") or "unknown")
+    fail(
+        error,
+        exit_code=20,
+        halt=assessment.get("halt", "adopt:identity-unproven"),
+        cause=assessment.get("cause", "adopt:identity-unproven"),
+        resumeCommand=resume_adopt_command(
+            root, run_id, state.get("source_task_list")
+        ),
+        **{k: v for k, v in assessment.items() if k not in ("proven", "plan", "state")},
+        **extra,
+    )
+
+
+def finalize_identity_refusal(
+    root: Path, run_id: str, state: dict[str, Any], assessment: dict[str, Any]
+) -> dict[str, Any]:
+    return {
+        "verdict": "fail",
+        "action": "run-finalize",
+        "error": assessment.get("cause", "adopt:identity-unproven"),
+        "halt": assessment.get("halt", "adopt:identity-unproven"),
+        "cause": assessment.get("cause", "adopt:identity-unproven"),
+        "resumeCommand": resume_adopt_command(
+            root, run_id, state.get("source_task_list")
+        ),
+        **{k: v for k, v in assessment.items() if k not in ("proven", "plan", "state")},
+    }
+
+
+def _adopt_lock_is_stale(meta: dict[str, Any]) -> bool:
+    ts = meta.get("heartbeatAt") or meta.get("acquiredAt")
+    if not isinstance(ts, str):
+        return True
+    try:
+        from datetime import datetime, timezone
+
+        dt = datetime.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - dt).total_seconds()
+        return age > ADOPT_LOCK_STALE_SECONDS
+    except ValueError:
+        return True
+
+
+def _reclaim_stale_adopt_lock(lock_path: Path) -> bool:
+    meta = read_lock_meta(lock_path)
+    if not meta:
+        lock_path.unlink(missing_ok=True)
+        return True
+    if lock_owner_live(meta) and not _adopt_lock_is_stale(meta):
+        return False
+    lock_path.unlink(missing_ok=True)
+    return True
+
+
+def acquire_adopt_lock(root: Path, run_id: str) -> dict[str, Any]:
+    lock_path = adopt_lock_path(root, run_id)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    now = utc_now()
+    meta: dict[str, Any] = {
+        "kind": "adopt-lock",
+        "runId": run_id,
+        "pid": os.getpid(),
+        "threadId": threading.get_ident(),
+        "host": socket.gethostname(),
+        "acquiredAt": now,
+        "heartbeatAt": now,
+    }
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+
+    def try_acquire() -> bool:
+        try:
+            fd = os.open(lock_path, flags, 0o600)
+        except FileExistsError:
+            return False
+        os.write(fd, (json.dumps(meta) + "\n").encode("utf-8"))
+        os.close(fd)
+        return True
+
+    if try_acquire():
+        return {"verdict": "pass", "lockPath": str(lock_path), "meta": meta}
+    existing = read_lock_meta(lock_path)
+    if _reclaim_stale_adopt_lock(lock_path) and try_acquire():
+        return {
+            "verdict": "pass",
+            "lockPath": str(lock_path),
+            "meta": meta,
+            "reclaimed": True,
+            "previousHolder": existing,
+        }
+    if existing.get("runId") == run_id and existing.get("pid") == os.getpid():
+        if existing.get("threadId") == threading.get_ident():
+            return {"verdict": "pass", "lockPath": str(lock_path), "reentrant": True}
+    return {
+        "verdict": "fail",
+        "error": "adopt-lock-held",
+        "halt": "adopt:lock-cas",
+        "cause": "adopt:lock-cas",
+        "holder": existing,
+        "lockPath": str(lock_path),
+        "resumeCommand": resume_adopt_command(root, run_id),
+    }
+
+
+def release_adopt_lock(lock_path: Path) -> None:
+    if lock_path.is_file():
+        lock_path.unlink(missing_ok=True)
+
+
+@contextmanager
+def adopt_lock_guard(root: Path, run_id: str) -> Iterator[dict[str, Any]]:
+    acquired = acquire_adopt_lock(root, run_id)
+    if acquired.get("verdict") != "pass":
+        fail(
+            acquired.get("error", "adopt lock acquire failed"),
+            exit_code=20,
+            **{k: v for k, v in acquired.items() if k != "verdict"},
+        )
+    lock_path = Path(str(acquired["lockPath"]))
+    try:
+        yield acquired
+    finally:
+        release_adopt_lock(lock_path)
 
 
 def legacy_global_plan_path(root: Path) -> Path:
@@ -244,6 +539,8 @@ def preview_adoption(root: Path, source: dict[str, Any]) -> dict[str, Any]:
     state = dict(source["state"])
     run_id = str(source["runId"])
     target = source.get("target")
+    identity = assess_proven_run_scoped_identity(root, state, run_id=run_id)
+    proven = bool(identity.get("proven"))
     global_plan = legacy_global_plan_path(root)
     plan_exists = global_plan.is_file()
     plan_hash = compute_plan_hash(read_json(global_plan)) if plan_exists else None
@@ -251,6 +548,7 @@ def preview_adoption(root: Path, source: dict[str, Any]) -> dict[str, Any]:
     hash_mismatch = bool(
         recorded_hash and plan_hash and str(recorded_hash) != str(plan_hash)
     )
+    foreign_global_plan = bool(hash_mismatch and proven)
     run_state_path = state_path(root, run_id)
     recovery = []
     if _run_scoped_state_exists(root, run_id):
@@ -273,10 +571,18 @@ def preview_adoption(root: Path, source: dict[str, Any]) -> dict[str, Any]:
         "globalPlanPresent": plan_exists,
         "recordedPlanHash": recorded_hash,
         "globalPlanHash": plan_hash,
-        "planHashMismatch": hash_mismatch,
+        "planHashMismatch": hash_mismatch and not proven,
+        "foreignGlobalPlan": foreign_global_plan,
+        "provenRunScopedIdentity": proven,
+        "preferRunScopedPlan": proven,
+        "runScopedPlanHash": identity.get("planHash") if proven else None,
+        "sourceTaskListContentHash": identity.get("sourceTaskListContentHash")
+        if proven
+        else None,
         "runScopedStateExists": _run_scoped_state_exists(root, run_id),
         "runScopedStatePath": _rel_path(root, run_state_path),
         "lock": lock_state_for_target(root, target),
+        "adoptLockPath": _rel_path(root, adopt_lock_path(root, run_id)),
         "recoveryPaths": recovery,
         "willAdopt": {
             "state": _rel_path(root, run_state_path),
@@ -306,78 +612,131 @@ def adopt_legacy_run(
     preview = preview_adoption(root, source)
     run_id = str(source["runId"])
     run_state = state_path(root, run_id)
-    if preview.get("planHashMismatch"):
-        fail(
-            "plan hash mismatch refuses adoption",
-            exit_code=20,
-            halt="adopt:plan-hash-mismatch",
-            **preview,
+    with adopt_lock_guard(root, run_id):
+        identity = assess_proven_run_scoped_identity(
+            root, dict(source["state"]), run_id=run_id
         )
-    if preview.get("runScopedStateExists") and not abandon:
-        extra = {k: v for k, v in preview.items() if k not in ("verdict", "action", "recoveryPaths")}
-        fail(
-            "run-scoped state already exists; use inspect or abandon-and-recreate",
-            exit_code=20,
-            halt="adopt:run-scoped-exists",
-            recoveryPaths=preview.get("recoveryPaths"),
-            **extra,
+        prefer_run_scoped = bool(identity.get("proven"))
+        if preview.get("planHashMismatch") and not prefer_run_scoped:
+            fail(
+                "plan hash mismatch refuses adoption",
+                exit_code=20,
+                halt="adopt:plan-hash-mismatch",
+                resumeCommand=resume_adopt_command(
+                    root, run_id, source.get("taskList")
+                ),
+                **preview,
+            )
+        if preview.get("runScopedStateExists") and not abandon and not prefer_run_scoped:
+            extra = {
+                k: v
+                for k, v in preview.items()
+                if k not in ("verdict", "action", "recoveryPaths")
+            }
+            fail(
+                "run-scoped state already exists; use inspect or abandon-and-recreate",
+                exit_code=20,
+                halt="adopt:run-scoped-exists",
+                recoveryPaths=preview.get("recoveryPaths"),
+                resumeCommand=resume_adopt_command(
+                    root, run_id, source.get("taskList")
+                ),
+                **extra,
+            )
+        if abandon and run_state.is_file():
+            run_state.unlink(missing_ok=True)
+            plan_path(root, run_id).unlink(missing_ok=True)
+
+        state = dict(source["state"])
+        if not state.get("runId"):
+            state["runId"] = run_id
+        elif str(state["runId"]) != run_id:
+            run_id = str(state["runId"])
+
+        if prefer_run_scoped:
+            plan = dict(identity["plan"])
+            plan_hash = str(identity.get("planHash") or compute_plan_hash(plan))
+            task_list_hash = str(identity.get("sourceTaskListContentHash") or "")
+            state["sourceTaskListContentHash"] = task_list_hash
+            state["planHash"] = plan_hash
+            plan_source = "run-scoped"
+        else:
+            if not legacy_global_plan_path(root).is_file():
+                refuse_unproven_identity(
+                    root,
+                    state,
+                    {
+                        "proven": False,
+                        "halt": "adopt:identity-unproven",
+                        "cause": "adopt:run-scoped-plan-missing",
+                        "runId": run_id,
+                    },
+                    error="missing run-scoped plan and global plan",
+                )
+            plan = read_legacy_global_plan_once(root)
+            plan_hash = compute_plan_hash(plan)
+            recorded = state.get("planHash")
+            if recorded and str(recorded) != plan_hash:
+                fail(
+                    "plan hash mismatch refuses adoption",
+                    exit_code=20,
+                    halt="adopt:plan-hash-mismatch",
+                    recordedPlanHash=recorded,
+                    globalPlanHash=plan_hash,
+                    resumeCommand=resume_adopt_command(
+                        root, run_id, source.get("taskList")
+                    ),
+                )
+            task_list = state.get("source_task_list") or source.get("taskList")
+            if isinstance(task_list, str) and task_list.strip():
+                tl_hash = compute_task_list_content_hash(root, task_list.strip())
+                if tl_hash:
+                    state["sourceTaskListContentHash"] = tl_hash
+            plan_source = "global"
+
+        state["legacyAdopted"] = True
+        state["adoptedAt"] = utc_now()
+        state["adoptedPlanHash"] = plan_hash
+        state["legacyStatePath"] = source.get("statePath")
+        state["legacyPlanPath"] = _rel_path(
+            root,
+            plan_path(root, run_id)
+            if prefer_run_scoped
+            else legacy_global_plan_path(root),
         )
-    if abandon and run_state.is_file():
-        run_state.unlink(missing_ok=True)
-        plan_path(root, run_id).unlink(missing_ok=True)
 
-    state = dict(source["state"])
-    if not state.get("runId"):
-        state["runId"] = run_id
-    elif str(state["runId"]) != run_id:
-        run_id = str(state["runId"])
+        tmp_state = run_state.with_name(run_state.name + ".adopt-tmp")
+        write_json(tmp_state, state)
+        tmp_state.replace(run_state)
 
-    plan = read_legacy_global_plan_once(root)
-    plan_hash = compute_plan_hash(plan)
-    recorded = state.get("planHash")
-    if recorded and str(recorded) != plan_hash:
-        fail(
-            "plan hash mismatch refuses adoption",
-            exit_code=20,
-            halt="adopt:plan-hash-mismatch",
-            recordedPlanHash=recorded,
-            globalPlanHash=plan_hash,
-        )
+        if not prefer_run_scoped or not plan_path(root, run_id).is_file():
+            persist_plan(root, run_id, plan, state)
+        write_json(run_state, state)
 
-    state["legacyAdopted"] = True
-    state["adoptedAt"] = utc_now()
-    state["adoptedPlanHash"] = plan_hash
-    state["legacyStatePath"] = source.get("statePath")
-    state["legacyPlanPath"] = _rel_path(root, legacy_global_plan_path(root))
+        breadcrumb = {
+            "migrated": True,
+            "adopted": True,
+            "adoptedAt": state["adoptedAt"],
+            "runId": run_id,
+            "runScopedPath": _rel_path(root, run_state),
+            "target": source.get("target"),
+            "source_task_list": source.get("taskList"),
+            "planSource": plan_source,
+        }
+        legacy_state = root / str(source["statePath"])
+        write_json(legacy_state, breadcrumb)
 
-    tmp_state = run_state.with_name(run_state.name + ".adopt-tmp")
-    write_json(tmp_state, state)
-    tmp_state.replace(run_state)
-
-    persist_plan(root, run_id, plan, state)
-    write_json(run_state, state)
-
-    breadcrumb = {
-        "migrated": True,
-        "adopted": True,
-        "adoptedAt": state["adoptedAt"],
-        "runId": run_id,
-        "runScopedPath": _rel_path(root, run_state),
-        "target": source.get("target"),
-        "source_task_list": source.get("taskList"),
-    }
-    legacy_state = root / str(source["statePath"])
-    write_json(legacy_state, breadcrumb)
-
-    return {
-        "verdict": "pass",
-        "action": "adopt",
-        "runId": run_id,
-        "adoptedPlanHash": plan_hash,
-        "statePath": _rel_path(root, run_state),
-        "planPath": _rel_path(root, plan_path(root, run_id)),
-        "legacyBreadcrumb": _rel_path(root, legacy_state),
-    }
+        return {
+            "verdict": "pass",
+            "action": "adopt",
+            "runId": run_id,
+            "adoptedPlanHash": plan_hash,
+            "planSource": plan_source,
+            "preferRunScopedPlan": prefer_run_scoped,
+            "statePath": _rel_path(root, run_state),
+            "planPath": _rel_path(root, plan_path(root, run_id)),
+            "legacyBreadcrumb": _rel_path(root, legacy_state),
+        }
 
 
 def cmd_adopt(root: Path, args: list[str]) -> None:
@@ -418,17 +777,32 @@ def maybe_adopt_on_deliver_loop(root: Path, state: dict[str, Any]) -> dict[str, 
     """Release-bounded single legacy plan read during deliver-loop adoption (R18/R21)."""
     if state.get("legacyAdopted") or state.get("adoptedPlanHash"):
         return {"adopted": False, "reason": "already-adopted"}
-    if state.get("planHash"):
+    run_id = state.get("runId") if isinstance(state.get("runId"), str) else None
+    identity = (
+        assess_proven_run_scoped_identity(root, state, run_id=run_id)
+        if run_id
+        else {"proven": False}
+    )
+    if identity.get("proven"):
+        if state.get("planHash"):
+            return {"adopted": False, "reason": "run-scoped-plan-present"}
+    elif state.get("planHash"):
         return {"adopted": False, "reason": "run-scoped-plan-present"}
     target = target_branch_from_state(state)
     slug = target.split("/", 1)[1] if target and "/" in target else None
-    run_id = state.get("runId") if isinstance(state.get("runId"), str) else None
     source = locate_legacy_source(root, slug=slug, run_id=run_id)
     if not source and legacy_global_plan_path(root).is_file():
         source = locate_legacy_source_from_state(root, state)
     if not source:
-        return {"adopted": False, "reason": "no-legacy-source"}
-    if source.get("layout") == "scoped":
+        if not identity.get("proven"):
+            return {"adopted": False, "reason": "no-legacy-source"}
+        refuse_unproven_identity(
+            root,
+            state,
+            identity,
+            error="adopt requires proven run-scoped identity or legacy source",
+        )
+    if source.get("layout") == "scoped" and not identity.get("proven"):
         return {"adopted": False, "reason": "scoped-layout"}
     adopted_run_id = str(source.get("runId") or run_id or "")
     try:

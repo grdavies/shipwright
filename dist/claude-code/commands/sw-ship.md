@@ -315,6 +315,22 @@ are unconditional whether or not a PR exists yet.
 - **Bypass flags** — `--fast` / `--skip-local` / `--skip-simplify` skip only optional/advisory gates; each
   skip writes an explicit record; no combination suppresses a mandatory gate.
 
+## Phase-ship hygiene floors (PRD 278 R1–R2)
+
+Phase-mode `/sw-ship` may auto-repair three hygiene halts via `scripts/phase_ship_hygiene.py` before
+terminal status — **automate-or-fail-closed** (D2); no silent operator file surgery.
+
+| Step / gate | Trigger | Safe auto-repair | Hard refuse |
+| --- | --- | --- | --- |
+| `gap-check` | Missing `gap-check.status.json` | Authoritative gap evaluation for exact phase HEAD → binding pass write | Forged pass without `evaluationProvenance` or HEAD skew (D4) |
+| `deliver-loop` / terminal prepare | `tasks-currency-divergence` | Re-sync checkbox ledger from `source_task_list` | Mutating frozen task-list bytes or inventing completion |
+| `wave_terminal` / terminal prepare | `prTestPlan-manifest-missing` | Mirror orchestrator gate-cache manifest when safe | No authoritative manifest source |
+
+When auto-repair refuses, the chain halts with typed `cause` + `resumeCommand` (typically
+`/sw-ship --phase-mode --from <step>`). Regression:
+`scripts/unit_tests/planning/test_phase_ship_hygiene_autorepair.py`. Deliver-level detail:
+`core/commands/sw-deliver.md` **Closeout hardening**.
+
 ## Phase-mode contract (`--phase-mode`)
 
 When `/sw-deliver` dispatches `/sw-ship` for a phase, it MUST invoke with `--phase-mode` and carry

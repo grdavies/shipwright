@@ -936,6 +936,10 @@
 * merge phase promote-and-load-contracts-size-medium into feat/provider-aware-rule-storage (92d9692) <!-- sw-deliver:promote-and-load-contracts-size-medium -->
 * merge phase dual-home-integrity-revoke-size-medium into feat/provider-aware-rule-storage (6916e40) <!-- sw-deliver:dual-home-integrity-revoke-size-medium -->
 * merge phase interchangeability-docs-decisions-size-small into feat/provider-aware-rule-storage (0da7b5d) <!-- sw-deliver:interchangeability-docs-decisions-size-small -->
+* merge phase numeric-absorb-closeout-exactly-one-gap-map into feat/deliver-ship-closeout-hardening (50d305e) <!-- sw-deliver:numeric-absorb-closeout-exactly-one-gap-map -->
+* merge phase prefer-run-scoped-adopt-lock-cas-content-hash into feat/deliver-ship-closeout-hardening (b179c8d) <!-- sw-deliver:prefer-run-scoped-adopt-lock-cas-content-hash -->
+* merge phase phase-ship-hygiene-safe-auto-repair into feat/deliver-ship-closeout-hardening (542d480) <!-- sw-deliver:phase-ship-hygiene-safe-auto-repair -->
+* merge phase docs-parity-absorb-acceptance-map into feat/deliver-ship-closeout-hardening (cb92603) <!-- sw-deliver:docs-parity-absorb-acceptance-map -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
