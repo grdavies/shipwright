@@ -368,6 +368,9 @@ def _path_under_managed_roots(path: Path, repo_root: Path) -> bool:
     return False
 
 
+ORCH_CWD_ADOPTED_ENV = "SW_DELIVER_ORCH_CWD_ADOPTED"
+
+
 def _orchestrator_lock_reclaimable(root: Path, target: str) -> bool:
     from wave_state import lock_owner_live, read_lock_meta, scoped_paths
 
@@ -378,19 +381,191 @@ def _orchestrator_lock_reclaimable(root: Path, target: str) -> bool:
     return not lock_owner_live(meta)
 
 
-def try_adopt_recorded_orchestrator_worktree(
-    root: Path, state: dict[str, Any], plan: dict[str, Any]
+def _orch_adopt_resume_command(root: Path, state: dict[str, Any]) -> str:
+    from wave_failure import resume_deliver_command
+
+    try:
+        return resume_deliver_command(root, state)
+    except Exception:
+        task_list = state.get("source_task_list")
+        if isinstance(task_list, str) and task_list.strip():
+            return f"/sw-deliver run {task_list.strip()}"
+        return "/sw-deliver run"
+
+
+def _fail_orch_adopt(
+    root: Path,
+    state: dict[str, Any],
+    error: str,
+    *,
+    cause: str,
+    halt: str = "orchestrator-adopt",
+    exit_code: int = 20,
+    **extra: Any,
+) -> None:
+    """Fail-closed orch adopt with typed cause + resumeCommand (PRD 276 R6)."""
+    fail(
+        error,
+        exit_code=exit_code,
+        halt=halt,
+        cause=cause,
+        resumeCommand=_orch_adopt_resume_command(root, state),
+        **extra,
+    )
+
+
+def _git_worktree_registered(repo_root: Path, path: Path) -> bool:
+    """True when *path* appears in ``git worktree list`` (execution-time bind)."""
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "worktree", "list", "--porcelain"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return False
+    resolved = path.resolve()
+    for line in (proc.stdout or "").splitlines():
+        if not line.startswith("worktree "):
+            continue
+        candidate = Path(line.split(" ", 1)[1].strip())
+        try:
+            if candidate.resolve() == resolved:
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def rebind_orch_execution_identity(
+    root: Path,
+    path: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    *,
+    target: str,
 ) -> dict[str, Any]:
-    """Auto-adopt durable orchestratorWorktree on resume (PRD 068 R2)."""
+    """Rebind orch identity at execution time — closes TOCTOU (PRD 276 R14)."""
+    from wave_lifecycle import git_toplevel, orchestrator_worktree_branch
+    from wave_state import canonical_repo_root
+
+    repo_root = canonical_repo_root(root)
+    try:
+        path_common = git_toplevel(path)
+        root_common = git_toplevel(repo_root)
+    except (OSError, subprocess.CalledProcessError) as exc:
+        _fail_orch_adopt(
+            root,
+            state,
+            f"cannot resolve git-common-dir for orch adopt: {exc}",
+            cause="adopt:git-common-dir-unresolved",
+            path=str(path),
+        )
+    if path_common.resolve() != root_common.resolve():
+        _fail_orch_adopt(
+            root,
+            state,
+            "orchestrator worktree git-common-dir mismatch",
+            cause="adopt:git-common-dir-mismatch",
+            path=str(path),
+            pathCommonDir=str(path_common),
+            rootCommonDir=str(root_common),
+        )
+    if not _git_worktree_registered(repo_root, path):
+        _fail_orch_adopt(
+            root,
+            state,
+            "orchestrator path is not a registered git worktree",
+            cause="adopt:worktree-unregistered",
+            path=str(path),
+        )
+    branch = orchestrator_worktree_branch(path)
+    if branch != target:
+        _fail_orch_adopt(
+            root,
+            state,
+            f"orchestrator worktree on {branch!r}, expected {target!r}",
+            cause="adopt:branch-head-mismatch",
+            actual=branch,
+            expected=target,
+            path=str(path),
+        )
+    head_proc = subprocess.run(
+        ["git", "-C", str(path), "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    head = head_proc.stdout.strip() if head_proc.returncode == 0 else ""
+    if not head:
+        _fail_orch_adopt(
+            root,
+            state,
+            "cannot resolve orchestrator branch HEAD",
+            cause="adopt:branch-head-unresolved",
+            path=str(path),
+        )
+    run_id = state.get("runId") or state.get("scopedRunId")
+    source = state.get("source_task_list") or (plan.get("source_task_list") if plan else None)
+    if not run_id and not source:
+        _fail_orch_adopt(
+            root,
+            state,
+            "cannot rebind run identity for orch adopt",
+            cause="adopt:run-identity-missing",
+            path=str(path),
+        )
+    return {
+        "gitCommonDir": str(path_common.resolve()),
+        "worktreeRegistered": True,
+        "branch": branch,
+        "head": head,
+        "runId": run_id,
+        "source_task_list": source,
+        "reboundAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+
+
+def _dual_drive_blocks_adopt(
+    state: dict[str, Any], loop_args: list[str] | None, *, fresh_seconds: int = 120
+) -> bool:
+    """True when a fresh driver heartbeat means adopt would mask dual-drive (R7)."""
+    if loop_args is not None and (
+        has_flag(loop_args, "--self-wake") or has_flag(loop_args, "--dry-run")
+    ):
+        return False
+    if state.get("verdict") != "running" or not state.get("phases"):
+        return False
+    hb = state.get("driverHeartbeatAt")
+    if not isinstance(hb, str):
+        return False
+    age = age_seconds(hb)
+    return age is not None and age < fresh_seconds
+
+
+def try_adopt_recorded_orchestrator_worktree(
+    root: Path,
+    state: dict[str, Any],
+    plan: dict[str, Any],
+    *,
+    loop_args: list[str] | None = None,
+    perform_reentry: bool = True,
+) -> dict[str, Any]:
+    """Validated orch cwd adopt with execution-time identity rebind (PRD 276 R5/R6/R13/R14).
+
+    Path-record alone is insufficient: on success this either reports already-in-cwd
+    after identity rebind, or re-enters (chdir + delegateRoot) so further deliver-loop
+    checks run with cwd set to the validated orchestrator worktree.
+    """
     orch = state.get("orchestratorWorktree") or {}
     raw_path = orch.get("path")
     if not isinstance(raw_path, str) or not raw_path.strip():
         return {"adopted": False, "reason": "no-recorded-path"}
     if _is_basename_only_path(raw_path):
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "orchestrator worktree path is basename-only; refusing invent",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-basename-only",
             path=raw_path,
         )
@@ -403,35 +578,35 @@ def try_adopt_recorded_orchestrator_worktree(
     else:
         path = path.resolve()
     if not _path_under_managed_roots(path, repo_root):
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "orchestrator worktree path is outside managed roots",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-unmanaged-path",
             path=str(path),
         )
     if not path.is_dir():
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "recorded orchestrator worktree path is missing",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-path-missing",
             path=str(path),
         )
     target = target_branch_from_state(state) or (plan.get("target") or {}).get("branch")
     if not isinstance(target, str) or not target:
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "cannot resolve target branch for orchestrator adopt",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-missing-target",
         )
     recorded_branch = orch.get("branch")
     if isinstance(recorded_branch, str) and recorded_branch and recorded_branch != target:
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             f"orchestrator worktree branch mismatch: {recorded_branch!r} vs {target!r}",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-branch-mismatch",
             recorded=recorded_branch,
             expected=target,
@@ -439,10 +614,10 @@ def try_adopt_recorded_orchestrator_worktree(
     expected_name = f"{slug_from_target(target)}-orchestrator"
     recorded_name = str(orch.get("name") or "")
     if recorded_name and recorded_name != expected_name and path.name != expected_name:
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "orchestrator worktree slug/name mismatch",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-slug-mismatch",
             expectedName=expected_name,
             recordedName=recorded_name,
@@ -457,39 +632,59 @@ def try_adopt_recorded_orchestrator_worktree(
 
     current = orchestrator_worktree_branch(path)
     if current != target:
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             f"orchestrator worktree on {current!r}, expected {target!r}",
-            exit_code=20,
-            halt="orchestrator-adopt",
             cause="resume:orchestrator-branch-mismatch",
             actual=current,
             expected=target,
         )
     if orchestrator_worktree_dirty(path):
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             f"orchestrator worktree is dirty: {path}",
-            exit_code=20,
             halt="dirty-orchestrator",
             cause="resume:orchestrator-dirty",
             path=str(path),
         )
     if not _orchestrator_lock_reclaimable(repo_root, target):
-        fail(
+        _fail_orch_adopt(
+            root,
+            state,
             "orchestrator lock held and not reclaimable",
-            exit_code=20,
             halt="orchestrator-lock-held",
             cause="resume:orchestrator-lock-held",
             target=target,
         )
-    if root.resolve() == path.resolve():
-        return {"adopted": False, "reason": "already-in-orchestrator-cwd", "path": str(path)}
-    proc = subprocess.run(
-        ["git", "-C", str(path), "rev-parse", "HEAD"],
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    tip = proc.stdout.strip() if proc.returncode == 0 else ""
+    # R7 — do not auto-adopt when a fresh peer heartbeat indicates dual-drive.
+    if _dual_drive_blocks_adopt(state, loop_args):
+        _fail_orch_adopt(
+            root,
+            state,
+            "driver-heartbeat-fresh-double-adopt",
+            halt="double-drive",
+            cause="adopt:dual-drive-preserved",
+            remediation="wait for driver heartbeat to go stale or use self-wake continuation",
+            driverHeartbeatAt=state.get("driverHeartbeatAt"),
+        )
+
+    identity = rebind_orch_execution_identity(root, path, state, plan, target=target)
+
+    already_cwd = root.resolve() == path.resolve() or Path.cwd().resolve() == path.resolve()
+    adopted_marker = os.environ.get(ORCH_CWD_ADOPTED_ENV, "")
+    if already_cwd or adopted_marker == str(path):
+        return {
+            "adopted": False,
+            "reason": "already-in-orchestrator-cwd",
+            "path": str(path),
+            "identity": identity,
+            "reentry": False,
+            "cwd": str(Path.cwd().resolve()),
+        }
+
+    tip = str(identity.get("head") or "")
     adopt_orchestrator_worktree(
         root,
         top=git_toplevel(repo_root),
@@ -498,11 +693,98 @@ def try_adopt_recorded_orchestrator_worktree(
         target=target,
         tip=tip,
     )
-    return {"adopted": True, "path": str(path), "branch": target, "name": path.name}
+
+    # R13 — validated re-entry: cwd must be set; path-record alone is insufficient.
+    if not perform_reentry:
+        return {
+            "adopted": True,
+            "path": str(path),
+            "branch": target,
+            "name": path.name,
+            "identity": identity,
+            "reentry": False,
+            "cwd": str(Path.cwd().resolve()),
+            "insufficientWithoutReentry": True,
+        }
+
+    os.environ[ORCH_CWD_ADOPTED_ENV] = str(path)
+    os.chdir(path)
+    return {
+        "adopted": True,
+        "path": str(path),
+        "branch": target,
+        "name": path.name,
+        "identity": identity,
+        "reentry": True,
+        "cwd": str(Path.cwd().resolve()),
+        "delegateRoot": str(path),
+    }
+
+
+def _resolve_recorded_orch_path(root: Path, state: dict[str, Any]) -> Path | None:
+    orch = state.get("orchestratorWorktree") or {}
+    raw_path = orch.get("path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return None
+    if _is_basename_only_path(raw_path):
+        return None
+    from wave_state import canonical_repo_root
+
+    repo_root = canonical_repo_root(root)
+    path = Path(raw_path)
+    if not path.is_absolute():
+        path = (repo_root / path).resolve()
+    else:
+        path = path.resolve()
+    return path
+
+
+def _looks_like_orchestrator_worktree(path: Path) -> bool:
+    """True for managed ``.sw-worktrees/<slug>-orchestrator`` paths (PRD 276 R5)."""
+    try:
+        parts = path.resolve().parts
+    except OSError:
+        parts = path.parts
+    return ".sw-worktrees" in parts and str(path.name).endswith("-orchestrator")
+
+
+def should_attempt_orch_cwd_adopt(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    resume: dict[str, Any] | None = None,
+) -> bool:
+    """Whether deliver entry should run validated orch cwd adopt (PRD 276 R5/R6/R8).
+
+    - Consumable resume → always attempt (missing/invalid → fail-closed R6).
+    - Otherwise attempt only for recoverable skew on a managed
+      ``.sw-worktrees/*-orchestrator`` path (R5/R8). Fixture stubs that point at
+      the primary checkout itself are ignored unless resume is consumable.
+    """
+    orch = state.get("orchestratorWorktree") or {}
+    raw_path = orch.get("path")
+    if not isinstance(raw_path, str) or not raw_path.strip():
+        return False
+    if resume and resume.get("consumable"):
+        return True
+    if _is_basename_only_path(raw_path):
+        return False
+    path = _resolve_recorded_orch_path(root, state)
+    if path is None:
+        return False
+    from wave_state import canonical_repo_root
+
+    repo_root = canonical_repo_root(root)
+    if not _looks_like_orchestrator_worktree(path):
+        return False
+    if not _path_under_managed_roots(path, repo_root):
+        return False
+    # Exists or vanished managed orch — attempt (missing → R6 fail-closed).
+    return True
 
 
 def apply_resume_entry(root: Path, state: dict[str, Any], plan: dict[str, Any], args: list[str]) -> dict[str, Any]:
-    """Resume short-circuit + orchestrator adopt on deliver-loop entry (PRD 068 R1/R2)."""
+    """Resume short-circuit + orchestrator adopt on deliver-loop entry (PRD 068 R1/R2, PRD 276 R5)."""
     from wave_deliver import evaluate_resume_short_circuit
 
     resume = evaluate_resume_short_circuit(root, args)
@@ -512,11 +794,14 @@ def apply_resume_entry(root: Path, state: dict[str, Any], plan: dict[str, Any], 
             exit_code=20,
             halt=resume.get("cause", "resume-blocked"),
             cause=resume.get("cause"),
+            resumeCommand=_orch_adopt_resume_command(root, state),
             **{k: v for k, v in resume.items() if k not in ("halt", "consumable", "state")},
         )
     adopt: dict[str, Any] = {"adopted": False}
-    if resume.get("consumable") and state.get("orchestratorWorktree"):
-        adopt = try_adopt_recorded_orchestrator_worktree(root, state, plan)
+    if should_attempt_orch_cwd_adopt(root, state, resume=resume):
+        adopt = try_adopt_recorded_orchestrator_worktree(
+            root, state, plan, loop_args=args, perform_reentry=True
+        )
     return {"resume": resume, "orchestratorAdopt": adopt}
 
 def fixture_tree_clean_or_halt(root: Path, state: dict[str, Any]) -> None:
@@ -1076,7 +1361,105 @@ def load_state(root: Path, task_list: str | None = None) -> dict[str, Any]:
     return load_deliver_state(root, task_list=task_list)
 
 
+def ensure_exclusive_run_lease(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    before_mutation: bool = True,
+) -> dict[str, Any]:
+    """Acquire/refresh exclusive runId lease before mutating run state (PRD 276 R9/R10/R20)."""
+    run_id = state.get("runId")
+    if not isinstance(run_id, str) or not run_id.strip():
+        return {"skipped": True, "reason": "no-run-id"}
+    from wave_lock import (
+        acquire_run_lease,
+        assert_run_lease_write,
+        heartbeat_run_lease,
+    )
+
+    source_task_list = state.get("source_task_list")
+    if isinstance(source_task_list, str):
+        task_list_arg = source_task_list
+    else:
+        task_list_arg = None
+    held = state.get("runLease") if isinstance(state.get("runLease"), dict) else {}
+    held_gen = held.get("generation") if isinstance(held, dict) else None
+    if (
+        isinstance(held, dict)
+        and held.get("runId") == run_id
+        and isinstance(held_gen, int)
+        and held_gen > 0
+    ):
+        fence = assert_run_lease_write(root, run_id, held_gen)
+        if fence.get("verdict") == "pass":
+            hb = heartbeat_run_lease(root, run_id, held_gen)
+            if hb.get("verdict") == "pass":
+                return {
+                    "verdict": "pass",
+                    "action": "run-lease-refresh",
+                    "runId": run_id,
+                    "generation": held_gen,
+                    "beforeMutation": before_mutation,
+                }
+            out = hb
+        else:
+            out = fence
+        # Stale generation / lost lease — try re-acquire (may reclaim).
+        if out.get("error") in (
+            "run-lease-generation-stale",
+            "run-lease-missing",
+            "run-lease-stale-self",
+        ):
+            acquired = acquire_run_lease(
+                root, run_id, source_task_list=task_list_arg
+            )
+            if acquired.get("verdict") == "pass":
+                state["runLease"] = {
+                    "runId": run_id,
+                    "generation": acquired["generation"],
+                    "lockPath": acquired.get("lockPath"),
+                    "acquiredAt": utc_now(),
+                    "reclaimed": bool(acquired.get("reclaimed")),
+                }
+                return {**acquired, "beforeMutation": before_mutation}
+            out = acquired
+        fail(
+            str(out.get("error") or "run-lease-held"),
+            exit_code=20,
+            halt=out.get("halt") or out.get("error") or "run-lease-held",
+            cause=out.get("error") or "run-lease-held",
+            resumeCommand=out.get("resumeCommand")
+            or f"python3 scripts/wave.py deliver-loop --run-id {run_id}",
+            holder=out.get("holder"),
+            lockPath=out.get("lockPath"),
+        )
+
+    acquired = acquire_run_lease(root, run_id, source_task_list=task_list_arg)
+    if acquired.get("verdict") != "pass":
+        fail(
+            str(acquired.get("error") or "run-lease-held"),
+            exit_code=20,
+            halt=acquired.get("halt") or acquired.get("error") or "run-lease-held",
+            cause=acquired.get("error") or "run-lease-held",
+            resumeCommand=acquired.get("resumeCommand")
+            or f"python3 scripts/wave.py deliver-loop --run-id {run_id}",
+            holder=acquired.get("holder"),
+            lockPath=acquired.get("lockPath"),
+        )
+    state["runLease"] = {
+        "runId": run_id,
+        "generation": acquired["generation"],
+        "lockPath": acquired.get("lockPath"),
+        "acquiredAt": utc_now(),
+        "reclaimed": bool(acquired.get("reclaimed")),
+    }
+    return {**acquired, "beforeMutation": before_mutation}
+
+
 def save_state(root: Path, state: dict[str, Any]) -> None:
+    # R9/R20 — exclusive run lease + generation fence before shared-state mutation.
+    if isinstance(state.get("runId"), str) and state.get("runId"):
+        ensure_exclusive_run_lease(root, state, before_mutation=True)
     save_deliver_state(root, state)
 
 
@@ -1088,6 +1471,192 @@ def sync_terminal_state(root: Path, state: dict[str, Any]) -> dict[str, Any]:
         state.clear()
         state.update(synced)
     return state
+
+
+# --- Finalize checkpoint ledger (PRD 276 R15) ---------------------------------
+
+FINALIZE_CHECKPOINT_FILENAME = "finalize-checkpoint.json"
+FINALIZE_CHECKPOINT_PHASES = ("release", "projection", "receipt", "immutable")
+FINALIZE_CHECKPOINT_SCHEMA = 1
+
+
+def finalize_checkpoint_path(root: Path, run_id: str) -> Path:
+    from wave_run_paths import run_directory
+
+    return run_directory(root, run_id) / FINALIZE_CHECKPOINT_FILENAME
+
+
+def resume_finalize_command(run_id: str) -> str:
+    return f"python3 scripts/wave.py finalize --run-id {run_id}"
+
+
+def empty_finalize_checkpoint(run_id: str, *, merge_commit: str | None = None) -> dict[str, Any]:
+    phases = {
+        name: {"status": "pending", "at": None, "result": None}
+        for name in FINALIZE_CHECKPOINT_PHASES
+    }
+    payload: dict[str, Any] = {
+        "schemaVersion": FINALIZE_CHECKPOINT_SCHEMA,
+        "runId": run_id,
+        "status": "in-progress",
+        "phases": phases,
+        "lastCompletedPhase": None,
+        "mergeCommit": merge_commit,
+        "resumeCommand": resume_finalize_command(run_id),
+        "updatedAt": utc_now(),
+    }
+    return payload
+
+
+def load_finalize_checkpoint(root: Path, run_id: str) -> dict[str, Any] | None:
+    from wave_json_io import StateCorruptError, read_json
+
+    path = finalize_checkpoint_path(root, run_id)
+    if not path.is_file():
+        return None
+    try:
+        data = read_json(path)
+    except StateCorruptError:
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def save_finalize_checkpoint(root: Path, run_id: str, checkpoint: dict[str, Any]) -> Path:
+    path = finalize_checkpoint_path(root, run_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = dict(checkpoint)
+    payload["runId"] = run_id
+    payload["updatedAt"] = utc_now()
+    payload.setdefault("resumeCommand", resume_finalize_command(run_id))
+    write_json_file(path, payload)
+    return path
+
+
+def mark_finalize_phase_started(
+    root: Path,
+    run_id: str,
+    phase: str,
+    *,
+    checkpoint: dict[str, Any] | None = None,
+    merge_commit: str | None = None,
+) -> dict[str, Any]:
+    """Write-ahead mark before executing a finalize phase (R15)."""
+    if phase not in FINALIZE_CHECKPOINT_PHASES:
+        raise ValueError(f"unknown finalize phase: {phase}")
+    ckpt = checkpoint or load_finalize_checkpoint(root, run_id) or empty_finalize_checkpoint(
+        run_id, merge_commit=merge_commit
+    )
+    if merge_commit and not ckpt.get("mergeCommit"):
+        ckpt["mergeCommit"] = merge_commit
+    phases = ckpt.setdefault("phases", {})
+    entry = dict(phases.get(phase) or {})
+    entry["status"] = "started"
+    entry["at"] = utc_now()
+    phases[phase] = entry
+    ckpt["status"] = "in-progress"
+    save_finalize_checkpoint(root, run_id, ckpt)
+    return ckpt
+
+
+def mark_finalize_phase_complete(
+    root: Path,
+    run_id: str,
+    phase: str,
+    result: dict[str, Any] | None = None,
+    *,
+    checkpoint: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if phase not in FINALIZE_CHECKPOINT_PHASES:
+        raise ValueError(f"unknown finalize phase: {phase}")
+    ckpt = checkpoint or load_finalize_checkpoint(root, run_id) or empty_finalize_checkpoint(run_id)
+    phases = ckpt.setdefault("phases", {})
+    entry = dict(phases.get(phase) or {})
+    entry["status"] = "complete"
+    entry["at"] = utc_now()
+    if result is not None:
+        entry["result"] = result
+    phases[phase] = entry
+    ckpt["lastCompletedPhase"] = phase
+    if phase == "immutable":
+        ckpt["status"] = "complete"
+    else:
+        ckpt["status"] = "in-progress"
+    save_finalize_checkpoint(root, run_id, ckpt)
+    return ckpt
+
+
+def mark_finalize_phase_failed(
+    root: Path,
+    run_id: str,
+    phase: str,
+    error: str,
+    *,
+    checkpoint: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    ckpt = checkpoint or load_finalize_checkpoint(root, run_id) or empty_finalize_checkpoint(run_id)
+    phases = ckpt.setdefault("phases", {})
+    entry = dict(phases.get(phase) or {})
+    entry["status"] = "failed"
+    entry["at"] = utc_now()
+    entry["error"] = error
+    phases[phase] = entry
+    ckpt["status"] = "failed"
+    ckpt["failedPhase"] = phase
+    ckpt["resumeCommand"] = resume_finalize_command(run_id)
+    save_finalize_checkpoint(root, run_id, ckpt)
+    return ckpt
+
+
+def finalize_phase_complete(checkpoint: dict[str, Any] | None, phase: str) -> bool:
+    if not checkpoint:
+        return False
+    phases = checkpoint.get("phases") or {}
+    entry = phases.get(phase) or {}
+    return entry.get("status") == "complete"
+
+
+def next_finalize_phase(checkpoint: dict[str, Any] | None) -> str | None:
+    """Return the first incomplete finalize phase for resume (R15)."""
+    for phase in FINALIZE_CHECKPOINT_PHASES:
+        if not finalize_phase_complete(checkpoint, phase):
+            return phase
+    return None
+
+
+def partial_finalize_resume_payload(
+    root: Path,
+    run_id: str,
+    checkpoint: dict[str, Any],
+    *,
+    error: str,
+    failed_phase: str | None = None,
+) -> dict[str, Any]:
+    """Typed resume path after partial finalize (PRD 276 R4) — not success."""
+    return {
+        "verdict": "fail",
+        "action": "run-finalize",
+        "error": error,
+        "halt": "finalize:partial",
+        "cause": "finalize:checkpoint-incomplete",
+        "failedPhase": failed_phase or checkpoint.get("failedPhase"),
+        "lastCompletedPhase": checkpoint.get("lastCompletedPhase"),
+        "checkpoint": checkpoint,
+        "checkpointPath": str(finalize_checkpoint_path(root, run_id)),
+        "resumeCommand": checkpoint.get("resumeCommand") or resume_finalize_command(run_id),
+        "note": "release before durable completion is not success; resume from last checkpoint",
+    }
+
+
+def ensure_terminal_ship_run_state(root: Path, state: dict[str, Any]) -> dict[str, Any]:
+    """Mirror slug→run-scoped state before terminal-ship (PRD 276 R1)."""
+    from wave_state import ensure_run_scoped_state_mirrored
+
+    mirrored = ensure_run_scoped_state_mirrored(root, state)
+    if mirrored:
+        state.setdefault("runId", mirrored.get("runId"))
+        if mirrored.get("runId"):
+            state["runId"] = mirrored["runId"]
+    return mirrored or state
 
 
 def manual_living_doc_reconcile_suggestion(root: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -3650,10 +4219,31 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
     if task_list and resumed:
         entry = apply_resume_entry(root, state, plan, args)
-        if entry.get("orchestratorAdopt", {}).get("adopted"):
+        adopt = entry.get("orchestratorAdopt") or {}
+        # PRD 276 R5/R13 — validated re-entry delegates into orch cwd.
+        if adopt.get("reentry") and adopt.get("delegateRoot"):
+            cmd_deliver_loop(Path(str(adopt["delegateRoot"])), args)
+            return
+        if adopt.get("adopted") or adopt.get("reason") == "already-in-orchestrator-cwd":
+            if adopt.get("path"):
+                root = Path(str(adopt["path"]))
             state = load_state(root, task_list)
             plan, state = resolve_plan_with_adoption(root, state, task_list)
             resumed = bool(state.get("verdict") == "running" and state.get("phases"))
+    elif should_attempt_orch_cwd_adopt(root, state, resume=None):
+        # Non-resume entry from repo root still auto-adopts when orch is recorded (R5/R8).
+        adopt = try_adopt_recorded_orchestrator_worktree(
+            root, state, plan, loop_args=args, perform_reentry=True
+        )
+        if adopt.get("reentry") and adopt.get("delegateRoot"):
+            cmd_deliver_loop(Path(str(adopt["delegateRoot"])), args)
+            return
+        if adopt.get("path") and (
+            adopt.get("adopted") or adopt.get("reason") == "already-in-orchestrator-cwd"
+        ):
+            root = Path(str(adopt["path"]))
+            state = load_state(root, task_list)
+            plan, state = resolve_plan_with_adoption(root, state, task_list)
     if resumed and state.get("phases") and not state.get("planHash"):
         plan, state = resolve_plan_with_adoption(root, state, task_list)
 
@@ -3772,6 +4362,8 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
             else:
                 if step["action"] in ("retrospective", "terminal-ship"):
                     sync_terminal_state(root, state)
+                    if step["action"] == "terminal-ship":
+                        ensure_terminal_ship_run_state(root, state)
                     save_state(root, state)
                 persist_cursor(root, state, step["action"])
             emit(

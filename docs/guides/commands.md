@@ -182,6 +182,19 @@ surfaces in `list` output — never silent fallback to repository-global plan pa
 marks the run `immutable`, and releases target-lock resources. It does **not** close planning units, absorb
 gaps, or delete worktrees — those are separate hygiene steps after merge detection.
 
+**Run-state mirror + finalize checkpoint:** before terminal-ship / finalize, slug-scoped deliver state is
+mirrored into `.cursor/sw-deliver-runs/<runId>/` when run-scoped state is missing (`ensure_run_scoped_state_mirrored`).
+Finalize is write-ahead resumable via `finalize-checkpoint.json` (`release` → `projection` → `receipt` →
+`immutable`). After squash-merge deletes the feature branch, host PR merge evidence still verifies; partial
+finalize returns typed `finalize:partial` / `finalize:checkpoint-incomplete` with
+`resumeCommand` (`python3 scripts/wave.py finalize --run-id <runId>`) — never silent success.
+
+**Orch cwd adopt + exclusive run lease:** managed orchestrator worktrees auto-adopt a validated recorded
+path (execution-time identity rebind); invalid/missing paths fail closed with typed cause + `resumeCommand`.
+Mutating run-scoped state requires an exclusive durable `runId` lease under `.cursor/sw-deliver-run-locks/`
+(generation fencing; stale reclaim bumps generation). See `core/commands/sw-deliver.md` absorb map and
+[workflows — Deliver driver resilience](workflows.md#deliver-driver-resilience-decision-acknowledgements).
+
 **Plan validation:** mechanical gate for agent-proposed phase/wave plans — not hand-authored in
 chat. Default `orchestration.planPolicy: canonical` preserves today's behavior; `proposed` is opt-in on
 the `/sw-deliver` pilot (TR0 gate, per-run acknowledgement, non-`main` target).

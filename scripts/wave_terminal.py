@@ -697,6 +697,11 @@ def cmd_terminal_ship_run(root: Path, args: list[str]) -> None:
 
 def _cmd_terminal_ship_run_body(root: Path, args: list[str], *, dry_run: bool) -> None:
     state = load_state(root)
+    # PRD 276 R1 — ensure run-scoped state exists before terminal-ship proceeds.
+    from wave_deliver_loop import ensure_terminal_ship_run_state
+
+    ensure_terminal_ship_run_state(root, state)
+    save_state(root, state)
     mode = terminal_autonomy_mode(root)
     if mode == "supervised" and not has_flag(args, "--force"):
         emit(
@@ -1974,8 +1979,24 @@ def finalize_run(
     dry_run: bool = False,
     actor: str | None = None,
 ) -> dict[str, Any]:
-    """Finalize deliver run lifecycle after verified terminal merge (PRD 081 R24)."""
-    from wave_state import run_finalize_authorization, save_run_scoped_state
+    """Finalize deliver run lifecycle after verified terminal merge (PRD 081 R24, PRD 276 R15)."""
+    from wave_deliver_loop import (
+        empty_finalize_checkpoint,
+        finalize_phase_complete,
+        load_finalize_checkpoint,
+        mark_finalize_phase_complete,
+        mark_finalize_phase_failed,
+        mark_finalize_phase_started,
+        next_finalize_phase,
+        partial_finalize_resume_payload,
+        resume_finalize_command,
+    )
+    from wave_state import (
+        ensure_run_scoped_state_mirrored,
+        load_run_scoped_state,
+        run_finalize_authorization,
+        save_run_scoped_state,
+    )
     from wave_transition_receipt import (
         build_terminal_receipt,
         default_actor,
@@ -1983,17 +2004,30 @@ def finalize_run(
         read_terminal_receipt,
     )
 
-    if state.get("immutable"):
+    # Prefer durable run-scoped state; mirror from slug when missing (R1/R2).
+    work_state = dict(state)
+    if not work_state.get("immutable"):
+        mirrored = ensure_run_scoped_state_mirrored(root, work_state)
+        if mirrored:
+            work_state = dict(mirrored)
+            work_state.update({k: v for k, v in state.items() if k not in mirrored or k == "runId"})
+        loaded = load_run_scoped_state(root, run_id)
+        if loaded:
+            work_state = loaded
+
+    if work_state.get("immutable"):
         existing = read_terminal_receipt(root, run_id)
+        ckpt = load_finalize_checkpoint(root, run_id)
         return {
             "verdict": "pass",
             "action": "run-finalize",
             "immutable": True,
             "terminalReceipt": existing,
+            "checkpoint": ckpt,
             "note": "already finalized",
         }
 
-    merge_info = verify_terminal_merge_via_host(root, state)
+    merge_info = verify_terminal_merge_via_host(root, work_state)
     if merge_info.get("verdict") != "pass":
         return {
             "verdict": "fail",
@@ -2001,6 +2035,7 @@ def finalize_run(
             "error": merge_info.get("reason", "terminal-merge-unverified"),
             "merge": merge_info,
             "note": "run remains nonterminal (R24)",
+            "resumeCommand": resume_finalize_command(run_id),
         }
 
     merge_commit = str(merge_info.get("mergeCommit") or "")
@@ -2012,34 +2047,169 @@ def finalize_run(
             "wouldVerifyMergeCommit": merge_commit,
         }
 
-    released = release_run_resources(root, run_id, state)
-    projections = close_run_projections(root, run_id, state)
-    receipt = build_terminal_receipt(
-        merge_commit=merge_commit,
-        released_resources={**released, "projections": projections},
-        actor=actor or default_actor(),
-        merge_detail={
-            key: merge_info[key]
-            for key in ("prNumber", "mergedAt", "detail")
-            if key in merge_info
-        },
+    checkpoint = load_finalize_checkpoint(root, run_id) or empty_finalize_checkpoint(
+        run_id, merge_commit=merge_commit
     )
-    persist_terminal_receipt(root, run_id, receipt)
+    if merge_commit and not checkpoint.get("mergeCommit"):
+        checkpoint["mergeCommit"] = merge_commit
+        from wave_deliver_loop import save_finalize_checkpoint
 
-    work_state = dict(state)
-    work_state["immutable"] = True
-    work_state["verdict"] = "finalized"
-    work_state["finalizedAt"] = utc_now()
-    work_state["terminalMerge"] = {
-        "mergeCommit": merge_commit,
-        "prNumber": merge_info.get("prNumber"),
-        "mergedAt": merge_info.get("mergedAt"),
-        "verifiedAt": utc_now(),
-    }
-    work_state.pop("orchestratorWorktree", None)
-    work_state["phaseWorktrees"] = {}
-    with run_finalize_authorization():
-        save_run_scoped_state(root, run_id, work_state)
+        save_finalize_checkpoint(root, run_id, checkpoint)
+
+    released: dict[str, Any] = {}
+    projections: dict[str, Any] = {}
+    receipt: dict[str, Any] | None = None
+
+    # --- release ---
+    if not finalize_phase_complete(checkpoint, "release"):
+        checkpoint = mark_finalize_phase_started(
+            root, run_id, "release", checkpoint=checkpoint, merge_commit=merge_commit
+        )
+        try:
+            released = release_run_resources(root, run_id, work_state)
+            # Partial multi-resource failure: surface typed resume, never success (R4/R16).
+            failed_resources = [
+                name
+                for name, info in released.items()
+                if isinstance(info, dict) and info.get("verdict") == "fail"
+            ]
+            if failed_resources:
+                checkpoint = mark_finalize_phase_failed(
+                    root,
+                    run_id,
+                    "release",
+                    f"resource-release-partial:{','.join(failed_resources)}",
+                    checkpoint=checkpoint,
+                )
+                return partial_finalize_resume_payload(
+                    root,
+                    run_id,
+                    checkpoint,
+                    error="finalize:release-partial-failure",
+                    failed_phase="release",
+                )
+            checkpoint = mark_finalize_phase_complete(
+                root, run_id, "release", released, checkpoint=checkpoint
+            )
+        except Exception as exc:  # noqa: BLE001 — durable partial path (R4/R16)
+            checkpoint = mark_finalize_phase_failed(
+                root, run_id, "release", str(exc), checkpoint=checkpoint
+            )
+            return partial_finalize_resume_payload(
+                root,
+                run_id,
+                checkpoint,
+                error=f"finalize:release-failed:{exc}",
+                failed_phase="release",
+            )
+    else:
+        released = ((checkpoint.get("phases") or {}).get("release") or {}).get("result") or {}
+
+    # Release alone is never success — continue remaining phases (R15).
+    if next_finalize_phase(checkpoint) == "projection" or not finalize_phase_complete(
+        checkpoint, "projection"
+    ):
+        pass  # fall through
+
+    # --- projection ---
+    if not finalize_phase_complete(checkpoint, "projection"):
+        checkpoint = mark_finalize_phase_started(
+            root, run_id, "projection", checkpoint=checkpoint, merge_commit=merge_commit
+        )
+        try:
+            projections = close_run_projections(root, run_id, work_state)
+            checkpoint = mark_finalize_phase_complete(
+                root, run_id, "projection", projections, checkpoint=checkpoint
+            )
+        except Exception as exc:  # noqa: BLE001
+            checkpoint = mark_finalize_phase_failed(
+                root, run_id, "projection", str(exc), checkpoint=checkpoint
+            )
+            return partial_finalize_resume_payload(
+                root,
+                run_id,
+                checkpoint,
+                error=f"finalize:projection-failed:{exc}",
+                failed_phase="projection",
+            )
+    else:
+        projections = ((checkpoint.get("phases") or {}).get("projection") or {}).get("result") or {}
+
+    # --- receipt ---
+    if not finalize_phase_complete(checkpoint, "receipt"):
+        checkpoint = mark_finalize_phase_started(
+            root, run_id, "receipt", checkpoint=checkpoint, merge_commit=merge_commit
+        )
+        try:
+            receipt = build_terminal_receipt(
+                merge_commit=merge_commit,
+                released_resources={**released, "projections": projections},
+                actor=actor or default_actor(),
+                merge_detail={
+                    key: merge_info[key]
+                    for key in ("prNumber", "mergedAt", "detail")
+                    if key in merge_info
+                },
+            )
+            persist_terminal_receipt(root, run_id, receipt)
+            checkpoint = mark_finalize_phase_complete(
+                root, run_id, "receipt", {"mergeCommit": merge_commit}, checkpoint=checkpoint
+            )
+        except Exception as exc:  # noqa: BLE001
+            checkpoint = mark_finalize_phase_failed(
+                root, run_id, "receipt", str(exc), checkpoint=checkpoint
+            )
+            return partial_finalize_resume_payload(
+                root,
+                run_id,
+                checkpoint,
+                error=f"finalize:receipt-failed:{exc}",
+                failed_phase="receipt",
+            )
+    else:
+        receipt = read_terminal_receipt(root, run_id)
+
+    # --- immutable ---
+    if not finalize_phase_complete(checkpoint, "immutable"):
+        checkpoint = mark_finalize_phase_started(
+            root, run_id, "immutable", checkpoint=checkpoint, merge_commit=merge_commit
+        )
+        try:
+            final_state = dict(work_state)
+            final_state["immutable"] = True
+            final_state["verdict"] = "finalized"
+            final_state["finalizedAt"] = utc_now()
+            final_state["terminalMerge"] = {
+                "mergeCommit": merge_commit,
+                "prNumber": merge_info.get("prNumber"),
+                "mergedAt": merge_info.get("mergedAt"),
+                "verifiedAt": utc_now(),
+            }
+            final_state.pop("orchestratorWorktree", None)
+            final_state["phaseWorktrees"] = {}
+            with run_finalize_authorization():
+                save_run_scoped_state(root, run_id, final_state)
+            checkpoint = mark_finalize_phase_complete(
+                root,
+                run_id,
+                "immutable",
+                {"immutable": True, "verdict": "finalized"},
+                checkpoint=checkpoint,
+            )
+        except Exception as exc:  # noqa: BLE001
+            checkpoint = mark_finalize_phase_failed(
+                root, run_id, "immutable", str(exc), checkpoint=checkpoint
+            )
+            return partial_finalize_resume_payload(
+                root,
+                run_id,
+                checkpoint,
+                error=f"finalize:immutable-failed:{exc}",
+                failed_phase="immutable",
+            )
+
+    if receipt is None:
+        receipt = read_terminal_receipt(root, run_id)
 
     return {
         "verdict": "pass",
@@ -2048,11 +2218,12 @@ def finalize_run(
         "terminalReceipt": receipt,
         "releasedResources": released,
         "projections": projections,
+        "checkpoint": load_finalize_checkpoint(root, run_id),
     }
 
 
 def cmd_finalize_run(root: Path, args: list[str]) -> None:
-    from wave_state import load_run_scoped_state
+    from wave_state import ensure_run_scoped_state_mirrored, load_run_scoped_state
 
     run_id = parse_kv(args, "--run-id") or os.environ.get("SW_RUN_ID") or os.environ.get(
         "SW_DELIVER_RUN_ID", ""
@@ -2060,6 +2231,16 @@ def cmd_finalize_run(root: Path, args: list[str]) -> None:
     if not run_id:
         fail("--run-id or SW_RUN_ID required")
     state = load_run_scoped_state(root, run_id)
+    if not state:
+        # Recovery: mirror slug state into run-scoped when missing (R1/R2).
+        mirrored = ensure_run_scoped_state_mirrored(root, {"runId": run_id})
+        if mirrored and mirrored.get("runId") == run_id:
+            state = mirrored
+        else:
+            # Try again after ensuring with empty hint (loads slug state).
+            mirrored = ensure_run_scoped_state_mirrored(root)
+            if mirrored and str(mirrored.get("runId") or "") == run_id:
+                state = mirrored
     if not state:
         fail(f"run state not found: {run_id}", exit_code=20, halt="finalize:run-not-found")
     if state.get("immutable"):
@@ -2070,8 +2251,8 @@ def cmd_finalize_run(root: Path, args: list[str]) -> None:
         fail(
             payload.get("error", "terminal merge unverified"),
             exit_code=10,
-            halt="finalize:merge-unverified",
-            **{k: v for k, v in payload.items() if k not in ("verdict", "error")},
+            halt=payload.get("halt") or "finalize:merge-unverified",
+            **{k: v for k, v in payload.items() if k not in ("verdict", "error", "halt")},
         )
     emit(payload)
 
