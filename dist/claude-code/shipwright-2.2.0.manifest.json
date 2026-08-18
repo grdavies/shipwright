@@ -262,6 +262,7 @@
     "deferred-placeholder-lint.py",
     "deliver_closeout.py",
     "deliver_cwd_guard.py",
+    "deliver_finalize_fixtures.py",
     "deliver_plan_surfacing.py",
     "dep-import-guard.py",
     "deprecated_surface_freshness.py",
@@ -728,5 +729,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 725
+  "moduleCount": 726
 }
