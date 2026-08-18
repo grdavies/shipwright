@@ -14,13 +14,28 @@ declares its capability flags — change no command.
 | `search` | query, {filePath?, category?, recentOnly?, scope?, mode?} | ranked memories (summary + id) | Targeted retrieval; excludes `status: superseded`/`resolved`/tombstone by default. |
 | `traverse` | from-id, {edge?, depth?, direction?} | nodes + edges (+ dangling) | Walk `links[]` + inline markdown links; dangling targets tolerated. |
 | `expand` | ids[] | full memory content + backlinks | Fetch full text after a search; includes inbound edges. |
-| `store` | content, category, {relatedFiles?, tags?, importance?, scope?, links?, session?} | memory id | Write a distilled memory. |
+| `store` | content, category, {relatedFiles?, tags?, importance?, scope?, links?, session?} | memory id | Write a distilled memory. **Requires** per-repo write binding (PRD 279); unbound refuses. |
 | `modify` | id, action(update/inactivate/reactivate), fields? | confirmation | Edit / soft-delete / restore. |
 | `list-recent` | project, days_back? | recent memories + tasks | Activity recap. |
 | `tasks` *(optional)* | create/update/complete/list, fields | task id / list | Cross-repo phase board. |
 | `link` *(optional)* | from-id, to-ids | confirmation | Knowledge-graph links. |
 | `export` *(optional)* | project, scope?, `format` (`jsonl` \| `okf`) | neutral JSONL or OKF bundle dir | Portability snapshot. |
 | `import` *(optional)* | neutral JSONL or OKF bundle, `format` | ids[] | Ingest portability snapshot. |
+
+## Per-repo write binding (PRD 279)
+
+Mutating ops (`store`, `/sw-memory-sync` distillation, optional-root `import`) must pass
+`scripts/memory_write_binding.py` / `memory_preflight.assert_write_binding` **before** adapter
+dispatch. Binding sources:
+
+| Source | Condition | Project |
+| --- | --- | --- |
+| Config | `memory.provider` + non-empty `memory.project` | configured project |
+| Marker | `.cursor/sw-memory.provider` literal `in-repo` | workspace basename |
+| Unbound | neither | **refuse writes** (typed cause + audit); reads may display with `displayGuidance=in-repo` |
+
+Hard cut: no ambient Recallium write default; remote/external markers without `memory.project` refuse;
+`__global__` is explicit-config only. R9–R17 continue the shared brainstorm numbering with PRD 278.
 
 ## Capability flags
 
