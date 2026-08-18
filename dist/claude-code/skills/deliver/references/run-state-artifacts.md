@@ -119,6 +119,29 @@ scripts/wave.py state terminal --verdict complete
 Per-phase `/sw-ship` outcomes live in `sw-deliver-runs/<phase>/status.json` (`merge-ready-green` |
 `blocked`); `scripts/ship-phase-status.py` syncs `blocked` into run-state when present.
 
+### Closeout hardening artifacts (PRD 278)
+
+Run-scoped state may carry adopt/closeout bind fields written by `wave_run_adopt.py` and finalize
+paths:
+
+| Field | Writer | Role |
+| --- | --- | --- |
+| `sourceTaskListContentHash` | `wave_run_adopt.py` | Content-hash bind for `source_task_list` during prefer-run-scoped adopt |
+| `planHash` | `wave_run_plan.py` / adopt | Verified on every run-scoped plan read |
+| `legacyAdopted` / `adoptedPlanHash` | adopt | Breadcrumb after slug-scoped → run-scoped migration |
+
+Phase-ship hygiene auto-repair (R1) writes or refreshes these **per-phase** artifacts when safe:
+
+| Artifact | Path | Notes |
+| --- | --- | --- |
+| Gap-check status | `$SW_RUN_DIR/gap-check.status.json` or run-scoped `phases/<id>/` | Must include `evaluationProvenance` for binding pass (forged pass refused) |
+| Tasks currency | issue-store progress via `planning_progress` | Never mutates frozen task-list file bytes |
+| PR test-plan manifest | orchestrator gate-cache mirror | `wave_terminal.py` terminal prepare only |
+
+Numeric absorb closeout (R6–R8) runs at `close-delivery-units` — not at per-phase ship-green. Bare
+numeric refs in PRD `planningIssues` / `sw-edges` must resolve to exactly one eligible open gap before
+unit closure; see `core/commands/sw-deliver.md` **Numeric absorb exactly-one**.
+
 ### Orchestrator lock + merge journal (R51)
 
 ```bash

@@ -628,6 +628,59 @@ Terminal finalize is safely re-runnable from the **primary** checkout after orch
 4. Partial finalize after `release_run_resources` returns `finalize:partial` / `finalize:checkpoint-incomplete`
    with `resumeCommand` (`python3 scripts/wave.py finalize --run-id <runId>`) — never silent success.
 
+## Closeout hardening (PRD 278)
+
+Deliver and ship closeout paths gained three mechanical surfaces — phase-ship hygiene auto-repair,
+prefer-run-scoped adopt, and numeric absorb exactly-one mapping. Operator UX stays on existing
+`/sw-deliver` / `/sw-ship` commands; behavior is fail-closed with typed `cause` + `resumeCommand`
+when auto-repair is unsafe.
+
+### Phase-ship hygiene auto-repair (R1, D2, D4)
+
+Under `/sw-ship --phase-mode`, `scripts/phase_ship_hygiene.py` may auto-repair three hygiene halts
+**only** from authoritative run-scoped evidence for the exact phase HEAD:
+
+| Halt | Module | Auto-repair action | Refused when |
+| --- | --- | --- | --- |
+| `gap-check-missing` | `gap-check-gate.py` | Writes binding `gap-check.status.json` after authoritative gap evaluation | Forged pass without `evaluationProvenance`; evaluation head ≠ phase HEAD |
+| `tasks-currency-divergence` | `wave_deliver.py` / `wave_deliver_loop.py` | Re-aligns checkbox ledger from `source_task_list` without mutating frozen task-list bytes | Would invent completion for unchecked work |
+| `prTestPlan-manifest-missing` | `wave_terminal.py` | Mirrors orchestrator `pr-test-plan.manifest.json` from gate-cache evidence | No safe authoritative manifest source |
+
+Regression: `scripts/unit_tests/planning/test_phase_ship_hygiene_autorepair.py`. See also
+`/sw-ship` **Phase-ship hygiene floors**.
+
+### Prefer-run-scoped adopt (R3–R5, D6)
+
+`scripts/wave_run_adopt.py` prefers a proven run-scoped `plan.json` + run identity even when the
+legacy global plan belongs to another `runId` (`planHashMismatch`). Adoption binds
+`sourceTaskListContentHash` (content-hash of `source_task_list`) and uses an advisory lock/CAS
+spanning identity-check → adopt write (`.cursor/sw-deliver-adopt-locks/`). Missing or unproven
+run-scoped identity fails closed on finalize/adopt with typed `halt` + `resumeCommand` — no silent
+global overwrite. Regression: `scripts/unit_tests/planning/test_wave_run_adopt_prefer_run_scoped.py`.
+
+### Numeric absorb exactly-one (R6–R8, D5)
+
+`scripts/planning_store_facade.py` resolves bare planning-issue numeric absorb refs (hybrid
+`planningIssues` / `sw-edges`) to **exactly one** eligible open gap unit id before provenance
+closeout. `0` or `N>1` matches → typed `not-ready`; provider/API faults → `not-ready` (not silent
+skip). Wired through `close-delivery-units` and deliver finalize paths. Regression:
+`scripts/unit_tests/planning/test_numeric_absorb_closeout.py`.
+
+### Absorb acceptance map (R9, D1, D3)
+
+| Source issue | Requirement cluster | PRD 278 scope |
+| --- | --- | --- |
+| #730 | R1–R2 | Phase-ship hygiene safe auto-repair; forged gap-check refused; frozen-ledger mutation refused |
+| #731 | R3–R5 | Prefer run-scoped plan under foreign global `planHashMismatch`; lock/CAS + content-hash bind |
+| #739 | R6–R8 | Numeric absorb → exactly-one open gap; provider fault → not-ready |
+
+**Decision stance (D1):** PRD 278 ships as a focused closeout-hardening PRD — not a mega-PRD bundling
+unrelated deliver surfaces. **Decision stance (D3):** PRD 278 absorbs #731 dogfood closeout; do not
+amend PRD 276 for the same behavior.
+
+Normative path contract and `core-scripts-parity` for touched modules:
+`core/sw-reference/layout.md` **PRD 278 closeout surfaces**.
+
 ## Phase-mode context currency (PRD 080)
 
 Phase-mode ship steps bind a worktree-scoped context (`SW_PHASE_MODE`, `SW_PHASE_SLUG`, `SW_RUN_DIR`,

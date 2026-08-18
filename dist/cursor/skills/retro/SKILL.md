@@ -61,6 +61,21 @@ failed) returns not-ready with `resumeCommand`; retry is idempotent.
 (labels → native type → body marker → content inference). Conflicting type evidence fails closed. Non-gap
 refs return typed skip without freeze-check; provider/scope/auth failures are not-ready, not silent skip.
 
+### PRD 278 closeout hardening (post-merge)
+
+When `close-delivery-units` runs after merge detection, PRD 278 surfaces affect closure audit outcomes:
+
+- **Numeric absorb (R6–R8):** bare issue-number absorb refs must resolve to exactly one eligible open gap;
+  partial discovery or ambiguous mapping returns `not-ready` — surface the printed `resumeCommand` in retro
+  narrative when closure audit fails.
+- **Prefer-run-scoped adopt (R3–R5):** unrelated to retro report content; affects resume only when legacy
+  slug-scoped state is adopted mid-run.
+- **Phase-ship hygiene (R1–R2):** per-phase auto-repair runs during `/sw-ship --phase-mode`; retro does not
+  re-run hygiene — closure evidence must already be binding from ship terminal status.
+
+See `core/commands/sw-retrospective.md` **Closeout hardening implications** and
+`core/sw-reference/layout.md` **PRD 278 closeout surfaces** (absorb map #730/#731/#739).
+
 ### Optional painful → gap handoff (when config enabled)
 
 After emitting structured retro output, when `retrospective.gapCapture.enabled` is true, hand off painful

@@ -137,6 +137,20 @@ Annotation batches, safe close-on-merge, hierarchy projection, and inFlight trac
 
 
 
+## Closeout hardening (PRD 278 R1/R3/R6)
+
+Three mechanical closeout surfaces affect deliver resume, phase ship, and post-merge closure:
+
+| Surface | R-IDs | Behavior | Key module |
+| --- | --- | --- | --- |
+| Phase-ship hygiene auto-repair | R1, R2 | Safe auto-repair for `gap-check-missing`, `tasks-currency-divergence`, `prTestPlan-manifest-missing` on exact phase HEAD; forged gap-check and frozen-ledger mutation refused | `phase_ship_hygiene.py`, `gap-check-gate.py`, `wave_deliver.py`, `wave_terminal.py` |
+| Prefer-run-scoped adopt | R3–R5 | Proven run-scoped `plan.json` wins over foreign global `planHashMismatch`; content-hash bind + adopt lock/CAS | `wave_run_adopt.py` |
+| Numeric absorb exactly-one | R6–R8 | Bare numeric absorb refs resolve to exactly one eligible open gap before closeout; 0/N>1/provider fault → not-ready | `planning_store_facade.py` |
+
+Absorb acceptance map (#730→R1–R2, #731→R3–R5, #739→R6–R8) and D1/D3 packaging stance:
+`core/sw-reference/layout.md` **PRD 278 closeout surfaces**. Command detail:
+`core/commands/sw-deliver.md` **Closeout hardening**.
+
 ## Operator command index
 
 Progressive-disclosure detail lives in `references/*.md`. This index preserves doc-currency grep
