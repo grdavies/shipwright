@@ -2015,6 +2015,12 @@ def finalize_run(
         if loaded:
             work_state = loaded
 
+    from wave_run_adopt import assess_proven_run_scoped_identity, finalize_identity_refusal
+
+    identity = assess_proven_run_scoped_identity(root, work_state, run_id=run_id)
+    if not identity.get("proven"):
+        return finalize_identity_refusal(root, run_id, work_state, identity)
+
     if work_state.get("immutable"):
         existing = read_terminal_receipt(root, run_id)
         ckpt = load_finalize_checkpoint(root, run_id)

@@ -12,6 +12,7 @@ SCRIPT_DIR = Path(__file__).resolve().parents[2]
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from deliver_finalize_fixtures import seed_proven_run_identity
 from wave_deliver_loop import ensure_terminal_ship_run_state, load_finalize_checkpoint
 from wave_json_io import write_json
 from wave_run_paths import run_directory, state_path
@@ -82,6 +83,7 @@ def test_finalize_retry_completion_and_no_duplicate_transitions(tmp_path: Path) 
     write_json(state_path(tmp_path, run_id), state)
     write_run_local_lease(tmp_path, run_id, "feat/metrics-demo")
     acquire_target_lock(tmp_path, "feat/metrics-demo", run_id)
+    state = seed_proven_run_identity(tmp_path, run_id, state)
 
     merge_info = {
         "merged": True,

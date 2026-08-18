@@ -11,6 +11,7 @@ SCRIPT_DIR = Path(__file__).resolve().parents[2]
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from deliver_finalize_fixtures import seed_proven_run_identity
 from wave_json_io import write_json
 from wave_run_paths import run_directory, state_path
 from wave_state import load_run_scoped_state, write_run_local_lease
@@ -44,7 +45,7 @@ def _seed_run(tmp_path: Path, run_id: str) -> dict:
     write_json(state_path(tmp_path, run_id), state)
     write_run_local_lease(tmp_path, run_id, "feat/squash-demo")
     acquire_target_lock(tmp_path, "feat/squash-demo", run_id)
-    return state
+    return seed_proven_run_identity(tmp_path, run_id, state)
 
 
 def test_finalize_uses_host_pr_merge_when_branch_deleted(tmp_path: Path) -> None:
@@ -52,8 +53,14 @@ def test_finalize_uses_host_pr_merge_when_branch_deleted(tmp_path: Path) -> None
     run_id = "deliver-squash-delete"
     state = _seed_run(tmp_path, run_id)
 
-    # Squash-merge deletes the feature branch tip from the local repo.
+    # Squash-merge lands task-list content on main, then deletes the feature branch.
     subprocess.run(["git", "checkout", "-q", "main"], cwd=tmp_path, check=True)
+    subprocess.run(
+        ["git", "merge", "--squash", "feat/squash-demo"],
+        cwd=tmp_path,
+        check=True,
+    )
+    subprocess.run(["git", "commit", "-qm", "squash merge feat/squash-demo"], cwd=tmp_path, check=True)
     subprocess.run(["git", "branch", "-D", "feat/squash-demo"], cwd=tmp_path, check=True)
     gone = subprocess.run(
         ["git", "rev-parse", "feat/squash-demo"],
