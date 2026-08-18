@@ -582,6 +582,52 @@ Soft-priority scheduling may **provision** phases 1∥2 and 3∥4 concurrently w
 - **Deferrals (R49):** cross-feature waves, rich living-status dashboard, and contention feedback into `/sw-tasks` re-run remain explicit non-goals — no silent partial ship.
 - **Cleanup autonomy (R50):** when `cleanup.autonomy: auto`, `finalize-completion` applies dry-run `wouldRemove` after deterministic merge detection.
 
+## Deliver driver resilience (PRD 276)
+
+Harden `/sw-deliver` against squash-delete finalize fragility, orchestrator cwd skew after restart, and
+multi-agent double-drive of one `runId`. Absorbs planning gaps **#698**, **#704**, and **#705**.
+
+### Absorb map (R17)
+
+| Source | Shipped behavior | Primary touchpoints |
+| --- | --- | --- |
+| **#698** finalize / mirror | Mirror slug→run-scoped state before terminal-ship; write-ahead finalize checkpoint (`release` → `projection` → `receipt` → `immutable`); host PR merge evidence when the feature branch is deleted post-squash; partial finalize leaves typed `resumeCommand` (release before durable completion ≠ success) | `scripts/wave_state.py`, `scripts/wave_deliver_loop.py` (`finalize-checkpoint.json`) |
+| **#704** orch cwd adopt | Valid recorded orch path → validated re-exec/delegate with cwd set; path-record alone insufficient; invalid/missing path fail-closed with typed cause + `resumeCommand`; adoption preserves true dual-drive desync; execution-time identity rebind (git-common-dir, worktree registration, branch HEAD, run identity) | `scripts/wave_deliver_loop.py` (`try_adopt_recorded_orchestrator_worktree`) |
+| **#705** exclusive run lease | Acquire exclusive durable runId lease before mutating run state; second adopter → typed lease-held halt + `resumeCommand`; stale TTL/heartbeat reclaim bumps generation; uncertain ownership / cross-clone fail-closed | `scripts/wave_lock.py` (`.cursor/sw-deliver-run-locks/`) |
+
+### Orch cwd auto-adopt (R5–R8, R13–R14)
+
+When durable state records a valid orchestrator worktree, deliver entry **auto-adopts** it (sets cwd /
+rebinds identity) instead of message-only halt for recoverable skew. Prefer adopt over asking the operator
+to `cd` manually. Missing, invalid, dirty, or dual-drive-fresh paths remain fail-closed — see
+**Orchestrator worktree auto-adopt** above for the base path checks; PRD 276 adds execution-time rebind and
+desync-preserving refusal.
+
+### Exclusive runId lease — held halt + stale reclaim (R9–R12, R20–R21)
+
+Before mutating run-scoped state, `deliver-loop` acquires an exclusive lease keyed by `runId` under
+`.cursor/sw-deliver-run-locks/` (git-common-dir anchored; see `.sw/layout.md` lease taxonomy).
+
+| Condition | Behavior |
+| --- | --- |
+| Lease held by live peer | Halt with typed cause (lease-held) + `resumeCommand` — do not double-drive |
+| Stale heartbeat / dead PID (same host) | Reclaim without manual lock surgery; generation bumps (fencing) |
+| Uncertain ownership / cross-clone | Fail closed — no automatic takeover without explicit ack |
+| Prior-generation write after reclaim | Refused (generation fencing) |
+
+Heartbeat alone is not sufficient fencing — the durable lease file + generation is authoritative (D3).
+
+### Primary finalize after squash / orch teardown (R1–R4, R15–R16)
+
+Terminal finalize is safely re-runnable from the **primary** checkout after orchestrator teardown:
+
+1. Ensure run-scoped state exists (mirror from slug-scoped when missing) before terminal-ship.
+2. Write-ahead `finalize-checkpoint.json` under the run directory; resume from the last incomplete phase.
+3. When the feature branch is deleted post-squash-merge, verify via **host PR merge evidence** — not a
+   missing local branch tip.
+4. Partial finalize after `release_run_resources` returns `finalize:partial` / `finalize:checkpoint-incomplete`
+   with `resumeCommand` (`python3 scripts/wave.py finalize --run-id <runId>`) — never silent success.
+
 ## Phase-mode context currency (PRD 080)
 
 Phase-mode ship steps bind a worktree-scoped context (`SW_PHASE_MODE`, `SW_PHASE_SLUG`, `SW_RUN_DIR`,

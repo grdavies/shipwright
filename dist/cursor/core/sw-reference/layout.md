@@ -79,6 +79,8 @@ docs/decisions/
 │       ├── state.json
 │       └── receipts/
 ├── sw-deliver-locks/                # per-phase-head ship lease (integration+phase branch digest)
+├── sw-deliver-run-locks/            # exclusive deliver runId lease (PRD 276 R9–R12, R20–R21)
+│   └── reclaim-journal.jsonl        # stale reclaim + generation fencing audit
 ├── sw-target-locks/                 # target-branch exclusion locks (git-common-dir anchored, R19)
 │   └── reclaim-journal.jsonl
 ├── sw-doc-run-locks/                # doc-run exclusion locks (topic digest, R19)
@@ -218,10 +220,23 @@ runtime concerns belong to PRD 272 — not duplicated here. See `scripts/graph/l
 | Doc-run exclusion | `.cursor/sw-doc-run-locks/` | `wave_lock.doc_run_lock_path_for` | `reclaim-journal.jsonl` |
 | Doc-to-feature handoff | `.cursor/sw-doc-to-feature-handoff-locks/` | `wave_lock.doc_to_feature_handoff_lock_path_for` | `reclaim-journal.jsonl` |
 | Phase-head ship lease | `.cursor/sw-deliver-locks/` | `wave_lock.lock_path_for` | — |
+| Exclusive deliver runId lease | `.cursor/sw-deliver-run-locks/` | `wave_lock.run_lease_path_for` | `reclaim-journal.jsonl` |
 | Run-local lease record | `<runId>/lease.json` | `wave_run_paths.lease_path` | points at target-lock digest |
 
 Target locks are git-common-dir anchored and symlink-checked (`wave_lock.py`). Takeover appends a journal
 entry before reclaim; a live heartbeat is never reclaimed without explicit cross-host acknowledgement.
+
+### Exclusive runId lease taxonomy (PRD 276 R19)
+
+| Concern | Contract |
+| --- | --- |
+| Scope | Local to the git common-dir — not a cross-clone remote lease (uncertain ownership fail-closed) |
+| Key | `runId` digest under `.cursor/sw-deliver-run-locks/<digest>-<runId>.lock` |
+| Acquire | Before mutating run-scoped deliver state (`deliver-loop` adoption) |
+| Held halt | Second concurrent adopter → typed halt + `resumeCommand` (no double-drive) |
+| Stale reclaim | Same-host + stale heartbeat + dead PID; bumps `generation` and journals the takeover |
+| Generation fencing | Writes carrying a prior generation after reclaim fail closed |
+| Distinct from | Phase-head ship lease (`.cursor/sw-deliver-locks/`) and run-local `lease.json` orphan-trace record |
 
 **Cross-clone remote lease (PRD 090 R2):** target-branch and doc-to-feature handoff locks also take a
 git-ref CAS lease via `wave_remote_lease` (`refs/sw-locks/…`) so two clones cannot both hold the same
