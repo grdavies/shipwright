@@ -32,6 +32,7 @@ def _approval(rule_id: str, body: str) -> dict:
         "contentHash": content_hash(body),
         "approvedBy": "operator",
         "approvedAt": "2026-08-18T00:00:00Z",
+        "provenance": "sw-memory-audit",
     }
 
 
@@ -43,7 +44,9 @@ def test_rules_promote_capability_on_all_providers() -> None:
         assert adapter_path_for(provider) == f"providers/{provider}.md"
 
 
-def test_promote_writes_via_configured_provider_adapter(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_promote_writes_via_configured_provider_adapter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     captured: dict = {}
 
     def writer(root: Path, payload: dict) -> dict:
@@ -64,7 +67,7 @@ def test_promote_writes_via_configured_provider_adapter(monkeypatch: pytest.Monk
         lambda root, provider: {"ok": True, "provider": provider},
     )
     result = promote_rule(
-        REPO,
+        tmp_path,
         rule_id="provider-agnostic-rules",
         body=BODY,
         approval=_approval("provider-agnostic-rules", BODY),
@@ -74,6 +77,7 @@ def test_promote_writes_via_configured_provider_adapter(monkeypatch: pytest.Monk
     assert result["adapterDoc"] == "providers/recallium.md"
     assert captured["payload"]["ruleId"] == "provider-agnostic-rules"
     assert captured["payload"]["contentHash"] == content_hash(BODY)
+    assert "provider-agnostic-rules" in result["allowlist"]
 
 
 def test_promote_refuses_without_audit() -> None:

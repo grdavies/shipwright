@@ -26,6 +26,7 @@ APPROVAL = {
     "ruleId": "no-auto-promote",
     "contentHash": content_hash(BODY),
     "approvedBy": "operator",
+    "provenance": "sw-memory-audit",
 }
 
 
