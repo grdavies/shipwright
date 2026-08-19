@@ -1166,6 +1166,20 @@ def cmd_merge_enqueue(root: Path, args: list[str]) -> None:
     phase_branch = meta.get("branch")
     if not phase_branch:
         fail("missing phase branch for enqueue", exit_code=20, phase=phase_slug)
+    from decision_graph.prototype import refuse_merge_enqueue
+
+    target_branch = str((state.get("target") or {}).get("branch") or "")
+    prototype_check = refuse_merge_enqueue(str(phase_branch), target_branch)
+    if prototype_check.get("verdict") != "pass":
+        fail(
+            "prototype branch cannot merge-enqueue to integration or main",
+            exit_code=20,
+            halt="blocked",
+            cause=prototype_check.get("cause") or "prototype:merge-refused",
+            phase=phase_slug,
+            branch=str(phase_branch),
+            target=target_branch,
+        )
     expected = phase_branch_head(root, state, phase_slug, str(phase_branch))
     ok_shape, shape_cause = validate_terminal_status_shape(status, root)
     if not ok_shape:
