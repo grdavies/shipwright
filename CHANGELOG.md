@@ -955,6 +955,7 @@
 * merge phase sync-command-configuration-guide into feat/codebase-intelligence (a4290b9) <!-- sw-deliver:sync-command-configuration-guide -->
 * merge phase schemas-guardrails-adapter-docs into feat/codebase-intelligence (5514456) <!-- sw-deliver:schemas-guardrails-adapter-docs -->
 * merge phase doctor-init-absorb-acceptance into feat/codebase-intelligence (74252e1) <!-- sw-deliver:doctor-init-absorb-acceptance -->
+* merge phase decisiongraph-schema-and-validation-small into feat/engineering-decision-layer (53d8066) <!-- sw-deliver:decisiongraph-schema-and-validation-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
