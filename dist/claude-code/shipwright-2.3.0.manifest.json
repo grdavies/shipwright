@@ -183,6 +183,7 @@
     "_sw/waitmap.json",
     "_zipapp_launcher.py",
     "agents_md_thin.py",
+    "architecture_radar.py",
     "authoring-guard.py",
     "authoring_guard.py",
     "basic_memory_interchange.py",
@@ -746,5 +747,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 743
+  "moduleCount": 744
 }
