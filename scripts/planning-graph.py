@@ -48,6 +48,28 @@ def cmd_status(root: Path, rest: list[str]) -> int:
     print(result["status"])
     return 0
 
+
+def cmd_decision_frontier(root: Path, rest: list[str]) -> int:
+    """Read-only DecisionGraph frontier for a planning unit (PRD 280 R5)."""
+    from decision_graph.frontier import frontier_for_unit
+
+    unit_id = _parse_flag(rest, "--unit-id")
+    graph_flag = _parse_flag(rest, "--graph")
+    if not unit_id:
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "error": "usage: planning-graph.py decision-frontier --unit-id <id> [--graph <path>]",
+                }
+            )
+        )
+        return 2
+    graph_path = Path(graph_flag) if graph_flag else None
+    result = frontier_for_unit(root, unit_id, graph_path=graph_path)
+    print(json.dumps(result, ensure_ascii=False, indent=2))
+    return 0 if result.get("verdict") == "pass" else 20
+
 def cmd_park(root: Path, action: str, rest: list[str]) -> int:
     """Park/unpark a unit under local-config allowlist + reason governance (R28).
 
@@ -81,12 +103,13 @@ def main(argv: list[str] | None = None) -> int:
     root = git_root(plugin_root)
     if not args or args[0] in {"-h", "--help"}:
         print(
-            "usage: planning-graph.py reconcile|cycle-check|doctor|relief-check|next|status|park|unpark|posture|paths ...\n"
+            "usage: planning-graph.py reconcile|cycle-check|doctor|relief-check|next|status|decision-frontier|park|unpark|posture|paths ...\n"
             "  planning-graph.py reconcile [--dry-run]\n"
             "  planning-graph.py next [--override]   # empty post-filter frontier → scheduler-exhausted halt\n"
             "  planning-graph.py park <unit-id> --reason <why> [--actor <actor>]\n"
             "  planning-graph.py unpark <unit-id> [--actor <actor>]\n"
             "  planning-graph.py status --unit-id <id> | --issue <n>\n"
+            "  planning-graph.py decision-frontier --unit-id <id> [--graph <path>]\n"
             "  planning-graph.py posture\n"
         )
         return 0
@@ -103,6 +126,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_park(root, cmd, rest)
     if cmd == "status":
         return cmd_status(root, rest)
+    if cmd == "decision-frontier":
+        return cmd_decision_frontier(root, rest)
     if cmd == "posture":
         return subprocess.run([py, str(plugin_root / "scripts/planning_autonomy.py"), str(root), "posture"], shell=False).returncode
     if cmd == "paths":
