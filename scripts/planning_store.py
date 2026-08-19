@@ -46,6 +46,7 @@ _EXPORTED_NAMES = (
     '_issues_destination_endpoint',
     '_lookup_issue_record',
     '_parse_absorbs_targets',
+    '_planning_store',
     '_prd_number_from_unit_id',
     '_prd_unit_id_alias_candidates',
     '_redact_content',
