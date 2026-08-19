@@ -260,7 +260,9 @@
     "decision_graph/__init__.py",
     "decision_graph/evidence.py",
     "decision_graph/frontier.py",
+    "decision_graph/human_action.py",
     "decision_graph/prototype.py",
+    "decision_graph/receipt.py",
     "decision_graph/schema.py",
     "decision_graph/validate.py",
     "decision_graph_guard.py",
@@ -378,6 +380,7 @@
     "graph/learning_store.py",
     "graph/legacy_adapters.py",
     "graph/lineage.py",
+    "graph/node_kinds.py",
     "graph/observability.py",
     "graph/packages/__init__.py",
     "graph/packages/adoption.py",
@@ -738,5 +741,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 735
+  "moduleCount": 738
 }
