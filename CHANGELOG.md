@@ -946,6 +946,7 @@
 * merge phase memory-skill-docs into feat/per-repo-memory-write-binding (362e4c3) <!-- sw-deliver:memory-skill-docs -->
 * merge phase sync-command-configuration-guide into feat/codebase-intelligence (a4290b9) <!-- sw-deliver:sync-command-configuration-guide -->
 * merge phase schemas-guardrails-adapter-docs into feat/codebase-intelligence (5514456) <!-- sw-deliver:schemas-guardrails-adapter-docs -->
+* merge phase doctor-init-absorb-acceptance into feat/codebase-intelligence (74252e1) <!-- sw-deliver:doctor-init-absorb-acceptance -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
