@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-19T21:01:42Z",
+  "generatedAt": "2026-08-19T21:44:59Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3295,91 +3295,109 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:32:reconcile.py",
+      "id": "core/commands/sw-status.md:36:status_collect.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 32,
+      "line": 36,
+      "column": 11,
+      "script": "status_collect.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-status.md:37:status_collect.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-status.md",
+      "line": 37,
+      "column": 11,
+      "script": "status_collect.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-status.md:52:reconcile.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-status.md",
+      "line": 52,
       "column": 12,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:36:verify-unconfigured.py",
+      "id": "core/commands/sw-status.md:56:verify-unconfigured.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 36,
+      "line": 56,
       "column": 48,
       "script": "verify-unconfigured.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:37:sw-configure.py",
+      "id": "core/commands/sw-status.md:57:sw-configure.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 37,
+      "line": 57,
       "column": 41,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:43:reconcile.py",
+      "id": "core/commands/sw-status.md:63:reconcile.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 43,
+      "line": 63,
       "column": 37,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:50:wave_living_docs.py",
+      "id": "core/commands/sw-status.md:70:wave_living_docs.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 50,
+      "line": 70,
       "column": 12,
       "script": "wave_living_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:59:status_integrity.py",
+      "id": "core/commands/sw-status.md:79:status_integrity.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 59,
+      "line": 79,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:62:status_integrity.py",
+      "id": "core/commands/sw-status.md:82:status_integrity.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 62,
+      "line": 82,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:142:status_integrity.py",
+      "id": "core/commands/sw-status.md:162:status_integrity.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 142,
+      "line": 162,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:274:sw_bootstrap.py",
+      "id": "core/commands/sw-status.md:294:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 274,
+      "line": 294,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-status.md:282:wave.py",
+      "id": "core/commands/sw-status.md:302:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 282,
+      "line": 302,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -6319,37 +6337,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/retro/SKILL.md:34:rule_verification.py",
+      "id": "core/skills/retro/SKILL.md:34:architecture_radar.py",
       "tree": "core/skills",
       "file": "core/skills/retro/SKILL.md",
       "line": 34,
       "column": 8,
-      "script": "rule_verification.py",
+      "script": "architecture_radar.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/retro/SKILL.md:35:rule_verification.py",
+      "id": "core/skills/retro/SKILL.md:47:rule_verification.py",
       "tree": "core/skills",
       "file": "core/skills/retro/SKILL.md",
-      "line": 35,
+      "line": 47,
       "column": 8,
       "script": "rule_verification.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/retro/SKILL.md:36:rule_verification.py",
+      "id": "core/skills/retro/SKILL.md:48:rule_verification.py",
       "tree": "core/skills",
       "file": "core/skills/retro/SKILL.md",
-      "line": 36,
+      "line": 48,
       "column": 8,
       "script": "rule_verification.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/retro/SKILL.md:82:planning_gap_capture.py",
+      "id": "core/skills/retro/SKILL.md:49:rule_verification.py",
       "tree": "core/skills",
       "file": "core/skills/retro/SKILL.md",
-      "line": 82,
+      "line": 49,
+      "column": 8,
+      "script": "rule_verification.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/retro/SKILL.md:95:planning_gap_capture.py",
+      "tree": "core/skills",
+      "file": "core/skills/retro/SKILL.md",
+      "line": 95,
       "column": 18,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
@@ -10144,91 +10171,109 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:32:reconcile.py",
+      "id": "dist/claude-code/commands/sw-status.md:36:status_collect.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 32,
+      "line": 36,
+      "column": 11,
+      "script": "status_collect.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-status.md:37:status_collect.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-status.md",
+      "line": 37,
+      "column": 11,
+      "script": "status_collect.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-status.md:52:reconcile.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-status.md",
+      "line": 52,
       "column": 12,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:36:verify-unconfigured.py",
+      "id": "dist/claude-code/commands/sw-status.md:56:verify-unconfigured.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 36,
+      "line": 56,
       "column": 48,
       "script": "verify-unconfigured.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:37:sw-configure.py",
+      "id": "dist/claude-code/commands/sw-status.md:57:sw-configure.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 37,
+      "line": 57,
       "column": 41,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:43:reconcile.py",
+      "id": "dist/claude-code/commands/sw-status.md:63:reconcile.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 43,
+      "line": 63,
       "column": 37,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:50:wave_living_docs.py",
+      "id": "dist/claude-code/commands/sw-status.md:70:wave_living_docs.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 50,
+      "line": 70,
       "column": 12,
       "script": "wave_living_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:59:status_integrity.py",
+      "id": "dist/claude-code/commands/sw-status.md:79:status_integrity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 59,
+      "line": 79,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:62:status_integrity.py",
+      "id": "dist/claude-code/commands/sw-status.md:82:status_integrity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 62,
+      "line": 82,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:142:status_integrity.py",
+      "id": "dist/claude-code/commands/sw-status.md:162:status_integrity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 142,
+      "line": 162,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:274:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-status.md:294:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 274,
+      "line": 294,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:282:wave.py",
+      "id": "dist/claude-code/commands/sw-status.md:302:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 282,
+      "line": 302,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -12331,37 +12376,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/retro/SKILL.md:34:rule_verification.py",
+      "id": "dist/claude-code/skills/retro/SKILL.md:34:architecture_radar.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/retro/SKILL.md",
       "line": 34,
       "column": 8,
-      "script": "rule_verification.py",
+      "script": "architecture_radar.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/retro/SKILL.md:35:rule_verification.py",
+      "id": "dist/claude-code/skills/retro/SKILL.md:47:rule_verification.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 35,
+      "line": 47,
       "column": 8,
       "script": "rule_verification.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/retro/SKILL.md:36:rule_verification.py",
+      "id": "dist/claude-code/skills/retro/SKILL.md:48:rule_verification.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 36,
+      "line": 48,
       "column": 8,
       "script": "rule_verification.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/retro/SKILL.md:82:planning_gap_capture.py",
+      "id": "dist/claude-code/skills/retro/SKILL.md:49:rule_verification.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 82,
+      "line": 49,
+      "column": 8,
+      "script": "rule_verification.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/retro/SKILL.md:95:planning_gap_capture.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/retro/SKILL.md",
+      "line": 95,
       "column": 18,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
@@ -15841,91 +15895,109 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:32:reconcile.py",
+      "id": "dist/cursor/commands/sw-status.md:36:status_collect.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 32,
+      "line": 36,
+      "column": 11,
+      "script": "status_collect.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-status.md:37:status_collect.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-status.md",
+      "line": 37,
+      "column": 11,
+      "script": "status_collect.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-status.md:52:reconcile.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-status.md",
+      "line": 52,
       "column": 12,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:36:verify-unconfigured.py",
+      "id": "dist/cursor/commands/sw-status.md:56:verify-unconfigured.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 36,
+      "line": 56,
       "column": 48,
       "script": "verify-unconfigured.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:37:sw-configure.py",
+      "id": "dist/cursor/commands/sw-status.md:57:sw-configure.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 37,
+      "line": 57,
       "column": 41,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:43:reconcile.py",
+      "id": "dist/cursor/commands/sw-status.md:63:reconcile.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 43,
+      "line": 63,
       "column": 37,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:50:wave_living_docs.py",
+      "id": "dist/cursor/commands/sw-status.md:70:wave_living_docs.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 50,
+      "line": 70,
       "column": 12,
       "script": "wave_living_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:59:status_integrity.py",
+      "id": "dist/cursor/commands/sw-status.md:79:status_integrity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 59,
+      "line": 79,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:62:status_integrity.py",
+      "id": "dist/cursor/commands/sw-status.md:82:status_integrity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 62,
+      "line": 82,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:142:status_integrity.py",
+      "id": "dist/cursor/commands/sw-status.md:162:status_integrity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 142,
+      "line": 162,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:274:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-status.md:294:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 274,
+      "line": 294,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:282:wave.py",
+      "id": "dist/cursor/commands/sw-status.md:302:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 282,
+      "line": 302,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -18028,37 +18100,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/retro/SKILL.md:34:rule_verification.py",
+      "id": "dist/cursor/skills/retro/SKILL.md:34:architecture_radar.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/retro/SKILL.md",
       "line": 34,
       "column": 8,
-      "script": "rule_verification.py",
+      "script": "architecture_radar.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/retro/SKILL.md:35:rule_verification.py",
+      "id": "dist/cursor/skills/retro/SKILL.md:47:rule_verification.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/retro/SKILL.md",
-      "line": 35,
+      "line": 47,
       "column": 8,
       "script": "rule_verification.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/retro/SKILL.md:36:rule_verification.py",
+      "id": "dist/cursor/skills/retro/SKILL.md:48:rule_verification.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/retro/SKILL.md",
-      "line": 36,
+      "line": 48,
       "column": 8,
       "script": "rule_verification.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/retro/SKILL.md:82:planning_gap_capture.py",
+      "id": "dist/cursor/skills/retro/SKILL.md:49:rule_verification.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/retro/SKILL.md",
-      "line": 82,
+      "line": 49,
+      "column": 8,
+      "script": "rule_verification.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/retro/SKILL.md:95:planning_gap_capture.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/retro/SKILL.md",
+      "line": 95,
       "column": 18,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"

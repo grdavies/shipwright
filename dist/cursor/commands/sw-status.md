@@ -29,6 +29,26 @@ Load `skills/living-status/SKILL.md`.
    Returns `readyCount`, `ready[]`, and `blockedHumanActions[]` (open human-action nodes lacking
    verified receipts). Optional `--run-id <decisionRunId>` scopes receipt lookup to one journal under
    `.cursor/sw-decision-runs/<runId>/`.
+1. **Codebase Intelligence last artifacts (PRD 280 R14)** — read-only summaries of the latest radar scan
+   and vocabulary divergence check (never mutates artifacts):
+
+   ```bash
+   python3 scripts/status_collect.py architecture-radar-last
+   python3 scripts/status_collect.py vocabulary-divergence-last
+   ```
+
+   | Field | Meaning |
+   | --- | --- |
+   | `present` | Whether a last artifact exists on disk |
+   | `readOnly` | Always true — collectors never mutate artifacts |
+   | `artifactPath` | Repo-relative path to the last artifact JSON |
+   | `scanId` / `scannedAt` | Latest radar scan identity and timestamp when `present` |
+   | `candidateCount` | Candidate rows from the linked candidates artifact when readable |
+   | `checkedAt` | UTC timestamp of the last divergence check when `present` |
+   | `maxSeverity` | Highest divergence severity (`info` / `warn` / `error`) |
+   | `divergenceCount` | Number of divergence rows in the last artifact |
+
+   Missing artifacts return `present: false` with `verdict: pass` — status does not treat absence as an error.
 2. `python3 scripts/reconcile.py derive` — show per-PRD status + task/PR linkage.
 2. On user request or post-merge: `reconcile` to update INDEX Status column.
 3. After shipped phase: `append-log` for completion log entry.
