@@ -52,7 +52,7 @@ def test_render_procedure_with_steps_and_artifacts() -> None:
 def test_valid_receipt_passes_hash_and_actor() -> None:
     envelope = build_receipt_envelope(
         node_id="approve",
-        actor="operator@example.com",
+        actor="t@t.com",
         outcome="approved",
     )
     result = validate_receipt(envelope.as_dict(), expected_node_id="approve")
@@ -62,7 +62,7 @@ def test_valid_receipt_passes_hash_and_actor() -> None:
 def test_tampered_receipt_fails_closed() -> None:
     envelope = build_receipt_envelope(
         node_id="approve",
-        actor="operator@example.com",
+        actor="t@t.com",
         outcome="approved",
     )
     document = envelope.as_dict()
@@ -109,7 +109,7 @@ def test_verified_receipt_unblocks_admission() -> None:
     }
     receipt = build_receipt_envelope(
         node_id="human",
-        actor="operator@example.com",
+        actor="t@t.com",
         outcome="approved",
     ).as_dict()
     allowed = admission_allowed(graph, "next", {"human": receipt})
