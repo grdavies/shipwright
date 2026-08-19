@@ -173,7 +173,7 @@
         "profiles": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Workflow optimization profiles (PRD 272 R23). Kernel immutables (cache, loop bounds, resourceLimits) are rejected — use graphExecution.cache and compiled spec.resourceLimits instead.",
+          "description": "Workflow optimization profiles (PRD 272 R23). Kernel immutables (cache, loop bounds, resourceLimits) are rejected \u2014 use graphExecution.cache and compiled spec.resourceLimits instead.",
           "properties": {
             "optimization": {
               "type": "string",
@@ -183,7 +183,7 @@
                 "thorough"
               ],
               "default": "balanced",
-              "description": "Optional reviewer depth only — absolute floor enforced separately after profile+inject."
+              "description": "Optional reviewer depth only \u2014 absolute floor enforced separately after profile+inject."
             }
           }
         },
@@ -925,7 +925,7 @@
         "obsidian": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Obsidian provider settings (when memory.provider is obsidian). Local REST API MCP on loopback only. vaultPath is realpath-confined: resolved absolute paths must stay under the configured vault root; traversal and symlink escapes are rejected. Install recipes document Obsidian + Local REST API plugin enablement — adapters never auto-install either.",
+          "description": "Obsidian provider settings (when memory.provider is obsidian). Local REST API MCP on loopback only. vaultPath is realpath-confined: resolved absolute paths must stay under the configured vault root; traversal and symlink escapes are rejected. Install recipes document Obsidian + Local REST API plugin enablement \u2014 adapters never auto-install either.",
           "properties": {
             "vaultPath": {
               "type": "string",
@@ -1788,6 +1788,67 @@
               "minimum": 0,
               "default": 300,
               "description": "Reversible undo window before reconciler materializes an auto-decided absorption."
+            }
+          }
+        },
+        "intelligence": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Codebase Intelligence: architecture radar + domain vocabulary (PRD 280).",
+          "properties": {
+            "radar": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Architecture health radar settings (PRD 280 R4/R13/R16).",
+              "properties": {
+                "postMerge": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When true, /sw-retrospective --post-merge may invoke architecture_radar.py scan (default false for v1 soak)."
+                },
+                "schedule": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "description": "Optional cron-like schedule expression for maintenance-only radar scans; null disables scheduled scans."
+                },
+                "windows": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Signal collection windows and activity-bias thresholds.",
+                  "properties": {
+                    "gitChurnDays": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "default": 30
+                    },
+                    "activityBiasMinPrCount": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "default": 3
+                    },
+                    "activityBiasLastPrs": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "default": 30
+                    }
+                  }
+                }
+              }
+            },
+            "vocabulary": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Domain vocabulary divergence settings (PRD 280 R10).",
+              "properties": {
+                "strictMode": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When true, divergence severity error blocks spec-rigor; default advisory."
+                }
+              }
             }
           }
         }
