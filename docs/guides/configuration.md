@@ -190,7 +190,7 @@ Example operator config:
 }
 ```
 
-**Write binding hard-cut (PRD 279):** `/sw-memory-sync` and other mutating store paths refuse when the
+**Write binding hard-cut:** `/sw-memory-sync` and other mutating store paths refuse when the
 repo has no explicit binding. Binding is either:
 
 | Binding | Requirement |

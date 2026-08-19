@@ -22,7 +22,7 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
 
 ## Procedure
 
-1. Resolve provider + project via `memory-preflight`. **Bind before sync (PRD 279):** require an explicit
+1. Resolve provider + project via `memory-preflight`. **Bind before sync:** require an explicit
    write binding — config `memory.provider` + non-empty `memory.project`, or marker
    `.cursor/sw-memory.provider` with literal `in-repo` (basename project). Assert with
    `python3 scripts/sw_bootstrap.py memory_preflight.py -- assert-sync-store` (or
@@ -76,7 +76,7 @@ See `core/skills/memory/SKILL.md` for the full codec contract.
 ## Guardrails
 
 - **Refuse unbound writes** — bind via `memory.provider`+`memory.project` or `.cursor/sw-memory.provider=in-repo`
-  before sync; never ambient-default to Recallium for writes (PRD 279).
+  before sync; never ambient-default to Recallium for writes.
 - Never store raw transcript text — only distilled substance. No secrets, tokens, or credentials.
 - Cap volume: prefer a few high-signal memories over many low-signal ones (avoid re-creating bloat).
 - Idempotent: re-running without new deltas must be a no-op (marker prevents reprocessing).
