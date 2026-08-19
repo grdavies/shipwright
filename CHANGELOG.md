@@ -961,6 +961,7 @@
 * merge phase human-action-receipts-medium into feat/engineering-decision-layer (df0ef6c) <!-- sw-deliver:human-action-receipts-medium -->
 * merge phase issue-store-and-pipeline-integration-medium into feat/engineering-decision-layer (de3edb8) <!-- sw-deliver:issue-store-and-pipeline-integration-medium -->
 * merge phase observability-and-operator-surfaces-small into feat/engineering-decision-layer (a856a94) <!-- sw-deliver:observability-and-operator-surfaces-small -->
+* merge phase config-schema-shared-signal-collectors into feat/codebase-intelligence (62f0651) <!-- sw-deliver:config-schema-shared-signal-collectors -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
