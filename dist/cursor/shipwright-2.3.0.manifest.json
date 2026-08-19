@@ -258,8 +258,11 @@
     "credentials/send_path.py",
     "debug_deliver_handoff.py",
     "decision_graph/__init__.py",
+    "decision_graph/evidence.py",
+    "decision_graph/prototype.py",
     "decision_graph/schema.py",
     "decision_graph/validate.py",
+    "decision_graph_guard.py",
     "decision_log.py",
     "default_branch_commit_guard.py",
     "deferred-placeholder-lint.py",
@@ -734,5 +737,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 731
+  "moduleCount": 734
 }
