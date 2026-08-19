@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.3.0](https://github.com/grdavies/shipwright/compare/v2.2.0...v2.3.0) (2026-08-19)
+
+
+### Features
+
+* **prd-278:** deliver ship closeout hardening ([#908](https://github.com/grdavies/shipwright/issues/908)) ([e870f11](https://github.com/grdavies/shipwright/commit/e870f110122a8c6ce98a9f32b8be8686e5d0828d))
+* **prd-279:** per repo memory write binding ([#918](https://github.com/grdavies/shipwright/issues/918)) ([6b8b5bd](https://github.com/grdavies/shipwright/commit/6b8b5bd6ef95be266b8502e8f70479fd8746dee3))
+
 ## [2.2.0](https://github.com/grdavies/shipwright/compare/v2.1.0...v2.2.0) (2026-08-18)
 
 
