@@ -742,7 +742,7 @@
     "memory": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Durable memory provider selection and project binding. API credentials are env-sourced only.",
+      "description": "Durable memory provider selection and project binding. Writes require an explicit binding (provider + non-empty project, or .cursor/sw-memory.provider marker selecting literal in-repo); unbound sync/store refuses. API credentials are env-sourced only.",
       "properties": {
         "credentialRef": {
           "type": "string",
@@ -757,7 +757,7 @@
         "provider": {
           "type": "string",
           "default": "in-repo",
-          "description": "Active memory adapter id. Membership and adapter integrity are validated against memory-provider-catalog.json and providers/<id>.md + providers/<id>-rules.py (registration validator at config write, startup, and guardrail preflight) \u2014 not schema-closed."
+          "description": "Active memory adapter id. For mutating paths, pair with non-empty memory.project (or use an in-repo marker). Membership and adapter integrity are validated against memory-provider-catalog.json and providers/<id>.md + providers/<id>-rules.py (registration validator at config write, startup, and guardrail preflight) \u2014 not schema-closed. Unbound writes refuse; there is no ambient Recallium default."
         },
         "sourceOfTruth": {
           "type": "string",
@@ -975,7 +975,7 @@
         },
         "project": {
           "type": "string",
-          "description": "Memory project scope key (e.g. repo name)."
+          "description": "Memory project scope key (e.g. repo name). Required with memory.provider for write binding on remote/external providers; marker-only in-repo may derive basename. Unbound or remote-marker-without-project writes refuse."
         },
         "defaultScope": {
           "enum": [

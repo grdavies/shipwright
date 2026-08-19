@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-19T00:09:26Z",
+  "generatedAt": "2026-08-19T00:29:06Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -4060,19 +4060,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/recallium.md:54:credentials-doctor.py",
+      "id": "core/providers/recallium.md:50:memory_preflight.py",
       "tree": "core/providers",
       "file": "core/providers/recallium.md",
-      "line": 54,
+      "line": 50,
+      "column": 17,
+      "script": "memory_preflight.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/providers/recallium.md:68:credentials-doctor.py",
+      "tree": "core/providers",
+      "file": "core/providers/recallium.md",
+      "line": 68,
       "column": 19,
       "script": "credentials-doctor.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/rules/memory-guardrails.mdc:110:memory-sot.py",
+      "id": "core/rules/memory-guardrails.mdc:128:memory-sot.py",
       "tree": "core/rules",
       "file": "core/rules/memory-guardrails.mdc",
-      "line": 110,
+      "line": 128,
       "column": 21,
       "script": "memory-sot.py",
       "classification": "self-repo-only"
