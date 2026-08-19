@@ -964,6 +964,7 @@
 * merge phase config-schema-shared-signal-collectors into feat/codebase-intelligence (62f0651) <!-- sw-deliver:config-schema-shared-signal-collectors -->
 * merge phase domain-vocabulary-store-divergence-cli into feat/codebase-intelligence (6f7152d) <!-- sw-deliver:domain-vocabulary-store-divergence-cli -->
 * merge phase architecture-radar-core into feat/codebase-intelligence (747561a) <!-- sw-deliver:architecture-radar-core -->
+* merge phase prd-doc-review-integration-hooks into feat/codebase-intelligence (6f52383) <!-- sw-deliver:prd-doc-review-integration-hooks -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
