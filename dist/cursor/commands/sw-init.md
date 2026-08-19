@@ -19,9 +19,10 @@ review-provider selection, project-type detection + verify configuration, guardr
 init/validate, portability self-check, version-drift notice, write schema-valid
 `.cursor/workflow.config.json`; retains doctor and repair modes on re-run.
 
-**Does NOT:** scaffold CI workflows, migrate Recallium memories into in-repo, auto-install MemPalace (or any
-memory provider package), auto-install Obsidian or the Local REST API community plugin, auto-seed rule files,
-or write global (user-level) config — repo-local only.
+**Does NOT:** scaffold CI workflows, migrate ambient Recallium (or other provider) data into a bound project,
+auto-install MemPalace (or any memory provider package), auto-install Obsidian or the Local REST API community
+plugin, auto-seed rule files, or write global (user-level) config — repo-local only. Unbound operators must
+bind explicitly before `/sw-memory-sync`; there is no ambient write default and no soft-warn migration window.
 
 ## Flags
 
@@ -100,8 +101,23 @@ For **in-repo**:
 
 - Ask **commit mode**: `committed` (default, PR-reviewable) or `local` (gitignore `.cursor/sw-memory-local/`).
 
-For **recallium**: verify reachability (`host HTTP transport -fsS --max-time 3 <restBaseUrl>/health` or equivalent); warn if
-unreachable but still allow save.
+For **recallium**: require non-empty `memory.project` (no basename inference for remote providers). Verify
+reachability (`host HTTP transport -fsS --max-time 3 <restBaseUrl>/health` or equivalent); warn if unreachable
+but still allow save. Do **not** import or remap existing ambient Recallium projects automatically.
+
+### Bind before sync (write binding hard-cut)
+
+`/sw-memory-sync` and other mutating store paths refuse when the repo has no explicit binding. During init and
+doctor repair, tell unbound operators how to bind **before** sync:
+
+| Binding | What to write |
+| --- | --- |
+| Config | `memory.provider` **and** non-empty `memory.project` in `.cursor/workflow.config.json` |
+| Marker | `.cursor/sw-memory.provider` containing literal `in-repo` (project = workspace basename) |
+
+Remote/external markers without `memory.project` refuse. Assert locally:
+`python3 scripts/sw_bootstrap.py memory_preflight.py -- assert-sync-store`. Hard cut: no ambient Recallium
+write default and no auto-migration of machine-local MCP data into the bound project.
 
 For **mempalace**:
 
@@ -261,6 +277,9 @@ Detect and recommend (never hard-fail scaffold):
   `none`; set `review.provider` explicitly if review gating is desired).
 - `review.enabled: false` in existing config → warn deprecated; suggest `review.provider: "none"`.
 - Recallium reachable when `memory.provider` is `recallium`.
+- **Write binding:** when neither config (`memory.provider` + `memory.project`) nor an `in-repo` marker is
+  present, warn that `/sw-memory-sync` will refuse writes and print the bind-before-sync table above — do
+  **not** auto-migrate ambient Recallium data or invent a project.
 - MemPalace package import + `memory.mempalace.palacePath` directory probe when `memory.provider` is `mempalace`
   (install recipe + live-smoke checklist: `docs/guides/configuration.md` **MemPalace memory provider**; no
   auto-install).
@@ -439,8 +458,21 @@ Print summary: providers, verify status, portability self-check, drift notice, c
 - Never auto-seed `category: rule` files (R42).
 - Never write vacuous verify placeholders — real commands or explicit gaps only.
 - Redaction chokepoint applies to all in-repo writes.
+- Never ambient-default memory writes to Recallium when unbound; doctor must instruct bind-before-sync (R17).
+
+## Absorb acceptance map (#733 → R9–R12, R15–R17)
+
+| Source issue | Requirement cluster | Init / doctor scope |
+| --- | --- | --- |
+| #733 per-repo memory binding | R9–R12 | Unbound sync/store refuse; marker=`in-repo` only; remote needs `memory.project`; PRD 277 rule dual-home unchanged |
+| #733 | R15–R16 | Refused writes emit typed audit/log; refuse reasons avoid secret paths |
+| #733 | R17 | Hard cut on ship; `/sw-init` / doctor tell unbound operators how to bind; no ambient auto-migration |
+
+**Decision stance (D1):** write-binding ships as its own PRD (not bundled with deliver closeout). **Decision
+stance (D3):** absorb #733 here after amendment #735 cancellation — do not amend closed PRD 277.
 
 ## Fresh-install zero-config path
 
-A repo can commit only `.cursor/sw-memory.provider` + empty store dirs without `workflow.config.json`. Run
-`/sw-init` to customize.
+A repo can commit only `.cursor/sw-memory.provider` + empty store dirs without `workflow.config.json`. That
+marker is an explicit `in-repo` write binding (basename project). Run `/sw-init` to customize provider +
+project; until then, remote/unbound writes refuse.
