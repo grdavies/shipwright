@@ -20,6 +20,15 @@ Load `skills/living-status/SKILL.md`.
    ```
    Returns one of `backlog`, `planned`, `in-progress`, `complete`, or `unauthorized` — the same value
    `/sw-status` reports for planning-unit queries regardless of backend.
+2. **DecisionGraph frontier (PRD 280 R20)** — for a planning unit with a linked DecisionGraph:
+
+   ```bash
+   python3 scripts/status_collect.py decision-frontier --unit-id <unit-id>
+   ```
+
+   Returns `readyCount`, `ready[]`, and `blockedHumanActions[]` (open human-action nodes lacking
+   verified receipts). Optional `--run-id <decisionRunId>` scopes receipt lookup to one journal under
+   `.cursor/sw-decision-runs/<runId>/`.
 2. `python3 scripts/reconcile.py derive` — show per-PRD status + task/PR linkage.
 2. On user request or post-merge: `reconcile` to update INDEX Status column.
 3. After shipped phase: `append-log` for completion log entry.
