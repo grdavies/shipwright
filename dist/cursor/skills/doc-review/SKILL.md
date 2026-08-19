@@ -131,6 +131,24 @@ Returns canonical JSON: resolved persona ids, matched signals, and activation-re
 
 Mirrors `sw-triage` `--tier` override recording.
 
+### Vocabulary divergence signal (PRD 280 R10, D7)
+
+When `.cursor/sw-vocabulary-divergence/last.json` exists from a prior `/sw-prd` run and `divergence` is
+non-empty:
+
+1. **Load artifact** at dispatch prep (read-only — do not re-run `check-divergence` during review).
+2. **Coherence persona only** — inject the divergence summary into the coherence dispatch prompt via
+   `CONTEXT_BLOCKS` (or equivalent `dispatch_prompt.py build --context-json` block):
+   - `maxSeverity`, each `divergence[]` entry (`concept`, `occurrences`, `severity`, `note`)
+   - `humanGated: true` and `registryTermCount` when present
+3. Coherence must surface terminology drift against the artifact; treat `severity: error` items as **hard**
+   coherence findings when `strictMode` was active at check time.
+4. **No auto canonical promotion** — personas and synthesizer must **not** call `put-term`, edit vocabulary
+   registry units, or apply `safe_auto` rewrites that impose canonical names. Route vocabulary alignment to
+   `manual` (or `gated_auto` when operator confirms).
+
+Other personas do not receive the artifact unless an explicit `--personas` override expands scope.
+
 ### Activation record
 
 Emit at start of every review (inline in the review report):

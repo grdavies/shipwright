@@ -50,6 +50,12 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
      reach freeze; slot-filling templates are available via
      `python3 scripts/doc_format.py template prd_requirement` (and related kinds in `doc_format.SLOT_TEMPLATES`).
    - Save to `docs/prds/<n>-<slug>/<n>-prd-<slug>.md`.
+   - **Vocabulary divergence (PRD 280 R10, D4):** post-draft, run
+     `python3 scripts/domain_vocabulary.py check-divergence --file <prd-path>` (file-store) or
+     `check-divergence --unit-id <prd-unit-id>` (issue-store). Advisory by default — warn-only
+     `verdict: pass` does not block handoff. When `planning.intelligence.vocabulary.strictMode` is true
+     (or `--strict`), exit `20` on `verdict: fail` halts before `/sw-doc-review`. Artifact:
+     `.cursor/sw-vocabulary-divergence/last.json` (read-only; no `put-term`).
 5. **Decision record (`--type decision`):**
    - Brainstorm optional — decisions are authored up-front; **do not** apply the "no doc without brainstorm" guard.
    - Assign decision number per collision policy (scan `docs/decisions/` — separate counter from `docs/prds/`).
