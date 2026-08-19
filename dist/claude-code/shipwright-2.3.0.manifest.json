@@ -257,6 +257,16 @@
     "credentials/selector_store.py",
     "credentials/send_path.py",
     "debug_deliver_handoff.py",
+    "decision_graph/__init__.py",
+    "decision_graph/evidence.py",
+    "decision_graph/frontier.py",
+    "decision_graph/human_action.py",
+    "decision_graph/journal.py",
+    "decision_graph/prototype.py",
+    "decision_graph/receipt.py",
+    "decision_graph/schema.py",
+    "decision_graph/validate.py",
+    "decision_graph_guard.py",
     "decision_log.py",
     "default_branch_commit_guard.py",
     "deferred-placeholder-lint.py",
@@ -371,6 +381,7 @@
     "graph/learning_store.py",
     "graph/legacy_adapters.py",
     "graph/lineage.py",
+    "graph/node_kinds.py",
     "graph/observability.py",
     "graph/packages/__init__.py",
     "graph/packages/adoption.py",
@@ -560,6 +571,8 @@
     "planning_github_projects_v2.py",
     "planning_gitlab_client.py",
     "planning_graph.py",
+    "planning_graph/__init__.py",
+    "planning_graph/decision_projection.py",
     "planning_hierarchy.py",
     "planning_import_inventory.py",
     "planning_index_gen.py",
@@ -647,6 +660,7 @@
     "spec_union_056.py",
     "stabilize-merge-sync.py",
     "stabilize_same_stage_lib.py",
+    "status_collect.py",
     "status_integrity.py",
     "suite_registry.py",
     "suite_registry_check.py",
@@ -731,5 +745,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 728
+  "moduleCount": 742
 }

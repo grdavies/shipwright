@@ -27,6 +27,14 @@ When effective backend is `issue-store`:
 
 File-store repos: unchanged — path and file save below apply.
 
+## DecisionGraph scope (PRD 280 R15)
+
+When task generation covers PRDs with an attached `DecisionGraph`:
+
+1. Include a `## DecisionGraph scope` subsection under each affected parent phase when decision nodes gate implementation.
+2. Reference the linked graph by **unit id** + virtual `docs/planning/decision/<unit-id>/decision-graph.json` — never assume a code-repo JSON file exists under issue-store.
+3. Phase dependency edges may reference decision-frontier readiness; cite `python3 scripts/planning-graph.py decision-frontier --unit-id <prd-unit-id>` for read-only ready-set discovery.
+
 ## Path
 
 `docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` per `.sw/layout.md`.

@@ -79,6 +79,19 @@ At save time on the Full path:
 `/sw-freeze` re-verifies linkage (`doc-link-check.py`, R55) and may write the forward ref if still writable (R53).
 Fields are documented in `.sw/layout.md`.
 
+## DecisionGraph scope (PRD 280 R15)
+
+When a PRD drives engineering decisions that require a `DecisionGraph`:
+
+1. Persist the graph via `planning_store.put` with unit id `<prd-unit-id>-decision-graph` and virtual body-path `docs/planning/decision/<unit-id>/decision-graph.json` (`sw:decision` issue type).
+2. Link PRD ↔ graph without code-repo file writes:
+
+   ```bash
+   python3 scripts/doc_link.py write-decision-graph-link --prd <prd-body-path> [--prd-unit-id <id>] [--graph-unit-id <id>]
+   ```
+
+3. Doc-review and freeze gates validate the `decision-graph` back-reference resolves via issue-store handles.
+
 ## Collision policy
 
 - Same feature/topic, new run: increment `<n>`, distinct slug; do not overwrite.

@@ -36,6 +36,14 @@ Quick tier handoff.
 
 No brainstorm required; no task generation after freeze.
 
+## DecisionGraph scope (PRD 280 R15)
+
+For PRDs that adopt the engineering decision layer:
+
+- After PRD freeze, operators may attach a `DecisionGraph` via issue-store (`sw:decision`) and link it with `doc_link.py write-decision-graph-link`.
+- `/sw-tasks` must cite DecisionGraph scope when decision nodes gate phased delivery; `/sw-doc-review` validates linkage resolves before freeze.
+- DecisionGraph storage is **separate** from PRD markdown — shared planning infra only (D1).
+
 | Tier | Stages run |
 |------|------------|
 | Full | brainstorm → PRD → panel (signal-driven) → freeze → tasks |

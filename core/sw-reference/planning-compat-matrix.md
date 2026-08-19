@@ -36,7 +36,7 @@ Inventory snapshot: 2026-07-29T08:03:47Z — 154 symbols,
 | symbol | `KILL_SWITCH_NOTICE` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | shim re-export |
 | symbol | `LocalSyncedBackend` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | shim re-export |
 | symbol | `MATERIALIZE_MISSING_FROZEN_BODY` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | shim re-export |
-| symbol | `MemoryLocalCacheBackend` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | shim re-export |
+| symbol | `ReplicatedPlanningCacheBackend` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | shim re-export |
 | symbol | `PROJECT_KEY_PATTERN` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | shim re-export |
 | symbol | `PUT_INCOMPLETE_LABEL` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | shim re-export |
 | symbol | `R1_BROWSE_CONTRACT` | 10 | compat-removal | zero-inventoried-imports-across-enforced-trees | shim re-export |

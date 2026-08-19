@@ -15,6 +15,7 @@ EXIT_ERROR = 2
 
 BRAINSTORM_KEYS = ("brainstorm", "source_brainstorm")
 PRD_KEYS = ("prd",)
+DECISION_GRAPH_KEYS = ("decision-graph", "decisionGraph")
 ORIGIN_VALUES = frozenset({"brainstorm", "request", "issue"})
 ISSUE_REF_KEYS = ("issue", "defect", "planningIssue")
 
@@ -120,6 +121,13 @@ def link_target_resolves(
 
 def brainstorm_backref(fm: dict[str, str]) -> str | None:
     for key in BRAINSTORM_KEYS:
+        if fm.get(key):
+            return fm[key]
+    return None
+
+
+def decision_graph_backref(fm: dict[str, str]) -> str | None:
+    for key in DECISION_GRAPH_KEYS:
         if fm.get(key):
             return fm[key]
     return None
@@ -325,6 +333,24 @@ def check_prd_content(
                 }
             )
 
+    graph_ref = decision_graph_backref(fm)
+    if graph_ref:
+        from planning.identity import decision_graph_virtual_body_path
+
+        graph_unit = Path(graph_ref).stem if "/" in graph_ref else graph_ref.strip()
+        graph_path = (
+            graph_ref
+            if "/" in graph_ref
+            else decision_graph_virtual_body_path(graph_unit)
+        )
+        if not link_target_resolves(root, graph_path, unit_id=graph_unit, prd_unit_id=prd_unit_id):
+            findings.append(
+                {
+                    "code": "dangling-decision-graph-backref",
+                    "message": f"decision-graph back-reference does not resolve: {graph_ref}",
+                }
+            )
+
     verdict = "pass" if not findings else "fail"
     return {
         "verdict": verdict,
@@ -489,6 +515,25 @@ def write_forwardref(
     }
 
 
+def write_decision_graph_link(
+    root: Path,
+    prd: str,
+    *,
+    prd_unit_id: str | None = None,
+    graph_unit_id: str | None = None,
+) -> dict[str, Any]:
+    from planning_graph.decision_projection import project_prd_decision_graph_link
+
+    prd_rel, prd_uid = normalize_body_ref(root, prd)
+    prd_uid = prd_unit_id or prd_uid
+    return project_prd_decision_graph_link(
+        root,
+        prd_uid or pah.default_unit_id_from_body_path(prd_rel),
+        prd_rel,
+        graph_unit_id=graph_unit_id,
+    )
+
+
 def emit(obj: dict[str, Any], code: int = 0) -> None:
     print(json.dumps(obj, ensure_ascii=False, indent=2))
     raise SystemExit(code)
@@ -554,6 +599,22 @@ def main() -> None:
                 prd,
                 brainstorm_unit_id=kv("--brainstorm-unit-id"),
                 prd_unit_id=kv("--prd-unit-id"),
+            )
+        )
+
+    if cmd == "write-decision-graph-link":
+        prd = kv("--prd")
+        if not prd:
+            emit({"verdict": "fail", "error": "--prd required"}, EXIT_ERROR)
+        root_override = kv("--root")
+        if root_override:
+            root = Path(root_override).resolve()
+        emit(
+            write_decision_graph_link(
+                root,
+                prd,
+                prd_unit_id=kv("--prd-unit-id"),
+                graph_unit_id=kv("--graph-unit-id"),
             )
         )
 
