@@ -35,6 +35,24 @@ Set `memory.guardrails.enforceBeforeSubmit: false` to disable the hook entirely 
 
 `sessionStart` injection is best-effort (fail-open).
 
+## Write binding hard-cut (unbound refuse + assert)
+
+Mutating memory paths (`/sw-memory-sync` store, adapter `store`, and other R9-enumerated writers) MUST
+call `scripts/memory_preflight.py` write assert (`assert_write_binding` / `assert-sync-store` /
+`resolve-provider --for-write`) **immediately before** provider dispatch. Unbound writes refuse with a
+typed cause and audit event — never ambient-default to Recallium or omit `project_name` into a
+machine-local MCP project.
+
+| Binding | Condition | Write project |
+| --- | --- | --- |
+| Config | `memory.provider` **and** non-empty `memory.project` | configured project |
+| Marker | `.cursor/sw-memory.provider` literal `in-repo` | workspace basename |
+| Unbound | neither | **refuse** (`writeAuthorized=false`) |
+
+Remote/external markers without `memory.project` refuse. Unbound **reads**/preflight MAY resolve for
+display (`source=unbound`, `displayGuidance=in-repo`) without authorizing writes. Hard cut on ship: no
+soft-warn write window; doctor/`/sw-init` tell unbound operators how to bind before sync.
+
 ## Catalog resolve + validator (PRD 071 R4)
 
 Before hook rule-fetch or adapter load, Shipwright validates `memory.provider` through the catalog +

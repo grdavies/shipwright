@@ -664,6 +664,23 @@ not amend PRD 276 for the same behavior.
 Operator command detail: `core/commands/sw-deliver.md` **Closeout hardening**;
 `core/commands/sw-ship.md` **Phase-ship hygiene floors**.
 
+### PRD 279 write-binding surfaces (R13, R17, D1, D3)
+
+Per-repo memory write binding (absorb #733). Operator bind-before-sync guidance lives on
+`core/commands/sw-init.md` (**Bind before sync**, **Absorb acceptance map**). Runtime assert:
+`scripts/memory_preflight.py` / `scripts/memory_write_binding.py`.
+
+**Absorb acceptance map** (source issue → requirement cluster):
+
+| Issue | R-IDs | Acceptance |
+| --- | --- | --- |
+| #733 | R9–R12 | Unbound sync/store refuse; marker=`in-repo` only; remote needs project; PRD 277 rule dual-home unchanged |
+| #733 | R15–R16 | Typed audit on refuse; secrets omitted from refuse reasons |
+| #733 | R17 | Hard cut; `/sw-init` / doctor instruct bind-before-sync; no ambient auto-migration |
+
+**Decision stance (D1):** separate PRD from deliver closeout cluster. **Decision stance (D3):** new PRD
+absorbs #733 after amendment #735 cancellation — do not amend closed PRD 277.
+
 ### Verify `no-baseline` evidence matrix (planning#641 / #642, PRD 094 R7/R17)
 
 Planning issues **#641** and **#642** share one `no-baseline` verification partition
@@ -1228,3 +1245,4 @@ records are enumerated by `planning_backend_control.py list` and surfaced in `pl
 | --- | --- |
 | Deliver durable state (`.cursor/sw-deliver-state.<slug>.json`, locks, merge queue) | Repo root (primary checkout) |
 | Hook ephemeral state (`.cursor/hooks/state/*`) | R20-resolved active root (worktree when aligned) |
+<!-- currency: layout-reference-mirror sync -->

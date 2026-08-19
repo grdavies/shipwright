@@ -190,6 +190,19 @@ Example operator config:
 }
 ```
 
+**Write binding hard-cut:** `/sw-memory-sync` and other mutating store paths refuse when the
+repo has no explicit binding. Binding is either:
+
+| Binding | Requirement |
+| --- | --- |
+| Config | `memory.provider` **and** non-empty `memory.project` |
+| Marker | `.cursor/sw-memory.provider` containing literal `in-repo` (project = workspace basename) |
+
+Remote/external markers (e.g. `recallium`) without `memory.project` refuse. There is **no** ambient
+Recallium write default and **no** auto-migration into a machine-local MCP project. Unbound reads may
+still resolve for display (`displayGuidance=in-repo`) without authorizing writes. Assert locally with
+`python3 scripts/sw_bootstrap.py memory_preflight.py -- assert-sync-store`.
+
 Reject examples (config write / hook resolve): `unknown-vendor`, `../traversal`, empty string, or a
 catalog row missing adapter integrity or rules script.
 

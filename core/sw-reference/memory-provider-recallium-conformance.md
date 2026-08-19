@@ -19,6 +19,7 @@ registration checklist in `core/skills/memory/CAPABILITIES.md` — **not** a Rec
 | Interchange (`jsonl` / `okf`) | **pass** (synthesized — degrade-open) |
 | Source-of-truth class | **pass** (`memory-authoritative`) |
 | Credentials clause | **pass** (`env-only`) |
+| Per-repo write binding | **pass** (adapter documents unbound refuse + assert; no ambient write default) |
 | Typed relationship edges | **gap** (edge-degraded; documented) |
 | Native export/import | **gap** (synthesized; documented) |
 
@@ -37,6 +38,7 @@ Validated mechanically by `scripts/memory_adapter_checklist.py` and
 | **Degrade-open** | `export`/`import` capability flags `false`; commands synthesize interchange — never block unrelated surfaces | **pass** |
 | **Interchange** | `interchange.jsonl: synthesized`, `interchange.okf: synthesized` | **pass** |
 | **Credentials** | `credentials.location: env-only`; notes forbid catalog/config/memory secret storage | **pass** |
+| **Write binding** | Adapter **Write binding (hard-cut)** section: assert before `store`; unbound/remote-marker-without-project refuse; no ambient Recallium write default | **pass** |
 | **REST SSRF** | `restFetchPolicy` localhost-only; enforced via `scripts/sw_recallium_url.py` | **pass** |
 
 ## Capability flag parity

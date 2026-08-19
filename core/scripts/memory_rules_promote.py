@@ -363,8 +363,13 @@ def ordinary_store(
     rule_id: str = "",
     body: str = "",
     approval: dict[str, Any] | None = None,
+    root: Path | None = None,
 ) -> dict[str, Any]:
     refuse_unapproved_rule_write(category=category, approval=approval, rule_id=rule_id, body=body)
+    if root is not None:
+        from memory_preflight import assert_write_binding
+
+        assert_write_binding(Path(root), "store", category)
     return {"verdict": "ok", "action": "store", "category": category}
 
 
@@ -374,8 +379,22 @@ def memory_sync_store(
     rule_id: str = "",
     body: str = "",
     approval: dict[str, Any] | None = None,
+    root: Path | None = None,
 ) -> dict[str, Any]:
     refuse_unapproved_rule_write(category=category, approval=approval, rule_id=rule_id, body=body)
+    if root is not None:
+        from memory_preflight import memory_sync_store_path
+
+        # Assert chokepoint before any provider-facing sync store (PRD 279 R9).
+        binding_result = memory_sync_store_path(Path(root), category=category)
+        return {
+            "verdict": "ok",
+            "action": "memory-sync",
+            "category": category,
+            "provider": binding_result.get("provider"),
+            "project": binding_result.get("project"),
+            "source": binding_result.get("source"),
+        }
     return {"verdict": "ok", "action": "memory-sync", "category": category}
 
 
@@ -385,8 +404,13 @@ def import_store(
     rule_id: str = "",
     body: str = "",
     approval: dict[str, Any] | None = None,
+    root: Path | None = None,
 ) -> dict[str, Any]:
     refuse_unapproved_rule_write(category=category, approval=approval, rule_id=rule_id, body=body)
+    if root is not None:
+        from memory_preflight import assert_write_binding
+
+        assert_write_binding(Path(root), "import", category)
     return {"verdict": "ok", "action": "import", "category": category}
 
 

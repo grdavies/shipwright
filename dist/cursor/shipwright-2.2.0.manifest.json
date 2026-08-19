@@ -483,6 +483,7 @@
     "memory_sot_audit.py",
     "memory_switch.py",
     "memory_visibility_probe.py",
+    "memory_write_binding.py",
     "mempalace_interchange.py",
     "merge_ready_enforcement.py",
     "migrate_registry_wave.py",
@@ -730,5 +731,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 727
+  "moduleCount": 728
 }
