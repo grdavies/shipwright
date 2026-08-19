@@ -1245,4 +1245,4 @@ records are enumerated by `planning_backend_control.py list` and surfaced in `pl
 | --- | --- |
 | Deliver durable state (`.cursor/sw-deliver-state.<slug>.json`, locks, merge queue) | Repo root (primary checkout) |
 | Hook ephemeral state (`.cursor/hooks/state/*`) | R20-resolved active root (worktree when aligned) |
-<!-- currency: layout-reference-mirror sync -->
+<!-- currency: layout-planning-authority 2026-08-19T16:05Z -->
