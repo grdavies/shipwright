@@ -965,6 +965,7 @@
 * merge phase domain-vocabulary-store-divergence-cli into feat/codebase-intelligence (6f7152d) <!-- sw-deliver:domain-vocabulary-store-divergence-cli -->
 * merge phase architecture-radar-core into feat/codebase-intelligence (747561a) <!-- sw-deliver:architecture-radar-core -->
 * merge phase prd-doc-review-integration-hooks into feat/codebase-intelligence (6f52383) <!-- sw-deliver:prd-doc-review-integration-hooks -->
+* merge phase retro-status-surfaces into feat/codebase-intelligence (fdcf6a5) <!-- sw-deliver:retro-status-surfaces -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
