@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-19T09:15:16Z",
+  "generatedAt": "2026-08-19T14:28:14Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3277,91 +3277,100 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:23:reconcile.py",
+      "id": "core/commands/sw-status.md:26:status_collect.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 23,
+      "line": 26,
+      "column": 11,
+      "script": "status_collect.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-status.md:32:reconcile.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-status.md",
+      "line": 32,
       "column": 12,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:27:verify-unconfigured.py",
+      "id": "core/commands/sw-status.md:36:verify-unconfigured.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 27,
+      "line": 36,
       "column": 48,
       "script": "verify-unconfigured.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:28:sw-configure.py",
+      "id": "core/commands/sw-status.md:37:sw-configure.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 28,
+      "line": 37,
       "column": 41,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:34:reconcile.py",
+      "id": "core/commands/sw-status.md:43:reconcile.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 34,
+      "line": 43,
       "column": 37,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:41:wave_living_docs.py",
+      "id": "core/commands/sw-status.md:50:wave_living_docs.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 41,
+      "line": 50,
       "column": 12,
       "script": "wave_living_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:50:status_integrity.py",
+      "id": "core/commands/sw-status.md:59:status_integrity.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 50,
+      "line": 59,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:53:status_integrity.py",
+      "id": "core/commands/sw-status.md:62:status_integrity.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 53,
+      "line": 62,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:133:status_integrity.py",
+      "id": "core/commands/sw-status.md:142:status_integrity.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 133,
+      "line": 142,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-status.md:265:sw_bootstrap.py",
+      "id": "core/commands/sw-status.md:274:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 265,
+      "line": 274,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-status.md:273:wave.py",
+      "id": "core/commands/sw-status.md:282:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-status.md",
-      "line": 273,
+      "line": 282,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -10090,91 +10099,100 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:23:reconcile.py",
+      "id": "dist/claude-code/commands/sw-status.md:26:status_collect.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 23,
+      "line": 26,
+      "column": 11,
+      "script": "status_collect.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-status.md:32:reconcile.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-status.md",
+      "line": 32,
       "column": 12,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:27:verify-unconfigured.py",
+      "id": "dist/claude-code/commands/sw-status.md:36:verify-unconfigured.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 27,
+      "line": 36,
       "column": 48,
       "script": "verify-unconfigured.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:28:sw-configure.py",
+      "id": "dist/claude-code/commands/sw-status.md:37:sw-configure.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 28,
+      "line": 37,
       "column": 41,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:34:reconcile.py",
+      "id": "dist/claude-code/commands/sw-status.md:43:reconcile.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 34,
+      "line": 43,
       "column": 37,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:41:wave_living_docs.py",
+      "id": "dist/claude-code/commands/sw-status.md:50:wave_living_docs.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 41,
+      "line": 50,
       "column": 12,
       "script": "wave_living_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:50:status_integrity.py",
+      "id": "dist/claude-code/commands/sw-status.md:59:status_integrity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 50,
+      "line": 59,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:53:status_integrity.py",
+      "id": "dist/claude-code/commands/sw-status.md:62:status_integrity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 53,
+      "line": 62,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:133:status_integrity.py",
+      "id": "dist/claude-code/commands/sw-status.md:142:status_integrity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 133,
+      "line": 142,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:265:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-status.md:274:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 265,
+      "line": 274,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-status.md:273:wave.py",
+      "id": "dist/claude-code/commands/sw-status.md:282:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-status.md",
-      "line": 273,
+      "line": 282,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -15751,91 +15769,100 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:23:reconcile.py",
+      "id": "dist/cursor/commands/sw-status.md:26:status_collect.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 23,
+      "line": 26,
+      "column": 11,
+      "script": "status_collect.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-status.md:32:reconcile.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-status.md",
+      "line": 32,
       "column": 12,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:27:verify-unconfigured.py",
+      "id": "dist/cursor/commands/sw-status.md:36:verify-unconfigured.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 27,
+      "line": 36,
       "column": 48,
       "script": "verify-unconfigured.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:28:sw-configure.py",
+      "id": "dist/cursor/commands/sw-status.md:37:sw-configure.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 28,
+      "line": 37,
       "column": 41,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:34:reconcile.py",
+      "id": "dist/cursor/commands/sw-status.md:43:reconcile.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 34,
+      "line": 43,
       "column": 37,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:41:wave_living_docs.py",
+      "id": "dist/cursor/commands/sw-status.md:50:wave_living_docs.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 41,
+      "line": 50,
       "column": 12,
       "script": "wave_living_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:50:status_integrity.py",
+      "id": "dist/cursor/commands/sw-status.md:59:status_integrity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 50,
+      "line": 59,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:53:status_integrity.py",
+      "id": "dist/cursor/commands/sw-status.md:62:status_integrity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 53,
+      "line": 62,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:133:status_integrity.py",
+      "id": "dist/cursor/commands/sw-status.md:142:status_integrity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 133,
+      "line": 142,
       "column": 8,
       "script": "status_integrity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:265:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-status.md:274:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 265,
+      "line": 274,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-status.md:273:wave.py",
+      "id": "dist/cursor/commands/sw-status.md:282:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-status.md",
-      "line": 273,
+      "line": 282,
       "column": 311,
       "script": "wave.py",
       "classification": "self-repo-only"
