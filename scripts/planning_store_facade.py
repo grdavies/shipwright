@@ -784,6 +784,17 @@ def _gitlab_store_project_private(root: Path, cfg: dict[str, Any], owner: str, p
 
 
 def parse_visibility_from_content(content: str) -> str | None:
+    if content.lstrip().startswith("{"):
+        try:
+            doc = json.loads(content)
+        except json.JSONDecodeError:
+            doc = None
+        if isinstance(doc, dict):
+            metadata = doc.get("metadata")
+            if isinstance(metadata, dict):
+                vis = metadata.get("visibility")
+                if vis is not None and str(vis).strip():
+                    return str(vis).strip()
     if not content.startswith("---"):
         return None
     end = content.find("\n---", 3)
@@ -2475,6 +2486,16 @@ def _default_body_path(unit_id: str, artifact_type: str) -> str:
         return f"docs/prds/tasks-{unit_id}.md"
     if artifact_type == "gap":
         return f"docs/planning/gap/{unit_id}/{unit_id}.md"
+    if artifact_type == "decision":
+        from planning.identity import (
+            DECISION_GRAPH_UNIT_SUFFIX,
+            decision_graph_virtual_body_path,
+            decision_record_virtual_body_path,
+        )
+
+        if unit_id.endswith(DECISION_GRAPH_UNIT_SUFFIX):
+            return decision_graph_virtual_body_path(unit_id)
+        return decision_record_virtual_body_path(unit_id)
     if artifact_type == "prd":
         prd_num = _prd_number_from_unit_id(unit_id)
         if prd_num:
