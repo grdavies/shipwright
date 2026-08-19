@@ -23,7 +23,9 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import planning_paths as pp  # noqa: E402
 from host_lib import load_workflow_config  # noqa: E402
-from planning_store import resolve_effective_backend  # noqa: E402
+import planning_store as _planning_store  # noqa: E402
+
+resolve_effective_backend = _planning_store.resolve_effective_backend
 
 CUTOVER_STATE_REL = ".cursor/hooks/state/planning-cutover-gate.json"
 RegionAuthority = Literal["file", "issue", "deliver"]

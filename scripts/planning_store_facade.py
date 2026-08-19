@@ -88,12 +88,21 @@ from _planning_pkg_loader import load_package, load_submodule  # noqa: E402
 
 _planning_pkg = load_package()
 BARE_INTEGER_UNIT_ID = _planning_pkg.BARE_INTEGER_UNIT_ID
+DECISION_ARTIFACT_TYPE = _planning_pkg.DECISION_ARTIFACT_TYPE
+DECISION_GRAPH_FILENAME = _planning_pkg.DECISION_GRAPH_FILENAME
+DECISION_GRAPH_UNIT_SUFFIX = _planning_pkg.DECISION_GRAPH_UNIT_SUFFIX
+DECISION_ISSUE_TYPE_LABEL = _planning_pkg.DECISION_ISSUE_TYPE_LABEL
 LEGACY_UNIT_MAP_PATH = _planning_pkg.LEGACY_UNIT_MAP_PATH
 NATIVE_UNIT_ID_PATTERN = _planning_pkg.NATIVE_UNIT_ID_PATTERN
 NATIVE_UNIT_ID_PREFIX = _planning_pkg.NATIVE_UNIT_ID_PREFIX
 PROJECT_KEY_PATTERN = _planning_pkg.PROJECT_KEY_PATTERN
 PROJECT_KEY_REGISTRY = _planning_pkg.PROJECT_KEY_REGISTRY
+decision_graph_unit_id = _planning_pkg.decision_graph_unit_id
+decision_graph_virtual_body_path = _planning_pkg.decision_graph_virtual_body_path
+decision_record_virtual_body_path = _planning_pkg.decision_record_virtual_body_path
 format_native_unit_id = _planning_pkg.format_native_unit_id
+is_decision_graph_body_path = _planning_pkg.is_decision_graph_body_path
+resolve_decision_put_path = _planning_pkg.resolve_decision_put_path
 is_bare_integer_unit_id = _planning_pkg.is_bare_integer_unit_id
 is_namespaced_native_unit_id = _planning_pkg.is_namespaced_native_unit_id
 load_legacy_unit_map = _planning_pkg.load_legacy_unit_map
@@ -784,6 +793,17 @@ def _gitlab_store_project_private(root: Path, cfg: dict[str, Any], owner: str, p
 
 
 def parse_visibility_from_content(content: str) -> str | None:
+    if content.lstrip().startswith("{"):
+        try:
+            doc = json.loads(content)
+        except json.JSONDecodeError:
+            doc = None
+        if isinstance(doc, dict):
+            metadata = doc.get("metadata")
+            if isinstance(metadata, dict):
+                vis = metadata.get("visibility")
+                if vis is not None and str(vis).strip():
+                    return str(vis).strip()
     if not content.startswith("---"):
         return None
     end = content.find("\n---", 3)
@@ -2475,6 +2495,16 @@ def _default_body_path(unit_id: str, artifact_type: str) -> str:
         return f"docs/prds/tasks-{unit_id}.md"
     if artifact_type == "gap":
         return f"docs/planning/gap/{unit_id}/{unit_id}.md"
+    if artifact_type == "decision":
+        from planning.identity import (
+            DECISION_GRAPH_UNIT_SUFFIX,
+            decision_graph_virtual_body_path,
+            decision_record_virtual_body_path,
+        )
+
+        if unit_id.endswith(DECISION_GRAPH_UNIT_SUFFIX):
+            return decision_graph_virtual_body_path(unit_id)
+        return decision_record_virtual_body_path(unit_id)
     if artifact_type == "prd":
         prd_num = _prd_number_from_unit_id(unit_id)
         if prd_num:

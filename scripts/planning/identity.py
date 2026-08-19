@@ -18,6 +18,10 @@ NATIVE_UNIT_ID_PREFIX: dict[str, str] = {
 }
 NATIVE_UNIT_ID_PATTERN = re.compile(r"^(gh|jira|gl):(\d+)$")
 BARE_INTEGER_UNIT_ID = re.compile(r"^\d{3}$")
+DECISION_ISSUE_TYPE_LABEL = "sw:decision"
+DECISION_ARTIFACT_TYPE = "decision"
+DECISION_GRAPH_FILENAME = "decision-graph.json"
+DECISION_GRAPH_UNIT_SUFFIX = "-decision-graph"
 
 
 def store_section(cfg: dict[str, Any]) -> dict[str, Any]:
@@ -214,6 +218,58 @@ def reverse_resolve_legacy_unit_id(root: Path, native_id: str) -> str | None:
         if native == native_id:
             return legacy
     return None
+
+
+def decision_graph_unit_id(prd_unit_id: str) -> str:
+    """Derive the DecisionGraph issue-store unit id for a PRD unit (PRD 280 R16)."""
+    unit_id = (prd_unit_id or "").strip()
+    if not unit_id:
+        return ""
+    if unit_id.endswith(DECISION_GRAPH_UNIT_SUFFIX):
+        return unit_id
+    return f"{unit_id}{DECISION_GRAPH_UNIT_SUFFIX}"
+
+
+def decision_graph_virtual_body_path(unit_id: str) -> str:
+    """Virtual body path for DecisionGraph JSON in separate-project issue-store (R17)."""
+    uid = (unit_id or "").strip()
+    if not uid:
+        raise ValueError("decision-graph unit id required")
+    return f"docs/planning/decision/{uid}/{DECISION_GRAPH_FILENAME}"
+
+
+def decision_record_virtual_body_path(unit_id: str) -> str:
+    """Virtual body path for markdown decision records."""
+    uid = (unit_id or "").strip()
+    if not uid:
+        raise ValueError("decision unit id required")
+    return f"docs/decisions/{uid}.md"
+
+
+def is_decision_graph_body_path(body_path: str) -> bool:
+    norm = body_path.replace("\\", "/").lower()
+    return norm.endswith(f"/{DECISION_GRAPH_FILENAME}") or "/planning/decision/" in norm
+
+
+def resolve_decision_put_path(unit_id: str, body_path: str) -> tuple[str, str]:
+    """Normalize unit id + virtual path for decision artifact puts (fail-closed)."""
+    uid = (unit_id or "").strip()
+    rel = body_path.replace("\\", "/").lstrip("/") if body_path else ""
+    if is_decision_graph_body_path(rel):
+        if not uid:
+            parts = rel.split("/")
+            if len(parts) >= 3 and parts[-1] == DECISION_GRAPH_FILENAME:
+                uid = parts[-2]
+        if not uid:
+            raise ValueError("decision-graph put requires unit id")
+        return uid, decision_graph_virtual_body_path(uid)
+    if rel.startswith("docs/decisions/"):
+        if not uid:
+            uid = Path(rel).stem
+        return uid, decision_record_virtual_body_path(uid)
+    if uid:
+        return uid, decision_graph_virtual_body_path(uid)
+    raise ValueError("decision put requires unit id or recognized virtual body path")
 
 
 def unit_id_lookup_candidates(root: Path, unit_id: str) -> list[str]:
