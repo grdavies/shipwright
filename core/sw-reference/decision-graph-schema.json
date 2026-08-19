@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipwright.dev/schemas/decision-graph/v1",
+  "title": "DecisionGraph",
+  "description": "Engineering decision layer graph document (PRD 280).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {
+      "const": "decision-graph/v1"
+    },
+    "kind": {
+      "const": "DecisionGraph"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unitId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodes", "edges"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nodeKind": {
+      "type": "string",
+      "enum": [
+        "decision",
+        "research",
+        "human-action",
+        "prototype",
+        "unknown"
+      ]
+    },
+    "nodeStatus": {
+      "type": "string",
+      "enum": ["open", "resolved", "cancelled"]
+    },
+    "resolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome"],
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rationale": {
+          "type": "string"
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        },
+        "kind": {
+          "$ref": "#/$defs/nodeKind"
+        },
+        "status": {
+          "$ref": "#/$defs/nodeStatus"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "topic": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolution": {
+          "$ref": "#/$defs/resolution"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "decision"
+              }
+            }
+          },
+          "then": {
+            "required": ["question"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "research"
+              }
+            }
+          },
+          "then": {
+            "required": ["topic"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "human-action"
+              }
+            }
+          },
+          "then": {
+            "required": ["title"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "prototype"
+              }
+            }
+          },
+          "then": {
+            "required": ["title"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "unknown"
+              }
+            }
+          },
+          "then": {
+            "required": ["question"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": ["decision", "unknown"]
+              },
+              "status": {
+                "const": "resolved"
+              }
+            }
+          },
+          "then": {
+            "required": ["resolution"]
+          }
+        }
+      ]
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["from", "to"],
+      "properties": {
+        "from": {
+          "type": "string",
+          "minLength": 1
+        },
+        "to": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
