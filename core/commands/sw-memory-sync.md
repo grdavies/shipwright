@@ -22,7 +22,12 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
 
 ## Procedure
 
-1. Resolve provider + project via `memory-preflight`.
+1. Resolve provider + project via `memory-preflight`. **Bind before sync (PRD 279):** require an explicit
+   write binding — config `memory.provider` + non-empty `memory.project`, or marker
+   `.cursor/sw-memory.provider` with literal `in-repo` (basename project). Assert with
+   `python3 scripts/sw_bootstrap.py memory_preflight.py -- assert-sync-store` (or
+   `resolve-provider --for-write`) before any adapter `store`. Unbound repos **refuse** with a typed
+   cause; there is no ambient Recallium write default and no soft-warn window.
 2. Locate the transcript directory for this workspace (the platform's `agent-transcripts/*.jsonl`).
    Read the marker; compute the candidate set (new or changed since `processedMtimeMs`).
 3. For each candidate transcript, read only the **delta** (events after the last processed point).
@@ -44,7 +49,7 @@ source. `/sw-memory-sync` only writes the *distilled* sink into the memory provi
    with `egress_point="cross-project-copy"`.
 7. Store each kept item via the adapter `store` op with the right canonical category, `relatedFiles`,
    stable tags (`surface:sync`, plus `prd-<n>`/`task-<n>` when inferable), and a deliberate importance.
-   Project scope by default; global only on explicit user direction.
+   Project scope by default; global (`__global__`) only with an explicit config binding.
 8. Update the marker (`processedMtimeMs`, `lastDistilledAt`) for each processed transcript.
 9. **Supersede reconcile (R7):** `python3 scripts/reconcile.py supersede-reconcile --json` — for each
    entry in `docs/decisions/SUPERSEDED.log`, best-effort re-point the non-authoritative side:
@@ -70,6 +75,8 @@ See `core/skills/memory/SKILL.md` for the full codec contract.
 
 ## Guardrails
 
+- **Refuse unbound writes** — bind via `memory.provider`+`memory.project` or `.cursor/sw-memory.provider=in-repo`
+  before sync; never ambient-default to Recallium for writes (PRD 279).
 - Never store raw transcript text — only distilled substance. No secrets, tokens, or credentials.
 - Cap volume: prefer a few high-signal memories over many low-signal ones (avoid re-creating bloat).
 - Idempotent: re-running without new deltas must be a no-op (marker prevents reprocessing).
