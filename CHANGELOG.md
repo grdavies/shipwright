@@ -962,6 +962,7 @@
 * merge phase issue-store-and-pipeline-integration-medium into feat/engineering-decision-layer (de3edb8) <!-- sw-deliver:issue-store-and-pipeline-integration-medium -->
 * merge phase observability-and-operator-surfaces-small into feat/engineering-decision-layer (a856a94) <!-- sw-deliver:observability-and-operator-surfaces-small -->
 * merge phase config-schema-shared-signal-collectors into feat/codebase-intelligence (62f0651) <!-- sw-deliver:config-schema-shared-signal-collectors -->
+* merge phase domain-vocabulary-store-divergence-cli into feat/codebase-intelligence (6f7152d) <!-- sw-deliver:domain-vocabulary-store-divergence-cli -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
