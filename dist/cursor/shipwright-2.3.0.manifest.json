@@ -226,6 +226,7 @@
     "code-review-normalize.py",
     "code-review-select.py",
     "code_review_normalize_lib.py",
+    "codebase_intelligence_signals.py",
     "commit-msg-guard.py",
     "communication-resolve.py",
     "config-at-entry.py",
@@ -745,5 +746,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 742
+  "moduleCount": 743
 }
