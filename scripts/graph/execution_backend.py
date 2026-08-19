@@ -533,3 +533,198 @@ class LocalSyncExecutionBackend:
 
     def result(self, handle: ExecutionHandle) -> TerminalEnvelope:
         return self._inner.result(handle)
+
+
+@dataclass
+class _HumanActionHandleRecord:
+    request: SubmitRequest
+    phase: PollPhase = PollPhase.RUNNING
+    terminal: TerminalEnvelope | None = None
+
+
+class HumanActionExecutionBackend:
+    """WorkflowGraph human-action adapter — awaitHuman + receipt consume (PRD 280 R13)."""
+
+    def __init__(self) -> None:
+        self._records: dict[str, _HumanActionHandleRecord] = {}
+        self._by_idempotency: dict[str, str] = {}
+
+    def submit(self, request: SubmitRequest) -> SubmitResult:
+        existing = self._by_idempotency.get(request.idempotency_key)
+        if existing is not None:
+            return SubmitResult(
+                handle=ExecutionHandle(existing, request.idempotency_key),
+                duplicate=True,
+            )
+
+        from decision_graph.human_action import is_human_action_node, render_procedure_markdown
+        from decision_graph.receipt import validate_receipt
+        from graph.node_kinds import is_human_action_kind
+
+        node = dict(request.node)
+        kind = str(node.get("kind") or "")
+        if not is_human_action_kind(kind) and not is_human_action_node(node):
+            raise ExecutionBackendError(f"human-action backend refused kind {kind!r}")
+
+        handle_id = str(uuid.uuid4())
+        record = _HumanActionHandleRecord(request=request)
+        self._records[handle_id] = record
+        self._by_idempotency[request.idempotency_key] = handle_id
+
+        receipt_doc = None
+        target = node.get("target")
+        if isinstance(target, Mapping):
+            data = target.get("data")
+            if isinstance(data, Mapping):
+                receipt_doc = data.get("receipt")
+
+        if isinstance(receipt_doc, Mapping):
+            verdict = validate_receipt(receipt_doc, expected_node_id=str(node.get("id") or ""))
+            if verdict.get("verdict") == "pass":
+                record.terminal = TerminalEnvelope(
+                    report=AdvisoryExecutionReport(
+                        verdict="pass",
+                        output=verdict.get("receipt"),
+                        coverage={"awaitHuman": False, "receiptConsumed": True},
+                    )
+                )
+            else:
+                record.terminal = TerminalEnvelope(
+                    report=AdvisoryExecutionReport(
+                        verdict="fail",
+                        output=verdict,
+                        coverage={"awaitHuman": True, "receiptConsumed": False},
+                    ),
+                    reason=str(verdict.get("code") or "receipt-invalid"),
+                )
+        else:
+            procedure = render_procedure_markdown(node)
+            record.terminal = TerminalEnvelope(
+                report=AdvisoryExecutionReport(
+                    verdict="pending",
+                    verdict_eligible=False,
+                    output={"procedure": procedure},
+                    coverage={"awaitHuman": True, "receiptConsumed": False},
+                    retry_only=True,
+                ),
+                reason="await-human-receipt",
+            )
+        record.phase = PollPhase.TERMINAL
+        return SubmitResult(
+            handle=ExecutionHandle(handle_id, request.idempotency_key),
+            duplicate=False,
+        )
+
+    def consume_receipt(
+        self,
+        handle: ExecutionHandle,
+        receipt: Mapping[str, Any],
+    ) -> TerminalEnvelope:
+        """Attach a verified receipt to a pending human-action handle."""
+        from decision_graph.receipt import validate_receipt
+
+        record = self._require(handle)
+        node_id = str(record.request.node.get("id") or "")
+        verdict = validate_receipt(receipt, expected_node_id=node_id or None)
+        if verdict.get("verdict") != "pass":
+            record.terminal = TerminalEnvelope(
+                report=AdvisoryExecutionReport(
+                    verdict="fail",
+                    output=verdict,
+                    coverage={"awaitHuman": True, "receiptConsumed": False},
+                ),
+                reason=str(verdict.get("code") or "receipt-invalid"),
+            )
+        else:
+            record.terminal = TerminalEnvelope(
+                report=AdvisoryExecutionReport(
+                    verdict="pass",
+                    output=verdict.get("receipt"),
+                    coverage={"awaitHuman": False, "receiptConsumed": True},
+                )
+            )
+        record.phase = PollPhase.TERMINAL
+        assert record.terminal is not None
+        return record.terminal
+
+    def poll(self, handle: ExecutionHandle) -> PollStatus:
+        record = self._require(handle)
+        if record.phase == PollPhase.TERMINAL:
+            return PollStatus(phase=PollPhase.TERMINAL)
+        return PollStatus(phase=record.phase)
+
+    def cancel(self, handle: ExecutionHandle) -> PollStatus:
+        record = self._require(handle)
+        record.terminal = TerminalEnvelope(
+            report=AdvisoryExecutionReport(
+                verdict="cancelled",
+                coverage={"awaitHuman": False, "cancelled": True},
+            ),
+            reason="human-action-cancelled",
+        )
+        record.phase = PollPhase.TERMINAL
+        return PollStatus(phase=PollPhase.CANCEL_ACKNOWLEDGED, cancel_acknowledged=True)
+
+    def result(self, handle: ExecutionHandle) -> TerminalEnvelope:
+        record = self._require(handle)
+        if record.terminal is None:
+            raise ExecutionBackendError(f"handle not terminal: {handle.handle_id}")
+        return record.terminal
+
+    def _require(self, handle: ExecutionHandle) -> _HumanActionHandleRecord:
+        record = self._records.get(handle.handle_id)
+        if record is None:
+            raise ExecutionBackendError(f"unknown handle: {handle.handle_id}")
+        if record.request.idempotency_key != handle.idempotency_key:
+            raise ExecutionBackendError("handle/idempotency_key mismatch")
+        return record
+
+
+class RoutingExecutionBackend:
+    """Route node kinds to specialized backends; default sync path for others."""
+
+    def __init__(
+        self,
+        *,
+        default: ExecutionBackend | None = None,
+        human_action: HumanActionExecutionBackend | None = None,
+    ) -> None:
+        self._default = default
+        self._human_action = human_action or HumanActionExecutionBackend()
+        self._handle_backends: dict[str, ExecutionBackend] = {}
+
+    def _select(self, node: Mapping[str, Any]) -> ExecutionBackend:
+        from graph.node_kinds import node_awaits_human
+
+        if node_awaits_human(node):
+            return self._human_action
+        if self._default is None:
+            raise ExecutionBackendError(
+                f"no default backend for node kind {node.get('kind')!r}"
+            )
+        return self._default
+
+    def submit(self, request: SubmitRequest) -> SubmitResult:
+        backend = self._select(request.node)
+        result = backend.submit(request)
+        self._handle_backends[result.handle.handle_id] = backend
+        return result
+
+    def _backend_for(self, handle: ExecutionHandle) -> ExecutionBackend:
+        backend = self._handle_backends.get(handle.handle_id)
+        if backend is None:
+            raise ExecutionBackendError(f"unknown handle: {handle.handle_id}")
+        return backend
+
+    def poll(self, handle: ExecutionHandle) -> PollStatus:
+        return self._backend_for(handle).poll(handle)
+
+    def cancel(self, handle: ExecutionHandle) -> PollStatus:
+        return self._backend_for(handle).cancel(handle)
+
+    def result(self, handle: ExecutionHandle) -> TerminalEnvelope:
+        return self._backend_for(handle).result(handle)
+
+    @property
+    def human_action_backend(self) -> HumanActionExecutionBackend:
+        return self._human_action
