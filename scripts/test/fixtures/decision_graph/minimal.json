@@ -1,0 +1,18 @@
+{
+  "apiVersion": "decision-graph/v1",
+  "kind": "DecisionGraph",
+  "metadata": {
+    "name": "fixture-minimal"
+  },
+  "spec": {
+    "nodes": [
+      {
+        "id": "d1",
+        "kind": "decision",
+        "status": "open",
+        "question": "Which storage backend?"
+      }
+    ],
+    "edges": []
+  }
+}
