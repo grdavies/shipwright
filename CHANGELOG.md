@@ -958,6 +958,7 @@
 * merge phase decisiongraph-schema-and-validation-small into feat/engineering-decision-layer (53d8066) <!-- sw-deliver:decisiongraph-schema-and-validation-small -->
 * merge phase frontier-scheduler-small into feat/engineering-decision-layer (dcf19f5) <!-- sw-deliver:frontier-scheduler-small -->
 * merge phase kernel-guards-and-prototype-isolation-medium into feat/engineering-decision-layer (745bee7) <!-- sw-deliver:kernel-guards-and-prototype-isolation-medium -->
+* merge phase human-action-receipts-medium into feat/engineering-decision-layer (df0ef6c) <!-- sw-deliver:human-action-receipts-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
