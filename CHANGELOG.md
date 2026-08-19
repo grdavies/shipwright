@@ -945,6 +945,7 @@
 * merge phase unbound-fallback-alignment-hard-cut into feat/per-repo-memory-write-binding (a3a8724) <!-- sw-deliver:unbound-fallback-alignment-hard-cut -->
 * merge phase memory-skill-docs into feat/per-repo-memory-write-binding (362e4c3) <!-- sw-deliver:memory-skill-docs -->
 * merge phase sync-command-configuration-guide into feat/codebase-intelligence (a4290b9) <!-- sw-deliver:sync-command-configuration-guide -->
+* merge phase schemas-guardrails-adapter-docs into feat/codebase-intelligence (5514456) <!-- sw-deliver:schemas-guardrails-adapter-docs -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
