@@ -35,6 +35,20 @@ Conformance review: [`sw-reference/memory-provider-recallium-conformance.md`](..
 
 `<project>` below is `memory.project` from the config. Global scope uses the literal `__global__`.
 
+## Write binding (hard-cut)
+
+Recallium is **never** the ambient unbound write default. Mutating ops (`store`, `/sw-memory-sync`
+distillation) must pass `memory_preflight` write assert before this adapter runs:
+
+- Bound: `memory.provider: recallium` **and** non-empty `memory.project` → writes use that project only.
+- Marker `.cursor/sw-memory.provider` with a remote id (including `recallium`) **without**
+  `memory.project` → refuse (`memory-write-marker-remote-needs-project`).
+- Unbound → refuse writes (`memory-write-unbound`); reads/preflight may still show
+  `displayGuidance=in-repo` with `writeAuthorized=false`.
+- `__global__` is explicit-config only — unbound must not omit `project_name` into an ambient default.
+
+Assert: `python3 scripts/memory_preflight.py assert-sync-store` or `resolve-provider --for-write`.
+
 ## Auth
 
 Recallium REST and hook-context rule fetches resolve through committed `memory.credentialRef` and the
