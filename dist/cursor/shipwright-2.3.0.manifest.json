@@ -570,6 +570,8 @@
     "planning_github_projects_v2.py",
     "planning_gitlab_client.py",
     "planning_graph.py",
+    "planning_graph/__init__.py",
+    "planning_graph/decision_projection.py",
     "planning_hierarchy.py",
     "planning_import_inventory.py",
     "planning_index_gen.py",
@@ -741,5 +743,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 738
+  "moduleCount": 740
 }
