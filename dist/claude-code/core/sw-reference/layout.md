@@ -85,8 +85,13 @@ docs/decisions/
 │   └── reclaim-journal.jsonl
 ├── sw-doc-run-locks/                # doc-run exclusion locks (topic digest, R19)
 │   └── reclaim-journal.jsonl
-└── sw-planning-reservations/        # transactional PRD number reservation locks (R16)
-    └── <nnn>.lock
+├── sw-planning-reservations/        # transactional PRD number reservation locks (R16)
+│   └── <nnn>.lock
+├── sw-architecture-radar/           # read-only architecture radar scan artifacts (PRD 280 R1–R6)
+│   ├── last.json                    # pointer to latest scan
+│   └── <scanId>/                    # per-scan candidates + scoring payload
+└── sw-vocabulary-divergence/        # read-only vocabulary divergence artifacts (PRD 280 R7–R11)
+    └── last.json                    # latest check-divergence summary
 ```
 
 ### Per-run deliver layout (PRD 081 R18, R20)
@@ -680,6 +685,36 @@ Per-repo memory write binding (absorb #733). Operator bind-before-sync guidance 
 
 **Decision stance (D1):** separate PRD from deliver closeout cluster. **Decision stance (D3):** new PRD
 absorbs #733 after amendment #735 cancellation — do not amend closed PRD 277.
+
+### Codebase Intelligence surfaces (PRD 280 R1–R17, D1–D7)
+
+Dual-engine operator runtime for architecture health radar and domain vocabulary divergence. No new
+`sw-*` slash commands — existing `/sw-prd`, `/sw-doc-review`, `/sw-retrospective`, and `/sw-status`
+invoke the CLIs below.
+
+| Surface | Canonical path | Writer | Notes |
+| --- | --- | --- | --- |
+| Radar artifacts | `.cursor/sw-architecture-radar/` | `scripts/architecture_radar.py` | Read-only scan output; `last.json` + per-`scanId/` dirs |
+| Divergence artifacts | `.cursor/sw-vocabulary-divergence/` | `scripts/domain_vocabulary.py` | Read-only `check-divergence` summary at `last.json` |
+| Shared signals | `scripts/codebase_intelligence_signals.py` | collectors (read-only git/planning reads) | Mirrored to `core/scripts/`; feeds radar + vocabulary |
+| Vocabulary authority | issue-store `vocab-<slug>` units | `domain_vocabulary.py put-term` | No local `docs/` writes (D3) |
+
+Runtime modules mirrored under `core/scripts/` (`core-scripts-parity` when touched):
+`codebase_intelligence_signals.py`, `architecture_radar.py`, `domain_vocabulary.py`.
+
+**Absorb acceptance map** (source gap → requirement cluster):
+
+| Gap | R-IDs | Acceptance |
+| --- | --- | --- |
+| gap-316 | R1–R6, R12–R14 | Radar scan/explain/emit-candidates; read-only + human `--confirm` on gap emit; shared signals; status/retro hooks |
+| gap-317 | R7–R11, R12, R14–R17 | Vocabulary put/get/list/check-divergence via issue-store; PRD/doc-review hooks; strictMode fail-closed; unit tests green |
+
+**Decision stance (D1):** dual-engine architecture (radar + vocabulary) documented in
+`docs/guides/workflows.md` — not a third planning surface. **Decision stance (D6):** no new slash
+commands; extend existing doc/status/retro paths only.
+
+Operator detail: `docs/guides/workflows.md` (**Codebase Intelligence**);
+`core/commands/sw-status.md` (last-artifact collectors).
 
 ### Verify `no-baseline` evidence matrix (planning#641 / #642, PRD 094 R7/R17)
 
