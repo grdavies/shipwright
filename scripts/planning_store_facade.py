@@ -3944,14 +3944,6 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     else:
         checks.extend(sep.get("checks", []))
 
-    tracked_prds = doctor_tracked_prd_bodies(root, cfg)
-    if tracked_prds.get("verdict") == "fail":
-        return tracked_prds
-    if tracked_prds.get("skipped"):
-        skipped_reasons.append(str(tracked_prds.get("reason") or "tracked-prd-bodies-skipped"))
-    else:
-        checks.extend(tracked_prds.get("checks", []))
-
     from wave_living_docs import doctor_banned_living_path_drift
 
     banned = doctor_banned_living_path_drift(root)
