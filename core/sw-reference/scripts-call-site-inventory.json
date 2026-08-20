@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-20T08:47:16Z",
+  "generatedAt": "2026-08-20T16:41:53Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -631,73 +631,82 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-debug.md:83:debug_deliver_handoff.py",
+      "id": "core/commands/sw-debug.md:78:debug_repro_gate.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
-      "line": 83,
+      "line": 78,
+      "column": 12,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-debug.md:89:debug_deliver_handoff.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-debug.md",
+      "line": 89,
       "column": 17,
       "script": "debug_deliver_handoff.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-debug.md:108:wave.py",
+      "id": "core/commands/sw-debug.md:114:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
-      "line": 108,
+      "line": 114,
       "column": 12,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-debug.md:109:dispatch-check.py",
+      "id": "core/commands/sw-debug.md:115:dispatch-check.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
-      "line": 109,
+      "line": 115,
       "column": 12,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-debug.md:112:sw_bootstrap.py",
+      "id": "core/commands/sw-debug.md:118:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
-      "line": 112,
+      "line": 118,
       "column": 24,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-debug.md:113:resolve-intensity.py",
+      "id": "core/commands/sw-debug.md:119:resolve-intensity.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
-      "line": 113,
+      "line": 119,
       "column": 28,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-debug.md:133:sw_bootstrap.py",
+      "id": "core/commands/sw-debug.md:139:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
-      "line": 133,
+      "line": 139,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-debug.md:148:sw_bootstrap.py",
+      "id": "core/commands/sw-debug.md:154:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
-      "line": 148,
+      "line": 154,
       "column": 28,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-debug.md:152:sw_bootstrap.py",
+      "id": "core/commands/sw-debug.md:158:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-debug.md",
-      "line": 152,
+      "line": 158,
       "column": 40,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -4951,10 +4960,37 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/debug/SKILL.md:79:rca_fanout.py",
+      "id": "core/skills/debug/SKILL.md:76:debug_repro_gate.py",
       "tree": "core/skills",
       "file": "core/skills/debug/SKILL.md",
-      "line": 79,
+      "line": 76,
+      "column": 8,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/debug/SKILL.md:96:debug_repro_gate.py",
+      "tree": "core/skills",
+      "file": "core/skills/debug/SKILL.md",
+      "line": 96,
+      "column": 29,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/debug/SKILL.md:111:debug_repro_gate.py",
+      "tree": "core/skills",
+      "file": "core/skills/debug/SKILL.md",
+      "line": 111,
+      "column": 29,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/debug/SKILL.md:129:rca_fanout.py",
+      "tree": "core/skills",
+      "file": "core/skills/debug/SKILL.md",
+      "line": 129,
       "column": 9,
       "script": "rca_fanout.py",
       "classification": "self-repo-only"
@@ -7561,73 +7597,82 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:83:debug_deliver_handoff.py",
+      "id": "dist/claude-code/commands/sw-debug.md:78:debug_repro_gate.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
-      "line": 83,
+      "line": 78,
+      "column": 12,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-debug.md:89:debug_deliver_handoff.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-debug.md",
+      "line": 89,
       "column": 17,
       "script": "debug_deliver_handoff.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:108:wave.py",
+      "id": "dist/claude-code/commands/sw-debug.md:114:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
-      "line": 108,
+      "line": 114,
       "column": 12,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:109:dispatch-check.py",
+      "id": "dist/claude-code/commands/sw-debug.md:115:dispatch-check.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
-      "line": 109,
+      "line": 115,
       "column": 12,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:112:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-debug.md:118:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
-      "line": 112,
+      "line": 118,
       "column": 24,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:113:resolve-intensity.py",
+      "id": "dist/claude-code/commands/sw-debug.md:119:resolve-intensity.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
-      "line": 113,
+      "line": 119,
       "column": 28,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:133:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-debug.md:139:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
-      "line": 133,
+      "line": 139,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:148:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-debug.md:154:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
-      "line": 148,
+      "line": 154,
       "column": 28,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-debug.md:152:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-debug.md:158:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-debug.md",
-      "line": 152,
+      "line": 158,
       "column": 40,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -11044,10 +11089,37 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/debug/SKILL.md:79:rca_fanout.py",
+      "id": "dist/claude-code/skills/debug/SKILL.md:76:debug_repro_gate.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/debug/SKILL.md",
-      "line": 79,
+      "line": 76,
+      "column": 8,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/debug/SKILL.md:96:debug_repro_gate.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/debug/SKILL.md",
+      "line": 96,
+      "column": 29,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/debug/SKILL.md:111:debug_repro_gate.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/debug/SKILL.md",
+      "line": 111,
+      "column": 29,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/debug/SKILL.md:129:rca_fanout.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/debug/SKILL.md",
+      "line": 129,
       "column": 9,
       "script": "rca_fanout.py",
       "classification": "self-repo-only"
@@ -13339,73 +13411,82 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:83:debug_deliver_handoff.py",
+      "id": "dist/cursor/commands/sw-debug.md:78:debug_repro_gate.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
-      "line": 83,
+      "line": 78,
+      "column": 12,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-debug.md:89:debug_deliver_handoff.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-debug.md",
+      "line": 89,
       "column": 17,
       "script": "debug_deliver_handoff.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:108:wave.py",
+      "id": "dist/cursor/commands/sw-debug.md:114:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
-      "line": 108,
+      "line": 114,
       "column": 12,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:109:dispatch-check.py",
+      "id": "dist/cursor/commands/sw-debug.md:115:dispatch-check.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
-      "line": 109,
+      "line": 115,
       "column": 12,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:112:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-debug.md:118:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
-      "line": 112,
+      "line": 118,
       "column": 24,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:113:resolve-intensity.py",
+      "id": "dist/cursor/commands/sw-debug.md:119:resolve-intensity.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
-      "line": 113,
+      "line": 119,
       "column": 28,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:133:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-debug.md:139:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
-      "line": 133,
+      "line": 139,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:148:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-debug.md:154:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
-      "line": 148,
+      "line": 154,
       "column": 28,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-debug.md:152:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-debug.md:158:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-debug.md",
-      "line": 152,
+      "line": 158,
       "column": 40,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -16822,10 +16903,37 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/debug/SKILL.md:79:rca_fanout.py",
+      "id": "dist/cursor/skills/debug/SKILL.md:76:debug_repro_gate.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/debug/SKILL.md",
-      "line": 79,
+      "line": 76,
+      "column": 8,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/debug/SKILL.md:96:debug_repro_gate.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/debug/SKILL.md",
+      "line": 96,
+      "column": 29,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/debug/SKILL.md:111:debug_repro_gate.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/debug/SKILL.md",
+      "line": 111,
+      "column": 29,
+      "script": "debug_repro_gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/debug/SKILL.md:129:rca_fanout.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/debug/SKILL.md",
+      "line": 129,
       "column": 9,
       "script": "rca_fanout.py",
       "classification": "self-repo-only"
