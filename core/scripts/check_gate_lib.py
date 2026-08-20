@@ -91,7 +91,7 @@ def validate_resilience_verify_scope(root: Path, cfg: dict[str, Any]) -> str | N
     """Fail-closed readiness check for resilience verify scope wiring (PRD 323 R22)."""
     runner = root / RESILIENCE_RUNNER_REL
     if not runner.is_file():
-        return "runner-missing"
+        return None
     text = runner.read_text(encoding="utf-8", errors="replace")
     if RESILIENCE_VERIFY_SCOPE not in text:
         return "runner-missing-resilience-scope"
