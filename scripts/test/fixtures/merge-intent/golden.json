@@ -1,0 +1,29 @@
+{
+  "cases": [
+    {
+      "path": "scripts/shared.py",
+      "leftReceipt": {
+        "taskRef": "3.1",
+        "rationale": "left intent for shared module"
+      },
+      "rightReceipt": {
+        "taskRef": "3.1",
+        "rationale": "right intent for shared module"
+      },
+      "expectedClass": "compatible-merge",
+      "expectedSide": "RIGHT"
+    },
+    {
+      "path": "scripts/a.py",
+      "leftCommitMessage": "task 3.1 left intent",
+      "rightCommitMessage": "task 3.2 right intent",
+      "expectedClass": "semantic-ambiguous"
+    },
+    {
+      "path": "scripts/test/fixtures/parity/cursor-golden.manifest",
+      "leftReceipt": {},
+      "rightReceipt": {},
+      "expectedClass": "deterministic-regen"
+    }
+  ]
+}

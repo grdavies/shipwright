@@ -259,6 +259,7 @@
     "credentials/selector_store.py",
     "credentials/send_path.py",
     "debug_deliver_handoff.py",
+    "debug_repro_gate.py",
     "decision_graph/__init__.py",
     "decision_graph/evidence.py",
     "decision_graph/frontier.py",
@@ -499,6 +500,8 @@
     "memory_visibility_probe.py",
     "memory_write_binding.py",
     "mempalace_interchange.py",
+    "merge_intent_resolve.py",
+    "merge_provenance.py",
     "merge_ready_enforcement.py",
     "migrate_registry_wave.py",
     "migration-parity-shadow.py",
@@ -751,5 +754,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 748
+  "moduleCount": 751
 }

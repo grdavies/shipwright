@@ -323,9 +323,12 @@ def _resolve_scope() -> str:
     import os
 
     explicit = os.environ.get("SW_TEST_SCOPE", "").strip().lower()
-    if explicit in {"fast", "phase", "full"}:
+    if explicit in {"fast", "phase", "full", "resilience"}:
         return explicit
     return "full"
+
+
+RESILIENCE_PYTEST_PATH = "scripts/unit_tests/resilience"
 
 
 def run_pytest_scope(
@@ -352,6 +355,20 @@ def run_pytest_scope(
     return run_pytest(final_args, root=resolved_root)
 
 
+def run_resilience_verify(root: Path, *, coverage: bool = False, coverdir: Path | None = None) -> int:
+    """Run resilience harness pytest slice (PRD 323 R22)."""
+    use_coverage = coverage_enabled(flag=coverage)
+    active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
+    os.environ["SW_TEST_SCOPE"] = "resilience"
+    ec = run_pytest(
+        [RESILIENCE_PYTEST_PATH],
+        root=root if (root / "scripts" / "unit_tests").is_dir() else repo_root(),
+    )
+    if use_coverage and active_coverdir is not None:
+        emit_coverage_report(active_coverdir, root=root)
+    return ec
+
+
 def run_verify(
     root: Path,
     *,
@@ -360,6 +377,8 @@ def run_verify(
     scope: str = "full",
 ) -> int:
     """Run pytest collection plus pr-test-plan manifest (PRD 054 R17/R18)."""
+    if scope == "resilience":
+        return run_resilience_verify(root, coverage=coverage, coverdir=coverdir)
     use_coverage = coverage_enabled(flag=coverage)
     active_coverdir = coverdir or (resolve_coverdir(root) if use_coverage else None)
     os.environ["SW_TEST_SCOPE"] = scope
@@ -407,7 +426,7 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("run-manifest", help="Run pr-test-plan manifest fixtures")
     p_verify = sub.add_parser("verify", help="Run verify.test bundle")
-    p_verify.add_argument("--scope", default=None, choices=["fast", "phase", "full"])
+    p_verify.add_argument("--scope", default=None, choices=["fast", "phase", "full", "resilience"])
     sub.add_parser("list", help="List discoverable tests")
 
     p_pytest = sub.add_parser("run-pytest", help="Run vendored pytest with scope dispatch")
@@ -431,6 +450,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_manifest(root, coverage=coverage)
     if args.cmd == "verify":
         scope = args.scope or _resolve_scope()
+        if scope == "resilience":
+            return run_resilience_verify(root, coverage=coverage)
         if scope in {"fast", "phase"}:
             return run_pytest_scope(root, scope=scope)
         return run_verify(root, coverage=coverage, scope=scope)
