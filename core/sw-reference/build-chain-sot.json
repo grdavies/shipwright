@@ -95,6 +95,8 @@
     "quality-signal.schema.json",
     "root-cause-record.schema.json",
     "rule-effectiveness-record.schema.json",
+    "rule-recommendation.schema.json",
+    "safety-rule-ids.json",
     "risk-class-floors.json",
     "schemas/",
     "schemas/orchestrator-guideline-pack.schema.json",
