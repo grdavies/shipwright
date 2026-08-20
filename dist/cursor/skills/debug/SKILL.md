@@ -68,6 +68,56 @@ python3 scripts/dispatch-check.py --agent generalPurpose --command sw-debug --sk
 4. `memory-preflight` **search**: category `debug`, `relatedFiles`, tags for failing area.
 5. Attach `priorDebugMemoryIds` to the signal context.
 
+## Phase 1.5 — Repro-first gate (R16–R21)
+
+Before RCA hypothesis generation, run the mechanical repro-first gate:
+
+```bash
+python3 scripts/debug_repro_gate.py run \
+  --signal "$RUN_DIR/normalized-signal.json" \
+  --state "$RUN_DIR/repro-gate-state.json" \
+  --out "$RUN_DIR/repro-gate.status.json"
+```
+
+Gate verdicts: `pass` (repro confirmed or production evidence bundle complete), `blocked`
+(pending checklist items — exit 20), `exhausted` (bounded acquisition exhausted — exit 20). Typed halts
+include `resumeCommand` and checklist state (R21).
+
+### Mechanical reproduction path (dev-time, R17)
+
+For `test_failure`, `build_failure`, and `verify_failure`:
+
+1. **Repro command (red)** — run the narrowest repro command; record exact command + output digest in
+   `repro-gate-state.json` under `repro.reproCommand` / `repro.reproConfirmed`.
+2. **Minimize** — shrink surface area until failure remains (`mechanicalRepro.repro_minimize`).
+3. **Instrument** — add temporary logging or trace hooks on the failing path
+   (`mechanicalRepro.repro_instrument`).
+
+Checklist metadata: `python3 scripts/debug_repro_gate.py checklist-metadata --signal-class dev-time`.
+
+### Evidence acquisition path (production, R18–R20)
+
+When local repro is impossible for `sentry`, `deploy_log`, or `user_report`:
+
+1. Fetch logs (`evidenceAcquisition.logs`).
+2. Fetch traces/spans (`evidenceAcquisition.traces`).
+3. Collect replay bundle when available (`evidenceAcquisition.replay_bundle`).
+4. Sentry MCP enrich read-only (`evidenceAcquisition.sentry_enrich`).
+
+Before hypothesis unlock, persist production evidence bundle metadata in gate state:
+
+- `signalClass`, `checklistState`, redacted `artifactPaths`, and `complete: true` when required items finish.
+
+Checklist metadata: `python3 scripts/debug_repro_gate.py checklist-metadata --signal-class production`.
+
+### Hypothesis gate (R19)
+
+Do not emit or dispatch RCA hypotheses while gate verdict is `blocked`. If hypotheses are present during
+evaluation, the gate returns `hypothesisGate: refused` with cause `hypothesis-before-gate`.
+
+On `pass`, proceed to Phase 2. On `blocked` or `exhausted`, halt with `resumeCommand` and surface checklist
+state — no speculative fix or hypothesis fan-out.
+
 ## Phase 2 — RCA
 
 Invoke `skills/rca-core`:

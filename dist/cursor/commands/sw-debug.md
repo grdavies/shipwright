@@ -73,12 +73,18 @@ guideline pack — plans omitting or reordering them are rejected fail-closed. D
 3. **Normalize + redact** signal per `skills/rca-core/references/debug-inputs.md` (extend shape for dev-time).
 4. **Sentry enrich** when applicable (`skills/debug/references/sentry.md`); degrade if MCP unavailable.
    - When steps 4 and the pre-work search both apply, run **concurrently** (DBG-A2) — independent I/O; collect
-     before RCA.
-5. **RCA** — `skills/rca-core` (`rca-core` entry):
+     before repro gate / RCA.
+5. **Repro-first gate (R16–R21)** — before RCA hypothesis generation, run
+   `python3 scripts/debug_repro_gate.py run --signal "$RUN_DIR/normalized-signal.json" --state "$RUN_DIR/repro-gate-state.json" --out "$RUN_DIR/repro-gate.status.json"`.
+   - Dev-time: mechanical repro path (red command, minimize, instrument) per `skills/debug/SKILL.md` Phase 1.5.
+   - Production: evidence acquisition checklist + bundle metadata before hypothesis unlock (R20).
+   - **Halt** on `blocked` or `exhausted` (exit 20) with typed `resumeCommand`; do not dispatch RCA hypotheses
+     while checklist items remain (R19).
+6. **RCA** — `skills/rca-core` (`rca-core` entry) **only after gate `pass`**:
    - production signals → **debug entry**
    - test/build/verify failures → **dev-time entry** (repro-first + failing-regression-test gates)
-6. **Route** — classify fix size via triage rubric; present handoff and **halt for one human route confirmation**.
-7. On confirmed route, **in-turn** (DBG-A1):
+7. **Route** — classify fix size via triage rubric; present handoff and **halt for one human route confirmation**.
+8. On confirmed route, **in-turn** (DBG-A1):
    - **Small** → thin debug pack → deliver handoff (PRD 067 R10–R13):
      1. `python3 scripts/debug_deliver_handoff.py . materialize --slug <slug> --files … --acceptance … --rca-summary '<redacted>'`
         writes `tasks-debug-<slug>` (virtual body `docs/prds/debug-<slug>/…`) without `/sw-doc`.
@@ -89,8 +95,8 @@ guideline pack — plans omitting or reordering them are rejected fail-closed. D
         “run verify next” from debug.
    - **Substantial** → dispatch `/sw-brainstorm` or `/sw-amend` per doc workstream (R14). Never auto-merge
      to `main`. Substantial routes **bypass** the thin debug pack.
-8. **Record** route + originating signal via `memory-preflight` write (redacted) for compounding.
-9. Return structured handoff summary (root cause, proposed fix, route, next command / `resumeCommand`).
+9. **Record** route + originating signal via `memory-preflight` write (redacted) for compounding.
+10. Return structured handoff summary (root cause, proposed fix, route, next command / `resumeCommand`).
 
 ## Delegated atomics
 
