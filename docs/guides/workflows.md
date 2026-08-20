@@ -1164,6 +1164,65 @@ confirmation alone is insufficient; peer agreement without exogenous coupling is
 
 Authority: `.cursor/sw-learning-store/` via `ReviewerMetricsStoreAdapter` only (see `.sw/layout.md`).
 
+## Codebase Intelligence
+
+Shipwright exposes a **dual-engine** operator surface — architecture health radar and domain vocabulary
+divergence — without new slash commands. Existing workflows invoke read-only CLIs and surface artifacts
+through `/sw-status`, `/sw-prd`, `/sw-doc-review`, and `/sw-retrospective`.
+
+### Configuration
+
+`planning.intelligence` in `workflow.config.json` (schema: `core/sw-reference/config.schema.json`):
+
+| Key | Default | Role |
+| --- | --- | --- |
+| `planning.intelligence.radar.postMerge` | `false` | When true, `/sw-retrospective --post-merge` may run `architecture_radar.py scan` |
+| `planning.intelligence.radar.schedule` | `null` | Optional maintenance schedule; `null` disables scheduled scans |
+| `planning.intelligence.radar.windows.*` | see schema | Git-churn window and activity-bias thresholds |
+| `planning.intelligence.vocabulary.strictMode` | `false` | When true, divergence `error` severity blocks spec-rigor; default advisory |
+
+### Architecture radar
+
+Read-only signal collection and scoring — never mutates git or worktrees.
+
+```bash
+python3 scripts/architecture_radar.py scan
+python3 scripts/architecture_radar.py explain <modulePath> [--scan-id <id>]
+python3 scripts/architecture_radar.py emit-candidates [--scan-id <id>] --confirm
+```
+
+| Concern | Contract |
+| --- | --- |
+| Artifacts | `.cursor/sw-architecture-radar/` (`last.json` + per-`scanId/` candidates) |
+| Shared signals | `scripts/codebase_intelligence_signals.py` — git churn, review findings, gap linkage, reverts, import fan-out, test fragility |
+| Human gate | `emit-candidates` invokes gap capture **only** with `--confirm` |
+| Status | `python3 scripts/status_collect.py architecture-radar-last` |
+| Post-merge retro | Optional `scan` when `radar.postMerge: true`; compound notes only — never auto-emit or promote |
+
+### Domain vocabulary
+
+Terms are authoritative in the planning issue-store (`vocab-<slug>` units). The CLI never writes under
+`docs/` in the code repo.
+
+```bash
+python3 scripts/domain_vocabulary.py put-term --slug <slug> --body-file <path>
+python3 scripts/domain_vocabulary.py get-term --slug <slug>
+python3 scripts/domain_vocabulary.py list-terms
+python3 scripts/domain_vocabulary.py check-divergence --body-file <prd-draft.md>
+```
+
+| Concern | Contract |
+| --- | --- |
+| Divergence artifact | `.cursor/sw-vocabulary-divergence/last.json` (read-only) |
+| PRD hook | `/sw-prd` post-draft `check-divergence` — advisory unless `strictMode` |
+| Doc review | Coherence persona receives divergence summary when present; no silent canonical promotion |
+| Status | `python3 scripts/status_collect.py vocabulary-divergence-last` |
+| Tests | `scripts/unit_tests/planning/test_domain_vocabulary.py`, `test_architecture_radar.py` |
+
+### Layout and absorb close-out
+
+Harness roots and absorb acceptance criteria live in `.sw/layout.md` (**Codebase Intelligence surfaces**).
+
 ## Turn-independent deliver ship loop
 
 Phase-mode `/sw-deliver run` drives `/sw-ship` through the durable **ship-loop driver** — not ad-hoc
