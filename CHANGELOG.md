@@ -966,6 +966,7 @@
 * merge phase architecture-radar-core into feat/codebase-intelligence (747561a) <!-- sw-deliver:architecture-radar-core -->
 * merge phase prd-doc-review-integration-hooks into feat/codebase-intelligence (6f52383) <!-- sw-deliver:prd-doc-review-integration-hooks -->
 * merge phase retro-status-surfaces into feat/codebase-intelligence (fdcf6a5) <!-- sw-deliver:retro-status-surfaces -->
+* merge phase docs-layout-absorb-closure into feat/codebase-intelligence (de75519) <!-- sw-deliver:docs-layout-absorb-closure -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
