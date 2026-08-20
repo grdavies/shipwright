@@ -969,6 +969,7 @@
 * merge phase docs-layout-absorb-closure into feat/codebase-intelligence (de75519) <!-- sw-deliver:docs-layout-absorb-closure -->
 * merge phase rule-effectiveness-events into feat/measurement-and-learning (0f5c90f) <!-- sw-deliver:rule-effectiveness-events -->
 * merge phase workflow-intelligence-cohort-store into feat/measurement-and-learning (fd2c14d) <!-- sw-deliver:workflow-intelligence-cohort-store -->
+* merge phase rule-recommendations-and-safety-exception into feat/measurement-and-learning (42ada3b) <!-- sw-deliver:rule-recommendations-and-safety-exception -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
