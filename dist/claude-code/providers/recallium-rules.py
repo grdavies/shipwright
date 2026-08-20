@@ -114,6 +114,13 @@ def main() -> int:
         rid = row.get("id") or row.get("memory_id") or row.get("summary")
         summary = row.get("summary") or row.get("content") or ""
         rules.append({"id": rid, "summary": summary})
+    if os.environ.get("SW_RULE_EFFECTIVENESS_DISABLED") != "1":
+        try:
+            from rule_effectiveness import emit_provider_fetch_events
+
+            emit_provider_fetch_events(root, provider="recallium", rules=rules, ok=True)
+        except Exception:
+            pass
     print(json.dumps({"ok": True, "rules": rules}))
     return 0
 

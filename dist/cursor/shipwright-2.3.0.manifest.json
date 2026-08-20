@@ -639,6 +639,7 @@
     "review_synthesize.py",
     "reviewer-dispatch-check.py",
     "reviewer-metrics.py",
+    "rule_effectiveness.py",
     "rule_verification.py",
     "rule_verification_lib.py",
     "rule_verifier_sweep.py",
@@ -736,10 +737,12 @@
     "wave_spec_seed.py",
     "wave_spec_seed_guard.py",
     "wave_state.py",
+    "wave_status.py",
     "wave_target_lock.py",
     "wave_terminal.py",
     "wave_transition_receipt.py",
     "workflow-pin-validity-check.py",
+    "workflow_intelligence.py",
     "workflow_pin_validity_check_lib.py",
     "worktree.py",
     "worktree_lib.py",
@@ -748,5 +751,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 745
+  "moduleCount": 748
 }

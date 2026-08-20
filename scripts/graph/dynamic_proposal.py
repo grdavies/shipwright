@@ -2,6 +2,7 @@
 """Guarded WorkflowGraph proposals with deterministic canonical fallback."""
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -1160,3 +1161,77 @@ def evaluate_shadow_proposal(
         receipts=receipts,
         token_cost=token_cost,
     )
+
+
+def export_shadow_evaluation_inputs(
+    candidates: Sequence[Mapping[str, Any]] | None,
+    *,
+    canonical_graph: Mapping[str, Any],
+    shadow_enabled: bool = True,
+) -> dict[str, Any]:
+    """Export read-only shadow evaluation inputs from optimization candidates (PRD 280 R9)."""
+    read_only_payload = {
+        "readOnlyAssert": True,
+        "mutatingBackendCalls": 0,
+    }
+    if not shadow_enabled:
+        return {
+            "verdict": "skipped",
+            "action": "export-shadow-inputs",
+            "reason": "shadow-disabled",
+            "inputs": [],
+            **read_only_payload,
+        }
+    if not candidates:
+        return {
+            "verdict": "pass",
+            "action": "export-shadow-inputs",
+            "candidateCount": 0,
+            "inputs": [],
+            **read_only_payload,
+        }
+
+    inputs: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    canonical_stripped = _strip_proposal_metric_fields(canonical_graph)
+    for index, candidate in enumerate(candidates):
+        if not isinstance(candidate, Mapping):
+            errors.append({"index": index, "error": "candidate must be a mapping"})
+            continue
+        try:
+            stripped = _strip_proposal_metric_fields(candidate)
+            assert_judgment_independence_floor(stripped, template=canonical_graph)
+            digest = hashlib.sha256(
+                json.dumps(dict(stripped), sort_keys=True, separators=(",", ":")).encode(
+                    "utf-8"
+                )
+            ).hexdigest()
+            inputs.append(
+                {
+                    "candidateDigest": digest,
+                    "proposal": stripped,
+                    "canonicalGraph": canonical_stripped,
+                    "readOnly": True,
+                    "mutatingBackendCalls": 0,
+                    "shadowMode": "read-only-export",
+                }
+            )
+        except (TypeError, ValueError) as exc:
+            errors.append({"index": index, "error": str(exc)})
+
+    if errors and not inputs:
+        return {
+            "verdict": "fail",
+            "action": "export-shadow-inputs",
+            "errors": errors,
+            "inputs": [],
+            **read_only_payload,
+        }
+    return {
+        "verdict": "pass",
+        "action": "export-shadow-inputs",
+        "candidateCount": len(inputs),
+        "inputs": inputs,
+        "errors": errors or None,
+        **read_only_payload,
+    }

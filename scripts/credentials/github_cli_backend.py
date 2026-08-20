@@ -25,7 +25,8 @@ from credentials.selector_store import SelectorEntry, resolve_xdg_config_home
 
 GH_PROMPT_DISABLED_ENV: Final[str] = "GH_PROMPT_DISABLED"
 DEFAULT_CREDENTIAL_ENV_NAME: Final[str] = "GH_TOKEN"
-_SCOPE_LINE_RE = re.compile(r"Token scopes:\s*'?(?P<scopes>[^'\n]+)'?", re.IGNORECASE)
+_SCOPE_LINE_RE = re.compile(r"Token scopes:\s*(?P<scopes>.+)$", re.IGNORECASE)
+_SCOPE_QUOTED_RE = re.compile(r"'([^']+)'|\"([^\"]+)\"")
 
 GithubCliRunner = Callable[["GithubCliInvocation"], subprocess.CompletedProcess[str]]
 
@@ -112,6 +113,13 @@ def required_scopes_for_purpose(purpose: str) -> tuple[str, ...]:
 
 
 def parse_scopes_from_auth_status(stdout: str) -> tuple[str, ...]:
+    """Parse `gh auth status` scope lines.
+
+    Older CLI prints a single-quoted comma list (`'repo, read:org'`). Newer CLI
+    quotes each scope (`'gist', 'read:org', 'repo'`). Both must yield the full set —
+    stopping at the first closing quote falsely reports only `gist` and trips
+    `resolver-insufficient-scope` when `repo` is actually granted.
+    """
     for line in stdout.splitlines():
         match = _SCOPE_LINE_RE.search(line)
         if not match:
@@ -119,7 +127,14 @@ def parse_scopes_from_auth_status(stdout: str) -> tuple[str, ...]:
         raw = match.group("scopes").strip()
         if not raw:
             return ()
-        return tuple(scope.strip() for scope in raw.split(",") if scope.strip())
+        quoted = [m.group(1) or m.group(2) for m in _SCOPE_QUOTED_RE.finditer(raw)]
+        if quoted:
+            if len(quoted) == 1 and "," in quoted[0]:
+                return tuple(scope.strip() for scope in quoted[0].split(",") if scope.strip())
+            return tuple(scope.strip() for scope in quoted if scope.strip())
+        return tuple(
+            scope.strip().strip("'\"") for scope in raw.split(",") if scope.strip()
+        )
     return ()
 
 

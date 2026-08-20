@@ -165,6 +165,8 @@ def main(argv: list[str] | None = None) -> int:
 
     exec_env = os.environ.copy()
     exec_env.update(child_env)
+    if normalize_script_name(args.script) == "memory_preflight.py":
+        exec_env.setdefault("SW_RULE_EFFECTIVENESS_SURFACE", "memory-preflight")
     exec_argv = [sys.executable, str(target), *script_args]
     os.execve(sys.executable, exec_argv, exec_env)
     return 0  # pragma: no cover

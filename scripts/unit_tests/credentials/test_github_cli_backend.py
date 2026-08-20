@@ -94,6 +94,20 @@ class TestScopeParsing:
         stdout = "github.com\n  ✓ Logged in\n  - Token scopes: 'repo, read:org'\n"
         assert parse_scopes_from_auth_status(stdout) == ("repo", "read:org")
 
+    def test_parse_scopes_from_auth_status_per_scope_quotes(self) -> None:
+        """Modern `gh auth status` quotes each scope (not the whole list)."""
+        stdout = (
+            "github.com\n  ✓ Logged in\n"
+            "  - Token scopes: 'gist', 'read:org', 'repo', 'workflow', 'write:packages'\n"
+        )
+        assert parse_scopes_from_auth_status(stdout) == (
+            "gist",
+            "read:org",
+            "repo",
+            "workflow",
+            "write:packages",
+        )
+
     def test_scope_shortfall_surfaces_missing_requirement(self) -> None:
         result = probe_scopes(("read:user",), ("repo", "read:user"))
         assert result.shortfall == ("repo",)
