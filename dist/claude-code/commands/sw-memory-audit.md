@@ -85,3 +85,30 @@ Never lower sensitivity during bulk import, sync, or automated promotion without
   contradicting content-bearing `decision` memories; offer `legacy-reconcile-plan` on explicit mode switch.
 - When a memory contradicts the authoritative side, propose collapse-to-pointer or promotion per SoT — do not
   silently rewrite authoritative git records from memory.
+
+## Rule effectiveness recommendations (PRD 280 R5)
+
+Before promoting, retiring, or materially narrowing any `category: rule` memory based on telemetry:
+
+1. Generate the advisory report (read-only):
+
+```bash
+python3 scripts/rule_effectiveness.py recommendations report --root .
+```
+
+2. Review `recommendations` in the JSON output — each entry includes `recommendation` (`retain`, `merge`,
+   `narrow`, `re-evaluate`, `retire`), `reason`, `confidence`, and `supportingMetrics`.
+3. **Safety exception (R4):** safety-tagged rules (see `core/sw-reference/safety-rule-ids.json`) never receive
+   an autonomous `retire` recommendation without a recorded waiver. Blocked retires surface as
+   `safetyBlocked: true` with `re-evaluate` and an audit handoff reason.
+4. Lifecycle mutations (`retire`, `merge`, `narrow`) require explicit human approval in this audit — no silent
+   promotion from measurement outputs. Present recommendation rows in the proposal table alongside hygiene flags.
+5. Waiver recording (human-gated only, after audit approval):
+
+```bash
+python3 scripts/rule_effectiveness.py record-waiver <rule-id> \
+  --recommendation retire --approved-by <actor> --reason "<rationale>"
+```
+
+Never record waivers or apply rule lifecycle changes during bulk import, sync, or automated promotion without
+this audit gate.
