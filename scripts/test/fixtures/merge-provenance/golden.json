@@ -1,0 +1,78 @@
+{
+  "cases": [
+    {
+      "path": "scripts/merge_provenance.py",
+      "leftHead": null,
+      "rightHead": null,
+      "executeReceipts": {
+        "2.1": {
+          "taskRef": "2.1",
+          "verdict": "green",
+          "rationale": "feat(provenance): define resolver schema and index API"
+        }
+      },
+      "expectedLeft": {
+        "side": "LEFT",
+        "path": "scripts/merge_provenance.py",
+        "resolved": true,
+        "taskRef": "2.1",
+        "phaseId": "2",
+        "phaseSlug": "provenance-infrastructure-medium",
+        "rationale": "feat(provenance): define resolver schema and index API"
+      },
+      "expectedRight": {
+        "side": "RIGHT",
+        "path": "scripts/merge_provenance.py",
+        "resolved": true,
+        "taskRef": "2.1",
+        "phaseId": "2",
+        "phaseSlug": "provenance-infrastructure-medium",
+        "rationale": "feat(provenance): define resolver schema and index API"
+      }
+    },
+    {
+      "path": "scripts/unit_tests/merge/test_merge_provenance.py",
+      "leftHead": null,
+      "rightHead": null,
+      "executeReceipts": {
+        "2.3": {
+          "taskRef": "2.3",
+          "verdict": "green",
+          "commitMessage": "test(provenance): golden conflict fixtures"
+        }
+      },
+      "expectedLeft": {
+        "side": "LEFT",
+        "path": "scripts/unit_tests/merge/test_merge_provenance.py",
+        "resolved": true,
+        "taskRef": "2.3",
+        "phaseId": "2",
+        "phaseSlug": "provenance-infrastructure-medium",
+        "rationale": "test(provenance): golden conflict fixtures"
+      }
+    },
+    {
+      "path": "docs/prds/323-fixture/323-prd-fixture.md",
+      "leftHead": null,
+      "rightHead": null,
+      "executeReceipts": {},
+      "expectedLeft": {
+        "side": "LEFT",
+        "path": "docs/prds/323-fixture/323-prd-fixture.md",
+        "resolved": false
+      }
+    },
+    {
+      "path": "docs/prds/323-fixture/tasks-fixture-provenance.md",
+      "leftHead": null,
+      "rightHead": null,
+      "executeReceipts": {},
+      "expectedLeft": {
+        "side": "LEFT",
+        "path": "docs/prds/323-fixture/tasks-fixture-provenance.md",
+        "resolved": false,
+        "virtualPath": ".cursor/planning-materialized/docs/prds/323-fixture/tasks-fixture-provenance.md"
+      }
+    }
+  ]
+}
