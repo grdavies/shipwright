@@ -971,6 +971,7 @@
 * merge phase workflow-intelligence-cohort-store into feat/measurement-and-learning (fd2c14d) <!-- sw-deliver:workflow-intelligence-cohort-store -->
 * merge phase rule-recommendations-and-safety-exception into feat/measurement-and-learning (42ada3b) <!-- sw-deliver:rule-recommendations-and-safety-exception -->
 * merge phase analysis-cli-and-status-surfaces into feat/measurement-and-learning (84c3f18) <!-- sw-deliver:analysis-cli-and-status-surfaces -->
+* merge phase shadow-feed-gates-and-dogfood into feat/measurement-and-learning (3ee5b5f) <!-- sw-deliver:shadow-feed-gates-and-dogfood -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
