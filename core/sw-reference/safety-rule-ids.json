@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "description": "Rule ids tagged safety-critical — autonomous retire refused without waiver (PRD 280 R4).",
+  "ruleIds": [
+    "sw-guardrails",
+    "memory-guardrails",
+    "sw-naming",
+    "sw-python-first",
+    "sw-git-conventions",
+    "sw-conductor",
+    "mock-realism"
+  ]
+}

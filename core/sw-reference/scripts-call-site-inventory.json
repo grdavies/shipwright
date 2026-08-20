@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-19T23:57:19Z",
+  "generatedAt": "2026-08-20T05:41:16Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -2149,6 +2149,24 @@
       "line": 84,
       "column": 46,
       "script": "memory-sot.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-memory-audit.md:96:rule_effectiveness.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-memory-audit.md",
+      "line": 96,
+      "column": 8,
+      "script": "rule_effectiveness.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-memory-audit.md:109:rule_effectiveness.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-memory-audit.md",
+      "line": 109,
+      "column": 8,
+      "script": "rule_effectiveness.py",
       "classification": "self-repo-only"
     },
     {
@@ -9028,6 +9046,24 @@
       "classification": "self-repo-only"
     },
     {
+      "id": "dist/claude-code/commands/sw-memory-audit.md:96:rule_effectiveness.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-memory-audit.md",
+      "line": 96,
+      "column": 8,
+      "script": "rule_effectiveness.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-memory-audit.md:109:rule_effectiveness.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-memory-audit.md",
+      "line": 109,
+      "column": 8,
+      "script": "rule_effectiveness.py",
+      "classification": "self-repo-only"
+    },
+    {
       "id": "dist/claude-code/commands/sw-memory-export.md:27:memory_switch.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-memory-export.md",
@@ -14749,6 +14785,24 @@
       "line": 84,
       "column": 46,
       "script": "memory-sot.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-memory-audit.md:96:rule_effectiveness.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-memory-audit.md",
+      "line": 96,
+      "column": 8,
+      "script": "rule_effectiveness.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-memory-audit.md:109:rule_effectiveness.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-memory-audit.md",
+      "line": 109,
+      "column": 8,
+      "script": "rule_effectiveness.py",
       "classification": "self-repo-only"
     },
     {
