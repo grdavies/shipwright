@@ -639,6 +639,7 @@
     "review_synthesize.py",
     "reviewer-dispatch-check.py",
     "reviewer-metrics.py",
+    "rule_effectiveness.py",
     "rule_verification.py",
     "rule_verification_lib.py",
     "rule_verifier_sweep.py",
@@ -748,5 +749,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 745
+  "moduleCount": 746
 }

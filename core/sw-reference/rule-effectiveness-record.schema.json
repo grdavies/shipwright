@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rule-effectiveness-record.schema.json",
+  "title": "Rule effectiveness telemetry record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "ruleId",
+    "surface",
+    "provider",
+    "outcome",
+    "recordedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "eventId": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 128,
+      "description": "Content-addressed idempotency key — duplicate writes are no-ops."
+    },
+    "ruleId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "surface": {
+      "type": "string",
+      "enum": [
+        "rules-load",
+        "provider-rules-fetch",
+        "memory-preflight"
+      ]
+    },
+    "provider": {
+      "type": ["string", "null"],
+      "maxLength": 64
+    },
+    "outcome": {
+      "type": "string",
+      "enum": [
+        "loaded",
+        "filtered",
+        "revoked",
+        "unreachable",
+        "error"
+      ]
+    },
+    "recordedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rulesReturned": { "type": "integer", "minimum": 0 },
+        "rulesAllowlisted": { "type": "integer", "minimum": 0 },
+        "summaryLength": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "cohortDigest": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$",
+      "description": "Optional SHA-256 digest of normalized cohort dimensions."
+    }
+  }
+}

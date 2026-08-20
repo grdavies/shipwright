@@ -247,7 +247,7 @@ def rules_load(
         for entry in filter_allowlisted(raw_rules, allowlist)
         if _rule_id(entry) not in revoked
     ]
-    return {
+    result = {
         "verdict": "ok",
         "op": "rules-load",
         "provider": provider,
@@ -256,6 +256,27 @@ def rules_load(
         "revoked": sorted(revoked),
         "source": "rules-load",
     }
+    if os.environ.get("SW_RULE_EFFECTIVENESS_DISABLED") != "1":
+        try:
+            from rule_effectiveness import emit_memory_preflight_rules_load
+
+            telemetry = emit_memory_preflight_rules_load(
+                root,
+                provider=provider,
+                rules=rules,
+                allowlist_count=len(rules),
+            )
+            if telemetry.get("verdict") == "halt":
+                raise PreflightError(
+                    str(telemetry.get("errors")),
+                    cause="rule-effectiveness-redaction",
+                )
+            result["ruleEffectiveness"] = telemetry
+        except PreflightError:
+            raise
+        except Exception:
+            pass
+    return result
 
 
 def search_cannot_load_rules() -> None:
