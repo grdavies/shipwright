@@ -44,7 +44,7 @@ FROZEN_LABEL = "sw:frozen"
 FREEZE_INCOMPLETE_LABEL = "sw:freeze-incomplete"
 FREEZE_HASH_PATTERN = re.compile(r"sw-freeze-hash:\s*([a-f0-9]{64})")
 
-ARTIFACT_TYPES = frozenset({"prd", "gap", "tasks", "brainstorm", "decision", "amendment"})
+ARTIFACT_TYPES = frozenset({"prd", "gap", "tasks", "brainstorm", "decision", "amendment", "vocabulary"})
 # Sentinel returned by ``infer_artifact_type`` for opaque issue-store locators
 # (``issue:<n>`` / ``issue-cache:<n>``) that carry no path-shape type signal.
 ARTIFACT_TYPE_UNRESOLVED = "__unresolved__"
@@ -55,6 +55,7 @@ TYPE_LABELS = {
     "brainstorm": "sw:brainstorm",
     "decision": "sw:decision",
     "amendment": "sw:amendment",
+    "vocabulary": "sw:vocabulary",
 }
 STATUS_LABEL_PREFIX = "sw:status:"
 GAP_LABEL_OPEN = "sw:gap-open"
@@ -260,6 +261,8 @@ def infer_artifact_type(body_path: str) -> str:
         return "decision"
     if "/gap/" in rel or "/planning/gap/" in rel or rel.startswith("docs/planning/gap/"):
         return "gap"
+    if "/planning/vocabulary/" in rel or rel.startswith("docs/planning/vocabulary/"):
+        return "vocabulary"
     if "/amendments/" in rel:
         return "amendment"
     base = rel.rsplit("/", 1)[-1]

@@ -27,6 +27,19 @@ always false; operators apply edits to task authoring manually after review.
 
 4. Run `python3 scripts/loop_health.py --summary` (when `loopHealth.enabled`) and fold the diagnostic loop-health summary into the retro narrative — metrics are not gating.
 
+5. **Post-merge architecture radar (PRD 280 R13, D2)** — when `planning.intelligence.radar.postMerge` is **true**
+   (default **false**; on-demand scan remains operator-initiated):
+
+```bash
+python3 scripts/architecture_radar.py scan
+```
+
+Run only on **post-merge** retrospective paths (`/sw-retrospective --post-merge`). Pre-merge retro does
+not invoke radar. Output feeds **compound notes only** — include top candidates (`modulePath`, `strength`,
+`disposition`, `improvement`) in distilled learning candidates for the compound write step. Never auto-invoke
+`emit-candidates`, gap capture, or vocabulary canonical promotion from retro. Artifacts persist read-only under
+`.cursor/sw-architecture-radar/`; `/sw-status` surfaces the latest via `architecture-radar-last`.
+
 6. **Rule adversarial verification (R7)** — for each **rule-class** promotion candidate surfaced to compound
    write, run verifier → skeptic before the human promotion gate (unchanged):
 

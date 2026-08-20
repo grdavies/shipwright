@@ -183,6 +183,7 @@
     "_sw/waitmap.json",
     "_zipapp_launcher.py",
     "agents_md_thin.py",
+    "architecture_radar.py",
     "authoring-guard.py",
     "authoring_guard.py",
     "basic_memory_interchange.py",
@@ -226,6 +227,7 @@
     "code-review-normalize.py",
     "code-review-select.py",
     "code_review_normalize_lib.py",
+    "codebase_intelligence_signals.py",
     "commit-msg-guard.py",
     "communication-resolve.py",
     "config-at-entry.py",
@@ -310,6 +312,7 @@
     "docs_pr.py",
     "docs_worktree.py",
     "doctor.py",
+    "domain_vocabulary.py",
     "env-read-guard.py",
     "evidence-read.py",
     "evidence_read.py",
@@ -745,5 +748,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 742
+  "moduleCount": 745
 }

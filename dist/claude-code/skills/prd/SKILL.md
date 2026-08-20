@@ -104,6 +104,32 @@ When a PRD drives engineering decisions that require a `DecisionGraph`:
 - PRD: scan `docs/prds/` for highest `<n>`, increment, zero-pad to 3 digits.
 - Decision: scan `docs/decisions/` for highest `<n>`, increment, zero-pad to 3 digits — **separate counter**.
 
+## Domain vocabulary divergence (PRD 280 R10, D4)
+
+After persisting a **PRD draft** (`--type prd` only — skip decision records):
+
+1. Run terminology drift detection against the saved body:
+
+   ```bash
+   # file-store (body on disk)
+   python3 scripts/domain_vocabulary.py check-divergence --file <prd-path>
+
+   # issue-store (authoritative body in planning store)
+   python3 scripts/domain_vocabulary.py check-divergence --unit-id <prd-unit-id>
+   ```
+
+2. **Advisory default** — `planning.intelligence.vocabulary.strictMode` defaults `false`; `verdict: pass`
+   with `maxSeverity: warn` does **not** block handoff to `/sw-doc-review`.
+3. **Strict escalation** — when `strictMode: true` (config or CLI `--strict`), `verdict: fail` with exit code
+   `20` halts `/sw-prd` before doc-review handoff (fail-closed).
+4. **Artifact** — results persist read-only at `.cursor/sw-vocabulary-divergence/last.json` for downstream
+   doc-review (coherence persona).
+5. **No canonical promotion** — divergence output is `humanGated`; this step never calls `put-term` or mutates
+   the vocabulary registry.
+
+Surface a short divergence summary in the `/sw-prd` report when `divergence` is non-empty (concepts,
+`maxSeverity`, artifact path).
+
 ## Handoff
 
 → `/sw-doc-review` (not `/sw-freeze` or `/sw-tasks`). Resolve Open Questions before freeze (spec-rigor clarify gate on Full tier PRDs).

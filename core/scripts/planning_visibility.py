@@ -41,7 +41,7 @@ DEPRECATED_VISIBILITY_PROFILE_KEY = "visibilityProfile"
 _TIER_PRIVACY_RANK: dict[str, int] = {"all-public": 0, "specs-public": 1, "all-private": 2}
 
 ADVISORY_CONTENT_CLASSES = frozenset({"brainstorm", "decision", "learnings", "gap"})
-SPEC_CONTENT_CLASSES = frozenset({"prd", "tasks", "amendment"})
+SPEC_CONTENT_CLASSES = frozenset({"prd", "tasks", "amendment", "vocabulary"})
 
 STATE_REL = Path(".cursor/hooks/state/planning-visibility.json")
 CONFIG_REL = Path(".cursor/workflow.config.json")

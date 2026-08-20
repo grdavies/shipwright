@@ -961,6 +961,12 @@
 * merge phase human-action-receipts-medium into feat/engineering-decision-layer (df0ef6c) <!-- sw-deliver:human-action-receipts-medium -->
 * merge phase issue-store-and-pipeline-integration-medium into feat/engineering-decision-layer (de3edb8) <!-- sw-deliver:issue-store-and-pipeline-integration-medium -->
 * merge phase observability-and-operator-surfaces-small into feat/engineering-decision-layer (a856a94) <!-- sw-deliver:observability-and-operator-surfaces-small -->
+* merge phase config-schema-shared-signal-collectors into feat/codebase-intelligence (62f0651) <!-- sw-deliver:config-schema-shared-signal-collectors -->
+* merge phase domain-vocabulary-store-divergence-cli into feat/codebase-intelligence (6f7152d) <!-- sw-deliver:domain-vocabulary-store-divergence-cli -->
+* merge phase architecture-radar-core into feat/codebase-intelligence (747561a) <!-- sw-deliver:architecture-radar-core -->
+* merge phase prd-doc-review-integration-hooks into feat/codebase-intelligence (6f52383) <!-- sw-deliver:prd-doc-review-integration-hooks -->
+* merge phase retro-status-surfaces into feat/codebase-intelligence (fdcf6a5) <!-- sw-deliver:retro-status-surfaces -->
+* merge phase docs-layout-absorb-closure into feat/codebase-intelligence (de75519) <!-- sw-deliver:docs-layout-absorb-closure -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
