@@ -259,6 +259,7 @@
     "credentials/selector_store.py",
     "credentials/send_path.py",
     "debug_deliver_handoff.py",
+    "debug_repro_gate.py",
     "decision_graph/__init__.py",
     "decision_graph/evidence.py",
     "decision_graph/frontier.py",
@@ -751,5 +752,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 748
+  "moduleCount": 749
 }
