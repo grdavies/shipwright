@@ -83,6 +83,31 @@ def validate_pr_test_plan_gate(root: Path, pr_test_plan_gate: Any) -> str | None
     return None
 
 
+RESILIENCE_VERIFY_SCOPE = "resilience"
+RESILIENCE_RUNNER_REL = Path("scripts/test/_runner.py")
+
+
+def validate_resilience_verify_scope(root: Path, cfg: dict[str, Any]) -> str | None:
+    """Fail-closed readiness check for resilience verify scope wiring (PRD 323 R22)."""
+    runner = root / RESILIENCE_RUNNER_REL
+    if not runner.is_file():
+        return None
+    text = runner.read_text(encoding="utf-8", errors="replace")
+    if RESILIENCE_VERIFY_SCOPE not in text:
+        return "runner-missing-resilience-scope"
+    if "run_resilience_verify" not in text:
+        return "runner-missing-resilience-handler"
+    resilience_dir = root / "scripts/unit_tests/resilience"
+    if not resilience_dir.is_dir():
+        return "resilience-suite-missing"
+    configured = cfg_value(cfg, "verify", "resilienceTest")
+    if configured is not None:
+        cmd = str(configured)
+        if f"--scope {RESILIENCE_VERIFY_SCOPE}" not in cmd:
+            return "verify.resilienceTest-mismatch"
+    return None
+
+
 def resolve_plugin_root(script_dir: Path | None = None) -> Path:
     """Resolve plugin content root (mirrors sw-resolve-plugin-root.py)."""
     script_dir = script_dir or SCRIPT_DIR
@@ -1155,6 +1180,16 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
         jsonio.emit(payload)
         return 30, payload
 
+    resilience_err = validate_resilience_verify_scope(root, cfg)
+    if resilience_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": f"resilienceVerify:{resilience_err}",
+            "source": "local-evidence",
+        }
+        jsonio.emit(payload)
+        return 30, payload
+
     if not re.fullmatch(r"[a-z0-9-]*", review_provider):
         payload = {
             "verdict": "blocked",
@@ -1275,6 +1310,12 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     manifest_err = validate_pr_test_plan_gate(root, slim_ref)
     if manifest_err:
         payload = {"verdict": "blocked", "reason": f"prTestPlan:{manifest_err}"}
+        jsonio.emit(payload)
+        return 30, payload
+
+    resilience_err = validate_resilience_verify_scope(root, cfg)
+    if resilience_err:
+        payload = {"verdict": "blocked", "reason": f"resilienceVerify:{resilience_err}"}
         jsonio.emit(payload)
         return 30, payload
 
