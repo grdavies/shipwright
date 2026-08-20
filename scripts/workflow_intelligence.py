@@ -336,6 +336,180 @@ class WorkflowIntelligenceStore:
 
         return result
 
+    def load_aggregate(self, key: str) -> dict[str, Any] | None:
+        path = self.aggregate_path(key)
+        if not path.is_file():
+            return None
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+        return payload if isinstance(payload, dict) else None
+
+    def resolve_aggregate(self, key: str) -> dict[str, Any] | None:
+        """Load persisted aggregate or compute from ingested records."""
+        existing = self.load_aggregate(key)
+        if existing:
+            return existing
+        records = [
+            record
+            for record in self.iter_records()
+            if str(record.get("cohortKey") or "") == key
+        ]
+        if not records:
+            return None
+        return self.aggregate_cohort(records)
+
+    def records_for_cohort(self, key: str) -> list[dict[str, Any]]:
+        return [
+            record
+            for record in self.iter_records()
+            if str(record.get("cohortKey") or "") == key
+        ]
+
+    def list_cohort_summaries(self) -> list[dict[str, Any]]:
+        summaries: dict[str, dict[str, Any]] = {}
+        for record in self.iter_records():
+            key = str(record.get("cohortKey") or "")
+            if not key:
+                continue
+            entry = summaries.setdefault(
+                key,
+                {
+                    "cohortKey": key,
+                    "cohortDimensions": record.get("cohortDimensions") or {},
+                    "recordCount": 0,
+                },
+            )
+            entry["recordCount"] += 1
+        for key in sorted(summaries):
+            aggregate = self.resolve_aggregate(key)
+            if aggregate:
+                summaries[key]["aggregate"] = {
+                    "sampleSize": aggregate.get("sampleSize"),
+                    "latencyP50Ms": aggregate.get("latencyP50Ms"),
+                    "latencyP95Ms": aggregate.get("latencyP95Ms"),
+                    "reworkContributionP95": aggregate.get("reworkContributionP95"),
+                    "readyWithoutReworkRate": aggregate.get("readyWithoutReworkRate"),
+                }
+        return [summaries[key] for key in sorted(summaries)]
+
+
+def _resolve_cohort_key(store: WorkflowIntelligenceStore, raw: str | None, dimensions: str | None) -> str:
+    if raw:
+        key = raw.strip()
+        if len(key) != 64:
+            fail("invalid cohort key")
+        return key
+    if not dimensions:
+        fail("cohort key or dimensions JSON required")
+    parsed = json.loads(dimensions)
+    if not isinstance(parsed, dict):
+        fail("dimensions must be a JSON object")
+    return cohort_key(parsed)
+
+
+def _metric_slice(aggregate: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "latencyP50Ms": aggregate.get("latencyP50Ms"),
+        "latencyP95Ms": aggregate.get("latencyP95Ms"),
+        "reworkContributionP95": aggregate.get("reworkContributionP95"),
+        "readyWithoutReworkRate": aggregate.get("readyWithoutReworkRate"),
+        "sampleSize": aggregate.get("sampleSize"),
+    }
+
+
+def cmd_compare(args: argparse.Namespace) -> dict[str, Any]:
+    store = WorkflowIntelligenceStore(args.root.resolve())
+    left_key = _resolve_cohort_key(store, args.left_key, args.left_dimensions)
+    right_key = _resolve_cohort_key(store, args.right_key, args.right_dimensions)
+    left = store.resolve_aggregate(left_key)
+    right = store.resolve_aggregate(right_key)
+    if not left:
+        fail("left cohort has no data", leftKey=left_key)
+    if not right:
+        fail("right cohort has no data", rightKey=right_key)
+    left_metrics = _metric_slice(left)
+    right_metrics = _metric_slice(right)
+    delta: dict[str, Any] = {}
+    for field in ("latencyP50Ms", "latencyP95Ms", "reworkContributionP95", "readyWithoutReworkRate"):
+        left_val = float(left_metrics.get(field) or 0)
+        right_val = float(right_metrics.get(field) or 0)
+        delta[field] = round(right_val - left_val, 6)
+    return {
+        "verdict": "pass",
+        "action": "compare",
+        "left": {"cohortKey": left_key, "metrics": left_metrics},
+        "right": {"cohortKey": right_key, "metrics": right_metrics},
+        "delta": delta,
+    }
+
+
+def cmd_trend(args: argparse.Namespace) -> dict[str, Any]:
+    store = WorkflowIntelligenceStore(args.root.resolve())
+    key = _resolve_cohort_key(store, args.cohort_key, args.dimensions)
+    since = str(args.since or "").strip()
+    records = store.records_for_cohort(key)
+    if since:
+        records = [record for record in records if str(record.get("updatedAt") or "") >= since]
+    records.sort(key=lambda item: str(item.get("updatedAt") or ""))
+    points: list[dict[str, Any]] = []
+    for record in records:
+        metrics = record.get("metrics") if isinstance(record.get("metrics"), dict) else {}
+        points.append(
+            {
+                "updatedAt": record.get("updatedAt"),
+                "graphRunId": record.get("graphRunId"),
+                "latencyP50Ms": metrics.get("latencyP50Ms"),
+                "latencyP95Ms": metrics.get("latencyP95Ms"),
+                "reworkContribution": metrics.get("reworkContribution"),
+                "readyWithoutRework": metrics.get("readyWithoutRework"),
+            }
+        )
+    return {
+        "verdict": "pass",
+        "action": "trend",
+        "cohortKey": key,
+        "since": since or None,
+        "pointCount": len(points),
+        "points": points,
+    }
+
+
+def cmd_top_rework(args: argparse.Namespace) -> dict[str, Any]:
+    store = WorkflowIntelligenceStore(args.root.resolve())
+    key_filter = str(args.cohort_key or "").strip()
+    rows: list[dict[str, Any]] = []
+    for record in store.iter_records():
+        cohort_key = str(record.get("cohortKey") or "")
+        if key_filter and cohort_key != key_filter:
+            continue
+        metrics = record.get("metrics") if isinstance(record.get("metrics"), dict) else {}
+        rows.append(
+            {
+                "graphRunId": record.get("graphRunId"),
+                "deliverRunId": record.get("deliverRunId"),
+                "cohortKey": cohort_key,
+                "updatedAt": record.get("updatedAt"),
+                "reworkContribution": float(metrics.get("reworkContribution") or 0),
+                "humanRework": bool(metrics.get("humanRework")),
+            }
+        )
+    rows.sort(
+        key=lambda item: (
+            -float(item.get("reworkContribution") or 0),
+            str(item.get("updatedAt") or ""),
+        )
+    )
+    limit = max(1, int(args.limit or 10))
+    return {
+        "verdict": "pass",
+        "action": "top-rework",
+        "cohortKey": key_filter or None,
+        "limit": limit,
+        "contributors": rows[:limit],
+    }
+
 
 def _graph_store_root(repo_root: Path) -> Path:
     return repo_root / ".cursor" / "sw-graph-runs"
@@ -449,6 +623,21 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("list-records", help="List ingested intelligence records")
 
+    compare_cmd = sub.add_parser("compare", help="Compare cohort p50/p95 metrics (R8)")
+    compare_cmd.add_argument("--left-key")
+    compare_cmd.add_argument("--right-key")
+    compare_cmd.add_argument("--left-dimensions", help="JSON object when --left-key omitted")
+    compare_cmd.add_argument("--right-dimensions", help="JSON object when --right-key omitted")
+
+    trend_cmd = sub.add_parser("trend", help="Trend cohort metrics over time (R8)")
+    trend_cmd.add_argument("--cohort-key")
+    trend_cmd.add_argument("--dimensions", help="JSON object when --cohort-key omitted")
+    trend_cmd.add_argument("--since", help="ISO timestamp lower bound (inclusive)")
+
+    top_rework_cmd = sub.add_parser("top-rework", help="Top rework contributors (R8)")
+    top_rework_cmd.add_argument("--cohort-key", default="")
+    top_rework_cmd.add_argument("--limit", type=int, default=10)
+
     args = parser.parse_args(argv)
     root = args.root.resolve()
 
@@ -460,6 +649,12 @@ def main(argv: list[str] | None = None) -> int:
         emit(cmd_aggregate(args))
     if args.command == "list-records":
         emit(cmd_list_records(args))
+    if args.command == "compare":
+        emit(cmd_compare(args))
+    if args.command == "trend":
+        emit(cmd_trend(args))
+    if args.command == "top-rework":
+        emit(cmd_top_rework(args))
     fail(f"unknown command: {args.command}")
     return 0
 

@@ -194,6 +194,18 @@ def derive_prd_status(root: Path) -> dict[str, Any]:
         except json.JSONDecodeError:
             handoffs = []
     pull_in = [h.get("artifact") for h in handoffs if h.get("artifact")]
+    measurement_learning: dict[str, Any] = {"verdict": "pass", "readOnly": True}
+    try:
+        from wave_status import collect_measurement_learning_status
+
+        measurement_learning = collect_measurement_learning_status(root)
+    except Exception:
+        measurement_learning = {
+            "verdict": "pass",
+            "readOnly": True,
+            "present": False,
+            "error": "measurement-learning-unavailable",
+        }
     return {
         "prds": result,
         "gapBacklog": str(prds_dir / "GAP-BACKLOG.md"),
@@ -201,6 +213,7 @@ def derive_prd_status(root: Path) -> dict[str, Any]:
         "livePhaseStatus": live_phase_status,
         "authoringHandoffs": handoffs,
         "pullInScan": pull_in,
+        "measurementLearning": measurement_learning,
     }
 
 

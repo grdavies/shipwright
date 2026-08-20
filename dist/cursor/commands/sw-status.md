@@ -49,6 +49,26 @@ Load `skills/living-status/SKILL.md`.
    | `divergenceCount` | Number of divergence rows in the last artifact |
 
    Missing artifacts return `present: false` with `verdict: pass` — status does not treat absence as an error.
+1. **Measurement and learning (PRD 280 R10)** — read-only rule effectiveness summaries and workflow
+   intelligence cohort drill-down (never mutates telemetry stores):
+
+   ```bash
+   python3 scripts/wave_status.py rule-effectiveness-summary
+   python3 scripts/wave_status.py cohort-drill-down [--cohort-key <sha256>]
+   python3 scripts/wave_status.py measurement-learning [--cohort-key <sha256>]
+   ```
+
+   | Field | Meaning |
+   | --- | --- |
+   | `readOnly` | Always true — collectors never mutate stores |
+   | `present` | Whether underlying measurement artifacts exist |
+   | `recommendationCount` | Advisory rule lifecycle recommendations observed |
+   | `safetyRefusals` | Safety-tagged rules blocked from autonomous retire |
+   | `cohortCount` / `cohorts[]` | Summaries when no `--cohort-key` filter |
+   | `aggregate` / `recentRuns[]` | Drill-down for a single cohort key |
+
+   Missing data returns `present: false` with `verdict: pass`. Analysis CLI queries remain on
+   `python3 scripts/workflow_intelligence.py compare|trend|top-rework` (JSON-only; R8).
 2. `python3 scripts/reconcile.py derive` — show per-PRD status + task/PR linkage.
 2. On user request or post-merge: `reconcile` to update INDEX Status column.
 3. After shipped phase: `append-log` for completion log entry.
