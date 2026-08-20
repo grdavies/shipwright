@@ -737,6 +737,7 @@
     "wave_spec_seed.py",
     "wave_spec_seed_guard.py",
     "wave_state.py",
+    "wave_status.py",
     "wave_target_lock.py",
     "wave_terminal.py",
     "wave_transition_receipt.py",
@@ -750,5 +751,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 747
+  "moduleCount": 748
 }
