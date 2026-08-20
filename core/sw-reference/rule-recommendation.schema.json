@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rule-recommendation.schema.json",
+  "title": "Rule lifecycle recommendation (advisory)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "ruleId",
+    "recommendation",
+    "reason",
+    "confidence",
+    "supportingMetrics",
+    "generatedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "ruleId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "recommendation": {
+      "type": "string",
+      "enum": [
+        "retain",
+        "merge",
+        "narrow",
+        "re-evaluate",
+        "retire"
+      ]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "supportingMetrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eventCount": { "type": "integer", "minimum": 0 },
+        "loadedCount": { "type": "integer", "minimum": 0 },
+        "errorCount": { "type": "integer", "minimum": 0 },
+        "unreachableCount": { "type": "integer", "minimum": 0 },
+        "revokedCount": { "type": "integer", "minimum": 0 },
+        "filteredCount": { "type": "integer", "minimum": 0 },
+        "loadSuccessRate": { "type": "number", "minimum": 0, "maximum": 1 },
+        "errorRate": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "safetyTagged": {
+      "type": "boolean"
+    },
+    "safetyBlocked": {
+      "type": "boolean",
+      "description": "True when retire was refused for a safety-tagged rule without waiver."
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "auditHandoffRequired": {
+      "type": "boolean",
+      "description": "Promotion/lifecycle changes require /sw-memory-audit (R5)."
+    }
+  }
+}
