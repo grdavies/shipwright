@@ -1166,6 +1166,20 @@ def cmd_merge_enqueue(root: Path, args: list[str]) -> None:
     phase_branch = meta.get("branch")
     if not phase_branch:
         fail("missing phase branch for enqueue", exit_code=20, phase=phase_slug)
+    from decision_graph.prototype import refuse_merge_enqueue
+
+    target_branch = str((state.get("target") or {}).get("branch") or "")
+    prototype_check = refuse_merge_enqueue(str(phase_branch), target_branch)
+    if prototype_check.get("verdict") != "pass":
+        fail(
+            "prototype branch cannot merge-enqueue to integration or main",
+            exit_code=20,
+            halt="blocked",
+            cause=prototype_check.get("cause") or "prototype:merge-refused",
+            phase=phase_slug,
+            branch=str(phase_branch),
+            target=target_branch,
+        )
     expected = phase_branch_head(root, state, phase_slug, str(phase_branch))
     ok_shape, shape_cause = validate_terminal_status_shape(status, root)
     if not ok_shape:
@@ -1280,6 +1294,56 @@ def cmd_merge_exec(root: Path, args: list[str]) -> None:
             resolved, resolve_detail = attempt_deterministic_conflict_resolve(
                 root, wt, state, conflict_paths, phase_slug
             )
+        intent_detail: dict[str, Any] = {}
+        if not resolved and conflict_paths:
+            import merge_intent_resolve as mir
+
+            if mir.intent_merge_enabled(root):
+                left_head = git_run(["rev-parse", str(target)], cwd=wt, check=False).stdout.strip()
+                right_head = git_run(["rev-parse", merge_ref], cwd=wt, check=False).stdout.strip()
+                task_list = str(state.get("source_task_list") or "")
+                intent_detail = mir.attempt_intent_resolve(
+                    root,
+                    wt,
+                    state,
+                    conflict_paths=conflict_paths,
+                    phase_slug=phase_slug,
+                    phase_branch=str(phase_branch),
+                    target=str(target),
+                    left_head=left_head or None,
+                    right_head=right_head or None,
+                    task_list=task_list,
+                    regen_detail=resolve_detail,
+                )
+                intent_class = str(intent_detail.get("intentClass") or "")
+                if (
+                    intent_detail.get("verdict") == "pass"
+                    and intent_class == "compatible-merge"
+                    and intent_detail.get("applied") is True
+                ):
+                    resolved = True
+                    resolve_detail = intent_detail
+                elif intent_class == "semantic-ambiguous":
+                    abort_merge(wt)
+                    halt_extra = mir.semantic_halt_payload(
+                        intent_detail,
+                        root,
+                        state,
+                        phase_slug=phase_slug,
+                        phase_branch=str(phase_branch),
+                        target=str(target),
+                        orchestrator_worktree=wt,
+                    )
+                    fail(
+                        "merge failed",
+                        exit_code=20,
+                        halt="blocked",
+                        cause="merge-queue:semantic-ambiguous",
+                        stderr=str(merge_result.get("stderr") or "").strip(),
+                        **halt_extra,
+                    )
+                elif intent_class == "deterministic-regen":
+                    resolve_detail = {**resolve_detail, **intent_detail}
         proc = subprocess.CompletedProcess(args=[], returncode=0, stdout="", stderr="")
         if resolved:
             proc = git_run(["commit", "-m", msg], cwd=wt, check=False)
@@ -1287,6 +1351,11 @@ def cmd_merge_exec(root: Path, args: list[str]) -> None:
             abort_merge(wt)
             fail_detail = dict(resolve_detail)
             fail_detail.setdefault("conflictPaths", conflict_paths)
+            if intent_detail:
+                fail_detail["intentMerge"] = {
+                    "intentClass": intent_detail.get("intentClass"),
+                    "proposalPath": intent_detail.get("proposalPath"),
+                }
             fail(
                 "merge failed",
                 exit_code=20,

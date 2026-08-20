@@ -500,6 +500,7 @@
     "memory_visibility_probe.py",
     "memory_write_binding.py",
     "mempalace_interchange.py",
+    "merge_intent_resolve.py",
     "merge_provenance.py",
     "merge_ready_enforcement.py",
     "migrate_registry_wave.py",
@@ -753,5 +754,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 750
+  "moduleCount": 751
 }
