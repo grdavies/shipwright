@@ -3773,6 +3773,37 @@ def doctor_separate_project_local_writes(root: Path, cfg: dict[str, Any]) -> dic
     return result
 
 
+def doctor_tracked_prd_bodies(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Fail closed when tracked docs/prds bodies remain in the code repo (PRD 280 R11)."""
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    if not issue_store_separate_project_effective(root, cfg):
+        return {
+            "verdict": "pass",
+            "action": "doctor-tracked-prd-bodies",
+            "skipped": True,
+            "reason": "not-separate-project-issue-store",
+        }
+    tracked = tracked_planning_body_paths(root)
+    prd_paths = sorted(path for path in tracked if path.startswith("docs/prds/"))
+    if prd_paths:
+        return {
+            "verdict": "fail",
+            "action": "doctor-tracked-prd-bodies",
+            "halt": "tracked-prd-bodies-in-code-repo",
+            "error": "tracked docs/prds bodies forbidden in code repo under issue-store",
+            "paths": prd_paths,
+            "remediation": (
+                "run planning_store cleanup for legacy tracked bodies or migrate authoring to issue-store"
+            ),
+        }
+    return {
+        "verdict": "pass",
+        "action": "doctor-tracked-prd-bodies",
+        "checks": ["no-tracked-docs-prds-bodies"],
+    }
+
+
 def cleanup_separate_project_local_writes(root: Path, cfg: dict[str, Any], *, apply: bool = False) -> dict[str, Any]:
     """PRD 061 R3a — untrack legacy banned planning bodies in the code repo (idempotent)."""
     from planning_artifact_handle import issue_store_separate_project_effective
