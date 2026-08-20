@@ -558,6 +558,86 @@ def ingest_graph_run(
     }
 
 
+def optimization_candidates_from_intelligence(
+    repo_root: Path,
+    *,
+    canonical_graph: Mapping[str, Any],
+    limit: int = 5,
+    cohort_key_filter: str | None = None,
+) -> list[dict[str, Any]]:
+    """Build advisory optimization candidate proposals from cohort intelligence (R9)."""
+    store = WorkflowIntelligenceStore(repo_root)
+    records = list(store.iter_records())
+    if cohort_key_filter:
+        records = [
+            record
+            for record in records
+            if str(record.get("cohortKey") or "") == cohort_key_filter
+        ]
+    records.sort(
+        key=lambda item: (
+            -float((item.get("metrics") or {}).get("reworkContribution") or 0),
+            str(item.get("updatedAt") or ""),
+        )
+    )
+    candidates: list[dict[str, Any]] = []
+    for record in records[: max(1, limit)]:
+        candidate = json.loads(json.dumps(dict(canonical_graph)))
+        metadata = candidate.setdefault("metadata", {})
+        if isinstance(metadata, dict):
+            metadata["optimizationSource"] = "workflow-intelligence"
+            metadata["cohortKey"] = record.get("cohortKey")
+            metadata["graphRunId"] = record.get("graphRunId")
+            metrics = record.get("metrics") if isinstance(record.get("metrics"), dict) else {}
+            metadata["reworkContribution"] = metrics.get("reworkContribution")
+            metadata["latencyP95Ms"] = metrics.get("latencyP95Ms")
+        candidates.append(candidate)
+    return candidates
+
+
+def export_shadow_candidates(
+    repo_root: Path,
+    *,
+    canonical_graph: Mapping[str, Any],
+    shadow_enabled: bool = True,
+    limit: int = 5,
+    cohort_key: str | None = None,
+) -> dict[str, Any]:
+    """Export workflow-intelligence optimization candidates to shadow inputs (R9)."""
+    from graph.dynamic_proposal import export_shadow_evaluation_inputs
+
+    candidates = optimization_candidates_from_intelligence(
+        repo_root,
+        canonical_graph=canonical_graph,
+        limit=limit,
+        cohort_key_filter=cohort_key,
+    )
+    return export_shadow_evaluation_inputs(
+        candidates,
+        canonical_graph=canonical_graph,
+        shadow_enabled=shadow_enabled,
+    )
+
+
+def cmd_shadow_export(args: argparse.Namespace) -> dict[str, Any]:
+    root = args.root.resolve()
+    if not args.canonical_graph:
+        fail("--canonical-graph required")
+    canonical_path = Path(args.canonical_graph)
+    if not canonical_path.is_file():
+        fail("canonical graph file not found", path=str(canonical_path))
+    canonical_graph = json.loads(canonical_path.read_text(encoding="utf-8"))
+    if not isinstance(canonical_graph, dict):
+        fail("canonical graph must be a JSON object")
+    return export_shadow_candidates(
+        root,
+        canonical_graph=canonical_graph,
+        shadow_enabled=not bool(args.disabled),
+        limit=int(args.limit or 5),
+        cohort_key=str(args.cohort_key or "").strip() or None,
+    )
+
+
 def cmd_cohort_key(args: argparse.Namespace) -> dict[str, Any]:
     raw = json.loads(args.dimensions)
     if not isinstance(raw, dict):
@@ -638,6 +718,23 @@ def main(argv: list[str] | None = None) -> int:
     top_rework_cmd.add_argument("--cohort-key", default="")
     top_rework_cmd.add_argument("--limit", type=int, default=10)
 
+    shadow_export_cmd = sub.add_parser(
+        "shadow-export",
+        help="Export optimization candidates to shadow evaluation inputs (R9)",
+    )
+    shadow_export_cmd.add_argument(
+        "--canonical-graph",
+        required=True,
+        help="Path to canonical WorkflowGraph JSON",
+    )
+    shadow_export_cmd.add_argument("--cohort-key", default="")
+    shadow_export_cmd.add_argument("--limit", type=int, default=5)
+    shadow_export_cmd.add_argument(
+        "--disabled",
+        action="store_true",
+        help="Simulate shadow-disabled export (read-only skipped payload)",
+    )
+
     args = parser.parse_args(argv)
     root = args.root.resolve()
 
@@ -655,6 +752,8 @@ def main(argv: list[str] | None = None) -> int:
         emit(cmd_trend(args))
     if args.command == "top-rework":
         emit(cmd_top_rework(args))
+    if args.command == "shadow-export":
+        emit(cmd_shadow_export(args))
     fail(f"unknown command: {args.command}")
     return 0
 
