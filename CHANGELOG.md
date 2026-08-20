@@ -974,6 +974,7 @@
 * merge phase shadow-feed-gates-and-dogfood into feat/measurement-and-learning (3ee5b5f) <!-- sw-deliver:shadow-feed-gates-and-dogfood -->
 * merge phase repro-first-debug-gate-medium into feat/debug-and-resilience (409f6d2) <!-- sw-deliver:repro-first-debug-gate-medium -->
 * merge phase provenance-infrastructure-medium into feat/debug-and-resilience (f1490c0) <!-- sw-deliver:provenance-infrastructure-medium -->
+* merge phase intent-aware-merge-resolution-large into feat/debug-and-resilience (dc459c8) <!-- sw-deliver:intent-aware-merge-resolution-large -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
