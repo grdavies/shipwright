@@ -978,6 +978,7 @@
 * merge phase fault-injection-harness-large into feat/debug-and-resilience (902f1d0) <!-- sw-deliver:fault-injection-harness-large -->
 * merge phase state-machine-property-suite-large into feat/debug-and-resilience (c499ad2) <!-- sw-deliver:state-machine-property-suite-large -->
 * merge phase external-issue-triage-lifecycle-gap-323 into feat/workflow-extensions (cf619c1) <!-- sw-deliver:external-issue-triage-lifecycle-gap-323 -->
+* merge phase portable-cross-harness-handoff-bundle-gap-324 into feat/workflow-extensions (88731ab) <!-- sw-deliver:portable-cross-harness-handoff-bundle-gap-324 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
