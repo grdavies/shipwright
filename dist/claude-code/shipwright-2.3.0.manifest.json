@@ -747,6 +747,7 @@
     "wave_terminal.py",
     "wave_transition_receipt.py",
     "workflow-pin-validity-check.py",
+    "workflow_extensions.py",
     "workflow_intelligence.py",
     "workflow_pack_sdk.py",
     "workflow_pin_validity_check_lib.py",
@@ -757,5 +758,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 754
+  "moduleCount": 755
 }

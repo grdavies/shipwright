@@ -35,6 +35,7 @@ def _issue_store_cfg(project_key: str = "external-intake-fixture") -> dict:
             }
         },
         "host": {"provider": "github"},
+        "workflow": {"extensions": {"externalIntake": True, "handoffBundle": False, "packageSdk": False}},
     }
 
 

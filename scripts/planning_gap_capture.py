@@ -751,6 +751,11 @@ def capture_external_intake(
     """Feedback handoff to external-intake store verbs — no nested orchestrators (PRD 280 R4/R5/R7)."""
     from planning_external_intake import EXTERNAL_INTAKE_OUTCOMES
     from planning_store_facade import external_intake_run_pipeline, external_intake_txn, load_workflow_config
+    from workflow_extensions import require_extension
+
+    disabled = require_extension("externalIntake", root=root)
+    if disabled is not None:
+        return {**disabled, "action": "capture-external-intake"}
 
     normalized_outcome = str(outcome or "brief").strip().lower()
     if normalized_outcome not in EXTERNAL_INTAKE_OUTCOMES:
