@@ -982,6 +982,7 @@
 * merge phase workflow-package-authoring-sdk-gap-326 into feat/workflow-extensions (fa25703) <!-- sw-deliver:workflow-package-authoring-sdk-gap-326 -->
 * merge phase cross-cutting-integration-and-rollout into feat/workflow-extensions (df666ac) <!-- sw-deliver:cross-cutting-integration-and-rollout -->
 * merge phase container-executionbackend-and-conformance-suite-l into feat/execution-platform (76dd480) <!-- sw-deliver:container-executionbackend-and-conformance-suite-l -->
+* merge phase remote-execution-ownership-cas-leases-m into feat/execution-platform (3963b0d) <!-- sw-deliver:remote-execution-ownership-cas-leases-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
