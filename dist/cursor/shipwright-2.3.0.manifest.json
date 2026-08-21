@@ -314,6 +314,7 @@
     "docs_worktree.py",
     "doctor.py",
     "domain_vocabulary.py",
+    "effective_config_gen.py",
     "env-read-guard.py",
     "evidence-read.py",
     "evidence_read.py",
@@ -358,6 +359,7 @@
     "graph/benchmark/runner.py",
     "graph/cache_mac.py",
     "graph/cache_store.py",
+    "graph/container_execution_backend.py",
     "graph/convergence_loop.py",
     "graph/cost_telemetry.py",
     "graph/crash_replay_harness.py",
@@ -758,5 +760,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 755
+  "moduleCount": 757
 }

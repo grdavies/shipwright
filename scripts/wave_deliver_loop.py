@@ -1371,11 +1371,9 @@ def ensure_exclusive_run_lease(
     run_id = state.get("runId")
     if not isinstance(run_id, str) or not run_id.strip():
         return {"skipped": True, "reason": "no-run-id"}
-    from wave_lock import (
-        acquire_run_lease,
-        assert_run_lease_write,
-        heartbeat_run_lease,
-    )
+    from graph.run_ownership import default_deliver_run_ownership_provider
+
+    provider = default_deliver_run_ownership_provider(root)
 
     source_task_list = state.get("source_task_list")
     if isinstance(source_task_list, str):
@@ -1390,9 +1388,9 @@ def ensure_exclusive_run_lease(
         and isinstance(held_gen, int)
         and held_gen > 0
     ):
-        fence = assert_run_lease_write(root, run_id, held_gen)
+        fence = provider.assert_write(run_id, held_gen)
         if fence.get("verdict") == "pass":
-            hb = heartbeat_run_lease(root, run_id, held_gen)
+            hb = provider.heartbeat(run_id, held_gen)
             if hb.get("verdict") == "pass":
                 return {
                     "verdict": "pass",
@@ -1410,8 +1408,8 @@ def ensure_exclusive_run_lease(
             "run-lease-missing",
             "run-lease-stale-self",
         ):
-            acquired = acquire_run_lease(
-                root, run_id, source_task_list=task_list_arg
+            acquired = provider.acquire(
+                run_id, source_task_list=task_list_arg
             )
             if acquired.get("verdict") == "pass":
                 state["runLease"] = {
@@ -1434,7 +1432,7 @@ def ensure_exclusive_run_lease(
             lockPath=out.get("lockPath"),
         )
 
-    acquired = acquire_run_lease(root, run_id, source_task_list=task_list_arg)
+    acquired = provider.acquire(run_id, source_task_list=task_list_arg)
     if acquired.get("verdict") != "pass":
         fail(
             str(acquired.get("error") or "run-lease-held"),

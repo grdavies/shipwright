@@ -1686,3 +1686,46 @@ class GraphScheduler:
             timing_events=timing.events,
             redetect=redetect_verdict,
         )
+
+
+def create_graph_scheduler(
+    executor: Any,
+    *,
+    root: Any,
+    receipts: ExecutionReceiptJournal,
+    pools: ResourcePoolRegistry,
+    cfg: Mapping[str, Any] | None = None,
+    **kwargs: Any,
+) -> GraphScheduler:
+    """Factory wiring graphExecution.execution.backend into GraphScheduler (PRD 279 R1/R3)."""
+    from pathlib import Path
+
+    from graph.execution_backend import create_execution_backend
+
+    repo_root = Path(root)
+    backend = create_execution_backend(
+        executor,
+        root=repo_root,
+        cfg=cfg,
+        clock=kwargs.get("clock"),
+        runtime=kwargs.get("runtime"),
+        credential_resolver=kwargs.get("credential_resolver"),
+    )
+    scheduler_kwargs = {
+        key: value
+        for key, value in kwargs.items()
+        if key
+        not in {
+            "clock",
+            "runtime",
+            "credential_resolver",
+            "backend",
+        }
+    }
+    return GraphScheduler(
+        executor,
+        receipts=receipts,
+        pools=pools,
+        backend=backend,
+        **scheduler_kwargs,
+    )

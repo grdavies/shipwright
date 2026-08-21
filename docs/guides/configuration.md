@@ -718,6 +718,9 @@ independently tunable** — serial-equivalent `maxConcurrency: 1` does not imply
 | `graphExecution.resourceLimits.maxConcurrency` | `1` | Serial-equivalent mitigation lane; raising concurrency is a cutover/scheduling-mode concern |
 | `graphExecution.resourceLimits.maxDurationSeconds` | `86400` | Run-level wall clock for compiled graphs |
 | `graphExecution.cache.enabled` | `true` | Content-addressed node cache; set `false` to disable reuse while keeping `maxConcurrency: 1` |
+| `graphExecution.execution.backend` | `local-sync` | ExecutionBackend selection (`local-sync` default; `container` opt-in after conformance green) |
+| `graphExecution.execution.container.image` | `shipwright/graph-node:latest` | OCI image for container backend node execution |
+| `graphExecution.execution.container.credentialRef` | — | Broker ref for mutating container credential injection (`purpose: graph-container-exec`) |
 
 Compiled `WorkflowGraph` IR carries `spec.resourceLimits.maxConcurrency` per plan; workflow defaults apply when
 the compile target omits limits. Operator surfaces stay on existing commands (`/sw-deliver --explain-plan`,
@@ -1813,3 +1816,210 @@ command allowlist—`delegation.mode` does not force those onto Tasks.
 
 Greenfield `/sw-init` seeds `heuristic`. Tighten to `bind-only` when you need fail-closed binding for every spawn.
 
+<!-- effective-config:begin generated (scripts/effective_config_gen.py) -->
+## Effective configuration (generated)
+
+Machine-readable defaults for workflow settings. Regenerate with:
+
+```bash
+python3 scripts/effective_config_gen.py generate --write
+python3 scripts/effective_config_gen.py project-docs --write
+```
+
+Shipwright `2.3.0` · schema `config.schema.json`
+
+| Setting | Schema default | Greenfield | Migration | Runtime fallback | Deprecated | Removed |
+| --- | --- | --- | --- | --- | --- | --- |
+| `agentsFile` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `—` | `—` |
+| `checks.treatNeutralAsPass` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `checks.watch.maxWaitMinutes` | `20` | `20` | `20` | `20` | `—` | `—` |
+| `checks.watch.pollSeconds` | `45` | `45` | `45` | `45` | `—` | `—` |
+| `cleanup.autonomy` | `confirm` | `confirm` | `confirm` | `confirm` | `—` | `—` |
+| `coderabbit.noDefer` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `coderabbit.reviewGraceMinutes` | `15` | `15` | `15` | `15` | `—` | `—` |
+| `communication.defaultIntensity` | `full` | `full` | `full` | `full` | `—` | `—` |
+| `compound.autonomy` | `supervised` | `supervised` | `supervised` | `supervised` | `—` | `—` |
+| `contextCompression.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `contextCompression.strategies.diff` | `path-reference` | `path-reference` | `path-reference` | `path-reference` | `—` | `—` |
+| `contextCompression.strategies.json` | `compress` | `compress` | `compress` | `compress` | `—` | `—` |
+| `contextCompression.strategies.log` | `compress` | `compress` | `compress` | `compress` | `—` | `—` |
+| `contextCompression.strategies.prose` | `compress` | `compress` | `compress` | `compress` | `—` | `—` |
+| `contextCompression.thresholdTokens` | `8000` | `8000` | `8000` | `8000` | `—` | `—` |
+| `decisionsDir` | `docs/decisions` | `docs/decisions` | `docs/decisions` | `docs/decisions` | `—` | `—` |
+| `defaultBaseBranch` | `main` | `main` | `main` | `main` | `—` | `—` |
+| `delegation.mode` | `heuristic` | `heuristic` | `heuristic` | `heuristic` | `—` | `—` |
+| `deliver.autonomy.maxIterations` | `500` | `500` | `500` | `500` | `—` | `—` |
+| `deliver.autonomy.maxRunMinutes` | `1440` | `1440` | `1440` | `1440` | `—` | `—` |
+| `deliver.autonomy.mode` | `autonomous` | `autonomous` | `autonomous` | `autonomous` | `—` | `—` |
+| `deliver.loop.drainMechanical` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `deliver.loop.maxStepsPerInvocation` | `12` | `12` | `12` | `12` | `—` | `—` |
+| `deliver.phaseAckCadence` | `0` | `0` | `0` | `0` | `—` | `—` |
+| `deliver.remediation.maxAttempts` | `2` | `2` | `2` | `2` | `—` | `—` |
+| `deliver.targetLock.staleSeconds` | `300` | `300` | `300` | `300` | `—` | `—` |
+| `deliver.terminal.autonomy` | `supervised` | `supervised` | `supervised` | `supervised` | `—` | `—` |
+| `deliver.watchdog.phaseTimeoutMinutes` | `240` | `240` | `240` | `240` | `—` | `—` |
+| `deliver.watchdog.stalenessClassifier.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `deliver.watchdog.stalenessClassifier.stuckThresholdMinutes` | `30` | `30` | `30` | `30` | `—` | `—` |
+| `deliver.watchdog.stalenessClassifier.waitingOnHumanBoost` | `0.35` | `0.35` | `0.35` | `0.35` | `—` | `—` |
+| `deliver.watchdog.stalenessClassifier.workingThresholdMinutes` | `5` | `5` | `5` | `5` | `—` | `—` |
+| `dispatch.complexityProbe.bandCeiling` | `deep` | `deep` | `deep` | `deep` | `—` | `—` |
+| `dispatch.complexityProbe.bandFloor` | `cheap` | `cheap` | `cheap` | `cheap` | `—` | `—` |
+| `dispatch.complexityProbe.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `dispatch.tokenBudget.advisory` | `32000` | `32000` | `32000` | `32000` | `—` | `—` |
+| `doc.afterTasks` | `confirm` | `confirm` | `confirm` | `confirm` | `—` | `—` |
+| `doc.loop.drainMechanical` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `doc.loop.maxStepsPerInvocation` | `8` | `8` | `8` | `8` | `—` | `—` |
+| `execute.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `execute.maxExpansionDepth` | `2` | `2` | `2` | `2` | `—` | `—` |
+| `execute.sizing.thresholds.distinctDirs` | `2` | `2` | `2` | `2` | `—` | `—` |
+| `execute.sizing.thresholds.filesTouched` | `3` | `3` | `3` | `3` | `—` | `—` |
+| `execute.sizing.thresholds.traceabilityScenarios` | `2` | `2` | `2` | `2` | `—` | `—` |
+| `gapCheck.ruleVerifierSweep.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `graphExecution.budget.haltOnExhaustion` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `graphExecution.budget.maxExecutionsPerNode` | `8` | `8` | `8` | `8` | `—` | `—` |
+| `graphExecution.cache.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `graphExecution.cache.maxAgeSeconds` | `2592000` | `2592000` | `2592000` | `2592000` | `—` | `—` |
+| `graphExecution.cache.maxSizeBytes` | `268435456` | `268435456` | `268435456` | `268435456` | `—` | `—` |
+| `graphExecution.cache.scope` | `run` | `run` | `run` | `run` | `—` | `—` |
+| `graphExecution.execution.backend` | `local-sync` | `local-sync` | `local-sync` | `local-sync` | `—` | `—` |
+| `graphExecution.execution.container.image` | `shipwright/graph-node:latest` | `shipwright/graph-node:latest` | `shipwright/graph-node:latest` | `shipwright/graph-node:latest` | `—` | `—` |
+| `graphExecution.execution.container.resourceLimits.cpuMillis` | `1000` | `1000` | `1000` | `1000` | `—` | `—` |
+| `graphExecution.execution.container.resourceLimits.memoryMb` | `512` | `512` | `512` | `512` | `—` | `—` |
+| `graphExecution.execution.container.resourceLimits.timeoutSeconds` | `3600` | `3600` | `3600` | `3600` | `—` | `—` |
+| `graphExecution.profiles.optimization` | `balanced` | `balanced` | `balanced` | `balanced` | `—` | `—` |
+| `graphExecution.resourceLimits.maxConcurrency` | `1` | `1` | `1` | `1` | `—` | `—` |
+| `graphExecution.resourceLimits.maxDurationSeconds` | `86400` | `86400` | `86400` | `86400` | `—` | `—` |
+| `host.rateLimit.baseBackoffMs` | `1000` | `1000` | `1000` | `1000` | `—` | `—` |
+| `host.rateLimit.capBackoffMs` | `60000` | `60000` | `60000` | `60000` | `—` | `—` |
+| `host.rateLimit.jitter` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `host.rateLimit.maxAttempts` | `5` | `5` | `5` | `5` | `—` | `—` |
+| `host.rateLimit.maxCumulativeWaitMs` | `300000` | `300000` | `300000` | `300000` | `—` | `—` |
+| `host.rateLimit.mutatingMinDelayMs` | `1000` | `1000` | `1000` | `1000` | `—` | `—` |
+| `host.rateLimit.nearLimitThreshold` | `5` | `5` | `5` | `5` | `—` | `—` |
+| `host.remote` | `origin` | `origin` | `origin` | `origin` | `—` | `—` |
+| `host.tokenEnv` | `—` | `—` | `—` | `—` | `legacy` | `—` |
+| `inefficiency.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `inefficiency.thresholds.slowCiJobSeconds` | `300` | `300` | `300` | `300` | `—` | `—` |
+| `inefficiency.thresholds.slowTestSeconds` | `30` | `30` | `30` | `30` | `—` | `—` |
+| `intraPhase.harnessLimit` | `8` | `8` | `8` | `8` | `—` | `—` |
+| `intraPhase.parallelBudget` | `2` | `2` | `2` | `2` | `—` | `—` |
+| `invariantsOptional` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `loop.autoPropose.cooldownMinutes` | `30` | `30` | `30` | `30` | `—` | `—` |
+| `loop.autoPropose.dedupWindow` | `3600` | `3600` | `3600` | `3600` | `—` | `—` |
+| `loop.autoPropose.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `loop.autoPropose.maxOpenMetaUnits` | `10` | `10` | `10` | `10` | `—` | `—` |
+| `loop.autoPropose.maxPerDay` | `5` | `5` | `5` | `5` | `—` | `—` |
+| `loop.autoPropose.scheduler` | `manual` | `manual` | `manual` | `manual` | `—` | `—` |
+| `loopHealth.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `loopHealth.staleInboxDays` | `14` | `14` | `14` | `14` | `—` | `—` |
+| `memory.autoSync.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `memory.autoSync.minMinutes` | `120` | `120` | `120` | `120` | `—` | `—` |
+| `memory.autoSync.minTurns` | `10` | `10` | `10` | `10` | `—` | `—` |
+| `memory.basicMemory.apiBase` | `https://cloud.basicmemory.com` | `https://cloud.basicmemory.com` | `https://cloud.basicmemory.com` | `https://cloud.basicmemory.com` | `—` | `—` |
+| `memory.basicMemory.failClosed` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `memory.basicMemory.memoriesDirectory` | `memories` | `memories` | `memories` | `memories` | `—` | `—` |
+| `memory.basicMemory.mode` | `local` | `local` | `local` | `local` | `—` | `—` |
+| `memory.basicMemory.redactOnWrite` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `memory.basicMemory.ruleCacheTtlSec` | `300` | `300` | `300` | `300` | `—` | `—` |
+| `memory.basicMemory.rulesDirectory` | `rules` | `rules` | `rules` | `rules` | `—` | `—` |
+| `memory.basicMemory.supportedPackage` | `basic-memory>=0.22.0,<1.0.0` | `basic-memory>=0.22.0,<1.0.0` | `basic-memory>=0.22.0,<1.0.0` | `basic-memory>=0.22.0,<1.0.0` | `—` | `—` |
+| `memory.basicMemory.tokenEnv` | `BASIC_MEMORY_API_KEY` | `BASIC_MEMORY_API_KEY` | `BASIC_MEMORY_API_KEY` | `BASIC_MEMORY_API_KEY` | `—` | `—` |
+| `memory.connection.restBaseUrl` | `http://localhost:8001` | `http://localhost:8001` | `http://localhost:8001` | `http://localhost:8001` | `—` | `—` |
+| `memory.guardrails.allowEmptyRules` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `memory.guardrails.enforceBeforeSubmit` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `memory.guardrails.requireRuleClass` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `memory.inRepo.commitMode` | `committed` | `committed` | `committed` | `committed` | `—` | `—` |
+| `memory.inRepo.storeDir` | `.cursor/sw-memory` | `.cursor/sw-memory` | `.cursor/sw-memory` | `.cursor/sw-memory` | `—` | `—` |
+| `memory.mempalace.failClosed` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `memory.mempalace.redactOnWrite` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `memory.mempalace.ruleCacheTtlSec` | `300` | `300` | `300` | `300` | `—` | `—` |
+| `memory.mempalace.rulesRoom` | `rules` | `rules` | `rules` | `rules` | `—` | `—` |
+| `memory.mempalace.searchExcludeRooms` | `["transcripts"]` | `["transcripts"]` | `["transcripts"]` | `["transcripts"]` | `—` | `—` |
+| `memory.mempalace.supportedPackage` | `mempalace>=3.6.0,<4.0.0` | `mempalace>=3.6.0,<4.0.0` | `mempalace>=3.6.0,<4.0.0` | `mempalace>=3.6.0,<4.0.0` | `—` | `—` |
+| `memory.obsidian.failClosed` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `memory.obsidian.mcpBaseUrl` | `http://127.0.0.1:27123` | `http://127.0.0.1:27123` | `http://127.0.0.1:27123` | `http://127.0.0.1:27123` | `—` | `—` |
+| `memory.obsidian.memoriesDirectory` | `memories` | `memories` | `memories` | `memories` | `—` | `—` |
+| `memory.obsidian.redactOnWrite` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `memory.obsidian.ruleCacheTtlSec` | `300` | `300` | `300` | `300` | `—` | `—` |
+| `memory.obsidian.rulesDirectory` | `rules` | `rules` | `rules` | `rules` | `—` | `—` |
+| `memory.obsidian.tokenEnv` | `OBSIDIAN_API_KEY` | `OBSIDIAN_API_KEY` | `OBSIDIAN_API_KEY` | `OBSIDIAN_API_KEY` | `—` | `—` |
+| `memory.playbooks.activeMinConfidence` | `0.6` | `0.6` | `0.6` | `0.6` | `—` | `—` |
+| `memory.playbooks.confidenceStep` | `0.05` | `0.05` | `0.05` | `0.05` | `—` | `—` |
+| `memory.playbooks.demoteMaxSuccessRate` | `0.4` | `0.4` | `0.4` | `0.4` | `—` | `—` |
+| `memory.playbooks.demoteMinUsage` | `5` | `5` | `5` | `5` | `—` | `—` |
+| `memory.playbooks.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `memory.playbooks.injectMinConfidence` | `0.75` | `0.75` | `0.75` | `0.75` | `—` | `—` |
+| `memory.playbooks.promoteMinSuccessRate` | `0.8` | `0.8` | `0.8` | `0.8` | `—` | `—` |
+| `memory.playbooks.promoteMinUsage` | `5` | `5` | `5` | `5` | `—` | `—` |
+| `memory.provider` | `in-repo` | `in-repo` | `in-repo` | `in-repo` | `—` | `—` |
+| `memory.sourceOfTruth` | `auto` | `auto` | `auto` | `auto` | `—` | `—` |
+| `memory.tokenEnv` | `—` | `—` | `—` | `—` | `legacy` | `—` |
+| `notebook.sessionIndex` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `orchestration.planPolicy` | `proposed` | `proposed` | `proposed` | `proposed` | `—` | `—` |
+| `planning.autonomy` | `full-conductor` | `full-conductor` | `full-conductor` | `full-conductor` | `—` | `—` |
+| `planning.fullConductor.confidenceThreshold` | `0.85` | `0.85` | `0.85` | `0.85` | `—` | `—` |
+| `planning.fullConductor.mutationBudget` | `5` | `5` | `5` | `5` | `—` | `—` |
+| `planning.fullConductor.undoWindowSeconds` | `300` | `300` | `300` | `300` | `—` | `—` |
+| `planning.inFlight.stalenessTtlHours` | `72` | `72` | `72` | `72` | `—` | `—` |
+| `planning.intelligence.radar.postMerge` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `planning.intelligence.radar.windows.activityBiasLastPrs` | `30` | `30` | `30` | `30` | `—` | `—` |
+| `planning.intelligence.radar.windows.activityBiasMinPrCount` | `3` | `3` | `3` | `3` | `—` | `—` |
+| `planning.intelligence.radar.windows.gitChurnDays` | `30` | `30` | `30` | `30` | `—` | `—` |
+| `planning.intelligence.vocabulary.strictMode` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `planning.privacyAck.required` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `planning.refusalLedger.maxSizeBytes` | `52428800` | `52428800` | `52428800` | `52428800` | `—` | `—` |
+| `planning.refusalLedger.path` | `.cursor/sw-refusal-ledger` | `.cursor/sw-refusal-ledger` | `.cursor/sw-refusal-ledger` | `.cursor/sw-refusal-ledger` | `—` | `—` |
+| `planning.refusalLedger.ttlSeconds` | `2592000` | `2592000` | `2592000` | `2592000` | `—` | `—` |
+| `planning.releaseGrouping.labelPrefix` | `sw:release:` | `sw:release:` | `sw:release:` | `sw:release:` | `—` | `—` |
+| `planning.releaseGrouping.mode` | `milestone` | `milestone` | `milestone` | `milestone` | `—` | `—` |
+| `planning.store.backend` | `in-repo-public` | `in-repo-public` | `in-repo-public` | `in-repo-public` | `—` | `—` |
+| `planning.store.issues.tokenEnv` | `—` | `—` | `—` | `—` | `legacy` | `—` |
+| `planning.store.operatorProjection.githubProjects.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `planning.store.operatorProjection.linear.cycleSharingNotice` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `planning.store.operatorProjection.linear.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `planning.store.operatorProjection.linear.initiativeSubstitute` | `substitute-views` | `substitute-views` | `substitute-views` | `substitute-views` | `—` | `—` |
+| `planning.visibilityProfile` | `specs-public` | `specs-public` | `specs-public` | `specs-public` | `—` | `—` |
+| `planningDir` | `docs/planning` | `docs/planning` | `docs/planning` | `docs/planning` | `—` | `—` |
+| `prdsDir` | `docs/prds` | `docs/prds` | `docs/prds` | `docs/prds` | `—` | `—` |
+| `quality.provider` | `none` | `none` | `none` | `none` | `—` | `—` |
+| `rca.fanout.ambiguity_trigger` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `rca.fanout.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `rca.fanout.max_width` | `4` | `4` | `4` | `4` | `—` | `—` |
+| `rca.fanout.min_hypotheses` | `3` | `3` | `3` | `3` | `—` | `—` |
+| `recurrence.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `recurrence.threshold` | `3` | `3` | `3` | `3` | `—` | `—` |
+| `retrospective.gapCapture.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `retrospective.gapCapture.maxCapturesPerRun` | `3` | `3` | `3` | `3` | `—` | `—` |
+| `review.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `review.local.apply` | `auto` | `auto` | `auto` | `auto` | `—` | `—` |
+| `review.local.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `review.local.gate.haltOn` | `[]` | `[]` | `[]` | `[]` | `—` | `—` |
+| `review.local.gate.surface` | `["P0", "P1", "P2", "P3"]` | `["P0", "P1", "P2", "P3"]` | `["P0", "P1", "P2", "P3"]` | `["P0", "P1", "P2", "P3"]` | `—` | `—` |
+| `review.local.grouping` | `auto` | `auto` | `auto` | `auto` | `—` | `—` |
+| `review.local.provider` | `native` | `native` | `native` | `native` | `—` | `—` |
+| `review.local.ui.enrich` | `off` | `off` | `off` | `off` | `—` | `—` |
+| `review.provider` | `none` | `none` | `none` | `none` | `—` | `—` |
+| `stabilizeLoop.sameStageEscalation.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
+| `stabilizeLoop.sameStageEscalation.escalateAfterFailures` | `2` | `2` | `2` | `2` | `—` | `—` |
+| `stabilizeLoop.sameStageEscalation.personaFallback` | `adversarial` | `adversarial` | `adversarial` | `adversarial` | `—` | `—` |
+| `stateFile` | `.git/shipwright.json` | `.git/shipwright.json` | `.git/shipwright.json` | `.git/shipwright.json` | `—` | `—` |
+| `tasks.sizing.maxPhaseCount` | `13` | `13` | `13` | `13` | `—` | `—` |
+| `tasks.sizing.minPhaseFiles` | `2` | `2` | `2` | `2` | `—` | `—` |
+| `tasks.sizing.minPhaseScenarios` | `1` | `1` | `1` | `1` | `—` | `—` |
+| `tasksDir` | `docs/prds` | `docs/prds` | `docs/prds` | `docs/prds` | `—` | `—` |
+| `tournament.cost_ceiling` | `0` | `0` | `0` | `0` | `—` | `—` |
+| `tournament.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `tournament.n` | `3` | `3` | `3` | `3` | `—` | `—` |
+| `verify.allowUnconfigured` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `verify.watchdog.maxMinutes` | `120` | `120` | `120` | `120` | `—` | `—` |
+| `verifyE2e.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `verifyE2e.provider` | `none` | `none` | `none` | `none` | `—` | `—` |
+| `verifyMutation.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `verifyMutation.provider` | `none` | `none` | `none` | `none` | `—` | `—` |
+| `workflow.extensions.externalIntake` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `workflow.extensions.handoffBundle` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `workflow.extensions.packageSdk` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `worktree.parallelCeiling` | `4` | `4` | `4` | `4` | `—` | `—` |
+| `worktree.scaffold.portRangeEnd` | `9199` | `9199` | `9199` | `9199` | `—` | `—` |
+| `worktree.scaffold.portRangeStart` | `9100` | `9100` | `9100` | `9100` | `—` | `—` |
+<!-- effective-config:end generated -->

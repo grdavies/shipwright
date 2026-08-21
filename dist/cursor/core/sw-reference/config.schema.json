@@ -204,6 +204,63 @@
               "description": "When true, budget exhaustion emits non-ready and blocks merge-ready surfaces."
             }
           }
+        },
+        "execution": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Graph node ExecutionBackend selection (PRD 279 R1/R3). Default local-sync; container opt-in after conformance green.",
+          "properties": {
+            "backend": {
+              "type": "string",
+              "enum": [
+                "local-sync",
+                "container"
+              ],
+              "default": "local-sync",
+              "description": "ExecutionBackend implementation. Rollout order: local-sync → container → remote."
+            },
+            "container": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "ContainerExecutionBackend settings when execution.backend is container.",
+              "properties": {
+                "image": {
+                  "type": "string",
+                  "default": "shipwright/graph-node:latest",
+                  "description": "OCI image reference for isolated node execution."
+                },
+                "credentialRef": {
+                  "type": "string",
+                  "description": "Broker selector ref for mutating container credential injection (purpose: graph-container-exec)."
+                },
+                "storeRoot": {
+                  "type": "string",
+                  "description": "Optional durable handle store root; defaults to .cursor/sw-graph-runs/container-handles under repo root."
+                },
+                "resourceLimits": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "memoryMb": {
+                      "type": "integer",
+                      "minimum": 64,
+                      "default": 512
+                    },
+                    "cpuMillis": {
+                      "type": "integer",
+                      "minimum": 100,
+                      "default": 1000
+                    },
+                    "timeoutSeconds": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "default": 3600
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
