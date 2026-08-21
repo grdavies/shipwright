@@ -58,6 +58,8 @@ def main() -> None:
         "doctor",
         "cleanup",
         "progress-update",
+        "external-intake-txn",
+        "external-intake-pipeline",
         "migrate-orphan-phase-issues",
         "projection-refresh",
         "probe-projection",
@@ -281,6 +283,34 @@ def main() -> None:
             task_list=task_list,
             checked_phase_ids=checked,
             task_ref=task_ref,
+        )
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
+    elif args.command == "external-intake-txn":
+        verb = _require(rest, "--verb")
+        result = external_intake_txn(
+            root,
+            cfg,
+            verb=verb,
+            issue_id=_optional(rest, "--issue-id"),
+            signal_id=_optional(rest, "--signal-id"),
+            title=_optional(rest, "--title"),
+            signal_class=_optional(rest, "--signal-class") or "unknown",
+            comment=_optional(rest, "--comment"),
+            gap_unit_id=_optional(rest, "--gap-unit-id"),
+            priority=_optional(rest, "--priority") or "medium",
+            tier=_optional(rest, "--tier") or "build",
+            gap_class=_optional(rest, "--gap-class") or "external",
+            dry_run="--dry-run" in rest,
+        )
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
+    elif args.command == "external-intake-pipeline":
+        issue_id = _require(rest, "--issue-id")
+        result = external_intake_run_pipeline(
+            root,
+            cfg,
+            issue_id=issue_id,
+            duplicate="--duplicate" in rest,
+            dry_run="--dry-run" in rest,
         )
         emit(result, 0 if result.get("verdict") == "ok" else 20)
     elif args.command == "migrate-orphan-phase-issues":
