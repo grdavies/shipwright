@@ -107,8 +107,14 @@ def collect_export_handoff(
 ) -> dict[str, Any]:
     """Read-only HandoffBundle export for /sw-status --export-handoff (PRD 280 R10)."""
     from handoff_bundle import export_bundle
+    from workflow_extensions import require_extension
 
     root = root.resolve()
+    disabled = require_extension("handoffBundle", root=root)
+    if disabled is not None:
+        disabled["readOnly"] = True
+        disabled["exportCommand"] = "python3 scripts/wave_status.py export-handoff"
+        return disabled
     result = export_bundle(
         root,
         unit_id=unit_id,

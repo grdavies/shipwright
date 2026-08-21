@@ -80,6 +80,25 @@ PLANNING_DOC_BINDINGS: tuple[dict[str, Any], ...] = (
             "resolve_emission_destination",
         ),
     },
+    {
+        "id": "configuration-workflow-extensions",
+        "doc": "docs/guides/configuration.md",
+        "sources": (
+            "scripts/workflow_extensions.py",
+            "scripts/handoff_bundle.py",
+            "scripts/workflow_pack_sdk.py",
+            "scripts/planning_external_intake.py",
+        ),
+        "markers": (
+            "workflow.extensions",
+            "externalIntake",
+            "handoffBundle",
+            "packageSdk",
+            "HandoffBundle",
+            "workflow-pack-sdk",
+            "External intake",
+        ),
+    },
 )
 
 

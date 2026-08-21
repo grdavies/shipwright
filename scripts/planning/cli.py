@@ -286,6 +286,11 @@ def main() -> None:
         )
         emit(result, 0 if result.get("verdict") == "ok" else 20)
     elif args.command == "external-intake-txn":
+        from workflow_extensions import require_extension
+
+        disabled = require_extension("externalIntake", root=root, cfg=cfg)
+        if disabled is not None:
+            emit({**disabled, "action": "external-intake-txn"}, 20)
         verb = _require(rest, "--verb")
         result = external_intake_txn(
             root,
@@ -304,6 +309,11 @@ def main() -> None:
         )
         emit(result, 0 if result.get("verdict") == "ok" else 20)
     elif args.command == "external-intake-pipeline":
+        from workflow_extensions import require_extension
+
+        disabled = require_extension("externalIntake", root=root, cfg=cfg)
+        if disabled is not None:
+            emit({**disabled, "action": "external-intake-pipeline"}, 20)
         issue_id = _require(rest, "--issue-id")
         result = external_intake_run_pipeline(
             root,

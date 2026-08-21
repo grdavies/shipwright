@@ -18,6 +18,7 @@ from graph.node_kinds import CLOSED_NODE_KINDS, NODE_KIND_REGISTRY, lookup_node_
 from graph.packages.trust import package_content_digest
 from kernel_classification import load_classification, normalize_step
 from skills_spec_guard import Finding, _scan_skill_md, partition_findings
+from workflow_extensions import require_extension
 
 PACKAGE_KIND = "WorkflowPackage"
 PACKAGE_SCHEMA_VERSION = 1
@@ -518,6 +519,11 @@ def main(argv: list[str] | None = None) -> int:
     confirm_cmd.add_argument("--root", type=Path, default=Path.cwd(), help="Repository root")
 
     args = parser.parse_args(argv)
+    disabled = require_extension("packageSdk", root=Path(args.root).resolve())
+    if disabled is not None:
+        json.dump(disabled, sys.stdout, indent=2, sort_keys=True)
+        sys.stdout.write("\n")
+        return 20
     if args.command == "validate":
         exit_code, report = validate_pack(args.pack, repo_root=args.root, report_path=args.report)
         json.dump(report, sys.stdout, indent=2, sort_keys=True)

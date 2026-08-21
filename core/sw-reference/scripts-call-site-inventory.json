@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-20T16:41:53Z",
+  "generatedAt": "2026-08-21T05:35:03Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -19738,154 +19738,154 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1488:generate-pr-test-plan-ci-workflow.py",
+      "id": "docs/guides/configuration.md:1518:generate-pr-test-plan-ci-workflow.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1488,
+      "line": 1518,
       "column": 8,
       "script": "generate-pr-test-plan-ci-workflow.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1504:test/run_suite_registry_fixtures.py",
+      "id": "docs/guides/configuration.md:1534:test/run_suite_registry_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1504,
+      "line": 1534,
       "column": 49,
       "script": "test/run_suite_registry_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1506:test/run_pr_test_plan_fixtures.py",
+      "id": "docs/guides/configuration.md:1536:test/run_pr_test_plan_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1506,
+      "line": 1536,
       "column": 9,
       "script": "test/run_pr_test_plan_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1562:capability_docs.py",
+      "id": "docs/guides/configuration.md:1592:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1562,
+      "line": 1592,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1565:capability_docs.py",
+      "id": "docs/guides/configuration.md:1595:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1565,
+      "line": 1595,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1568:capability_docs.py",
+      "id": "docs/guides/configuration.md:1598:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1568,
+      "line": 1598,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1584:test/run_pilot_fixtures.py",
+      "id": "docs/guides/configuration.md:1614:test/run_pilot_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1584,
+      "line": 1614,
       "column": 24,
       "script": "test/run_pilot_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1594:test/run_emitter_fixtures.py",
+      "id": "docs/guides/configuration.md:1624:test/run_emitter_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1594,
+      "line": 1624,
       "column": 8,
       "script": "test/run_emitter_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1641:phase_sizing.py",
+      "id": "docs/guides/configuration.md:1671:phase_sizing.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1641,
+      "line": 1671,
       "column": 8,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1655:phase_sizing_corpus.py",
+      "id": "docs/guides/configuration.md:1685:phase_sizing_corpus.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1655,
+      "line": 1685,
       "column": 27,
       "script": "phase_sizing_corpus.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1655:phase_sizing_corpus.py",
+      "id": "docs/guides/configuration.md:1685:phase_sizing_corpus.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1655,
+      "line": 1685,
       "column": 0,
       "script": "phase_sizing_corpus.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1660:test/run_phase_sizing_corpus_fixtures.py",
+      "id": "docs/guides/configuration.md:1690:test/run_phase_sizing_corpus_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1660,
+      "line": 1690,
       "column": 9,
       "script": "test/run_phase_sizing_corpus_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1695:reviewer-metrics.py",
+      "id": "docs/guides/configuration.md:1725:reviewer-metrics.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1695,
+      "line": 1725,
       "column": 23,
       "script": "reviewer-metrics.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1713:test/run_inefficiency_scan_fixtures.py",
+      "id": "docs/guides/configuration.md:1743:test/run_inefficiency_scan_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1713,
+      "line": 1743,
       "column": 24,
       "script": "test/run_inefficiency_scan_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1717:test/run_behavioral_anomaly_fixtures.py",
+      "id": "docs/guides/configuration.md:1747:test/run_behavioral_anomaly_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1717,
+      "line": 1747,
       "column": 9,
       "script": "test/run_behavioral_anomaly_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1728:loop_health.py",
+      "id": "docs/guides/configuration.md:1758:loop_health.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1728,
+      "line": 1758,
       "column": 14,
       "script": "loop_health.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1743:test/run_loop_autonomy_invariant_fixtures.py",
+      "id": "docs/guides/configuration.md:1773:test/run_loop_autonomy_invariant_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1743,
+      "line": 1773,
       "column": 24,
       "script": "test/run_loop_autonomy_invariant_fixtures.py",
       "classification": "self-repo-only"
