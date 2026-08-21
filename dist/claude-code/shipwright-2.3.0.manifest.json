@@ -314,6 +314,7 @@
     "docs_worktree.py",
     "doctor.py",
     "domain_vocabulary.py",
+    "effective_config_gen.py",
     "env-read-guard.py",
     "evidence-read.py",
     "evidence_read.py",
@@ -759,5 +760,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 756
+  "moduleCount": 757
 }

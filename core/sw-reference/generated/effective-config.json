@@ -1,0 +1,1572 @@
+{
+  "schemaVersion": "config.schema.json",
+  "shipwrightVersion": "2.3.0",
+  "generatedAt": "2026-08-21T19:26:54Z",
+  "generator": "scripts/effective_config_gen.py",
+  "settings": {
+    "agentsFile": {
+      "schemaDefault": "AGENTS.md",
+      "greenfieldDefault": "AGENTS.md",
+      "migrationDefault": "AGENTS.md",
+      "runtimeFallback": "AGENTS.md",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "checks.treatNeutralAsPass": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "checks.watch.maxWaitMinutes": {
+      "schemaDefault": 20,
+      "greenfieldDefault": 20,
+      "migrationDefault": 20,
+      "runtimeFallback": 20,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "checks.watch.pollSeconds": {
+      "schemaDefault": 45,
+      "greenfieldDefault": 45,
+      "migrationDefault": 45,
+      "runtimeFallback": 45,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "cleanup.autonomy": {
+      "schemaDefault": "confirm",
+      "greenfieldDefault": "confirm",
+      "migrationDefault": "confirm",
+      "runtimeFallback": "confirm",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "coderabbit.noDefer": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "coderabbit.reviewGraceMinutes": {
+      "schemaDefault": 15,
+      "greenfieldDefault": 15,
+      "migrationDefault": 15,
+      "runtimeFallback": 15,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "communication.defaultIntensity": {
+      "schemaDefault": "full",
+      "greenfieldDefault": "full",
+      "migrationDefault": "full",
+      "runtimeFallback": "full",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "compound.autonomy": {
+      "schemaDefault": "supervised",
+      "greenfieldDefault": "supervised",
+      "migrationDefault": "supervised",
+      "runtimeFallback": "supervised",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "contextCompression.enabled": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "contextCompression.strategies.diff": {
+      "schemaDefault": "path-reference",
+      "greenfieldDefault": "path-reference",
+      "migrationDefault": "path-reference",
+      "runtimeFallback": "path-reference",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "contextCompression.strategies.json": {
+      "schemaDefault": "compress",
+      "greenfieldDefault": "compress",
+      "migrationDefault": "compress",
+      "runtimeFallback": "compress",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "contextCompression.strategies.log": {
+      "schemaDefault": "compress",
+      "greenfieldDefault": "compress",
+      "migrationDefault": "compress",
+      "runtimeFallback": "compress",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "contextCompression.strategies.prose": {
+      "schemaDefault": "compress",
+      "greenfieldDefault": "compress",
+      "migrationDefault": "compress",
+      "runtimeFallback": "compress",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "contextCompression.thresholdTokens": {
+      "schemaDefault": 8000,
+      "greenfieldDefault": 8000,
+      "migrationDefault": 8000,
+      "runtimeFallback": 8000,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "decisionsDir": {
+      "schemaDefault": "docs/decisions",
+      "greenfieldDefault": "docs/decisions",
+      "migrationDefault": "docs/decisions",
+      "runtimeFallback": "docs/decisions",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "defaultBaseBranch": {
+      "schemaDefault": "main",
+      "greenfieldDefault": "main",
+      "migrationDefault": "main",
+      "runtimeFallback": "main",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "delegation.mode": {
+      "schemaDefault": "heuristic",
+      "greenfieldDefault": "heuristic",
+      "migrationDefault": "heuristic",
+      "runtimeFallback": "heuristic",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.autonomy.maxIterations": {
+      "schemaDefault": 500,
+      "greenfieldDefault": 500,
+      "migrationDefault": 500,
+      "runtimeFallback": 500,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.autonomy.maxRunMinutes": {
+      "schemaDefault": 1440,
+      "greenfieldDefault": 1440,
+      "migrationDefault": 1440,
+      "runtimeFallback": 1440,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.autonomy.mode": {
+      "schemaDefault": "autonomous",
+      "greenfieldDefault": "autonomous",
+      "migrationDefault": "autonomous",
+      "runtimeFallback": "autonomous",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.loop.drainMechanical": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.loop.maxStepsPerInvocation": {
+      "schemaDefault": 12,
+      "greenfieldDefault": 12,
+      "migrationDefault": 12,
+      "runtimeFallback": 12,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.phaseAckCadence": {
+      "schemaDefault": 0,
+      "greenfieldDefault": 0,
+      "migrationDefault": 0,
+      "runtimeFallback": 0,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.remediation.maxAttempts": {
+      "schemaDefault": 2,
+      "greenfieldDefault": 2,
+      "migrationDefault": 2,
+      "runtimeFallback": 2,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.targetLock.staleSeconds": {
+      "schemaDefault": 300,
+      "greenfieldDefault": 300,
+      "migrationDefault": 300,
+      "runtimeFallback": 300,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.terminal.autonomy": {
+      "schemaDefault": "supervised",
+      "greenfieldDefault": "supervised",
+      "migrationDefault": "supervised",
+      "runtimeFallback": "supervised",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.watchdog.phaseTimeoutMinutes": {
+      "schemaDefault": 240,
+      "greenfieldDefault": 240,
+      "migrationDefault": 240,
+      "runtimeFallback": 240,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.watchdog.stalenessClassifier.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.watchdog.stalenessClassifier.stuckThresholdMinutes": {
+      "schemaDefault": 30,
+      "greenfieldDefault": 30,
+      "migrationDefault": 30,
+      "runtimeFallback": 30,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.watchdog.stalenessClassifier.waitingOnHumanBoost": {
+      "schemaDefault": 0.35,
+      "greenfieldDefault": 0.35,
+      "migrationDefault": 0.35,
+      "runtimeFallback": 0.35,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "deliver.watchdog.stalenessClassifier.workingThresholdMinutes": {
+      "schemaDefault": 5,
+      "greenfieldDefault": 5,
+      "migrationDefault": 5,
+      "runtimeFallback": 5,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "dispatch.complexityProbe.bandCeiling": {
+      "schemaDefault": "deep",
+      "greenfieldDefault": "deep",
+      "migrationDefault": "deep",
+      "runtimeFallback": "deep",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "dispatch.complexityProbe.bandFloor": {
+      "schemaDefault": "cheap",
+      "greenfieldDefault": "cheap",
+      "migrationDefault": "cheap",
+      "runtimeFallback": "cheap",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "dispatch.complexityProbe.enabled": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "dispatch.tokenBudget.advisory": {
+      "schemaDefault": 32000,
+      "greenfieldDefault": 32000,
+      "migrationDefault": 32000,
+      "runtimeFallback": 32000,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "doc.afterTasks": {
+      "schemaDefault": "confirm",
+      "greenfieldDefault": "confirm",
+      "migrationDefault": "confirm",
+      "runtimeFallback": "confirm",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "doc.loop.drainMechanical": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "doc.loop.maxStepsPerInvocation": {
+      "schemaDefault": 8,
+      "greenfieldDefault": 8,
+      "migrationDefault": 8,
+      "runtimeFallback": 8,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "execute.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "execute.maxExpansionDepth": {
+      "schemaDefault": 2,
+      "greenfieldDefault": 2,
+      "migrationDefault": 2,
+      "runtimeFallback": 2,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "execute.sizing.thresholds.distinctDirs": {
+      "schemaDefault": 2,
+      "greenfieldDefault": 2,
+      "migrationDefault": 2,
+      "runtimeFallback": 2,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "execute.sizing.thresholds.filesTouched": {
+      "schemaDefault": 3,
+      "greenfieldDefault": 3,
+      "migrationDefault": 3,
+      "runtimeFallback": 3,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "execute.sizing.thresholds.traceabilityScenarios": {
+      "schemaDefault": 2,
+      "greenfieldDefault": 2,
+      "migrationDefault": 2,
+      "runtimeFallback": 2,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "gapCheck.ruleVerifierSweep.enabled": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.budget.haltOnExhaustion": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.budget.maxExecutionsPerNode": {
+      "schemaDefault": 8,
+      "greenfieldDefault": 8,
+      "migrationDefault": 8,
+      "runtimeFallback": 8,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.cache.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.cache.maxAgeSeconds": {
+      "schemaDefault": 2592000,
+      "greenfieldDefault": 2592000,
+      "migrationDefault": 2592000,
+      "runtimeFallback": 2592000,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.cache.maxSizeBytes": {
+      "schemaDefault": 268435456,
+      "greenfieldDefault": 268435456,
+      "migrationDefault": 268435456,
+      "runtimeFallback": 268435456,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.cache.scope": {
+      "schemaDefault": "run",
+      "greenfieldDefault": "run",
+      "migrationDefault": "run",
+      "runtimeFallback": "run",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.execution.backend": {
+      "schemaDefault": "local-sync",
+      "greenfieldDefault": "local-sync",
+      "migrationDefault": "local-sync",
+      "runtimeFallback": "local-sync",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.execution.container.image": {
+      "schemaDefault": "shipwright/graph-node:latest",
+      "greenfieldDefault": "shipwright/graph-node:latest",
+      "migrationDefault": "shipwright/graph-node:latest",
+      "runtimeFallback": "shipwright/graph-node:latest",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.execution.container.resourceLimits.cpuMillis": {
+      "schemaDefault": 1000,
+      "greenfieldDefault": 1000,
+      "migrationDefault": 1000,
+      "runtimeFallback": 1000,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.execution.container.resourceLimits.memoryMb": {
+      "schemaDefault": 512,
+      "greenfieldDefault": 512,
+      "migrationDefault": 512,
+      "runtimeFallback": 512,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.execution.container.resourceLimits.timeoutSeconds": {
+      "schemaDefault": 3600,
+      "greenfieldDefault": 3600,
+      "migrationDefault": 3600,
+      "runtimeFallback": 3600,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.profiles.optimization": {
+      "schemaDefault": "balanced",
+      "greenfieldDefault": "balanced",
+      "migrationDefault": "balanced",
+      "runtimeFallback": "balanced",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.resourceLimits.maxConcurrency": {
+      "schemaDefault": 1,
+      "greenfieldDefault": 1,
+      "migrationDefault": 1,
+      "runtimeFallback": 1,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "graphExecution.resourceLimits.maxDurationSeconds": {
+      "schemaDefault": 86400,
+      "greenfieldDefault": 86400,
+      "migrationDefault": 86400,
+      "runtimeFallback": 86400,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "host.rateLimit.baseBackoffMs": {
+      "schemaDefault": 1000,
+      "greenfieldDefault": 1000,
+      "migrationDefault": 1000,
+      "runtimeFallback": 1000,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "host.rateLimit.capBackoffMs": {
+      "schemaDefault": 60000,
+      "greenfieldDefault": 60000,
+      "migrationDefault": 60000,
+      "runtimeFallback": 60000,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "host.rateLimit.jitter": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "host.rateLimit.maxAttempts": {
+      "schemaDefault": 5,
+      "greenfieldDefault": 5,
+      "migrationDefault": 5,
+      "runtimeFallback": 5,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "host.rateLimit.maxCumulativeWaitMs": {
+      "schemaDefault": 300000,
+      "greenfieldDefault": 300000,
+      "migrationDefault": 300000,
+      "runtimeFallback": 300000,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "host.rateLimit.mutatingMinDelayMs": {
+      "schemaDefault": 1000,
+      "greenfieldDefault": 1000,
+      "migrationDefault": 1000,
+      "runtimeFallback": 1000,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "host.rateLimit.nearLimitThreshold": {
+      "schemaDefault": 5,
+      "greenfieldDefault": 5,
+      "migrationDefault": 5,
+      "runtimeFallback": 5,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "host.remote": {
+      "schemaDefault": "origin",
+      "greenfieldDefault": "origin",
+      "migrationDefault": "origin",
+      "runtimeFallback": "origin",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "host.tokenEnv": {
+      "schemaDefault": null,
+      "greenfieldDefault": null,
+      "migrationDefault": null,
+      "runtimeFallback": null,
+      "deprecatedSince": "legacy",
+      "removedIn": null
+    },
+    "inefficiency.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "inefficiency.thresholds.slowCiJobSeconds": {
+      "schemaDefault": 300,
+      "greenfieldDefault": 300,
+      "migrationDefault": 300,
+      "runtimeFallback": 300,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "inefficiency.thresholds.slowTestSeconds": {
+      "schemaDefault": 30,
+      "greenfieldDefault": 30,
+      "migrationDefault": 30,
+      "runtimeFallback": 30,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "intraPhase.harnessLimit": {
+      "schemaDefault": 8,
+      "greenfieldDefault": 8,
+      "migrationDefault": 8,
+      "runtimeFallback": 8,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "intraPhase.parallelBudget": {
+      "schemaDefault": 2,
+      "greenfieldDefault": 2,
+      "migrationDefault": 2,
+      "runtimeFallback": 2,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "invariantsOptional": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "loop.autoPropose.cooldownMinutes": {
+      "schemaDefault": 30,
+      "greenfieldDefault": 30,
+      "migrationDefault": 30,
+      "runtimeFallback": 30,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "loop.autoPropose.dedupWindow": {
+      "schemaDefault": 3600,
+      "greenfieldDefault": 3600,
+      "migrationDefault": 3600,
+      "runtimeFallback": 3600,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "loop.autoPropose.enabled": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "loop.autoPropose.maxOpenMetaUnits": {
+      "schemaDefault": 10,
+      "greenfieldDefault": 10,
+      "migrationDefault": 10,
+      "runtimeFallback": 10,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "loop.autoPropose.maxPerDay": {
+      "schemaDefault": 5,
+      "greenfieldDefault": 5,
+      "migrationDefault": 5,
+      "runtimeFallback": 5,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "loop.autoPropose.scheduler": {
+      "schemaDefault": "manual",
+      "greenfieldDefault": "manual",
+      "migrationDefault": "manual",
+      "runtimeFallback": "manual",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "loopHealth.enabled": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "loopHealth.staleInboxDays": {
+      "schemaDefault": 14,
+      "greenfieldDefault": 14,
+      "migrationDefault": 14,
+      "runtimeFallback": 14,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.autoSync.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.autoSync.minMinutes": {
+      "schemaDefault": 120,
+      "greenfieldDefault": 120,
+      "migrationDefault": 120,
+      "runtimeFallback": 120,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.autoSync.minTurns": {
+      "schemaDefault": 10,
+      "greenfieldDefault": 10,
+      "migrationDefault": 10,
+      "runtimeFallback": 10,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.basicMemory.apiBase": {
+      "schemaDefault": "https://cloud.basicmemory.com",
+      "greenfieldDefault": "https://cloud.basicmemory.com",
+      "migrationDefault": "https://cloud.basicmemory.com",
+      "runtimeFallback": "https://cloud.basicmemory.com",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.basicMemory.failClosed": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.basicMemory.memoriesDirectory": {
+      "schemaDefault": "memories",
+      "greenfieldDefault": "memories",
+      "migrationDefault": "memories",
+      "runtimeFallback": "memories",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.basicMemory.mode": {
+      "schemaDefault": "local",
+      "greenfieldDefault": "local",
+      "migrationDefault": "local",
+      "runtimeFallback": "local",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.basicMemory.redactOnWrite": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.basicMemory.ruleCacheTtlSec": {
+      "schemaDefault": 300,
+      "greenfieldDefault": 300,
+      "migrationDefault": 300,
+      "runtimeFallback": 300,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.basicMemory.rulesDirectory": {
+      "schemaDefault": "rules",
+      "greenfieldDefault": "rules",
+      "migrationDefault": "rules",
+      "runtimeFallback": "rules",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.basicMemory.supportedPackage": {
+      "schemaDefault": "basic-memory>=0.22.0,<1.0.0",
+      "greenfieldDefault": "basic-memory>=0.22.0,<1.0.0",
+      "migrationDefault": "basic-memory>=0.22.0,<1.0.0",
+      "runtimeFallback": "basic-memory>=0.22.0,<1.0.0",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.basicMemory.tokenEnv": {
+      "schemaDefault": "BASIC_MEMORY_API_KEY",
+      "greenfieldDefault": "BASIC_MEMORY_API_KEY",
+      "migrationDefault": "BASIC_MEMORY_API_KEY",
+      "runtimeFallback": "BASIC_MEMORY_API_KEY",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.connection.restBaseUrl": {
+      "schemaDefault": "http://localhost:8001",
+      "greenfieldDefault": "http://localhost:8001",
+      "migrationDefault": "http://localhost:8001",
+      "runtimeFallback": "http://localhost:8001",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.guardrails.allowEmptyRules": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.guardrails.enforceBeforeSubmit": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.guardrails.requireRuleClass": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.inRepo.commitMode": {
+      "schemaDefault": "committed",
+      "greenfieldDefault": "committed",
+      "migrationDefault": "committed",
+      "runtimeFallback": "committed",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.inRepo.storeDir": {
+      "schemaDefault": ".cursor/sw-memory",
+      "greenfieldDefault": ".cursor/sw-memory",
+      "migrationDefault": ".cursor/sw-memory",
+      "runtimeFallback": ".cursor/sw-memory",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.mempalace.failClosed": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.mempalace.redactOnWrite": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.mempalace.ruleCacheTtlSec": {
+      "schemaDefault": 300,
+      "greenfieldDefault": 300,
+      "migrationDefault": 300,
+      "runtimeFallback": 300,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.mempalace.rulesRoom": {
+      "schemaDefault": "rules",
+      "greenfieldDefault": "rules",
+      "migrationDefault": "rules",
+      "runtimeFallback": "rules",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.mempalace.searchExcludeRooms": {
+      "schemaDefault": [
+        "transcripts"
+      ],
+      "greenfieldDefault": [
+        "transcripts"
+      ],
+      "migrationDefault": [
+        "transcripts"
+      ],
+      "runtimeFallback": [
+        "transcripts"
+      ],
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.mempalace.supportedPackage": {
+      "schemaDefault": "mempalace>=3.6.0,<4.0.0",
+      "greenfieldDefault": "mempalace>=3.6.0,<4.0.0",
+      "migrationDefault": "mempalace>=3.6.0,<4.0.0",
+      "runtimeFallback": "mempalace>=3.6.0,<4.0.0",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.obsidian.failClosed": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.obsidian.mcpBaseUrl": {
+      "schemaDefault": "http://127.0.0.1:27123",
+      "greenfieldDefault": "http://127.0.0.1:27123",
+      "migrationDefault": "http://127.0.0.1:27123",
+      "runtimeFallback": "http://127.0.0.1:27123",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.obsidian.memoriesDirectory": {
+      "schemaDefault": "memories",
+      "greenfieldDefault": "memories",
+      "migrationDefault": "memories",
+      "runtimeFallback": "memories",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.obsidian.redactOnWrite": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.obsidian.ruleCacheTtlSec": {
+      "schemaDefault": 300,
+      "greenfieldDefault": 300,
+      "migrationDefault": 300,
+      "runtimeFallback": 300,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.obsidian.rulesDirectory": {
+      "schemaDefault": "rules",
+      "greenfieldDefault": "rules",
+      "migrationDefault": "rules",
+      "runtimeFallback": "rules",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.obsidian.tokenEnv": {
+      "schemaDefault": "OBSIDIAN_API_KEY",
+      "greenfieldDefault": "OBSIDIAN_API_KEY",
+      "migrationDefault": "OBSIDIAN_API_KEY",
+      "runtimeFallback": "OBSIDIAN_API_KEY",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.playbooks.activeMinConfidence": {
+      "schemaDefault": 0.6,
+      "greenfieldDefault": 0.6,
+      "migrationDefault": 0.6,
+      "runtimeFallback": 0.6,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.playbooks.confidenceStep": {
+      "schemaDefault": 0.05,
+      "greenfieldDefault": 0.05,
+      "migrationDefault": 0.05,
+      "runtimeFallback": 0.05,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.playbooks.demoteMaxSuccessRate": {
+      "schemaDefault": 0.4,
+      "greenfieldDefault": 0.4,
+      "migrationDefault": 0.4,
+      "runtimeFallback": 0.4,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.playbooks.demoteMinUsage": {
+      "schemaDefault": 5,
+      "greenfieldDefault": 5,
+      "migrationDefault": 5,
+      "runtimeFallback": 5,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.playbooks.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.playbooks.injectMinConfidence": {
+      "schemaDefault": 0.75,
+      "greenfieldDefault": 0.75,
+      "migrationDefault": 0.75,
+      "runtimeFallback": 0.75,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.playbooks.promoteMinSuccessRate": {
+      "schemaDefault": 0.8,
+      "greenfieldDefault": 0.8,
+      "migrationDefault": 0.8,
+      "runtimeFallback": 0.8,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.playbooks.promoteMinUsage": {
+      "schemaDefault": 5,
+      "greenfieldDefault": 5,
+      "migrationDefault": 5,
+      "runtimeFallback": 5,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.provider": {
+      "schemaDefault": "in-repo",
+      "greenfieldDefault": "in-repo",
+      "migrationDefault": "in-repo",
+      "runtimeFallback": "in-repo",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.sourceOfTruth": {
+      "schemaDefault": "auto",
+      "greenfieldDefault": "auto",
+      "migrationDefault": "auto",
+      "runtimeFallback": "auto",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "memory.tokenEnv": {
+      "schemaDefault": null,
+      "greenfieldDefault": null,
+      "migrationDefault": null,
+      "runtimeFallback": null,
+      "deprecatedSince": "legacy",
+      "removedIn": null
+    },
+    "notebook.sessionIndex": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "orchestration.planPolicy": {
+      "schemaDefault": "proposed",
+      "greenfieldDefault": "proposed",
+      "migrationDefault": "proposed",
+      "runtimeFallback": "proposed",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.autonomy": {
+      "schemaDefault": "full-conductor",
+      "greenfieldDefault": "full-conductor",
+      "migrationDefault": "full-conductor",
+      "runtimeFallback": "full-conductor",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.fullConductor.confidenceThreshold": {
+      "schemaDefault": 0.85,
+      "greenfieldDefault": 0.85,
+      "migrationDefault": 0.85,
+      "runtimeFallback": 0.85,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.fullConductor.mutationBudget": {
+      "schemaDefault": 5,
+      "greenfieldDefault": 5,
+      "migrationDefault": 5,
+      "runtimeFallback": 5,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.fullConductor.undoWindowSeconds": {
+      "schemaDefault": 300,
+      "greenfieldDefault": 300,
+      "migrationDefault": 300,
+      "runtimeFallback": 300,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.inFlight.stalenessTtlHours": {
+      "schemaDefault": 72,
+      "greenfieldDefault": 72,
+      "migrationDefault": 72,
+      "runtimeFallback": 72,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.radar.postMerge": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.radar.windows.activityBiasLastPrs": {
+      "schemaDefault": 30,
+      "greenfieldDefault": 30,
+      "migrationDefault": 30,
+      "runtimeFallback": 30,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.radar.windows.activityBiasMinPrCount": {
+      "schemaDefault": 3,
+      "greenfieldDefault": 3,
+      "migrationDefault": 3,
+      "runtimeFallback": 3,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.radar.windows.gitChurnDays": {
+      "schemaDefault": 30,
+      "greenfieldDefault": 30,
+      "migrationDefault": 30,
+      "runtimeFallback": 30,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.vocabulary.strictMode": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.privacyAck.required": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.refusalLedger.maxSizeBytes": {
+      "schemaDefault": 52428800,
+      "greenfieldDefault": 52428800,
+      "migrationDefault": 52428800,
+      "runtimeFallback": 52428800,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.refusalLedger.path": {
+      "schemaDefault": ".cursor/sw-refusal-ledger",
+      "greenfieldDefault": ".cursor/sw-refusal-ledger",
+      "migrationDefault": ".cursor/sw-refusal-ledger",
+      "runtimeFallback": ".cursor/sw-refusal-ledger",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.refusalLedger.ttlSeconds": {
+      "schemaDefault": 2592000,
+      "greenfieldDefault": 2592000,
+      "migrationDefault": 2592000,
+      "runtimeFallback": 2592000,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.releaseGrouping.labelPrefix": {
+      "schemaDefault": "sw:release:",
+      "greenfieldDefault": "sw:release:",
+      "migrationDefault": "sw:release:",
+      "runtimeFallback": "sw:release:",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.releaseGrouping.mode": {
+      "schemaDefault": "milestone",
+      "greenfieldDefault": "milestone",
+      "migrationDefault": "milestone",
+      "runtimeFallback": "milestone",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.store.backend": {
+      "schemaDefault": "in-repo-public",
+      "greenfieldDefault": "in-repo-public",
+      "migrationDefault": "in-repo-public",
+      "runtimeFallback": "in-repo-public",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.store.issues.tokenEnv": {
+      "schemaDefault": null,
+      "greenfieldDefault": null,
+      "migrationDefault": null,
+      "runtimeFallback": null,
+      "deprecatedSince": "legacy",
+      "removedIn": null
+    },
+    "planning.store.operatorProjection.githubProjects.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.store.operatorProjection.linear.cycleSharingNotice": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.store.operatorProjection.linear.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.store.operatorProjection.linear.initiativeSubstitute": {
+      "schemaDefault": "substitute-views",
+      "greenfieldDefault": "substitute-views",
+      "migrationDefault": "substitute-views",
+      "runtimeFallback": "substitute-views",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.visibilityProfile": {
+      "schemaDefault": "specs-public",
+      "greenfieldDefault": "specs-public",
+      "migrationDefault": "specs-public",
+      "runtimeFallback": "specs-public",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planningDir": {
+      "schemaDefault": "docs/planning",
+      "greenfieldDefault": "docs/planning",
+      "migrationDefault": "docs/planning",
+      "runtimeFallback": "docs/planning",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "prdsDir": {
+      "schemaDefault": "docs/prds",
+      "greenfieldDefault": "docs/prds",
+      "migrationDefault": "docs/prds",
+      "runtimeFallback": "docs/prds",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "quality.provider": {
+      "schemaDefault": "none",
+      "greenfieldDefault": "none",
+      "migrationDefault": "none",
+      "runtimeFallback": "none",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "rca.fanout.ambiguity_trigger": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "rca.fanout.enabled": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "rca.fanout.max_width": {
+      "schemaDefault": 4,
+      "greenfieldDefault": 4,
+      "migrationDefault": 4,
+      "runtimeFallback": 4,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "rca.fanout.min_hypotheses": {
+      "schemaDefault": 3,
+      "greenfieldDefault": 3,
+      "migrationDefault": 3,
+      "runtimeFallback": 3,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "recurrence.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "recurrence.threshold": {
+      "schemaDefault": 3,
+      "greenfieldDefault": 3,
+      "migrationDefault": 3,
+      "runtimeFallback": 3,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "retrospective.gapCapture.enabled": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "retrospective.gapCapture.maxCapturesPerRun": {
+      "schemaDefault": 3,
+      "greenfieldDefault": 3,
+      "migrationDefault": 3,
+      "runtimeFallback": 3,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "review.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "review.local.apply": {
+      "schemaDefault": "auto",
+      "greenfieldDefault": "auto",
+      "migrationDefault": "auto",
+      "runtimeFallback": "auto",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "review.local.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "review.local.gate.haltOn": {
+      "schemaDefault": [],
+      "greenfieldDefault": [],
+      "migrationDefault": [],
+      "runtimeFallback": [],
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "review.local.gate.surface": {
+      "schemaDefault": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ],
+      "greenfieldDefault": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ],
+      "migrationDefault": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ],
+      "runtimeFallback": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ],
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "review.local.grouping": {
+      "schemaDefault": "auto",
+      "greenfieldDefault": "auto",
+      "migrationDefault": "auto",
+      "runtimeFallback": "auto",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "review.local.provider": {
+      "schemaDefault": "native",
+      "greenfieldDefault": "native",
+      "migrationDefault": "native",
+      "runtimeFallback": "native",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "review.local.ui.enrich": {
+      "schemaDefault": "off",
+      "greenfieldDefault": "off",
+      "migrationDefault": "off",
+      "runtimeFallback": "off",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "review.provider": {
+      "schemaDefault": "none",
+      "greenfieldDefault": "none",
+      "migrationDefault": "none",
+      "runtimeFallback": "none",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "stabilizeLoop.sameStageEscalation.enabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "stabilizeLoop.sameStageEscalation.escalateAfterFailures": {
+      "schemaDefault": 2,
+      "greenfieldDefault": 2,
+      "migrationDefault": 2,
+      "runtimeFallback": 2,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "stabilizeLoop.sameStageEscalation.personaFallback": {
+      "schemaDefault": "adversarial",
+      "greenfieldDefault": "adversarial",
+      "migrationDefault": "adversarial",
+      "runtimeFallback": "adversarial",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "stateFile": {
+      "schemaDefault": ".git/shipwright.json",
+      "greenfieldDefault": ".git/shipwright.json",
+      "migrationDefault": ".git/shipwright.json",
+      "runtimeFallback": ".git/shipwright.json",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "tasks.sizing.maxPhaseCount": {
+      "schemaDefault": 13,
+      "greenfieldDefault": 13,
+      "migrationDefault": 13,
+      "runtimeFallback": 13,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "tasks.sizing.minPhaseFiles": {
+      "schemaDefault": 2,
+      "greenfieldDefault": 2,
+      "migrationDefault": 2,
+      "runtimeFallback": 2,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "tasks.sizing.minPhaseScenarios": {
+      "schemaDefault": 1,
+      "greenfieldDefault": 1,
+      "migrationDefault": 1,
+      "runtimeFallback": 1,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "tasksDir": {
+      "schemaDefault": "docs/prds",
+      "greenfieldDefault": "docs/prds",
+      "migrationDefault": "docs/prds",
+      "runtimeFallback": "docs/prds",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "tournament.cost_ceiling": {
+      "schemaDefault": 0,
+      "greenfieldDefault": 0,
+      "migrationDefault": 0,
+      "runtimeFallback": 0,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "tournament.enabled": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "tournament.n": {
+      "schemaDefault": 3,
+      "greenfieldDefault": 3,
+      "migrationDefault": 3,
+      "runtimeFallback": 3,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "verify.allowUnconfigured": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "verify.watchdog.maxMinutes": {
+      "schemaDefault": 120,
+      "greenfieldDefault": 120,
+      "migrationDefault": 120,
+      "runtimeFallback": 120,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "verifyE2e.enabled": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "verifyE2e.provider": {
+      "schemaDefault": "none",
+      "greenfieldDefault": "none",
+      "migrationDefault": "none",
+      "runtimeFallback": "none",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "verifyMutation.enabled": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "verifyMutation.provider": {
+      "schemaDefault": "none",
+      "greenfieldDefault": "none",
+      "migrationDefault": "none",
+      "runtimeFallback": "none",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "workflow.extensions.externalIntake": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "workflow.extensions.handoffBundle": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "workflow.extensions.packageSdk": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "worktree.parallelCeiling": {
+      "schemaDefault": 4,
+      "greenfieldDefault": 4,
+      "migrationDefault": 4,
+      "runtimeFallback": 4,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "worktree.scaffold.portRangeEnd": {
+      "schemaDefault": 9199,
+      "greenfieldDefault": 9199,
+      "migrationDefault": 9199,
+      "runtimeFallback": 9199,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "worktree.scaffold.portRangeStart": {
+      "schemaDefault": 9100,
+      "greenfieldDefault": 9100,
+      "migrationDefault": 9100,
+      "runtimeFallback": 9100,
+      "deprecatedSince": null,
+      "removedIn": null
+    }
+  }
+}
