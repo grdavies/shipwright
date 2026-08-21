@@ -5218,6 +5218,204 @@ def write_back_gap_prereqs_061(root: Path, cfg: dict[str, Any], *, dry_run: bool
     return {"verdict": "ok" if ok else "partial", "action": "write-back-gap-prereqs", "dryRun": dry_run, "results": results}
 
 
+def external_intake_txn(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    verb: str,
+    issue_id: str | None = None,
+    signal_id: str | None = None,
+    title: str | None = None,
+    signal_class: str = "unknown",
+    comment: str | None = None,
+    gap_unit_id: str | None = None,
+    priority: str = "medium",
+    tier: str = "build",
+    gap_class: str = "external",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Planning-store txn verbs for external issue triage lifecycle (PRD 280 R1–R3)."""
+    from planning_external_intake import (
+        TXN_VERBS,
+        VERB_TO_STATE,
+        append_transition,
+        gap_promotion_labels,
+        initial_external_intake_block,
+        outcome_for_verb,
+        parse_external_intake_block,
+        sync_external_intake_labels,
+        upsert_external_intake_block,
+        validate_transition,
+    )
+
+    if verb not in TXN_VERBS:
+        return {"verdict": "fail", "action": verb, "error": "unknown-external-intake-verb", "verb": verb}
+
+    backend = resolve_effective_backend(root, cfg)
+    if backend.get("configured") != "issue-store":
+        return {"verdict": "fail", "action": verb, "error": "issue-store-required"}
+
+    provider = str(resolve_issues_provider(cfg).get("provider") or "none")
+    pk = validate_project_key(root, cfg)
+    if pk.get("verdict") != "ok":
+        return pk
+    project_key = str(pk["projectKey"])
+    client = IssuesClient(root, provider)
+
+    if verb == "external-intake-receive":
+        if not signal_id or not title:
+            return {"verdict": "fail", "action": verb, "error": "signal-id-and-title-required"}
+        block = initial_external_intake_block(signal_id=signal_id, signal_class=signal_class)
+        body = upsert_external_intake_block("", block)
+        labels = sync_external_intake_labels([], "received")
+        if dry_run:
+            return {"verdict": "ok", "action": verb, "dryRun": True, "state": "received", "signalId": signal_id}
+        created = client.issue_create(
+            title=title,
+            body=body,
+            labels=labels,
+            project_key=project_key,
+            artifact_type="external",
+            unit_id=f"external-{signal_id}",
+        )
+        return {
+            "verdict": "ok",
+            "action": verb,
+            "issueId": str(created.id),
+            "state": "received",
+            "signalId": signal_id,
+        }
+
+    if not issue_id:
+        return {"verdict": "fail", "action": verb, "error": "issue-id-required", "verb": verb}
+
+    try:
+        current = client.issue_get(str(issue_id))
+    except Exception as exc:  # noqa: BLE001
+        return {"verdict": "fail", "action": verb, "error": str(exc), "issueId": issue_id}
+
+    block = parse_external_intake_block(current.body)
+    if not block:
+        return {"verdict": "fail", "action": verb, "error": "missing-external-intake-block", "issueId": issue_id}
+
+    from_state = str(block.get("state") or "")
+    to_state = VERB_TO_STATE[verb]
+    try:
+        validate_transition(from_state, to_state)
+    except ValueError as exc:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": str(exc),
+            "issueId": issue_id,
+            "fromState": from_state,
+            "toState": to_state,
+        }
+
+    note = comment or ""
+    updated_block = append_transition(
+        block,
+        verb=verb,
+        from_state=from_state,
+        to_state=to_state,
+        note=note,
+    )
+    body = upsert_external_intake_block(current.body, updated_block)
+    labels = sync_external_intake_labels(list(current.labels), to_state)
+
+    if verb == "external-intake-promote" and gap_unit_id:
+        from planning_github_client import merge_external_gap_promotion_labels
+
+        labels = merge_external_gap_promotion_labels(
+            labels,
+            unit_id=gap_unit_id,
+            priority=priority,
+            tier=tier,
+            gap_class=gap_class,
+        )
+        updated_block["promotedUnitId"] = gap_unit_id
+        body = upsert_external_intake_block(body, updated_block)
+
+    outcome = outcome_for_verb(verb)
+    if outcome:
+        updated_block["outcome"] = outcome
+        body = upsert_external_intake_block(body, updated_block)
+
+    if dry_run:
+        return {
+            "verdict": "ok",
+            "action": verb,
+            "dryRun": True,
+            "issueId": issue_id,
+            "fromState": from_state,
+            "toState": to_state,
+            "outcome": outcome,
+        }
+
+    redacted_comment = redact_content(comment) if comment else None
+    if labels != list(current.labels):
+        current = client.issue_label(str(issue_id), labels, if_match=current.etag)
+    if body != current.body:
+        current = client.issue_update(str(issue_id), body=body, if_match=current.etag)
+    if redacted_comment:
+        client.issue_comment(str(issue_id), redacted_comment)
+
+    return {
+        "verdict": "ok",
+        "action": verb,
+        "issueId": issue_id,
+        "fromState": from_state,
+        "toState": to_state,
+        "outcome": outcome,
+        "promotedUnitId": gap_unit_id,
+        "gapLabels": gap_promotion_labels(
+            unit_id=gap_unit_id,
+            priority=priority,
+            tier=tier,
+            gap_class=gap_class,
+        )
+        if gap_unit_id
+        else None,
+    }
+
+
+def external_intake_run_pipeline(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str,
+    duplicate: bool = False,
+    through: str = "actionability",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Validation pipeline classify→duplicate→verify→actionability (PRD 280 R3)."""
+    steps = ["external-intake-classify"]
+    if duplicate:
+        steps.append("external-intake-duplicate-check")
+    steps.append("external-intake-verify")
+    if through == "actionability":
+        steps.append("external-intake-actionability")
+    results: list[dict[str, Any]] = []
+    for step in steps:
+        result = external_intake_txn(root, cfg, verb=step, issue_id=issue_id, dry_run=dry_run)
+        results.append(result)
+        if result.get("verdict") != "ok":
+            return {
+                "verdict": "fail",
+                "action": "external-intake-pipeline",
+                "issueId": issue_id,
+                "failedStep": step,
+                "results": results,
+            }
+    return {
+        "verdict": "ok",
+        "action": "external-intake-pipeline",
+        "issueId": issue_id,
+        "through": through,
+        "results": results,
+    }
+
+
 def resolve_absorbed_gaps_061(
     root: Path,
     cfg: dict[str, Any],
