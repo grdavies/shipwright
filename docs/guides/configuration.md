@@ -1454,7 +1454,7 @@ CI-readiness gate until GitHub CI is available — `/sw-init` host doctor warns 
 
 Neutral shipped example omits scaffold; dogfood repos may set scaffold explicitly.
 
-## Workflow extensions (PRD 280)
+## Workflow extensions
 
 Opt-in rollout flags under `workflow.extensions.*` (default **`false`** until cutover evidence).
 Operator surfaces stay on existing `sw-*` commands and planning-store verbs — no parallel
