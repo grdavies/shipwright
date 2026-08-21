@@ -983,6 +983,7 @@
 * merge phase cross-cutting-integration-and-rollout into feat/workflow-extensions (df666ac) <!-- sw-deliver:cross-cutting-integration-and-rollout -->
 * merge phase container-executionbackend-and-conformance-suite-l into feat/execution-platform (76dd480) <!-- sw-deliver:container-executionbackend-and-conformance-suite-l -->
 * merge phase remote-execution-ownership-cas-leases-m into feat/execution-platform (3963b0d) <!-- sw-deliver:remote-execution-ownership-cas-leases-m -->
+* merge phase effective-config-and-upgrade-manifest-generation-m into feat/execution-platform (ddc08c0) <!-- sw-deliver:effective-config-and-upgrade-manifest-generation-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
