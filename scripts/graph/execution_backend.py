@@ -728,3 +728,42 @@ class RoutingExecutionBackend:
     @property
     def human_action_backend(self) -> HumanActionExecutionBackend:
         return self._human_action
+
+
+def create_execution_backend(
+    executor: Any,
+    *,
+    root: Any | None = None,
+    cfg: Mapping[str, Any] | None = None,
+    clock: Clock | None = None,
+    runtime: Any | None = None,
+    credential_resolver: Any | None = None,
+) -> ExecutionBackend:
+    """Resolve graphExecution.execution.backend — default LocalSync (PRD 279 R1)."""
+    from pathlib import Path
+
+    repo_root = Path(root) if root is not None else Path.cwd()
+    if cfg is None:
+        from host_lib import load_workflow_config
+
+        cfg = load_workflow_config(repo_root)
+    graph_exec = cfg.get("graphExecution") or {}
+    execution = graph_exec.get("execution") or {}
+    backend_kind = str(execution.get("backend") or "local-sync").strip().lower()
+
+    if backend_kind == "container":
+        from graph.container_execution_backend import (
+            ContainerExecutionBackend,
+            resolve_container_execution_config,
+        )
+
+        config = resolve_container_execution_config(cfg, root=repo_root)
+        return ContainerExecutionBackend(
+            config=config,
+            runtime=runtime,
+            root=repo_root,
+            credential_resolver=credential_resolver,
+            clock=clock,
+        )
+
+    return LocalSyncExecutionBackend(executor, clock=clock)
