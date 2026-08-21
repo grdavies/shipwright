@@ -23,7 +23,7 @@ from init_credential_migration import (
     offer_legacy_migration,
     selector_add,
 )
-from init_posture_defaults import greenfield_posture_patch
+from init_profile_report import greenfield_curated_patch
 
 
 def _plugin_root() -> Path:
@@ -217,7 +217,7 @@ def cmd_write_draft(root: Path, *, accept: bool, write_verify: bool, config: str
             "schemaVersion": schema_version(root),
         },
     }
-    draft.update(greenfield_posture_patch())
+    draft.update(greenfield_curated_patch())
     draft = _deep_merge(draft, credential_patch_for_draft(root))
     comm_defaults_path = root / "core/sw-reference/communication-routing.defaults.json"
     if comm_defaults_path.is_file():
