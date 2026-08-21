@@ -34,7 +34,8 @@ def parse_task_checkboxes(text: str) -> dict[str, bool]:
     out: dict[str, bool] = {}
     current_ref: str | None = None
     for line in text.splitlines():
-        ref_match = re.match(r"^-\s+\[([ xX])\]\s+(\d+\.\d+)\s", line)
+        # Accept plain `4.1` or bold `**4.1**` task refs (common frozen-task formatting).
+        ref_match = re.match(r"^-\s+\[([ xX])\]\s+(?:\*\*)?(\d+\.\d+)(?:\*\*)?\s", line)
         if ref_match:
             done = ref_match.group(1).lower() == "x"
             current_ref = ref_match.group(2)
