@@ -17,9 +17,11 @@ if str(SCRIPT_DIR) not in sys.path:
 from _sw.cli import run_module_main
 from init_credential_migration import (
     apply_guided_single_identity,
+    build_credential_checklist,
     build_init_plan,
     credential_patch_for_draft,
     offer_ci_env_declaration,
+    offer_example_env_file,
     offer_legacy_migration,
     selector_add,
 )
@@ -130,8 +132,40 @@ def cmd_credential(root: Path, subcmd: str, rest: list[str]) -> int:
     plan = build_init_plan(config_root, selector_path=selector, xdg_base=xdg)
 
     if subcmd == "plan":
-        print(json.dumps(plan.to_public_dict(), indent=2))
+        payload = plan.to_public_dict()
+        payload["checklist"] = build_credential_checklist(
+            config_root,
+            plan,
+            selector_path=selector,
+            xdg_base=xdg,
+        ).to_public_dict()
+        print(json.dumps(payload, indent=2))
         return 0
+    if subcmd == "checklist":
+        checklist = build_credential_checklist(
+            config_root,
+            plan,
+            selector_path=selector,
+            xdg_base=xdg,
+        )
+        print(json.dumps(checklist.to_public_dict(), indent=2))
+        return 0
+    if subcmd == "example-env":
+        token_env = ""
+        j = 0
+        while j < len(rest):
+            token = rest[j]
+            if token == "--token-env" and j + 1 < len(rest):
+                token_env = rest[j + 1]
+                j += 2
+                continue
+            j += 1
+        if not token_env.strip():
+            print(json.dumps({"verdict": "fail", "error": "--token-env required"}), file=sys.stderr)
+            return 2
+        result = offer_example_env_file(config_root, token_env=token_env.strip(), confirm=confirm)
+        print(json.dumps(result, indent=2))
+        return 0 if result.get("verdict") in {"ok", "confirm-required"} else 1
     if subcmd == "apply":
         result = apply_guided_single_identity(
             config_root,
