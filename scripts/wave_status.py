@@ -96,6 +96,39 @@ def collect_measurement_learning_status(root: Path, *, cohort_key: str | None = 
     }
 
 
+def collect_export_handoff(
+    root: Path,
+    *,
+    unit_id: str | None = None,
+    phase_slug: str | None = None,
+    run_id: str | None = None,
+    handoff_degraded: bool = False,
+    out_path: str | None = None,
+) -> dict[str, Any]:
+    """Read-only HandoffBundle export for /sw-status --export-handoff (PRD 280 R10)."""
+    from handoff_bundle import export_bundle
+
+    root = root.resolve()
+    result = export_bundle(
+        root,
+        unit_id=unit_id,
+        phase_slug=phase_slug,
+        run_id=run_id,
+        handoff_degraded=handoff_degraded,
+    )
+    if out_path and result.get("verdict") == "pass" and isinstance(result.get("bundle"), dict):
+        destination = Path(out_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(
+            json.dumps(result["bundle"], ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        result = {**result, "path": str(destination.relative_to(root)) if destination.is_relative_to(root) else str(destination)}
+    result["readOnly"] = True
+    result["exportCommand"] = "python3 scripts/wave_status.py export-handoff"
+    return result
+
+
 def cmd_rule_effectiveness_summary(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve() if args.root else Path.cwd()
     payload = collect_rule_effectiveness_summary(root)
@@ -115,6 +148,23 @@ def cmd_measurement_learning(args: argparse.Namespace) -> int:
     payload = collect_measurement_learning_status(root, cohort_key=args.cohort_key or None)
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if payload.get("verdict") == "pass" else 20
+
+
+def cmd_export_handoff(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve() if args.root else Path.cwd()
+    payload = collect_export_handoff(
+        root,
+        unit_id=args.unit_id or None,
+        phase_slug=args.phase_slug or None,
+        run_id=args.run_id or None,
+        handoff_degraded=bool(args.handoff_degraded),
+        out_path=args.out or None,
+    )
+    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    verdict = str(payload.get("verdict") or "")
+    if verdict == "pass":
+        return 0
+    return 20
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -141,6 +191,17 @@ def main(argv: list[str] | None = None) -> int:
     )
     combined.add_argument("--cohort-key", default="")
     combined.set_defaults(func=cmd_measurement_learning)
+
+    export_handoff = sub.add_parser(
+        "export-handoff",
+        help="Export portable HandoffBundle@v1 from durable state (read-only; PRD 280 R10)",
+    )
+    export_handoff.add_argument("--unit-id", default="")
+    export_handoff.add_argument("--phase-slug", default="")
+    export_handoff.add_argument("--run-id", default="")
+    export_handoff.add_argument("--handoff-degraded", action="store_true")
+    export_handoff.add_argument("--out", default="")
+    export_handoff.set_defaults(func=cmd_export_handoff)
 
     args = parser.parse_args(argv)
     return int(args.func(args))
