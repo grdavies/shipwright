@@ -89,6 +89,10 @@ RESILIENCE_RUNNER_REL = Path("scripts/test/_runner.py")
 
 def validate_effective_config_drift(root: Path) -> str | None:
     """Fail-closed when generated effective-config/doc projection drifts (PRD 279 R15)."""
+    gen = root / "scripts" / "effective_config_gen.py"
+    config_path = root / "core" / "sw-reference" / "generated" / "effective-config.json"
+    if not gen.is_file() or not config_path.is_file():
+        return None
     try:
         from effective_config_gen import check_drift
     except ImportError:

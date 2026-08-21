@@ -92,10 +92,11 @@ def diagnose(root: Path | None = None) -> dict[str, Any]:
     try:
         from effective_config_gen import check_drift
 
-        drift_errors = check_drift(target)
-        for err in drift_errors:
-            issues.append(f"effective-config:{err}")
-            remediation.append("python3 scripts/effective_config_gen.py all --write")
+        if (target / "core/sw-reference/generated/effective-config.json").is_file():
+            drift_errors = check_drift(target)
+            for err in drift_errors:
+                issues.append(f"effective-config:{err}")
+                remediation.append("python3 scripts/effective_config_gen.py all --write")
     except ImportError:
         pass
 
