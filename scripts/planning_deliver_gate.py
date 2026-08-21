@@ -420,6 +420,7 @@ def log_dependency_override(root: Path, *, unit_id: str, task_list: str, blockin
 
 
 def dependency_gate(root: Path, task_path: Path, *, override: bool = False, override_reason: str | None = None) -> dict[str, Any]:
+    enforce_execution_platform_remote_prereq(root, task_path, action="dependency-gate")
     unit = resolve_unit(root, task_path)
     if unit is None:
         return handle_unit_not_in_graph(root, task_path, action="dependency-gate")
@@ -482,6 +483,76 @@ def _phase_slug_from_env() -> str | None:
     return slug or None
 
 
+EXECUTION_PLATFORM_TASK_LIST = "docs/prds/279-execution-platform/tasks-279-execution-platform.md"
+EXECUTION_PLATFORM_CONTAINER_PHASE_SLUG = "container-executionbackend-and-conformance-suite-l"
+EXECUTION_PLATFORM_REMOTE_PHASE_ID = "2"
+
+
+def _execution_platform_task_list_rel(task_path: Path, root: Path) -> str:
+    try:
+        return str(task_path.relative_to(pp.git_root(root))).replace("\\", "/")
+    except ValueError:
+        return str(task_path).replace("\\", "/")
+
+
+def _execution_platform_remote_work(task_rel: str) -> bool:
+    if not task_rel.endswith("tasks-279-execution-platform.md"):
+        return False
+    phase_id = os.environ.get("SW_PHASE_ID", "").strip()
+    if phase_id == EXECUTION_PLATFORM_REMOTE_PHASE_ID:
+        return True
+    slug = os.environ.get("SW_PHASE_SLUG", "").strip()
+    return "remote-execution-ownership" in slug
+
+
+def container_conformance_evidence_present(root: Path) -> tuple[bool, str]:
+    """R8 — remote ownership blocked until container conformance artifacts + phase-1 evidence."""
+    conf_test = root / "scripts/unit_tests/graph/test_execution_backend_conformance.py"
+    container_mod = root / "scripts/graph/container_execution_backend.py"
+    if not conf_test.is_file() or not container_mod.is_file():
+        return False, "execution-platform:container-conformance-artifacts-missing"
+    try:
+        from wave_deliver_loop import MERGED_PHASE_STATUSES
+        from wave_merge import read_phase_status_optional
+        from wave_state import load_deliver_state
+
+        state = load_deliver_state(root)
+        phase_statuses = {
+            str(k): (v.get("status") if isinstance(v, dict) else str(v))
+            for k, v in (state.get("phases") or {}).items()
+        }
+        if phase_statuses.get("1") in MERGED_PHASE_STATUSES:
+            return True, "phase1-merged"
+        _, status = read_phase_status_optional(
+            root, EXECUTION_PLATFORM_CONTAINER_PHASE_SLUG, state
+        )
+        if isinstance(status, dict) and status.get("verdict") == "merge-ready-green":
+            return True, "phase1-merge-ready-green"
+    except Exception as exc:
+        return False, f"execution-platform:phase1-evidence-unreadable:{exc.__class__.__name__}"
+    return False, "execution-platform:phase1-conformance-required"
+
+
+def enforce_execution_platform_remote_prereq(
+    root: Path, task_path: Path, *, action: str
+) -> dict[str, Any] | None:
+    """Fail closed when PRD 279 phase-2 remote ownership starts before phase-1 conformance (R8)."""
+    rel = _execution_platform_task_list_rel(task_path, root)
+    if not _execution_platform_remote_work(rel):
+        return None
+    ok, cause = container_conformance_evidence_present(root)
+    if ok:
+        return {"verdict": "pass", "action": action, "executionPlatformPrereq": cause}
+    fail(
+        cause,
+        halt="dependency-gate",
+        cause=cause,
+        taskList=rel,
+        blockingUnits=["gap-328"],
+        note="PRD 279 R8 — remote ownership blocked until container conformance green",
+    )
+
+
 def run_start_revalidate(
     root: Path,
     task_path: Path,
@@ -490,6 +561,9 @@ def run_start_revalidate(
 ) -> dict[str, Any]:
     enforce_ci_status_capability_deliver(root)
     write_disposition_gate(root, phase_slug=phase_slug or _phase_slug_from_env())
+    enforce_execution_platform_remote_prereq(
+        root, task_path, action="run-start-revalidate"
+    )
     unit = resolve_unit(root, task_path)
     if unit is None:
         return handle_unit_not_in_graph(root, task_path, action="run-start-revalidate")
