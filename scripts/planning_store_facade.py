@@ -1949,6 +1949,150 @@ def discover_absorbed_units_anchored(
     return delivery_grade, skipped
 
 
+_SHORT_GAP_NUMBER_RE = re.compile(r"^gap-(\d+)$")
+
+
+def _is_short_gap_number_target(target: str) -> bool:
+    """True for bare ``gap-NNN`` absorb targets (not slug-suffixed unit ids)."""
+    return bool(_SHORT_GAP_NUMBER_RE.fullmatch(target.strip()))
+
+
+def _collect_gap_units_matching_absorb_target(
+    root: Path,
+    cfg: dict[str, Any],
+    target: str,
+    *,
+    backend: "IssueStoreBackend",
+    gap_catalog: list[Any] | None = None,
+) -> list[str]:
+    """Collect gap unit ids that match an absorb target (prefix-safe / gap-NNN)."""
+    from planning_gap_capture import gap_absorb_target_match
+
+    needle = target.strip()
+    if not needle:
+        return []
+
+    matches: list[str] = []
+    seen: set[str] = set()
+
+    def _add(unit_id: str) -> None:
+        uid = unit_id.strip()
+        if not uid or uid in seen:
+            return
+        seen.add(uid)
+        matches.append(uid)
+
+    body_path = _default_body_path(needle, "gap")
+    direct = _lookup_issue_record(backend, needle, body_path)
+    if direct is not None:
+        _add(str(getattr(direct, "unit_id", "") or needle))
+        return matches
+
+    pmis = _migrate_issue_store()
+    key_result = pmis.validate_project_key(root, cfg)
+    if key_result.get("verdict") != "ok":
+        raise PlanningIssueRefResolutionError(
+            needle,
+            "invalid-project-key",
+            message=str(key_result.get("message") or "invalid project key"),
+        )
+    project_key = str(key_result["projectKey"])
+    search = getattr(backend._client, "issue_search", None)
+    if not callable(search):
+        return matches
+    records = gap_catalog
+    if records is None:
+        try:
+            records = list(search(project_key=project_key, artifact_type="gap"))
+        except (
+            IssueCapabilityError,
+            IssueBudgetExhausted,
+            IssueTombstone,
+            IssueTransferred,
+        ) as exc:
+            raise _planning_issue_ref_provider_error(needle, exc) from exc
+    for item in records:
+        try:
+            artifact_type = _resolve_planning_issue_artifact_type(item)
+        except PlanningIssueRefResolutionError:
+            continue
+        if artifact_type != "gap":
+            continue
+        unit_id = str(getattr(item, "unit_id", "") or "").strip()
+        if unit_id and gap_absorb_target_match(needle, unit_id):
+            _add(unit_id)
+    return matches
+
+
+def _resolve_short_gap_absorb_to_unit(
+    root: Path,
+    cfg: dict[str, Any],
+    target: str,
+    *,
+    backend: "IssueStoreBackend",
+    gap_catalog: list[Any] | None = None,
+) -> str:
+    """Resolve ``gap-NNN`` to exactly one store unit id — fail closed on 0/N>1."""
+    matches = _collect_gap_units_matching_absorb_target(
+        root, cfg, target, backend=backend, gap_catalog=gap_catalog
+    )
+    if not matches:
+        raise PlanningIssueRefResolutionError(target, "gap-unit-unresolved")
+    if len(matches) > 1:
+        raise PlanningIssueRefResolutionError(
+            target,
+            "gap-unit-ambiguous",
+            candidates=matches,
+        )
+    return matches[0]
+
+
+def _canonicalize_short_gap_absorb_targets(
+    root: Path,
+    cfg: dict[str, Any],
+    gap_ids: set[str],
+    *,
+    fail_closed: bool = True,
+) -> tuple[set[str], list[dict[str, str]]]:
+    """Expand bare ``gap-NNN`` delivery-grade targets to slug-suffixed unit ids.
+
+    Prevents ``resolve_delivery_linked_units`` from silently dropping short
+    ``sw-edges`` absorbs when the store only indexes full unit ids.
+    """
+    skipped: list[dict[str, str]] = []
+    if not gap_ids:
+        return set(), skipped
+    shorts = sorted(g for g in gap_ids if _is_short_gap_number_target(g))
+    if not shorts:
+        return set(gap_ids), skipped
+
+    backend = get_backend(root, cfg, override="issue-store")
+    if not isinstance(backend, IssueStoreBackend):
+        if fail_closed:
+            raise PlanningIssueRefResolutionError(
+                shorts[0],
+                "issue-store-backend-required",
+            )
+        for short in shorts:
+            skipped.append({"unitId": short, "reason": "issue-store-backend-required"})
+        return {g for g in gap_ids if not _is_short_gap_number_target(g)}, skipped
+
+    gap_catalog: list[Any] | None = None
+    out = {g for g in gap_ids if not _is_short_gap_number_target(g)}
+    for short in shorts:
+        try:
+            resolved = _resolve_short_gap_absorb_to_unit(
+                root, cfg, short, backend=backend, gap_catalog=gap_catalog
+            )
+        except PlanningIssueRefResolutionError:
+            if fail_closed:
+                raise
+            skipped.append({"unitId": short, "reason": "gap-unit-unresolved"})
+            continue
+        out.add(resolved)
+    return out, skipped
+
+
 def _gap_closure_evidence(
     fm: dict[str, str],
     edges: dict[str, Any] | None,
@@ -1960,6 +2104,8 @@ def _gap_closure_evidence(
 
     Resolves bare planning-issue absorb targets (``sw-edges`` / ``absorbs``) to gap
     unit ids through the issue store so closeout does not silently drop them (gap-309).
+    Also expands bare ``gap-NNN`` targets to slug-suffixed unit ids so short
+    ``sw-edges`` absorbs are not silently omitted from the closure snapshot.
     """
     _ = prd_num  # schedule labels are not anchored absorption markers (PRD 070 R1)
     delivery_grade, skipped = discover_absorbed_units_anchored(fm, edges)
@@ -1969,6 +2115,10 @@ def _gap_closure_evidence(
     )
     delivery_grade |= resolved
     skipped.extend(resolve_skipped)
+    delivery_grade, short_skipped = _canonicalize_short_gap_absorb_targets(
+        root, cfg, delivery_grade, fail_closed=True
+    )
+    skipped.extend(short_skipped)
     return delivery_grade, skipped
 
 
@@ -2631,6 +2781,30 @@ def resolve_delivery_linked_units(
         body_path = _default_body_path(gap_id, "gap")
         if _lookup_issue_record(backend, gap_id, body_path) is not None:
             units[gap_id] = {"unitId": gap_id, "artifactType": "gap", "bodyPath": body_path}
+            continue
+        # Last-chance expand for any residual short form (or prefix-only) targets.
+        if _is_short_gap_number_target(gap_id):
+            try:
+                resolved = _resolve_short_gap_absorb_to_unit(
+                    root, cfg, gap_id, backend=backend
+                )
+            except PlanningIssueRefResolutionError as exc:
+                return {
+                    "verdict": "not-ready",
+                    "error": exc.error,
+                    "prdUnitId": prd_unit,
+                    "planningIssueRef": exc.ref,
+                    **exc.detail,
+                }
+            resolved_path = _default_body_path(resolved, "gap")
+            if _lookup_issue_record(backend, resolved, resolved_path) is not None:
+                units[resolved] = {
+                    "unitId": resolved,
+                    "artifactType": "gap",
+                    "bodyPath": resolved_path,
+                }
+                continue
+        gap_skipped.append({"unitId": gap_id, "reason": "gap-unit-not-found"})
 
     ordered = sorted(
         units.values(),
