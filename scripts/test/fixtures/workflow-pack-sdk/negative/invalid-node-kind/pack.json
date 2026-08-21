@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "kind": "WorkflowPackage",
+  "name": "fixture-bad-kind",
+  "version": "1.0.0",
+  "producer": "shipwright-fixture",
+  "graph": {
+    "nodes": [
+      {
+        "id": "run",
+        "kind": "unknown-kind",
+        "target": {
+          "step": "sw-execute"
+        }
+      }
+    ],
+    "edges": []
+  }
+}
