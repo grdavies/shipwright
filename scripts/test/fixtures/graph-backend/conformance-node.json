@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "description": "Hermetic fixtures for ExecutionBackend conformance (PRD 279 R6).",
+  "node": {
+    "id": "fixture-node",
+    "kind": "command",
+    "title": "Conformance fixture node"
+  },
+  "mutatingNode": {
+    "id": "mutating-fixture",
+    "kind": "command",
+    "title": "Mutating conformance fixture",
+    "execution": {
+      "purity": "mutating"
+    }
+  },
+  "credentialEnvKey": "GRAPH_CONTAINER_TOKEN"
+}

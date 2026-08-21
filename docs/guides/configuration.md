@@ -718,6 +718,9 @@ independently tunable** — serial-equivalent `maxConcurrency: 1` does not imply
 | `graphExecution.resourceLimits.maxConcurrency` | `1` | Serial-equivalent mitigation lane; raising concurrency is a cutover/scheduling-mode concern |
 | `graphExecution.resourceLimits.maxDurationSeconds` | `86400` | Run-level wall clock for compiled graphs |
 | `graphExecution.cache.enabled` | `true` | Content-addressed node cache; set `false` to disable reuse while keeping `maxConcurrency: 1` |
+| `graphExecution.execution.backend` | `local-sync` | ExecutionBackend selection (`local-sync` default; `container` opt-in after conformance green) |
+| `graphExecution.execution.container.image` | `shipwright/graph-node:latest` | OCI image for container backend node execution |
+| `graphExecution.execution.container.credentialRef` | — | Broker ref for mutating container credential injection (`purpose: graph-container-exec`) |
 
 Compiled `WorkflowGraph` IR carries `spec.resourceLimits.maxConcurrency` per plan; workflow defaults apply when
 the compile target omits limits. Operator surfaces stay on existing commands (`/sw-deliver --explain-plan`,

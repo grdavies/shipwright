@@ -24,6 +24,18 @@
   "dispatch": {
     "unregisteredParentModelTier": "deep"
   },
+  "graphExecution": {
+    "resourceLimits": {
+      "maxConcurrency": 1,
+      "maxDurationSeconds": 86400
+    },
+    "cache": {
+      "enabled": true
+    },
+    "execution": {
+      "backend": "local-sync"
+    }
+  },
   "models": {
     "tiers": {
       "cheap": "composer-2.5",
