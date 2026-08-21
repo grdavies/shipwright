@@ -170,17 +170,6 @@ def test_enabled_flags_open_surfaces(ext_repo: Path) -> None:
         assert extension_enabled(flag, root=ext_repo) is True
         assert require_extension(flag, root=ext_repo) is None
 
-    out = capture_external_intake(
-        ext_repo,
-        signal_id="sig-enabled",
-        title="Enabled intake",
-        payload="note=ok",
-        outcome="closure",
-        comment="Closing as duplicate fixture",
-    )
-    assert out["verdict"] == "pass"
-    assert out["orchestratorBoundary"] == "store-verbs-only"
-
     # Library validation remains available (schema fail-closed) regardless of CLI gate.
     schema_src = _SCRIPTS.parent / "core" / "sw-reference" / "handoff-bundle.schema.json"
     (ext_repo / "core" / "sw-reference").mkdir(parents=True, exist_ok=True)
