@@ -426,6 +426,7 @@
     "graph/worktree_integration.py",
     "guidelines_validate.py",
     "halt_resume.py",
+    "handoff_bundle.py",
     "harness_isolation_lint.py",
     "harness_skew_lib.py",
     "host-detect.py",
@@ -755,5 +756,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 752
+  "moduleCount": 753
 }
