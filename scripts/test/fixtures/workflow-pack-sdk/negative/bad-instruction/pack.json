@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "WorkflowPackage",
+  "name": "fixture-bad-instruction",
+  "version": "1.0.0",
+  "producer": "shipwright-fixture",
+  "graph": {
+    "nodes": [
+      {
+        "id": "run",
+        "kind": "gate",
+        "target": {
+          "step": "sw-verify"
+        }
+      }
+    ],
+    "edges": []
+  },
+  "instructions": [
+    "skills/bad-skill/SKILL.md"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "kind": "WorkflowPackage",
+  "name": "fixture-cycle",
+  "version": "1.0.0",
+  "producer": "shipwright-fixture",
+  "declaredSideEffects": ["git-write"],
+  "nodeCapabilities": {
+    "a": {
+      "sideEffects": ["git-write"],
+      "credentials": []
+    },
+    "b": {
+      "sideEffects": ["git-write"],
+      "credentials": []
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "a",
+        "kind": "command",
+        "target": {
+          "step": "sw-execute"
+        }
+      },
+      {
+        "id": "b",
+        "kind": "command",
+        "target": {
+          "step": "sw-verify"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from": "a",
+        "to": "b"
+      },
+      {
+        "from": "b",
+        "to": "a"
+      }
+    ]
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "kind": "WorkflowPackage",
+  "name": "fixture-valid",
+  "version": "1.0.0",
+  "producer": "shipwright-fixture",
+  "dependencies": [],
+  "declaredSideEffects": ["git-write"],
+  "nodeCapabilities": {
+    "run": {
+      "sideEffects": ["git-write"],
+      "credentials": []
+    }
+  },
+  "graph": {
+    "nodes": [
+      {
+        "id": "run",
+        "kind": "command",
+        "target": {
+          "step": "sw-execute"
+        }
+      },
+      {
+        "id": "await-human",
+        "kind": "human-action",
+        "target": {
+          "step": "sw-ready"
+        }
+      }
+    ],
+    "edges": [
+      {
+        "from": "run",
+        "to": "await-human"
+      }
+    ]
+  },
+  "instructions": [
+    "skills/demo-skill/SKILL.md"
+  ],
+  "capabilities": [
+    {
+      "id": "demo-cap",
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "phase_default",
+            "selectionFamily": "review",
+            "command": "sw-review",
+            "scope": "phase"
+          }
+        ]
+      }
+    }
+  ]
+}
