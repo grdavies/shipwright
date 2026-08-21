@@ -49,8 +49,9 @@ def parse_task_checkboxes(text: str) -> dict[str, bool]:
 
 def toggle_checkbox(text: str, task_ref: str, done: bool | None = None) -> str:
     """Toggle or set checkbox for task ref (e.g. '7.1'). Raises ValueError on invalid edit."""
+    # Accept plain `4.1` or bold `**4.1**` (same contract as parse_task_checkboxes).
     pattern = re.compile(
-        rf"^(-\s+)\[([ xX])\](\s+{re.escape(task_ref)}\s)",
+        rf"^(-\s+)\[([ xX])\](\s+(?:\*\*)?{re.escape(task_ref)}(?:\*\*)?\s)",
         re.MULTILINE,
     )
     match = pattern.search(text)
