@@ -89,6 +89,16 @@ def diagnose(root: Path | None = None) -> dict[str, Any]:
 
     _append_tokenenv_deprecations(target, issues, remediation)
 
+    try:
+        from effective_config_gen import check_drift
+
+        drift_errors = check_drift(target)
+        for err in drift_errors:
+            issues.append(f"effective-config:{err}")
+            remediation.append("python3 scripts/effective_config_gen.py all --write")
+    except ImportError:
+        pass
+
     verdict = "pass" if not issues else "warn"
     return {
         "verdict": verdict,

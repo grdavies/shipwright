@@ -87,6 +87,18 @@ RESILIENCE_VERIFY_SCOPE = "resilience"
 RESILIENCE_RUNNER_REL = Path("scripts/test/_runner.py")
 
 
+def validate_effective_config_drift(root: Path) -> str | None:
+    """Fail-closed when generated effective-config/doc projection drifts (PRD 279 R15)."""
+    try:
+        from effective_config_gen import check_drift
+    except ImportError:
+        return None
+    errors = check_drift(root)
+    if not errors:
+        return None
+    return errors[0]
+
+
 def validate_resilience_verify_scope(root: Path, cfg: dict[str, Any]) -> str | None:
     """Fail-closed readiness check for resilience verify scope wiring (PRD 323 R22)."""
     runner = root / RESILIENCE_RUNNER_REL
@@ -1180,6 +1192,16 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
         jsonio.emit(payload)
         return 30, payload
 
+    effective_config_err = validate_effective_config_drift(root)
+    if effective_config_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": f"effectiveConfig:{effective_config_err}",
+            "source": "local-evidence",
+        }
+        jsonio.emit(payload)
+        return 30, payload
+
     resilience_err = validate_resilience_verify_scope(root, cfg)
     if resilience_err:
         payload = {
@@ -1310,6 +1332,12 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     manifest_err = validate_pr_test_plan_gate(root, slim_ref)
     if manifest_err:
         payload = {"verdict": "blocked", "reason": f"prTestPlan:{manifest_err}"}
+        jsonio.emit(payload)
+        return 30, payload
+
+    effective_config_err = validate_effective_config_drift(root)
+    if effective_config_err:
+        payload = {"verdict": "blocked", "reason": f"effectiveConfig:{effective_config_err}"}
         jsonio.emit(payload)
         return 30, payload
 
