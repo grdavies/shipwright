@@ -1454,6 +1454,36 @@ CI-readiness gate until GitHub CI is available — `/sw-init` host doctor warns 
 
 Neutral shipped example omits scaffold; dogfood repos may set scaffold explicitly.
 
+## Workflow extensions
+
+Opt-in rollout flags under `workflow.extensions.*` (default **`false`** until cutover evidence).
+Operator surfaces stay on existing `sw-*` commands and planning-store verbs — no parallel
+`/sw-graph-*` family.
+
+| Flag | Default | Surface |
+|------|---------|---------|
+| `workflow.extensions.externalIntake` | `false` | External intake lifecycle via `/sw-feedback` → planning-store `external-intake-*` verbs |
+| `workflow.extensions.handoffBundle` | `false` | Portable **HandoffBundle**@v1 via `/sw-status --export-handoff` / `wave_status.py export-handoff` |
+| `workflow.extensions.packageSdk` | `false` | **workflow-pack-sdk** conformance CLI (`scripts/workflow_pack_sdk.py`) + digest-bound adoption |
+
+Example (all off until cutover):
+
+```json
+{
+  "workflow": {
+    "extensions": {
+      "externalIntake": false,
+      "handoffBundle": false,
+      "packageSdk": false
+    }
+  }
+}
+```
+
+Issue-store `separate-project` mode remains authoritative via `planning_store.put`; the code repo
+receives projections only through **materialize at deliver entry** (`.cursor/planning-materialized/`).
+Helper: `scripts/workflow_extensions.py` (`require_extension`, `extension_enabled`).
+
 ## Optional integrations
 
 | Integration | Config | When to enable |

@@ -72,6 +72,7 @@
     "guidelines/debug.pack.json",
     "guidelines/doc.pack.json",
     "guidelines/feedback.pack.json",
+    "handoff-bundle.schema.json",
     "harness-roots-manifest.json",
     "inflight-signal.schema.json",
     "kernel-classification.json",

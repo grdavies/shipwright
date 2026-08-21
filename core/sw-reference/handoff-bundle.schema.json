@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/grdavies/shipwright/core/sw-reference/handoff-bundle.schema.json",
+  "title": "HandoffBundle@v1",
+  "description": "Portable cross-harness handoff bundle (PRD 280 gap-324 R8–R13). Harness-agnostic required fields; optional extensions bags are non-authoritative.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "exportedAt",
+    "expiresAt",
+    "bundleDigest",
+    "goal",
+    "currentState",
+    "resolvedDecisions",
+    "unresolvedDecisions",
+    "activeNode",
+    "blockers",
+    "evidence",
+    "changedFiles",
+    "relevantRules",
+    "nextAction",
+    "workflowDigest"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "HandoffBundle@v1" },
+    "exportedAt": { "type": "string", "minLength": 1 },
+    "expiresAt": { "type": "string", "minLength": 1 },
+    "bundleDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "runId": {
+      "type": "string",
+      "description": "Source run reference only — MUST NOT resume deliver on foreign harness (R13)."
+    },
+    "unitId": { "type": "string" },
+    "phaseSlug": { "type": "string" },
+    "headSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "goal": { "type": "string", "minLength": 1 },
+    "currentState": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["summary", "phaseStatus"],
+      "properties": {
+        "summary": { "type": "string" },
+        "phaseStatus": { "type": "string" },
+        "branch": { "type": "string" },
+        "deliverVerdict": { "type": "string" }
+      }
+    },
+    "resolvedDecisions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/decisionEntry" }
+    },
+    "unresolvedDecisions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/decisionEntry" }
+    },
+    "activeNode": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "nodeId": { "type": "string" },
+        "title": { "type": "string" },
+        "kind": { "type": "string" }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "detail"],
+        "properties": {
+          "kind": { "type": "string" },
+          "detail": { "type": "string" },
+          "nodeId": { "type": "string" }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["kind", "path"],
+        "properties": {
+          "kind": { "type": "string" },
+          "path": { "type": "string" },
+          "verdict": { "type": "string" }
+        }
+      }
+    },
+    "changedFiles": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "relevantRules": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "nextAction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action", "detail"],
+      "properties": {
+        "action": { "type": "string" },
+        "detail": { "type": "string" },
+        "command": { "type": "string" }
+      }
+    },
+    "workflowDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "handoffDegraded": {
+      "type": "boolean",
+      "description": "True when DecisionGraph export was unavailable but operator acked degraded export."
+    },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cursor": { "type": "object", "additionalProperties": true },
+        "claude": { "type": "object", "additionalProperties": true }
+      }
+    }
+  },
+  "$defs": {
+    "decisionEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodeId", "title", "status"],
+      "properties": {
+        "nodeId": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string" },
+        "kind": { "type": "string" },
+        "resolution": { "type": "string" }
+      }
+    }
+  }
+}

@@ -426,6 +426,7 @@
     "graph/worktree_integration.py",
     "guidelines_validate.py",
     "halt_resume.py",
+    "handoff_bundle.py",
     "harness_isolation_lint.py",
     "harness_skew_lib.py",
     "host-detect.py",
@@ -572,6 +573,7 @@
     "planning_deliver_gate.py",
     "planning_discover.py",
     "planning_doctor_ledger.py",
+    "planning_external_intake.py",
     "planning_gap_capture.py",
     "planning_github_client.py",
     "planning_github_projects_v2.py",
@@ -745,7 +747,9 @@
     "wave_terminal.py",
     "wave_transition_receipt.py",
     "workflow-pin-validity-check.py",
+    "workflow_extensions.py",
     "workflow_intelligence.py",
+    "workflow_pack_sdk.py",
     "workflow_pin_validity_check_lib.py",
     "worktree.py",
     "worktree_lib.py",
@@ -754,5 +758,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 751
+  "moduleCount": 755
 }

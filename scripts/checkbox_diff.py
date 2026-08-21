@@ -34,7 +34,8 @@ def parse_task_checkboxes(text: str) -> dict[str, bool]:
     out: dict[str, bool] = {}
     current_ref: str | None = None
     for line in text.splitlines():
-        ref_match = re.match(r"^-\s+\[([ xX])\]\s+(\d+\.\d+)\s", line)
+        # Accept plain `4.1` or bold `**4.1**` task refs (common frozen-task formatting).
+        ref_match = re.match(r"^-\s+\[([ xX])\]\s+(?:\*\*)?(\d+\.\d+)(?:\*\*)?\s", line)
         if ref_match:
             done = ref_match.group(1).lower() == "x"
             current_ref = ref_match.group(2)
@@ -48,8 +49,9 @@ def parse_task_checkboxes(text: str) -> dict[str, bool]:
 
 def toggle_checkbox(text: str, task_ref: str, done: bool | None = None) -> str:
     """Toggle or set checkbox for task ref (e.g. '7.1'). Raises ValueError on invalid edit."""
+    # Accept plain `4.1` or bold `**4.1**` (same contract as parse_task_checkboxes).
     pattern = re.compile(
-        rf"^(-\s+)\[([ xX])\](\s+{re.escape(task_ref)}\s)",
+        rf"^(-\s+)\[([ xX])\](\s+(?:\*\*)?{re.escape(task_ref)}(?:\*\*)?\s)",
         re.MULTILINE,
     )
     match = pattern.search(text)

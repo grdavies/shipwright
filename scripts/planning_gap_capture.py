@@ -735,6 +735,118 @@ def capture_gap(
     return {"unitId": unit_id, "path": body_path_rel, "signalId": signal_id, "deduped": False, "action": "gap-capture"}
 
 
+def capture_external_intake(
+    root: Path,
+    *,
+    signal_id: str,
+    title: str,
+    payload: str | None = None,
+    outcome: str = "brief",
+    issue_id: str | None = None,
+    gap_unit_id: str | None = None,
+    comment: str | None = None,
+    signal_class: str = "feedback",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Feedback handoff to external-intake store verbs — no nested orchestrators (PRD 280 R4/R5/R7)."""
+    from workflow_extensions import require_extension
+
+    disabled = require_extension("externalIntake", root=root)
+    if disabled is not None:
+        return {**disabled, "action": "capture-external-intake"}
+
+    from planning_external_intake import EXTERNAL_INTAKE_OUTCOMES
+    from planning_store_facade import external_intake_run_pipeline, external_intake_txn, load_workflow_config
+
+    normalized_outcome = str(outcome or "brief").strip().lower()
+    if normalized_outcome not in EXTERNAL_INTAKE_OUTCOMES:
+        return {
+            "verdict": "fail",
+            "action": "capture-external-intake",
+            "error": "invalid-outcome",
+            "allowed": sorted(EXTERNAL_INTAKE_OUTCOMES),
+        }
+
+    cfg = load_workflow_config(root)
+    redacted_payload = redact_override_reason(payload or title)
+    reporter_comment = comment or redacted_payload
+
+    receive = external_intake_txn(
+        root,
+        cfg,
+        verb="external-intake-receive",
+        signal_id=signal_id,
+        title=title,
+        signal_class=signal_class,
+        dry_run=dry_run,
+    )
+    if receive.get("verdict") != "ok":
+        return {"verdict": "fail", "action": "capture-external-intake", "step": "receive", **receive}
+
+    active_issue_id = issue_id or str(receive.get("issueId") or "")
+    if not active_issue_id:
+        return {"verdict": "fail", "action": "capture-external-intake", "error": "missing-issue-id"}
+
+    pipeline_through = "actionability" if normalized_outcome == "brief" else "verify"
+    pipeline = external_intake_run_pipeline(
+        root,
+        cfg,
+        issue_id=active_issue_id,
+        duplicate=normalized_outcome == "closure",
+        through=pipeline_through,
+        dry_run=dry_run,
+    )
+    if pipeline.get("verdict") != "ok":
+        return {"verdict": "fail", "action": "capture-external-intake", "step": "pipeline", **pipeline}
+
+    if normalized_outcome == "brief":
+        if not gap_unit_id:
+            dirs = pp.load_planning_dirs(root)
+            gap_unit_id, _body_path = allocate_gap_unit_id(root, title, lambda uid: gap_body_rel(dirs, uid))
+        terminal = external_intake_txn(
+            root,
+            cfg,
+            verb="external-intake-promote",
+            issue_id=active_issue_id,
+            gap_unit_id=gap_unit_id,
+            comment=reporter_comment,
+            dry_run=dry_run,
+        )
+    elif normalized_outcome == "question":
+        terminal = external_intake_txn(
+            root,
+            cfg,
+            verb="external-intake-ask-reporter",
+            issue_id=active_issue_id,
+            comment=reporter_comment,
+            dry_run=dry_run,
+        )
+    else:
+        terminal = external_intake_txn(
+            root,
+            cfg,
+            verb="external-intake-close",
+            issue_id=active_issue_id,
+            comment=reporter_comment,
+            dry_run=dry_run,
+        )
+
+    if terminal.get("verdict") != "ok":
+        return {"verdict": "fail", "action": "capture-external-intake", "step": "terminal", **terminal}
+
+    return {
+        "verdict": "pass",
+        "action": "capture-external-intake",
+        "signalId": signal_id,
+        "issueId": active_issue_id,
+        "outcome": normalized_outcome,
+        "gapUnitId": gap_unit_id,
+        "pipeline": pipeline,
+        "terminal": terminal,
+        "orchestratorBoundary": "store-verbs-only",
+    }
+
+
 def classify_pain_item(item: dict[str, Any]) -> str:
     """Substantial-vs-noise heuristic (R19, gap-032).
 
@@ -2095,6 +2207,21 @@ def parse_flags(rest: list[str]) -> dict[str, Any]:
         elif tok == "--digest" and i + 1 < len(rest):
             out["digest"] = rest[i + 1]
             i += 2
+        elif tok == "--outcome" and i + 1 < len(rest):
+            out["outcome"] = rest[i + 1]
+            i += 2
+        elif tok == "--issue-id" and i + 1 < len(rest):
+            out["issue_id"] = rest[i + 1]
+            i += 2
+        elif tok == "--comment" and i + 1 < len(rest):
+            out["comment"] = rest[i + 1]
+            i += 2
+        elif tok == "--payload" and i + 1 < len(rest):
+            out["payload"] = rest[i + 1]
+            i += 2
+        elif tok == "--signal-class" and i + 1 < len(rest):
+            out["signal_class"] = rest[i + 1]
+            i += 2
         elif tok == "--unattended":
             out["unattended"] = True
             i += 1
@@ -2108,7 +2235,7 @@ def main(argv: list[str] | None = None) -> None:
     if len(args) < 2:
         fail(
             "usage: planning_gap_capture.py <repo-root> "
-"<capture|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override|retro-capture|retro-confirm|retro-materialize|record-absorb-linkage|verify-absorb-closeout-072|verify-absorb-closeout-073> [options]"
+"<capture|capture-external-intake|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override|retro-capture|retro-confirm|retro-materialize|record-absorb-linkage|verify-absorb-closeout-072|verify-absorb-closeout-073> [options]"
         )
     root = Path(args[0]).resolve()
     command = args[1]
@@ -2139,6 +2266,25 @@ def main(argv: list[str] | None = None) -> None:
             authoritative=bool(flags.get("authoritative")),
         )
         emit({"verdict": "pass", **out})
+
+    if command == "capture-external-intake":
+        signal_id = flags.get("signal_id")
+        title = flags.get("title")
+        if not signal_id or not title:
+            fail("--signal-id and --title required for capture-external-intake")
+        out = capture_external_intake(
+            root,
+            signal_id=signal_id,
+            title=title,
+            payload=flags.get("payload"),
+            outcome=str(flags.get("outcome") or "brief"),
+            issue_id=flags.get("issue_id"),
+            gap_unit_id=flags.get("unit_id"),
+            comment=flags.get("comment"),
+            signal_class=str(flags.get("signal_class") or "feedback"),
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") == "pass" else 20)
 
     if command == "confirm":
         signal_id = flags.get("signal_id")

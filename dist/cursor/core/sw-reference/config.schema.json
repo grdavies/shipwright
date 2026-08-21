@@ -2362,6 +2362,34 @@
           }
         }
       }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Workflow extension rollout flags (PRD 280). Defaults false until cutover evidence.",
+      "properties": {
+        "extensions": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "externalIntake": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable external issue triage lifecycle operator surfaces (gap-323)."
+            },
+            "handoffBundle": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable portable HandoffBundle export/import surfaces (gap-324)."
+            },
+            "packageSdk": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable workflow-pack-sdk conformance CLI / adoption gate (gap-326)."
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {

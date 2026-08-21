@@ -312,5 +312,12 @@
     "provider": "github",
     "remote": "origin",
     "credentialRef": "github-work"
+  },
+  "workflow": {
+    "extensions": {
+      "externalIntake": false,
+      "handoffBundle": false,
+      "packageSdk": false
+    }
   }
 }
