@@ -997,6 +997,7 @@
 * merge phase write-draft-schema-fidelity-and-findings-report-wiring-m into feat/greenfield-init-credentials-ci (101a876) <!-- sw-deliver:write-draft-schema-fidelity-and-findings-report-wiring-m -->
 * merge phase unit-and-integration-tests-l into feat/greenfield-init-credentials-ci (bddd35d) <!-- sw-deliver:unit-and-integration-tests-l -->
 * merge phase absorb-closeout-and-configuration-docs-s into feat/greenfield-init-credentials-ci (934fc72) <!-- sw-deliver:absorb-closeout-and-configuration-docs-s -->
+* merge phase merge-detection-finalize-completion-under-pr-number-slug-drift-m into feat/deliver-finalize-consumer-resilience (ec52b6e) <!-- sw-deliver:merge-detection-finalize-completion-under-pr-number-slug-drift-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
