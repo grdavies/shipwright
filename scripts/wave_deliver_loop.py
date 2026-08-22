@@ -2194,7 +2194,10 @@ def ship_loop_env_for_phase(
             run_dir=run_dir,
         )
         if scripts_root is None:
-            scripts_root = _resolve_ship_scripts_root(wt)
+            try:
+                scripts_root = _resolve_ship_scripts_root(wt)
+            except ScriptsResolveError:
+                scripts_root = None
     resolved_root = ""
     if scripts_root is not None:
         resolved_root = str(
