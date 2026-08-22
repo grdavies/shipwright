@@ -150,6 +150,81 @@ python3 scripts/credentials-doctor.py --root .
 The JSON report lists configured `references` (backend + scope + last successful resolution) and per-surface
 `credentialRef` / pairing / required-operation verdicts. See [commands — Credential operations](commands.md#credential-operations).
 
+## Greenfield on-ramp
+
+New repos follow one ordered path through `/sw-init` and `sw-configure` — credentials, CI presence, curated
+profile defaults, and the annotated example config. Nothing in this path forces a `.env` file or reads
+ambient tokens without a declared `environment` backend entry.
+
+### 1 — Credential checklist (broker-only)
+
+`/sw-init` and `python3 scripts/sw_bootstrap.py sw-configure.py -- credential plan` emit the **same four steps** in order:
+
+| Step | Meaning |
+| --- | --- |
+| Identity source | `github_cli` when authenticated, else a declared env/keystore backend |
+| `credentialRef` binding | Committed config references (`host`, planning, memory) point at selector entries |
+| Selector allowlists | Machine-local `allowedRepos`, `allowedProjectIds`, `allowedEndpoints` for fail-closed scope |
+| Resolution probe | `python3 scripts/sw_bootstrap.py credentials-doctor.py -- --root .` — terminal green path per checklist step |
+
+The selector holds **metadata and allowlists only** — never secret material. Apply with:
+
+```bash
+python3 scripts/sw_bootstrap.py sw-configure.py -- credential plan
+python3 scripts/sw_bootstrap.py sw-configure.py -- credential apply --confirm
+```
+
+### 2 — Named `tokenEnv` (multi-account)
+
+When init detects multi-repo or multi-account risk (more than one remote owner, or an existing selector entry
+for a different account), guided apply offers a **named** `tokenEnv` (for example `SW_GITHUB_TOKEN_WORK`)
+bound through an explicitly declared `environment` backend — not ambient `GITHUB_TOKEN`. Single-account
+`github_cli` remains the default and is not outranked automatically.
+
+Undeclared ambient resolution is **not-ready** in `credentials-doctor` — name the env var in config and
+declare the backend in the selector before expecting green.
+
+### 3 — `.env` is optional, never primary
+
+Init never creates or loads `.env` as the primary credential path. An example env file is emitted only on
+explicit operator request, appended to `.gitignore`, and consumable solely through a declared
+`environment` backend entry in the selector.
+
+### 4 — Consent-gated CI stub
+
+When the repo has no PR workflow or only a default-branch-restricted `pull_request` trigger, offer a
+consent-gated stub so `base-preflight:ci-or-review` can satisfy CI presence:
+
+```bash
+python3 scripts/sw_bootstrap.py sw-configure.py -- ci-stub plan
+python3 scripts/sw_bootstrap.py sw-configure.py -- ci-stub apply --confirm
+```
+
+`plan` is read-only (target path + rendered body). `apply` without `--confirm` refuses. Re-apply when a
+workflow already exists is an idempotent no-op that preserves operator edits. Explicit decline is recorded at
+`.cursor/sw-init-ci-stub.json` so preflight reports decline rather than a silent gap.
+
+### 5 — Curated greenfield profile and annotated example
+
+`/sw-init` seeds **seven** recommended posture keys for hands-off deliver (see **Greenfield init posture**
+below). Classification (`present` / `defaulted` / `unset` / `deprecated`) and the annotated reference
+config are single-sourced from `init_profile_report`:
+
+```bash
+python3 scripts/sw_bootstrap.py init_profile_report.py -- classify --markdown
+python3 scripts/sw_bootstrap.py sw-configure.py -- findings
+```
+
+Annotated reference (neutral, no dev-harness paths): `core/sw-reference/workflow.config.example.json`.
+Copy manually when skipping `/sw-init`:
+
+```bash
+cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
+```
+
+Doctor surfaces drift on re-run and **never silently overwrites** explicit operator values without
+`--confirm` on profile refresh.
+
 ## `/sw-init`
 
 Run `/sw-init` in your **target project repo**. It walks through setup and writes
