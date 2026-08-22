@@ -106,12 +106,17 @@ fi
 
 # --- setup-accept-defaults-no-write ---
 if OUT=$(bash "$ROOT/scripts/sw-configure.py" write-draft --accept-defaults 2>/dev/null) && \
-   python3 - "/tmp/sw-init-draft.json" <<'PY'
+   python3 - "$OUT" "/tmp/sw-init-draft.json" <<'PY'
 import json, sys
 from pathlib import Path
-d = json.loads(Path(sys.argv[1]).read_text())
-assert "verify" not in d or not d["verify"]
-assert "verifyGaps" in d or "projectTypeDetection" in d
+payload = json.loads(sys.argv[1])
+draft = json.loads(Path(sys.argv[2]).read_text())
+assert payload.get("verdict") == "pass"
+side = payload.get("sideChannel") or {}
+assert "verifyGaps" in side or "projectTypeDetection" in side
+assert "verifyGaps" not in draft
+assert "projectTypeDetection" not in draft
+assert "verify" not in draft or not draft["verify"]
 print("accept defaults ok")
 PY
 then
