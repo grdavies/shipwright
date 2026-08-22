@@ -38,6 +38,56 @@ def load_default_branch(root: Path) -> str:
     return "main"
 
 
+def _git_ref_exists(root: Path, ref: str) -> bool:
+    return (
+        subprocess.run(
+            ["git", "-C", str(root), "show-ref", "--verify", "--quiet", ref],
+            check=False,
+        ).returncode
+        == 0
+    )
+
+
+def _git_rev_parse(root: Path, ref: str) -> str | None:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", ref],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return None
+    sha = proc.stdout.strip()
+    return sha or None
+
+
+def resolve_docs_worktree_base(
+    root: Path,
+    *,
+    remote: str,
+    default: str,
+    fetch_ok: bool,
+) -> dict[str, Any]:
+    """Choose docs worktree base with remote-tracking precedence (PRD 325 R13)."""
+    remote_tracking = f"refs/remotes/{remote}/{default}"
+    local_head = f"refs/heads/{default}"
+    candidates: list[tuple[str, str]] = []
+    if _git_ref_exists(root, remote_tracking):
+        candidates.append((f"{remote}/{default}", remote_tracking))
+    if _git_ref_exists(root, local_head):
+        candidates.append((default, local_head))
+    candidates.append(("HEAD", "HEAD"))
+
+    base_ref, git_ref = candidates[0]
+    base_sha = _git_rev_parse(root, git_ref) or _git_rev_parse(root, base_ref)
+    payload: dict[str, Any] = {"baseRef": base_ref, "baseSha": base_sha}
+    if not fetch_ok:
+        payload["fetchNotice"] = (
+            f"fetch {remote} {default} failed or unavailable; using local base fallback"
+        )
+    return payload
+
+
 def separate_project_handoff(root: Path, topic: str) -> dict[str, Any]:
     from host_lib import load_workflow_config
     from planning_artifact_handle import issue_store_separate_project_effective
@@ -172,7 +222,39 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"verdict": "pass", "action": "provision", "branch": branch, "path": str(path), "note": "already exists", "nextSteps": {"cd": str(path), "move_agent_to_root": str(path), "memoryPrework": f"python3 scripts/wave.py memory prework record --surface sw-doc --scope docs/{topic}"}}))
         return 0
     if dry_run:
-        print(json.dumps({"verdict": "pass", "action": "provision", "dry_run": True, "branch": branch, "path": str(path)}))
+        from host_lib import load_workflow_config, remote_name
+
+        remote_proc = subprocess.run(
+            [sys.executable, str(SCRIPT_DIR / "host_lib.py"), "--root", str(root), "remote-name"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        host_remote = remote_proc.stdout.strip() or remote_name(load_workflow_config(root))
+        fetch_proc = subprocess.run(
+            ["git", "-C", str(root), "fetch", host_remote, default],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        base_payload = resolve_docs_worktree_base(
+            root,
+            remote=host_remote,
+            default=default,
+            fetch_ok=fetch_proc.returncode == 0,
+        )
+        print(
+            json.dumps(
+                {
+                    "verdict": "pass",
+                    "action": "provision",
+                    "dry_run": True,
+                    "branch": branch,
+                    "path": str(path),
+                    **base_payload,
+                }
+            )
+        )
         return 0
     wt_root.mkdir(parents=True, exist_ok=True)
     from host_lib import load_workflow_config, remote_name
@@ -183,15 +265,39 @@ def main(argv: list[str] | None = None) -> int:
         check=False,
     )
     host_remote = remote_proc.stdout.strip() or remote_name(load_workflow_config(root))
-    subprocess.run(["git", "-C", str(root), "fetch", host_remote, default], check=False)
-    base_ref = default
-    if subprocess.run(["git", "-C", str(root), "show-ref", "--verify", "--quiet", f"refs/heads/{default}"], check=False).returncode != 0:
-        base_ref = "HEAD"
+    fetch_proc = subprocess.run(
+        ["git", "-C", str(root), "fetch", host_remote, default],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    base_payload = resolve_docs_worktree_base(
+        root,
+        remote=host_remote,
+        default=default,
+        fetch_ok=fetch_proc.returncode == 0,
+    )
+    base_ref = str(base_payload["baseRef"])
     if subprocess.run(["git", "-C", str(root), "show-ref", "--verify", "--quiet", f"refs/heads/{branch}"], check=False).returncode == 0:
         subprocess.run(["git", "-C", str(root), "worktree", "add", str(path), branch], check=True, capture_output=True)
     else:
         subprocess.run(["git", "-C", str(root), "worktree", "add", "-b", branch, str(path), base_ref], check=True, capture_output=True)
-    print(json.dumps({"verdict": "pass", "action": "provision", "branch": branch, "path": str(path), "nextSteps": {"cd": str(path), "move_agent_to_root": str(path), "memoryPrework": f"python3 scripts/wave.py memory prework record --surface sw-doc --scope docs/{topic}"}}))
+    print(
+        json.dumps(
+            {
+                "verdict": "pass",
+                "action": "provision",
+                "branch": branch,
+                "path": str(path),
+                **base_payload,
+                "nextSteps": {
+                    "cd": str(path),
+                    "move_agent_to_root": str(path),
+                    "memoryPrework": f"python3 scripts/wave.py memory prework record --surface sw-doc --scope docs/{topic}",
+                },
+            }
+        )
+    )
     return 0
 
 
