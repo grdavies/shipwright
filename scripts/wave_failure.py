@@ -604,11 +604,24 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
 
 
 def cmd_blast_radius_dependents(root: Path, args: list[str]) -> None:
+    from wave_phase_pr import PHASE_GREEN_MERGED_PREDICATE, phase_green_merged
+    from wave_state import phase_complete
+
     state = load_state(root)
     pid, meta = find_phase(state, parse_kv(args, "--phase-id"), parse_kv(args, "--phase-slug"))
     deps = transitive_dependent_ids(pid, plan_edges(root, state))
     phases = state.get("phases") or {}
-    slugs = [phases[d].get("slug", d) for d in deps if d in phases]
+    slugs = []
+    cleared: list[dict[str, str]] = []
+    for dep_id in deps:
+        if dep_id not in phases:
+            continue
+        dep_meta = phases[dep_id]
+        entry = {"phaseId": dep_id, "phaseSlug": str(dep_meta.get("slug", dep_id))}
+        if phase_complete(dep_meta.get("status")) or phase_green_merged(root, dep_meta):
+            cleared.append({**entry, "reason": "green-merged"})
+        else:
+            slugs.append(dep_meta.get("slug", dep_id))
     emit(
         {
             "verdict": "pass",
@@ -617,22 +630,55 @@ def cmd_blast_radius_dependents(root: Path, args: list[str]) -> None:
             "sourcePhaseSlug": meta.get("slug"),
             "dependentPhaseIds": deps,
             "dependentPhaseSlugs": slugs,
+            "blastRadius": {
+                "cleared": cleared,
+                "predicate": PHASE_GREEN_MERGED_PREDICATE,
+            },
         }
     )
 
 
+def _partition_blast_radius_dependents(
+    root: Path,
+    phases: dict[str, Any],
+    deps: list[str],
+) -> tuple[list[str], list[dict[str, str]]]:
+    from wave_phase_pr import phase_green_merged
+    from wave_state import phase_complete
+
+    to_invalidate: list[str] = []
+    cleared: list[dict[str, str]] = []
+    for dep_id in deps:
+        if dep_id not in phases:
+            continue
+        dep_meta = phases[dep_id]
+        entry = {"phaseId": dep_id, "phaseSlug": str(dep_meta.get("slug", dep_id))}
+        if phase_complete(dep_meta.get("status")):
+            if phase_green_merged(root, dep_meta):
+                cleared.append({**entry, "reason": "green-merged"})
+            continue
+        if phase_green_merged(root, dep_meta):
+            cleared.append({**entry, "reason": "green-merged"})
+            continue
+        to_invalidate.append(dep_id)
+    return to_invalidate, cleared
+
+
 def cmd_blast_radius_apply(root: Path, args: list[str]) -> None:
+    from wave_phase_pr import PHASE_GREEN_MERGED_PREDICATE, phase_green_merged
+    from wave_state import phase_complete, record_blast_radius
+
     state = load_state(root)
     pid, meta = find_phase(state, parse_kv(args, "--phase-id"), parse_kv(args, "--phase-slug"))
     cause = parse_kv(args, "--cause") or meta.get("cause") or "blocked"
     upstream_slug = meta.get("slug", pid)
     deps = transitive_dependent_ids(pid, plan_edges(root, state))
     phases = state.get("phases") or {}
+    to_invalidate, cleared = _partition_blast_radius_dependents(root, phases, deps)
     blocked: list[dict[str, str]] = []
-    for dep_id in deps:
-        if dep_id not in phases:
-            continue
-        if phases[dep_id].get("status") in ("green-merged", "rejected"):
+    for dep_id in to_invalidate:
+        dep_meta = phases[dep_id]
+        if phase_complete(dep_meta.get("status")):
             continue
         phases[dep_id]["status"] = "blocked"
         phases[dep_id]["cause"] = f"blast-radius:upstream-blocked:{upstream_slug}"
@@ -641,6 +687,14 @@ def cmd_blast_radius_apply(root: Path, args: list[str]) -> None:
             {"phaseId": dep_id, "phaseSlug": phases[dep_id].get("slug", dep_id)}
         )
     state["phases"] = phases
+    now = utc_now()
+    record_blast_radius(
+        state,
+        applied=blocked,
+        cleared=cleared,
+        predicate=PHASE_GREEN_MERGED_PREDICATE,
+        at=now,
+    )
     save_state(root, state)
     append_log(
         root,
@@ -649,17 +703,24 @@ def cmd_blast_radius_apply(root: Path, args: list[str]) -> None:
             "sourcePhaseId": pid,
             "sourcePhaseSlug": upstream_slug,
             "blockedDependents": blocked,
+            "clearedDependents": cleared,
             "cause": cause,
         },
         state,
     )
     emit(
         {
-            "verdict": "pass",
+            "verdict": "ok",
             "action": "blast-radius-apply",
             "sourcePhaseId": pid,
             "sourcePhaseSlug": upstream_slug,
             "blockedDependents": blocked,
+            "blastRadius": {
+                "applied": blocked,
+                "cleared": cleared,
+                "predicate": PHASE_GREEN_MERGED_PREDICATE,
+                "at": now,
+            },
         }
     )
 
