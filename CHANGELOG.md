@@ -998,6 +998,7 @@
 * merge phase unit-and-integration-tests-l into feat/greenfield-init-credentials-ci (bddd35d) <!-- sw-deliver:unit-and-integration-tests-l -->
 * merge phase absorb-closeout-and-configuration-docs-s into feat/greenfield-init-credentials-ci (934fc72) <!-- sw-deliver:absorb-closeout-and-configuration-docs-s -->
 * merge phase merge-detection-finalize-completion-under-pr-number-slug-drift-m into feat/deliver-finalize-consumer-resilience (ec52b6e) <!-- sw-deliver:merge-detection-finalize-completion-under-pr-number-slug-drift-m -->
+* merge phase blast-radius-clear-on-green-merged-phases-m into feat/deliver-finalize-consumer-resilience (32ceb3c) <!-- sw-deliver:blast-radius-clear-on-green-merged-phases-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
