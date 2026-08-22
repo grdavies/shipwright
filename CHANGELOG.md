@@ -986,6 +986,7 @@
 * merge phase effective-config-and-upgrade-manifest-generation-m into feat/execution-platform (ddc08c0) <!-- sw-deliver:effective-config-and-upgrade-manifest-generation-m -->
 * merge phase credential-checklist-model-m into feat/greenfield-init-credentials-ci (b0c48c8) <!-- sw-deliver:credential-checklist-model-m -->
 * merge phase credential-verification-in-doctor-s into feat/greenfield-init-credentials-ci (623e23f) <!-- sw-deliver:credential-verification-in-doctor-s -->
+* merge phase ci-stub-golden-template-s into feat/greenfield-init-credentials-ci (642aaf2) <!-- sw-deliver:ci-stub-golden-template-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
