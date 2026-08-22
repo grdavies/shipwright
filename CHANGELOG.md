@@ -995,6 +995,7 @@
 * merge phase profile-completeness-check-in-doctor-s into feat/greenfield-init-credentials-ci (11dfe50) <!-- sw-deliver:profile-completeness-check-in-doctor-s -->
 * merge phase sw-configure-ci-stub-subcommand-s into feat/greenfield-init-credentials-ci (7038b5b) <!-- sw-deliver:sw-configure-ci-stub-subcommand-s -->
 * merge phase write-draft-schema-fidelity-and-findings-report-wiring-m into feat/greenfield-init-credentials-ci (101a876) <!-- sw-deliver:write-draft-schema-fidelity-and-findings-report-wiring-m -->
+* merge phase unit-and-integration-tests-l into feat/greenfield-init-credentials-ci (bddd35d) <!-- sw-deliver:unit-and-integration-tests-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
