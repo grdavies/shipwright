@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.4.0](https://github.com/grdavies/shipwright/compare/v2.3.0...v2.4.0) (2026-08-22)
+
+
+### Features
+
+* **prd-279:** execution platform ([#956](https://github.com/grdavies/shipwright/issues/956)) ([d7cb521](https://github.com/grdavies/shipwright/commit/d7cb521adb02038fc19a4bec1ad63d1fee1d4e50))
+* **prd-280:** codebase intelligence ([#933](https://github.com/grdavies/shipwright/issues/933)) ([bbdc4ec](https://github.com/grdavies/shipwright/commit/bbdc4ecb07b74351164e2b78a00c66478ea7ffbe))
+* **prd-280:** engineering decision layer ([#925](https://github.com/grdavies/shipwright/issues/925)) ([72384b1](https://github.com/grdavies/shipwright/commit/72384b16ffb3c1a4a28d090b8ea55ce66bab130c))
+* **prd-280:** measurement and learning ([#939](https://github.com/grdavies/shipwright/issues/939)) ([d187a32](https://github.com/grdavies/shipwright/commit/d187a3243cc693946288a559aa4dbe9d68fb534d))
+* **prd-280:** workflow extensions ([#951](https://github.com/grdavies/shipwright/issues/951)) ([0441049](https://github.com/grdavies/shipwright/commit/0441049d3a9e56af9fd08d1c3909112ed6e0cdf2))
+* **prd-323:** debug and resilience ([#945](https://github.com/grdavies/shipwright/issues/945)) ([5bcbc90](https://github.com/grdavies/shipwright/commit/5bcbc9080a7aed690af8ad9666d61a69febe8cc6))
+* **prd-324:** greenfield init credentials ci ([#970](https://github.com/grdavies/shipwright/issues/970)) ([a81db18](https://github.com/grdavies/shipwright/commit/a81db18b3b31840668c6843d3f2cc84a91583b87))
+
+
+### Bug Fixes
+
+* **planning:** expand short gap-NNN absorbs in closeout ([#952](https://github.com/grdavies/shipwright/issues/952)) ([380cc1d](https://github.com/grdavies/shipwright/commit/380cc1d5a0697bf035a9a8782724110a4b49dd3e))
+
 ## [2.3.0](https://github.com/grdavies/shipwright/compare/v2.2.0...v2.3.0) (2026-08-19)
 
 
