@@ -1254,6 +1254,17 @@ record commands only; purge is journaled and does not replay refused writes.
 events with derived dirty state. Mutating authority calls drain pending outbox destinations; refusal-ledger
 writes map onto outbox destinations so projection catch-up survives outages/retries without silent drop.
 
+## Golden templates (`core/sw-reference/templates/`)
+
+Authoritative templates consumed by host adapters and init helpers. Edit under
+`core/sw-reference/templates/`; build-chain SoT lists `templates/` in `coreAuthoredAllowlist`.
+
+| Template | Path | Writer | Purpose |
+| --- | --- | --- | --- |
+| PR body | `core/sw-reference/templates/pr-body.md` | host `pr-create` | Required Summary/Test plan fields for PR descriptions |
+| Merge commit | `core/sw-reference/templates/merge-commit.md` | host merge | Squash/merge commit body |
+| CI stub (pull request) | `core/sw-reference/templates/ci-stub-pull-request.yml` | `init_ci_stub.py` `apply --confirm` (consent-gated) | Minimal unrestricted `pull_request` workflow seeded into `.github/workflows/` during greenfield init; never rewritten after apply |
+
 ## Credential machine-local records
 
 Non-secret credential references live in committed config; secret backends and scope enforcement live in
