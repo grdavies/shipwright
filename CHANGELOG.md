@@ -1003,6 +1003,7 @@
 * merge phase ship-loop-resolution-and-provisioning-in-consumer-repos-m into feat/deliver-finalize-consumer-resilience (07669db) <!-- sw-deliver:ship-loop-resolution-and-provisioning-in-consumer-repos-m -->
 * merge phase docs-currency-gate-soft-skip-in-consumer-repos-m into feat/deliver-finalize-consumer-resilience (b01d26d) <!-- sw-deliver:docs-currency-gate-soft-skip-in-consumer-repos-m -->
 * merge phase docs-worktree-bases-on-the-fetched-remote-default-tip-s into feat/deliver-finalize-consumer-resilience (0e65521) <!-- sw-deliver:docs-worktree-bases-on-the-fetched-remote-default-tip-s -->
+* merge phase closeout-prefers-run-scoped-state-s into feat/deliver-finalize-consumer-resilience (0886c4c) <!-- sw-deliver:closeout-prefers-run-scoped-state-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
