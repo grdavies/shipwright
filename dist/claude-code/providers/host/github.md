@@ -78,13 +78,22 @@ fail-closed, not advisory.
 During the one-release alias window, `host.tokenEnv` (default `GITHUB_TOKEN`) may name the presence
 env var for an `environment` backend — `credentialRef` wins when both are set.
 
-For CI check visibility grant **Checks** read access — prefer a fine-grained PAT with repository
-**Checks: Read** permission (primary remediation path). Classic PAT `repo` grants far broader access
-than required and is a **legacy** fallback only; do not grant invalid OAuth scope strings for check
-reads.
+For CI check and workflow-run visibility, prefer a **fine-grained PAT** scoped to this repository
+with at least:
+
+- **Actions: Read** — read workflow runs and check-run status (primary path for CI evidence)
+- **Workflows: Write** — when the token must dispatch or update workflows (optional; omit when
+  read-only CI watch is sufficient)
+- **Contents: Read** and **Pull requests: Read** — typical minimums for host PR and merge flows
+
+GitHub's fine-grained PAT UI does not expose a standalone **Checks** permission; lead with **Actions:
+Read** (and **Workflows: Write** when dispatch is required) rather than **Checks: Read** as the sole
+instruction. Classic PAT `repo` grants far broader access than required and is a **legacy** fallback only;
+do not grant invalid OAuth scope strings for check reads.
 
 Remediation when check status cannot be read:
-`core/providers/host/remediation-checks.md` (github section).
+`core/providers/host/remediation-checks.md` (github section) — unblocks checklist step
+`verification` (`python3 scripts/credentials-doctor.py`).
 
 Diagnose: `python3 scripts/credentials-doctor.py --root .` (never prints secret values). See
 [configuration — Credential references](../../docs/guides/configuration.md#credential-references-and-machine-local-selector).
