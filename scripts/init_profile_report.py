@@ -79,23 +79,12 @@ def advanced_entries() -> tuple[ProfileEntry, ...]:
 
 
 def curated_posture_leaf_keys() -> tuple[tuple[tuple[str, ...], Any], ...]:
-    """Seven posture leaf keys — derived from curated profile (PRD 069 R10 / PRD 324 R9)."""
-    posture_prefixes = (
-        ("orchestration", "planPolicy"),
-        ("delegation", "mode"),
-        ("planning", "autonomy"),
-        ("deliver", "autonomy", "mode"),
-        ("deliver", "loop", "drainMechanical"),
-        ("inefficiency", "enabled"),
-        ("execute", "enabled"),
-    )
-    by_path = {entry.path: entry for entry in curated_entries()}
+    """Seedable curated leaf keys — sole derivation from curated profile (PRD 324 R9)."""
     out: list[tuple[tuple[str, ...], Any]] = []
-    for prefix in posture_prefixes:
-        entry = by_path.get(prefix)
-        if entry is None or entry.recommended == OPERATOR_CHOICE:
+    for entry in curated_entries():
+        if entry.recommended in (OPERATOR_CHOICE, "bundled defaults"):
             continue
-        out.append((prefix, entry.recommended))
+        out.append((entry.path, entry.recommended))
     return tuple(out)
 
 

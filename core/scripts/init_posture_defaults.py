@@ -10,7 +10,7 @@ from init_profile_report import (
     leaf_get,
 )
 
-# Seven leaf keys — sole source is init_profile_report (PRD 324 R9).
+# Curated superset — sole source is init_profile_report (PRD 324 R9); advanced keys excluded.
 GREENFIELD_POSTURE_LEAF_KEYS: tuple[tuple[tuple[str, ...], Any], ...] = curated_posture_leaf_keys()
 
 
