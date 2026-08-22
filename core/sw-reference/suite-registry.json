@@ -386,6 +386,210 @@
       "ciShard": 1
     },
     {
+      "id": "prd-325-finalize-recovery-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "verifyOrder": 17,
+      "pytestPath": "scripts/unit_tests/deliver/test_prd325_finalize_recovery.py",
+      "ciShard": 1,
+      "pathTriggers": [
+        "scripts/wave_compound.py",
+        "scripts/wave_terminal.py",
+        "scripts/unit_tests/deliver/test_prd325_finalize_recovery.py"
+      ],
+      "tags": [
+        "pytest",
+        "deliver",
+        "prd-325"
+      ]
+    },
+    {
+      "id": "prd-325-closeout-run-scoped-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "verifyOrder": 17,
+      "pytestPath": "scripts/unit_tests/deliver/test_prd325_closeout_run_scoped.py",
+      "ciShard": 1,
+      "pathTriggers": [
+        "scripts/deliver_closeout.py",
+        "scripts/wave_state.py",
+        "scripts/unit_tests/deliver/test_prd325_closeout_run_scoped.py"
+      ],
+      "tags": [
+        "pytest",
+        "deliver",
+        "prd-325"
+      ]
+    },
+    {
+      "id": "prd-325-blast-radius-clear-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "verifyOrder": 17,
+      "pytestPath": "scripts/unit_tests/deliver/test_prd325_blast_radius_clear.py",
+      "ciShard": 1,
+      "pathTriggers": [
+        "scripts/wave_failure.py",
+        "scripts/wave_phase_pr.py",
+        "scripts/unit_tests/deliver/test_prd325_blast_radius_clear.py"
+      ],
+      "tags": [
+        "pytest",
+        "deliver",
+        "prd-325"
+      ]
+    },
+    {
+      "id": "prd-325-ship-loop-resolve-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "verifyOrder": 17,
+      "pytestPath": "scripts/unit_tests/deliver/test_prd325_ship_loop_resolve.py",
+      "ciShard": 1,
+      "pathTriggers": [
+        "scripts/wave_deliver_loop.py",
+        "scripts/sw_scripts_resolve.py",
+        "scripts/unit_tests/deliver/test_prd325_ship_loop_resolve.py"
+      ],
+      "tags": [
+        "pytest",
+        "deliver",
+        "prd-325"
+      ]
+    },
+    {
+      "id": "prd-325-publish-surface-profiles-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "verifyOrder": 17,
+      "pytestPath": "scripts/unit_tests/deliver/test_prd325_publish_surface_profiles.py",
+      "ciShard": 1,
+      "pathTriggers": [
+        "scripts/publish_surface_audit.py",
+        "scripts/unit_tests/deliver/test_prd325_publish_surface_profiles.py"
+      ],
+      "tags": [
+        "pytest",
+        "deliver",
+        "prd-325"
+      ]
+    },
+    {
+      "id": "prd-325-scripts-hash-binding-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "verifyOrder": 17,
+      "pytestPath": "scripts/unit_tests/deliver/test_prd325_scripts_hash_binding.py",
+      "ciShard": 1,
+      "pathTriggers": [
+        "scripts/wave_lifecycle.py",
+        "scripts/sw_scripts_resolve.py",
+        "scripts/unit_tests/deliver/test_prd325_scripts_hash_binding.py"
+      ],
+      "tags": [
+        "pytest",
+        "deliver",
+        "prd-325"
+      ]
+    },
+    {
+      "id": "prd-325-docs-currency-consumer-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 17,
+      "pytestPath": "scripts/unit_tests/test_prd325_docs_currency_consumer.py",
+      "ciShard": 2,
+      "pathTriggers": [
+        "scripts/docs-currency-gate.py",
+        "scripts/unit_tests/test_prd325_docs_currency_consumer.py"
+      ],
+      "tags": [
+        "pytest",
+        "deliver",
+        "prd-325"
+      ]
+    },
+    {
+      "id": "prd-325-docs-worktree-base-ref-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 17,
+      "pytestPath": "scripts/unit_tests/test_prd325_docs_worktree_base_ref.py",
+      "ciShard": 2,
+      "pathTriggers": [
+        "scripts/docs_worktree.py",
+        "scripts/unit_tests/test_prd325_docs_worktree_base_ref.py"
+      ],
+      "tags": [
+        "pytest",
+        "deliver",
+        "prd-325"
+      ]
+    },
+    {
+      "id": "prd-325-absorb-closeout-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 63,
+      "pytestPath": "scripts/unit_tests/planning/test_prd325_absorb_closeout.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_gap_capture.py",
+        "scripts/planning_store_facade.py",
+        "scripts/unit_tests/planning/test_prd325_absorb_closeout.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "prd-325"
+      ]
+    },
+    {
       "id": "dispatch-binding-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
@@ -2031,7 +2235,15 @@
         "deliver-concurrency-fixtures",
         "deliver-invariant-fixtures",
         "status-integrity-fixtures",
-        "planning-035-deliver-conductor-fixtures"
+        "planning-035-deliver-conductor-fixtures",
+        "prd-325-finalize-recovery-fixtures",
+        "prd-325-closeout-run-scoped-fixtures",
+        "prd-325-blast-radius-clear-fixtures",
+        "prd-325-ship-loop-resolve-fixtures",
+        "prd-325-publish-surface-profiles-fixtures",
+        "prd-325-scripts-hash-binding-fixtures",
+        "prd-325-docs-currency-consumer-fixtures",
+        "prd-325-docs-worktree-base-ref-fixtures"
       ]
     },
     "docs": {
