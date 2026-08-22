@@ -451,6 +451,7 @@
     "inflight_migration_bridge.py",
     "inflight_reconcile.py",
     "inflight_signal.py",
+    "init_ci_stub.py",
     "init_credential_migration.py",
     "init_posture_defaults.py",
     "init_profile_report.py",
@@ -762,5 +763,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 759
+  "moduleCount": 760
 }
