@@ -991,6 +991,7 @@
 * merge phase curated-greenfield-profile-module-m into feat/greenfield-init-credentials-ci (ba161d1) <!-- sw-deliver:curated-greenfield-profile-module-m -->
 * merge phase credential-docs-and-fine-grained-pat-wording-s into feat/greenfield-init-credentials-ci (abd3b96) <!-- sw-deliver:credential-docs-and-fine-grained-pat-wording-s -->
 * merge phase ci-stub-plan-apply-module-m into feat/greenfield-init-credentials-ci (4ed57a0) <!-- sw-deliver:ci-stub-plan-apply-module-m -->
+* merge phase posture-defaults-wiring-to-curated-profile-s into feat/greenfield-init-credentials-ci (61f7643) <!-- sw-deliver:posture-defaults-wiring-to-curated-profile-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
