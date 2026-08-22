@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-22T02:55:13Z",
+  "generatedAt": "2026-08-22T05:03:02Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -2044,64 +2044,73 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-init.md:372:sw-configure.py",
+      "id": "core/commands/sw-init.md:374:sw-configure.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 372,
+      "line": 374,
       "column": 8,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-init.md:399:sw_bootstrap.py",
+      "id": "core/commands/sw-init.md:375:sw-configure.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 399,
+      "line": 375,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-init.md:386:check-gate.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-init.md",
+      "line": 386,
+      "column": 65,
+      "script": "check-gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-init.md:394:sw-configure.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-init.md",
+      "line": 394,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-init.md:421:sw_bootstrap.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-init.md",
+      "line": 421,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:415:gitignore-generate.py",
+      "id": "core/commands/sw-init.md:437:gitignore-generate.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 415,
+      "line": 437,
       "column": 8,
       "script": "gitignore-generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-init.md:425:planning-doctor.py",
+      "id": "core/commands/sw-init.md:447:planning-doctor.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 425,
+      "line": 447,
       "column": 28,
       "script": "planning-doctor.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-init.md:441:sw_bootstrap.py",
+      "id": "core/commands/sw-init.md:463:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 441,
-      "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "core/commands/sw-init.md:442:sw_bootstrap.py",
-      "tree": "core/commands",
-      "file": "core/commands/sw-init.md",
-      "line": 442,
-      "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "core/commands/sw-init.md:455:sw_bootstrap.py",
-      "tree": "core/commands",
-      "file": "core/commands/sw-init.md",
-      "line": 455,
+      "line": 463,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -2116,19 +2125,37 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:465:sw_bootstrap.py",
+      "id": "core/commands/sw-init.md:477:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 465,
+      "line": 477,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-init.md:479:sw_bootstrap.py",
+      "id": "core/commands/sw-init.md:486:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-init.md",
-      "line": 479,
+      "line": 486,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "core/commands/sw-init.md:487:sw_bootstrap.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-init.md",
+      "line": 487,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "core/commands/sw-init.md:501:sw_bootstrap.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-init.md",
+      "line": 501,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -9064,64 +9091,73 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:372:sw-configure.py",
+      "id": "dist/claude-code/commands/sw-init.md:374:sw-configure.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 372,
+      "line": 374,
       "column": 8,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:399:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-init.md:375:sw-configure.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 399,
+      "line": 375,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-init.md:386:check-gate.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-init.md",
+      "line": 386,
+      "column": 65,
+      "script": "check-gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-init.md:394:sw-configure.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-init.md",
+      "line": 394,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-init.md:421:sw_bootstrap.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-init.md",
+      "line": 421,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:415:gitignore-generate.py",
+      "id": "dist/claude-code/commands/sw-init.md:437:gitignore-generate.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 415,
+      "line": 437,
       "column": 8,
       "script": "gitignore-generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:425:planning-doctor.py",
+      "id": "dist/claude-code/commands/sw-init.md:447:planning-doctor.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 425,
+      "line": 447,
       "column": 28,
       "script": "planning-doctor.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:441:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-init.md:463:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 441,
-      "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/commands/sw-init.md:442:sw_bootstrap.py",
-      "tree": "dist/claude-code/commands",
-      "file": "dist/claude-code/commands/sw-init.md",
-      "line": 442,
-      "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/commands/sw-init.md:455:sw_bootstrap.py",
-      "tree": "dist/claude-code/commands",
-      "file": "dist/claude-code/commands/sw-init.md",
-      "line": 455,
+      "line": 463,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -9136,19 +9172,37 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:465:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-init.md:477:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 465,
+      "line": 477,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-init.md:479:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-init.md:486:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-init.md",
-      "line": 479,
+      "line": 486,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-init.md:487:sw_bootstrap.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-init.md",
+      "line": 487,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-init.md:501:sw_bootstrap.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-init.md",
+      "line": 501,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -10837,366 +10891,6 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/compound/SKILL.md:13:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/compound/SKILL.md",
-      "line": 13,
-      "column": 9,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/compound/SKILL.md:16:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/compound/SKILL.md",
-      "line": 16,
-      "column": 54,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/compound/SKILL.md:20:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/compound/SKILL.md",
-      "line": 20,
-      "column": 43,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/compound/SKILL.md:25:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/compound/SKILL.md",
-      "line": 25,
-      "column": 37,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/compound/SKILL.md:32:memory-sot.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/compound/SKILL.md",
-      "line": 32,
-      "column": 8,
-      "script": "memory-sot.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:24:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 24,
-      "column": 65,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:122:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 122,
-      "column": 8,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:168:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 168,
-      "column": 27,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:169:doc_loop.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 169,
-      "column": 23,
-      "script": "doc_loop.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:173:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 173,
-      "column": 19,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:200:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 200,
-      "column": 72,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:204:dispatch-check.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 204,
-      "column": 11,
-      "script": "dispatch-check.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:288:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 288,
-      "column": 29,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:355:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 355,
-      "column": 8,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:359:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 359,
-      "column": 8,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:376:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 376,
-      "column": 8,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:377:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 377,
-      "column": 8,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/closeout-self-wake.md:9:deliver_closeout.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/closeout-self-wake.md",
-      "line": 9,
-      "column": 8,
-      "script": "deliver_closeout.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/closeout-self-wake.md:11:deliver_closeout.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/closeout-self-wake.md",
-      "line": 11,
-      "column": 8,
-      "script": "deliver_closeout.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/parallel-dispatch-protocol.md:7:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/parallel-dispatch-protocol.md",
-      "line": 7,
-      "column": 9,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/parallel-dispatch-protocol.md:18:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/parallel-dispatch-protocol.md",
-      "line": 18,
-      "column": 8,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/parallel-dispatch-protocol.md:58:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/parallel-dispatch-protocol.md",
-      "line": 58,
-      "column": 8,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/parallel-dispatch-protocol.md:65:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/parallel-dispatch-protocol.md",
-      "line": 65,
-      "column": 8,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/planning-full-conductor.md:22:planning_autonomy.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/planning-full-conductor.md",
-      "line": 22,
-      "column": 8,
-      "script": "planning_autonomy.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/planning-full-conductor.md:23:planning_autonomy.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/planning-full-conductor.md",
-      "line": 23,
-      "column": 8,
-      "script": "planning_autonomy.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/planning-full-conductor.md:24:planning_autonomy.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/planning-full-conductor.md",
-      "line": 24,
-      "column": 8,
-      "script": "planning_autonomy.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/planning-full-conductor.md:25:planning_autonomy.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/planning-full-conductor.md",
-      "line": 25,
-      "column": 8,
-      "script": "planning_autonomy.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/planning-full-conductor.md:26:planning_autonomy.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/planning-full-conductor.md",
-      "line": 26,
-      "column": 8,
-      "script": "planning_autonomy.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/self-wake-sentinel.md:15:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/self-wake-sentinel.md",
-      "line": 15,
-      "column": 13,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/self-wake-sentinel.md:16:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/self-wake-sentinel.md",
-      "line": 16,
-      "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/conductor/references/two-tier-plan-lifecycle.md:3:wave.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/conductor/references/two-tier-plan-lifecycle.md",
-      "line": 3,
-      "column": 33,
-      "script": "wave.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/debug/SKILL.md:12:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/debug/SKILL.md",
-      "line": 12,
-      "column": 45,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/debug/SKILL.md:21:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/debug/SKILL.md",
-      "line": 21,
-      "column": 62,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/debug/SKILL.md:55:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/debug/SKILL.md",
-      "line": 55,
-      "column": 33,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/debug/SKILL.md:64:dispatch-check.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/debug/SKILL.md",
-      "line": 64,
-      "column": 8,
-      "script": "dispatch-check.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/debug/SKILL.md:76:debug_repro_gate.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/debug/SKILL.md",
-      "line": 76,
-      "column": 8,
-      "script": "debug_repro_gate.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/debug/SKILL.md:96:debug_repro_gate.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/debug/SKILL.md",
-      "line": 96,
-      "column": 29,
-      "script": "debug_repro_gate.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/debug/SKILL.md:111:debug_repro_gate.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/debug/SKILL.md",
-      "line": 111,
-      "column": 29,
-      "script": "debug_repro_gate.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/debug/SKILL.md:129:rca_fanout.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/debug/SKILL.md",
-      "line": 129,
-      "column": 9,
-      "script": "rca_fanout.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/debug/references/sentry.md:49:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/debug/references/sentry.md",
-      "line": 49,
-      "column": 63,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
       "id": "dist/claude-code/skills/deliver/SKILL.md:16:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/deliver/SKILL.md",
@@ -12412,69 +12106,6 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/prd/SKILL.md:10:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 10,
-      "column": 44,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/prd/SKILL.md:53:doc_link.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 53,
-      "column": 11,
-      "script": "doc_link.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/prd/SKILL.md:75:doc_link.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 75,
-      "column": 12,
-      "script": "doc_link.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/prd/SKILL.md:77:doc_link.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 77,
-      "column": 12,
-      "script": "doc_link.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/prd/SKILL.md:90:doc_link.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 90,
-      "column": 11,
-      "script": "doc_link.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/prd/SKILL.md:115:domain_vocabulary.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 115,
-      "column": 11,
-      "script": "domain_vocabulary.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/prd/SKILL.md:118:domain_vocabulary.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 118,
-      "column": 11,
-      "script": "domain_vocabulary.py",
-      "classification": "self-repo-only"
-    },
-    {
       "id": "dist/claude-code/skills/rca-core/SKILL.md:18:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/rca-core/SKILL.md",
@@ -12583,168 +12214,6 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/retro/SKILL.md:10:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 10,
-      "column": 43,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/retro/SKILL.md:21:execution_telemetry.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 21,
-      "column": 8,
-      "script": "execution_telemetry.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/retro/SKILL.md:22:execution_telemetry.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 22,
-      "column": 8,
-      "script": "execution_telemetry.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/retro/SKILL.md:28:loop_health.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 28,
-      "column": 16,
-      "script": "loop_health.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/retro/SKILL.md:34:architecture_radar.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 34,
-      "column": 8,
-      "script": "architecture_radar.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/retro/SKILL.md:47:rule_verification.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 47,
-      "column": 8,
-      "script": "rule_verification.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/retro/SKILL.md:48:rule_verification.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 48,
-      "column": 8,
-      "script": "rule_verification.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/retro/SKILL.md:49:rule_verification.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 49,
-      "column": 8,
-      "script": "rule_verification.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/retro/SKILL.md:95:planning_gap_capture.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/SKILL.md",
-      "line": 95,
-      "column": 18,
-      "script": "planning_gap_capture.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/retro/references/rule-adversarial-verification.md:9:rule_verification.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/references/rule-adversarial-verification.md",
-      "line": 9,
-      "column": 8,
-      "script": "rule_verification.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/retro/references/rule-adversarial-verification.md:15:rule_verification.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/references/rule-adversarial-verification.md",
-      "line": 15,
-      "column": 8,
-      "script": "rule_verification.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/retro/references/rule-adversarial-verification.md:21:rule_verification.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/retro/references/rule-adversarial-verification.md",
-      "line": 21,
-      "column": 8,
-      "script": "rule_verification.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/ship/SKILL.md:13:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/ship/SKILL.md",
-      "line": 13,
-      "column": 9,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/ship/SKILL.md:23:dist_freshness.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/ship/SKILL.md",
-      "line": 23,
-      "column": 8,
-      "script": "dist_freshness.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/ship/SKILL.md:24:dist_freshness.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/ship/SKILL.md",
-      "line": 24,
-      "column": 28,
-      "script": "dist_freshness.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/ship/SKILL.md:33:dist_freshness_ship.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/ship/SKILL.md",
-      "line": 33,
-      "column": 8,
-      "script": "dist_freshness_ship.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/ship/SKILL.md:53:ship-build-chain-check.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/ship/SKILL.md",
-      "line": 53,
-      "column": 8,
-      "script": "ship-build-chain-check.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/ship/SKILL.md:56:build-chain-sync.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/ship/SKILL.md",
-      "line": 56,
-      "column": 36,
-      "script": "build-chain-sync.py",
-      "classification": "self-repo-only"
-    },
-    {
       "id": "dist/claude-code/skills/shipwright-state/SKILL.md:10:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/shipwright-state/SKILL.md",
@@ -12797,33 +12266,6 @@
       "column": 8,
       "script": "shipwright-state.py",
       "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/simplify/SKILL.md:12:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/simplify/SKILL.md",
-      "line": 12,
-      "column": 43,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/simplify/SKILL.md:37:simplify-gate.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/simplify/SKILL.md",
-      "line": 37,
-      "column": 32,
-      "script": "simplify-gate.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/simplify/SKILL.md:59:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/simplify/SKILL.md",
-      "line": 59,
-      "column": 39,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
     },
     {
       "id": "dist/claude-code/skills/spec-rigor/SKILL.md:11:sw_bootstrap.py",
@@ -13083,69 +12525,6 @@
       "file": "dist/claude-code/skills/triage/SKILL.md",
       "line": 21,
       "column": 45,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:23:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 23,
-      "column": 45,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:74:verify-evidence.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 74,
-      "column": 8,
-      "script": "verify-evidence.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:138:verify-baseline.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 138,
-      "column": 8,
-      "script": "verify-baseline.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:155:claims_audit.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 155,
-      "column": 12,
-      "script": "claims_audit.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:159:claims_audit.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 159,
-      "column": 12,
-      "script": "claims_audit.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:168:behavioral_anomaly_check.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 168,
-      "column": 49,
-      "script": "behavioral_anomaly_check.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/verification-gate/SKILL.md:210:sw_bootstrap.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/verification-gate/SKILL.md",
-      "line": 210,
-      "column": 34,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
@@ -14887,64 +14266,73 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:372:sw-configure.py",
+      "id": "dist/cursor/commands/sw-init.md:374:sw-configure.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 372,
+      "line": 374,
       "column": 8,
       "script": "sw-configure.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:399:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-init.md:375:sw-configure.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 399,
+      "line": 375,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-init.md:386:check-gate.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-init.md",
+      "line": 386,
+      "column": 65,
+      "script": "check-gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-init.md:394:sw-configure.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-init.md",
+      "line": 394,
+      "column": 8,
+      "script": "sw-configure.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-init.md:421:sw_bootstrap.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-init.md",
+      "line": 421,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:415:gitignore-generate.py",
+      "id": "dist/cursor/commands/sw-init.md:437:gitignore-generate.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 415,
+      "line": 437,
       "column": 8,
       "script": "gitignore-generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:425:planning-doctor.py",
+      "id": "dist/cursor/commands/sw-init.md:447:planning-doctor.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 425,
+      "line": 447,
       "column": 28,
       "script": "planning-doctor.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:441:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-init.md:463:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 441,
-      "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/cursor/commands/sw-init.md:442:sw_bootstrap.py",
-      "tree": "dist/cursor/commands",
-      "file": "dist/cursor/commands/sw-init.md",
-      "line": 442,
-      "column": 8,
-      "script": "sw_bootstrap.py",
-      "classification": "consumer-capable"
-    },
-    {
-      "id": "dist/cursor/commands/sw-init.md:455:sw_bootstrap.py",
-      "tree": "dist/cursor/commands",
-      "file": "dist/cursor/commands/sw-init.md",
-      "line": 455,
+      "line": 463,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -14959,19 +14347,37 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:465:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-init.md:477:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 465,
+      "line": 477,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-init.md:479:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-init.md:486:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-init.md",
-      "line": 479,
+      "line": 486,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "dist/cursor/commands/sw-init.md:487:sw_bootstrap.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-init.md",
+      "line": 487,
+      "column": 8,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
+      "id": "dist/cursor/commands/sw-init.md:501:sw_bootstrap.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-init.md",
+      "line": 501,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
