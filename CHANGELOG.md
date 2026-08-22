@@ -988,6 +988,7 @@
 * merge phase credential-verification-in-doctor-s into feat/greenfield-init-credentials-ci (623e23f) <!-- sw-deliver:credential-verification-in-doctor-s -->
 * merge phase ci-stub-golden-template-s into feat/greenfield-init-credentials-ci (642aaf2) <!-- sw-deliver:ci-stub-golden-template-s -->
 * merge phase preflight-ci-presence-surface-s into feat/greenfield-init-credentials-ci (cf8db27) <!-- sw-deliver:preflight-ci-presence-surface-s -->
+* merge phase curated-greenfield-profile-module-m into feat/greenfield-init-credentials-ci (ba161d1) <!-- sw-deliver:curated-greenfield-profile-module-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
