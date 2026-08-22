@@ -14,10 +14,19 @@ HOOK_NAMES = ("pre-commit", "pre-push", "commit-msg")
 TOKENENV_MIGRATE_REMEDIATION = (
     "python3 scripts/sw-configure.py credential migrate"
 )
+PROFILE_REFRESH_REMEDIATION = "python3 scripts/doctor.py profile-refresh --confirm"
 
 
 def repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent
+    return Path(__file__).resolve().parent.parent.parent
+
+
+def resolve_workflow_config_path(target: Path) -> Path | None:
+    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
+        path = target / rel
+        if path.is_file():
+            return path
+    return None
 
 
 def _append_tokenenv_deprecations(
@@ -55,6 +64,150 @@ def _append_tokenenv_deprecations(
         remediation.append(TOKENENV_MIGRATE_REMEDIATION)
 
 
+def profile_completeness_report(target: Path) -> dict[str, Any]:
+    """Report curated profile keys that are unset or deprecated (PRD 324 R12)."""
+    config_path = resolve_workflow_config_path(target)
+    if config_path is None:
+        return {
+            "verdict": "skip",
+            "reason": "no-workflow-config",
+            "unset": [],
+            "deprecated": [],
+            "refreshAvailable": False,
+        }
+
+    from init_profile_report import classify_profile, OPERATOR_CHOICE, leaf_get_optional
+
+    cfg = json.loads(config_path.read_text(encoding="utf-8"))
+    if not isinstance(cfg, dict):
+        return {
+            "verdict": "fail",
+            "error": "invalid-workflow-config",
+            "unset": [],
+            "deprecated": [],
+            "refreshAvailable": False,
+        }
+
+    report = classify_profile(repo_root(), config=cfg)
+    rows = report.get("rows") or []
+    unset = [
+        row
+        for row in rows
+        if row.get("tier") == "curated" and row.get("status") == "unset"
+    ]
+    deprecated = [
+        row
+        for row in rows
+        if row.get("tier") == "curated" and row.get("status") == "deprecated"
+    ]
+    refreshable = []
+    for row in unset:
+        rec = row.get("recommended")
+        if rec in (OPERATOR_CHOICE, "bundled defaults", None):
+            continue
+        path_tuple = tuple(str(row.get("path", "")).split("."))
+        if leaf_get_optional(cfg, path_tuple) is not None:
+            continue
+        refreshable.append(row)
+
+    verdict = "pass"
+    if unset or deprecated:
+        verdict = "warn"
+    return {
+        "verdict": verdict,
+        "configPath": config_path.relative_to(target).as_posix(),
+        "unset": unset,
+        "deprecated": deprecated,
+        "refreshAvailable": bool(refreshable),
+        "refreshablePaths": [row.get("path") for row in refreshable],
+    }
+
+
+def profile_refresh(target: Path, *, confirm: bool) -> dict[str, Any]:
+    """Consent-gated refresh — fills unset curated keys only; never overwrites operator values."""
+    config_path = resolve_workflow_config_path(target)
+    if config_path is None:
+        return {"verdict": "fail", "error": "no-workflow-config"}
+
+    report = profile_completeness_report(target)
+    if not confirm:
+        return {
+            "verdict": "confirm-required",
+            "unset": report.get("unset", []),
+            "deprecated": report.get("deprecated", []),
+            "refreshablePaths": report.get("refreshablePaths", []),
+            "hint": (
+                "profile refresh writes only unset curated keys; "
+                "operator-set and deprecated values are never overwritten"
+            ),
+            "remediation": PROFILE_REFRESH_REMEDIATION,
+        }
+
+    from init_profile_report import OPERATOR_CHOICE, leaf_get_optional
+
+    cfg = json.loads(config_path.read_text(encoding="utf-8"))
+    if not isinstance(cfg, dict):
+        return {"verdict": "fail", "error": "invalid-workflow-config"}
+
+    applied: list[str] = []
+    for row in report.get("unset", []):
+        rec = row.get("recommended")
+        if rec in (OPERATOR_CHOICE, "bundled defaults", None):
+            continue
+        path_tuple = tuple(str(row.get("path", "")).split("."))
+        if leaf_get_optional(cfg, path_tuple) is not None:
+            continue
+        _set_nested(cfg, path_tuple, rec)
+        applied.append(str(row.get("path")))
+
+    if not applied:
+        return {
+            "verdict": "pass",
+            "written": False,
+            "reason": "nothing-to-refresh",
+            "applied": [],
+        }
+
+    config_path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    return {
+        "verdict": "pass",
+        "written": True,
+        "applied": applied,
+        "configPath": config_path.relative_to(target).as_posix(),
+    }
+
+
+def _set_nested(doc: dict[str, Any], path: tuple[str, ...], value: Any) -> None:
+    cur: dict[str, Any] = doc
+    for key in path[:-1]:
+        nxt = cur.get(key)
+        if not isinstance(nxt, dict):
+            nxt = {}
+            cur[key] = nxt
+        cur = nxt
+    cur[path[-1]] = value
+
+
+def _append_profile_completeness(
+    target: Path,
+    issues: list[str],
+    remediation: list[str],
+) -> None:
+    report = profile_completeness_report(target)
+    if report.get("verdict") == "skip":
+        return
+    for row in report.get("unset", []):
+        path = row.get("path")
+        if path:
+            issues.append(f"profile-unset:{path}")
+    for row in report.get("deprecated", []):
+        path = row.get("path")
+        if path:
+            issues.append(f"profile-deprecated:{path}")
+    if report.get("refreshAvailable"):
+        remediation.append(PROFILE_REFRESH_REMEDIATION)
+
+
 def diagnose(root: Path | None = None) -> dict[str, Any]:
     """Run repo-wide doctor checks against ``root`` (defaults to plugin root)."""
     target = root if root is not None else repo_root()
@@ -88,6 +241,7 @@ def diagnose(root: Path | None = None) -> dict[str, Any]:
         remediation.append("Install CPython >= 3.9 and ensure python3 is on PATH")
 
     _append_tokenenv_deprecations(target, issues, remediation)
+    _append_profile_completeness(target, issues, remediation)
 
     try:
         from effective_config_gen import check_drift
@@ -112,15 +266,38 @@ def diagnose(root: Path | None = None) -> dict[str, Any]:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser(
         prog="doctor",
-        description="Detect stale layout, Python floor, and tokenEnv deprecation issues.",
+        description="Detect stale layout, Python floor, tokenEnv deprecation, and profile completeness.",
     )
     parser.add_argument(
         "--root",
         default=None,
         help="Repository root to diagnose (default: plugin/repo root)",
     )
+    sub = parser.add_subparsers(dest="command")
+    sub.add_parser("diagnose", help="Run full doctor checks (default)")
+    sub.add_parser("profile-check", help="Profile completeness report only")
+    refresh_p = sub.add_parser("profile-refresh", help="Consent-gated curated profile refresh")
+    refresh_p.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Apply refresh for unset curated keys only",
+    )
     args = parser.parse_args(argv)
     root = Path(args.root).resolve() if args.root else repo_root()
+    command = args.command or "diagnose"
+
+    if command == "profile-check":
+        out = profile_completeness_report(root)
+        print(json.dumps(out, indent=2))
+        return 0 if out.get("verdict") in ("pass", "skip") else 1
+
+    if command == "profile-refresh":
+        out = profile_refresh(root, confirm=bool(args.confirm))
+        print(json.dumps(out, indent=2))
+        if out.get("verdict") == "confirm-required":
+            return 1
+        return 0 if out.get("verdict") == "pass" else 1
+
     out = diagnose(root)
     print(json.dumps(out, indent=2))
     return 0 if out["verdict"] == "pass" else 1
