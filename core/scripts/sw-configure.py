@@ -25,6 +25,7 @@ from init_credential_migration import (
     offer_legacy_migration,
     selector_add,
 )
+from init_ci_stub import apply_ci_stub, plan_ci_stub
 from init_profile_report import greenfield_curated_patch
 
 
@@ -104,6 +105,33 @@ def _credential_argv(rest: list[str]) -> tuple[str, list[str]]:
     if not rest:
         return "", []
     return rest[0], rest[1:]
+
+
+def cmd_ci_stub(root: Path, subcmd: str, rest: list[str]) -> int:
+    confirm = "--confirm" in rest
+    wire_verify = "--wire-verify" in rest
+    config_root = root
+    i = 0
+    while i < len(rest):
+        token = rest[i]
+        if token == "--root" and i + 1 < len(rest):
+            config_root = Path(rest[i + 1]).expanduser().resolve()
+            i += 2
+            continue
+        i += 1
+    wire: str = "on" if wire_verify else "off"
+    if subcmd in ("", "plan"):
+        payload = plan_ci_stub(config_root, wire_verify=wire)
+        print(json.dumps(payload, indent=2))
+        return 0
+    if subcmd == "apply":
+        payload = apply_ci_stub(config_root, confirm=confirm, wire_verify=wire)
+        print(json.dumps(payload, indent=2))
+        if payload.get("verdict") == "fail":
+            return 2
+        return 0
+    print(json.dumps({"verdict": "fail", "error": f"unknown ci-stub command: {subcmd}"}), file=sys.stderr)
+    return 2
 
 
 def cmd_credential(root: Path, subcmd: str, rest: list[str]) -> int:
@@ -324,7 +352,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args or args[0] in ("-h", "--help"):
         print(
             "usage: sw-configure.py detect|schema-version|shipwright-version|"
-            "drift-check|portability-check|write-draft|credential",
+            "drift-check|portability-check|write-draft|credential|ci-stub",
             file=sys.stderr,
         )
         return 2 if args else 0
@@ -372,6 +400,9 @@ def main(argv: list[str] | None = None) -> int:
     if cmd == "write-draft":
         out = config or "/tmp/sw-init-draft.json"
         return cmd_write_draft(root, accept=accept, write_verify=write_verify, config=out)
+    if cmd == "ci-stub":
+        subcmd, sub_rest = _credential_argv(rest)
+        return cmd_ci_stub(root, subcmd, sub_rest)
     if cmd == "credential":
         subcmd, sub_rest = _credential_argv(rest)
         if not subcmd:
