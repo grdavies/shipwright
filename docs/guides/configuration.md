@@ -158,20 +158,20 @@ ambient tokens without a declared `environment` backend entry.
 
 ### 1 — Credential checklist (broker-only)
 
-`/sw-init` and `python3 scripts/sw-configure.py credential plan` emit the **same four steps** in order:
+`/sw-init` and `python3 scripts/sw_bootstrap.py sw-configure.py -- credential plan` emit the **same four steps** in order:
 
 | Step | Meaning |
 | --- | --- |
 | Identity source | `github_cli` when authenticated, else a declared env/keystore backend |
 | `credentialRef` binding | Committed config references (`host`, planning, memory) point at selector entries |
 | Selector allowlists | Machine-local `allowedRepos`, `allowedProjectIds`, `allowedEndpoints` for fail-closed scope |
-| Resolution probe | `python3 scripts/credentials-doctor.py --root .` — terminal green path per checklist step |
+| Resolution probe | `python3 scripts/sw_bootstrap.py credentials-doctor.py -- --root .` — terminal green path per checklist step |
 
 The selector holds **metadata and allowlists only** — never secret material. Apply with:
 
 ```bash
-python3 scripts/sw-configure.py credential plan
-python3 scripts/sw-configure.py credential apply --confirm
+python3 scripts/sw_bootstrap.py sw-configure.py -- credential plan
+python3 scripts/sw_bootstrap.py sw-configure.py -- credential apply --confirm
 ```
 
 ### 2 — Named `tokenEnv` (multi-account)
@@ -196,8 +196,8 @@ When the repo has no PR workflow or only a default-branch-restricted `pull_reque
 consent-gated stub so `base-preflight:ci-or-review` can satisfy CI presence:
 
 ```bash
-python3 scripts/sw-configure.py ci-stub plan
-python3 scripts/sw-configure.py ci-stub apply --confirm
+python3 scripts/sw_bootstrap.py sw-configure.py -- ci-stub plan
+python3 scripts/sw_bootstrap.py sw-configure.py -- ci-stub apply --confirm
 ```
 
 `plan` is read-only (target path + rendered body). `apply` without `--confirm` refuses. Re-apply when a
@@ -211,8 +211,8 @@ below). Classification (`present` / `defaulted` / `unset` / `deprecated`) and th
 config are single-sourced from `init_profile_report`:
 
 ```bash
-python3 scripts/init_profile_report.py classify --markdown
-python3 scripts/sw-configure.py findings
+python3 scripts/sw_bootstrap.py init_profile_report.py -- classify --markdown
+python3 scripts/sw_bootstrap.py sw-configure.py -- findings
 ```
 
 Annotated reference (neutral, no dev-harness paths): `core/sw-reference/workflow.config.example.json`.

@@ -14,7 +14,7 @@ def test_configuration_greenfield_onramp_section(repo_root: Path) -> None:
         "optional, never primary",
         "ci-stub plan",
         "ci-stub apply --confirm",
-        "init_profile_report.py classify",
+        "sw_bootstrap.py init_profile_report.py",
         "core/sw-reference/workflow.config.example.json",
     ):
         assert token in text

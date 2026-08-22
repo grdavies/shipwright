@@ -640,6 +640,38 @@ conflict. Normative block shape and hash rules: `core/sw-reference/canonical-ser
 (`sw-edges` section). Gap-capture absorb linkage (`planning_gap_capture.record_absorb_linkage`) uses the
 same merge path — PRD-side absorbs put must not drop native links.
 
+### PRD 324 greenfield init surfaces (R1–R14, D1–D3)
+
+Greenfield credential UX, consent-gated CI stub, curated profile, and configuration discoverability.
+Runtime modules mirrored under `core/scripts/` (`core-scripts-parity` when touched):
+
+| Module | Role | Regression |
+| --- | --- | --- |
+| `scripts/init_credential_migration.py` | Ordered credential checklist + named `tokenEnv` branch | `test_init_credential_checklist.py` |
+| `scripts/credentials-doctor.py` / `scripts/credentials/checklist.py` | Checklist-aligned doctor verdicts | `test_credential_checklist_doctor.py` |
+| `scripts/init_ci_stub.py` | Consent-gated CI stub `plan` / `apply --confirm` | `test_init_ci_stub.py` |
+| `scripts/wave_preflight.py` | CI-presence scan for init findings | `test_init_ci_stub_preflight_integration.py` |
+| `scripts/init_profile_report.py` | Curated greenfield profile single source | `test_init_profile_report.py` |
+| `scripts/init_posture_defaults.py` | Greenfield posture write-draft patch | `test_init_default_seeds.py` |
+| `scripts/sw-configure.py` | `ci-stub` subcommand + consolidated findings | init suite |
+| `scripts/doctor.py` | Consent-gated profile completeness refresh | `test_init_profile_report.py` |
+
+Golden template: `core/sw-reference/templates/ci-stub-pull-request.yml` (see **Golden templates** below).
+
+Operator on-ramp: `docs/guides/configuration.md` **Greenfield on-ramp**;
+`core/commands/sw-init.md` (credential checklist + CI stub).
+
+**Absorb acceptance map** (source gap → requirement cluster):
+
+| Gap | R-IDs | Acceptance |
+| --- | --- | --- |
+| `gap-339-redesign-greenfield-credential-setup-ux-investig` | R1–R4 | Single ordered checklist; named `tokenEnv` under multi-account risk; no forced `.env`; broker-only resolution |
+| `gap-340-seed-consent-gated-pr-ci-stub-from-sw-init-when-` | R5–R8 | `ci-stub plan` read-only; `apply --confirm` consent gate; decline recorded; unrestricted `pull_request` stub |
+| `gap-341-improve-sw-init-coverage-defaults-and-config-dis` | R9–R12 | Curated profile single-sourced; present/defaulted/unset classification; example-config link; consent-gated refresh |
+
+PRD `sw-edges` `absorbs` targets above must each resolve to exactly one open gap unit at delivery close
+(`planning_store_facade` numeric absorb parity).
+
 ### PRD 278 closeout surfaces (R9, R11, D1, D3)
 
 Deliver/ship closeout hardening modules and their `core/scripts/` mirrors (required planning gate
