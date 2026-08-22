@@ -12,6 +12,7 @@ from unittest.mock import patch
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[2]
+_REPO_ROOT = _ROOT.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
@@ -53,7 +54,7 @@ def _trusted_scripts(tmp_path: Path, *, suffix: str = "") -> Path:
 
 
 @pytest.fixture
-def git_repo(tmp_path: Path) -> Path:
+def git_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     repo = tmp_path / "repo"
     repo.mkdir()
     _git(repo, "init", "-q")
@@ -63,8 +64,8 @@ def git_repo(tmp_path: Path) -> Path:
     _git(repo, "add", "README.md")
     _git(repo, "commit", "-qm", "init")
     _git(repo, "branch", "-M", "main")
-    if not (repo / "scripts").exists():
-        (repo / "scripts").symlink_to(_ROOT, target_is_directory=True)
+    scripts = _REPO_ROOT / "scripts"
+    monkeypatch.setenv("SHIPWRIGHT_SCRIPTS", str(scripts.resolve()))
     return repo
 
 
@@ -93,8 +94,11 @@ def test_equal_hash_provision_is_noop(git_repo: Path, capsys: pytest.CaptureFixt
     orchestrator_binding = scripts_root_binding(orch)
     assert primary_binding["hash"] == orchestrator_binding["hash"]
 
-    with pytest.raises(SystemExit) as exc:
-        wave_lifecycle.cmd_orchestrator_provision(repo, ["--target", "feat/hash-demo"])
+    with patch("halt_resume.enrich_fail_extra"), patch.object(
+        wave_lifecycle, "assert_primary_off_target"
+    ):
+        with pytest.raises(SystemExit) as exc:
+            wave_lifecycle.cmd_orchestrator_provision(repo, ["--target", "feat/hash-demo"])
     assert exc.value.code == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["adopted"] is True
