@@ -156,7 +156,7 @@ class TestLegacyTokenVariableRepository:
         dry = offer_legacy_migration(root, plan, confirm=False, selector_path=selector)
         expected = selector_add_command(
             ref="github-work",
-            backend="environment",
+            backend="github_cli",
             provider="github",
             hostname="github.com",
             account="work",

@@ -28,6 +28,17 @@ from host_lib import (
 )
 
 CONFIGURE_CLI = "python3 scripts/sw-configure.py"
+CREDENTIAL_DOCTOR_CLI = "python3 scripts/credentials-doctor.py"
+METADATA_ONLY_NOTICE = (
+    "The machine-local credential selector holds metadata and allowlists only — "
+    "never secret material."
+)
+CHECKLIST_STEP_ORDER = (
+    "identity-source",
+    "credential-ref-binding",
+    "selector-allowlists",
+    "verification",
+)
 DEFAULT_HOST_REF = "github-work"
 DEFAULT_PLANNING_REF = "planning-work"
 DEFAULT_MEMORY_REF = "memory-work"
@@ -45,6 +56,42 @@ class DetectedAccount:
     provider: str
     hostname: str
     account: str
+
+
+@dataclass(frozen=True, slots=True)
+class CredentialChecklistStep:
+    id: str
+    title: str
+    description: str
+    status: str
+    remediation: str | None = None
+
+    def to_public_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "status": self.status,
+        }
+        if self.remediation:
+            payload["remediation"] = self.remediation
+        return payload
+
+
+@dataclass(frozen=True, slots=True)
+class CredentialChecklist:
+    steps: tuple[CredentialChecklistStep, ...]
+    metadataOnlyNotice: str = METADATA_ONLY_NOTICE
+    namedTokenEnv: str | None = None
+    multiAccountRisk: bool = False
+
+    def to_public_dict(self) -> dict[str, Any]:
+        return {
+            "steps": [step.to_public_dict() for step in self.steps],
+            "metadataOnlyNotice": self.metadataOnlyNotice,
+            "namedTokenEnv": self.namedTokenEnv,
+            "multiAccountRisk": self.multiAccountRisk,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -239,6 +286,276 @@ def build_init_plan(
     )
 
 
+def suggest_named_token_env(provider: str, account: str) -> str:
+    provider_key = re.sub(r"[^A-Z0-9]+", "_", provider.upper()).strip("_") or "HOST"
+    account_key = re.sub(r"[^A-Z0-9]+", "_", account.upper()).strip("_") or "WORK"
+    return f"SW_{provider_key}_TOKEN_{account_key}"
+
+
+def _remote_owners(root: Path) -> set[str]:
+    proc = subprocess.run(
+        ["git", "remote", "-v"],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    owners: set[str] = set()
+    for line in proc.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        slug = repo_slug_from_remote(parts[1])
+        if "/" in slug:
+            owners.add(slug.split("/", 1)[0].lower())
+    return owners
+
+
+def detect_multi_account_risk(
+    root: Path,
+    plan: InitCredentialPlan,
+    *,
+    selector_path: Path | None = None,
+    xdg_base: Path | None = None,
+) -> dict[str, Any]:
+    path = selector_path or default_selector_path(xdg_base=xdg_base)
+    owners = _remote_owners(root)
+    multi_repo = len(owners) > 1
+    existing_accounts: set[str] = set()
+    document = _load_selector_document(path)
+    entries = document.get("entries")
+    if isinstance(entries, dict):
+        for entry in entries.values():
+            if isinstance(entry, dict):
+                account = str(entry.get("account") or "").strip()
+                if account:
+                    existing_accounts.add(account.lower())
+    selected_account = (plan.accounts[0].account if plan.accounts else "work").lower()
+    selector_conflict = bool(existing_accounts - {selected_account})
+    multi_account = plan.disclosure == "multi" or selector_conflict
+    risk = multi_repo or multi_account
+    named_token_env = None
+    if risk:
+        account = plan.accounts[0].account if plan.accounts else "work"
+        named_token_env = suggest_named_token_env(plan.provider, account)
+    return {
+        "risk": risk,
+        "multiRepo": multi_repo,
+        "multiAccount": multi_account,
+        "namedTokenEnv": named_token_env,
+        "remoteOwners": sorted(owners),
+    }
+
+
+def _selector_entry_for_ref(
+    root: Path,
+    plan: InitCredentialPlan,
+    *,
+    selector_path: Path | None = None,
+    xdg_base: Path | None = None,
+    ref: str | None = None,
+) -> dict[str, object] | None:
+    path = selector_path or default_selector_path(xdg_base=xdg_base)
+    document = _load_selector_document(path)
+    entries = document.get("entries")
+    if not isinstance(entries, dict):
+        return None
+    target = ref or plan.credential_refs.host
+    entry = entries.get(target)
+    return dict(entry) if isinstance(entry, dict) else None
+
+
+def _identity_source_status(plan: InitCredentialPlan, entry: Mapping[str, object] | None) -> str:
+    if plan.accounts and plan.recommended_backend == "github_cli":
+        if entry and str(entry.get("backend") or "") == "github_cli":
+            return "ready"
+        if not entry:
+            return "pending"
+    if entry:
+        backend = str(entry.get("backend") or "")
+        if backend in {"environment", "keystore", "github_cli", "git_credential"}:
+            return "ready"
+    if plan.recommended_backend == "github_cli" and plan.accounts:
+        return "pending"
+    return "pending"
+
+
+def _credential_ref_status(plan: InitCredentialPlan) -> str:
+    return "ready" if plan.has_credential_refs else "pending"
+
+
+def _selector_allowlist_status(entry: Mapping[str, object] | None) -> str:
+    if not entry:
+        return "pending"
+    required = ("allowedRepos", "allowedProjectIds", "allowedEndpoints")
+    if all(isinstance(entry.get(key), list) and entry.get(key) for key in required):
+        return "ready"
+    return "pending"
+
+
+def build_credential_checklist(
+    root: Path,
+    plan: InitCredentialPlan,
+    *,
+    selector_path: Path | None = None,
+    xdg_base: Path | None = None,
+) -> CredentialChecklist:
+    risk = detect_multi_account_risk(
+        root,
+        plan,
+        selector_path=selector_path,
+        xdg_base=xdg_base,
+    )
+    entry = _selector_entry_for_ref(
+        root,
+        plan,
+        selector_path=selector_path,
+        xdg_base=xdg_base,
+    )
+    identity_backend = plan.recommended_backend
+    if plan.accounts and plan.recommended_backend == "github_cli":
+        identity_detail = "Use github_cli when authenticated"
+    elif identity_backend == "keystore":
+        identity_detail = "Declare a keystore backend entry"
+    else:
+        identity_detail = "Declare an environment or keystore backend entry"
+    identity_status = _identity_source_status(plan, entry)
+    identity_remediation = (
+        f"{CONFIGURE_CLI} credential apply --confirm"
+        if identity_status == "pending"
+        else None
+    )
+    ref_status = _credential_ref_status(plan)
+    ref_remediation = (
+        f"{CONFIGURE_CLI} credential apply --confirm"
+        if ref_status == "pending"
+        else None
+    )
+    allowlist_status = _selector_allowlist_status(entry)
+    allowlist_remediation = (
+        selector_add_command(
+            ref=plan.credential_refs.host,
+            backend=plan.recommended_backend,
+            provider=plan.provider,
+            hostname=plan.hostname,
+            account=plan.accounts[0].account if plan.accounts else "work",
+            repo_slug=plan.repo_slug,
+            project_id=plan.project_id,
+        )
+        if allowlist_status == "pending"
+        else None
+    )
+    verification_status = "ready" if all(
+        status == "ready"
+        for status in (identity_status, ref_status, allowlist_status)
+    ) else "pending"
+    verification_remediation = f"{CREDENTIAL_DOCTOR_CLI} --root {root.resolve()}"
+    steps = (
+        CredentialChecklistStep(
+            id="identity-source",
+            title="Identity source",
+            description=identity_detail,
+            status=identity_status,
+            remediation=identity_remediation,
+        ),
+        CredentialChecklistStep(
+            id="credential-ref-binding",
+            title="credentialRef binding",
+            description="Bind host, planning, and memory credentialRef fields in workflow.config.json",
+            status=ref_status,
+            remediation=ref_remediation,
+        ),
+        CredentialChecklistStep(
+            id="selector-allowlists",
+            title="Selector allowlists",
+            description=(
+                "Machine-local selector entry with allowedRepos, allowedProjectIds, "
+                "and allowedEndpoints"
+            ),
+            status=allowlist_status,
+            remediation=allowlist_remediation,
+        ),
+        CredentialChecklistStep(
+            id="verification",
+            title="Verification",
+            description="Resolve credentials through credentials-doctor",
+            status=verification_status,
+            remediation=verification_remediation,
+        ),
+    )
+    return CredentialChecklist(
+        steps=steps,
+        namedTokenEnv=risk.get("namedTokenEnv"),
+        multiAccountRisk=bool(risk.get("risk")),
+    )
+
+
+def refuse_undeclared_ambient_token(
+    *,
+    backend: str,
+    token_env: str | None,
+    selector_entry: Mapping[str, object] | None,
+) -> dict[str, Any] | None:
+    if backend != "environment":
+        return None
+    env_name = (token_env or "").strip()
+    if not env_name:
+        return {
+            "verdict": "refused",
+            "cause": "undeclared-ambient-token",
+            "detail": (
+                "environment backend requires an explicitly declared tokenEnv on the "
+                "selector entry — ambient GITHUB_TOKEN without declaration is refused"
+            ),
+        }
+    if selector_entry and not str(selector_entry.get("tokenEnv") or "").strip():
+        return {
+            "verdict": "refused",
+            "cause": "undeclared-ambient-token",
+            "detail": (
+                f"token env {env_name!r} is not declared on the selector entry; "
+                "bind tokenEnv through a declared environment backend entry"
+            ),
+        }
+    return None
+
+
+def offer_example_env_file(
+    root: Path,
+    *,
+    token_env: str,
+    confirm: bool,
+) -> dict[str, Any]:
+    env_path = root / ".env.example"
+    if not confirm:
+        return {
+            "verdict": "confirm-required",
+            "path": str(env_path),
+            "hint": (
+                "optional example env file is written only on explicit request; "
+                "consumption requires a declared environment backend entry"
+            ),
+        }
+    env_path.write_text(f"{token_env}=\n", encoding="utf-8")
+    gitignore_path = root / ".gitignore"
+    ignore_line = ".env.example"
+    if gitignore_path.is_file():
+        existing = gitignore_path.read_text(encoding="utf-8").splitlines()
+        if ignore_line not in existing:
+            gitignore_path.write_text(
+                gitignore_path.read_text(encoding="utf-8").rstrip() + f"\n{ignore_line}\n",
+                encoding="utf-8",
+            )
+    else:
+        gitignore_path.write_text(f"{ignore_line}\n", encoding="utf-8")
+    return {
+        "verdict": "ok",
+        "path": str(env_path),
+        "gitignored": True,
+        "notice": "example env is optional and never the primary credential path",
+    }
+
+
 def build_selector_entry(
     *,
     backend: str,
@@ -295,7 +612,7 @@ def migration_selector_command(plan: InitCredentialPlan, account: DetectedAccoun
     hostname = selected.hostname if selected else plan.hostname
     return selector_add_command(
         ref=plan.credential_refs.host,
-        backend="environment",
+        backend=plan.recommended_backend,
         provider=provider,
         hostname=hostname,
         account=account_name,
@@ -336,16 +653,15 @@ def _default_token_env(provider: str) -> str:
     return ""
 
 
-def credential_refs_patch(plan: InitCredentialPlan) -> dict[str, Any]:
+def credential_refs_patch(plan: InitCredentialPlan, *, token_env: str | None = None) -> dict[str, Any]:
     refs = plan.credential_refs
-    token_env = _default_token_env(plan.provider)
     host_patch: dict[str, Any] = {
         "provider": plan.provider,
         "remote": "origin",
         "credentialRef": refs.host,
     }
-    if token_env:
-        host_patch["tokenEnv"] = token_env
+    if token_env and token_env.strip():
+        host_patch["tokenEnv"] = token_env.strip()
     return {
         "projectId": plan.project_id,
         "host": host_patch,
@@ -517,11 +833,26 @@ def apply_guided_single_identity(
     selector_path: Path | None = None,
     xdg_base: Path | None = None,
 ) -> dict[str, Any]:
+    checklist = build_credential_checklist(
+        root,
+        plan,
+        selector_path=selector_path,
+        xdg_base=xdg_base,
+    )
+    risk = detect_multi_account_risk(
+        root,
+        plan,
+        selector_path=selector_path,
+        xdg_base=xdg_base,
+    )
     if plan.disclosure == "multi":
         return {
             "verdict": "halt",
             "disclosure": "multi",
             "accounts": [item.account for item in plan.accounts],
+            "checklist": checklist.to_public_dict(),
+            "namedTokenEnv": risk.get("namedTokenEnv"),
+            "metadataOnlyNotice": METADATA_ONLY_NOTICE,
             "hint": (
                 "multiple accounts detected; configure keystore or per-reference backends "
                 "before applying the guided single-identity path"
@@ -532,6 +863,7 @@ def apply_guided_single_identity(
     provider = selected.provider if selected else plan.provider
     hostname = selected.hostname if selected else plan.hostname
     backend = plan.recommended_backend
+    token_env = risk.get("namedTokenEnv") if risk.get("risk") else None
     entry = build_selector_entry(
         backend=backend,
         provider=provider,
@@ -539,6 +871,7 @@ def apply_guided_single_identity(
         account=account_name,
         repo_slug=plan.repo_slug,
         project_id=plan.project_id,
+        token_env=token_env,
     )
     selector_command = selector_add_command(
         ref=plan.credential_refs.host,
@@ -550,10 +883,12 @@ def apply_guided_single_identity(
         project_id=plan.project_id,
     )
     if not confirm:
-        return {
+        payload: dict[str, Any] = {
             "verdict": "confirm-required",
             "disclosure": plan.disclosure,
             "selectorCommand": selector_command,
+            "checklist": checklist.to_public_dict(),
+            "metadataOnlyNotice": METADATA_ONLY_NOTICE,
             "wouldWrite": {
                 "configPath": str(_config_path(root)),
                 "selectorPath": str(selector_path or default_selector_path(xdg_base=xdg_base)),
@@ -561,7 +896,14 @@ def apply_guided_single_identity(
                 "projectId": plan.project_id,
             },
         }
-    cfg = merge_config_patch(_read_config(root), credential_refs_patch(plan))
+        if token_env:
+            payload["namedTokenEnv"] = token_env
+            payload["multiAccountRisk"] = True
+        return payload
+    cfg = merge_config_patch(
+        _read_config(root),
+        credential_refs_patch(plan, token_env=token_env),
+    )
     config_path = _write_config(root, cfg)
     selector_written = write_local_selector_entry(
         ref=plan.credential_refs.host,
@@ -581,7 +923,7 @@ def apply_guided_single_identity(
             root=root,
             credential_refs=plan.credential_refs,
         )
-    return {
+    result: dict[str, Any] = {
         "verdict": "ok",
         "disclosure": plan.disclosure,
         "configPath": str(config_path),
@@ -589,8 +931,19 @@ def apply_guided_single_identity(
         "selectorCommand": selector_command,
         "projectId": plan.project_id,
         "credentialRefs": plan.credential_refs.as_dict(),
+        "checklist": build_credential_checklist(
+            root,
+            plan,
+            selector_path=active_selector,
+            xdg_base=xdg_base,
+        ).to_public_dict(),
+        "metadataOnlyNotice": METADATA_ONLY_NOTICE,
         "userLevelWriteException": True,
     }
+    if token_env:
+        result["namedTokenEnv"] = token_env
+        result["multiAccountRisk"] = True
+    return result
 
 
 def offer_legacy_migration(
