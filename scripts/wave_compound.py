@@ -21,11 +21,14 @@ from host_invoke import host_verb
 from cleanup_lib import load_default_branch
 from wave_json_io import StateCorruptError, read_json, write_json
 from wave_state import (
+    branch_slug_from_target,
     completion_finalize_authorization,
     load_deliver_state,
     phase_complete,
     resolve_state_path,
+    run_slug_from_state,
     save_deliver_state,
+    slug_drift_payload,
     target_branch_from_state,
 )
 
@@ -137,13 +140,46 @@ def _breadcrumb_target_branch(root: Path) -> str | None:
     return None
 
 
-def merged_terminal_pr_by_head(root: Path, target: str) -> dict[str, Any] | None:
+def resolve_target_branch(
+    root: Path,
+    state: dict[str, Any],
+) -> tuple[str | None, str]:
+    """Resolve target branch: run-scoped state → breadcrumb → terminal PR head."""
+    branch = target_branch_from_state(state)
+    if branch:
+        return branch, "state"
+    breadcrumb = _breadcrumb_target_branch(root)
+    if breadcrumb:
+        return breadcrumb, "breadcrumb"
+    terminal = state.get("terminalPr") or {}
+    for key in ("headRefName", "headBranch"):
+        head = terminal.get(key)
+        if isinstance(head, str) and head.strip():
+            return head.strip(), f"terminalPr.{key}"
+    return None, ""
+
+
+def _terminal_pr_payload_from_view(payload: dict[str, Any], *, fallback: dict[str, Any] | None = None) -> dict[str, Any]:
+    merge_commit = payload.get("mergeCommit") or {}
+    head = payload.get("headRefName") or (fallback or {}).get("headRefName")
+    return {
+        "number": payload.get("number") or (fallback or {}).get("number"),
+        "url": payload.get("url") or (fallback or {}).get("url"),
+        "mergedAt": payload.get("mergedAt") or (fallback or {}).get("mergedAt"),
+        "mergeCommit": merge_commit.get("oid") if isinstance(merge_commit, dict) else merge_commit,
+        "headRefName": head,
+    }
+
+
+def merged_terminal_pr_by_head(root: Path, target: str) -> tuple[dict[str, Any] | None, bool]:
     """Discover merged terminal PR via host list when durable state is cleared (R13)."""
     top = git_top(root)
     default = load_default_branch(top)
+    host_unavailable = False
     for state_filter in ("merged", "closed", "all"):
         out = host_verb(root, "pr-list", head=target, base=default, state=state_filter)
         if out.get("verdict") != "ok":
+            host_unavailable = True
             continue
         items = out.get("data") if isinstance(out.get("data"), list) else []
         for item in items:
@@ -157,37 +193,91 @@ def merged_terminal_pr_by_head(root: Path, target: str) -> dict[str, Any] | None
                 continue
             viewed = host_verb(root, "pr-view", number=str(number))
             if viewed.get("verdict") != "ok":
+                host_unavailable = True
                 continue
             payload = viewed.get("data") or {}
             if str(payload.get("state") or "").upper() != "MERGED":
                 continue
-            merge_commit = payload.get("mergeCommit") or {}
-            return {
-                "number": number,
-                "url": item.get("url") or payload.get("url"),
-                "mergedAt": payload.get("mergedAt"),
-                "mergeCommit": merge_commit.get("oid") if isinstance(merge_commit, dict) else merge_commit,
-            }
-    return None
+            if payload.get("number") is None:
+                payload = {**payload, "number": number}
+            return _terminal_pr_payload_from_view(payload, fallback=item), host_unavailable
+    return None, host_unavailable
+
+
+def _host_indeterminate() -> dict[str, Any]:
+    return {"merged": False, "status": "indeterminate", "detail": "host-unavailable"}
 
 
 def terminal_pr_merged_via_host(root: Path, state: dict[str, Any]) -> dict[str, Any] | None:
     """Authoritative merge signal for squash-merged terminal PRs (R53)."""
     terminal = state.get("terminalPr") or {}
     number = terminal.get("number")
-    if number is None:
-        target = target_branch_from_state(state) or _breadcrumb_target_branch(root)
-        if target:
-            discovered = merged_terminal_pr_by_head(root, target)
-            if discovered:
-                number = discovered.get("number")
-        if number is None:
+    discovered: dict[str, Any] | None = None
+    host_unavailable = False
+
+    def _recover_by_head() -> dict[str, Any] | None:
+        nonlocal discovered, host_unavailable
+        target = resolve_target_branch(root, state)[0]
+        if not target:
             return None
+        discovered, host_unavailable = merged_terminal_pr_by_head(root, target)
+        return discovered
+
+    if number is not None:
+        viewed = host_verb(root, "pr-view", number=str(number))
+        if viewed.get("verdict") != "ok":
+            recovered = _recover_by_head()
+            if recovered:
+                number = recovered.get("number")
+            elif host_unavailable:
+                return _host_indeterminate()
+            else:
+                return None
+        else:
+            payload = viewed.get("data") or {}
+            if str(payload.get("state") or "").upper() != "MERGED":
+                recovered = _recover_by_head()
+                if recovered:
+                    number = recovered.get("number")
+                    discovered = recovered
+                elif host_unavailable:
+                    return _host_indeterminate()
+                else:
+                    return None
+            else:
+                merge_commit = payload.get("mergeCommit") or {}
+                return {
+                    "merged": True,
+                    "status": "merged",
+                    "detail": "terminal-pr-host",
+                    "prNumber": number,
+                    "mergedAt": payload.get("mergedAt"),
+                    "mergeCommit": merge_commit.get("oid") if isinstance(merge_commit, dict) else merge_commit,
+                }
+    else:
+        discovered = _recover_by_head()
+        if discovered:
+            number = discovered.get("number")
+        elif host_unavailable:
+            return _host_indeterminate()
+        else:
+            return None
+
+    if discovered and number is not None:
+        return {
+            "merged": True,
+            "status": "merged",
+            "detail": "terminal-pr-host-recovered",
+            "prNumber": number,
+            "mergedAt": discovered.get("mergedAt"),
+            "mergeCommit": discovered.get("mergeCommit"),
+        }
+
     out = host_verb(root, "pr-view", number=str(number))
     if out.get("verdict") != "ok":
-        return None
+        return _host_indeterminate()
     payload = out.get("data") or {}
-    if payload.get("state") != "MERGED":
+    if str(payload.get("state") or "").upper() != "MERGED":
         return None
     merge_commit = payload.get("mergeCommit") or {}
     return {
@@ -203,31 +293,61 @@ def terminal_pr_merged_via_host(root: Path, state: dict[str, Any]) -> dict[str, 
 def enrich_state_for_merge_check(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     """Recover target/terminalPr hints when branch-scoped state was cleared (R13/R14)."""
     enriched = dict(state)
-    if not target_branch_from_state(enriched):
-        breadcrumb = _breadcrumb_target_branch(root)
-        if breadcrumb:
-            enriched.setdefault("target", {})["branch"] = breadcrumb
-    terminal = enriched.get("terminalPr") or {}
-    if not terminal.get("number"):
-        target = target_branch_from_state(enriched)
-        if target:
-            discovered = merged_terminal_pr_by_head(root, target)
-            if discovered:
-                enriched["terminalPr"] = discovered
+    target, target_source = resolve_target_branch(root, enriched)
+    if target and not target_branch_from_state(enriched):
+        enriched.setdefault("target", {})["branch"] = target
+    terminal = dict(enriched.get("terminalPr") or {})
+    needs_recovery = not terminal.get("number")
+    if terminal.get("number") is not None and not needs_recovery:
+        viewed = host_verb(root, "pr-view", number=str(terminal["number"]))
+        if viewed.get("verdict") == "ok":
+            payload = viewed.get("data") or {}
+            if str(payload.get("state") or "").upper() != "MERGED":
+                needs_recovery = True
+    if needs_recovery and target:
+        discovered, _host_unavailable = merged_terminal_pr_by_head(root, target)
+        if discovered:
+            enriched["terminalPr"] = discovered
+            if not target_branch_from_state(enriched):
+                head = discovered.get("headRefName")
+                if isinstance(head, str) and head:
+                    enriched.setdefault("target", {})["branch"] = head
+    elif terminal:
+        enriched["terminalPr"] = terminal
+    enriched["_targetSource"] = target_source
     return enriched
+
+
+def _attach_slug_drift(
+    result: dict[str, Any],
+    state: dict[str, Any],
+    target: str | None,
+    *,
+    source: str,
+) -> dict[str, Any]:
+    drift = slug_drift_payload(run_slug_from_state(state), target, source=source)
+    if drift:
+        result = {**result, "slugDrift": drift}
+    return result
 
 
 def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     work_state = enrich_state_for_merge_check(root, state)
-    target = target_branch_from_state(work_state) or _breadcrumb_target_branch(root)
+    target, target_source = resolve_target_branch(root, work_state)
     if not target:
         return {"merged": False, "reason": "no-target-branch"}
     top = git_top(root)
     default = load_default_branch(top)
 
     gh_info = terminal_pr_merged_via_host(root, work_state)
-    if gh_info:
-        return {**gh_info, "target": target, "default": default}
+    host_indeterminate = bool(gh_info and gh_info.get("status") == "indeterminate")
+    if gh_info and gh_info.get("merged"):
+        return _attach_slug_drift(
+            {**gh_info, "target": target, "default": default},
+            state,
+            target,
+            source=target_source,
+        )
 
     target_proc = subprocess.run(
         ["git", "-C", str(top), "rev-parse", target],
@@ -237,7 +357,7 @@ def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     target_sha = target_proc.stdout.strip() if target_proc.returncode == 0 else ""
     default_ref, default_sha = resolve_default_ref(top, default)
     if not target_sha or not default_sha:
-        return {
+        base = {
             "merged": False,
             "status": "indeterminate",
             "detail": "missing-branch-ref",
@@ -245,19 +365,27 @@ def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
             "default": default,
             "defaultRef": default_ref,
         }
+        if host_indeterminate:
+            base["detail"] = "host-unavailable"
+        return _attach_slug_drift(base, state, target, source=target_source)
     anc = subprocess.run(
         ["git", "-C", str(top), "merge-base", "--is-ancestor", target_sha, default_sha],
         capture_output=True,
     )
     if anc.returncode == 0:
-        return {
-            "merged": True,
-            "status": "merged",
-            "detail": "ancestor-of-default",
-            "target": target,
-            "default": default,
-            "defaultRef": default_ref,
-        }
+        return _attach_slug_drift(
+            {
+                "merged": True,
+                "status": "merged",
+                "detail": "ancestor-of-default",
+                "target": target,
+                "default": default,
+                "defaultRef": default_ref,
+            },
+            state,
+            target,
+            source=target_source,
+        )
     cherry = subprocess.run(
         ["git", "-C", str(top), "cherry", default_ref, target],
         text=True,
@@ -265,22 +393,46 @@ def target_merge_detected(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     )
     plus = [ln for ln in cherry.stdout.splitlines() if ln.startswith("+")]
     if cherry.returncode == 0 and not plus and cherry.stdout.strip():
-        return {
-            "merged": True,
-            "status": "merged",
-            "detail": "squash-cherry",
+        return _attach_slug_drift(
+            {
+                "merged": True,
+                "status": "merged",
+                "detail": "squash-cherry",
+                "target": target,
+                "default": default,
+                "defaultRef": default_ref,
+            },
+            state,
+            target,
+            source=target_source,
+        )
+    if host_indeterminate:
+        return _attach_slug_drift(
+            {
+                "merged": False,
+                "status": "indeterminate",
+                "detail": "host-unavailable",
+                "target": target,
+                "default": default,
+                "defaultRef": default_ref,
+            },
+            state,
+            target,
+            source=target_source,
+        )
+    return _attach_slug_drift(
+        {
+            "merged": False,
+            "status": "unmerged",
+            "detail": "not-on-default",
             "target": target,
             "default": default,
             "defaultRef": default_ref,
-        }
-    return {
-        "merged": False,
-        "status": "unmerged",
-        "detail": "not-on-default",
-        "target": target,
-        "default": default,
-        "defaultRef": default_ref,
-    }
+        },
+        state,
+        target,
+        source=target_source,
+    )
 
 
 def is_allowed_premerge_path(path: str) -> bool:
@@ -530,17 +682,33 @@ def _persist_finalize_state(root: Path, state: dict[str, Any], info: dict[str, A
     completion.update(
         {
             "status": "merged-complete",
-            "mergedAt": now,
+            "mergedAt": info.get("mergedAt") or now,
             "mergeDetail": info.get("detail"),
         }
     )
+    if info.get("prNumber") is not None:
+        completion["prNumber"] = info["prNumber"]
+    if info.get("mergeCommit"):
+        completion["mergeCommit"] = info["mergeCommit"]
     if not completion.get("at"):
         completion["at"] = now
     state["completion"] = completion
     state["verdict"] = "complete"
     target = target_branch_from_state(state) or info.get("target")
-    if target and not target_branch_from_state(state):
-        state["target"] = {"branch": target}
+    if target:
+        slug = branch_slug_from_target(target)
+        state["target"] = {"branch": target, "slug": slug}
+        completion["slug"] = slug
+    if info.get("prNumber") is not None:
+        terminal = dict(state.get("terminalPr") or {})
+        terminal["number"] = info["prNumber"]
+        if info.get("mergeCommit"):
+            terminal["mergeCommit"] = info["mergeCommit"]
+        if info.get("mergedAt"):
+            terminal["mergedAt"] = info["mergedAt"]
+        if target:
+            terminal["headRefName"] = target
+        state["terminalPr"] = terminal
     with completion_finalize_authorization():
         save_state(root, state)
     return completion
@@ -548,6 +716,21 @@ def _persist_finalize_state(root: Path, state: dict[str, Any], info: dict[str, A
 
 def cmd_completion_finalize_if_merged(root: Path, args: list[str]) -> None:
     state = load_state(root) if state_path(root).is_file() else {}
+    completion = state.get("completion") or {}
+    if completion.get("status") == "merged-complete" and state.get("verdict") == "complete":
+        work_state = enrich_state_for_merge_check(root, state)
+        info = target_merge_detected(root, work_state)
+        emit(
+            {
+                "verdict": "pass",
+                "action": "completion-finalize",
+                "idempotent": True,
+                "cleanupSuggestion": "Run `/sw-cleanup` to prune merged branches and stale worktrees.",
+                "completion": completion,
+                "mergeDetected": info,
+            }
+        )
+        return
     work_state = enrich_state_for_merge_check(root, state)
     info = target_merge_detected(root, work_state)
     if not info.get("merged"):
@@ -567,7 +750,12 @@ def cmd_completion_finalize_if_merged(root: Path, args: list[str]) -> None:
         )
     living_docs = invoke_living_docs_reconcile_finalize(root, work_state)
     if state:
-        completion = _persist_finalize_state(root, state, info)
+        merged_state = dict(state)
+        if work_state.get("terminalPr"):
+            merged_state["terminalPr"] = work_state["terminalPr"]
+        if work_state.get("target"):
+            merged_state["target"] = work_state["target"]
+        completion = _persist_finalize_state(root, merged_state, info)
     else:
         completion = {
             "status": "merged-complete",
