@@ -400,10 +400,10 @@ Bounded discovery loops run until dry, a discretionary stop fires, or a hard cei
 
 | Control | Meaning |
 | --- | --- |
-| **`max_rounds`** | Hard ceiling — exceeding it halts with partial fingerprints preserved (`r7.convergence.max-rounds-exceeded`) |
+| **`max_rounds`** | Hard ceiling — exceeding it halts with partial fingerprints preserved (`graph.convergence.max-rounds-exceeded`) |
 | **Discretionary stops** | After at least two healthy productive rounds: marginal-value, duplicate-rate, or token-budget early stop |
-| **`dry-clean`** | Success only when discovery exited successfully, produced non-empty evidence, and was not truncated or rate-limited (`r7.convergence.dry-clean`) |
-| **`dry-error`** | Halt or fail — truncated, rate-limited, or errored discovery is never treated as converged (`r7.convergence.dry-error` and related codes) |
+| **`dry-clean`** | Success only when discovery exited successfully, produced non-empty evidence, and was not truncated or rate-limited (`graph.convergence.dry-clean`) |
+| **`dry-error`** | Halt or fail — truncated, rate-limited, or errored discovery is never treated as converged (`graph.convergence.dry-error` and related codes) |
 
 Stable convergence reason codes and canonical next actions are emitted onto graph status and explain
 surfaces via `scripts/graph/observability.py`. Term definitions:

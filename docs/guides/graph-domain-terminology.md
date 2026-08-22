@@ -42,9 +42,9 @@ Operator surfaces stay `/sw-deliver` and `/sw-status` (no graph-prefixed slash c
 | `GraphScheduler` | Single owning loop for WorkflowGraph admission and state transitions — distinct from orchestrator conductor fan-out. |
 | **fragment pin** | Typed `use:` reference `<name>@<version>` to a versioned `WorkflowFragment` in `.sw/workflows/fragments/`; expansion records each pin's digest and fails closed on cycles or ceiling violations. |
 | **shadow score** | Kernel-derived comparison of candidate vs canonical graphs: predicted latency, cost, parallelism, node count, resource demand, and verification coverage (aggregate and per verifier class). Proposal-supplied metric fields are ignored; shadow never mutates dispatch. |
-| **`dry-clean`** | Convergence verdict when a discovery round exited successfully, produced non-empty evidence, and was not truncated or rate-limited. May converge only after round-health attestation passes. Reason code: `r7.convergence.dry-clean`. |
-| **`dry-error`** | Convergence halt when discovery errored, was truncated, rate-limited, or otherwise failed round-health attestation — not a success path. Reason codes include `r7.convergence.dry-error`, `r7.convergence.discovery-error`, `r7.convergence.truncated`, and `r7.convergence.rate-limited`. |
-| **`max_rounds`** | Hard ceiling on convergence loop iterations; exceeding it preserves partial fingerprints and emits `r7.convergence.max-rounds-exceeded`. Discretionary early stops (marginal-value, duplicate-rate, token-budget) require at least two healthy productive rounds first. |
+| **`dry-clean`** | Convergence verdict when a discovery round exited successfully, produced non-empty evidence, and was not truncated or rate-limited. May converge only after round-health attestation passes. Reason code: `graph.convergence.dry-clean`. |
+| **`dry-error`** | Convergence halt when discovery errored, was truncated, rate-limited, or otherwise failed round-health attestation — not a success path. Reason codes include `graph.convergence.dry-error`, `graph.convergence.discovery-error`, `graph.convergence.truncated`, and `graph.convergence.rate-limited`. |
+| **`max_rounds`** | Hard ceiling on convergence loop iterations; exceeding it preserves partial fingerprints and emits `graph.convergence.max-rounds-exceeded`. Discretionary early stops (marginal-value, duplicate-rate, token-budget) require at least two healthy productive rounds first. |
 
 ## Distinguisher
 

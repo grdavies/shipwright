@@ -128,7 +128,7 @@ only on existing **`/sw-deliver`** and **`/sw-status`** commands (no `/sw-graph-
 | Plan comparison (read-only) | `/sw-deliver --explain-plan` | Node count, parallelism, critical path — no shadow mutation |
 | Shadow comparison | `/sw-deliver` (when `proposed` is active) | Predicted latency, cost, parallelism, node count, resource demand, verification coverage; proposal-supplied metric fields are ignored |
 | Live progress | `/sw-status` (`graph-progress`) | Receipt-backed node states for the active `runId` |
-| Stable reason codes + next action | `/sw-status` (`explain <nodeId>`) | Every optimizer and convergence outcome emits `reasonCode`, `verdict`, responsible node/artifact, explanation, and canonical `nextAction` (convergence codes prefixed `r7.convergence.*`) |
+| Stable reason codes + next action | `/sw-status` (`explain <nodeId>`) | Every optimizer and convergence outcome emits `reasonCode`, `verdict`, responsible node/artifact, explanation, and canonical `nextAction` (convergence codes prefixed `graph.convergence.*`) |
 | Digest-bound promotion confirm | `/sw-deliver` | Human confirmation binds the expanded template digest on an existing operator command |
 
 Mechanical shadow and observability entrypoints (same surfaces `/sw-status` delegates to):
