@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -97,8 +98,9 @@ def test_orchestrator_provision_fail_dirty(git_repo: Path) -> None:
     (wt / "dirty.txt").write_text("x\n", encoding="utf-8")
     subprocess.run(["git", "checkout", "-q", "main"], cwd=git_repo, check=True)
 
-    with pytest.raises(SystemExit) as exc:
-        wave_lifecycle.cmd_orchestrator_provision(git_repo, ["--target", "feat/demo"])
+    with patch("halt_resume.enrich_fail_extra"):
+        with pytest.raises(SystemExit) as exc:
+            wave_lifecycle.cmd_orchestrator_provision(git_repo, ["--target", "feat/demo"])
     assert exc.value.code == 20
 
 
