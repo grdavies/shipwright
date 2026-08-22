@@ -1,0 +1,24 @@
+# Shipwright CI stub — human-editable workflow template.
+#
+# This file is copied into your repo's .github/workflows/ only when you run
+# `sw-configure ci-stub apply --confirm`. After apply, Shipwright will not
+# rewrite or regenerate this workflow; edit it freely to match your project.
+#
+# Purpose: satisfy base-preflight CI presence with an unrestricted pull_request
+# trigger (no default-branch-only filter). Replace the placeholder job with
+# your real CI steps when ready.
+
+name: Pull request
+
+on:
+  pull_request:
+
+jobs:
+  placeholder:
+    name: CI placeholder (edit me)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Placeholder — replace with your CI steps
+        run: |
+          echo "Shipwright CI stub: this job is a placeholder."
+          echo "It does not run Shipwright verify gates — wire verify.* explicitly when ready."
