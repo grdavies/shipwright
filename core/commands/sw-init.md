@@ -311,6 +311,31 @@ python3 scripts/sw-configure.py credential plan
 python3 scripts/sw-configure.py credential apply --confirm
 ```
 
+**Ordered credential checklist (single guidance surface):** `credential plan` emits one checklist in
+fixed order — the same sequence `credentials-doctor` reports on verification. Do not surface parallel
+ad-hoc credential prompts outside this list:
+
+| Step | Id | What it covers |
+| --- | --- | --- |
+| 1 | `identity-source` | Identity backend — `github_cli` when authenticated, else a declared `environment` or `keystore` backend entry |
+| 2 | `credential-ref-binding` | `host` / `planning` / `memory` `credentialRef` fields in `.cursor/workflow.config.json` |
+| 3 | `selector-allowlists` | Machine-local selector entry with `allowedRepos`, `allowedProjectIds`, and `allowedEndpoints` |
+| 4 | `verification` | Resolution probe via `python3 scripts/credentials-doctor.py` |
+
+The selector holds **metadata and allowlists only — never secret material**. Tokens stay in env,
+keystore, or `github_cli` — not in the selector file or repo config.
+
+**Named `tokenEnv` (multi-repo / multi-account):** when `credential plan` reports
+`multiAccountRisk: true` (more than one distinct remote owner, or selector entries for a different
+account), the guided apply offers a **named** `tokenEnv` (for example `SW_GITHUB_TOKEN_<ACCOUNT>`)
+bound through a declared `environment` backend instead of ambient `GITHUB_TOKEN`. Single-account
+authenticated `github_cli` remains the default and is not outranked automatically by keystore.
+
+**`.env` is never the primary path:** init does not create or load `.env` as the primary credential
+path. An optional `.env.example` is written only on explicit operator request, appended to
+`.gitignore`, and consumable solely through an explicitly declared `environment` backend entry.
+Undeclared ambient token load is refused with a typed cause naming the missing backend declaration.
+
 **Progressive disclosure:** when `credential plan` reports `disclosure: multi` (many detected accounts),
 do **not** run the guided apply — surface keystore and multi-principal configuration instead. Keystore
 options appear only when multiple accounts are detected or the operator explicitly opts in.
@@ -338,6 +363,28 @@ python3 scripts/sw-configure.py credential declare-ci --confirm  # writes .sw/cr
 ```
 
 Never print token values — reference env var names only.
+
+### 5e. Consent-gated CI stub (PRD 324 R5)
+
+When the repo has no PR workflow or only a default-branch-restricted `pull_request` trigger,
+offer a consent-gated stub so `base-preflight:ci-or-review` can satisfy CI presence without
+softening the gate. **Plan is read-only; apply requires explicit confirmation.**
+
+```bash
+python3 scripts/sw-configure.py ci-stub plan
+python3 scripts/sw-configure.py ci-stub apply --confirm
+```
+
+`ci-stub plan` (default safe action) prints whether a stub is needed, the target path
+(`.github/workflows/shipwright-ci-stub.yml`), and the rendered body when seeding is required.
+`ci-stub apply` without `--confirm` exits non-zero with the consent message. On write, output names
+the workflow path and reminds the operator the file is theirs to edit — Shipwright will not rewrite
+it after apply. Re-running apply when the workflow already exists is an idempotent no-op that
+preserves operator edits. Explicit decline is recorded at `.cursor/sw-init-ci-stub.json` so
+base-preflight reports decline rather than a silent gap.
+
+Optional `--wire-verify` on plan/apply opts into wiring `python3 scripts/check-gate.py` into the
+stub job; default placeholder body cannot be mistaken for a Shipwright verify gate.
 
 ### 5d. Portability self-check (R24/R25)
 

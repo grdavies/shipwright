@@ -238,6 +238,7 @@
     "credentials/__init__.py",
     "credentials/alias_removal_preflight.py",
     "credentials/backends.py",
+    "credentials/checklist.py",
     "credentials/child_env.py",
     "credentials/ci_declaration.py",
     "credentials/config_surface.py",
@@ -450,8 +451,10 @@
     "inflight_migration_bridge.py",
     "inflight_reconcile.py",
     "inflight_signal.py",
+    "init_ci_stub.py",
     "init_credential_migration.py",
     "init_posture_defaults.py",
+    "init_profile_report.py",
     "init_scripts_facade.py",
     "install-hooks.py",
     "install.py",
@@ -760,5 +763,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 757
+  "moduleCount": 760
 }

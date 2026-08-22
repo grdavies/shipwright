@@ -83,15 +83,46 @@ def pr_trigger_restricted_to_default(block: str, default_branch: str) -> bool:
     return all(b in (default_branch, "master") for b in branches)
 
 
+CI_PRESENCE_NO_WORKFLOWS = "no-workflows"
+CI_PRESENCE_RESTRICTED = "restricted-PR-trigger"
+CI_PRESENCE_SATISFIED = "satisfied"
+
+
+def _ci_presence_result(
+    *,
+    presence: str,
+    workflows: list[str],
+    restricted: list[str],
+    error: str | None = None,
+) -> dict[str, Any]:
+    ok = presence == CI_PRESENCE_SATISFIED
+    result: dict[str, Any] = {
+        "ok": ok,
+        "presence": presence,
+        "workflows": workflows,
+        "restricted": restricted,
+    }
+    if error:
+        result["error"] = error
+    return result
+
+
 def scan_ci_workflows(root: Path, default_branch: str) -> dict[str, Any]:
+    """Scan for pull_request CI workflows without running deliver preflight.
+
+    Returns a structured ``presence`` verdict:
+    - ``no-workflows`` — missing ``.github/workflows`` or no ``pull_request`` triggers
+    - ``restricted-PR-trigger`` — PR workflows exist but only fire on the default branch
+    - ``satisfied`` — at least one unrestricted ``pull_request`` workflow (stub-compatible)
+    """
     workflows_dir = root / ".github" / "workflows"
     if not workflows_dir.is_dir():
-        return {
-            "ok": False,
-            "error": "no .github/workflows directory",
-            "workflows": [],
-            "restricted": [],
-        }
+        return _ci_presence_result(
+            presence=CI_PRESENCE_NO_WORKFLOWS,
+            workflows=[],
+            restricted=[],
+            error="no .github/workflows directory",
+        )
     pr_workflows: list[str] = []
     restricted: list[str] = []
     for path in sorted(workflows_dir.glob("*.y*ml")):
@@ -103,17 +134,23 @@ def scan_ci_workflows(root: Path, default_branch: str) -> dict[str, Any]:
         if pr_trigger_restricted_to_default(block, default_branch):
             restricted.append(path.name)
     if not pr_workflows:
-        return {
-            "ok": False,
-            "error": "no pull_request workflows found",
-            "workflows": [],
-            "restricted": [],
-        }
-    return {
-        "ok": len(restricted) == 0,
-        "workflows": pr_workflows,
-        "restricted": restricted,
-    }
+        return _ci_presence_result(
+            presence=CI_PRESENCE_NO_WORKFLOWS,
+            workflows=[],
+            restricted=[],
+            error="no pull_request workflows found",
+        )
+    if restricted:
+        return _ci_presence_result(
+            presence=CI_PRESENCE_RESTRICTED,
+            workflows=pr_workflows,
+            restricted=restricted,
+        )
+    return _ci_presence_result(
+        presence=CI_PRESENCE_SATISFIED,
+        workflows=pr_workflows,
+        restricted=[],
+    )
 
 
 def scan_review_provider(root: Path, config: dict[str, Any]) -> dict[str, Any]:

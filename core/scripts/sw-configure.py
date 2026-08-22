@@ -17,13 +17,26 @@ if str(SCRIPT_DIR) not in sys.path:
 from _sw.cli import run_module_main
 from init_credential_migration import (
     apply_guided_single_identity,
+    build_credential_checklist,
     build_init_plan,
     credential_patch_for_draft,
     offer_ci_env_declaration,
+    offer_example_env_file,
     offer_legacy_migration,
     selector_add,
 )
-from init_posture_defaults import greenfield_posture_patch
+from host_lib import default_base_branch
+from init_ci_stub import apply_ci_stub, plan_ci_stub
+from init_profile_report import (
+    classify_profile,
+    greenfield_curated_patch,
+    load_workflow_config,
+    render_classification_markdown,
+)
+from wave_preflight import CI_PRESENCE_SATISFIED, scan_ci_workflows
+
+# UX side-channel keys — never persisted to workflow.config.json (PRD 324 R11).
+DRAFT_SIDE_CHANNEL_KEYS = frozenset({"verifyGaps", "projectTypeDetection"})
 
 
 def _plugin_root() -> Path:
@@ -104,6 +117,33 @@ def _credential_argv(rest: list[str]) -> tuple[str, list[str]]:
     return rest[0], rest[1:]
 
 
+def cmd_ci_stub(root: Path, subcmd: str, rest: list[str]) -> int:
+    confirm = "--confirm" in rest
+    wire_verify = "--wire-verify" in rest
+    config_root = root
+    i = 0
+    while i < len(rest):
+        token = rest[i]
+        if token == "--root" and i + 1 < len(rest):
+            config_root = Path(rest[i + 1]).expanduser().resolve()
+            i += 2
+            continue
+        i += 1
+    wire: str = "on" if wire_verify else "off"
+    if subcmd in ("", "plan"):
+        payload = plan_ci_stub(config_root, wire_verify=wire)
+        print(json.dumps(payload, indent=2))
+        return 0
+    if subcmd == "apply":
+        payload = apply_ci_stub(config_root, confirm=confirm, wire_verify=wire)
+        print(json.dumps(payload, indent=2))
+        if payload.get("verdict") == "fail":
+            return 2
+        return 0
+    print(json.dumps({"verdict": "fail", "error": f"unknown ci-stub command: {subcmd}"}), file=sys.stderr)
+    return 2
+
+
 def cmd_credential(root: Path, subcmd: str, rest: list[str]) -> int:
     confirm = "--confirm" in rest
     selector_path = ""
@@ -130,8 +170,40 @@ def cmd_credential(root: Path, subcmd: str, rest: list[str]) -> int:
     plan = build_init_plan(config_root, selector_path=selector, xdg_base=xdg)
 
     if subcmd == "plan":
-        print(json.dumps(plan.to_public_dict(), indent=2))
+        payload = plan.to_public_dict()
+        payload["checklist"] = build_credential_checklist(
+            config_root,
+            plan,
+            selector_path=selector,
+            xdg_base=xdg,
+        ).to_public_dict()
+        print(json.dumps(payload, indent=2))
         return 0
+    if subcmd == "checklist":
+        checklist = build_credential_checklist(
+            config_root,
+            plan,
+            selector_path=selector,
+            xdg_base=xdg,
+        )
+        print(json.dumps(checklist.to_public_dict(), indent=2))
+        return 0
+    if subcmd == "example-env":
+        token_env = ""
+        j = 0
+        while j < len(rest):
+            token = rest[j]
+            if token == "--token-env" and j + 1 < len(rest):
+                token_env = rest[j + 1]
+                j += 2
+                continue
+            j += 1
+        if not token_env.strip():
+            print(json.dumps({"verdict": "fail", "error": "--token-env required"}), file=sys.stderr)
+            return 2
+        result = offer_example_env_file(config_root, token_env=token_env.strip(), confirm=confirm)
+        print(json.dumps(result, indent=2))
+        return 0 if result.get("verdict") in {"ok", "confirm-required"} else 1
     if subcmd == "apply":
         result = apply_guided_single_identity(
             config_root,
@@ -198,14 +270,103 @@ def cmd_credential(root: Path, subcmd: str, rest: list[str]) -> int:
     return 2
 
 
-def cmd_write_draft(root: Path, *, accept: bool, write_verify: bool, config: str) -> int:
-    out_path = config or "/tmp/sw-init-draft.json"
-    detect = json.loads(
+def _strip_draft_side_channel(draft: dict) -> dict:
+    """Return a schema-persistable copy without UX-only side-channel keys."""
+    return {key: value for key, value in draft.items() if key not in DRAFT_SIDE_CHANNEL_KEYS}
+
+
+def _validate_config_document(root: Path, document: dict) -> list[str]:
+    """Validate against config.schema.json when jsonschema is available."""
+    path = schema_path(root)
+    if not path.is_file():
+        return []
+    try:
+        import jsonschema
+    except ImportError:
+        return []
+    schema = json.loads(path.read_text(encoding="utf-8"))
+    validator = jsonschema.Draft7Validator(schema)
+    return [err.message for err in validator.iter_errors(document)]
+
+
+def _detect_project_type(root: Path) -> dict:
+    return json.loads(
         subprocess.check_output(
             [sys.executable, str(SCRIPT_DIR / "detect-project-type.py"), "--root", str(root), "--propose"],
             text=True,
         )
     )
+
+
+def build_findings_report(root: Path, *, markdown: bool = False) -> dict:
+    """Consolidated init findings — profile classification + CI presence (PRD 324 R8/R10)."""
+    config = load_workflow_config(root)
+    profile = classify_profile(root, config=config)
+    default_branch = default_base_branch(root)
+    ci_scan = scan_ci_workflows(root, default_branch)
+    detect = _detect_project_type(root)
+    warnings: list[dict] = []
+    if ci_scan.get("presence") != CI_PRESENCE_SATISFIED:
+        warnings.append(
+            {
+                "code": "ci-presence",
+                "message": "deliver will refuse until a PR workflow exists",
+                "remediation": "python3 scripts/sw-configure.py ci-stub plan",
+                "scan": ci_scan,
+            }
+        )
+    verify_gaps = detect.get("verifyGaps") or []
+    if verify_gaps and not config.get("verify"):
+        warnings.append(
+            {
+                "code": "verify-gaps",
+                "message": (
+                    "detected verify gaps — persist schema-valid verify.* with "
+                    "python3 scripts/sw-configure.py write-draft --accept-defaults --write-verify"
+                ),
+                "verifyGaps": verify_gaps,
+            }
+        )
+    payload: dict = {
+        "verdict": "pass" if profile.get("verdict") == "pass" else "fail",
+        "profile": profile,
+        "ciPresence": ci_scan,
+        "projectTypeDetection": {
+            "matches": detect.get("matches", []),
+            "ambiguous": detect.get("ambiguous", False),
+            "verifyGaps": verify_gaps,
+        },
+        "warnings": warnings,
+    }
+    if markdown:
+        sections = [
+            "## Init findings report",
+            "",
+            render_classification_markdown(profile),
+        ]
+        if warnings:
+            sections.extend(["### Warnings", ""])
+            for warning in warnings:
+                sections.append(f"- **{warning['code']}**: {warning['message']}")
+                if warning.get("remediation"):
+                    sections.append(f"  - remediation: `{warning['remediation']}`")
+            sections.append("")
+        payload["markdown"] = "\n".join(sections)
+    return payload
+
+
+def cmd_findings_report(root: Path, *, markdown: bool) -> int:
+    payload = build_findings_report(root, markdown=markdown)
+    if markdown and payload.get("markdown"):
+        print(payload["markdown"])
+    else:
+        print(json.dumps(payload, indent=2))
+    return 0 if payload.get("verdict") == "pass" else 1
+
+
+def cmd_write_draft(root: Path, *, accept: bool, write_verify: bool, config: str) -> int:
+    out_path = config or "/tmp/sw-init-draft.json"
+    detect = _detect_project_type(root)
     draft: dict = {
         "doc": {"afterTasks": "confirm"},
         "compound": {"autonomy": "supervised"},
@@ -217,7 +378,7 @@ def cmd_write_draft(root: Path, *, accept: bool, write_verify: bool, config: str
             "schemaVersion": schema_version(root),
         },
     }
-    draft.update(greenfield_posture_patch())
+    draft.update(greenfield_curated_patch())
     draft = _deep_merge(draft, credential_patch_for_draft(root))
     comm_defaults_path = root / "core/sw-reference/communication-routing.defaults.json"
     if comm_defaults_path.is_file():
@@ -227,21 +388,51 @@ def cmd_write_draft(root: Path, *, accept: bool, write_verify: bool, config: str
                 draft["communication"] = comm_defaults
         except json.JSONDecodeError:
             pass
+    side_channel: dict = {}
+    write_verify_routing: str | None = None
     if accept:
-        draft["verifyGaps"] = detect.get("verifyGaps") or []
-        draft["projectTypeDetection"] = {
+        side_channel["verifyGaps"] = detect.get("verifyGaps") or []
+        side_channel["projectTypeDetection"] = {
             "matches": detect.get("matches", []),
             "ambiguous": detect.get("ambiguous", False),
         }
-    elif write_verify:
+        if side_channel["verifyGaps"] and not write_verify:
+            write_verify_routing = (
+                "detected verify gaps — re-run with --write-verify to persist schema-valid verify.* commands"
+            )
+    if write_verify:
         verify = {}
         for key, meta in (detect.get("proposals") or {}).items():
             if meta.get("safe") and meta.get("command"):
                 verify[key] = meta["command"]
         if verify:
             draft["verify"] = verify
-    Path(out_path).write_text(json.dumps(draft, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps({"verdict": "pass", "path": out_path, "verifyWritten": bool(draft.get("verify"))}, indent=2))
+    persistable = _strip_draft_side_channel(draft)
+    validation_errors = _validate_config_document(root, persistable)
+    if validation_errors:
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "error": "draft-fails-schema-validation",
+                    "validationErrors": validation_errors[:8],
+                },
+                indent=2,
+            ),
+            file=sys.stderr,
+        )
+        return 2
+    Path(out_path).write_text(json.dumps(persistable, indent=2) + "\n", encoding="utf-8")
+    response: dict = {
+        "verdict": "pass",
+        "path": out_path,
+        "verifyWritten": bool(persistable.get("verify")),
+    }
+    if side_channel:
+        response["sideChannel"] = side_channel
+    if write_verify_routing:
+        response["writeVerifyRouting"] = write_verify_routing
+    print(json.dumps(response, indent=2))
     return 0
 
 
@@ -290,7 +481,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args or args[0] in ("-h", "--help"):
         print(
             "usage: sw-configure.py detect|schema-version|shipwright-version|"
-            "drift-check|portability-check|write-draft|credential",
+            "drift-check|portability-check|findings|write-draft|credential|ci-stub",
             file=sys.stderr,
         )
         return 2 if args else 0
@@ -300,6 +491,7 @@ def main(argv: list[str] | None = None) -> int:
     config = ""
     accept = False
     write_verify = False
+    markdown = False
     i = 0
     while i < len(rest):
         token = rest[i]
@@ -313,6 +505,10 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if token == "--write-verify":
             write_verify = True
+            i += 1
+            continue
+        if token == "--markdown":
+            markdown = True
             i += 1
             continue
         if token == "--propose":
@@ -335,9 +531,14 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_drift_check(root, config)
     if cmd == "portability-check":
         return cmd_portability_check(root, config)
+    if cmd in ("findings", "findings-report"):
+        return cmd_findings_report(root, markdown=markdown)
     if cmd == "write-draft":
         out = config or "/tmp/sw-init-draft.json"
         return cmd_write_draft(root, accept=accept, write_verify=write_verify, config=out)
+    if cmd == "ci-stub":
+        subcmd, sub_rest = _credential_argv(rest)
+        return cmd_ci_stub(root, subcmd, sub_rest)
     if cmd == "credential":
         subcmd, sub_rest = _credential_argv(rest)
         if not subcmd:

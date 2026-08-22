@@ -984,6 +984,19 @@
 * merge phase container-executionbackend-and-conformance-suite-l into feat/execution-platform (76dd480) <!-- sw-deliver:container-executionbackend-and-conformance-suite-l -->
 * merge phase remote-execution-ownership-cas-leases-m into feat/execution-platform (3963b0d) <!-- sw-deliver:remote-execution-ownership-cas-leases-m -->
 * merge phase effective-config-and-upgrade-manifest-generation-m into feat/execution-platform (ddc08c0) <!-- sw-deliver:effective-config-and-upgrade-manifest-generation-m -->
+* merge phase credential-checklist-model-m into feat/greenfield-init-credentials-ci (b0c48c8) <!-- sw-deliver:credential-checklist-model-m -->
+* merge phase credential-verification-in-doctor-s into feat/greenfield-init-credentials-ci (623e23f) <!-- sw-deliver:credential-verification-in-doctor-s -->
+* merge phase ci-stub-golden-template-s into feat/greenfield-init-credentials-ci (642aaf2) <!-- sw-deliver:ci-stub-golden-template-s -->
+* merge phase preflight-ci-presence-surface-s into feat/greenfield-init-credentials-ci (cf8db27) <!-- sw-deliver:preflight-ci-presence-surface-s -->
+* merge phase curated-greenfield-profile-module-m into feat/greenfield-init-credentials-ci (ba161d1) <!-- sw-deliver:curated-greenfield-profile-module-m -->
+* merge phase credential-docs-and-fine-grained-pat-wording-s into feat/greenfield-init-credentials-ci (abd3b96) <!-- sw-deliver:credential-docs-and-fine-grained-pat-wording-s -->
+* merge phase ci-stub-plan-apply-module-m into feat/greenfield-init-credentials-ci (4ed57a0) <!-- sw-deliver:ci-stub-plan-apply-module-m -->
+* merge phase posture-defaults-wiring-to-curated-profile-s into feat/greenfield-init-credentials-ci (61f7643) <!-- sw-deliver:posture-defaults-wiring-to-curated-profile-s -->
+* merge phase profile-completeness-check-in-doctor-s into feat/greenfield-init-credentials-ci (11dfe50) <!-- sw-deliver:profile-completeness-check-in-doctor-s -->
+* merge phase sw-configure-ci-stub-subcommand-s into feat/greenfield-init-credentials-ci (7038b5b) <!-- sw-deliver:sw-configure-ci-stub-subcommand-s -->
+* merge phase write-draft-schema-fidelity-and-findings-report-wiring-m into feat/greenfield-init-credentials-ci (101a876) <!-- sw-deliver:write-draft-schema-fidelity-and-findings-report-wiring-m -->
+* merge phase unit-and-integration-tests-l into feat/greenfield-init-credentials-ci (bddd35d) <!-- sw-deliver:unit-and-integration-tests-l -->
+* merge phase absorb-closeout-and-configuration-docs-s into feat/greenfield-init-credentials-ci (934fc72) <!-- sw-deliver:absorb-closeout-and-configuration-docs-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

@@ -11,11 +11,25 @@ from pathlib import Path
 from typing import Any, Final, Mapping
 
 from credentials import failure_codes as fc
+from credentials.checklist import (
+    CHECKLIST_STEP_LABELS,
+    CHECKLIST_STEP_ORDER,
+    CONFIGURE_CREDENTIAL_APPLY,
+    CONFIGURE_CREDENTIAL_MIGRATE,
+    CONFIGURE_CREDENTIAL_PLAN,
+    CONFIGURE_CREDENTIAL_SELECTOR_ADD,
+    CREDENTIAL_REF as CHECKLIST_CREDENTIAL_REF,
+    IDENTITY_SOURCE,
+    RESOLUTION_PROBE,
+    SELECTOR_ALLOWLISTS,
+)
 from credentials.ci_declaration import (
     CI_SELECTOR_RELATIVE,
+    MISSING_CI_DECLARATION_REMEDIATION,
     deprecation_release_preflight,
     is_environment_backend_declared,
     is_github_actions,
+    resolve_presence_env_name,
     try_load_ci_selector,
     try_load_local_selector,
 )
@@ -89,6 +103,15 @@ class ReferenceListing:
     last_successful_resolution: str | None
 
 
+@dataclass(frozen=True, slots=True)
+class ChecklistStepResult:
+    step: str
+    label: str
+    verdict: str
+    cause: str | None = None
+    remediation_command: str | None = None
+
+
 def default_resolution_journal_path(*, xdg_base: Path | None = None) -> Path:
     from credentials.selector_store import resolve_xdg_config_home
 
@@ -131,6 +154,330 @@ def _notices_for_surface(
     if surface_binding.source == "tokenEnv-alias" and config_notices:
         return config_notices
     return ()
+
+
+def _token_env_declared_for_environment_backend(
+    token_env: str,
+    *,
+    root: Path,
+    selector_path: Path | None,
+    xdg_base: Path | None,
+) -> bool:
+    """Return True when an environment-backend selector entry declares the token env."""
+    normalized = token_env.strip()
+    if not normalized:
+        return False
+    local = try_load_local_selector(selector_path=selector_path, xdg_base=xdg_base)
+    ci = try_load_ci_selector(root=root)
+    for document in (local, ci):
+        if document is None:
+            continue
+        for entry in document.entries.values():
+            if entry.backend != "environment":
+                continue
+            presence_env = resolve_presence_env_name(entry, root=root)
+            if presence_env == normalized:
+                return True
+    return False
+
+
+def detect_undeclared_ambient_token_resolution(
+    surface_binding: ResolvedCredentialSurface,
+    *,
+    root: Path,
+    selector_path: Path | None = None,
+    xdg_base: Path | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> tuple[str, str] | None:
+    """Return (token_env, remediation) when ambient token lacks environment-backend declaration."""
+    if surface_binding.source != "tokenEnv-alias":
+        return None
+    token_env = (surface_binding.token_env or "").strip()
+    if not token_env:
+        return None
+    source = environ if environ is not None else os.environ
+    if not source.get(token_env, "").strip():
+        return None
+    if _token_env_declared_for_environment_backend(
+        token_env,
+        root=root,
+        selector_path=selector_path,
+        xdg_base=xdg_base,
+    ):
+        return None
+    remediation = (
+        f"{CONFIGURE_CREDENTIAL_SELECTOR_ADD} --ref <ref> --backend environment "
+        f"... --token-env {token_env!r}; or {MISSING_CI_DECLARATION_REMEDIATION}"
+    )
+    return token_env, remediation
+
+
+def _checklist_step_dict(step: ChecklistStepResult) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "step": step.step,
+        "label": step.label,
+        "verdict": step.verdict,
+    }
+    if step.cause is not None:
+        payload["cause"] = step.cause
+    if step.remediation_command is not None:
+        payload["remediationCommand"] = step.remediation_command
+    return payload
+
+
+def _evaluate_identity_source_step(
+    root: Path,
+    cfg: Mapping[str, Any],
+    host_surface: ResolvedCredentialSurface,
+    *,
+    selector_path: Path | None,
+    xdg_base: Path | None,
+    environ: Mapping[str, str] | None,
+) -> ChecklistStepResult:
+    label = CHECKLIST_STEP_LABELS[IDENTITY_SOURCE]
+    undeclared = detect_undeclared_ambient_token_resolution(
+        host_surface,
+        root=root,
+        selector_path=selector_path,
+        xdg_base=xdg_base,
+        environ=environ,
+    )
+    if undeclared is not None:
+        token_env, remediation = undeclared
+        return ChecklistStepResult(
+            step=IDENTITY_SOURCE,
+            label=label,
+            verdict="fail",
+            cause=f"undeclared-ambient-token:{token_env}",
+            remediation_command=remediation,
+        )
+
+    credential_ref = host_surface.credential_ref
+    if host_surface.source == "tokenEnv-alias":
+        return ChecklistStepResult(
+            step=IDENTITY_SOURCE,
+            label=label,
+            verdict="fail",
+            cause="legacy-token-env-without-declared-backend",
+            remediation_command=CONFIGURE_CREDENTIAL_MIGRATE,
+        )
+
+    if credential_ref is None:
+        return ChecklistStepResult(
+            step=IDENTITY_SOURCE,
+            label=label,
+            verdict="fail",
+            cause="identity-source-unbound",
+            remediation_command=CONFIGURE_CREDENTIAL_PLAN,
+        )
+
+    selector_entry: SelectorEntry | None = None
+    try:
+        document = load_selector_store(
+            path=selector_path,
+            xdg_base=xdg_base if selector_path is None else None,
+            skip_integrity=True,
+        )
+        selector_entry = document.entries.get(credential_ref)
+    except SelectorStoreError:
+        selector_entry = None
+
+    if selector_entry is None:
+        return ChecklistStepResult(
+            step=IDENTITY_SOURCE,
+            label=label,
+            verdict="fail",
+            cause="selector-entry-absent",
+            remediation_command=CONFIGURE_CREDENTIAL_APPLY,
+        )
+
+    backend = selector_entry.backend
+    if backend == "environment":
+        if not is_environment_backend_declared(
+            credential_ref,
+            root=root,
+            selector_path=selector_path,
+            xdg_base=xdg_base,
+        ):
+            return ChecklistStepResult(
+                step=IDENTITY_SOURCE,
+                label=label,
+                verdict="fail",
+                cause="environment-backend-undeclared",
+                remediation_command=MISSING_CI_DECLARATION_REMEDIATION,
+            )
+    elif backend not in {"github_cli", "keystore"}:
+        return ChecklistStepResult(
+            step=IDENTITY_SOURCE,
+            label=label,
+            verdict="fail",
+            cause=f"unsupported-backend:{backend}",
+            remediation_command=CONFIGURE_CREDENTIAL_PLAN,
+        )
+
+    return ChecklistStepResult(step=IDENTITY_SOURCE, label=label, verdict="pass")
+
+
+def _evaluate_credential_ref_step(
+    host_surface: ResolvedCredentialSurface,
+) -> ChecklistStepResult:
+    label = CHECKLIST_STEP_LABELS[CHECKLIST_CREDENTIAL_REF]
+    if host_surface.source == "credentialRef" and host_surface.credential_ref:
+        return ChecklistStepResult(step=CHECKLIST_CREDENTIAL_REF, label=label, verdict="pass")
+    if host_surface.source == "tokenEnv-alias":
+        return ChecklistStepResult(
+            step=CHECKLIST_CREDENTIAL_REF,
+            label=label,
+            verdict="fail",
+            cause="host-token-env-alias",
+            remediation_command=CONFIGURE_CREDENTIAL_MIGRATE,
+        )
+    return ChecklistStepResult(
+        step=CHECKLIST_CREDENTIAL_REF,
+        label=label,
+        verdict="fail",
+        cause="credential-ref-absent",
+        remediation_command=CONFIGURE_CREDENTIAL_APPLY,
+    )
+
+
+def _evaluate_selector_allowlists_step(
+    root: Path,
+    cfg: Mapping[str, Any],
+    host_surface: ResolvedCredentialSurface,
+    host_diagnosis: SurfaceDiagnosis,
+    *,
+    selector_path: Path | None,
+    xdg_base: Path | None,
+) -> ChecklistStepResult:
+    label = CHECKLIST_STEP_LABELS[SELECTOR_ALLOWLISTS]
+    credential_ref = host_surface.credential_ref
+    if host_surface.source != "credentialRef" or not credential_ref:
+        return ChecklistStepResult(
+            step=SELECTOR_ALLOWLISTS,
+            label=label,
+            verdict="fail",
+            cause="credential-ref-required-for-allowlists",
+            remediation_command=CONFIGURE_CREDENTIAL_APPLY,
+        )
+
+    selector_entry: SelectorEntry | None = None
+    try:
+        document = load_selector_store(
+            path=selector_path,
+            xdg_base=xdg_base if selector_path is None else None,
+            skip_integrity=True,
+        )
+        selector_entry = document.entries.get(credential_ref)
+    except SelectorStoreError as exc:
+        code = exc.code if exc.code in fc.ALL_FAILURE_CODES else fc.MISSING_SELECTOR
+        remediation = remediation_for_code(code, root=root)
+        return ChecklistStepResult(
+            step=SELECTOR_ALLOWLISTS,
+            label=label,
+            verdict="fail",
+            cause=code,
+            remediation_command=remediation.command,
+        )
+
+    if selector_entry is None:
+        remediation = remediation_for_code(fc.UNKNOWN_REF, root=root)
+        return ChecklistStepResult(
+            step=SELECTOR_ALLOWLISTS,
+            label=label,
+            verdict="fail",
+            cause=fc.UNKNOWN_REF,
+            remediation_command=remediation.command,
+        )
+
+    missing: list[str] = []
+    if not selector_entry.allowed_repos:
+        missing.append("allowedRepos")
+    if not selector_entry.allowed_project_ids:
+        missing.append("allowedProjectIds")
+    if not selector_entry.allowed_endpoints:
+        missing.append("allowedEndpoints")
+    if missing:
+        return ChecklistStepResult(
+            step=SELECTOR_ALLOWLISTS,
+            label=label,
+            verdict="fail",
+            cause=f"allowlists-incomplete:{','.join(missing)}",
+            remediation_command=CONFIGURE_CREDENTIAL_SELECTOR_ADD,
+        )
+
+    if host_diagnosis.failure is not None and host_diagnosis.failure.code in {
+        fc.OUT_OF_SCOPE_REPO,
+        fc.OUT_OF_SCOPE_PROJECT,
+        fc.OUT_OF_SCOPE_ENDPOINT,
+        fc.INSUFFICIENT_SCOPE,
+    }:
+        return ChecklistStepResult(
+            step=SELECTOR_ALLOWLISTS,
+            label=label,
+            verdict="fail",
+            cause=host_diagnosis.failure.code,
+            remediation_command=host_diagnosis.failure.remediation.command,
+        )
+
+    return ChecklistStepResult(step=SELECTOR_ALLOWLISTS, label=label, verdict="pass")
+
+
+def _evaluate_resolution_probe_step(
+    host_diagnosis: SurfaceDiagnosis,
+    *,
+    root: Path,
+) -> ChecklistStepResult:
+    label = CHECKLIST_STEP_LABELS[RESOLUTION_PROBE]
+    if host_diagnosis.required_operation_verdict == "pass":
+        return ChecklistStepResult(step=RESOLUTION_PROBE, label=label, verdict="pass")
+    cause = fc.UNAVAILABLE_BACKEND
+    remediation_command = remediation_for_code(cause, root=root).command
+    if host_diagnosis.failure is not None:
+        cause = host_diagnosis.failure.code
+        remediation_command = host_diagnosis.failure.remediation.command
+    return ChecklistStepResult(
+        step=RESOLUTION_PROBE,
+        label=label,
+        verdict="fail",
+        cause=cause,
+        remediation_command=remediation_command,
+    )
+
+
+def evaluate_credential_checklist(
+    root: Path,
+    cfg: Mapping[str, Any],
+    host_surface: ResolvedCredentialSurface,
+    host_diagnosis: SurfaceDiagnosis,
+    *,
+    selector_path: Path | None = None,
+    xdg_base: Path | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> list[ChecklistStepResult]:
+    """Evaluate ordered checklist steps for the init credential path (PRD 324 R1)."""
+    steps = [
+        _evaluate_identity_source_step(
+            root,
+            cfg,
+            host_surface,
+            selector_path=selector_path,
+            xdg_base=xdg_base,
+            environ=environ,
+        ),
+        _evaluate_credential_ref_step(host_surface),
+        _evaluate_selector_allowlists_step(
+            root,
+            cfg,
+            host_surface,
+            host_diagnosis,
+            selector_path=selector_path,
+            xdg_base=xdg_base,
+        ),
+        _evaluate_resolution_probe_step(host_diagnosis, root=root),
+    ]
+    order = {step_id: index for index, step_id in enumerate(CHECKLIST_STEP_ORDER)}
+    return sorted(steps, key=lambda item: order[item.step])
 
 
 def _scope_binding(entry: SelectorEntry | None) -> dict[str, tuple[str, ...]] | None:
@@ -450,25 +797,19 @@ def diagnose_surface(
         skip_integrity=skip_integrity,
     )
 
-    if failure is not None:
-        return SurfaceDiagnosis(
-            surface=surface_binding.surface,
-            repository=remote_url,
-            project_id=context.project_id,
-            credential_ref=credential_ref,
-            resolved_principal=None,
-            scope_binding=_scope_binding(selector_entry),
-            pairing=pairing,
-            repository_access="fail",
-            required_operation_verdict="fail",
-            failure=failure,
-            notices=surface_notices,
-        )
-
     if str(credential_ref).startswith("tokenEnv:"):
         token_env = surface_binding.token_env or ""
         source = environ if environ is not None else os.environ
-        if token_env and source.get(token_env, "").strip():
+        undeclared = detect_undeclared_ambient_token_resolution(
+            surface_binding,
+            root=root,
+            selector_path=selector_path,
+            xdg_base=xdg_base,
+            environ=source,
+        )
+        if undeclared is not None:
+            token_env_name, _ = undeclared
+            remediation = remediation_for_code(fc.MISSING_CI_DECLARATION, root=root)
             return SurfaceDiagnosis(
                 surface=surface_binding.surface,
                 repository=remote_url,
@@ -477,8 +818,46 @@ def diagnose_surface(
                 resolved_principal=None,
                 scope_binding=None,
                 pairing=pairing,
-                repository_access="ok",
-                required_operation_verdict="pass",
+                repository_access="fail",
+                required_operation_verdict="fail",
+                failure=DoctorFailure(
+                    code=fc.MISSING_CI_DECLARATION,
+                    remediation=remediation,
+                ),
+                notices=surface_notices
+                + (f"undeclared ambient token source: {token_env_name}",),
+            )
+        if token_env and source.get(token_env, "").strip():
+            if _token_env_declared_for_environment_backend(
+                token_env,
+                root=root,
+                selector_path=selector_path,
+                xdg_base=xdg_base,
+            ):
+                return SurfaceDiagnosis(
+                    surface=surface_binding.surface,
+                    repository=remote_url,
+                    project_id=context.project_id,
+                    credential_ref=credential_ref,
+                    resolved_principal=None,
+                    scope_binding=None,
+                    pairing=pairing,
+                    repository_access="ok",
+                    required_operation_verdict="pass",
+                    notices=surface_notices,
+                )
+            remediation = remediation_for_code(fc.MISSING_CI_DECLARATION, root=root)
+            return SurfaceDiagnosis(
+                surface=surface_binding.surface,
+                repository=remote_url,
+                project_id=context.project_id,
+                credential_ref=credential_ref,
+                resolved_principal=None,
+                scope_binding=None,
+                pairing=pairing,
+                repository_access="fail",
+                required_operation_verdict="fail",
+                failure=DoctorFailure(code=fc.MISSING_CI_DECLARATION, remediation=remediation),
                 notices=surface_notices,
             )
         remediation = remediation_for_code(fc.INSUFFICIENT_ACCESS, root=root)
@@ -493,6 +872,21 @@ def diagnose_surface(
             repository_access="fail",
             required_operation_verdict="fail",
             failure=DoctorFailure(code=fc.INSUFFICIENT_ACCESS, remediation=remediation),
+            notices=surface_notices,
+        )
+
+    if failure is not None:
+        return SurfaceDiagnosis(
+            surface=surface_binding.surface,
+            repository=remote_url,
+            project_id=context.project_id,
+            credential_ref=credential_ref,
+            resolved_principal=None,
+            scope_binding=_scope_binding(selector_entry),
+            pairing=pairing,
+            repository_access="fail",
+            required_operation_verdict="fail",
+            failure=failure,
             notices=surface_notices,
         )
 
@@ -651,10 +1045,23 @@ def diagnose_repository(
         skip_integrity=skip_integrity,
     )
     failures = [surface.failure for surface in surfaces if surface.failure is not None]
+    host_surface = surface_result.host
+    host_diagnosis = surfaces[0]
+    checklist = evaluate_credential_checklist(
+        root,
+        cfg,
+        host_surface,
+        host_diagnosis,
+        selector_path=selector_path,
+        xdg_base=xdg_base,
+        environ=environ,
+    )
     verdict = "ok"
     if failures:
         verdict = "fail"
     elif any(surface.required_operation_verdict == "fail" for surface in surfaces):
+        verdict = "fail"
+    elif any(step.verdict != "pass" for step in checklist):
         verdict = "fail"
 
     return {
@@ -662,6 +1069,7 @@ def diagnose_repository(
         "projectId": surface_result.project_id,
         "surfaces": [_surface_to_dict(surface) for surface in surfaces],
         "references": [_reference_to_dict(item) for item in references],
+        "checklist": [_checklist_step_dict(step) for step in checklist],
         "credentialDoctor": f"{CREDENTIAL_DOCTOR_CLI} --root {root.resolve()}",
     }
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Credential doctor CLI — identity-aware authentication diagnostics (PRD 080 phase 22 / R7)."""
+"""Credential doctor CLI — identity-aware authentication diagnostics (PRD 080 phase 22 / R7).
+
+Default invocation reports per-checklist-step status via ``credentials.doctor.diagnose_repository``
+(PRD 324 phase 2): identity source, credentialRef binding, selector allowlists, and resolution probe.
+"""
 from __future__ import annotations
 
 import argparse
