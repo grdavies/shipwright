@@ -53,7 +53,9 @@ def test_publish_surface_audit_critical_leak_not_ready() -> None:
 
 def test_publish_surface_audit_partial_discovery_not_ready() -> None:
     """Partial discovery cannot false-green when critical checks are unconsidered."""
-    with patch.object(psa, "CHECKS", (psa._check_denylist_leaked,)):
+    with patch.object(
+        psa, "checks_for_profile", return_value=(psa._check_denylist_leaked,)
+    ):
         result = psa.run_publish_surface_audit(Path("."), tracked_override=["README.md"])
     assert result["failed"] == []
     assert result["verdict"] == "not-ready"

@@ -1427,6 +1427,21 @@
           "default": "specs-public",
           "description": "Repo-level default visibility profile when a unit omits visibility (PRD 034 R1). Public-repo-aware resolution may select all-private at init (R3)."
         },
+        "publishSurface": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Deliver finalize publish-surface audit profile (PRD 325 R6).",
+          "properties": {
+            "profile": {
+              "type": "string",
+              "enum": [
+                "in-repo-public",
+                "private"
+              ],
+              "description": "Explicit publish-surface profile. When omitted, derived from planning.store backend and decision-home resolution; unknown values fall back to private fail-closed checks."
+            }
+          }
+        },
         "privacyAck": {
           "type": "object",
           "additionalProperties": false,
