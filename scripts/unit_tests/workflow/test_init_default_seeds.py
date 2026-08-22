@@ -19,7 +19,18 @@ def test_greenfield_posture_patch_shape() -> None:
     assert patch["deliver"]["loop"]["drainMechanical"] is True
     assert patch["inefficiency"]["enabled"] is True
     assert patch["execute"]["enabled"] is True
-    assert len(GREENFIELD_POSTURE_LEAF_KEYS) == 7
+    legacy_posture_paths = {
+        ("orchestration", "planPolicy"),
+        ("delegation", "mode"),
+        ("planning", "autonomy"),
+        ("deliver", "autonomy", "mode"),
+        ("deliver", "loop", "drainMechanical"),
+        ("inefficiency", "enabled"),
+        ("execute", "enabled"),
+    }
+    keyed = dict(GREENFIELD_POSTURE_LEAF_KEYS)
+    assert legacy_posture_paths <= set(keyed)
+    assert len(GREENFIELD_POSTURE_LEAF_KEYS) > len(legacy_posture_paths)
 
 
 def test_write_draft_seeds_posture(repo_root: Path) -> None:
