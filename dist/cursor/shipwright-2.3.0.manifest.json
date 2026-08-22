@@ -453,6 +453,7 @@
     "inflight_signal.py",
     "init_credential_migration.py",
     "init_posture_defaults.py",
+    "init_profile_report.py",
     "init_scripts_facade.py",
     "install-hooks.py",
     "install.py",
@@ -761,5 +762,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 758
+  "moduleCount": 759
 }
