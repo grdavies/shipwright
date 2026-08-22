@@ -75,6 +75,41 @@ def enumerate_command_doc_currency_artifacts() -> tuple[dict[str, object], ...]:
     return COMMAND_DOC_CURRENCY_ARTIFACTS
 
 
+INTERNAL_ARTIFACT_CURRENCY_CHECKS: tuple[str, ...] = (
+    "release-guide-artifacts",
+    "memory-doc-currency",
+    "planning-doc-currency",
+    "command-documentation-currency",
+)
+
+
+def artifact_currency_skip_reasons(
+    *, consumer_repo: bool, skip_artifact_currency: bool
+) -> tuple[str, ...]:
+    reasons: list[str] = []
+    if consumer_repo:
+        reasons.append("consumer-repo")
+    if skip_artifact_currency:
+        reasons.append("skip-artifact-currency")
+    return tuple(reasons)
+
+
+def build_artifact_currency_skipped(
+    *, consumer_repo: bool, skip_artifact_currency: bool
+) -> list[dict[str, str]]:
+    reasons = artifact_currency_skip_reasons(
+        consumer_repo=consumer_repo,
+        skip_artifact_currency=skip_artifact_currency,
+    )
+    if not reasons:
+        return []
+    return [
+        {"check": check, "reason": reason}
+        for check in INTERNAL_ARTIFACT_CURRENCY_CHECKS
+        for reason in reasons
+    ]
+
+
 def _git_last_commit_epoch(root: Path, rel: str) -> int | None:
     import subprocess
 
@@ -220,6 +255,7 @@ def main(argv: list[str] | None = None) -> int:
         sys.exit(2)
 
     phases = state.get("phases") or {}
+    from sw_scripts_resolve import is_shipwright_self_repo
     from wave_living_docs import (
         derive_index_status,
         living_doc_write_banned,
@@ -227,6 +263,13 @@ def main(argv: list[str] | None = None) -> int:
         read_index_status_evidence,
     )
     from wave_state import phase_complete
+
+    consumer_repo = not is_shipwright_self_repo(root)
+    artifact_currency_skipped = build_artifact_currency_skipped(
+        consumer_repo=consumer_repo,
+        skip_artifact_currency=skip_artifact_currency,
+    )
+    run_artifact_currency = not consumer_repo and not skip_artifact_currency
 
     all_green = bool(phases) and all(phase_complete((m or {}).get("status")) for m in phases.values())
     merged_main = False
@@ -271,10 +314,11 @@ def main(argv: list[str] | None = None) -> int:
         return f"| {prd.lstrip('0')} |" in log_text or f"| {prd} |" in log_text
 
     banned = living_doc_write_banned(root)
+    use_store_evidence = banned or consumer_repo
     slug = str((state.get("target") or {}).get("slug") or "")
     file_row_status = _index_status_from_file()
     index_status = None
-    if banned:
+    if use_store_evidence:
         ev = read_index_status_evidence(root, prd, slug=slug)
         if ev:
             index_status = str(ev.get("status") or "")
@@ -285,7 +329,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # When issue projection lags but tracked INDEX + deliver state say complete, reconcile (R4).
     if (
-        banned
+        use_store_evidence
         and all_green
         and expected == "complete"
         and index_status not in (None, expected)
@@ -301,10 +345,10 @@ def main(argv: list[str] | None = None) -> int:
 
     # COMPLETION-LOG / store completion events
     if all_green:
-        has_completion = read_completion_evidence(root, prd) is not None if banned else False
-        if banned and not has_completion:
+        has_completion = read_completion_evidence(root, prd) is not None if use_store_evidence else False
+        if use_store_evidence and not has_completion:
             has_completion = _completion_in_log()
-        elif not banned:
+        elif not use_store_evidence:
             has_completion = _completion_in_log()
         if not has_completion:
             drift.append({"kind": "completion-log-missing", "prd": prd})
@@ -349,7 +393,7 @@ def main(argv: list[str] | None = None) -> int:
                 payload = {"error": gb.stderr or gb.stdout}
             drift.append({"kind": "gap-backlog-integrity", "detail": payload})
 
-    if not skip_artifact_currency:
+    if run_artifact_currency:
         from docs_currency_081 import check_release_guide_artifacts
         from docs_currency_memory import check_memory_doc_currency
         from docs_currency_planning import check_planning_doc_currency
@@ -370,7 +414,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"verdict": "fail", "action": "docs-currency-gate", "prd": prd, "drift": drift}))
         sys.exit(1)
 
-    if not skip_artifact_currency:
+    if run_artifact_currency:
         command_doc_drift = check_command_documentation_currency(root)
         if command_doc_drift:
             print(
@@ -386,19 +430,18 @@ def main(argv: list[str] | None = None) -> int:
             )
             sys.exit(1)
 
-    print(
-        json.dumps(
-            {
-                "verdict": "pass",
-                "action": "docs-currency-gate",
-                "prd": prd,
-                "indexStatus": index_status,
-                "expected": expected,
-                "planPath": str(plan_file),
-                "artifactSet": [str(e.get("id") or e.get("doc")) for e in COMMAND_DOC_CURRENCY_ARTIFACTS],
-            }
-        )
-    )
+    pass_payload: dict[str, object] = {
+        "verdict": "pass",
+        "action": "docs-currency-gate",
+        "prd": prd,
+        "indexStatus": index_status,
+        "expected": expected,
+        "planPath": str(plan_file),
+        "artifactSet": [str(e.get("id") or e.get("doc")) for e in COMMAND_DOC_CURRENCY_ARTIFACTS],
+    }
+    if artifact_currency_skipped:
+        pass_payload["skipped"] = artifact_currency_skipped
+    print(json.dumps(pass_payload))
     return 0
 
 
