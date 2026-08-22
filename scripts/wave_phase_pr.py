@@ -102,13 +102,67 @@ def _phase_branch_for_slug(state: dict[str, Any], phase_slug: str) -> str | None
     return None
 
 
+GREEN_MERGED_TERMINAL_STATUSES = frozenset(
+    {"green-merged", "teardown-pending", "teardown-complete"}
+)
+PHASE_GREEN_MERGED_PREDICATE = "phase_green_merged"
+
+
 def _green_merged_slugs(state: dict[str, Any]) -> set[str]:
-    terminal = {"green-merged", "teardown-pending", "teardown-complete"}
     slugs: set[str] = set()
     for meta in (state.get("phases") or {}).values():
-        if meta.get("status") in terminal and meta.get("slug"):
+        if meta.get("status") in GREEN_MERGED_TERMINAL_STATUSES and meta.get("slug"):
             slugs.add(str(meta["slug"]))
     return slugs
+
+
+def phase_pr_host_merge_verdict(root: Path, meta: dict[str, Any]) -> dict[str, Any]:
+    """Host merge verdict for a phase PR. indeterminate host ⇒ caller treats as not green-merged."""
+    number = meta.get("openPrNumber")
+    branch = meta.get("branch")
+    if number is not None:
+        out = host_verb(root, "pr-view", number=str(number))
+        if out.get("verdict") != "ok":
+            return {"verdict": "indeterminate", "detail": "host-unavailable"}
+        payload = out.get("data") or {}
+        merged = str(payload.get("state") or "").upper() == "MERGED"
+        return {"verdict": "ok", "merged": merged}
+    if branch:
+        integration = integration_branch(root)
+        if not integration:
+            return {"verdict": "indeterminate", "detail": "no-integration-branch"}
+        listed = host_verb(
+            root,
+            "pr-list",
+            head=str(branch),
+            base=integration,
+            state="merged",
+            limit="5",
+        )
+        if listed.get("verdict") != "ok":
+            return {"verdict": "indeterminate", "detail": "host-unavailable"}
+        items = listed.get("data") if isinstance(listed.get("data"), list) else []
+        for item in items:
+            if not isinstance(item, dict) or item.get("number") is None:
+                continue
+            viewed = host_verb(root, "pr-view", number=str(item["number"]))
+            if viewed.get("verdict") != "ok":
+                return {"verdict": "indeterminate", "detail": "host-unavailable"}
+            payload = viewed.get("data") or {}
+            if str(payload.get("state") or "").upper() == "MERGED":
+                return {"verdict": "ok", "merged": True}
+        return {"verdict": "ok", "merged": False}
+    return {"verdict": "indeterminate", "detail": "no-pr-identity"}
+
+
+def phase_green_merged(root: Path, meta: dict[str, Any]) -> bool:
+    """Shared predicate: phase PR is green-merged (conservative when host is indeterminate)."""
+    if meta.get("status") not in GREEN_MERGED_TERMINAL_STATUSES:
+        return False
+    host = phase_pr_host_merge_verdict(root, meta)
+    if host.get("verdict") == "indeterminate":
+        return False
+    return bool(host.get("merged"))
 
 
 def close_superseded_phase_prs(root: Path, state: dict[str, Any], *, phase_slug: str | None = None) -> dict[str, Any]:
@@ -303,13 +357,12 @@ def create_or_reuse_phase_pr(
 
 def phase_green_merged_branch(root: Path, branch: str) -> bool:
     try:
-        from cleanup_lib import load_deliver_state
+        from wave_state import load_deliver_state
     except ImportError:
         return False
-    terminal = {"green-merged", "teardown-pending", "teardown-complete"}
     for meta in (load_deliver_state(root).get("phases") or {}).values():
-        if meta.get("branch") == branch and meta.get("status") in terminal:
-            return True
+        if meta.get("branch") == branch:
+            return phase_green_merged(root, meta)
     return False
 
 

@@ -45,6 +45,7 @@ from status_integrity import (
     status_is_consumable_terminal,
     validate_terminal_status_shape,
 )
+from wave_phase_pr import phase_green_merged
 
 FORWARD_MERGE_REBASE_RETRIES = 1
 DEFAULT_MERGE_RUN_NEXT_TIMEOUT_SECONDS = int(
@@ -141,14 +142,21 @@ def reorder_merge_queue(state: dict[str, Any], root: Path) -> None:
     state["mergeQueue"] = queue
 
 
-def dependencies_merged(phase_id: str, state: dict[str, Any], edges: list[dict[str, Any]]) -> bool:
+def dependencies_merged(
+    phase_id: str, state: dict[str, Any], edges: list[dict[str, Any]], root: Path
+) -> bool:
     merged = merged_phase_slugs(state)
     phases = state.get("phases") or {}
     for dep_id in dependency_ids_for(phase_id, edges):
         dep_meta = phases.get(dep_id) or {}
         dep_slug = str(dep_meta.get("slug") or dep_id)
-        if dep_slug not in merged and dep_meta.get("status") not in MERGED_TERMINAL_STATUSES:
+        if dep_slug in merged:
+            continue
+        if dep_meta.get("status") in MERGED_TERMINAL_STATUSES:
+            if phase_green_merged(root, dep_meta):
+                continue
             return False
+        return False
     return True
 
 
@@ -165,7 +173,7 @@ def select_next_merge_entry(
     for entry in queue:
         slug = str(entry.get("phaseSlug", ""))
         pid = phase_id_for_slug(state, slug)
-        if pid and not dependencies_merged(pid, state, edges):
+        if pid and not dependencies_merged(pid, state, edges, root):
             continue
         blocked = False
         for other in queue:

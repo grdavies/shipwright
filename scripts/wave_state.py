@@ -89,6 +89,46 @@ def phase_complete(status: str | None) -> bool:
     return status in TERMINAL_PHASE_STATUSES
 
 
+def record_blast_radius(
+    state: dict[str, Any],
+    *,
+    applied: list[dict[str, str]],
+    cleared: list[dict[str, str]],
+    predicate: str,
+    at: str,
+) -> None:
+    """Persist blast-radius apply outcome on run-scoped state (idempotent, PRD 325 R4/R5)."""
+    existing = state.get("blastRadius") if isinstance(state.get("blastRadius"), dict) else {}
+    prev_applied = {
+        str(entry.get("phaseId")): entry
+        for entry in (existing.get("applied") or [])
+        if isinstance(entry, dict) and entry.get("phaseId")
+    }
+    prev_cleared = {
+        str(entry.get("phaseId")): entry
+        for entry in (existing.get("cleared") or [])
+        if isinstance(entry, dict) and entry.get("phaseId")
+    }
+    for entry in cleared:
+        pid = str(entry.get("phaseId"))
+        if not pid:
+            continue
+        prev_cleared[pid] = dict(entry)
+        prev_applied.pop(pid, None)
+    for entry in applied:
+        pid = str(entry.get("phaseId"))
+        if not pid or pid in prev_cleared:
+            continue
+        prev_applied[pid] = dict(entry)
+    sort_key = lambda e: (0, int(e["phaseId"])) if str(e.get("phaseId", "")).isdigit() else (1, str(e.get("phaseId", "")))
+    state["blastRadius"] = {
+        "applied": sorted(prev_applied.values(), key=sort_key),
+        "cleared": sorted(prev_cleared.values(), key=sort_key),
+        "predicate": predicate,
+        "at": at,
+    }
+
+
 LOCK_STALE_SECONDS = int(os.environ.get("SW_LOCK_STALE_SECONDS", "3600"))
 CANONICAL_STATE_SKEW_SECONDS = 300
 
