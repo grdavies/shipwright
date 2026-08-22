@@ -152,6 +152,33 @@ def slug_from_target(target_branch: str) -> str:
     return target_branch.split("/", 1)[1]
 
 
+def run_slug_from_state(state: dict[str, Any]) -> str | None:
+    target = state.get("target")
+    if isinstance(target, dict):
+        slug = target.get("slug")
+        if isinstance(slug, str) and slug.strip():
+            return slug.strip()
+    return None
+
+
+def branch_slug_from_target(target_branch: str) -> str:
+    return slug_from_target(target_branch)
+
+
+def slug_drift_payload(
+    run_slug: str | None,
+    target_branch: str | None,
+    *,
+    source: str,
+) -> dict[str, Any] | None:
+    if not run_slug or not target_branch or not is_feature_target(target_branch):
+        return None
+    branch_slug = branch_slug_from_target(target_branch)
+    if run_slug == branch_slug:
+        return None
+    return {"runSlug": run_slug, "branchSlug": branch_slug, "source": source}
+
+
 def target_branch_from_state(state: dict[str, Any]) -> str | None:
     target = state.get("target")
     if isinstance(target, str) and is_feature_target(target):
