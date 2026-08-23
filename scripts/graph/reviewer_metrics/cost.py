@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Sequence
+from typing import Mapping, Sequence
 
 from graph.reviewer_metrics.surviving import CouplingEvidence, SurvivingVerdict, classify_surviving
 
@@ -113,3 +113,50 @@ def report_cost(findings: Sequence[FindingCostInput]) -> CostReport:
         provenance_breakdown=provenance_breakdown,
         verdict=CostVerdict.OK if saw_cost else CostVerdict.UNKNOWN,
     )
+
+
+@dataclass(frozen=True)
+class CostCeilingResult:
+    selected: tuple[str, ...]
+    total_cost: float
+    verdict: str
+    reason: str = ""
+
+    def to_dict(self) -> dict[str, float | str | list[str]]:
+        payload: dict[str, float | str | list[str]] = {
+            "verdict": self.verdict,
+            "selected": list(self.selected),
+            "totalCost": self.total_cost,
+        }
+        if self.reason:
+            payload["reason"] = self.reason
+        return payload
+
+
+def enforce_cost_ceiling(
+    reviewers: Sequence[str],
+    *,
+    cost_per_reviewer: Mapping[str, float],
+    ceiling: float | None,
+    min_personas: int = 1,
+    default_unit_cost: float = 1.0,
+) -> CostCeilingResult:
+    """Drop lowest-priority reviewers until dispatch cost is within ceiling."""
+    ordered = tuple(reviewers)
+    if ceiling is None or ceiling < 0:
+        total = sum(cost_per_reviewer.get(item, default_unit_cost) for item in ordered)
+        return CostCeilingResult(ordered, total, CostVerdict.OK.value)
+    if not ordered:
+        return CostCeilingResult((), 0.0, "fail", "selection-floor")
+
+    selected = list(ordered)
+    while selected:
+        total = sum(cost_per_reviewer.get(item, default_unit_cost) for item in selected)
+        if total <= ceiling:
+            if len(selected) < min_personas:
+                return CostCeilingResult((), total, "fail", "selection-floor")
+            return CostCeilingResult(tuple(selected), total, CostVerdict.OK.value)
+        if len(selected) <= min_personas:
+            return CostCeilingResult((), total, "fail", "selection-floor")
+        selected.pop()
+    return CostCeilingResult((), 0.0, "fail", "selection-floor")

@@ -1825,6 +1825,19 @@ Offline calibration constants — advisory only; no workflow config keys gate li
 Operator CLI: `python3 scripts/reviewer-metrics.py`. Storage authority: `.cursor/sw-learning-store/` via
 `ReviewerMetricsStoreAdapter` — see `.sw/layout.md` and `docs/guides/workflows.md`.
 
+### Bounded selection (`review.selection`)
+
+Harvest-ranked truncation for doc-review personas and code-review specialists (PRD 326 R17–R18). When no
+harvest record exists, selector output is byte-identical to the capability selector fallback.
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `review.selection.maxPersonas` | `32` | Upper bound on dispatched reviewers after harvest re-rank |
+| `review.selection.minPersonas` | `1` | Floor — selection fails closed (`selection-floor`) rather than dispatching zero reviewers |
+| `review.selection.costCeiling` | `null` | Optional USD dispatch ceiling enforced by `graph.reviewer_metrics.cost` before dispatch |
+
+Stable tie-break: reviewer id ascending when harvest scores tie.
+
 ## Self-improving loop — inefficiency scanner
 
 Process inefficiency detection. Greenfield default **enabled** (`inefficiency.enabled: true`); opt out by setting `false`.
@@ -2098,6 +2111,8 @@ Shipwright `2.4.0` · schema `config.schema.json`
 | `review.local.provider` | `native` | `native` | `native` | `native` | `—` | `—` |
 | `review.local.ui.enrich` | `off` | `off` | `off` | `off` | `—` | `—` |
 | `review.provider` | `none` | `none` | `none` | `none` | `—` | `—` |
+| `review.selection.maxPersonas` | `32` | `32` | `32` | `32` | `—` | `—` |
+| `review.selection.minPersonas` | `1` | `1` | `1` | `1` | `—` | `—` |
 | `stabilizeLoop.sameStageEscalation.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
 | `stabilizeLoop.sameStageEscalation.escalateAfterFailures` | `2` | `2` | `2` | `2` | `—` | `—` |
 | `stabilizeLoop.sameStageEscalation.personaFallback` | `adversarial` | `adversarial` | `adversarial` | `adversarial` | `—` | `—` |

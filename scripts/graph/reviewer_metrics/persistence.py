@@ -6,6 +6,7 @@ import json
 from typing import Any, Mapping
 
 from memory_redact import redact_learning_derivation
+from graph.reviewer_metrics.harvest import HARVEST_SCHEMA_VERSION
 
 METADATA_SCHEMA_VERSION = 1
 
@@ -168,3 +169,84 @@ def build_metadata_record(
     if dedup_key:
         record["dedupKey"] = dedup_key
     return validate_metadata_payload(record)
+
+
+HARVEST_OUTCOME_KIND = "harvest"
+HARVEST_ALLOWED_FIELDS = frozenset(
+    {
+        "schemaVersion",
+        "harvestedAt",
+        "reviewerCount",
+        "findingCount",
+        "provenanceSummary",
+        "recordedAt",
+        "outcomeKind",
+    }
+)
+
+
+class HarvestSchemaError(ValueError):
+    """Raised when a harvest payload violates the closed schema."""
+
+
+def validate_harvest_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, Mapping):
+        raise HarvestSchemaError("harvest payload must be a mapping")
+    extra = sorted(set(payload.keys()) - HARVEST_ALLOWED_FIELDS)
+    if extra:
+        raise HarvestSchemaError(f"unknown harvest fields: {', '.join(extra)}")
+    missing = sorted(
+        field
+        for field in ("schemaVersion", "harvestedAt", "reviewerCount", "findingCount", "recordedAt", "outcomeKind")
+        if field not in payload
+    )
+    if missing:
+        raise HarvestSchemaError(f"missing required harvest fields: {', '.join(missing)}")
+    if int(payload["schemaVersion"]) != HARVEST_SCHEMA_VERSION:
+        raise HarvestSchemaError("unsupported harvest schema version")
+    if str(payload["outcomeKind"]) != HARVEST_OUTCOME_KIND:
+        raise HarvestSchemaError("invalid harvest outcomeKind")
+    return {key: payload[key] for key in HARVEST_ALLOWED_FIELDS if key in payload}
+
+
+def redact_harvest_for_write(
+    payload: Mapping[str, Any],
+    *,
+    may_egress: bool = False,
+) -> tuple[dict[str, Any], dict[str, int]]:
+    validated = validate_harvest_payload(payload)
+    residuals: dict[str, int] = {}
+    redacted: dict[str, Any] = {}
+    for key, value in validated.items():
+        if isinstance(value, str):
+            field_text, field_residuals = redact_learning_derivation(
+                value,
+                may_egress=may_egress,
+            )
+            redacted[key] = field_text
+            for detector, count in field_residuals.items():
+                residuals[detector] = residuals.get(detector, 0) + count
+        else:
+            redacted[key] = value
+    return redacted, residuals
+
+
+def build_harvest_metadata_record(
+    *,
+    harvested_at: str,
+    reviewer_count: int,
+    finding_count: int,
+    recorded_at: str,
+    provenance_summary: str = "",
+) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "schemaVersion": HARVEST_SCHEMA_VERSION,
+        "harvestedAt": harvested_at,
+        "reviewerCount": reviewer_count,
+        "findingCount": finding_count,
+        "recordedAt": recorded_at,
+        "outcomeKind": HARVEST_OUTCOME_KIND,
+    }
+    if provenance_summary:
+        record["provenanceSummary"] = provenance_summary
+    return validate_harvest_payload(record)

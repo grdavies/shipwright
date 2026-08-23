@@ -1,7 +1,7 @@
 {
   "schemaVersion": "config.schema.json",
   "shipwrightVersion": "2.4.0",
-  "generatedAt": "2026-08-23T07:21:28Z",
+  "generatedAt": "2026-08-23T08:37:18Z",
   "generator": "scripts/effective_config_gen.py",
   "settings": {
     "agentsFile": {
@@ -1397,6 +1397,22 @@
       "greenfieldDefault": "none",
       "migrationDefault": "none",
       "runtimeFallback": "none",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "review.selection.maxPersonas": {
+      "schemaDefault": 32,
+      "greenfieldDefault": 32,
+      "migrationDefault": 32,
+      "runtimeFallback": 32,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "review.selection.minPersonas": {
+      "schemaDefault": 1,
+      "greenfieldDefault": 1,
+      "migrationDefault": 1,
+      "runtimeFallback": 1,
       "deprecatedSince": null,
       "removedIn": null
     },
