@@ -10,14 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from agent_instruction_compiler import (
-    FRONTMATTER_RE,
-    artifact_index,
-    instruction_drift_check,
-    lint_skill_spec,
-    load_compiled_artifacts,
-    parse_frontmatter,
-)
 from yaml_structured import safe_load
 
 SKILL_TREE_PREFIXES = (
@@ -44,6 +36,7 @@ ADVISORY_SKILL_LINES = 450
 MAX_SKILL_LINES = 500
 MAX_COMPATIBILITY_LEN = 500
 
+FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 BACKTICK_PATH_RE = re.compile(
     r"`((?:\./)?(?:references|scripts|assets|skills|core|docs|providers|commands|rules|agents|\.cursor|\.sw)[^`\s]+\.[a-zA-Z0-9]+)`"
@@ -247,6 +240,8 @@ def _scan_skill_md(
     if artifacts_by_source is not None:
         artifact = _artifact_for_path(rel, tree_prefix, artifacts_by_source)
     if artifact is not None:
+        from agent_instruction_compiler import lint_skill_spec
+
         compiler_findings = lint_skill_spec(
             source_path=rel,
             record_id=str(artifact.get("id") or ""),
@@ -257,6 +252,8 @@ def _scan_skill_md(
             findings.append(Finding(item.code, rel, item.message, severity=item.severity))
     else:
         try:
+            from agent_instruction_compiler import parse_frontmatter
+
             parsed_frontmatter, _body = parse_frontmatter(text, source_path=rel)
         except Exception:
             parsed_frontmatter = frontmatter
@@ -430,6 +427,12 @@ def check_repo(
     include_skills_ref: bool = False,
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
+    from agent_instruction_compiler import (
+        artifact_index,
+        instruction_drift_check,
+        load_compiled_artifacts,
+    )
+
     drift_code, drift_payload = instruction_drift_check(repo_root)
     if drift_code != 0 and drift_payload is not None:
         return drift_payload

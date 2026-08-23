@@ -12,8 +12,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from host_lib import load_workflow_config
-from model_policy_lib import ModelPolicy
 from yaml_structured import safe_load
 
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
@@ -71,7 +69,10 @@ def parse_frontmatter(text: str, *, source_path: str) -> tuple[dict[str, Any], s
     return parsed, body
 
 
-def load_model_policy(repo_root: Path) -> ModelPolicy:
+def load_model_policy(repo_root: Path):
+    from host_lib import load_workflow_config
+    from model_policy_lib import ModelPolicy
+
     config = load_workflow_config(repo_root)
     models = config.get("models") if isinstance(config, dict) else {}
     tiers = models.get("tiers") if isinstance(models, dict) and isinstance(models.get("tiers"), dict) else {}
@@ -82,7 +83,7 @@ def validate_agent_model(
     model: str,
     *,
     source_path: str,
-    policy: ModelPolicy,
+    policy,
 ) -> None:
     if model == INHERIT_MODEL:
         return
@@ -112,7 +113,8 @@ def compile_source(
     *,
     kind: str,
     repo_root: Path,
-    policy: ModelPolicy,
+    policy=None,
+    skip_model_policy: bool = False,
 ) -> dict[str, Any]:
     rel = path.relative_to(repo_root).as_posix()
     text = path.read_text(encoding="utf-8")
@@ -129,7 +131,10 @@ def compile_source(
         model_value = frontmatter.get("model")
         if not isinstance(model_value, str) or not model_value.strip():
             raise InstructionCompileError(rel, "missing model frontmatter")
-        validate_agent_model(model_value.strip(), source_path=rel, policy=policy)
+        if not skip_model_policy:
+            if policy is None:
+                policy = load_model_policy(repo_root)
+            validate_agent_model(model_value.strip(), source_path=rel, policy=policy)
         model: str | None = model_value.strip()
     elif kind == "skill":
         record_id = frontmatter.get("name")
@@ -168,6 +173,21 @@ def compile_repository(repo_root: Path) -> dict[str, Any]:
     artifacts: list[dict[str, Any]] = []
     for kind, path in discover_sources(repo_root):
         artifacts.append(compile_source(path, kind=kind, repo_root=repo_root, policy=policy))
+    artifacts.sort(key=lambda item: (item["kind"], item["id"]))
+    return {"version": 1, "artifacts": artifacts}
+
+
+def compile_repository_for_drift(repo_root: Path) -> dict[str, Any]:
+    artifacts: list[dict[str, Any]] = []
+    for kind, path in discover_sources(repo_root):
+        artifacts.append(
+            compile_source(
+                path,
+                kind=kind,
+                repo_root=repo_root,
+                skip_model_policy=True,
+            )
+        )
     artifacts.sort(key=lambda item: (item["kind"], item["id"]))
     return {"version": 1, "artifacts": artifacts}
 
@@ -311,7 +331,7 @@ def check_compiled_artifact(repo_root: Path) -> tuple[int, dict[str, Any]]:
             "path": COMPILED_ARTIFACT_REL,
         }
     expected = json.loads(expected_path.read_text(encoding="utf-8"))
-    actual = compile_repository(repo_root)
+    actual = compile_repository_for_drift(repo_root)
     if serialize_document(expected) == serialize_document(actual):
         return 0, {"verdict": "pass", "artifact": COMPILED_ARTIFACT_REL}
 
