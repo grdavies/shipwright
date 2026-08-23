@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import sys
@@ -11,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
+from agent_instruction_compiler import COMPILED_ARTIFACT_REL, load_compiled_artifacts
 from capability_manifest_validate import validate_capability_block
 from graph.ir import WorkflowGraphValidationError, validate_workflow_graph
 from graph.kernel_compiler import KERNEL_VERSION
@@ -72,6 +74,18 @@ def _graph_nodes_edges(graph: Mapping[str, Any]) -> tuple[list[dict[str, Any]], 
     nodes = list(graph.get("nodes") or [])
     edges = list(graph.get("edges") or [])
     return nodes, edges
+
+
+def compiled_instruction_digest(repo_root: Path) -> str | None:
+    artifact_path = repo_root / COMPILED_ARTIFACT_REL
+    if not artifact_path.is_file():
+        return None
+    try:
+        document = load_compiled_artifacts(repo_root)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return None
+    payload = json.dumps(document, indent=2, sort_keys=True) + "\n"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def validate_pack_schema(pack: Mapping[str, Any]) -> list[ConformanceFinding]:
@@ -460,6 +474,12 @@ def build_conformance_report(
     }
     if lint_advisory:
         report["advisories"] = [finding.as_dict() for finding in lint_advisory]
+    instruction_digest = compiled_instruction_digest(repo_root)
+    if instruction_digest is not None:
+        report["instructionArtifacts"] = {
+            "path": COMPILED_ARTIFACT_REL,
+            "digest": instruction_digest,
+        }
     return report
 
 

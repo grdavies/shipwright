@@ -6,6 +6,7 @@
   ],
   "regenCommands": [
     "python3 scripts/core_content_sync.py",
-    "python3 -m sw generate --all"
+    "python3 -m sw generate --all",
+    "python3 scripts/agent_instruction_compiler.py"
   ]
 }
