@@ -10,6 +10,7 @@ from typing import Any, Mapping
 from decision_graph.human_action import HUMAN_ACTION_KIND, is_human_action_node
 
 RECEIPT_API_VERSION = "decision-graph-receipt/v1"
+PROTOTYPE_TEARDOWN_RECEIPT_API_VERSION = "decision-graph-prototype-teardown-receipt/v1"
 RECEIPT_STATUSES = frozenset({"pending", "verified", "rejected"})
 
 
@@ -154,6 +155,86 @@ def validate_receipt(
         }
 
     return {"verdict": "pass", "receipt": envelope.as_dict()}
+
+
+def build_prototype_teardown_receipt(
+    *,
+    node_id: str,
+    parent_decision_id: str,
+    actor: str,
+    evidence_hashes: list[str],
+    branch: str,
+    attested_at: str | None = None,
+    status: str = "verified",
+) -> dict[str, Any]:
+    """Receipt envelope for prototype worktree teardown with linked evidence hashes."""
+    if status not in RECEIPT_STATUSES:
+        raise ReceiptValidationError(f"invalid receipt status: {status!r}")
+    actor_value = actor.strip()
+    if not actor_value:
+        raise ReceiptValidationError("actor attestation required")
+    return {
+        "apiVersion": PROTOTYPE_TEARDOWN_RECEIPT_API_VERSION,
+        "nodeId": node_id,
+        "parentDecisionId": parent_decision_id,
+        "actor": actor_value,
+        "branch": branch,
+        "evidenceHashes": sorted(set(evidence_hashes)),
+        "status": status,
+        "attestedAt": attested_at or utc_now(),
+    }
+
+
+def validate_prototype_teardown_receipt(document: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate a prototype teardown receipt envelope."""
+    if document.get("apiVersion") != PROTOTYPE_TEARDOWN_RECEIPT_API_VERSION:
+        return {
+            "verdict": "fail",
+            "code": "receipt:invalid-envelope",
+            "message": "invalid prototype teardown receipt apiVersion",
+        }
+    node_id = str(document.get("nodeId") or "")
+    parent_decision_id = str(document.get("parentDecisionId") or "")
+    actor = str(document.get("actor") or "").strip()
+    branch = str(document.get("branch") or "")
+    attested_at = str(document.get("attestedAt") or "")
+    status = str(document.get("status") or "")
+    evidence_hashes = document.get("evidenceHashes")
+    if not node_id or not parent_decision_id or not actor or not branch or not attested_at:
+        return {
+            "verdict": "fail",
+            "code": "receipt:invalid-envelope",
+            "message": "prototype teardown receipt missing required fields",
+        }
+    if status not in RECEIPT_STATUSES:
+        return {
+            "verdict": "fail",
+            "code": "receipt:invalid-envelope",
+            "message": f"invalid receipt status: {status!r}",
+        }
+    if not isinstance(evidence_hashes, list):
+        return {
+            "verdict": "fail",
+            "code": "receipt:invalid-envelope",
+            "message": "evidenceHashes must be an array",
+        }
+    normalized_hashes = sorted({str(item) for item in evidence_hashes if str(item)})
+    if document.get("evidenceHashes") != normalized_hashes:
+        return {
+            "verdict": "fail",
+            "code": "receipt:hash-mismatch",
+            "message": "evidenceHashes must be sorted and deduplicated",
+        }
+    if status != "verified":
+        return {
+            "verdict": "fail",
+            "code": "receipt:not-verified",
+            "message": f"receipt status is {status!r}",
+        }
+    return {
+        "verdict": "pass",
+        "receipt": dict(document),
+    }
 
 
 def _node_index(graph: Mapping[str, Any]) -> dict[str, dict[str, Any]]:

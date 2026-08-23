@@ -305,6 +305,59 @@ def has_linked_evidence(root: Path, parent_decision_id: str) -> bool:
     return bool(list_linked_evidence_paths(root, parent_decision_id))
 
 
+def _evidence_record_kind(record: dict[str, Any]) -> str:
+    return str(record.get("kind") or "")
+
+
+def _evidence_record_hash(record: dict[str, Any]) -> str:
+    spec = record.get("spec") if isinstance(record.get("spec"), dict) else {}
+    content_hash = str(spec.get("contentHash") or "")
+    if content_hash:
+        return content_hash
+    head_sha = str(spec.get("headSha") or "")
+    if head_sha:
+        return head_sha
+    return ""
+
+
+def linked_evidence_records(
+    root: Path,
+    parent_decision_id: str,
+    kind: str | None = None,
+) -> list[dict[str, Any]]:
+    """Return linked evidence records for a parent decision, optionally filtered by kind."""
+    records: list[dict[str, Any]] = []
+    for path in list_linked_evidence_paths(root, parent_decision_id):
+        try:
+            document = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(document, dict):
+            continue
+        if kind is not None and _evidence_record_kind(document) != kind:
+            continue
+        records.append(document)
+    return records
+
+
+def collect_linked_evidence_hashes(
+    root: Path,
+    parent_decision_id: str,
+    kind: str,
+) -> list[str]:
+    """Sorted unique content hashes for linked evidence of the given kind."""
+    hashes: list[str] = []
+    for record in linked_evidence_records(root, parent_decision_id, kind):
+        digest = _evidence_record_hash(record)
+        if digest:
+            hashes.append(digest)
+    return sorted(set(hashes))
+
+
+def has_linked_evidence_kind(root: Path, parent_decision_id: str, kind: str) -> bool:
+    return bool(collect_linked_evidence_hashes(root, parent_decision_id, kind))
+
+
 def check_evidence_required(document: dict[str, Any], root: Path) -> dict[str, Any]:
     """Fail closed when resolved decision nodes require evidence but have none linked."""
     spec = document.get("spec") if isinstance(document.get("spec"), dict) else {}
