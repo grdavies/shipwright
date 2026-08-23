@@ -90,8 +90,10 @@ docs/decisions/
 ├── sw-architecture-radar/           # read-only architecture radar scan artifacts (PRD 280 R1–R6)
 │   ├── last.json                    # pointer to latest scan
 │   └── <scanId>/                    # per-scan candidates + scoring payload
-└── sw-vocabulary-divergence/        # read-only vocabulary divergence artifacts (PRD 280 R7–R11)
-    └── last.json                    # latest check-divergence summary
+├── sw-vocabulary-divergence/        # read-only vocabulary divergence artifacts (PRD 280 R7–R11)
+│   └── last.json                    # latest check-divergence summary
+└── sw-decision-evidence/            # hash-linked research evidence records (PRD 326)
+    └── <parentDecisionId>.json      # ResearchEvidence@v1 per parent decision node
 ```
 
 ### Per-run deliver layout (PRD 081 R18, R20)
@@ -256,6 +258,19 @@ logical lock. Local heartbeat still wins within a clone; remote lease covers the
 | Per-phase evidence dir | `.cursor/sw-deliver-runs/<runId>/phases/<phaseId>/gate-evidence/` | Sole-writer path for mechanical gate records |
 | Terminal acceptance | `.cursor/sw-deliver-runs/terminal-acceptance.json` | Validated acceptance before `report terminal` |
 | Kernel lineage | `core/sw-reference/kernel-classification.json` | Manifest-to-lineage binding; kernel floor non-demotable |
+
+### Decision evidence store (PRD 326)
+
+| Artifact | Path | Role |
+| --- | --- | --- |
+| Research evidence schema | `core/sw-reference/research-evidence.schema.json` | `apiVersion: decision-evidence/v1`, `kind: ResearchEvidence` |
+| Canonical serialization | `core/sw-reference/canonical-serialization.md` | Sorted-key JSON + `contentHash` rules |
+| Per-parent evidence file | `.cursor/sw-decision-evidence/<parentDecisionId>.json` | Operator-local store; one record per parent decision node |
+
+Writers validate against the schema before atomic write. Canonical hash rules: sorted keys at every object
+level; `spec.contentHash` covers the spec object excluding itself (see **Decision evidence — ResearchEvidence**
+in `canonical-serialization.md`). Link-back updates parent decision nodes in the active `DecisionGraph`
+document — not a second authoritative graph store.
 
 
 ### Deliver run-state ledger (PRD 059 R9–R11)
