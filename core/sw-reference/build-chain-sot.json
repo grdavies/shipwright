@@ -76,6 +76,7 @@
     "handoff-bundle.schema.json",
     "harness-roots-manifest.json",
     "inflight-signal.schema.json",
+    "instruction-artifacts.json",
     "kernel-classification.json",
     "kernel-classification.md",
     "doc-workflow-transitions.json",
