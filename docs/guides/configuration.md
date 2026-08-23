@@ -1928,6 +1928,8 @@ Shipwright `2.4.0` · schema `config.schema.json`
 | Setting | Schema default | Greenfield | Migration | Runtime fallback | Deprecated | Removed |
 | --- | --- | --- | --- | --- | --- | --- |
 | `agentsFile` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `—` | `—` |
+| `architecture.assessment.mode` | `off` | `off` | `off` | `off` | `—` | `—` |
+| `architecture.assessment.path` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `—` | `—` |
 | `checks.treatNeutralAsPass` | `true` | `true` | `true` | `true` | `—` | `—` |
 | `checks.watch.maxWaitMinutes` | `20` | `20` | `20` | `20` | `—` | `—` |
 | `checks.watch.pollSeconds` | `45` | `45` | `45` | `45` | `—` | `—` |
@@ -2064,9 +2066,6 @@ Shipwright `2.4.0` · schema `config.schema.json`
 | `planning.intelligence.radar.windows.gitChurnDays` | `30` | `30` | `30` | `30` | `—` | `—` |
 | `planning.intelligence.vocabulary.strictMode` | `false` | `false` | `false` | `false` | `—` | `—` |
 | `planning.privacyAck.required` | `false` | `false` | `false` | `false` | `—` | `—` |
-| `agentsFile` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `—` | `—` |
-| `architecture.assessment.mode` | `off` | `off` | `off` | `off` | `—` | `—` |
-| `architecture.assessment.path` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `—` | `—` |
 | `planning.refusalLedger.maxSizeBytes` | `52428800` | `52428800` | `52428800` | `52428800` | `—` | `—` |
 | `planning.refusalLedger.path` | `.cursor/sw-refusal-ledger` | `.cursor/sw-refusal-ledger` | `.cursor/sw-refusal-ledger` | `.cursor/sw-refusal-ledger` | `—` | `—` |
 | `planning.refusalLedger.ttlSeconds` | `2592000` | `2592000` | `2592000` | `2592000` | `—` | `—` |
