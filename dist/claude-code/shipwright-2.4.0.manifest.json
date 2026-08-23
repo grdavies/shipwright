@@ -607,6 +607,8 @@
     "planning_migrate.py",
     "planning_migrate_issue_store.py",
     "planning_module_size_lint.py",
+    "planning_notion_canonical.py",
+    "planning_notion_client.py",
     "planning_park.py",
     "planning_path_redirect.py",
     "planning_paths.py",
@@ -767,5 +769,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 764
+  "moduleCount": 766
 }

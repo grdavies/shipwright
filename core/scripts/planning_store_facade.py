@@ -513,6 +513,7 @@ _ISSUES_PROVIDER_TO_BROKER: dict[str, str] = {
     "gitlab-issues": "gitlab",
     "jira": "jira",
     "linear": "linear",
+    "notion": "notion",
 }
 
 
