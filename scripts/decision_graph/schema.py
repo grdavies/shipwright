@@ -157,6 +157,21 @@ def _jsonschema_errors(document: dict[str, Any]) -> list[dict[str, str]]:
                     path_prefix + ["resolution", "outcome"],
                 )
 
+        requires_evidence = node.get("requiresEvidence")
+        if requires_evidence is not None:
+            if not isinstance(requires_evidence, bool):
+                add(
+                    ValidationErrorCode.SCHEMA_MISSING_FIELD,
+                    "requiresEvidence must be a boolean",
+                    path_prefix + ["requiresEvidence"],
+                )
+            elif requires_evidence and kind != NodeKind.DECISION.value:
+                add(
+                    ValidationErrorCode.SCHEMA_MISSING_FIELD,
+                    "requiresEvidence is only valid on decision nodes",
+                    path_prefix + ["requiresEvidence"],
+                )
+
     for index, edge in enumerate(edges):
         path_prefix = ["spec", "edges", str(index)]
         if not isinstance(edge, dict):
