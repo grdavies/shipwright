@@ -856,6 +856,35 @@ def run_deferred_placeholder_lint_gate(root: Path, payload: dict[str, Any]) -> t
     return 0, payload
 
 
+def run_architecture_assessment_gate(root: Path, cfg: dict[str, Any], payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    """Evaluate opt-in architecture doctrine assessment (PRD 326 R15)."""
+    mode = str(cfg_value(cfg, "architecture", "assessment", "mode", default="off") or "off").strip().lower()
+    if mode == "off":
+        return 0, payload
+    completed = proc.run(
+        [sys.executable, str(SCRIPT_DIR / "architecture_assessment.py"), "--root", str(root), "evaluate"],
+        cwd=str(root),
+    )
+    result: dict[str, Any] = {}
+    try:
+        result = json.loads(completed.stdout.strip() or "{}")
+    except json.JSONDecodeError:
+        result = {"verdict": "fail", "error": "architecture-assessment-invalid-output"}
+    payload = dict(payload)
+    payload["architectureAssessment"] = result
+    if mode == "advisory":
+        return 0, payload
+    if completed.returncode == 20 or result.get("verdict") == "fail":
+        blocked: dict[str, Any] = {
+            "verdict": "blocked",
+            "reason": "architecture-assessment:blocking-fail",
+            "architectureAssessment": result,
+        }
+        jsonio.emit(blocked)
+        return 30, blocked
+    return 0, payload
+
+
 def finalize_gate_payload(
     root: Path,
     cfg: dict[str, Any],
@@ -872,6 +901,9 @@ def finalize_gate_payload(
     if ec != 0:
         return ec, payload
     ec, payload = run_deferred_placeholder_lint_gate(root, payload)
+    if ec != 0:
+        return ec, payload
+    ec, payload = run_architecture_assessment_gate(root, cfg, payload)
     if ec != 0:
         return ec, payload
     verdict, required_failing, reason, payload = apply_quality_blocking_promotion(

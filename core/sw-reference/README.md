@@ -11,8 +11,12 @@ runtime gates. Do not duplicate semantics in command prose; link here instead.
 | `gate-evidence.schema.json` | Per-gate evidence record shape; atomic tmp-file-plus-rename write contract |
 | `kernel-classification.json` | Kernel/guideline lineage ids; manifest validator enforces R9-only add boundary |
 | `build-chain-sot.json` | Source-of-truth map for `copy-to-core` / emitter parity |
+| `architecture-doctrine.md` | Stable `AD-<n>` doctrine statements with rationale and observable signals (PRD 326) |
+| `architecture-assessment.schema.json` | Per-repo assessment YAML contract (`pass`/`fail`/`waived`/`manual`) |
 
-`scripts/gate_manifest_validate.py` fails closed on manifest↔lineage drift. Config-resolvable class
+`scripts/gate_manifest_validate.py` fails closed on manifest↔lineage drift.
+`scripts/architecture_assessment.py` evaluates doctrine + assessment YAML when
+`architecture.assessment.mode` is `advisory` or `blocking` (default `off`). Config-resolvable class
 promotion cannot demote the kernel floor (verification-gate, check-gate, gap-check, secret-scan).
 
 ## Agent-gate attestation boundary (R32)

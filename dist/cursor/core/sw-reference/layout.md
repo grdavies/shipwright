@@ -272,6 +272,20 @@ level; `spec.contentHash` covers the spec object excluding itself (see **Decisio
 in `canonical-serialization.md`). Link-back updates parent decision nodes in the active `DecisionGraph`
 document — not a second authoritative graph store.
 
+### Architecture doctrine and assessment (PRD 326)
+
+| Artifact | Path | Owner | Refresh |
+| --- | --- | --- | --- |
+| Doctrine artifact | `core/sw-reference/architecture-doctrine.md` | platform-team | per release |
+| Assessment schema | `core/sw-reference/architecture-assessment.schema.json` | platform-team | per release |
+| Assessment YAML | `.cursor/architecture-assessment.yaml` | repo operator | on verdict change |
+| Evaluator | `scripts/architecture_assessment.py` | platform-team | per release |
+
+Doctrine statements use stable `AD-<n>` ids with rationale and an observable signal (or `manual: true`).
+Assessment YAML is opt-in via `architecture.assessment.mode` (`off` default). `waived` entries require
+`waiver.{actor,reason,expires}`; expired waivers count as `fail`. Waivers cannot be authored on autonomous
+dispatch paths.
+
 
 ### Deliver run-state ledger (PRD 059 R9–R11)
 
