@@ -184,6 +184,7 @@
     "_zipapp_launcher.py",
     "agent_instruction_compiler.py",
     "agents_md_thin.py",
+    "architecture_assessment.py",
     "architecture_radar.py",
     "authoring-guard.py",
     "authoring_guard.py",
@@ -764,5 +765,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 761
+  "moduleCount": 762
 }
