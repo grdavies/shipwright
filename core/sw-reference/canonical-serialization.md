@@ -91,3 +91,64 @@ operational `content_hash` in store logs).
 
 Cross-provider fixtures: `scripts/tests/fixtures/canonical/*.json` — verified by
 `python3 scripts/test/run_planning_store_fixtures.py`.
+
+## Decision evidence — `ResearchEvidence` (PRD 326)
+
+Hash-linked research evidence records bind retrieved claims and source digests to a parent decision node
+in a `DecisionGraph`. Schema: `core/sw-reference/research-evidence.schema.json`. Store root:
+`.cursor/sw-decision-evidence/` — one file per parent id: `<parentDecisionId>.json`.
+
+### Document shape
+
+```json
+{
+  "apiVersion": "decision-evidence/v1",
+  "kind": "ResearchEvidence",
+  "metadata": {
+    "parentDecisionId": "<node-id>",
+    "linkedAt": "<UTC ISO-8601>",
+    "sourceKind": "<provenance-kind>"
+  },
+  "spec": {
+    "claim": "<normalized claim>",
+    "sources": [
+      {"uri": "<uri>", "accessedAt": "<UTC>", "digest": "<sha256-hex>", "quote": "<optional>"}
+    ],
+    "retrievedAt": "<UTC ISO-8601>",
+    "contentHash": "<sha256-hex>",
+    "linkBack": {"decisionNodeId": "<node-id>", "hashLinked": true}
+  }
+}
+```
+
+`additionalProperties` is **false** at every object level in the schema — no extension bags on write.
+
+### Canonical JSON (sorted keys)
+
+Normative serialization for hashing and byte-stable comparison:
+
+```python
+json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+```
+
+Apply at every nesting level (full document, `metadata`, `spec`, each `sources[]` entry, `linkBack`).
+
+### `contentHash`
+
+`spec.contentHash` is the lowercase hex SHA-256 digest of the canonical JSON for the **spec payload
+excluding `contentHash`**:
+
+```python
+material = {k: v for k, v in spec.items() if k != "contentHash"}
+content_hash = hashlib.sha256(
+    json.dumps(material, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+).hexdigest()
+```
+
+Readers verify by recomputing from stored fields; mismatch fails closed (`evidence:content-hash-mismatch`).
+
+### Link-back
+
+`spec.linkBack.decisionNodeId` MUST equal `metadata.parentDecisionId`. When `hashLinked` is `true`, graph
+writers attach the evidence `contentHash` (and optional head metadata) onto the parent decision node's
+`resolution` — same contract as prototype evidence link-back in `scripts/decision_graph/evidence.py`.

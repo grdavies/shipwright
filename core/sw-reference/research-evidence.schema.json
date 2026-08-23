@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipwright.dev/schemas/research-evidence/v1",
+  "title": "ResearchEvidence",
+  "description": "Hash-linked research evidence record bound to a parent decision node (PRD 326).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {
+      "const": "decision-evidence/v1"
+    },
+    "kind": {
+      "const": "ResearchEvidence"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parentDecisionId", "linkedAt", "sourceKind"],
+      "properties": {
+        "parentDecisionId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        },
+        "linkedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceKind": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim", "sources", "retrievedAt", "contentHash", "linkBack"],
+      "properties": {
+        "claim": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        },
+        "retrievedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "linkBack": {
+          "$ref": "#/$defs/linkBack"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri", "accessedAt", "digest"],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "accessedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "quote": {
+          "type": "string"
+        }
+      }
+    },
+    "linkBack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["decisionNodeId", "hashLinked"],
+      "properties": {
+        "decisionNodeId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        },
+        "hashLinked": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
