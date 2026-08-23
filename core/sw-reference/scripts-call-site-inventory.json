@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-23T07:14:27Z",
+  "generatedAt": "2026-08-23T08:38:31Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -20107,55 +20107,55 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1843:test/run_inefficiency_scan_fixtures.py",
+      "id": "docs/guides/configuration.md:1856:test/run_inefficiency_scan_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1843,
+      "line": 1856,
       "column": 24,
       "script": "test/run_inefficiency_scan_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1847:test/run_behavioral_anomaly_fixtures.py",
+      "id": "docs/guides/configuration.md:1860:test/run_behavioral_anomaly_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1847,
+      "line": 1860,
       "column": 9,
       "script": "test/run_behavioral_anomaly_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1858:loop_health.py",
+      "id": "docs/guides/configuration.md:1871:loop_health.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1858,
+      "line": 1871,
       "column": 14,
       "script": "loop_health.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1873:test/run_loop_autonomy_invariant_fixtures.py",
+      "id": "docs/guides/configuration.md:1886:test/run_loop_autonomy_invariant_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1873,
+      "line": 1886,
       "column": 24,
       "script": "test/run_loop_autonomy_invariant_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1922:effective_config_gen.py",
+      "id": "docs/guides/configuration.md:1935:effective_config_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1922,
+      "line": 1935,
       "column": 8,
       "script": "effective_config_gen.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1923:effective_config_gen.py",
+      "id": "docs/guides/configuration.md:1936:effective_config_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1923,
+      "line": 1936,
       "column": 8,
       "script": "effective_config_gen.py",
       "classification": "self-repo-only"
