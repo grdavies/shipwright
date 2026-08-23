@@ -1,0 +1,77 @@
+{
+  "id": "mention-url-roundtrip",
+  "provider": "notion",
+  "contract": "block-children",
+  "title": "[acme] prd:327-mention-url-roundtrip",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "markdown": "Please review with https://linear.app/acme/profiles/alice and [@bob](https://linear.app/acme/profiles/bob) on https://linear.app/acme/issue/ACM-42/sample-issue.\n",
+  "blocks": [
+    {
+      "object": "block",
+      "type": "paragraph",
+      "paragraph": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Please review with ",
+              "link": null
+            },
+            "annotations": {}
+          },
+          {
+            "type": "mention",
+            "mention": {
+              "type": "link",
+              "link": {
+                "url": "https://linear.app/acme/profiles/alice"
+              }
+            },
+            "annotations": {}
+          },
+          {
+            "type": "text",
+            "text": {
+              "content": " and ",
+              "link": null
+            },
+            "annotations": {}
+          },
+          {
+            "type": "mention",
+            "mention": {
+              "type": "link",
+              "link": {
+                "url": "https://linear.app/acme/profiles/bob"
+              }
+            },
+            "annotations": {}
+          },
+          {
+            "type": "text",
+            "text": {
+              "content": " on ",
+              "link": null
+            },
+            "annotations": {}
+          },
+          {
+            "type": "mention",
+            "mention": {
+              "type": "link",
+              "link": {
+                "url": "https://linear.app/acme/issue/ACM-42/sample-issue."
+              }
+            },
+            "annotations": {}
+          }
+        ]
+      }
+    }
+  ],
+  "canonical": "{\"body\":\"Please review with https://linear.app/acme/profiles/alice and https://linear.app/acme/profiles/bob on https://linear.app/acme/issue/ACM-42/sample-issue.\",\"comments\":[],\"labels\":[\"sw:prd\"],\"state\":\"open\",\"sw-canonical-version\":\"1\",\"title\":\"[acme] prd:327-mention-url-roundtrip\"}",
+  "hash": "3f8454f722001f4f57e91ad39ea7b48879a896d573c2b6f2318d002af5f0bdda"
+}

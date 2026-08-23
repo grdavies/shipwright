@@ -1,0 +1,79 @@
+{
+  "id": "headers",
+  "provider": "notion",
+  "contract": "block-children",
+  "title": "[acme] prd:327-headers",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "markdown": "# Sample PRD\n\n## Overview\n\n### Detail\n\nBody text.\n",
+  "blocks": [
+    {
+      "object": "block",
+      "type": "heading_1",
+      "heading_1": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Sample PRD",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ]
+      }
+    },
+    {
+      "object": "block",
+      "type": "heading_2",
+      "heading_2": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Overview",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ]
+      }
+    },
+    {
+      "object": "block",
+      "type": "heading_3",
+      "heading_3": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Detail",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ]
+      }
+    },
+    {
+      "object": "block",
+      "type": "paragraph",
+      "paragraph": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Body text.",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ]
+      }
+    }
+  ],
+  "canonical": "{\"body\":\"# Sample PRD\\n## Overview\\n### Detail\\nBody text.\",\"comments\":[],\"labels\":[\"sw:prd\"],\"state\":\"open\",\"sw-canonical-version\":\"1\",\"title\":\"[acme] prd:327-headers\"}",
+  "hash": "2a8e05978d64a9beb0e9ca63a3ecfaae47dbfd4573cad32e571e4e05f4a5b86f"
+}

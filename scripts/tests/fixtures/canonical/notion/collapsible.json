@@ -1,0 +1,65 @@
+{
+  "id": "collapsible",
+  "provider": "notion",
+  "contract": "block-children",
+  "title": "[acme] prd:327-collapsible",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "markdown": "+++ Notes\n\nHidden details here.\n\n+++\n\nVisible after.\n",
+  "blocks": [
+    {
+      "object": "block",
+      "type": "toggle",
+      "toggle": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Notes",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ],
+        "children": [
+          {
+            "object": "block",
+            "type": "paragraph",
+            "paragraph": {
+              "rich_text": [
+                {
+                  "type": "text",
+                  "text": {
+                    "content": "Hidden details here.",
+                    "link": null
+                  },
+                  "annotations": {}
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "object": "block",
+      "type": "paragraph",
+      "paragraph": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "Visible after.",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ]
+      }
+    }
+  ],
+  "canonical": "{\"body\":\"+++ Notes\\n\\nHidden details here.\\n\\n+++\\nVisible after.\",\"comments\":[],\"labels\":[\"sw:prd\"],\"state\":\"open\",\"sw-canonical-version\":\"1\",\"title\":\"[acme] prd:327-collapsible\"}",
+  "hash": "167d864adbd79c927262c8c7a67c188aa92c9eb658f2f6ae6d2c35713ca233e5"
+}
