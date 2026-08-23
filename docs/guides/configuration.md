@@ -1304,6 +1304,9 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `host.tokenEnv` | One-release alias naming presence env for `environment` backend (deprecated) |
 | `planning.store.issues.credentialRef` | Issue-store credential reference (independent of host) |
 | `memory.credentialRef` | External memory provider credential reference |
+| `agentsFile` | `AGENTS.md` | Standing agent guidance pointer file |
+| `architecture.assessment.mode` | Opt-in doctrine assessment posture — `off` (default), `advisory`, or `blocking` |
+| `architecture.assessment.path` | Per-repo assessment YAML (default `.cursor/architecture-assessment.yaml`) |
 | `planningDir` | Canonical planning-unit tree (`docs/planning` post-cutover; legacy paths until migration `--verify`) |
 | `prdsDir` | Legacy PRD directory alias (defaults to `docs/prds` until `planningDir` cutover) |
 | `tasksDir` | Frozen task-list alias (defaults to `prdsDir` until cutover) |
@@ -1331,6 +1334,8 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `review.provider` | AI review adapter — default **`none`**; `coderabbit` opt-in |
 | `quality.provider` | Structural-quality harness — default **`none`** (no-op safe default; `quality:none`) |
 | `quality.blockingTier` | Optional triage tier (`quick`/`standard`/`full`) at which a `poor` verdict blocks via gate (unset = advisory only) |
+| `architecture.assessment.mode` | Doctrine assessment posture — default **`off`** (evaluator inert); `advisory` reports only; `blocking` fails check-gate on any `fail` |
+| `architecture.assessment.path` | Per-repo assessment YAML validated against `architecture-assessment.schema.json` (default `.cursor/architecture-assessment.yaml`) |
 | `verify.lint` | Command `/sw-verify` runs for linting |
 | `verify.typecheck` | Command `/sw-verify` runs for type checking |
 | `verify.test` | Command `/sw-verify` runs for tests (Shipwright dev repos chain fixture suites; user installs use real project tests) |
@@ -1351,6 +1356,23 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `notebook.sessionIndex` | Opt-in session-start injection of a distilled, redacted `/sw-note` index — default **`false`** |
 
 See `core/sw-reference/config.schema.json` for the full schema.
+
+## Architecture doctrine assessment (opt-in)
+
+`architecture.assessment.mode` defaults to **`off`** — the evaluator is inert and existing repos change
+behavior only when the key is set to `advisory` or `blocking`.
+
+| Mode | Behavior |
+| --- | --- |
+| `off` | Skip evaluation (`verdict: skip`, exit 0) |
+| `advisory` | Evaluate and print `{verdict,failed,waived,manual}`; never blocks check-gate |
+| `blocking` | Same evaluation; any `fail` exits `20` and blocks check-gate |
+
+Assessment YAML lives at `architecture.assessment.path` (default `.cursor/architecture-assessment.yaml`).
+Each entry references a doctrine `AD-<n>` id with `verdict` ∈ `pass|fail|waived|manual`. A `waived` entry
+**requires** `waiver.{actor,reason,expires}`; expired waivers are treated as `fail`. Waivers must be
+authored by a human actor (`python3 scripts/architecture_assessment.py record-waiver …`) — autonomous
+dispatch paths refuse waiver authorship (same posture as the sizing freeze override gate).
 
 ## Communication routing (caveman intensity)
 
@@ -2042,6 +2064,9 @@ Shipwright `2.4.0` · schema `config.schema.json`
 | `planning.intelligence.radar.windows.gitChurnDays` | `30` | `30` | `30` | `30` | `—` | `—` |
 | `planning.intelligence.vocabulary.strictMode` | `false` | `false` | `false` | `false` | `—` | `—` |
 | `planning.privacyAck.required` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `agentsFile` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `—` | `—` |
+| `architecture.assessment.mode` | `off` | `off` | `off` | `off` | `—` | `—` |
+| `architecture.assessment.path` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `—` | `—` |
 | `planning.refusalLedger.maxSizeBytes` | `52428800` | `52428800` | `52428800` | `52428800` | `—` | `—` |
 | `planning.refusalLedger.path` | `.cursor/sw-refusal-ledger` | `.cursor/sw-refusal-ledger` | `.cursor/sw-refusal-ledger` | `.cursor/sw-refusal-ledger` | `—` | `—` |
 | `planning.refusalLedger.ttlSeconds` | `2592000` | `2592000` | `2592000` | `2592000` | `—` | `—` |

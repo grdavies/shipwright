@@ -26,6 +26,34 @@
       "type": "string",
       "default": "AGENTS.md"
     },
+    "architecture": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opt-in architecture doctrine assessment (PRD 326 R14). Default off preserves existing behavior.",
+      "properties": {
+        "assessment": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "off",
+                "advisory",
+                "blocking"
+              ],
+              "default": "off",
+              "description": "off = evaluator inert; advisory = report only; blocking = fail closed via check-gate."
+            },
+            "path": {
+              "type": "string",
+              "default": ".cursor/architecture-assessment.yaml",
+              "description": "Per-repo assessment YAML validated against architecture-assessment.schema.json."
+            }
+          }
+        }
+      }
+    },
     "prdsDir": {
       "type": "string",
       "default": "docs/prds",
