@@ -1497,9 +1497,15 @@ def _collect_absorb_targets_from_content(content: str) -> list[str]:
 
 
 def _apply_absorb_targets_to_content(content: str, absorb_targets: list[str]) -> str:
-    """Merge absorbs into canonical frontmatter and durable sw-edges (PRD 094 R3)."""
+    """Merge absorbs into canonical frontmatter and durable sw-edges (PRD 094 R3).
+
+    Hybrid operator bodies often lack YAML ``---`` frontmatter; when no
+    ``sw-edges`` fence exists yet, create one so absorb linkage is discoverable
+    by closeout (``discover_absorbed_units_anchored``).
+    """
     from gap_backlog import update_frontmatter_field
     from planning_canonical import (
+        SW_EDGES_FENCE,
         build_edges_block,
         merge_absorbs_into_edge_list,
         parse_edges_block,
@@ -1523,6 +1529,12 @@ def _apply_absorb_targets_to_content(content: str, absorb_targets: list[str]) ->
         merged_edges = merge_absorbs_into_edge_list(edges, targets)
         body_without_edges = strip_markers_and_edges(new_content)
         new_content = body_without_edges.rstrip() + "\n\n" + build_edges_block(merged_edges, native)
+    else:
+        merged_edges = merge_absorbs_into_edge_list([], targets)
+        # Preserve hybrid markers/body; only drop a stale fence if present under
+        # a non-standard parse miss, then append the durable absorbs block.
+        without_fence = SW_EDGES_FENCE.sub("", new_content)
+        new_content = without_fence.rstrip() + "\n\n" + build_edges_block(merged_edges, [])
     return new_content
 
 
@@ -1534,7 +1546,10 @@ def _merge_prd_absorbs_frontmatter(content: str, gap_unit_id: str) -> tuple[str,
     after = _canonicalize_absorb_targets(before + [gap_unit_id])
     if _absorb_sets_semantically_equal(before, after):
         return content, False
-    return _apply_absorb_targets_to_content(content, after), True
+    applied = _apply_absorb_targets_to_content(content, after)
+    if applied == content:
+        return content, False
+    return applied, True
 
 
 def _remerge_prd_absorbs(content: str, gap_unit_ids: list[str]) -> tuple[str, bool]:
