@@ -37,6 +37,7 @@ RESILIENCE_MODULES: dict[str, tuple[str, ...]] = {
     "unit_tests.resilience.test_property_finalize_checkpoint": (),
     "unit_tests.resilience.test_property_generation_fence": (),
     "unit_tests.resilience.test_property_merge_conflict": (),
+    "unit_tests.resilience.test_property_residual_hardening": (),
 }
 
 RESILIENCE_FILES = (
@@ -52,6 +53,7 @@ RESILIENCE_FILES = (
     "scripts/unit_tests/resilience/test_property_finalize_checkpoint.py",
     "scripts/unit_tests/resilience/test_property_generation_fence.py",
     "scripts/unit_tests/resilience/test_property_merge_conflict.py",
+    "scripts/unit_tests/resilience/test_property_residual_hardening.py",
 )
 
 
