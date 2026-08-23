@@ -1037,6 +1037,7 @@
 * merge phase requiresevidence-node-flag-fail-closed-guard-m into feat/workflow-quality-platform (5db298f) <!-- sw-deliver:requiresevidence-node-flag-fail-closed-guard-m -->
 * merge phase reviewer-harvest-bounded-selection-l into feat/workflow-quality-platform (a57d63d) <!-- sw-deliver:reviewer-harvest-bounded-selection-l -->
 * merge phase prototype-evidence-contract-closure-m into feat/workflow-quality-platform (a6c7905) <!-- sw-deliver:prototype-evidence-contract-closure-m -->
+* merge phase absorb-closeout-delivery-order-note-s into feat/workflow-quality-platform (a45785b) <!-- sw-deliver:absorb-closeout-delivery-order-note-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
