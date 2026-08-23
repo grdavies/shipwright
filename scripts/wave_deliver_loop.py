@@ -14,7 +14,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sw_scripts_resolve import resolve_script
+from sw_scripts_resolve import (
+    CONSUMER_NO_PLUGIN_ERROR,
+    ScriptsResolveError,
+    resolve_script,
+    resolve_scripts_dir,
+)
 
 from wave_json_io import StateCorruptError, read_json, write_json
 
@@ -2152,7 +2157,30 @@ def phase_mode_context_active(
     return bool(ctx and ctx.get("active") is True)
 
 
-def ship_loop_env_for_phase(state: dict[str, Any], phase_id: str, slug: str) -> dict[str, str]:
+def _resolve_ship_scripts_root(workspace: Path) -> Path:
+    result = resolve_scripts_dir(workspace)
+    if result.error:
+        raise ScriptsResolveError(result.error)
+    if result.path is None:
+        raise ScriptsResolveError("no trusted scripts root found")
+    return result.path.resolve()
+
+
+def _ship_loop_resolve_blocked(exc: ScriptsResolveError) -> dict[str, Any]:
+    msg = str(exc)
+    payload: dict[str, Any] = {"verdict": "blocked", "error": msg}
+    if msg == CONSUMER_NO_PLUGIN_ERROR:
+        payload["remediation"] = CONSUMER_NO_PLUGIN_ERROR
+    return payload
+
+
+def ship_loop_env_for_phase(
+    state: dict[str, Any],
+    phase_id: str,
+    slug: str,
+    *,
+    scripts_root: Path | str | None = None,
+) -> dict[str, str]:
     """Build explicit phase-mode dispatch env and persist worktree-scoped state."""
     task_list = str(state.get("source_task_list") or "")
     run_dir = f".cursor/sw-deliver-runs/{slug}"
@@ -2165,6 +2193,16 @@ def ship_loop_env_for_phase(state: dict[str, Any], phase_id: str, slug: str) -> 
             task_list=task_list,
             run_dir=run_dir,
         )
+        if scripts_root is None:
+            try:
+                scripts_root = _resolve_ship_scripts_root(wt)
+            except ScriptsResolveError:
+                scripts_root = None
+    resolved_root = ""
+    if scripts_root is not None:
+        resolved_root = str(
+            scripts_root.resolve() if isinstance(scripts_root, Path) else Path(scripts_root).resolve()
+        )
     target = state.get("target") if isinstance(state.get("target"), dict) else {}
     integration = str((target or {}).get("branch") or "").strip()
     env = {
@@ -2173,7 +2211,7 @@ def ship_loop_env_for_phase(state: dict[str, Any], phase_id: str, slug: str) -> 
         "SW_RUN_DIR": run_dir,
         "SW_TASK_LIST": task_list,
         "SW_PHASE_ID": str(phase_id),
-        "PYTHONPATH": "scripts",
+        "PYTHONPATH": resolved_root,
     }
     if integration:
         env["SW_INTEGRATION_BRANCH"] = integration
@@ -2206,9 +2244,13 @@ def run_ship_loop_drive(
     *,
     max_ticks: int = 64,
 ) -> tuple[int, dict[str, Any]]:
+    try:
+        ship_loop_script = resolve_script(worktree, "ship_loop.py")
+    except ScriptsResolveError as exc:
+        return 20, _ship_loop_resolve_blocked(exc)
     cmd = [
         sys.executable,
-        str(worktree / "scripts" / "ship_loop.py"),
+        str(ship_loop_script),
         str(worktree),
         "drive",
         "--phase",
@@ -2243,6 +2285,69 @@ def run_ship_loop_drive(
     return proc.returncode, data
 
 
+def _apply_phase_provision_to_state(
+    root: Path,
+    state: dict[str, Any],
+    pid: str,
+    data: dict[str, Any],
+) -> Path | None:
+    wt_path = data.get("path") or data.get("worktreePath")
+    if not wt_path:
+        wt_name = data.get("worktreeName") or data.get("name")
+        if wt_name:
+            wt_path = str((root / ".sw-worktrees" / wt_name).resolve())
+    from planning_progress import provision_deliver_hierarchy
+
+    hier = provision_deliver_hierarchy(root, state)
+    if hier.get("verdict") == "fail":
+        fail_payload(hier, "hierarchy provision failed", 20, phaseId=pid)
+    worktrees = state.setdefault("phaseWorktrees", {})
+    worktrees[pid] = {
+        "name": data.get("name") or data.get("worktreeName"),
+        "path": wt_path,
+    }
+    save_state(root, state)
+    if wt_path:
+        return Path(str(wt_path))
+    return None
+
+
+def _ensure_phase_worktree_for_dispatch(root: Path, state: dict[str, Any], pid: str) -> Path:
+    wt = phase_worktree_path(state, pid)
+    if wt is not None and wt.is_dir():
+        return wt
+    ec, data = run_wave(
+        root,
+        "phase",
+        "provision",
+        "--phase-id",
+        pid,
+        "--plan",
+        plan_rel_for_state(root, state),
+    )
+    provision_remediation = (
+        f"Provision the phase worktree before dispatch-ship "
+        f"(python3 scripts/wave.py phase provision --phase-id {pid})"
+    )
+    if ec != 0:
+        fail_payload(
+            data,
+            "phase provision failed",
+            ec or 20,
+            phaseId=pid,
+            remediation=provision_remediation,
+        )
+    wt = _apply_phase_provision_to_state(root, state, pid, data)
+    if wt is None or not wt.is_dir():
+        fail(
+            "dispatch-ship missing phase worktree after provision",
+            exit_code=20,
+            phaseId=pid,
+            remediation=provision_remediation,
+        )
+    return wt
+
+
 def execute_dispatch_ship(
     root: Path,
     state: dict[str, Any],
@@ -2257,10 +2362,12 @@ def execute_dispatch_ship(
     if lease_ec != 0:
         fail_payload(lease_data, "dispatch-ship lease acquire failed", lease_ec)
     mark_phases_in_flight(state, [pid], background=False)
-    wt = phase_worktree_path(state, pid)
-    if wt is None or not wt.is_dir():
-        fail("dispatch-ship missing phase worktree path", exit_code=20, phaseId=pid)
-    env = ship_loop_env_for_phase(state, pid, slug)
+    wt = _ensure_phase_worktree_for_dispatch(root, state, pid)
+    try:
+        scripts_root = _resolve_ship_scripts_root(wt)
+    except ScriptsResolveError as exc:
+        fail_payload(_ship_loop_resolve_blocked(exc), "ship-loop blocked", 20, phaseId=pid)
+    env = ship_loop_env_for_phase(state, pid, slug, scripts_root=scripts_root)
     ec, drive = run_ship_loop_drive(wt, slug, env)
     out: dict[str, Any] = {
         "executed": "dispatch-ship",

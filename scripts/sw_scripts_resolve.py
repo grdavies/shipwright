@@ -11,6 +11,7 @@ Untrusted SHIPWRIGHT_SCRIPTS values fail closed — no silent fallback.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -62,6 +63,38 @@ def scripts_dir_is_trusted(path: Path) -> bool:
         return False
     resolved = path.resolve()
     return all((resolved / marker).is_file() for marker in TRUST_MARKERS)
+
+
+def compute_scripts_root_hash(scripts_root: Path) -> str:
+    """Stable SHA256 digest over the resolved scripts root trust-marker set."""
+    resolved = scripts_root.resolve()
+    lines: list[str] = []
+    for marker in sorted(TRUST_MARKERS):
+        marker_path = resolved / marker
+        if not marker_path.is_file():
+            raise ScriptsResolveError(f"trust marker missing: {marker}")
+        digest = hashlib.sha256(marker_path.read_bytes()).hexdigest()
+        lines.append(f"{marker}:{digest}")
+    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
+
+
+def scripts_root_binding(
+    workspace: Path,
+    *,
+    env: Mapping[str, str] | None = None,
+    executor: Path | None = None,
+) -> dict[str, str]:
+    """Resolve trusted scripts root and return a durable binding record."""
+    result = resolve_scripts_dir(workspace, env=env, executor=executor)
+    if result.error:
+        raise ScriptsResolveError(result.error)
+    if result.path is None:
+        raise ScriptsResolveError("no trusted scripts root found")
+    return {
+        "root": str(result.path.resolve()),
+        "source": str(result.source or ""),
+        "hash": compute_scripts_root_hash(result.path),
+    }
 
 
 def validate_env_scripts_root(raw: str) -> tuple[Path | None, str | None]:

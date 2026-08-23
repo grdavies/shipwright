@@ -197,6 +197,94 @@
       "ciShard": 1
     },
     {
+      "id": "prd-325-finalize-recovery-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver/test_prd325_finalize_recovery.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1
+    },
+    {
+      "id": "prd-325-closeout-run-scoped-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver/test_prd325_closeout_run_scoped.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1
+    },
+    {
+      "id": "prd-325-blast-radius-clear-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver/test_prd325_blast_radius_clear.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1
+    },
+    {
+      "id": "prd-325-ship-loop-resolve-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver/test_prd325_ship_loop_resolve.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1
+    },
+    {
+      "id": "prd-325-publish-surface-profiles-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver/test_prd325_publish_surface_profiles.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1
+    },
+    {
+      "id": "prd-325-scripts-hash-binding-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/deliver/test_prd325_scripts_hash_binding.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1
+    },
+    {
+      "id": "prd-325-docs-currency-consumer-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/test_prd325_docs_currency_consumer.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "ciShard": 2
+    },
+    {
+      "id": "prd-325-docs-worktree-base-ref-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/test_prd325_docs_worktree_base_ref.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "ciShard": 2
+    },
+    {
       "id": "dispatch-binding-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -1425,6 +1513,17 @@
       "script": "scripts/test/run_pytest.py",
       "args": [
         "scripts/unit_tests/planning/test_planning_061_progress.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
+    },
+    {
+      "id": "prd-325-absorb-closeout-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_prd325_absorb_closeout.py",
         "-q"
       ],
       "classification": "required",

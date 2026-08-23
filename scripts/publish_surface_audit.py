@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Publish-surface audit for deliver finalize (PRD 069 R6)."""
+"""Publish-surface audit for deliver finalize (PRD 069 R6; PRD 325 R6–R7)."""
 from __future__ import annotations
 
 import argparse
@@ -14,20 +14,39 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from memory_sot import DECISION_STUB_ALLOWLIST, is_decision_body_path, resolve_decision_home
+from memory_sot import (
+    DECISION_STUB_ALLOWLIST,
+    is_decision_body_path,
+    load_config,
+    resolve_decision_home,
+)
 from wave_json_io import write_json
 
 AUDIT_REL = Path(".cursor/sw-deliver-runs/publish-surface-audit.json")
 SEVERITIES_EXPECTED = ("critical", "warning")
 
+PUBLISH_SURFACE_PROFILE_IN_REPO_PUBLIC = "in-repo-public"
+PUBLISH_SURFACE_PROFILE_PRIVATE = "private"
+PUBLISH_SURFACE_PROFILES = frozenset(
+    {PUBLISH_SURFACE_PROFILE_IN_REPO_PUBLIC, PUBLISH_SURFACE_PROFILE_PRIVATE}
+)
+DEFAULT_PUBLISH_SURFACE_PROFILE = PUBLISH_SURFACE_PROFILE_PRIVATE
+
 DECISION_INDEX_ALLOW = DECISION_STUB_ALLOWLIST
 
-GITIGNORE_REQUIRED_SNIPPETS = (
+GITIGNORE_PRIVATE_SNIPPETS = (
     "docs/prds/",
     ".cursor/planning-materialized/",
     ".cursor/sw-deliver-runs/",
     "docs/learnings/",
 )
+GITIGNORE_IN_REPO_PUBLIC_SNIPPETS = (
+    ".cursor/planning-materialized/",
+    ".cursor/sw-deliver-runs/",
+    "docs/learnings/",
+)
+# Backward-compatible alias for callers/tests that referenced the private set.
+GITIGNORE_REQUIRED_SNIPPETS = GITIGNORE_PRIVATE_SNIPPETS
 
 
 def utc_now() -> str:
@@ -36,6 +55,64 @@ def utc_now() -> str:
 
 def audit_path_for(root: Path) -> Path:
     return root / AUDIT_REL
+
+
+def gitignore_required_snippets(profile: str) -> tuple[str, ...]:
+    if profile == PUBLISH_SURFACE_PROFILE_IN_REPO_PUBLIC:
+        return GITIGNORE_IN_REPO_PUBLIC_SNIPPETS
+    return GITIGNORE_PRIVATE_SNIPPETS
+
+
+def resolve_publish_surface_profile(
+    root: Path, config: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Resolve publish-surface audit profile from workflow config + decision home."""
+    if config is None:
+        config = load_config(root)
+
+    planning = config.get("planning") if isinstance(config, dict) else {}
+    if isinstance(planning, dict):
+        publish_surface = planning.get("publishSurface")
+        if isinstance(publish_surface, dict):
+            explicit = publish_surface.get("profile")
+            if isinstance(explicit, str) and explicit.strip():
+                requested = explicit.strip()
+                if requested in PUBLISH_SURFACE_PROFILES:
+                    return {"profile": requested, "source": "config"}
+                return {
+                    "profile": DEFAULT_PUBLISH_SURFACE_PROFILE,
+                    "source": "config-unknown",
+                    "requested": requested,
+                }
+
+    home = resolve_decision_home(root, config)
+    from planning_store import resolve_effective_backend
+
+    backend = str(resolve_effective_backend(root, config).get("effective") or "")
+    decision_home = str(home.get("home") or "")
+
+    if decision_home == "planning-store" or backend == "issue-store":
+        return {
+            "profile": PUBLISH_SURFACE_PROFILE_PRIVATE,
+            "source": "derived-issue-store",
+            "decisionHome": decision_home,
+            "backend": backend,
+        }
+
+    if backend == PUBLISH_SURFACE_PROFILE_IN_REPO_PUBLIC and decision_home == "repo":
+        return {
+            "profile": PUBLISH_SURFACE_PROFILE_IN_REPO_PUBLIC,
+            "source": "derived-in-repo-public",
+            "decisionHome": decision_home,
+            "backend": backend,
+        }
+
+    return {
+        "profile": DEFAULT_PUBLISH_SURFACE_PROFILE,
+        "source": "default",
+        "decisionHome": decision_home,
+        "backend": backend,
+    }
 
 
 def git_tracked_paths(root: Path) -> tuple[list[str] | None, str | None]:
@@ -124,8 +201,22 @@ def _check_denylist_leaked(root: Path, tracked: list[str] | None, discovery_erro
     }
 
 
-def _check_docs_prds_absent(root: Path, tracked: list[str] | None, discovery_error: str | None) -> dict[str, Any]:
+def _check_docs_prds_absent(
+    root: Path,
+    tracked: list[str] | None,
+    discovery_error: str | None,
+    *,
+    profile: str,
+) -> dict[str, Any]:
     del root
+    if profile == PUBLISH_SURFACE_PROFILE_IN_REPO_PUBLIC:
+        return {
+            "id": "docs-prds-absent",
+            "severity": "critical",
+            "status": "skipped",
+            "considered": False,
+            "detail": {"profile": PUBLISH_SURFACE_PROFILE_IN_REPO_PUBLIC},
+        }
     if tracked is None:
         return {
             "id": "docs-prds-absent",
@@ -144,7 +235,13 @@ def _check_docs_prds_absent(root: Path, tracked: list[str] | None, discovery_err
     }
 
 
-def _check_gitignore_hygiene(root: Path, tracked: list[str] | None, discovery_error: str | None) -> dict[str, Any]:
+def _check_gitignore_hygiene(
+    root: Path,
+    tracked: list[str] | None,
+    discovery_error: str | None,
+    *,
+    profile: str,
+) -> dict[str, Any]:
     del tracked, discovery_error
     gitignore = root / ".gitignore"
     if not gitignore.is_file():
@@ -156,28 +253,73 @@ def _check_gitignore_hygiene(root: Path, tracked: list[str] | None, discovery_er
             "detail": "missing .gitignore",
         }
     text = gitignore.read_text(encoding="utf-8", errors="replace")
-    missing = [snippet for snippet in GITIGNORE_REQUIRED_SNIPPETS if snippet not in text]
+    required = gitignore_required_snippets(profile)
+    missing = [snippet for snippet in required if snippet not in text]
+    detail: dict[str, Any] | str | None
+    if missing:
+        detail = {"missingSnippets": missing, "profile": profile}
+    else:
+        detail = {"profile": profile}
     return {
         "id": "gitignore-publish-hygiene",
         "severity": "warning",
         "status": "failed" if missing else "passed",
         "considered": True,
-        "detail": {"missingSnippets": missing} if missing else None,
+        "detail": detail,
     }
 
 
 CheckFn = Callable[[Path, list[str] | None, str | None], dict[str, Any]]
 
-CHECKS: tuple[CheckFn, ...] = (
-    _check_denylist_leaked,
-    _check_docs_prds_absent,
-    _check_decision_home_migration,
-    _check_gitignore_hygiene,
-)
+
+def checks_for_profile(profile: str) -> tuple[CheckFn, ...]:
+    resolved = (
+        profile
+        if profile in PUBLISH_SURFACE_PROFILES
+        else DEFAULT_PUBLISH_SURFACE_PROFILE
+    )
+
+    def docs_prds_check(
+        root: Path, tracked: list[str] | None, discovery_error: str | None
+    ) -> dict[str, Any]:
+        return _check_docs_prds_absent(
+            root, tracked, discovery_error, profile=resolved
+        )
+
+    def gitignore_check(
+        root: Path, tracked: list[str] | None, discovery_error: str | None
+    ) -> dict[str, Any]:
+        return _check_gitignore_hygiene(
+            root, tracked, discovery_error, profile=resolved
+        )
+
+    return (
+        _check_denylist_leaked,
+        docs_prds_check,
+        _check_decision_home_migration,
+        gitignore_check,
+    )
 
 
-def run_publish_surface_audit(root: Path, *, tracked_override: list[str] | None = None) -> dict[str, Any]:
+CHECKS = checks_for_profile(DEFAULT_PUBLISH_SURFACE_PROFILE)
+
+
+def run_publish_surface_audit(
+    root: Path,
+    *,
+    tracked_override: list[str] | None = None,
+    profile_override: str | None = None,
+    config: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Evaluate publish-surface checklist; does not write JSON."""
+    profile_meta = (
+        {"profile": profile_override, "source": "override"}
+        if profile_override in PUBLISH_SURFACE_PROFILES
+        else resolve_publish_surface_profile(root, config)
+    )
+    profile = str(profile_meta["profile"])
+    checks = checks_for_profile(profile)
+
     discovery_error: str | None = None
     tracked: list[str] | None
     if tracked_override is not None:
@@ -185,9 +327,13 @@ def run_publish_surface_audit(root: Path, *, tracked_override: list[str] | None 
     else:
         tracked, discovery_error = git_tracked_paths(root)
 
-    items = [check(root, tracked, discovery_error) for check in CHECKS]
+    items = [check(root, tracked, discovery_error) for check in checks]
     passed = [item["id"] for item in items if item.get("status") == "passed"]
-    failed = [item["id"] for item in items if item.get("status") == "failed"]
+    failed = [
+        item["id"]
+        for item in items
+        if item.get("status") == "failed" and item.get("considered") is True
+    ]
     skipped = [item["id"] for item in items if item.get("status") == "skipped"]
 
     severities_considered = sorted(
@@ -208,6 +354,8 @@ def run_publish_surface_audit(root: Path, *, tracked_override: list[str] | None 
     return {
         "verdict": verdict,
         "action": "publish-surface-audit",
+        "profile": profile,
+        "profileResolution": profile_meta,
         "considered": items,
         "passed": passed,
         "failed": failed,

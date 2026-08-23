@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sw_scripts_resolve import resolve_script
+from sw_scripts_resolve import ScriptsResolveError, resolve_script, scripts_root_binding
 
 ORCHESTRATOR_ROLE = "orchestrator"
 PHASE_ROLE = "phase"
@@ -359,6 +359,55 @@ def orchestrator_worktree_dirty(path: Path) -> bool:
     return bool(status.strip())
 
 
+def _primary_workspace(top: Path) -> Path:
+    from primary_checkout_guard import canonical_repo_root, primary_worktree_path
+
+    repo_root = canonical_repo_root(top)
+    return primary_worktree_path(repo_root)
+
+
+def _resolve_scripts_bindings(
+    primary: Path,
+    orchestrator: Path,
+) -> tuple[dict[str, str], dict[str, str]]:
+    try:
+        primary_binding = scripts_root_binding(primary)
+        orchestrator_binding = scripts_root_binding(orchestrator)
+    except ScriptsResolveError as exc:
+        fail(str(exc), exit_code=20, halt="scripts-resolve-failed")
+    return primary_binding, orchestrator_binding
+
+
+def _enforce_scripts_hash_binding(
+    *,
+    primary_binding: dict[str, str],
+    orchestrator_binding: dict[str, str],
+    stored_binding: dict[str, Any] | None,
+    target: str,
+    rebind: bool,
+) -> dict[str, str]:
+    primary_hash = primary_binding["hash"]
+    orchestrator_hash = orchestrator_binding["hash"]
+    if primary_hash == orchestrator_hash:
+        return orchestrator_binding
+    if rebind:
+        return orchestrator_binding
+    remediation = (
+        f"python3 scripts/wave.py orchestrator provision --target {target} --rebind"
+    )
+    fail(
+        "orchestrator scripts root hash diverges from primary",
+        exit_code=20,
+        halt="scripts-hash-diverged",
+        remediation=remediation,
+        scriptsBinding={
+            "primary": primary_binding,
+            "orchestrator": orchestrator_binding,
+            "stored": stored_binding,
+        },
+    )
+
+
 def adopt_orchestrator_worktree(
     root: Path,
     *,
@@ -367,8 +416,16 @@ def adopt_orchestrator_worktree(
     name: str,
     target: str,
     tip: str,
+    scripts_binding: dict[str, str] | None = None,
 ) -> None:
     from wave_state import load_deliver_state, resolve_state_path, save_deliver_state
+
+    binding = scripts_binding
+    if binding is None:
+        try:
+            binding = scripts_root_binding(path)
+        except ScriptsResolveError as exc:
+            fail(str(exc), exit_code=20, halt="scripts-resolve-failed")
 
     write_shipwright_state(
         path,
@@ -395,6 +452,7 @@ def adopt_orchestrator_worktree(
         "countsTowardCeiling": False,
         "detachedHead": False,
         "head": tip,
+        "scriptsBinding": binding,
     }
     save_deliver_state(top, state, target=target)
 
@@ -403,6 +461,7 @@ def adopt_orchestrator_worktree(
 def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
     target = parse_kv(args, "--target")
     plan_rel = parse_kv(args, "--plan")
+    rebind = "--rebind" in args
     state = load_deliver_state(root)
     if not target:
         plan = load_plan(root, plan_rel, state=state)
@@ -413,6 +472,13 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
     name = parse_kv(args, "--name", f"{slug}-orchestrator") or f"{slug}-orchestrator"
     top = git_toplevel(root)
     assert_primary_off_target(top, target)
+    primary = _primary_workspace(top)
+    stored_binding: dict[str, Any] | None = None
+    orch_state = state.get("orchestratorWorktree")
+    if isinstance(orch_state, dict):
+        raw_binding = orch_state.get("scriptsBinding")
+        if isinstance(raw_binding, dict):
+            stored_binding = raw_binding
     wt_root = top / ".sw-worktrees"
     wt_root.mkdir(parents=True, exist_ok=True)
     path = wt_root / name
@@ -440,8 +506,22 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
                 remediation=f"commit or stash changes in {path} before adopt",
             )
         tip = git_run(["rev-parse", "HEAD"], cwd=path).stdout.strip()
+        primary_binding, orchestrator_binding = _resolve_scripts_bindings(primary, path)
+        scripts_binding = _enforce_scripts_hash_binding(
+            primary_binding=primary_binding,
+            orchestrator_binding=orchestrator_binding,
+            stored_binding=stored_binding,
+            target=target,
+            rebind=rebind,
+        )
         adopt_orchestrator_worktree(
-            root, top=top, path=path, name=name, target=target, tip=tip
+            root,
+            top=top,
+            path=path,
+            name=name,
+            target=target,
+            tip=tip,
+            scripts_binding=scripts_binding,
         )
         emit(
             {
@@ -451,6 +531,8 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
                 "branch": target,
                 "countsTowardCeiling": False,
                 "adopted": True,
+                "scriptsBinding": scripts_binding,
+                **({"rebound": True} if rebind else {}),
             }
         )
 
@@ -495,8 +577,22 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
     git_run(["worktree", "add", "-B", target, str(path), ref], cwd=top)
     checked_out_branch = target
 
+    primary_binding, orchestrator_binding = _resolve_scripts_bindings(primary, path)
+    scripts_binding = _enforce_scripts_hash_binding(
+        primary_binding=primary_binding,
+        orchestrator_binding=orchestrator_binding,
+        stored_binding=stored_binding,
+        target=target,
+        rebind=rebind,
+    )
     adopt_orchestrator_worktree(
-        root, top=top, path=path, name=name, target=target, tip=tip
+        root,
+        top=top,
+        path=path,
+        name=name,
+        target=target,
+        tip=tip,
+        scripts_binding=scripts_binding,
     )
 
     emit(
@@ -506,7 +602,9 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
             "path": str(path),
             "branch": target,
             "countsTowardCeiling": False,
+            "scriptsBinding": scripts_binding,
             **({"createdFromDefaultBase": True, "defaultBaseRef": ref} if created_from_default else {}),
+            **({"rebound": True} if rebind else {}),
         }
     )
 
@@ -514,18 +612,26 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
 def cmd_orchestrator_status(root: Path, _args: list[str]) -> None:
     from wave_state import load_deliver_state
 
-    state = load_deliver_state(git_toplevel(root))
+    top = git_toplevel(root)
+    state = load_deliver_state(top)
     orch = state.get("orchestratorWorktree")
     if not orch:
         emit({"verdict": "pass", "provisioned": False})
     path = Path(orch.get("path", ""))
-    emit(
-        {
-            "verdict": "pass",
-            "provisioned": path.is_dir(),
-            "orchestratorWorktree": orch,
-        }
-    )
+    payload: dict[str, Any] = {
+        "verdict": "pass",
+        "provisioned": path.is_dir(),
+        "orchestratorWorktree": orch,
+    }
+    if path.is_dir():
+        primary = _primary_workspace(top)
+        primary_binding, orchestrator_binding = _resolve_scripts_bindings(primary, path)
+        payload["primaryScriptsBinding"] = primary_binding
+        payload["orchestratorScriptsBinding"] = orchestrator_binding
+        payload["scriptsHashDiverged"] = (
+            primary_binding["hash"] != orchestrator_binding["hash"]
+        )
+    emit(payload)
 
 
 def cmd_forward_merge(root: Path, args: list[str]) -> None:

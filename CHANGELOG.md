@@ -997,6 +997,15 @@
 * merge phase write-draft-schema-fidelity-and-findings-report-wiring-m into feat/greenfield-init-credentials-ci (101a876) <!-- sw-deliver:write-draft-schema-fidelity-and-findings-report-wiring-m -->
 * merge phase unit-and-integration-tests-l into feat/greenfield-init-credentials-ci (bddd35d) <!-- sw-deliver:unit-and-integration-tests-l -->
 * merge phase absorb-closeout-and-configuration-docs-s into feat/greenfield-init-credentials-ci (934fc72) <!-- sw-deliver:absorb-closeout-and-configuration-docs-s -->
+* merge phase merge-detection-finalize-completion-under-pr-number-slug-drift-m into feat/deliver-finalize-consumer-resilience (ec52b6e) <!-- sw-deliver:merge-detection-finalize-completion-under-pr-number-slug-drift-m -->
+* merge phase blast-radius-clear-on-green-merged-phases-m into feat/deliver-finalize-consumer-resilience (32ceb3c) <!-- sw-deliver:blast-radius-clear-on-green-merged-phases-m -->
+* merge phase publish-surface-audit-under-in-repo-public-m into feat/deliver-finalize-consumer-resilience (6ce7c40) <!-- sw-deliver:publish-surface-audit-under-in-repo-public-m -->
+* merge phase ship-loop-resolution-and-provisioning-in-consumer-repos-m into feat/deliver-finalize-consumer-resilience (07669db) <!-- sw-deliver:ship-loop-resolution-and-provisioning-in-consumer-repos-m -->
+* merge phase docs-currency-gate-soft-skip-in-consumer-repos-m into feat/deliver-finalize-consumer-resilience (b01d26d) <!-- sw-deliver:docs-currency-gate-soft-skip-in-consumer-repos-m -->
+* merge phase docs-worktree-bases-on-the-fetched-remote-default-tip-s into feat/deliver-finalize-consumer-resilience (0e65521) <!-- sw-deliver:docs-worktree-bases-on-the-fetched-remote-default-tip-s -->
+* merge phase closeout-prefers-run-scoped-state-s into feat/deliver-finalize-consumer-resilience (0886c4c) <!-- sw-deliver:closeout-prefers-run-scoped-state-s -->
+* merge phase orchestrator-primary-scripts-hash-divergence-halt-and-rebind-s into feat/deliver-finalize-consumer-resilience (50e9d2a) <!-- sw-deliver:orchestrator-primary-scripts-hash-divergence-halt-and-rebind-s -->
+* merge phase regression-suite-absorb-closeout-for-331-338-l into feat/deliver-finalize-consumer-resilience (bd21e8c) <!-- sw-deliver:regression-suite-absorb-closeout-for-331-338-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

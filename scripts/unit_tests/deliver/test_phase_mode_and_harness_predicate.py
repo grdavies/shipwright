@@ -178,3 +178,72 @@ def test_ship_loop_env_writes_worktree_state(tmp_path: Path) -> None:
     persisted = json.loads((wt / ".cursor" / "sw-worktree-state.json").read_text(encoding="utf-8"))
     assert persisted["phaseMode"]["active"] is True
     assert persisted["phaseMode"]["phaseSlug"] == "phase-mode-context"
+
+
+def test_run_ship_loop_drive_uses_resolve_script(repo_root: Path) -> None:
+    wt = repo_root
+    env = {"SW_PHASE_MODE": "1", "PYTHONPATH": str(repo_root / "scripts")}
+    ec, data = wdl.run_ship_loop_drive(wt, "fixture-phase", env)
+    assert ec != 0 or data.get("verdict") != "blocked"
+    assert data.get("error") != "ship-loop:empty-output"
+
+
+def test_run_ship_loop_drive_blocked_on_resolver_error(tmp_path: Path) -> None:
+    from sw_scripts_resolve import CONSUMER_NO_PLUGIN_ERROR, ScriptsResolveError
+    from unittest.mock import patch
+
+    with patch.object(
+        wdl,
+        "resolve_script",
+        side_effect=ScriptsResolveError(CONSUMER_NO_PLUGIN_ERROR),
+    ):
+        ec, data = wdl.run_ship_loop_drive(tmp_path, "x", {})
+    assert ec == 20
+    assert data["verdict"] == "blocked"
+    assert data["error"] == CONSUMER_NO_PLUGIN_ERROR
+    assert data.get("remediation") == CONSUMER_NO_PLUGIN_ERROR
+
+
+def test_ship_loop_env_absolute_pythonpath(repo_root: Path, tmp_path: Path) -> None:
+    wt = tmp_path / "phase-wt"
+    wt.mkdir()
+    state = {
+        "source_task_list": "tasks.md",
+        "phaseWorktrees": {"5": {"path": str(wt)}},
+    }
+    scripts_root = repo_root / "scripts"
+    env = wdl.ship_loop_env_for_phase(state, "5", "ship-loop", scripts_root=scripts_root)
+    assert env["PYTHONPATH"] == str(scripts_root.resolve())
+    assert env["PYTHONPATH"] != "scripts"
+
+
+def test_ensure_phase_worktree_provisions_once(repo_root: Path, tmp_path: Path) -> None:
+    from unittest.mock import patch
+
+    state: dict = {"phaseWorktrees": {}, "runId": "deliver-test-run"}
+    wt = tmp_path / "provisioned"
+    wt.mkdir()
+
+    def fake_run_wave(_root: Path, *args: str) -> tuple[int, dict]:
+        assert args[0] == "phase"
+        assert args[1] == "provision"
+        return 0, {"path": str(wt), "name": "provisioned"}
+
+    with patch.object(wdl, "run_wave", side_effect=fake_run_wave):
+        with patch.object(wdl, "save_state"):
+            with patch("planning_progress.provision_deliver_hierarchy", return_value={"verdict": "ok"}):
+                resolved = wdl._ensure_phase_worktree_for_dispatch(repo_root, state, "5")
+    assert resolved == wt
+
+    call_count = 0
+
+    def counting_run_wave(_root: Path, *args: str) -> tuple[int, dict]:
+        nonlocal call_count
+        call_count += 1
+        return 0, {"path": str(wt)}
+
+    state["phaseWorktrees"] = {"5": {"path": str(wt)}}
+    with patch.object(wdl, "run_wave", side_effect=counting_run_wave):
+        again = wdl._ensure_phase_worktree_for_dispatch(repo_root, state, "5")
+    assert again == wt
+    assert call_count == 0

@@ -7,6 +7,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -28,7 +29,7 @@ planning_deliver_gate = _load("planning_deliver_gate_run_entry", "planning_deliv
 
 
 @pytest.fixture
-def git_repo(tmp_path: Path) -> Path:
+def git_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "Test"], cwd=tmp_path, check=True)
@@ -36,9 +37,8 @@ def git_repo(tmp_path: Path) -> Path:
     subprocess.run(["git", "add", "README.md"], cwd=tmp_path, check=True)
     subprocess.run(["git", "commit", "-qm", "init"], cwd=tmp_path, check=True)
     subprocess.run(["git", "branch", "-M", "main"], cwd=tmp_path, check=True)
-    scripts = tmp_path / "scripts"
-    if not scripts.exists():
-        scripts.symlink_to(_ROOT, target_is_directory=True)
+    scripts = _ROOT
+    monkeypatch.setenv("SHIPWRIGHT_SCRIPTS", str(scripts.resolve()))
     return tmp_path
 
 
@@ -97,8 +97,9 @@ def test_orchestrator_provision_fail_dirty(git_repo: Path) -> None:
     (wt / "dirty.txt").write_text("x\n", encoding="utf-8")
     subprocess.run(["git", "checkout", "-q", "main"], cwd=git_repo, check=True)
 
-    with pytest.raises(SystemExit) as exc:
-        wave_lifecycle.cmd_orchestrator_provision(git_repo, ["--target", "feat/demo"])
+    with patch("halt_resume.enrich_fail_extra"):
+        with pytest.raises(SystemExit) as exc:
+            wave_lifecycle.cmd_orchestrator_provision(git_repo, ["--target", "feat/demo"])
     assert exc.value.code == 20
 
 

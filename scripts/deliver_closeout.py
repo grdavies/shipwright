@@ -19,7 +19,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from host_lib import load_workflow_config
 from inflight_signal import prd_unit_id_from_state
-from wave_json_io import read_json, write_json
+from wave_json_io import StateCorruptError, read_json, write_json
 from wave_state import load_deliver_state
 
 CLOSEOUT_ROOT_REL = ".sw/deliver-closeout"
@@ -84,6 +84,9 @@ def slug_from_target_branch(branch: str) -> str:
 
 
 def deliver_run_id_from_state(state: dict[str, Any]) -> str | None:
+    explicit = str(state.get("runId") or "").strip()
+    if explicit:
+        return explicit
     prd = state.get("prd_number")
     if prd is None:
         return None
@@ -112,23 +115,183 @@ def is_pending_merge_completion(state: dict[str, Any]) -> bool:
     return completion.get("status") == "completed-pending-merge"
 
 
-def resolve_state_by_run_id(root: Path, run_id: str) -> tuple[dict[str, Any] | None, Path | None, str | None]:
-    from wave_state import enumerate_scoped_runs
+def _tag_state_source(state: dict[str, Any], source: str) -> dict[str, Any]:
+    tagged = dict(state)
+    tagged["stateSource"] = source
+    return tagged
+
+
+def _state_matches_run_id(run_id: str, state: dict[str, Any]) -> bool:
+    return deliver_run_id_from_state(state) == run_id
+
+
+def _slug_from_state(state: dict[str, Any]) -> str:
+    return str((state.get("target") or {}).get("slug") or "")
+
+
+def _read_state_file(path: Path) -> dict[str, Any] | None:
+    if not path.is_file():
+        return None
+    try:
+        return read_json(path)
+    except StateCorruptError:
+        return None
+
+
+def _run_scoped_resolution_candidates(
+    root: Path,
+    run_id: str,
+) -> tuple[list[tuple[dict[str, Any], Path, str]], str | None]:
+    from wave_run_paths import state_path as run_state_path
+    from wave_state import enumerate_run_scoped_dirs, path_normalize_anchor
+
+    anchor = path_normalize_anchor(root)
+    candidates: list[tuple[dict[str, Any], Path, str]] = []
+    seen_paths: set[str] = set()
+    corrupt_notice: str | None = None
+
+    def add_candidate(state_path: Path, state: dict[str, Any]) -> None:
+        rel = str(state_path.relative_to(anchor))
+        if rel in seen_paths:
+            return
+        seen_paths.add(rel)
+        candidates.append((state, state_path, _slug_from_state(state)))
+
+    direct = run_state_path(root, run_id)
+    if direct.is_file():
+        state = _read_state_file(direct)
+        if state is None:
+            corrupt_notice = f"run-scoped state corrupt at {direct}"
+        elif _state_matches_run_id(run_id, state):
+            add_candidate(direct, state)
+
+    for entry in enumerate_run_scoped_dirs(root):
+        entry_run_id = str(entry.get("runId") or "")
+        state_path = anchor / str(entry.get("statePath") or "")
+        state = _read_state_file(state_path)
+        if state is None:
+            if state_path.is_file():
+                corrupt_notice = corrupt_notice or f"run-scoped state corrupt at {state_path}"
+            continue
+        if entry_run_id == run_id or _state_matches_run_id(run_id, state):
+            add_candidate(state_path, state)
+
+    return candidates, corrupt_notice
+
+
+def _legacy_resolution_candidates(root: Path, run_id: str) -> list[tuple[dict[str, Any], Path, str]]:
+    from wave_state import (
+        _is_migration_breadcrumb,
+        _run_scoped_path_from_breadcrumb,
+        _scoped_path_from_breadcrumb,
+        enumerate_scoped_runs,
+        legacy_paths,
+        path_normalize_anchor,
+    )
+
+    anchor = path_normalize_anchor(root)
+    candidates: list[tuple[dict[str, Any], Path, str]] = []
+    seen_paths: set[str] = set()
+
+    def add_candidate(state_path: Path, state: dict[str, Any], slug: str) -> None:
+        rel = str(state_path.relative_to(anchor))
+        if rel in seen_paths:
+            return
+        seen_paths.add(rel)
+        candidates.append((_tag_state_source(state, "legacy"), state_path, slug))
 
     for run in enumerate_scoped_runs(root):
-        state_path = root / str(run["statePath"])
-        state = read_json(state_path) if state_path.is_file() else {}
-        if deliver_run_id_from_state(state) == run_id:
-            return state, state_path, str(run.get("slug") or "")
+        state_path = anchor / str(run["statePath"])
+        state = _read_state_file(state_path)
+        if state is None:
+            continue
+        if _state_matches_run_id(run_id, state):
+            add_candidate(state_path, state, str(run.get("slug") or ""))
+
     match = re.fullmatch(r"sw-deliver-(\d{3})-(.+)", run_id)
     if match:
         slug = match.group(2)
-        state_path = root / ".cursor" / f"sw-deliver-state.{slug}.json"
-        if state_path.is_file():
-            state = read_json(state_path)
-            if deliver_run_id_from_state(state) == run_id:
-                return state, state_path, slug
-    return None, None, None
+        state_path = anchor / ".cursor" / f"sw-deliver-state.{slug}.json"
+        state = _read_state_file(state_path)
+        if state and _state_matches_run_id(run_id, state):
+            add_candidate(state_path, state, slug)
+
+    legacy = legacy_paths(root)["state"]
+    breadcrumb_state = _read_state_file(legacy)
+    if breadcrumb_state and _is_migration_breadcrumb(breadcrumb_state):
+        adopted = _run_scoped_path_from_breadcrumb(root, breadcrumb_state)
+        if adopted and adopted.is_file():
+            state = _read_state_file(adopted)
+            if state and _state_matches_run_id(run_id, state):
+                add_candidate(adopted, state, _slug_from_state(state))
+        scoped = _scoped_path_from_breadcrumb(root, breadcrumb_state)
+        if scoped and scoped.is_file():
+            state = _read_state_file(scoped)
+            if state and _state_matches_run_id(run_id, state):
+                add_candidate(scoped, state, _slug_from_state(state))
+
+    return candidates
+
+
+def resolve_state_by_run_id(
+    root: Path,
+    run_id: str,
+) -> tuple[dict[str, Any] | None, Path | None, str | None, dict[str, Any]]:
+    """Resolve deliver state for closeout; run-scoped authority before legacy (PRD 325 R3)."""
+    from wave_state import path_normalize_anchor
+
+    anchor = path_normalize_anchor(root)
+    run_scoped, corrupt_notice = _run_scoped_resolution_candidates(root, run_id)
+    if len(run_scoped) > 1:
+        paths = [str(p.relative_to(anchor)) for _, p, _ in run_scoped]
+        return None, None, None, {
+            "error": "run-id-ambiguous",
+            "runId": run_id,
+            "statePaths": paths,
+            "stateSource": "run-scoped",
+        }
+    if len(run_scoped) == 1:
+        state, path, slug = run_scoped[0]
+        return _tag_state_source(state, "run-scoped"), path, slug, {}
+
+    if corrupt_notice:
+        print(
+            f"closeout: {corrupt_notice}; falling back to legacy state resolution",
+            file=sys.stderr,
+        )
+
+    legacy = _legacy_resolution_candidates(root, run_id)
+    if len(legacy) > 1:
+        paths = [str(p.relative_to(anchor)) for _, p, _ in legacy]
+        return None, None, None, {
+            "error": "run-id-ambiguous",
+            "runId": run_id,
+            "statePaths": paths,
+            "stateSource": "legacy",
+        }
+    if len(legacy) == 1:
+        state, path, slug = legacy[0]
+        return state, path, slug, {}
+
+    return None, None, None, {}
+
+
+def resolve_closeout_state(
+    root: Path,
+    *,
+    run_id: str | None = None,
+    task_list: str | None = None,
+    target: str | None = None,
+) -> tuple[dict[str, Any] | None, dict[str, Any]]:
+    """Resolve state for closeout entry points; prefers run-scoped when run_id is known."""
+    if run_id:
+        state, _path, _slug, meta = resolve_state_by_run_id(root, run_id)
+        return state, meta
+    state = load_deliver_state(root, target=target, task_list=task_list)
+    if state:
+        source = str(state.get("stateSource") or "legacy")
+        return _tag_state_source(state, source), {}
+    return None, {}
 
 
 def load_close_marker(root: Path, prd_unit_id: str) -> dict[str, Any] | None:
@@ -917,7 +1080,16 @@ def self_wake_poll_once(
     from wave_compound import target_merge_detected
 
     if state is None:
-        state, _state_path, _slug = resolve_state_by_run_id(root, run_id)
+        state, _state_path, _slug, resolution = resolve_state_by_run_id(root, run_id)
+        if resolution.get("error") == "run-id-ambiguous":
+            return {
+                "verdict": "fail",
+                "action": "self-wake-poll",
+                "error": "run-id-ambiguous",
+                "runId": run_id,
+                "statePaths": resolution.get("statePaths") or [],
+                "stateSource": resolution.get("stateSource"),
+            }
     if not state:
         return {"verdict": "fail", "action": "self-wake-poll", "error": "run-id-not-found", "runId": run_id}
     emit_self_wake_sentinel(run_id)
@@ -1024,7 +1196,18 @@ def main():
         pr = _parse_kv(rest, "--pr-number")
         if not pr:
             fail("--pr-number required")
-        state = load_deliver_state(root)
+        run_id = _parse_kv(rest, "--run-id")
+        state, resolution = resolve_closeout_state(root, run_id=run_id)
+        if resolution.get("error") == "run-id-ambiguous":
+            fail(
+                "ambiguous run-scoped state for run id",
+                exit_code=20,
+                error="run-id-ambiguous",
+                runId=run_id,
+                statePaths=resolution.get("statePaths") or [],
+            )
+        if not state:
+            state = load_deliver_state(root)
         payload = mapping_from_deliver_state(state, {"number": int(pr), "url": _parse_kv(rest, "--pr-url") or "", "head": _parse_kv(rest, "--head") or ""})
         if payload.get("verdict") == "fail":
             fail(str(payload.get("error")))
@@ -1046,7 +1229,18 @@ def main():
             fail("--prd-unit and --merge-sha required")
         pr_raw = _parse_kv(rest, "--pr-number")
         pr_number = int(pr_raw) if pr_raw else None
-        state = load_deliver_state(root)
+        run_id = _parse_kv(rest, "--run-id")
+        state, resolution = resolve_closeout_state(root, run_id=run_id)
+        if resolution.get("error") == "run-id-ambiguous":
+            fail(
+                "ambiguous run-scoped state for run id",
+                exit_code=20,
+                error="run-id-ambiguous",
+                runId=run_id,
+                statePaths=resolution.get("statePaths") or [],
+            )
+        if not state:
+            state = load_deliver_state(root)
         result = run_closeout(root, prd_unit_id=prd_unit, merge_sha=merge_sha, pr_number=pr_number, dry_run="--dry-run" in rest, state=state)
         emit(result, 0 if result.get("verdict") in ("ready", "dry-run") else 20)
     elif cmd in ("self-wake-poll", "self-wake"):

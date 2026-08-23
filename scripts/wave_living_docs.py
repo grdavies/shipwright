@@ -329,7 +329,9 @@ def append_completion_store_event(
 
 def read_completion_evidence(root: Path, prd_id: str) -> dict[str, object] | None:
     """PRD 061 R4/R5: read completion evidence from store cache under issue-store."""
-    if not living_doc_write_banned(root):
+    from sw_scripts_resolve import is_shipwright_self_repo
+
+    if not living_doc_write_banned(root) and is_shipwright_self_repo(root):
         return None
     cache = _completion_events_cache_path(root)
     if not cache.is_file():
@@ -348,8 +350,10 @@ def read_completion_evidence(root: Path, prd_id: str) -> dict[str, object] | Non
 
 
 def read_index_status_evidence(root: Path, prd_id: str, *, slug: str | None = None) -> dict[str, object] | None:
-    """PRD 061 R4: read index status from store projection cache under issue-store."""
-    if not living_doc_write_banned(root):
+    """PRD 061 R4 / PRD 325 R12: read index status from store projection cache."""
+    from sw_scripts_resolve import is_shipwright_self_repo
+
+    if not living_doc_write_banned(root) and is_shipwright_self_repo(root):
         return None
     return pii.read_projected_index_status(root, prd_id, slug=slug)
 
