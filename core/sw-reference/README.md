@@ -19,6 +19,38 @@ runtime gates. Do not duplicate semantics in command prose; link here instead.
 `architecture.assessment.mode` is `advisory` or `blocking` (default `off`). Config-resolvable class
 promotion cannot demote the kernel floor (verification-gate, check-gate, gap-check, secret-scan).
 
+## PRD 326 delivery order (R20)
+
+Durable delivery-order note for `326-prd-workflow-quality-platform` (issue-store unit). Mirrors the
+frozen task list `## Phase Dependencies` table in `tasks-326-workflow-quality-platform`.
+
+**Ordering constraints:**
+
+- **Phase 1** (PRD 323 surface verification on `main`, read-only) precedes all residual hardening
+  (Phases 2–4).
+- **ResearchEvidence chain** — Phases 5 → 6 → 7 → 8 are strictly serial.
+- **Compiler chain** — Phases 9 → 10 are strictly serial.
+- **Absorb closeout (Phase 13) is terminal** — must not run before Phases 2, 3, 4, 8, 10, 11, and 12
+  are complete.
+
+## Phase Dependencies
+
+| Phase | Depends on |
+|-------|------------|
+| 1 | none |
+| 2 | 1 |
+| 3 | 1 |
+| 4 | 1 |
+| 5 | 1 |
+| 6 | 5 |
+| 7 | 6 |
+| 8 | 7 |
+| 9 | 1 |
+| 10 | 9 |
+| 11 | 1 |
+| 12 | 1 |
+| 13 | 2, 3, 4, 8, 10, 11, 12 |
+
 ## Agent-gate attestation boundary (R32)
 
 Some gates are **agent-classified** (execute, review, simplify, stabilize): the ship-loop driver emits
