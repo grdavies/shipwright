@@ -12,14 +12,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from agent_instruction_compiler import COMPILED_ARTIFACT_REL, load_compiled_artifacts
+from agent_instruction_compiler import (
+    COMPILED_ARTIFACT_REL,
+    CompilerFinding,
+    check_compiled_artifact,
+    load_compiled_artifacts,
+    lint_skill_file,
+)
 from capability_manifest_validate import validate_capability_block
 from graph.ir import WorkflowGraphValidationError, validate_workflow_graph
 from graph.kernel_compiler import KERNEL_VERSION
 from graph.node_kinds import CLOSED_NODE_KINDS, NODE_KIND_REGISTRY, lookup_node_kind
 from graph.packages.trust import package_content_digest
 from kernel_classification import load_classification, normalize_step
-from skills_spec_guard import Finding, _scan_skill_md, partition_findings
 from workflow_extensions import require_extension
 
 PACKAGE_KIND = "WorkflowPackage"
@@ -373,25 +378,19 @@ def lint_instruction_artifacts(
                 ConformanceFinding(phase, "instruction-missing", f"instruction artifact missing: {rel}")
             )
             continue
-        tree_prefix = "."
-        skill_findings: list[Finding] = _scan_skill_md(repo_root, skill_path, tree_prefix)
-        hard, soft = partition_findings(skill_findings)
-        for finding in hard:
-            critical.append(
+        compiler_findings: list[CompilerFinding] = lint_skill_file(
+            skill_path,
+            source_path=rel,
+        )
+        for finding in compiler_findings:
+            severity = "advisory" if finding.severity == "advisory" else "critical"
+            target = advisory if severity == "advisory" else critical
+            target.append(
                 ConformanceFinding(
                     phase,
                     finding.code,
                     f"{rel}: {finding.message}",
-                    severity="critical",
-                )
-            )
-        for finding in soft:
-            advisory.append(
-                ConformanceFinding(
-                    phase,
-                    finding.code,
-                    f"{rel}: {finding.message}",
-                    severity="advisory",
+                    severity=severity,
                 )
             )
     return critical, advisory
@@ -512,15 +511,24 @@ def confirm_adoption(pack_path: Path, *, expected_digest: str, repo_root: Path |
             "actualDigest": digest,
         }
         return 1, payload
+    drift_code, drift_payload = check_compiled_artifact(repo)
+    if drift_code != 0:
+        if drift_payload.get("reason") == "instruction-artifact-drift":
+            return 20, {"verdict": "fail", "reason": "instruction-drift"}
+        return drift_code, drift_payload
     exit_code, report = validate_pack(path, repo_root=repo)
     if exit_code != 0:
         return exit_code, report
+    instruction_digest = compiled_instruction_digest(repo)
     payload = {
         "verdict": "pass",
         "contentDigest": digest,
         "confirmation": "digest-bound adoption confirmed",
         "packPin": f"{pack.get('name')}@{pack.get('version')}",
     }
+    if instruction_digest is not None:
+        payload["instructionArtifactDigest"] = instruction_digest
+        payload["instructionArtifactPath"] = COMPILED_ARTIFACT_REL
     return 0, payload
 
 

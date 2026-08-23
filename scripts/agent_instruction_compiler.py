@@ -8,13 +8,16 @@ import hashlib
 import json
 import re
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Mapping
 
-from host_lib import load_workflow_config
-from model_policy_lib import ModelPolicy
-from skills_spec_guard import FRONTMATTER_RE
 from yaml_structured import safe_load
+
+FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
+SKILL_NAME_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
+MAX_SKILL_NAME_LEN = 64
+MAX_SKILL_DESCRIPTION_LEN = 1024
 
 COMPILED_ARTIFACT_REL = "core/sw-reference/instruction-artifacts.json"
 INHERIT_MODEL = "inherit"
@@ -28,6 +31,13 @@ class InstructionCompileError(Exception):
         super().__init__(message)
         self.source_path = source_path
         self.message = message
+
+
+@dataclass(frozen=True)
+class CompilerFinding:
+    code: str
+    message: str
+    severity: str = "fail"
 
 
 def repo_root_from_script() -> Path:
@@ -59,7 +69,10 @@ def parse_frontmatter(text: str, *, source_path: str) -> tuple[dict[str, Any], s
     return parsed, body
 
 
-def load_model_policy(repo_root: Path) -> ModelPolicy:
+def load_model_policy(repo_root: Path):
+    from host_lib import load_workflow_config
+    from model_policy_lib import ModelPolicy
+
     config = load_workflow_config(repo_root)
     models = config.get("models") if isinstance(config, dict) else {}
     tiers = models.get("tiers") if isinstance(models, dict) and isinstance(models.get("tiers"), dict) else {}
@@ -70,7 +83,7 @@ def validate_agent_model(
     model: str,
     *,
     source_path: str,
-    policy: ModelPolicy,
+    policy,
 ) -> None:
     if model == INHERIT_MODEL:
         return
@@ -100,7 +113,8 @@ def compile_source(
     *,
     kind: str,
     repo_root: Path,
-    policy: ModelPolicy,
+    policy=None,
+    skip_model_policy: bool = False,
 ) -> dict[str, Any]:
     rel = path.relative_to(repo_root).as_posix()
     text = path.read_text(encoding="utf-8")
@@ -117,7 +131,10 @@ def compile_source(
         model_value = frontmatter.get("model")
         if not isinstance(model_value, str) or not model_value.strip():
             raise InstructionCompileError(rel, "missing model frontmatter")
-        validate_agent_model(model_value.strip(), source_path=rel, policy=policy)
+        if not skip_model_policy:
+            if policy is None:
+                policy = load_model_policy(repo_root)
+            validate_agent_model(model_value.strip(), source_path=rel, policy=policy)
         model: str | None = model_value.strip()
     elif kind == "skill":
         record_id = frontmatter.get("name")
@@ -160,6 +177,21 @@ def compile_repository(repo_root: Path) -> dict[str, Any]:
     return {"version": 1, "artifacts": artifacts}
 
 
+def compile_repository_for_drift(repo_root: Path) -> dict[str, Any]:
+    artifacts: list[dict[str, Any]] = []
+    for kind, path in discover_sources(repo_root):
+        artifacts.append(
+            compile_source(
+                path,
+                kind=kind,
+                repo_root=repo_root,
+                skip_model_policy=True,
+            )
+        )
+    artifacts.sort(key=lambda item: (item["kind"], item["id"]))
+    return {"version": 1, "artifacts": artifacts}
+
+
 def serialize_document(document: Mapping[str, Any]) -> str:
     return json.dumps(document, indent=2, sort_keys=True) + "\n"
 
@@ -182,6 +214,114 @@ def load_compiled_artifacts(repo_root: Path) -> dict[str, Any]:
     return document
 
 
+def _description_shape_ok(description: str) -> bool:
+    if not description or not description.strip():
+        return False
+    if len(description) > MAX_SKILL_DESCRIPTION_LEN:
+        return False
+    return "use when" in description.lower()
+
+
+def artifact_index(document: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    indexed: dict[str, dict[str, Any]] = {}
+    for item in document.get("artifacts") or []:
+        if isinstance(item, dict) and item.get("sourcePath"):
+            indexed[str(item["sourcePath"])] = item
+    return indexed
+
+
+def instruction_drift_check(repo_root: Path) -> tuple[int, dict[str, Any] | None]:
+    artifact_path = repo_root / COMPILED_ARTIFACT_REL
+    if not artifact_path.is_file():
+        return 0, None
+    exit_code, payload = check_compiled_artifact(repo_root)
+    if exit_code == 0:
+        return 0, None
+    if payload.get("reason") == "instruction-artifact-drift":
+        return 20, {"verdict": "fail", "reason": "instruction-drift"}
+    return exit_code, payload
+
+
+def lint_skill_spec(
+    *,
+    source_path: str,
+    record_id: str,
+    description: str,
+    skill_dir: str,
+) -> list[CompilerFinding]:
+    findings: list[CompilerFinding] = []
+    if not record_id:
+        findings.append(CompilerFinding("name-missing", "missing or empty name"))
+    else:
+        if len(record_id) > MAX_SKILL_NAME_LEN:
+            findings.append(
+                CompilerFinding("name-length", f"name exceeds {MAX_SKILL_NAME_LEN} characters")
+            )
+        if not SKILL_NAME_RE.fullmatch(record_id) or "--" in record_id:
+            findings.append(
+                CompilerFinding("name-regex", f"name {record_id!r} fails Agent Skills name regex")
+            )
+        if record_id != skill_dir:
+            findings.append(
+                CompilerFinding(
+                    "name-dir-mismatch",
+                    f"name {record_id!r} does not match directory {skill_dir!r}",
+                )
+            )
+    if not description:
+        findings.append(CompilerFinding("description-missing", "missing description"))
+    else:
+        if len(description) > MAX_SKILL_DESCRIPTION_LEN:
+            findings.append(
+                CompilerFinding(
+                    "description-length",
+                    f"description length {len(description)} exceeds {MAX_SKILL_DESCRIPTION_LEN}",
+                )
+            )
+        if not _description_shape_ok(description):
+            findings.append(
+                CompilerFinding(
+                    "description-shape",
+                    'description must include what+when shape with explicit "Use when" trigger',
+                )
+            )
+    return findings
+
+
+def lint_skill_file(
+    path: Path,
+    *,
+    repo_root: Path | None = None,
+    source_path: str | None = None,
+) -> list[CompilerFinding]:
+    resolved = path.resolve()
+    skill_dir = resolved.parent.name
+    rel = source_path
+    if rel is None and repo_root is not None:
+        try:
+            rel = resolved.relative_to(repo_root.resolve()).as_posix()
+        except ValueError:
+            rel = resolved.as_posix()
+    if rel is None:
+        rel = resolved.as_posix()
+    try:
+        text = resolved.read_text(encoding="utf-8")
+    except OSError as exc:
+        return [CompilerFinding("read-error", str(exc))]
+    try:
+        frontmatter, _body = parse_frontmatter(text, source_path=rel)
+    except InstructionCompileError as exc:
+        return [CompilerFinding("malformed-frontmatter", exc.message)]
+    record_id = frontmatter.get("name")
+    description = frontmatter.get("description")
+    return lint_skill_spec(
+        source_path=rel,
+        record_id=str(record_id).strip() if isinstance(record_id, str) else "",
+        description=description.strip() if isinstance(description, str) else "",
+        skill_dir=skill_dir,
+    )
+
+
 def check_compiled_artifact(repo_root: Path) -> tuple[int, dict[str, Any]]:
     expected_path = repo_root / COMPILED_ARTIFACT_REL
     if not expected_path.is_file():
@@ -191,7 +331,7 @@ def check_compiled_artifact(repo_root: Path) -> tuple[int, dict[str, Any]]:
             "path": COMPILED_ARTIFACT_REL,
         }
     expected = json.loads(expected_path.read_text(encoding="utf-8"))
-    actual = compile_repository(repo_root)
+    actual = compile_repository_for_drift(repo_root)
     if serialize_document(expected) == serialize_document(actual):
         return 0, {"verdict": "pass", "artifact": COMPILED_ARTIFACT_REL}
 
