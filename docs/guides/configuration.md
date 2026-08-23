@@ -1827,8 +1827,8 @@ Operator CLI: `python3 scripts/reviewer-metrics.py`. Storage authority: `.cursor
 
 ### Bounded selection (`review.selection`)
 
-Harvest-ranked truncation for doc-review personas and code-review specialists (PRD 326 R17–R18). When no
-harvest record exists, selector output is byte-identical to the capability selector fallback.
+Harvest-ranked truncation for doc-review personas and code-review specialists. When no harvest record
+exists, selector output is byte-identical to the capability selector fallback.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
