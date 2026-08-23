@@ -1031,6 +1031,7 @@
 * merge phase residual-hardening-deliver-resilience-property-suite-gap-319-m into feat/workflow-quality-platform (42c1a7e) <!-- sw-deliver:residual-hardening-deliver-resilience-property-suite-gap-319-m -->
 * merge phase agent-instruction-compiler-m into feat/workflow-quality-platform (64d4d85) <!-- sw-deliver:agent-instruction-compiler-m -->
 * merge phase researchevidence-schema-canonical-serialization-s into feat/workflow-quality-platform (269fe81) <!-- sw-deliver:researchevidence-schema-canonical-serialization-s -->
+* merge phase pack-sdk-wire-skills-spec-guard-conformance-m into feat/workflow-quality-platform (a16829a) <!-- sw-deliver:pack-sdk-wire-skills-spec-guard-conformance-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
