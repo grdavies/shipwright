@@ -2108,6 +2108,17 @@
         "scripts/planning/backends/issues.py",
         "scripts/unit_tests/planning/test_record_absorb_linkage_edges.py"
       ]
+    },
+    {
+      "id": "resilience-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 6,
+      "pytestPath": "scripts/unit_tests/resilience",
+      "classification": "required",
+      "description": "PRD 323 resilience property suite (R22 verify scope)"
     }
   ],
   "plans": {
@@ -2228,7 +2239,8 @@
         "core/commands/sw-deliver.md",
         "core/commands/sw-ship.md",
         "core/skills/deliver/**",
-        "core/skills/conductor/**"
+        "core/skills/conductor/**",
+        "scripts/unit_tests/resilience/**"
       ],
       "coreSuiteIds": [],
       "suiteIds": [
@@ -2243,7 +2255,8 @@
         "prd-325-publish-surface-profiles-fixtures",
         "prd-325-scripts-hash-binding-fixtures",
         "prd-325-docs-currency-consumer-fixtures",
-        "prd-325-docs-worktree-base-ref-fixtures"
+        "prd-325-docs-worktree-base-ref-fixtures",
+        "resilience-fixtures"
       ]
     },
     "docs": {
