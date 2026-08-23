@@ -66,6 +66,38 @@ def test_deliver_change_selects_deliver_domain_suites(registry: dict) -> None:
     assert "deliver-concurrency-fixtures" in plan["suites"]
 
 
+def test_prd325_deliver_regression_suites_registered(registry: dict) -> None:
+    suite_ids = {row["id"] for row in registry.get("suites", []) if isinstance(row, dict) and row.get("id")}
+    for suite_id in (
+        "prd-325-finalize-recovery-fixtures",
+        "prd-325-closeout-run-scoped-fixtures",
+        "prd-325-blast-radius-clear-fixtures",
+        "prd-325-ship-loop-resolve-fixtures",
+        "prd-325-publish-surface-profiles-fixtures",
+        "prd-325-scripts-hash-binding-fixtures",
+        "prd-325-docs-currency-consumer-fixtures",
+        "prd-325-docs-worktree-base-ref-fixtures",
+        "prd-325-absorb-closeout-fixtures",
+    ):
+        assert suite_id in suite_ids, f"missing suite {suite_id}"
+
+
+def test_prd325_wave_compound_change_selects_finalize_recovery(registry: dict) -> None:
+    plan = ts.compute_changed_domain_plan(
+        ["scripts/wave_compound.py"],
+        registry=registry,
+    )
+    assert "prd-325-finalize-recovery-fixtures" in plan["suites"]
+
+
+def test_prd325_absorb_change_selects_closeout_suite(registry: dict) -> None:
+    plan = ts.compute_changed_domain_plan(
+        ["scripts/planning_gap_capture.py"],
+        registry=registry,
+    )
+    assert "prd-325-absorb-closeout-fixtures" in plan["suites"]
+
+
 def test_redaction_path_includes_eval_suite(registry: dict) -> None:
     plan = ts.compute_changed_domain_plan(
         ["scripts/memory_redact.py"],
