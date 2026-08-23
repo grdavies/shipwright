@@ -1038,6 +1038,7 @@
 * merge phase reviewer-harvest-bounded-selection-l into feat/workflow-quality-platform (a57d63d) <!-- sw-deliver:reviewer-harvest-bounded-selection-l -->
 * merge phase prototype-evidence-contract-closure-m into feat/workflow-quality-platform (a6c7905) <!-- sw-deliver:prototype-evidence-contract-closure-m -->
 * merge phase absorb-closeout-delivery-order-note-s into feat/workflow-quality-platform (a45785b) <!-- sw-deliver:absorb-closeout-delivery-order-note-s -->
+* merge phase notion-client-canonicalization-probe-fixtures-l into feat/notion-planning-store-provider (4dc537e) <!-- sw-deliver:notion-client-canonicalization-probe-fixtures-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
