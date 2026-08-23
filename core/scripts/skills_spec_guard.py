@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import subprocess
@@ -9,6 +10,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from agent_instruction_compiler import (
+    FRONTMATTER_RE,
+    artifact_index,
+    instruction_drift_check,
+    lint_skill_spec,
+    load_compiled_artifacts,
+    parse_frontmatter,
+)
 from yaml_structured import safe_load
 
 SKILL_TREE_PREFIXES = (
@@ -35,7 +44,6 @@ ADVISORY_SKILL_LINES = 450
 MAX_SKILL_LINES = 500
 MAX_COMPATIBILITY_LEN = 500
 
-FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
 MARKDOWN_LINK_RE = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 BACKTICK_PATH_RE = re.compile(
     r"`((?:\./)?(?:references|scripts|assets|skills|core|docs|providers|commands|rules|agents|\.cursor|\.sw)[^`\s]+\.[a-zA-Z0-9]+)`"
@@ -150,7 +158,26 @@ def _collect_path_refs(text: str) -> list[str]:
     return refs
 
 
-def _scan_skill_md(repo_root: Path, skill_md: Path, tree_prefix: str) -> list[Finding]:
+def _artifact_for_path(
+    rel: str,
+    tree_prefix: str,
+    artifacts_by_source: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    if tree_prefix == "core/skills":
+        return artifacts_by_source.get(rel)
+    if tree_prefix in ("dist/cursor/skills", "dist/claude-code/skills"):
+        suffix = rel.removeprefix(f"{tree_prefix}/")
+        return artifacts_by_source.get(f"core/skills/{suffix}")
+    return None
+
+
+def _scan_skill_md(
+    repo_root: Path,
+    skill_md: Path,
+    tree_prefix: str,
+    *,
+    artifacts_by_source: dict[str, dict[str, Any]] | None = None,
+) -> list[Finding]:
     findings: list[Finding] = []
     rel = skill_md.relative_to(repo_root).as_posix()
     is_skill_entry = skill_md.name == "SKILL.md"
@@ -202,7 +229,6 @@ def _scan_skill_md(repo_root: Path, skill_md: Path, tree_prefix: str) -> list[Fi
 
     if not is_skill_entry:
         body = FRONTMATTER_RE.sub("", text, count=1)
-        is_reference_file = True
         for ref in _collect_path_refs(body):
             depth_issue = _reference_depth_violation(ref)
             if depth_issue:
@@ -217,43 +243,60 @@ def _scan_skill_md(repo_root: Path, skill_md: Path, tree_prefix: str) -> list[Fi
                 )
         return findings
 
-    name = frontmatter.get("name")
-    if not isinstance(name, str) or not name:
-        findings.append(Finding("name-missing", rel, "missing or empty name"))
+    artifact = None
+    if artifacts_by_source is not None:
+        artifact = _artifact_for_path(rel, tree_prefix, artifacts_by_source)
+    if artifact is not None:
+        compiler_findings = lint_skill_spec(
+            source_path=rel,
+            record_id=str(artifact.get("id") or ""),
+            description=str(artifact.get("description") or ""),
+            skill_dir=skill_dir,
+        )
+        for item in compiler_findings:
+            findings.append(Finding(item.code, rel, item.message, severity=item.severity))
     else:
-        if len(name) > MAX_NAME_LEN:
-            findings.append(Finding("name-length", rel, f"name exceeds {MAX_NAME_LEN} characters"))
-        if not NAME_RE.fullmatch(name) or "--" in name:
-            findings.append(Finding("name-regex", rel, f"name {name!r} fails Agent Skills name regex"))
-        if name != skill_dir:
-            findings.append(
-                Finding(
-                    "name-dir-mismatch",
-                    rel,
-                    f"name {name!r} does not match directory {skill_dir!r}",
+        try:
+            parsed_frontmatter, _body = parse_frontmatter(text, source_path=rel)
+        except Exception:
+            parsed_frontmatter = frontmatter
+        name = parsed_frontmatter.get("name")
+        if not isinstance(name, str) or not name:
+            findings.append(Finding("name-missing", rel, "missing or empty name"))
+        else:
+            if len(name) > MAX_NAME_LEN:
+                findings.append(Finding("name-length", rel, f"name exceeds {MAX_NAME_LEN} characters"))
+            if not NAME_RE.fullmatch(name) or "--" in name:
+                findings.append(Finding("name-regex", rel, f"name {name!r} fails Agent Skills name regex"))
+            if name != skill_dir:
+                findings.append(
+                    Finding(
+                        "name-dir-mismatch",
+                        rel,
+                        f"name {name!r} does not match directory {skill_dir!r}",
+                    )
                 )
-            )
 
-    description = frontmatter.get("description")
-    if not isinstance(description, str):
-        findings.append(Finding("description-missing", rel, "missing description"))
-    else:
-        if len(description) > MAX_DESCRIPTION_LEN:
-            findings.append(
-                Finding(
-                    "description-length",
-                    rel,
-                    f"description length {len(description)} exceeds {MAX_DESCRIPTION_LEN}",
+        description = parsed_frontmatter.get("description")
+        if not isinstance(description, str):
+            findings.append(Finding("description-missing", rel, "missing description"))
+        else:
+            if len(description) > MAX_DESCRIPTION_LEN:
+                findings.append(
+                    Finding(
+                        "description-length",
+                        rel,
+                        f"description length {len(description)} exceeds {MAX_DESCRIPTION_LEN}",
+                    )
                 )
-            )
-        if not _description_shape_ok(description):
-            findings.append(
-                Finding(
-                    "description-shape",
-                    rel,
-                    'description must include what+when shape with explicit "Use when" trigger',
+            if not _description_shape_ok(description):
+                findings.append(
+                    Finding(
+                        "description-shape",
+                        rel,
+                        'description must include what+when shape with explicit "Use when" trigger',
+                    )
                 )
-            )
 
     compatibility = frontmatter.get("compatibility")
     if compatibility is not None:
@@ -313,20 +356,46 @@ def iter_reference_files(repo_root: Path, tree_prefix: str) -> list[Path]:
     return sorted(base.glob("*/references/*.md"))
 
 
-def scan_tree(repo_root: Path, tree_prefix: str) -> list[Finding]:
+def scan_tree(
+    repo_root: Path,
+    tree_prefix: str,
+    *,
+    artifacts_by_source: dict[str, dict[str, Any]] | None = None,
+) -> list[Finding]:
     findings: list[Finding] = []
     for skill_md in iter_skill_files(repo_root, tree_prefix):
-        findings.extend(_scan_skill_md(repo_root, skill_md, tree_prefix))
+        findings.extend(
+            _scan_skill_md(
+                repo_root,
+                skill_md,
+                tree_prefix,
+                artifacts_by_source=artifacts_by_source,
+            )
+        )
     for ref_md in iter_reference_files(repo_root, tree_prefix):
-        findings.extend(_scan_skill_md(repo_root, ref_md, tree_prefix))
+        findings.extend(
+            _scan_skill_md(
+                repo_root,
+                ref_md,
+                tree_prefix,
+                artifacts_by_source=artifacts_by_source,
+            )
+        )
     return findings
 
 
-def scan_repo(repo_root: Path, tree_prefixes: tuple[str, ...] | None = None) -> list[Finding]:
+def scan_repo(
+    repo_root: Path,
+    tree_prefixes: tuple[str, ...] | None = None,
+    *,
+    artifacts_by_source: dict[str, dict[str, Any]] | None = None,
+) -> list[Finding]:
     prefixes = tree_prefixes or SKILL_TREE_PREFIXES
     findings: list[Finding] = []
     for prefix in prefixes:
-        findings.extend(scan_tree(repo_root, prefix))
+        findings.extend(
+            scan_tree(repo_root, prefix, artifacts_by_source=artifacts_by_source)
+        )
     return findings
 
 
@@ -361,7 +430,15 @@ def check_repo(
     include_skills_ref: bool = False,
 ) -> dict[str, Any]:
     repo_root = repo_root.resolve()
-    findings = scan_repo(repo_root, tree_prefixes)
+    drift_code, drift_payload = instruction_drift_check(repo_root)
+    if drift_code != 0 and drift_payload is not None:
+        return drift_payload
+    artifacts_by_source: dict[str, dict[str, Any]] = {}
+    try:
+        artifacts_by_source = artifact_index(load_compiled_artifacts(repo_root))
+    except (OSError, ValueError, json.JSONDecodeError):
+        artifacts_by_source = {}
+    findings = scan_repo(repo_root, tree_prefixes, artifacts_by_source=artifacts_by_source)
     if include_skills_ref:
         for prefix in tree_prefixes or SKILL_TREE_PREFIXES:
             findings.extend(advisory_skills_ref(repo_root, prefix))
