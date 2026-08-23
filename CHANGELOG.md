@@ -1033,6 +1033,7 @@
 * merge phase researchevidence-schema-canonical-serialization-s into feat/workflow-quality-platform (269fe81) <!-- sw-deliver:researchevidence-schema-canonical-serialization-s -->
 * merge phase pack-sdk-wire-skills-spec-guard-conformance-m into feat/workflow-quality-platform (a16829a) <!-- sw-deliver:pack-sdk-wire-skills-spec-guard-conformance-m -->
 * merge phase researchevidence-record-lifecycle-m into feat/workflow-quality-platform (0b0e001) <!-- sw-deliver:researchevidence-record-lifecycle-m -->
+* merge phase architecture-doctrine-artifact-assessment-yaml-opt-in-l into feat/workflow-quality-platform (364a07e) <!-- sw-deliver:architecture-doctrine-artifact-assessment-yaml-opt-in-l -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
