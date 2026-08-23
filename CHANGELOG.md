@@ -1026,6 +1026,7 @@
 * merge phase orchestrator-primary-scripts-hash-divergence-halt-and-rebind-s into feat/deliver-finalize-consumer-resilience (50e9d2a) <!-- sw-deliver:orchestrator-primary-scripts-hash-divergence-halt-and-rebind-s -->
 * merge phase regression-suite-absorb-closeout-for-331-338-l into feat/deliver-finalize-consumer-resilience (bd21e8c) <!-- sw-deliver:regression-suite-absorb-closeout-for-331-338-l -->
 * merge phase prd-323-surface-verification-on-main-read-only-s into feat/workflow-quality-platform (e8fe227) <!-- sw-deliver:prd-323-surface-verification-on-main-read-only-s -->
+* merge phase residual-hardening-repro-first-debug-gate-gap-322-m into feat/workflow-quality-platform (de7ba4c) <!-- sw-deliver:residual-hardening-repro-first-debug-gate-gap-322-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
