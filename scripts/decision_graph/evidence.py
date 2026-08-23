@@ -20,6 +20,7 @@ from gate_evidence import digest_bytes, digest_text, utc_now
 API_VERSION = "decision-evidence/v1"
 KIND_PROTOTYPE = "PrototypeEvidence"
 KIND_RESEARCH = "ResearchEvidence"
+REASON_EVIDENCE_REQUIRED = "evidence-required"
 NODE_ID_PATTERN = re.compile(r"^[a-z][a-z0-9-]{0,62}$")
 HASH_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 RESEARCH_SCHEMA_PATH = ROOT / "core" / "sw-reference" / "research-evidence.schema.json"
@@ -276,6 +277,55 @@ def _redact_record_for_write(record: dict[str, Any]) -> dict[str, Any]:
         spec["contentHash"] = compute_spec_content_hash(spec)
         validate_research_evidence_record(redacted)
     return redacted
+
+
+def node_requires_evidence(node: dict[str, Any]) -> bool:
+    from decision_graph.schema import NodeKind
+
+    if str(node.get("kind") or "") != NodeKind.DECISION.value:
+        return False
+    return node.get("requiresEvidence") is True
+
+
+def list_linked_evidence_paths(root: Path, parent_decision_id: str) -> list[Path]:
+    paths: list[Path] = []
+    legacy = root / ".cursor" / "sw-decision-evidence" / f"{parent_decision_id}.json"
+    if legacy.is_file():
+        paths.append(legacy)
+    base = root / ".cursor" / "sw-decision-evidence" / parent_decision_id
+    if base.is_dir():
+        for kind in (KIND_PROTOTYPE, KIND_RESEARCH):
+            collection = base / kind
+            if collection.is_dir():
+                paths.extend(sorted(collection.glob("*.json")))
+    return paths
+
+
+def has_linked_evidence(root: Path, parent_decision_id: str) -> bool:
+    return bool(list_linked_evidence_paths(root, parent_decision_id))
+
+
+def check_evidence_required(document: dict[str, Any], root: Path) -> dict[str, Any]:
+    """Fail closed when resolved decision nodes require evidence but have none linked."""
+    spec = document.get("spec") if isinstance(document.get("spec"), dict) else {}
+    nodes = spec.get("nodes") if isinstance(spec.get("nodes"), list) else []
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        if not node_requires_evidence(node):
+            continue
+        if str(node.get("status") or "") != "resolved":
+            continue
+        node_id = str(node.get("id") or "")
+        if not node_id:
+            continue
+        if not has_linked_evidence(root, node_id):
+            return {
+                "verdict": "fail",
+                "reason": REASON_EVIDENCE_REQUIRED,
+                "nodeId": node_id,
+            }
+    return {"verdict": "pass"}
 
 
 def evidence_store_path(

@@ -12,6 +12,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from decision_graph.evidence import check_evidence_required
 from decision_graph.schema import NodeKind, load_graph
 
 BLOCKING_KINDS: frozenset[str] = frozenset(
@@ -93,6 +94,15 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Treat dispatch as read-only (no production write refusal)",
     )
+    parser.add_argument(
+        "--require-evidence",
+        action="store_true",
+        help="Fail closed when resolved decision nodes with requiresEvidence lack linked records",
+    )
+    parser.add_argument(
+        "--root",
+        help="Repository root for evidence store discovery (defaults to plugin root)",
+    )
     args = parser.parse_args(argv)
 
     graph_path = Path(args.graph)
@@ -100,6 +110,12 @@ def main(argv: list[str] | None = None) -> None:
         document = load_graph(graph_path)
     except ValueError as exc:
         emit({"verdict": "fail", "cause": "graph:invalid-json", "message": str(exc)}, 20)
+
+    if args.require_evidence:
+        repo_root = Path(args.root) if args.root else SCRIPT_DIR.parent
+        evidence_result = check_evidence_required(document, repo_root)
+        if evidence_result.get("verdict") != "pass":
+            emit(evidence_result, 20)
 
     result = check_mutating_dispatch(
         document,

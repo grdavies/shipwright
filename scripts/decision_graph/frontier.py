@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from decision_graph.evidence import REASON_EVIDENCE_REQUIRED, has_linked_evidence, node_requires_evidence
 from decision_graph.schema import ValidationErrorCode, load_graph, validate_graph
 
 
@@ -82,7 +83,7 @@ def _cancelled_blocks(predecessor_id: str, by_id: dict[str, dict[str, Any]]) -> 
     return False
 
 
-def compute_frontier(document: dict[str, Any]) -> dict[str, Any]:
+def compute_frontier(document: dict[str, Any], *, root: Path | None = None) -> dict[str, Any]:
     """Return ready open nodes whose dependencies are satisfied; fail closed on cycles."""
     if detect_cycle(document):
         return {
@@ -127,6 +128,19 @@ def compute_frontier(document: dict[str, Any]) -> dict[str, Any]:
         if block_reason:
             blocked.append({"id": node_id, "reason": block_reason})
             continue
+
+        if node_requires_evidence(node):
+            evidence_root = root if root is not None else Path.cwd()
+            if not has_linked_evidence(evidence_root, node_id):
+                blocked.append(
+                    {
+                        "id": node_id,
+                        "reason": REASON_EVIDENCE_REQUIRED,
+                        "blockedBy": REASON_EVIDENCE_REQUIRED,
+                    }
+                )
+                continue
+
         ready.append(node_id)
 
     ready.sort()
@@ -174,7 +188,7 @@ def frontier_for_unit(root: Path, unit_id: str, *, graph_path: Path | None = Non
             "validation": validation,
         }
 
-    frontier = compute_frontier(document)
+    frontier = compute_frontier(document, root=root)
     frontier["unitId"] = unit_id
     frontier["graphPath"] = str(path)
     if document.get("metadata", {}).get("name"):
