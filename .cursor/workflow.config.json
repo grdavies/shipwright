@@ -202,7 +202,8 @@
       "mutationBudget": 10,
       "undoWindowSeconds": 3600
     },
-    "visibilityTier": "all-private"
+    "visibilityTier": "all-private",
+    "visibilityProfile": "all-private"
   },
   "orchestration": {
     "planPolicy": "proposed"
@@ -236,8 +237,14 @@
     }
   },
   "configuredWith": {
-    "shipwrightVersion": "1.11.0",
-    "schemaVersion": "c1a480645ed1"
+    "shipwrightVersion": "2.3.0",
+    "schemaVersion": "0d81d6d75e6b"
+  },
+  "retrospective": {
+    "gapCapture": {
+      "enabled": true,
+      "maxCapturesPerRun": 10
+    }
   },
   "compound": {
     "autonomy": "auto"
