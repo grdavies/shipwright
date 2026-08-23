@@ -1,0 +1,79 @@
+{
+  "id": "nested-lists",
+  "provider": "notion",
+  "contract": "block-children",
+  "title": "[acme] prd:327-nested-lists",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "markdown": "- parent\n  - child one\n  - child two\n- sibling\n",
+  "blocks": [
+    {
+      "object": "block",
+      "type": "bulleted_list_item",
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "parent",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ]
+      }
+    },
+    {
+      "object": "block",
+      "type": "bulleted_list_item",
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "child one",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ]
+      }
+    },
+    {
+      "object": "block",
+      "type": "bulleted_list_item",
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "child two",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ]
+      }
+    },
+    {
+      "object": "block",
+      "type": "bulleted_list_item",
+      "bulleted_list_item": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "sibling",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ]
+      }
+    }
+  ],
+  "canonical": "{\"body\":\"- parent\\n- child one\\n- child two\\n- sibling\",\"comments\":[],\"labels\":[\"sw:prd\"],\"state\":\"open\",\"sw-canonical-version\":\"1\",\"title\":\"[acme] prd:327-nested-lists\"}",
+  "hash": "57d1f7c86159a08f342754a35144b85b45e5dfeeaba83d7f5e241ff6732a8e17"
+}

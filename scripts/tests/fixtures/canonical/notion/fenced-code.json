@@ -1,0 +1,32 @@
+{
+  "id": "fenced-code",
+  "provider": "notion",
+  "contract": "block-children",
+  "title": "[acme] prd:327-fenced-code",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "markdown": "```python\nprint('hi')\n```\n",
+  "blocks": [
+    {
+      "object": "block",
+      "type": "code",
+      "code": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "print('hi')",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ],
+        "language": "python"
+      }
+    }
+  ],
+  "canonical": "{\"body\":\"```python\\nprint('hi')\\n```\",\"comments\":[],\"labels\":[\"sw:prd\"],\"state\":\"open\",\"sw-canonical-version\":\"1\",\"title\":\"[acme] prd:327-fenced-code\"}",
+  "hash": "66f38b1f8d78cbd3ef66db6f7d67875d7940d5dbc16fe18f6db143a8a8e0735f"
+}

@@ -1,0 +1,21 @@
+{
+  "id": "unsupported-block",
+  "provider": "notion",
+  "contract": "block-children",
+  "title": "[acme] prd:327-unsupported",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "markdown": "<!-- notion-unsupported: embed -->",
+  "blocks": [
+    {
+      "object": "block",
+      "type": "embed",
+      "embed": {
+        "url": "https://example.com/embed"
+      }
+    }
+  ],
+  "expectedError": "unsupported-block-type"
+}
