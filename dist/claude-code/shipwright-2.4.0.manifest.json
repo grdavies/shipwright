@@ -409,11 +409,13 @@
     "graph/reviewer_metrics/elo.py",
     "graph/reviewer_metrics/eval_report.py",
     "graph/reviewer_metrics/export.py",
+    "graph/reviewer_metrics/harvest.py",
     "graph/reviewer_metrics/independence.py",
     "graph/reviewer_metrics/label_schema.py",
     "graph/reviewer_metrics/persistence.py",
     "graph/reviewer_metrics/provenance.py",
     "graph/reviewer_metrics/ranking.py",
+    "graph/reviewer_metrics/selection.py",
     "graph/reviewer_metrics/store_adapter.py",
     "graph/reviewer_metrics/surviving.py",
     "graph/router_nodes.py",
@@ -765,5 +767,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 762
+  "moduleCount": 764
 }

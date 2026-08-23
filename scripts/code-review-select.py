@@ -23,6 +23,8 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(ns.repo_root).resolve()
     sys.path.insert(0, str(root / "scripts"))
     from capability_migration_parity import select_family
+    from graph.reviewer_metrics.selection import apply_bounded_code_review
+    from host_lib import load_workflow_config
 
     if ns.diff:
         raw = Path(ns.diff).read_text(encoding="utf-8")
@@ -36,6 +38,8 @@ def main(argv: list[str] | None = None) -> int:
 
     ctx = {"version": 1, "phase_type": "sw-review", "change_digest": digest}
     out = select_family("code-review", ctx, repo_root=root, skip_freshness=False)
+    cfg = load_workflow_config(root)
+    out = apply_bounded_code_review(out, repo_root=root, cfg=cfg)
     legacy_keys = ["core", "specialists", "signals", "executable_line_count", "adversarial_threshold", "excluded"]
     payload = {k: out[k] for k in legacy_keys if k in out}
     print(json.dumps(payload, separators=(",", ":"), sort_keys=True))

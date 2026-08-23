@@ -64,6 +64,11 @@
   },
   "review": {
     "provider": "none",
+    "selection": {
+      "maxPersonas": 32,
+      "minPersonas": 1,
+      "costCeiling": null
+    },
     "local": {
       "enabled": true,
       "provider": "native",
