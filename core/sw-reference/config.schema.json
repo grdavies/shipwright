@@ -26,6 +26,34 @@
       "type": "string",
       "default": "AGENTS.md"
     },
+    "architecture": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opt-in architecture doctrine assessment (PRD 326 R14). Default off preserves existing behavior.",
+      "properties": {
+        "assessment": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "off",
+                "advisory",
+                "blocking"
+              ],
+              "default": "off",
+              "description": "off = evaluator inert; advisory = report only; blocking = fail closed via check-gate."
+            },
+            "path": {
+              "type": "string",
+              "default": ".cursor/architecture-assessment.yaml",
+              "description": "Per-repo assessment YAML validated against architecture-assessment.schema.json."
+            }
+          }
+        }
+      }
+    },
     "prdsDir": {
       "type": "string",
       "default": "docs/prds",
@@ -661,6 +689,31 @@
             "pattern": "^[a-z0-9-]+$"
           },
           "description": "Ordered heterogeneous review adapter ids (supersedes scalar review.provider; scalar coerced to single-element array)."
+        },
+        "selection": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Bounded reviewer selection from harvest metrics (PRD 326 R18). Defaults preserve legacy full-panel behavior.",
+          "properties": {
+            "maxPersonas": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 32,
+              "description": "Maximum reviewers/personas dispatched after harvest re-rank."
+            },
+            "minPersonas": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "description": "Floor — bounded selection never dispatches fewer than this count."
+            },
+            "costCeiling": {
+              "type": ["number", "null"],
+              "minimum": 0,
+              "default": null,
+              "description": "Optional dispatch cost ceiling (USD); null disables cost-based truncation."
+            }
+          }
         }
       },
       "required": [

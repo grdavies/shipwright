@@ -1025,6 +1025,19 @@
 * merge phase closeout-prefers-run-scoped-state-s into feat/deliver-finalize-consumer-resilience (0886c4c) <!-- sw-deliver:closeout-prefers-run-scoped-state-s -->
 * merge phase orchestrator-primary-scripts-hash-divergence-halt-and-rebind-s into feat/deliver-finalize-consumer-resilience (50e9d2a) <!-- sw-deliver:orchestrator-primary-scripts-hash-divergence-halt-and-rebind-s -->
 * merge phase regression-suite-absorb-closeout-for-331-338-l into feat/deliver-finalize-consumer-resilience (bd21e8c) <!-- sw-deliver:regression-suite-absorb-closeout-for-331-338-l -->
+* merge phase prd-323-surface-verification-on-main-read-only-s into feat/workflow-quality-platform (e8fe227) <!-- sw-deliver:prd-323-surface-verification-on-main-read-only-s -->
+* merge phase residual-hardening-repro-first-debug-gate-gap-322-m into feat/workflow-quality-platform (de7ba4c) <!-- sw-deliver:residual-hardening-repro-first-debug-gate-gap-322-m -->
+* merge phase residual-hardening-merge-provenance-intent-resolve-gap-320-m into feat/workflow-quality-platform (2f7f45f) <!-- sw-deliver:residual-hardening-merge-provenance-intent-resolve-gap-320-m -->
+* merge phase residual-hardening-deliver-resilience-property-suite-gap-319-m into feat/workflow-quality-platform (42c1a7e) <!-- sw-deliver:residual-hardening-deliver-resilience-property-suite-gap-319-m -->
+* merge phase agent-instruction-compiler-m into feat/workflow-quality-platform (64d4d85) <!-- sw-deliver:agent-instruction-compiler-m -->
+* merge phase researchevidence-schema-canonical-serialization-s into feat/workflow-quality-platform (269fe81) <!-- sw-deliver:researchevidence-schema-canonical-serialization-s -->
+* merge phase pack-sdk-wire-skills-spec-guard-conformance-m into feat/workflow-quality-platform (a16829a) <!-- sw-deliver:pack-sdk-wire-skills-spec-guard-conformance-m -->
+* merge phase researchevidence-record-lifecycle-m into feat/workflow-quality-platform (0b0e001) <!-- sw-deliver:researchevidence-record-lifecycle-m -->
+* merge phase architecture-doctrine-artifact-assessment-yaml-opt-in-l into feat/workflow-quality-platform (364a07e) <!-- sw-deliver:architecture-doctrine-artifact-assessment-yaml-opt-in-l -->
+* merge phase requiresevidence-node-flag-fail-closed-guard-m into feat/workflow-quality-platform (5db298f) <!-- sw-deliver:requiresevidence-node-flag-fail-closed-guard-m -->
+* merge phase reviewer-harvest-bounded-selection-l into feat/workflow-quality-platform (a57d63d) <!-- sw-deliver:reviewer-harvest-bounded-selection-l -->
+* merge phase prototype-evidence-contract-closure-m into feat/workflow-quality-platform (a6c7905) <!-- sw-deliver:prototype-evidence-contract-closure-m -->
+* merge phase absorb-closeout-delivery-order-note-s into feat/workflow-quality-platform (a45785b) <!-- sw-deliver:absorb-closeout-delivery-order-note-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,23 @@ PROPERTY_SUITE_MODULES: tuple[tuple[str, str, str], ...] = (
     ("R4", "finalize-checkpoint", "test_property_finalize_checkpoint.py"),
     ("R5", "assurance-monotonicity", "test_property_assurance.py"),
     ("R6", "merge-conflict", "test_property_merge_conflict.py"),
+    ("R4r", "residual-hardening", "test_property_residual_hardening.py"),
+)
+
+
+class PropertyTransitionKind(str, Enum):
+    """First-class residual transition edges widened beyond PRD 323 R1–R6."""
+
+    STANDARD = "standard"
+    CANCEL_DURING_FINALIZE = "cancel-during-finalize"
+    GENERATION_FENCE_CACHE_RACE = "generation-fence-cache-race"
+    MERGE_CONFLICT_AFTER_CHECKPOINT = "merge-conflict-after-checkpoint"
+
+
+RESIDUAL_TRANSITION_KINDS: tuple[PropertyTransitionKind, ...] = (
+    PropertyTransitionKind.CANCEL_DURING_FINALIZE,
+    PropertyTransitionKind.GENERATION_FENCE_CACHE_RACE,
+    PropertyTransitionKind.MERGE_CONFLICT_AFTER_CHECKPOINT,
 )
 
 
@@ -32,6 +50,7 @@ class PropertyTransitionRequest(TransitionRequest):
     assurance_after: int | None = None
     merge_conflict: bool = False
     explicit_resolution: dict[str, Any] | None = None
+    kind: PropertyTransitionKind = PropertyTransitionKind.STANDARD
 
 
 @dataclass
@@ -41,6 +60,8 @@ class PropertyFixtureState:
     merge_conflict_open: bool = False
     merge_resolution: dict[str, Any] | None = None
     checkpoint: dict[str, Any] | None = None
+    finalize_in_flight: bool = False
+    generation_fence: int = 0
 
     @property
     def meta_path(self) -> Path:
@@ -62,6 +83,8 @@ class PropertyFixtureState:
                 "mergeConflictOpen": False,
                 "mergeResolution": None,
                 "checkpoint": None,
+                "finalizeInFlight": False,
+                "generationFence": 0,
             }
         payload = json.loads(path.read_text(encoding="utf-8"))
         return payload if isinstance(payload, dict) else {}
@@ -80,6 +103,8 @@ class PropertyFixtureState:
         self.merge_resolution = resolution if isinstance(resolution, dict) else None
         checkpoint = payload.get("checkpoint")
         self.checkpoint = checkpoint if isinstance(checkpoint, dict) else None
+        self.finalize_in_flight = bool(payload.get("finalizeInFlight"))
+        self.generation_fence = int(payload.get("generationFence") or 0)
 
     def persist(self, root: Path) -> None:
         self.save(
@@ -90,8 +115,15 @@ class PropertyFixtureState:
                 "mergeConflictOpen": self.merge_conflict_open,
                 "mergeResolution": self.merge_resolution,
                 "checkpoint": self.checkpoint,
+                "finalizeInFlight": self.finalize_in_flight,
+                "generationFence": self.generation_fence,
             },
         )
+
+
+def assurance_non_decreasing(before: int, after: int) -> bool:
+    """PRD 323 R5 — assurance cannot silently decrease."""
+    return after >= before
 
 
 class PropertyHarness(ResilienceHarness):
@@ -136,6 +168,16 @@ class PropertyHarness(ResilienceHarness):
         }
         self.property.persist(self.root)
 
+    def _generation_fence_cache_race(self, request: PropertyTransitionRequest) -> bool:
+        checkpoint = self.property.checkpoint
+        if not isinstance(checkpoint, dict):
+            return False
+        checkpoint_generation = int(checkpoint.get("generation") or 0)
+        checkpoint_cache = str(checkpoint.get("cacheIdentity") or "")
+        bumped = request.generation > max(checkpoint_generation, self.property.generation_fence)
+        cache_changed = bool(checkpoint_cache) and request.cache_identity != checkpoint_cache
+        return bumped and cache_changed
+
     def _resume_from_checkpoint(self) -> TransitionResult:
         self.property.sync(self.root)
         checkpoint = self.property.checkpoint
@@ -173,7 +215,7 @@ class PropertyHarness(ResilienceHarness):
             )
         self.property.sync(self.root)
 
-        if request.node_id in self.property.cancelled_nodes:
+        if request.node_id in self.property.cancelled_nodes and not self.property.finalize_in_flight:
             return TransitionResult(
                 verdict="blocked",
                 boundary=InjectionBoundary.ADMISSION,
@@ -203,7 +245,7 @@ class PropertyHarness(ResilienceHarness):
             self.record_resolution(request.explicit_resolution)
 
         if request.assurance_after is not None:
-            if request.assurance_after < self.property.assurance_level:
+            if not assurance_non_decreasing(self.property.assurance_level, request.assurance_after):
                 return TransitionResult(
                     verdict="blocked",
                     boundary=InjectionBoundary.CACHE,
@@ -213,8 +255,52 @@ class PropertyHarness(ResilienceHarness):
             self.property.assurance_level = request.assurance_after
             self.property.persist(self.root)
 
+        if self._generation_fence_cache_race(request) or (
+            request.kind == PropertyTransitionKind.GENERATION_FENCE_CACHE_RACE
+            and isinstance(self.property.checkpoint, dict)
+        ):
+            return TransitionResult(
+                verdict="blocked",
+                boundary=InjectionBoundary.CACHE,
+                cause="generation-fence-cache-race",
+                journal=self.journal.to_dict(),
+            )
+
         self._write_checkpoint(request)
+        self.property.finalize_in_flight = True
+        self.property.persist(self.root)
+
+        if request.kind == PropertyTransitionKind.MERGE_CONFLICT_AFTER_CHECKPOINT:
+            self.open_merge_conflict()
+            self.property.finalize_in_flight = False
+            self.property.persist(self.root)
+            return TransitionResult(
+                verdict="blocked",
+                boundary=InjectionBoundary.FINALIZE,
+                cause="merge-conflict-after-checkpoint",
+                journal=self.journal.to_dict(),
+            )
+
+        if request.kind == PropertyTransitionKind.CANCEL_DURING_FINALIZE:
+            self.cancel_node(request.node_id)
+
+        if request.node_id in self.property.cancelled_nodes and self.property.finalize_in_flight:
+            self.property.finalize_in_flight = False
+            self.property.persist(self.root)
+            return TransitionResult(
+                verdict="blocked",
+                boundary=InjectionBoundary.FINALIZE,
+                cause="cancel-during-finalize",
+                journal=self.journal.to_dict(),
+            )
+
+        if request.generation > self.property.generation_fence:
+            self.property.generation_fence = request.generation
+            self.property.persist(self.root)
+
         result = super().transition(request)
+        self.property.finalize_in_flight = False
+        self.property.persist(self.root)
         if result.verdict == "injected" and result.boundary == InjectionBoundary.FINALIZE:
             resumed = self._resume_from_checkpoint()
             if resumed is not None:
@@ -226,6 +312,9 @@ __all__ = [
     "PROPERTY_SUITE_MODULES",
     "PropertyFixtureState",
     "PropertyHarness",
+    "PropertyTransitionKind",
     "PropertyTransitionRequest",
+    "RESIDUAL_TRANSITION_KINDS",
+    "assurance_non_decreasing",
     "new_fixture_root",
 ]

@@ -173,4 +173,4 @@ Re-run the matching doctor after remediation; codes are designed for CI log grep
 
 Open a [discussion](https://github.com/grdavies/shipwright/discussions) or file an issue if something is
 unclear before starting large changes.
-<!-- currency: refreshed 2026-08-23T00:42:13Z for terminal prepare (PRD 325) -->
+<!-- currency: refreshed 2026-08-23T17:30:00Z for terminal prepare (PRD 326) — suite-registry phase-13 suites -->

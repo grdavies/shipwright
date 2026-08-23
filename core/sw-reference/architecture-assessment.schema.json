@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipwright.dev/schemas/architecture-assessment/v1",
+  "title": "ArchitectureAssessment",
+  "description": "Per-repo architecture doctrine assessment record (PRD 326 R14).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["doctrineVersion", "assessments"],
+  "properties": {
+    "doctrineVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "assessments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/assessmentEntry"
+      }
+    }
+  },
+  "$defs": {
+    "assessmentEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "verdict"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^AD-[0-9]+$"
+        },
+        "verdict": {
+          "type": "string",
+          "enum": ["pass", "fail", "waived", "manual"]
+        },
+        "evidence": {
+          "type": "string"
+        },
+        "waiver": {
+          "$ref": "#/$defs/waiver"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "verdict": {
+                "const": "waived"
+              }
+            },
+            "required": ["verdict"]
+          },
+          "then": {
+            "required": ["waiver"]
+          }
+        }
+      ]
+    },
+    "waiver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor", "reason", "expires"],
+      "properties": {
+        "actor": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expires": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

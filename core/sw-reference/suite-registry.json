@@ -590,6 +590,51 @@
       ]
     },
     {
+      "id": "prd-326-absorb-closeout-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 64,
+      "pytestPath": "scripts/unit_tests/planning/test_absorb_closeout_326.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_gap_capture.py",
+        "scripts/planning_store_facade.py",
+        "scripts/unit_tests/planning/test_absorb_closeout_326.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "prd-326"
+      ]
+    },
+    {
+      "id": "prd-326-order-note-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 65,
+      "pytestPath": "scripts/unit_tests/quality/test_prd326_order_note.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "core/sw-reference/README.md",
+        "scripts/unit_tests/quality/test_prd326_order_note.py"
+      ],
+      "tags": [
+        "pytest",
+        "quality",
+        "prd-326"
+      ]
+    },
+    {
       "id": "dispatch-binding-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
@@ -2108,6 +2153,17 @@
         "scripts/planning/backends/issues.py",
         "scripts/unit_tests/planning/test_record_absorb_linkage_edges.py"
       ]
+    },
+    {
+      "id": "resilience-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify"
+      ],
+      "verifyOrder": 6,
+      "pytestPath": "scripts/unit_tests/resilience",
+      "classification": "required",
+      "description": "PRD 323 resilience property suite (R22 verify scope)"
     }
   ],
   "plans": {
@@ -2228,7 +2284,8 @@
         "core/commands/sw-deliver.md",
         "core/commands/sw-ship.md",
         "core/skills/deliver/**",
-        "core/skills/conductor/**"
+        "core/skills/conductor/**",
+        "scripts/unit_tests/resilience/**"
       ],
       "coreSuiteIds": [],
       "suiteIds": [
@@ -2243,7 +2300,8 @@
         "prd-325-publish-surface-profiles-fixtures",
         "prd-325-scripts-hash-binding-fixtures",
         "prd-325-docs-currency-consumer-fixtures",
-        "prd-325-docs-worktree-base-ref-fixtures"
+        "prd-325-docs-worktree-base-ref-fixtures",
+        "resilience-fixtures"
       ]
     },
     "docs": {

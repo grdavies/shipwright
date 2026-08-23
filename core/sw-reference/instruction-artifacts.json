@@ -1,0 +1,841 @@
+{
+  "artifacts": [
+    {
+      "bodyDigest": "ad1b7177d23db24e9f8051246df7da2a070040898fae698afaaa2b4671ed1cd1",
+      "capabilities": [
+        "persona.sw-adversarial-reviewer"
+      ],
+      "description": "Stress-tests assumptions and constructs failure scenarios for high-stakes or architecturally significant requirements. Spawned by sw-doc-review.",
+      "id": "sw-adversarial-reviewer",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-adversarial-reviewer.md"
+    },
+    {
+      "bodyDigest": "55eddeaa493b21e2ea09081eeb3650b55e5e976fa5f0480965a1102547a315fe",
+      "capabilities": [
+        "persona.sw-claims-auditor"
+      ],
+      "description": "Adversarially verifies completed task-row claims against branch diff evidence. Spawned by verification-gate during /sw-ship and reused at deliver collect.",
+      "id": "sw-claims-auditor",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-claims-auditor.md"
+    },
+    {
+      "bodyDigest": "26835e6f17eb267fe081ee1d7277744ced4987a4f35ee6e569d40fd6b0fe5257",
+      "capabilities": [
+        "persona.sw-coherence-reviewer"
+      ],
+      "description": "Reviews documents for internal consistency \u2014 contradictions, terminology drift, broken references. Spawned by sw-doc-review.",
+      "id": "sw-coherence-reviewer",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-coherence-reviewer.md"
+    },
+    {
+      "bodyDigest": "fcc561bd86f64998c42ec964edf7de43535bd3a9b7904cd37d146ee5c2f3af68",
+      "capabilities": [
+        "persona.sw-design-reviewer"
+      ],
+      "description": "Reviews UI/UX flows, interaction design, and accessibility gaps. Spawned by sw-doc-review.",
+      "id": "sw-design-reviewer",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-design-reviewer.md"
+    },
+    {
+      "bodyDigest": "957e788816e38e3fd6e673d94ca02b0badcbb0bb5359f9b574e3537eb37f41f2",
+      "capabilities": [
+        "persona.sw-docs-currency-reviewer"
+      ],
+      "description": "Maps a proposed spec to affected in-repo documentation artifacts and required updates. Spawned by sw-doc-review.",
+      "id": "sw-docs-currency-reviewer",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-docs-currency-reviewer.md"
+    },
+    {
+      "bodyDigest": "073c7d4fd247779695fe57ddc72df6695cbddc365299f7a4e3bfdbe0a930da8b",
+      "capabilities": [
+        "persona.sw-feasibility-reviewer"
+      ],
+      "description": "Evaluates whether proposed approaches will survive contact with reality \u2014 conflicts, dependency gaps, migration risks. Spawned by sw-doc-review.",
+      "id": "sw-feasibility-reviewer",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-feasibility-reviewer.md"
+    },
+    {
+      "bodyDigest": "43c8b2ea2a5ee81bd313a1e057a58608e18190e5c06690d2954e53d174c4b72b",
+      "capabilities": [
+        "persona.sw-product-reviewer"
+      ],
+      "description": "Challenges premise claims and strategic consequences \u2014 what to build and why. Spawned by sw-doc-review.",
+      "id": "sw-product-reviewer",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-product-reviewer.md"
+    },
+    {
+      "bodyDigest": "3c40909b79c811a2bdd55b1f4084a73a654b9fdc87d2e6ca3b20d4afc65bbe7b",
+      "capabilities": [
+        "persona.sw-rca-hypothesis-generator"
+      ],
+      "description": "Clean-context RCA hypothesis generator for one evidence partition (logs, diff, data, or config). Spawned by rca-core fan-out mode only.",
+      "id": "sw-rca-hypothesis-generator",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-rca-hypothesis-generator.md"
+    },
+    {
+      "bodyDigest": "8948cb3a50e0eb215433585d1a36139d70b7b07af41437094775627558fe82cf",
+      "capabilities": [
+        "persona.sw-rca-hypothesis-refuter"
+      ],
+      "description": "Disproof-focused refuter for one RCA hypothesis before route decisions. Spawned after fan-out synthesis; never shares generator context.",
+      "id": "sw-rca-hypothesis-refuter",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-rca-hypothesis-refuter.md"
+    },
+    {
+      "bodyDigest": "bd61e89318d1f96f3cb9ba6e906933f203ae16ae588e85539941636edd02650b",
+      "capabilities": [
+        "persona.sw-rule-skeptic"
+      ],
+      "description": "Filters false positives from rule verifier output before human promotion. Spawned after sw-rule-verifier in retro compounding.",
+      "id": "sw-rule-skeptic",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-rule-skeptic.md"
+    },
+    {
+      "bodyDigest": "82bee8ec2a351cb10d21ea1a1fc7bbe54b8e4774a8bcfd35b4ff6a8f018f2625",
+      "capabilities": [
+        "persona.sw-rule-verifier"
+      ],
+      "description": "Tests a candidate behavioral rule against transcript and diff evidence before promotion. Spawned by retro compounding and rule verifier sweep.",
+      "id": "sw-rule-verifier",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-rule-verifier.md"
+    },
+    {
+      "bodyDigest": "f8b03b6f482e3919df08f921d2f7368bf22b1cbc306e6c2765b5d05e301bec8a",
+      "capabilities": [
+        "persona.sw-scope-guardian-reviewer"
+      ],
+      "description": "Reviews scope alignment \u2014 unjustified complexity, scope creep, missing boundaries. Spawned by sw-doc-review.",
+      "id": "sw-scope-guardian-reviewer",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-scope-guardian-reviewer.md"
+    },
+    {
+      "bodyDigest": "f2aaf50219af603f347103d002805ea957b85d59639915973aa8a6da5330f9d0",
+      "capabilities": [
+        "persona.sw-security-reviewer"
+      ],
+      "description": "Evaluates auth, data handling, API exposure, and trust-boundary risks in requirements. Spawned by sw-doc-review.",
+      "id": "sw-security-reviewer",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-security-reviewer.md"
+    },
+    {
+      "bodyDigest": "536cda82b2685b818a19b34abfc8b2c039b63775219f6ba8a71496d9d084114a",
+      "capabilities": [
+        "persona.sw-tournament-attempt"
+      ],
+      "description": "Develop one brainstorm divergence option in isolation for tournament selection. Spawned by tournament skill only.",
+      "id": "sw-tournament-attempt",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-tournament-attempt.md"
+    },
+    {
+      "bodyDigest": "7ca37ab9f8bac5c04cdfeadff8bf11235a01575c5c9141dccd2804b83b5db52d",
+      "capabilities": [
+        "persona.sw-tournament-judge"
+      ],
+      "description": "Pairwise tournament judge scoring an explicit rubric between two isolated attempts. Spawned by tournament skill only.",
+      "id": "sw-tournament-judge",
+      "kind": "agent",
+      "model": "inherit",
+      "sourcePath": "core/agents/sw-tournament-judge.md"
+    },
+    {
+      "bodyDigest": "418caab86751bac7a514984e673d3ead32bc08dc0a71c19487a66612389f22d7",
+      "capabilities": [],
+      "description": "Create a sibling amendment for a frozen PRD with continued R-IDs and supersede/retract directives. Does not edit the parent file.",
+      "id": "sw-amend",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-amend.md"
+    },
+    {
+      "bodyDigest": "83d60122cdc7e529cc90aae3d0e3d82e1921ec9589e26cc101fa85df5a120876",
+      "capabilities": [],
+      "description": "Route a free-form question to the best-fit existing persona for a read-only consult. Does not draft, review, freeze, dispatch a pipeline command, or mutate any file, config, or planning-store artifact.",
+      "id": "sw-ask",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-ask.md"
+    },
+    {
+      "bodyDigest": "bd69d085f4a5f0a94bec38a60f67000786ff0509aebc3d1177adef041bbbc974",
+      "capabilities": [],
+      "description": "Research and crystallize a new consult persona into one fixed local destination with confirm-before-write. Does not overwrite an existing persona, does not run the doc-review panel, and does not copy proprietary text or assets.",
+      "id": "sw-become",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-become.md"
+    },
+    {
+      "bodyDigest": "f3120866ace05c606a59e4c449bd2990721a13250b47694ae76ccd7dcb57a03f",
+      "capabilities": [],
+      "description": "Explore requirements through collaborative dialogue and write a brainstorm requirements doc. Does not draft a PRD or run the persona panel.",
+      "id": "sw-brainstorm",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-brainstorm.md"
+    },
+    {
+      "bodyDigest": "5cfd4416bcd0f7d7009d7da2ac559b0161c21333ffcf2435206ba95e1b94ac12",
+      "capabilities": [],
+      "description": "Override caveman communication intensity for the current chat until the next command dispatch. Does not load external skills or change artifact file fidelity.",
+      "id": "sw-caveman",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-caveman.md"
+    },
+    {
+      "bodyDigest": "a603f71d398b11ebad1648fcc64280a04ac40f2956b7995227332fc1cba411c9",
+      "capabilities": [],
+      "description": "Enumerate and remove merged branches, stale worktrees, and terminal deliver run-state with dry-run default and explicit confirm. Does not delete unmerged work, in-flight deliver runs, or use rm -rf on worktrees.",
+      "id": "sw-cleanup",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-cleanup.md"
+    },
+    {
+      "bodyDigest": "9250ed36f50d31ed17fc67e75c2d494ef8e999f9ee871b4cefa9a9d23efe2b96",
+      "capabilities": [],
+      "description": "Commit the current phase after verify and review. Does not push or open a PR.",
+      "id": "sw-commit",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-commit.md"
+    },
+    {
+      "bodyDigest": "6e31adf8d51786d87cc9e850d0007ae6e4e30708cfaa92e5423882245703db2d",
+      "capabilities": [],
+      "description": "[DEPRECATED] Use /sw-retrospective instead. Thin alias for the internal compound write step only.",
+      "id": "sw-compound",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-compound.md"
+    },
+    {
+      "bodyDigest": "9e492dab701556235b119732eb6cba46171a4dd806272f0f831528a5eca5eb3a",
+      "capabilities": [],
+      "description": "[DEPRECATED] Use /sw-retrospective instead. Thin alias routing to the consolidated retrospective orchestrator with phase auto-detect.",
+      "id": "sw-compound-ship",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-compound-ship.md"
+    },
+    {
+      "bodyDigest": "fdcf6a180da999eb14e53c5a5f216733ff9b9aee2d64e3494a3b435fad75ce53",
+      "capabilities": [],
+      "description": "Signal-driven production debug \u2014 triages deploy/Sentry/user signals through shared RCA and routes a fix without implementing or merging.",
+      "id": "sw-debug",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-debug.md"
+    },
+    {
+      "bodyDigest": "ffe20f249efc6ff8e9ef7285f9175b7df52bd38d53212b9b0e429fd5cfbf17b9",
+      "capabilities": [],
+      "description": "Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.",
+      "id": "sw-deliver",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-deliver.md"
+    },
+    {
+      "bodyDigest": "3d9d4c167107d32c3ec4453cee6cbe0ab94ad2f4c7dcfa112b138468c3869d05",
+      "capabilities": [],
+      "description": "Orchestrate the doc pipeline through task freeze, then branch on doc.afterTasks before dispatching implementation. Does not inline implementation.",
+      "id": "sw-doc",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-doc.md"
+    },
+    {
+      "bodyDigest": "56ab3db7af500dfafdbf892fdd4d22395d746dcca67639d24f033df839cbc16d",
+      "capabilities": [],
+      "description": "Review a PRD or decision-record draft with parallel persona sub-agents and apply safe fixes via synthesizer. Does not freeze artifacts or generate tasks.",
+      "id": "sw-doc-review",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-doc-review.md"
+    },
+    {
+      "bodyDigest": "d218fa3defdb26a82cad87eb69f43bc22a6384798853b1d4c41fd2c244a93e41",
+      "capabilities": [],
+      "description": "Execute one phase-sized slice on the current branch using the spec union and per-task execute discipline. Does not commit, push, or open a PR.",
+      "id": "sw-execute",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-execute.md"
+    },
+    {
+      "bodyDigest": "9653cd2e11c9eae44544e2c027758f7eeedc0c8e74cb11e126de683145c34744",
+      "capabilities": [],
+      "description": "Unified inbound-signals intake \u2014 normalizes production, review, and retro feedback and routes to debug, gap-capture, or brainstorm without analyzing or authoring.",
+      "id": "sw-feedback",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-feedback.md"
+    },
+    {
+      "bodyDigest": "91aa1a840c7796ec9042e6ea6de6e00fc3eecb06a470298dc2b170ec004caa48",
+      "capabilities": [],
+      "description": "Close a routed feedback backlog signal after verification confirms the fix shipped. Human-gated; does not merge or dispatch routes.",
+      "id": "sw-feedback-close",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-feedback-close.md"
+    },
+    {
+      "bodyDigest": "8c352ab1a90f749275b00fd2d39ae90750f6d21ef7c068a7b4c82936aa45c59e",
+      "capabilities": [],
+      "description": "Stamp frozen: true on an artifact, register in INDEX, and enforce immutability. Does not unfreeze or edit frozen parents.",
+      "id": "sw-freeze",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-freeze.md"
+    },
+    {
+      "bodyDigest": "c35a719f913ce37e9a455c27689366cf089082120eebea734ada8f8cb737152a",
+      "capabilities": [],
+      "description": "Gap-check phase plan vs diff; bounded closers for in-scope gaps. Does not merge or ship alone.",
+      "id": "sw-gaps",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-gaps.md"
+    },
+    {
+      "bodyDigest": "438040cc355bb590720d5dddd37fdde7aabb374d6a7a824492f180f945487d6d",
+      "capabilities": [],
+      "description": "Read-only diagnostic that explains sw- workflow behavior and checks current repo config/state/planning-backend reachability, citing relevant guides. Never mutates config, git, or the planning store.",
+      "id": "sw-guide",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-guide.md"
+    },
+    {
+      "bodyDigest": "1793ea9da422471d6c0657039b0ab8048e49c68dd52626418c883c6560d7adc2",
+      "capabilities": [],
+      "description": "Initialize and validate repo-local Shipwright config through a guided interview \u2014 scan, confirm, ask only unresolved choices \u2014 plus doctor/repair. Does not scaffold CI or migrate existing memories.",
+      "id": "sw-init",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-init.md"
+    },
+    {
+      "bodyDigest": "c1009ed94227b1efb0a49c05e6c19f69db71b82533839592649b93080e089d27",
+      "capabilities": [],
+      "description": "Read-only audit of a project's durable memories \u2014 flag mis-typed, mirrored, or low-signal entries and propose reclassification or collapse to pointer memories",
+      "id": "sw-memory-audit",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-memory-audit.md"
+    },
+    {
+      "bodyDigest": "b995c46ead25d9c12824f8eafed477eed474fa2bec2e899290c67502ae93a603",
+      "capabilities": [],
+      "description": "Export durable memories to provider-neutral JSONL or OKF bundle for portability, backup, or a provider swap",
+      "id": "sw-memory-export",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-memory-export.md"
+    },
+    {
+      "bodyDigest": "93094a9e0bae1cd32341c204664d7bfe47436a9938967f2524946debec9d7f8c",
+      "capabilities": [],
+      "description": "Import durable memories into the active provider \u2014 from neutral JSONL/OKF (provider swap) or from repo knowledge (AGENTS.md learned sections + .project_docs pointers). Standing policy is rule-class SoT; AGENTS.md is pointer-only. Idempotent.",
+      "id": "sw-memory-import",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-memory-import.md"
+    },
+    {
+      "bodyDigest": "5e4de7345d40542f4fe7cc3d36a6b730b48168adcfc9131296f0ecf76dabbe03",
+      "capabilities": [],
+      "description": "Distill new agent-transcript deltas into durable memories \u2014 the plugin-native replacement for the inherited continual-learning-index.json / agents-memory-updater flow",
+      "id": "sw-memory-sync",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-memory-sync.md"
+    },
+    {
+      "bodyDigest": "3fbf18316cde2cbdad9904b9a843bcb04d12afae6c49b40d6ab32d8fb0269500",
+      "capabilities": [],
+      "description": "Bidirectional planning store migration between in-repo files and issue-store \u2014 dry-run by default; quiesce, doctor, and GAP-BACKLOG shim (PRD 044).",
+      "id": "sw-migrate",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-migrate.md"
+    },
+    {
+      "bodyDigest": "70752bfc09929ef3e579c703002d334365cb75acd9f79c590d11d2e48cd7d3fd",
+      "capabilities": [],
+      "description": "Capture a one-line idea, task, or note into the local notebook outside the planning store, with confirm-first graduation to a gap or brainstorm. Does not write to the planning store directly or replace /sw-feedback gap-capture.",
+      "id": "sw-note",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-note.md"
+    },
+    {
+      "bodyDigest": "d535d820e4003084e8141332027650fd313cbd1a638070fbae8283bfdf205166",
+      "capabilities": [],
+      "description": "Push the phase branch and create or update its PR against the recorded parent. Does not commit or merge.",
+      "id": "sw-pr",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-pr.md"
+    },
+    {
+      "bodyDigest": "5bf5fe3471cf34b96d56d1574542d88b05535dc4ba727f1aacfae9624ddfbed6",
+      "capabilities": [],
+      "description": "Generate a PRD or decision-record draft (Full/Standard). Does not freeze, run persona review, or generate tasks.",
+      "id": "sw-prd",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-prd.md"
+    },
+    {
+      "bodyDigest": "d49a918ba2e2a29900f94802c5b32a7222ffbafd5266c79ca80c6c66baad0603",
+      "capabilities": [],
+      "description": "Terminal readiness report \u2014 runs check-gate.py and never merges. Does not push or fix code.",
+      "id": "sw-ready",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-ready.md"
+    },
+    {
+      "bodyDigest": "40cf1c89372ff3c571207d15e878924811a8c676136335e20d80808714e72b60",
+      "capabilities": [],
+      "description": "Post-ship retrospective capturing learnings for compounding. Report-only; does not write memory or edit doctrine without approval.",
+      "id": "sw-retro",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-retro.md"
+    },
+    {
+      "bodyDigest": "c152cbd76992fd67fecf715d24055fb10f7da0a4bd8a8788fca905df139ddced",
+      "capabilities": [],
+      "description": "Consolidated post-delivery retrospective (retro \u2192 compound write \u2192 memory-sync \u2192 status). Supports --pre-merge/--post-merge phase dispatch; does not merge or auto-promote rules.",
+      "id": "sw-retrospective",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-retrospective.md"
+    },
+    {
+      "bodyDigest": "3fe1dbecba01e34c58d3d56e9c44a670b3a84fafc2fafdec1a6da4bf3d355e8b",
+      "capabilities": [],
+      "description": "Local-then-provider code review \u2014 phase 1 multi-agent (ce-code-review) then phase 2 external provider. Does not run the CI gate or stabilize PR threads.",
+      "id": "sw-review",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-review.md"
+    },
+    {
+      "bodyDigest": "e090dd74ac3bdb7a2bd9f4c581e5fdab6e112445103ed7d310d21dc4fec22a5a",
+      "capabilities": [],
+      "description": "Deprecated alias \u2014 delegates to /sw-init. Does not implement configuration logic.",
+      "id": "sw-setup",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-setup.md"
+    },
+    {
+      "bodyDigest": "adf27046fbb84705e7d4b148c0c145f045d71c9805ee655a0aedcee31ee833ab",
+      "capabilities": [],
+      "description": "Gated orchestrator over the phase loop \u2014 advances on green, halts at human merge gate. Never merges.",
+      "id": "sw-ship",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-ship.md"
+    },
+    {
+      "bodyDigest": "f9487d8637c32384460ab60858c9bbf15d761a74f46f95fd73b365cdd6d508a9",
+      "capabilities": [],
+      "description": "Behavior-preserving simplification and deslop pass on the uncommitted delta after review. Re-verifies via simplify-gate; does not commit, push, or merge.",
+      "id": "sw-simplify",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-simplify.md"
+    },
+    {
+      "bodyDigest": "19d0fbd0aeff505a36248fa51ebd7aa8947f72b1645a132da5ab86eed0edf55e",
+      "capabilities": [],
+      "description": "Sync merge-base when the PR conflicts, then consume failing checks and unresolved threads before the next push. Does not merge the PR to main.",
+      "id": "sw-stabilize",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-stabilize.md"
+    },
+    {
+      "bodyDigest": "e718cc79cb194c5dce95db3f11c76c70ae268655cec6e4943b921c3a36a5edbe",
+      "capabilities": [],
+      "description": "Start a child phase branch inside the current worktree and record parent context in per-worktree state. Does not push or open a PR.",
+      "id": "sw-start",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-start.md"
+    },
+    {
+      "bodyDigest": "29b75ab3a3626d1193822c6be27a3d9d4b2475e60c1fd1a1d525884a7aa4de98",
+      "capabilities": [],
+      "description": "Derive and reconcile PRD living status from git facts. Does not modify frozen PRDs or merge PRs.",
+      "id": "sw-status",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-status.md"
+    },
+    {
+      "bodyDigest": "3146339b9160cd716bb61566772b02d39f72a330435a661aa6d36bcba406ec35",
+      "capabilities": [],
+      "description": "Generate a frozen task list from a frozen PRD in a single pass. Does not start implementation.",
+      "id": "sw-tasks",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-tasks.md"
+    },
+    {
+      "bodyDigest": "74e0cba20bb92afa9df14f0d0c6ddaf216dad334f441ae68198c43278ad95f6f",
+      "capabilities": [],
+      "description": "Classify work into Quick, Standard, or Full tiers from deterministic signals. Does not run brainstorm, PRD, freeze, or implementation phases.",
+      "id": "sw-triage",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-triage.md"
+    },
+    {
+      "bodyDigest": "167284ce3105c3bb2f8c240f1da482b28cd6458e67e98ac6eaeb8d255fe51333",
+      "capabilities": [],
+      "description": "Run scoped local verification for the current phase; tee logs to /tmp. Does not fix code or commit.",
+      "id": "sw-verify",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-verify.md"
+    },
+    {
+      "bodyDigest": "c72f83a7458ec792196b83c132dac4ed46d4a1dd8769b40940c6bb6b379b04dd",
+      "capabilities": [],
+      "description": "Watch the active PR's checks under the all-checks gate and report the next action",
+      "id": "sw-watch-ci",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-watch-ci.md"
+    },
+    {
+      "bodyDigest": "f9cb56fbe5bb8b7d1606a88ae322be1713b8dff41829008df62726b633f8cbe4",
+      "capabilities": [],
+      "description": "Provision or tear down a per-work-item git worktree with env scaffold. Does not run the phase loop or merge PRs.",
+      "id": "sw-worktree",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-worktree.md"
+    },
+    {
+      "bodyDigest": "270b1e7bcc8ca9e988df2b33a5c0309a12d8ae5708c5008990fd1db66efe6b4d",
+      "capabilities": [],
+      "description": "Explore requirements through one-question-at-a-time dialogue, then write a requirements document with stable R-IDs. Use when scope is open or Full-tier work precedes PRD drafting. Does not freeze artifacts or generate tasks.",
+      "id": "brainstorm",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/brainstorm/SKILL.md"
+    },
+    {
+      "bodyDigest": "6b0f7e4cd7f75d0670f9b322ff537f1b269d9de14eac1ea1483754bfc5ae0ec9",
+      "capabilities": [],
+      "description": "Converge on an ambiguous preference through concrete either/or instances instead of re-asking the same abstract question. Use when brainstorm divergence is unsure, a doc-review disposition is disputed, or feedback scope classification is ambiguous. Does not resolve unrelated ambiguity or bypass human confirmation on the converged rule.",
+      "id": "calibration-loop",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/calibration-loop/SKILL.md"
+    },
+    {
+      "bodyDigest": "508c4d94f2484a1ba228dc75060503b3669aa0d90b0891b23d59c532af930472",
+      "capabilities": [
+        "skill.checks-gate"
+      ],
+      "description": "Evaluate CI check pass, fail, pending, and blocked state for a PR under Shipwright all-checks policy. Use when running /sw-watch-ci or /sw-stabilize to compute a single gate verdict. Honors neutral allowlist and review-provider state; does not merge.",
+      "id": "checks-gate",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/checks-gate/SKILL.md"
+    },
+    {
+      "bodyDigest": "89cb8a4d1e5905e7b2e57b2d9e4381511a0f9782d3588ef52e537c126fca6323",
+      "capabilities": [],
+      "description": "Internal compound-write step for /sw-retrospective \u2014 distill retro and feedback into typed memories via memory-preflight. Use when compounding session learnings after retrospective. Human-gated rule promotion only; does not auto-promote rules.",
+      "id": "compound",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/compound/SKILL.md"
+    },
+    {
+      "bodyDigest": "4da53cdd1d1bf0afd293a8ef15581da3ad78effabd31206b44fd119628eb1c63",
+      "capabilities": [
+        "skill.conductor"
+      ],
+      "description": "Shared autonomous orchestration contract for self-continuation, legitimate halts, parallel phase dispatch, and durable-state resumption. Use when running /sw-deliver, /sw-ship, /sw-doc, /sw-debug, or /sw-feedback orchestrators. Does not re-author loop logic inline.",
+      "id": "conductor",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/conductor/SKILL.md"
+    },
+    {
+      "bodyDigest": "e7fd3262edc71a97910dd2120b973f5dbd091f0de604a360bc99d609c7d56f61",
+      "capabilities": [],
+      "description": "Signal-driven production debugging via shared RCA core. Use when triaging production errors, crashes, or regressions before fixing. Diagnoses and routes; does not implement patches or merge.",
+      "id": "debug",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/debug/SKILL.md"
+    },
+    {
+      "bodyDigest": "823275e5378d171e8c2c896a67d558cad79678616c339120f72ffb07ce40c2c7",
+      "capabilities": [],
+      "description": "Dependency-ordered deliver waves with dependent-branch stacking and integration branch lifecycle. Use when shipping frozen task-list phases or multi-feature integration waves. Does not merge to main or bypass the merge gate.",
+      "id": "deliver",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/deliver/SKILL.md"
+    },
+    {
+      "bodyDigest": "506d975e004c02fec0ede85fbb9e691631a8cf4e1b57bd6bea55e34eeb41c1c9",
+      "capabilities": [
+        "skill.doc-review"
+      ],
+      "description": "Review PRD drafts with parallel persona sub-agents and a synthesizer that auto-applies safe fixes. Use when Standard or Full tier needs persona panel review before freeze. Quick tier skips; does not generate tasks.",
+      "id": "doc-review",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/doc-review/SKILL.md"
+    },
+    {
+      "bodyDigest": "0a5b42f28ac6545c5e8a129c5a812d5b69ebbd25d61d0e5ef97247a195550e0f",
+      "capabilities": [],
+      "description": "Per-task TDD gate, two-stage subagent review, and executable-plan self-review for /sw-execute. Use when implementing frozen task phases with R-ID traceability. Does not ship or merge.",
+      "id": "execute-discipline",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/execute-discipline/SKILL.md"
+    },
+    {
+      "bodyDigest": "fdbf509c8758aff98a73e87183d8eb92c293fc11fe45cac54926b8c8e677a293",
+      "capabilities": [],
+      "description": "Unified inbound-signals intake and router. Use when normalizing Sentry, user, or CI feedback for /sw-debug or gap capture. Normalizes and dispatches; does not analyze, author, or execute fixes.",
+      "id": "feedback",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/feedback/SKILL.md"
+    },
+    {
+      "bodyDigest": "0f3e90fae54a49ff04c51acf97083243f41cbce792b8bebeabdf020159708018",
+      "capabilities": [],
+      "description": "Consume GAP-BACKLOG into the implementation loop and close routed signals after verification. Use when confirming a fix shipped for a tracked feedback signal. Human-gated; does not merge PRs.",
+      "id": "feedback-closure",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/feedback-closure/SKILL.md"
+    },
+    {
+      "bodyDigest": "0e44d5265f913636038a77eac690e4f0b36381d4cc98ead95cee9e42592ea759",
+      "capabilities": [],
+      "description": "Compare phase plan (spec union + task checklist) against git diff with bounded closers. Use when /sw-ship needs in-scope gap detection before commit. Default-on; does not author new scope.",
+      "id": "gap-check",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/gap-check/SKILL.md"
+    },
+    {
+      "bodyDigest": "a8a9c265e5eb1f63de2c0ee3e2749281a5210fe22cbf3b33c89a78af595a8610",
+      "capabilities": [
+        "skill.git-workflow"
+      ],
+      "description": "Shipwright trunk-based git conventions \u2014 branch names, Conventional Commits, PR and merge bodies, docs-on-a-branch. Use when creating branches, commits, or PRs in Shipwright worktrees. Host-agnostic; does not merge.",
+      "id": "git-workflow",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/git-workflow/SKILL.md"
+    },
+    {
+      "bodyDigest": "850fb931024779e9819e313db509b4cdd700eec4dd76cd8153afe3702df4f88a",
+      "capabilities": [],
+      "description": "Derive PRD status from git and deliver state; reconcile planning INDEX, COMPLETION-LOG, and gap projections. Use when auditing planning drift or updating living status during deliver. Hard-blocks on drift; does not author docs.",
+      "id": "living-status",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/living-status/SKILL.md"
+    },
+    {
+      "bodyDigest": "814d11ad7db18f5e8260714a66605db8864666f0001634ff93dd7186c75622b6",
+      "capabilities": [
+        "skill.memory"
+      ],
+      "description": "Provider-agnostic durable-memory access for the Shipwright workflow. Use when loading context at phase start or storing distilled memories at phase end via /sw-memory-sync. Routes through configured provider; never calls providers directly.",
+      "id": "memory",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/memory/SKILL.md"
+    },
+    {
+      "bodyDigest": "ad012634046bdbcab009588aeca4ffc23ee77aa4930716f59cc6bad9416c1df1",
+      "capabilities": [],
+      "description": "Bounded parallel worktrees (~2\u20134 ceiling), cross-branch recombination, merge pre-flight, shared-migration refusal. Use when /sw-deliver or /sw-worktree fans out independent heads. Does not bypass merge gates.",
+      "id": "parallelism",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/parallelism/SKILL.md"
+    },
+    {
+      "bodyDigest": "ca28045bee2173515469354111d9469148528aa219f58f5327703f12c03c1f43",
+      "capabilities": [],
+      "description": "Generate a PRD or decision-record draft for Full or Standard tier. Use when requirements are brainstormed and a written spec is needed before persona review. Does not freeze, run doc-review, or generate tasks.",
+      "id": "prd",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/prd/SKILL.md"
+    },
+    {
+      "bodyDigest": "a730c93264444eb3471d9277e1691297d7b96efbd45bcc12b4adbe04394ea787",
+      "capabilities": [],
+      "description": "Shared hypothesis-driven root cause analysis core for stabilize, debug, and dev-time entry points. Use when forming or refuting RCA hypotheses before routing fixes. Does not patch code or merge.",
+      "id": "rca-core",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/rca-core/SKILL.md"
+    },
+    {
+      "bodyDigest": "3e87a5464fd96de570107c995cad7e8949d59c2989c85c0e18251e27a94488af",
+      "capabilities": [],
+      "description": "Post-ship retrospective \u2014 what went well, painful, and should change; learning candidates for compounding. Use when running /sw-retrospective after phase or merge milestones. Report-only by default; does not auto-apply rules.",
+      "id": "retro",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/retro/SKILL.md"
+    },
+    {
+      "bodyDigest": "10935e52b83fd050eb8b3909b1f08a0a5ce8e7aa71c99d2e2af9a50b86ab2a09",
+      "capabilities": [],
+      "description": "Phase ship loop gates for /sw-ship \u2014 dist freshness, build-chain parity, operator-local closeout hygiene. Use when executing or resuming the ship chain. Does not merge.",
+      "id": "ship",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/ship/SKILL.md"
+    },
+    {
+      "bodyDigest": "0cea8fce32e4fe2b23b98d885a5f5894dd3b4021e16c4c5a12664a40af716bae",
+      "capabilities": [],
+      "description": "Per-worktree Shipwright state read and write contract. Use when resuming /sw-ship phases or reading runDir and phase status across worktrees. Resolves gitdir state; does not merge branches.",
+      "id": "shipwright-state",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/shipwright-state/SKILL.md"
+    },
+    {
+      "bodyDigest": "6a93e88a2299cccd6c22a07cc0ffd13a088a1fa30a1d4d66f7c41e3f532242f0",
+      "capabilities": [],
+      "description": "Behavior-preserving cleanup pass (reuse, quality, efficiency, AI-slop removal) after review. Use when /sw-ship runs post-review deslop before gap-check. Re-verified via simplify-gate; does not skip verify.",
+      "id": "simplify",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/simplify/SKILL.md"
+    },
+    {
+      "bodyDigest": "cba0161c2d5818b249120bd11d4d107a93c7b32686bc2217be5de4ff1b69bdda",
+      "capabilities": [],
+      "description": "Pre-freeze spec quality gates (clarify, checklist, analyze) and R-ID to task to test traceability. Use when validating PRD quality before /sw-freeze on Standard or Full tier. Blocks freeze on hard failures.",
+      "id": "spec-rigor",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/spec-rigor/SKILL.md"
+    },
+    {
+      "bodyDigest": "cefacdc420082988fbee785c351d369cd041d322b5c43e37681c47a2b10ff9a5",
+      "capabilities": [],
+      "description": "Resolve a frozen PRD or decision record plus amendments into one effective spec. Use when executing or reviewing against the authoritative requirement set. Read-only on parent; does not author amendments.",
+      "id": "spec-union",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/spec-union/SKILL.md"
+    },
+    {
+      "bodyDigest": "6cfe08c1901231b2691f421203bb402a092cc7a5e4e21622b278f9425006bdf2",
+      "capabilities": [],
+      "description": "Opt-in goal-driven loop that keeps running /sw-stabilize and /sw-watch-ci until the all-checks gate is green and no actionable review threads remain. Use when the user asks to stabilize until green or from /ship. Single-pass /sw-stabilize remains default; does not merge.",
+      "id": "stabilize-loop",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/stabilize-loop/SKILL.md"
+    },
+    {
+      "bodyDigest": "b3e782f0216a153a3eb3845c9a217826bd5f1e151ade4ba5a3fba13a302323de",
+      "capabilities": [],
+      "description": "Generate a frozen task list from a frozen PRD using the spec union in one pass. Use when PRD is frozen and implementation tasks are needed before /sw-freeze. No mid-pass user gates; does not implement.",
+      "id": "tasks",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/tasks/SKILL.md"
+    },
+    {
+      "bodyDigest": "24453223f2d0a0b30150c39d3e526bad0a899dbf55d44093781a6e6cfb2540fe",
+      "capabilities": [],
+      "description": "Run a bounded N-attempt tournament with deterministic bracketing and pairwise judges. Use when brainstorm divergence selection needs an isolated winner among competing options. Does not auto-apply decisions or bypass human synthesis.",
+      "id": "tournament",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/tournament/SKILL.md"
+    },
+    {
+      "bodyDigest": "3d0765aa02b5154c6811a54377ca35211d94045bf5938b514d23d7a694435521",
+      "capabilities": [
+        "skill.triage"
+      ],
+      "description": "Classify work into Quick, Standard, or Full tiers from deterministic signals. Use when routing new work or re-scoring scope mid-flight. Does not run the doc pipeline or implementation phases.",
+      "id": "triage",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/triage/SKILL.md"
+    },
+    {
+      "bodyDigest": "c528acaeaef8eed30d778afc48f19877463d7e8fe7413aca8e6cec736b9ae8dd",
+      "capabilities": [
+        "skill.verification-gate"
+      ],
+      "description": "Evidence-over-claims gate emitting verified, not-verified, or inconclusive from structured status files. Use when /sw-ship needs local evidence before commit. Complementary to checks-gate; never overrides CI truth.",
+      "id": "verification-gate",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/verification-gate/SKILL.md"
+    },
+    {
+      "bodyDigest": "dfa1243b079dc6dfd4ca0008354a2272a39108831da4b54020005ec49ac87107",
+      "capabilities": [],
+      "description": "Provision per-work-item git worktrees with env scaffold (ports, DB strategy) and safe teardown. Use when starting isolated implementation or docs work under the parallelism ceiling. Enforces ceiling; does not merge.",
+      "id": "worktree",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/worktree/SKILL.md"
+    }
+  ],
+  "version": 1
+}

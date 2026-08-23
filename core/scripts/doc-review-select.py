@@ -14,11 +14,15 @@ def main(argv: list[str] | None = None) -> int:
 
     sys.path.insert(0, sys.argv[1] + "/scripts")
     from capability_migration_parity import select_family
+    from graph.reviewer_metrics.selection import apply_bounded_doc_review
+    from host_lib import load_workflow_config
 
     root = Path(sys.argv[1])
     raw = sys.argv[2] or "{}"
     ctx = json.loads(raw)
     out = select_family("doc-review", ctx, repo_root=root, skip_freshness=False)
+    cfg = load_workflow_config(root)
+    out = apply_bounded_doc_review(out, repo_root=root, cfg=cfg)
     print(json.dumps(out, ensure_ascii=False, sort_keys=True, separators=(",", ":")))
     return 0
 

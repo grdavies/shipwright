@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -36,6 +38,32 @@ MECHANICAL_REPRO_STEPS: tuple[dict[str, Any], ...] = (
     },
 )
 
+NORMALIZED_ISO_TIMESTAMP = "<ISO-TIMESTAMP>"
+NORMALIZED_WORKTREE_PATH = "<WORKTREE-PATH>"
+NORMALIZED_PID = "<PID>"
+NORMALIZED_PORT = "<PORT>"
+
+_ISO_TIMESTAMP_RE = re.compile(
+    r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?"
+)
+_ABSOLUTE_WORKTREE_PATH_RE = re.compile(
+    r"(?:/(?:Volumes|Users|home|tmp|var|opt|private)(?:/[^\s\"']+)+|"
+    r"(?:^|[\s\"'])\.sw-worktrees/[^\s\"']+)"
+)
+_PID_NOISE_RE = re.compile(r"(?i)\b(?:pid[=:\s]+)(\d+)\b")
+_PORT_NOISE_RE = re.compile(r"(?i)\b(?:port|listening on)\s+(\d{2,5})\b")
+
+FORBIDDEN_REPRO_RECORD_FIELDS = frozenset(
+    {
+        "transcript",
+        "rawTranscript",
+        "prompt",
+        "promptText",
+        "messages",
+        "rawOutput",
+    }
+)
+
 EVIDENCE_ACQUISITION_CHECKLIST: tuple[dict[str, Any], ...] = (
     {
         "id": "logs",
@@ -64,9 +92,103 @@ EVIDENCE_ACQUISITION_CHECKLIST: tuple[dict[str, Any], ...] = (
 )
 
 
+class ReproUnverifiedError(ValueError):
+    """Raised when repro evidence cannot be verified for signature or persistence."""
+
+
+class RedactionRefusedError(RuntimeError):
+    """Raised when memory-redact fail-closed refuses persisted repro content."""
+
+
 def emit(obj: dict[str, Any], code: int = 0) -> None:
     print(json.dumps(obj, ensure_ascii=False, indent=2))
     raise SystemExit(code)
+
+
+def normalize_repro_text(text: str) -> str:
+    """Normalize repro evidence for deterministic signature hashing (gap 322)."""
+    normalized = "\n".join(line.rstrip() for line in text.splitlines())
+    normalized = _ISO_TIMESTAMP_RE.sub(NORMALIZED_ISO_TIMESTAMP, normalized)
+    normalized = _ABSOLUTE_WORKTREE_PATH_RE.sub(NORMALIZED_WORKTREE_PATH, normalized)
+    normalized = _PID_NOISE_RE.sub(lambda _m: f"pid={NORMALIZED_PID}", normalized)
+    normalized = _PORT_NOISE_RE.sub(lambda _m: f"port {NORMALIZED_PORT}", normalized)
+    return normalized.strip()
+
+
+def compute_repro_signature(repro_output: str) -> str:
+    """Return a byte-stable SHA-256 signature over normalized repro output."""
+    if not str(repro_output).strip():
+        raise ReproUnverifiedError("empty repro payload")
+    normalized = normalize_repro_text(repro_output)
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def extract_repro_output(repro: dict[str, Any]) -> str:
+    output = repro.get("reproOutput")
+    if output is None:
+        output = repro.get("output")
+    return str(output or "")
+
+
+def build_repro_unverified_fail(signal: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "verdict": "fail",
+        "reason": "repro-unverified",
+        "signal": {
+            "type": signal_type(signal),
+            "signalClass": signal_class(signal),
+        },
+    }
+
+
+def verify_repro_payload(repro: dict[str, Any] | None, signal: dict[str, Any]) -> dict[str, Any] | None:
+    """Return typed fail payload when repro verification is requested but payload is empty."""
+    repro = repro or {}
+    if not repro.get("verifySignature"):
+        return None
+    if not extract_repro_output(repro).strip():
+        return build_repro_unverified_fail(signal)
+    return None
+
+
+def build_repro_record(repro: dict[str, Any], signal: dict[str, Any]) -> dict[str, Any]:
+    for forbidden in FORBIDDEN_REPRO_RECORD_FIELDS:
+        if forbidden in repro:
+            raise RedactionRefusedError(f"forbidden repro field: {forbidden}")
+    output = extract_repro_output(repro)
+    signature = compute_repro_signature(output)
+    record: dict[str, Any] = {
+        "reproCommand": repro.get("reproCommand") or signal.get("reproCommand"),
+        "reproSignature": signature,
+        "reproConfirmed": repro.get("reproConfirmed"),
+        "signalType": signal_type(signal),
+        "signalClass": signal_class(signal),
+    }
+    if repro.get("reproOutputDigest"):
+        record["reproOutputDigest"] = repro.get("reproOutputDigest")
+    return record
+
+
+def redact_json_for_persist(obj: dict[str, Any]) -> str:
+    """Route persisted repro JSON through memory-redact fail-closed."""
+    import memory_redact
+    from planning_visibility import resolve_emission_destination
+
+    text = json.dumps(obj, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    destination = resolve_emission_destination("handoff-032")
+    try:
+        return memory_redact.redact(text, destination=destination)
+    except memory_redact.RedactionError as exc:
+        raise RedactionRefusedError(str(exc)) from exc
+
+
+def persist_repro_record(repro: dict[str, Any], signal: dict[str, Any], path: Path) -> Path:
+    """Persist a redacted repro record; refuses raw transcripts and unverifiable payloads."""
+    record = build_repro_record(repro, signal)
+    redacted = redact_json_for_persist(record)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(redacted + "\n", encoding="utf-8")
+    return path
 
 
 def signal_type(signal: dict[str, Any]) -> str:
@@ -298,6 +420,12 @@ def evaluate_gate(
     signal_path: str | None = None,
     state_path: str | None = None,
 ) -> dict[str, Any]:
+    state = state or {}
+    repro = state.get("repro") if isinstance(state.get("repro"), dict) else {}
+    verification_fail = verify_repro_payload(repro, signal)
+    if verification_fail is not None:
+        return verification_fail
+
     cls = signal_class(signal)
     if cls == "dev-time":
         result = evaluate_dev_time(signal, state, signal_path=signal_path, state_path=state_path)
@@ -324,7 +452,7 @@ def evaluate_gate(
 def exit_code_for_verdict(verdict: str) -> int:
     if verdict == "pass":
         return 0
-    if verdict in ("blocked", "exhausted"):
+    if verdict in ("blocked", "exhausted", "fail"):
         return 20
     return 20
 
@@ -349,6 +477,7 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--state")
     run.add_argument("--hypotheses")
     run.add_argument("--out")
+    run.add_argument("--repro-record", help="Persist redacted repro record to path")
 
     args = parser.parse_args(argv)
 
@@ -364,6 +493,26 @@ def main(argv: list[str] | None = None) -> int:
         hypotheses = raw if isinstance(raw, list) else None
     elif isinstance(hypotheses_raw, list):
         hypotheses = hypotheses_raw
+
+    if args.repro_record:
+        repro = state.get("repro") if isinstance(state.get("repro"), dict) else {}
+        try:
+            persist_repro_record(repro, signal, Path(args.repro_record))
+        except ReproUnverifiedError:
+            emit(build_repro_unverified_fail(signal), 20)
+        except RedactionRefusedError as exc:
+            emit(
+                {
+                    "verdict": "fail",
+                    "reason": "redaction-refused",
+                    "detail": str(exc),
+                    "signal": {
+                        "type": signal_type(signal),
+                        "signalClass": signal_class(signal),
+                    },
+                },
+                20,
+            )
 
     result = evaluate_gate(
         signal,

@@ -19,6 +19,7 @@ from decision_graph.evidence import (  # noqa: E402
     link_evidence_to_decision,
 )
 from decision_graph.prototype import (  # noqa: E402
+    CAUSE_MARKER_INVALID,
     is_prototype_branch,
     prototype_branch_name,
     refuse_merge_enqueue,
@@ -68,7 +69,7 @@ def test_prototype_branch_detection_and_merge_refusal() -> None:
     assert is_prototype_branch(branch)
     refusal = refuse_merge_enqueue(branch, "feat/engineering-decision-layer")
     assert refusal["verdict"] == "fail"
-    assert refusal["cause"] == "prototype:merge-refused"
+    assert refusal["cause"] == CAUSE_MARKER_INVALID
 
 
 def test_normal_phase_branch_merge_enqueue_allowed() -> None:

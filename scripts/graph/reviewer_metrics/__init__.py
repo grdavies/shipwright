@@ -28,7 +28,20 @@ from graph.reviewer_metrics.independence import (
     independence_warnings,
     score_independence,
 )
-from graph.reviewer_metrics.surviving import SurvivingVerdict, classify_surviving
+from graph.reviewer_metrics.harvest import (
+    HARVEST_SCHEMA_VERSION,
+    HarvestFindingInput,
+    HarvestRecord,
+    HarvestReviewerScore,
+    harvest_reviewers,
+    harvest_score_map,
+)
+from graph.reviewer_metrics.selection import (
+    SelectionConfig,
+    apply_bounded_code_review,
+    apply_bounded_doc_review,
+    load_selection_config,
+)
 from graph.reviewer_metrics.cohort import CohortIdentity, CohortAction, CohortResolution, cohort_compatible
 from graph.reviewer_metrics.elo import (
     ContestOutcome,
@@ -67,6 +80,16 @@ __all__ = [
     "MetadataSchemaError",
     "ProvenanceRecord",
     "ReviewerMetricsStoreAdapter",
+    "HarvestFindingInput",
+    "HarvestRecord",
+    "HarvestReviewerScore",
+    "HARVEST_SCHEMA_VERSION",
+    "SelectionConfig",
+    "apply_bounded_code_review",
+    "apply_bounded_doc_review",
+    "harvest_reviewers",
+    "harvest_score_map",
+    "load_selection_config",
     "SurvivingVerdict",
     "build_metadata_record",
     "classify_surviving",

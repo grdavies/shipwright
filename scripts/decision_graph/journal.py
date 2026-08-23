@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
-EVENT_TYPES = frozenset({"resolution", "human-action"})
+EVENT_TYPES = frozenset({"resolution", "human-action", "prototype-teardown"})
 _SAFE_RUN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 _SAFE_EVENT_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$")
 
@@ -147,6 +147,23 @@ class DecisionRunJournal:
     ) -> dict[str, Any]:
         body: dict[str, Any] = {
             "eventType": "human-action",
+            "nodeId": node_id,
+            "receipt": dict(receipt),
+        }
+        if actor:
+            body["actor"] = actor
+        return self.append_event(event_id, body)
+
+    def append_prototype_teardown(
+        self,
+        event_id: str,
+        *,
+        node_id: str,
+        receipt: Mapping[str, Any],
+        actor: str | None = None,
+    ) -> dict[str, Any]:
+        body: dict[str, Any] = {
+            "eventType": "prototype-teardown",
             "nodeId": node_id,
             "receipt": dict(receipt),
         }

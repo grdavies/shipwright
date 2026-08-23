@@ -22,6 +22,7 @@ from host_lib import load_workflow_config  # noqa: E402
 INTENT_CLASSES = frozenset({"deterministic-regen", "compatible-merge", "semantic-ambiguous"})
 SIDE_VALUES = frozenset({"LEFT", "RIGHT"})
 CLASS_PRIORITY = {"semantic-ambiguous": 0, "deterministic-regen": 1, "compatible-merge": 2}
+AMBIGUOUS_INTENT_EXIT = 20
 
 DETERMINISTIC_REGEN_RELPATHS = (
     "core/sw-reference/deterministic-regen-paths.json",
@@ -75,6 +76,102 @@ def path_in_allowlist(path: str, allowlist: list[str]) -> bool:
         if norm == entry:
             return True
     return False
+
+
+def _intent_descriptor(record: dict[str, Any], *, side: str) -> dict[str, Any]:
+    return {
+        "side": side,
+        "path": str(record.get("path") or ""),
+        "taskRef": str(record.get("taskRef") or ""),
+        "phaseSlug": str(record.get("phaseSlug") or ""),
+        "intent": str(record.get("intent") or record.get("taskRef") or mp.UNATTRIBUTED_INTENT),
+    }
+
+
+def detect_ambiguous_intent(
+    *,
+    conflict_paths: list[str],
+    left_records: list[dict[str, Any]],
+    right_records: list[dict[str, Any]],
+    path_decisions: list[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
+    by_left = {str(item.get("path")): item for item in left_records}
+    by_right = {str(item.get("path")): item for item in right_records}
+    conflicting_paths: list[str] = []
+    intents: list[dict[str, Any]] = []
+    seen_intent_keys: set[tuple[str, str, str]] = set()
+
+    for path in conflict_paths:
+        left = by_left.get(path, {"path": path, "side": "LEFT"})
+        right = by_right.get(path, {"path": path, "side": "RIGHT"})
+        left_ref = str(left.get("taskRef") or "")
+        right_ref = str(right.get("taskRef") or "")
+        if left_ref and right_ref and left_ref != right_ref:
+            conflicting_paths.append(path)
+            for descriptor in (_intent_descriptor(left, side="LEFT"), _intent_descriptor(right, side="RIGHT")):
+                key = (descriptor["side"], descriptor["path"], descriptor["taskRef"])
+                if key in seen_intent_keys:
+                    continue
+                seen_intent_keys.add(key)
+                intents.append(descriptor)
+
+    if path_decisions is not None:
+        chosen_sides = {
+            str(decision.get("chosenSide"))
+            for decision in path_decisions
+            if decision.get("intentClass") == "compatible-merge" and decision.get("chosenSide")
+        }
+        if len(chosen_sides) > 1:
+            for decision in path_decisions:
+                if decision.get("intentClass") != "compatible-merge":
+                    continue
+                path = str(decision.get("path") or "")
+                if path and path not in conflicting_paths:
+                    conflicting_paths.append(path)
+                left = decision.get("left") if isinstance(decision.get("left"), dict) else {}
+                right = decision.get("right") if isinstance(decision.get("right"), dict) else {}
+                for descriptor in (
+                    _intent_descriptor(left, side="LEFT"),
+                    _intent_descriptor(right, side="RIGHT"),
+                ):
+                    key = (descriptor["side"], descriptor["path"], descriptor["taskRef"])
+                    if key in seen_intent_keys:
+                        continue
+                    seen_intent_keys.add(key)
+                    intents.append(descriptor)
+
+    if not conflicting_paths and not intents:
+        return None
+    return {
+        "verdict": "halt",
+        "reason": "ambiguous-intent",
+        "paths": sorted(dict.fromkeys(conflicting_paths)),
+        "intents": sorted(intents, key=lambda item: (item["path"], item["side"], item["taskRef"])),
+    }
+
+
+def halt_ambiguous_intent_payload(
+    *,
+    conflict_paths: list[str],
+    left_records: list[dict[str, Any]],
+    right_records: list[dict[str, Any]],
+    path_decisions: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    payload = detect_ambiguous_intent(
+        conflict_paths=conflict_paths,
+        left_records=left_records,
+        right_records=right_records,
+        path_decisions=path_decisions,
+    )
+    if payload is None:
+        payload = {
+            "verdict": "halt",
+            "reason": "ambiguous-intent",
+            "paths": sorted(conflict_paths),
+            "intents": [],
+        }
+    payload["conflictPaths"] = sorted(conflict_paths)
+    return payload
 
 
 def aggregate_intent_class(classes: list[str]) -> str:
@@ -397,18 +494,44 @@ def attempt_intent_resolve(
     )
     if record_result.get("verdict") != "pass":
         return record_result
+    left_records = list(record_result.get("leftRecords") or [])
+    right_records = list(record_result.get("rightRecords") or [])
+    ambiguous = detect_ambiguous_intent(
+        conflict_paths=conflict_paths,
+        left_records=left_records,
+        right_records=right_records,
+    )
+    if ambiguous is not None:
+        return halt_ambiguous_intent_payload(
+            conflict_paths=conflict_paths,
+            left_records=left_records,
+            right_records=right_records,
+        )
     intent_class, path_decisions = classify_conflict_from_records(
         root,
         conflict_paths=conflict_paths,
-        left_records=list(record_result.get("leftRecords") or []),
-        right_records=list(record_result.get("rightRecords") or []),
+        left_records=left_records,
+        right_records=right_records,
         merging_phase_slug=phase_slug,
     )
+    ambiguous = detect_ambiguous_intent(
+        conflict_paths=conflict_paths,
+        left_records=left_records,
+        right_records=right_records,
+        path_decisions=path_decisions,
+    )
+    if ambiguous is not None:
+        return halt_ambiguous_intent_payload(
+            conflict_paths=conflict_paths,
+            left_records=left_records,
+            right_records=right_records,
+            path_decisions=path_decisions,
+        )
     proposal = build_proposal(
         root,
         conflict_paths=conflict_paths,
-        left_records=list(record_result.get("leftRecords") or []),
-        right_records=list(record_result.get("rightRecords") or []),
+        left_records=left_records,
+        right_records=right_records,
         path_decisions=path_decisions,
         intent_class=intent_class,
         phase_slug=phase_slug,
@@ -460,6 +583,31 @@ def load_json(path: str | None) -> dict[str, Any]:
     return doc if isinstance(doc, dict) else {}
 
 
+def ensure_no_ambiguous_intent(
+    *,
+    conflict_paths: list[str],
+    left_records: list[dict[str, Any]],
+    right_records: list[dict[str, Any]],
+    path_decisions: list[dict[str, Any]] | None = None,
+) -> None:
+    ambiguous = detect_ambiguous_intent(
+        conflict_paths=conflict_paths,
+        left_records=left_records,
+        right_records=right_records,
+        path_decisions=path_decisions,
+    )
+    if ambiguous is not None:
+        emit(
+            halt_ambiguous_intent_payload(
+                conflict_paths=conflict_paths,
+                left_records=left_records,
+                right_records=right_records,
+                path_decisions=path_decisions,
+            ),
+            AMBIGUOUS_INTENT_EXIT,
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Intent-aware merge resolver (PRD 323 R11–R15, R21)")
     parser.add_argument("--root", default=".")
@@ -500,12 +648,25 @@ def main(argv: list[str] | None = None) -> int:
         )
         if records.get("verdict") != "pass":
             emit(records, 2)
+        left_records = list(records.get("leftRecords") or [])
+        right_records = list(records.get("rightRecords") or [])
+        ensure_no_ambiguous_intent(
+            conflict_paths=paths,
+            left_records=left_records,
+            right_records=right_records,
+        )
         intent_class, path_decisions = classify_conflict_from_records(
             root,
             conflict_paths=paths,
-            left_records=list(records.get("leftRecords") or []),
-            right_records=list(records.get("rightRecords") or []),
+            left_records=left_records,
+            right_records=right_records,
             merging_phase_slug=args.phase_slug,
+        )
+        ensure_no_ambiguous_intent(
+            conflict_paths=paths,
+            left_records=left_records,
+            right_records=right_records,
+            path_decisions=path_decisions,
         )
         emit(
             {
@@ -526,18 +687,31 @@ def main(argv: list[str] | None = None) -> int:
         )
         if records.get("verdict") != "pass":
             emit(records, 2)
+        left_records = list(records.get("leftRecords") or [])
+        right_records = list(records.get("rightRecords") or [])
+        ensure_no_ambiguous_intent(
+            conflict_paths=paths,
+            left_records=left_records,
+            right_records=right_records,
+        )
         intent_class, path_decisions = classify_conflict_from_records(
             root,
             conflict_paths=paths,
-            left_records=list(records.get("leftRecords") or []),
-            right_records=list(records.get("rightRecords") or []),
+            left_records=left_records,
+            right_records=right_records,
             merging_phase_slug=args.phase_slug,
+        )
+        ensure_no_ambiguous_intent(
+            conflict_paths=paths,
+            left_records=left_records,
+            right_records=right_records,
+            path_decisions=path_decisions,
         )
         proposal = build_proposal(
             root,
             conflict_paths=paths,
-            left_records=list(records.get("leftRecords") or []),
-            right_records=list(records.get("rightRecords") or []),
+            left_records=left_records,
+            right_records=right_records,
             path_decisions=path_decisions,
             intent_class=intent_class,
             phase_slug=args.phase_slug,

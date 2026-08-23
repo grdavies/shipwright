@@ -20,6 +20,7 @@ from execute_task_status import sanitize_ref, status_path  # noqa: E402
 from planning_materialize import materialized_rel, parse_frontmatter  # noqa: E402
 
 SIDE_VALUES = frozenset({"LEFT", "RIGHT"})
+UNATTRIBUTED_INTENT = "unattributed"
 
 
 def emit(obj: dict[str, Any], code: int = 0) -> None:
@@ -36,6 +37,22 @@ def normalize_side(raw: str) -> str:
 
 def normalize_repo_path(raw: str) -> str:
     return raw.replace("\\", "/").lstrip("/")
+
+
+def normalize_rationale(value: str | None) -> str:
+    return " ".join(str(value or "").split()).strip().lower()
+
+
+def rationale_overlap_score(commit_msg: str, candidate: str) -> int:
+    commit_words = {word for word in normalize_rationale(commit_msg).split() if len(word) > 2}
+    candidate_words = {word for word in normalize_rationale(candidate).split() if len(word) > 2}
+    if not commit_words or not candidate_words:
+        return 0
+    return len(commit_words & candidate_words)
+
+
+def canonical_json_dumps(obj: Any) -> str:
+    return json.dumps(obj, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
 
 def git_run(root: Path, args: list[str]) -> subprocess.CompletedProcess[str]:
@@ -245,6 +262,43 @@ def select_binding(
     return bindings[0]
 
 
+def select_binding_for_side(
+    bindings: list[PathBinding] | None,
+    *,
+    execute_receipts: dict[str, dict[str, Any]],
+    root: Path,
+    rel: str,
+    head: str | None,
+) -> PathBinding | None:
+    if not bindings:
+        return None
+    if len(bindings) == 1:
+        return bindings[0]
+    for binding in bindings:
+        if binding.task_ref in execute_receipts:
+            return binding
+    if head:
+        commit_msg = git_commit_rationale(root, rel, head)
+        if commit_msg:
+            best_binding: PathBinding | None = None
+            best_score = 0
+            for binding in bindings:
+                for candidate in (binding.title, binding.expected, binding.task_ref):
+                    score = rationale_overlap_score(commit_msg, str(candidate))
+                    if score > best_score:
+                        best_score = score
+                        best_binding = binding
+            if best_binding is not None and best_score >= 2:
+                return best_binding
+            norm_commit = normalize_rationale(commit_msg)
+            for binding in bindings:
+                for candidate in (binding.expected, binding.title, binding.task_ref):
+                    cand = normalize_rationale(str(candidate))
+                    if cand and (cand in norm_commit or norm_commit in cand):
+                        return binding
+    return select_binding(bindings, execute_receipts=execute_receipts)
+
+
 def intent_record_for_path(
     index: ProvenanceIndex,
     path: str,
@@ -258,7 +312,13 @@ def intent_record_for_path(
     if bindings is None:
         virtual = _virtual_body_path(rel)
         bindings = index.by_path.get(virtual)
-    binding = select_binding(bindings, execute_receipts=index.execute_receipts)
+    binding = select_binding_for_side(
+        bindings,
+        execute_receipts=index.execute_receipts,
+        root=root,
+        rel=rel,
+        head=head,
+    )
     receipt = index.execute_receipts.get(binding.task_ref) if binding else None
     rationale = _receipt_rationale(receipt)
     if not rationale:
@@ -294,6 +354,7 @@ def intent_record_for_path(
                 "path": str(status_path(root, binding.task_ref)),
             }
     else:
+        record["intent"] = UNATTRIBUTED_INTENT
         record["rationale"] = rationale
         record["prdUnitId"] = index.prd_unit_id
         record["tasksUnitId"] = index.tasks_unit_id
@@ -311,13 +372,14 @@ def resolve_paths(
     deliver_state: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     index = build_index(root, task_list, deliver_state=deliver_state)
+    sorted_paths = sorted(normalize_repo_path(path) for path in paths)
     left_records = [
         intent_record_for_path(index, path, "LEFT", root=root, head=left_head)
-        for path in paths
+        for path in sorted_paths
     ]
     right_records = [
         intent_record_for_path(index, path, "RIGHT", root=root, head=right_head)
-        for path in paths
+        for path in sorted_paths
     ]
     return {
         "verdict": "pass",
@@ -407,7 +469,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.out:
             out = Path(args.out)
             out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            out.write_text(canonical_json_dumps(payload), encoding="utf-8")
         emit(payload)
 
     if args.command == "resolve":
@@ -423,7 +485,7 @@ def main(argv: list[str] | None = None) -> int:
         right = result["records"]["right"][0]
         payload = {"verdict": "pass", "left": left, "right": right}
         if args.out:
-            Path(args.out).write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            Path(args.out).write_text(canonical_json_dumps(payload), encoding="utf-8")
         emit(payload)
 
     if args.command == "resolve-batch":
@@ -439,7 +501,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.out:
             out = Path(args.out)
             out.parent.mkdir(parents=True, exist_ok=True)
-            out.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            out.write_text(canonical_json_dumps(result), encoding="utf-8")
         emit(result)
     return 0
 

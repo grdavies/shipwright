@@ -98,6 +98,22 @@ def test_prd325_absorb_change_selects_closeout_suite(registry: dict) -> None:
     assert "prd-325-absorb-closeout-fixtures" in plan["suites"]
 
 
+def test_prd326_absorb_change_selects_closeout_suite(registry: dict) -> None:
+    plan = ts.compute_changed_domain_plan(
+        ["scripts/planning_gap_capture.py"],
+        registry=registry,
+    )
+    assert "prd-326-absorb-closeout-fixtures" in plan["suites"]
+
+
+def test_prd326_order_note_change_selects_order_note_suite(registry: dict) -> None:
+    plan = ts.compute_changed_domain_plan(
+        ["core/sw-reference/README.md"],
+        registry=registry,
+    )
+    assert "prd-326-order-note-fixtures" in plan["suites"]
+
+
 def test_redaction_path_includes_eval_suite(registry: dict) -> None:
     plan = ts.compute_changed_domain_plan(
         ["scripts/memory_redact.py"],

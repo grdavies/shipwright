@@ -124,3 +124,42 @@ def label_with_provenance(
         match_reason=match_reason,
         terminal_status=terminal_status,
     )
+
+
+@dataclass(frozen=True)
+class HarvestFindingProvenance:
+    """Provenance binding for a finding contributing to a harvest record."""
+
+    finding_id: str
+    reviewer_id: str
+    run_id: str
+    recorded_at: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "findingId": self.finding_id,
+            "reviewerId": self.reviewer_id,
+            "runId": self.run_id,
+            "recordedAt": self.recorded_at,
+        }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> HarvestFindingProvenance:
+        return cls(
+            finding_id=str(payload.get("findingId", "")),
+            reviewer_id=str(payload.get("reviewerId", "")),
+            run_id=str(payload.get("runId", "")),
+            recorded_at=str(payload.get("recordedAt", "")),
+        )
+
+
+def build_harvest_provenance(
+    findings: Sequence[HarvestFindingProvenance],
+) -> tuple[HarvestFindingProvenance, ...]:
+    """Return deterministic provenance rows for every contributing finding."""
+    return tuple(
+        sorted(
+            findings,
+            key=lambda item: (item.finding_id, item.reviewer_id, item.run_id, item.recorded_at),
+        )
+    )
