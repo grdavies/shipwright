@@ -1029,6 +1029,7 @@
 * merge phase residual-hardening-repro-first-debug-gate-gap-322-m into feat/workflow-quality-platform (de7ba4c) <!-- sw-deliver:residual-hardening-repro-first-debug-gate-gap-322-m -->
 * merge phase residual-hardening-merge-provenance-intent-resolve-gap-320-m into feat/workflow-quality-platform (2f7f45f) <!-- sw-deliver:residual-hardening-merge-provenance-intent-resolve-gap-320-m -->
 * merge phase residual-hardening-deliver-resilience-property-suite-gap-319-m into feat/workflow-quality-platform (42c1a7e) <!-- sw-deliver:residual-hardening-deliver-resilience-property-suite-gap-319-m -->
+* merge phase agent-instruction-compiler-m into feat/workflow-quality-platform (64d4d85) <!-- sw-deliver:agent-instruction-compiler-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
