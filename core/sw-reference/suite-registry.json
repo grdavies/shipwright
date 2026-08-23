@@ -590,6 +590,51 @@
       ]
     },
     {
+      "id": "prd-326-absorb-closeout-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 64,
+      "pytestPath": "scripts/unit_tests/planning/test_absorb_closeout_326.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "scripts/planning_gap_capture.py",
+        "scripts/planning_store_facade.py",
+        "scripts/unit_tests/planning/test_absorb_closeout_326.py"
+      ],
+      "tags": [
+        "pytest",
+        "planning",
+        "prd-326"
+      ]
+    },
+    {
+      "id": "prd-326-order-note-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "verifyOrder": 65,
+      "pytestPath": "scripts/unit_tests/quality/test_prd326_order_note.py",
+      "ciShard": 4,
+      "pathTriggers": [
+        "core/sw-reference/README.md",
+        "scripts/unit_tests/quality/test_prd326_order_note.py"
+      ],
+      "tags": [
+        "pytest",
+        "quality",
+        "prd-326"
+      ]
+    },
+    {
       "id": "dispatch-binding-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
