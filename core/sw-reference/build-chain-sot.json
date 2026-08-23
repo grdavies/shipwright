@@ -45,6 +45,8 @@
     "README.md",
     "adoption-call-site-map.md",
     "anomaly-patterns.json",
+    "architecture-assessment.schema.json",
+    "architecture-doctrine.md",
     "build-chain-paths.json",
     "build-chain-sot.json",
     "call-site-map.md",
