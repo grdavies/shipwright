@@ -49,6 +49,9 @@ VERIFY_OVERRIDE_RECURRENCE_REL = ".cursor/hooks/state/verify-override-recurrence
 
 GAP_DRAFT_INBOX_REL = ".cursor/sw-gap-draft-inbox"
 DEFAULT_DRAFT_STALE_DAYS = 14
+RETRO_GAP_ROUTE_REL = ".cursor/hooks/state/retro-gap-routes"
+RETRO_GAP_KIND = "painful"
+DEFAULT_RETRO_MAX_CAPTURES = 3
 
 GAP_SECTION_PATTERNS: dict[str, re.Pattern[str]] = {
     "problem": re.compile(r"^##\s+Problem\s*$", re.MULTILINE | re.IGNORECASE),
@@ -732,6 +735,118 @@ def capture_gap(
     return {"unitId": unit_id, "path": body_path_rel, "signalId": signal_id, "deduped": False, "action": "gap-capture"}
 
 
+def capture_external_intake(
+    root: Path,
+    *,
+    signal_id: str,
+    title: str,
+    payload: str | None = None,
+    outcome: str = "brief",
+    issue_id: str | None = None,
+    gap_unit_id: str | None = None,
+    comment: str | None = None,
+    signal_class: str = "feedback",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Feedback handoff to external-intake store verbs — no nested orchestrators (PRD 280 R4/R5/R7)."""
+    from workflow_extensions import require_extension
+
+    disabled = require_extension("externalIntake", root=root)
+    if disabled is not None:
+        return {**disabled, "action": "capture-external-intake"}
+
+    from planning_external_intake import EXTERNAL_INTAKE_OUTCOMES
+    from planning_store_facade import external_intake_run_pipeline, external_intake_txn, load_workflow_config
+
+    normalized_outcome = str(outcome or "brief").strip().lower()
+    if normalized_outcome not in EXTERNAL_INTAKE_OUTCOMES:
+        return {
+            "verdict": "fail",
+            "action": "capture-external-intake",
+            "error": "invalid-outcome",
+            "allowed": sorted(EXTERNAL_INTAKE_OUTCOMES),
+        }
+
+    cfg = load_workflow_config(root)
+    redacted_payload = redact_override_reason(payload or title)
+    reporter_comment = comment or redacted_payload
+
+    receive = external_intake_txn(
+        root,
+        cfg,
+        verb="external-intake-receive",
+        signal_id=signal_id,
+        title=title,
+        signal_class=signal_class,
+        dry_run=dry_run,
+    )
+    if receive.get("verdict") != "ok":
+        return {"verdict": "fail", "action": "capture-external-intake", "step": "receive", **receive}
+
+    active_issue_id = issue_id or str(receive.get("issueId") or "")
+    if not active_issue_id:
+        return {"verdict": "fail", "action": "capture-external-intake", "error": "missing-issue-id"}
+
+    pipeline_through = "actionability" if normalized_outcome == "brief" else "verify"
+    pipeline = external_intake_run_pipeline(
+        root,
+        cfg,
+        issue_id=active_issue_id,
+        duplicate=normalized_outcome == "closure",
+        through=pipeline_through,
+        dry_run=dry_run,
+    )
+    if pipeline.get("verdict") != "ok":
+        return {"verdict": "fail", "action": "capture-external-intake", "step": "pipeline", **pipeline}
+
+    if normalized_outcome == "brief":
+        if not gap_unit_id:
+            dirs = pp.load_planning_dirs(root)
+            gap_unit_id, _body_path = allocate_gap_unit_id(root, title, lambda uid: gap_body_rel(dirs, uid))
+        terminal = external_intake_txn(
+            root,
+            cfg,
+            verb="external-intake-promote",
+            issue_id=active_issue_id,
+            gap_unit_id=gap_unit_id,
+            comment=reporter_comment,
+            dry_run=dry_run,
+        )
+    elif normalized_outcome == "question":
+        terminal = external_intake_txn(
+            root,
+            cfg,
+            verb="external-intake-ask-reporter",
+            issue_id=active_issue_id,
+            comment=reporter_comment,
+            dry_run=dry_run,
+        )
+    else:
+        terminal = external_intake_txn(
+            root,
+            cfg,
+            verb="external-intake-close",
+            issue_id=active_issue_id,
+            comment=reporter_comment,
+            dry_run=dry_run,
+        )
+
+    if terminal.get("verdict") != "ok":
+        return {"verdict": "fail", "action": "capture-external-intake", "step": "terminal", **terminal}
+
+    return {
+        "verdict": "pass",
+        "action": "capture-external-intake",
+        "signalId": signal_id,
+        "issueId": active_issue_id,
+        "outcome": normalized_outcome,
+        "gapUnitId": gap_unit_id,
+        "pipeline": pipeline,
+        "terminal": terminal,
+        "orchestratorBoundary": "store-verbs-only",
+    }
+
+
 def classify_pain_item(item: dict[str, Any]) -> str:
     """Substantial-vs-noise heuristic (R19, gap-032).
 
@@ -754,6 +869,309 @@ def classify_pain_item(item: dict[str, Any]) -> str:
     if recurrence >= SUBSTANTIAL_MIN_RECURRENCE:
         return "substantial"
     return "noise"
+
+
+def retro_gap_capture_config(root: Path) -> dict[str, Any]:
+    """``retrospective.gapCapture`` settings (PRD 275 R10/R22), defaulting to disabled."""
+    retrospective = ps.load_workflow_config(root).get("retrospective") or {}
+    cfg = retrospective.get("gapCapture") or {}
+    max_captures = cfg.get("maxCapturesPerRun")
+    if not isinstance(max_captures, int) or max_captures < 0:
+        max_captures = DEFAULT_RETRO_MAX_CAPTURES
+    return {
+        "enabled": cfg.get("enabled") is True,
+        "maxCapturesPerRun": max_captures,
+    }
+
+
+def retro_item_dedup_key(run_id: str, item_id: str) -> str:
+    return f"retro:{run_id}:{item_id}"
+
+
+def retro_item_signal_id(run_id: str, item_id: str) -> str:
+    return retro_item_dedup_key(run_id, item_id)
+
+
+def retro_item_digest(item: dict[str, Any]) -> str:
+    """Deterministic per-item digest for digest-bound human confirm (PRD 275 R23)."""
+    related = item.get("relatedFiles")
+    if not isinstance(related, list):
+        related = []
+    canonical = {
+        "extendsPriorPr": bool(item.get("extendsPriorPr")),
+        "itemId": str(item.get("itemId") or ""),
+        "kind": str(item.get("kind") or ""),
+        "newScope": bool(item.get("newScope")),
+        "prdRef": str(item.get("prdRef") or ""),
+        "relatedFiles": sorted(str(path) for path in related),
+        "summary": str(item.get("summary") or ""),
+    }
+    raw = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
+
+
+def redact_retro_summary(summary: str) -> str:
+    from memory_redact import redact
+    from planning_visibility import resolve_emission_destination
+
+    destination = resolve_emission_destination("reconciler-output")
+    return redact(summary, destination=destination)
+
+
+def retro_gap_route_path(root: Path, signal_id: str) -> Path:
+    safe = re.sub(r"[^a-zA-Z0-9._:-]+", "_", signal_id)
+    return pp.git_root(root) / RETRO_GAP_ROUTE_REL / f"{safe}.json"
+
+
+def record_retro_gap_route(
+    root: Path,
+    *,
+    signal_id: str,
+    dedup_key: str,
+    action: str,
+    digest: str,
+    extra: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Durable route record for retro gap lifecycle audit/resume (PRD 275 R11/R18)."""
+    path = retro_gap_route_path(root, signal_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    record: dict[str, Any] = {
+        "action": action,
+        "dedupKey": dedup_key,
+        "digest": digest,
+        "recordedAt": utc_now(),
+        "signalId": signal_id,
+    }
+    if extra:
+        record.update(extra)
+    history: list[dict[str, Any]] = []
+    if path.is_file():
+        try:
+            prior = writer.load_store(path)
+            if isinstance(prior.get("history"), list):
+                history = [entry for entry in prior["history"] if isinstance(entry, dict)]
+            elif isinstance(prior, dict) and prior.get("action"):
+                history = [prior]
+        except Exception:
+            history = []
+    history.append(record)
+    path.write_text(
+        json.dumps({"history": history, "signalId": signal_id}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    rel = str(path.resolve().relative_to(pp.git_root(root).resolve()))
+    return {"path": rel, "signalId": signal_id}
+
+
+def capture_retro_painful(
+    root: Path,
+    retro_output: dict[str, Any],
+    *,
+    unattended: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Emit ``kind:painful`` retro items into the gap draft inbox only (PRD 275 R8/R21).
+
+    Well/change items are excluded. Drafts are redacted; materialization is never
+    performed here. ``unattended`` callers may only draft — mint is always refused.
+    """
+    _ = unattended
+    cfg = retro_gap_capture_config(root)
+    if not cfg["enabled"]:
+        return {
+            "verdict": "skipped",
+            "reason": "retrospective.gapCapture.enabled is false (default)",
+        }
+    run_id = str(retro_output.get("runId") or "unknown")
+    items = retro_output.get("items")
+    if not isinstance(items, list):
+        items = []
+    max_captures = int(cfg["maxCapturesPerRun"])
+    drafted: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    overflow: list[dict[str, Any]] = []
+    painful_count = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        kind = str(item.get("kind") or "").strip().lower()
+        if kind != RETRO_GAP_KIND:
+            skipped.append(
+                {
+                    "itemId": item.get("itemId"),
+                    "kind": kind or None,
+                    "reason": "kind-excluded",
+                }
+            )
+            continue
+        if painful_count >= max_captures:
+            overflow.append(
+                {
+                    "itemId": item.get("itemId"),
+                    "reason": "cap-reached",
+                }
+            )
+            continue
+        item_id = str(item.get("itemId") or f"item-{painful_count + 1}")
+        signal_id = retro_item_signal_id(run_id, item_id)
+        dedup_key = retro_item_dedup_key(run_id, item_id)
+        digest = retro_item_digest(item)
+        summary = redact_retro_summary(str(item.get("summary") or item_id))
+        title = summary[:120] if summary else item_id
+        draft_path = gap_draft_inbox_path(root, signal_id)
+        if draft_path.is_file():
+            existing = writer.load_store(draft_path)
+            drafted.append(
+                {
+                    "action": "reused-draft",
+                    "dedupKey": dedup_key,
+                    "digest": digest,
+                    "signalId": signal_id,
+                    "status": existing.get("status", "draft"),
+                }
+            )
+            painful_count += 1
+            continue
+        payload = {
+            "dedupKey": dedup_key,
+            "digest": digest,
+            "itemId": item_id,
+            "kind": RETRO_GAP_KIND,
+            "route": "gap-capture",
+            "runId": run_id,
+            "sourceClass": "retro",
+            "summary": summary,
+        }
+        if not dry_run:
+            put_gap_draft(root, signal_id=signal_id, title=title, payload=payload)
+            record_retro_gap_route(
+                root,
+                signal_id=signal_id,
+                dedup_key=dedup_key,
+                action="draft",
+                digest=digest,
+            )
+        drafted.append(
+            {
+                "action": "draft-inbox",
+                "dedupKey": dedup_key,
+                "digest": digest,
+                "path": str(
+                    gap_draft_inbox_path(root, signal_id).resolve().relative_to(pp.git_root(root).resolve())
+                ),
+                "signalId": signal_id,
+            }
+        )
+        painful_count += 1
+    result: dict[str, Any] = {
+        "drafted": drafted,
+        "maxCapturesPerRun": max_captures,
+        "overflow": overflow,
+        "skipped": skipped,
+        "verdict": "pass",
+    }
+    if overflow:
+        result["operatorMessage"] = (
+            f"{len(overflow)} painful retro item(s) omitted — "
+            f"retrospective.gapCapture.maxCapturesPerRun is {max_captures}"
+        )
+    return result
+
+
+def confirm_retro_gap_draft(
+    root: Path,
+    *,
+    signal_id: str,
+    digest: str,
+) -> dict[str, Any]:
+    """Persist digest-bound human ack before materialization (PRD 275 R9/R23)."""
+    draft = load_gap_draft(root, signal_id)
+    expected = str(draft.get("digest") or "")
+    if not expected or digest != expected:
+        fail(
+            "digest-mismatch",
+            halt="retro-gap-digest-mismatch",
+            signalId=signal_id,
+            expectedDigest=expected or None,
+        )
+    if draft.get("status") == "materialized":
+        return {
+            "idempotent": True,
+            "signalId": signal_id,
+            "status": "materialized",
+            "unitId": draft.get("materializedUnitId"),
+        }
+    if draft.get("status") == "confirmed" and draft.get("confirmedDigest") == digest:
+        return {"digest": digest, "idempotent": True, "signalId": signal_id, "status": "confirmed"}
+    draft["status"] = "confirmed"
+    draft["confirmedAt"] = utc_now()
+    draft["confirmedDigest"] = digest
+    path = gap_draft_inbox_path(root, signal_id)
+    path.write_text(json.dumps(draft, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    record_retro_gap_route(
+        root,
+        signal_id=signal_id,
+        dedup_key=str(draft.get("dedupKey") or ""),
+        action="confirmed",
+        digest=digest,
+    )
+    return {"digest": digest, "signalId": signal_id, "status": "confirmed"}
+
+
+def materialize_retro_gap_draft(
+    root: Path,
+    *,
+    signal_id: str,
+    digest: str,
+    problem: str | None = None,
+    context: str | None = None,
+    unattended: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Materialize a confirmed retro gap draft; fail closed without persisted ack."""
+    if unattended:
+        fail("unattended-materialize-refused", halt="retro-gap-unattended-mint")
+    draft = load_gap_draft(root, signal_id)
+    if draft.get("status") == "materialized":
+        return {
+            "idempotent": True,
+            "signalId": signal_id,
+            "status": "materialized",
+            "unitId": draft.get("materializedUnitId"),
+        }
+    if draft.get("status") != "confirmed":
+        fail(
+            "materialize requires persisted human ack",
+            halt="retro-gap-ack-required",
+            signalId=signal_id,
+            status=draft.get("status"),
+        )
+    confirmed_digest = str(draft.get("confirmedDigest") or draft.get("digest") or "")
+    if digest != confirmed_digest:
+        fail(
+            "digest-bound confirm required",
+            halt="retro-gap-digest-mismatch",
+            signalId=signal_id,
+        )
+    title = str(draft.get("title") or signal_id)
+    summary = str(draft.get("summary") or title)
+    out = materialize_gap_draft(
+        root,
+        signal_id=signal_id,
+        problem=problem or title,
+        context=context or f"_Retro painful item (digest {digest})._\n\n{summary}",
+        dry_run=dry_run,
+    )
+    if not dry_run:
+        record_retro_gap_route(
+            root,
+            signal_id=signal_id,
+            dedup_key=str(draft.get("dedupKey") or ""),
+            action="materialized",
+            digest=digest,
+            extra={"unitId": out.get("unitId")},
+        )
+    return {**out, "digest": digest, "status": "materialized"}
 
 
 def terminal_capture(
@@ -1079,9 +1497,15 @@ def _collect_absorb_targets_from_content(content: str) -> list[str]:
 
 
 def _apply_absorb_targets_to_content(content: str, absorb_targets: list[str]) -> str:
-    """Merge absorbs into canonical frontmatter and durable sw-edges (PRD 094 R3)."""
+    """Merge absorbs into canonical frontmatter and durable sw-edges (PRD 094 R3).
+
+    Hybrid operator bodies often lack YAML ``---`` frontmatter; when no
+    ``sw-edges`` fence exists yet, create one so absorb linkage is discoverable
+    by closeout (``discover_absorbed_units_anchored``).
+    """
     from gap_backlog import update_frontmatter_field
     from planning_canonical import (
+        SW_EDGES_FENCE,
         build_edges_block,
         merge_absorbs_into_edge_list,
         parse_edges_block,
@@ -1105,6 +1529,12 @@ def _apply_absorb_targets_to_content(content: str, absorb_targets: list[str]) ->
         merged_edges = merge_absorbs_into_edge_list(edges, targets)
         body_without_edges = strip_markers_and_edges(new_content)
         new_content = body_without_edges.rstrip() + "\n\n" + build_edges_block(merged_edges, native)
+    else:
+        merged_edges = merge_absorbs_into_edge_list([], targets)
+        # Preserve hybrid markers/body; only drop a stale fence if present under
+        # a non-standard parse miss, then append the durable absorbs block.
+        without_fence = SW_EDGES_FENCE.sub("", new_content)
+        new_content = without_fence.rstrip() + "\n\n" + build_edges_block(merged_edges, [])
     return new_content
 
 
@@ -1116,7 +1546,10 @@ def _merge_prd_absorbs_frontmatter(content: str, gap_unit_id: str) -> tuple[str,
     after = _canonicalize_absorb_targets(before + [gap_unit_id])
     if _absorb_sets_semantically_equal(before, after):
         return content, False
-    return _apply_absorb_targets_to_content(content, after), True
+    applied = _apply_absorb_targets_to_content(content, after)
+    if applied == content:
+        return content, False
+    return applied, True
 
 
 def _remerge_prd_absorbs(content: str, gap_unit_ids: list[str]) -> tuple[str, bool]:
@@ -1723,6 +2156,225 @@ def record_absorb_linkage_073(
     return {**out, "action": "record-absorb-linkage-073"}
 
 
+# PRD 325 R15 — absorb close-out (#331–#338)
+PRD_325_UNIT_ID = "prd-325-deliver-finalize-consumer-resilience"
+PRD_325_NUMBER = "325"
+PRD_325_ABSORB_GAP_UNITS: tuple[str, ...] = (
+    "gap-331-merge-detection-finalize-recovery-under-pr-number",
+    "gap-332-closeout-prefers-run-scoped-state",
+    "gap-333-blast-radius-clear-on-green-merged-phases",
+    "gap-334-publish-surface-audit-under-in-repo-public",
+    "gap-335-ship-loop-resolution-and-provisioning-consumer",
+    "gap-336-orchestrator-primary-scripts-hash-divergence",
+    "gap-337-docs-currency-gate-soft-skip-consumer",
+    "gap-338-docs-worktree-bases-on-fetched-remote-tip",
+)
+PRD_325_PLANNING_ISSUE_NUMBERS: tuple[int, ...] = (331, 332, 333, 334, 335, 336, 337, 338)
+
+
+def verify_absorb_closeout_325(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Verify PRD 325 close-out discovers all eight anchored gaps (R15)."""
+    resolved_cfg = cfg if cfg is not None else ps.load_workflow_config(root)
+    snap = ps.resolve_delivery_linked_units(root, resolved_cfg, PRD_325_UNIT_ID)
+    if snap.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-325",
+            "error": snap.get("error"),
+            "prdUnitId": PRD_325_UNIT_ID,
+        }
+
+    gap_ids = [
+        item["unitId"]
+        for item in snap.get("snapshot", [])
+        if item.get("artifactType") == "gap"
+    ]
+    discovered = set(gap_ids)
+    missing = [
+        gap_id
+        for gap_id in PRD_325_ABSORB_GAP_UNITS
+        if not _match_expected_absorb_gap(discovered, gap_id)
+    ]
+    return {
+        "verdict": "ok" if not missing else "fail",
+        "action": "verify-absorb-closeout-325",
+        "prdUnitId": PRD_325_UNIT_ID,
+        "discoveredCount": len(discovered),
+        "discovered": sorted(discovered),
+        "missing": missing,
+        "skipped": list(snap.get("skipped") or []),
+        "planningIssues": [str(n) for n in PRD_325_PLANNING_ISSUE_NUMBERS],
+    }
+
+
+def record_absorb_linkage_325(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 325 absorb linkage for all eight delivery gaps (R15)."""
+    out = record_absorb_linkage(
+        root,
+        prd_unit_id=PRD_325_UNIT_ID,
+        prd_number=PRD_325_NUMBER,
+        gap_unit_ids=list(PRD_325_ABSORB_GAP_UNITS),
+        planning_issues=[f"planning#{num}" for num in PRD_325_PLANNING_ISSUE_NUMBERS],
+        prd_path=prd_path,
+        dry_run=dry_run,
+    )
+    return {**out, "action": "record-absorb-linkage-325"}
+
+
+# PRD 326 R19 — absorb close-out (gaps 311–314, 319, 320, 322 / planning #747–#750, #755, #756, #758)
+PRD_326_UNIT_ID = "326-prd-workflow-quality-platform"
+PRD_326_NUMBER = "326"
+PRD_326_ABSORB_GAP_UNITS: tuple[str, ...] = (
+    "gap-311-architecture-doctrine-and-design-quality-model-c",
+    "gap-312-first-class-research-and-prototype-evidence-node",
+    "gap-313-agent-instruction-compiler-linter-for-workflow-a",
+    "gap-314-reviewer-evidence-harvesting-and-bounded-reviewe",
+    "gap-319-fault-injection-and-state-machine-testing-framew",
+    "gap-320-intent-aware-merge-conflict-resolution-via-prove",
+    "gap-322-repro-first-debugging-invariant-for-sw-debug",
+)
+PRD_326_PLANNING_ISSUE_NUMBERS: tuple[int, ...] = (
+    747,
+    748,
+    749,
+    750,
+    755,
+    756,
+    758,
+)
+
+
+def verify_absorb_closeout_326(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Verify PRD 326 close-out discovers all seven anchored gaps (R19)."""
+    resolved_cfg = cfg if cfg is not None else ps.load_workflow_config(root)
+    snap = ps.resolve_delivery_linked_units(root, resolved_cfg, PRD_326_UNIT_ID)
+    if snap.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-326",
+            "error": snap.get("error"),
+            "prdUnitId": PRD_326_UNIT_ID,
+        }
+
+    gap_ids = [
+        item["unitId"]
+        for item in snap.get("snapshot", [])
+        if item.get("artifactType") == "gap"
+    ]
+    discovered = set(gap_ids)
+    missing = [
+        gap_id
+        for gap_id in PRD_326_ABSORB_GAP_UNITS
+        if not _match_expected_absorb_gap(discovered, gap_id)
+    ]
+    return {
+        "verdict": "ok" if not missing else "fail",
+        "action": "verify-absorb-closeout-326",
+        "prdUnitId": PRD_326_UNIT_ID,
+        "discoveredCount": len(discovered),
+        "discovered": sorted(discovered),
+        "missing": missing,
+        "skipped": list(snap.get("skipped") or []),
+        "planningIssues": [str(n) for n in PRD_326_PLANNING_ISSUE_NUMBERS],
+    }
+
+
+def record_absorb_linkage_326(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 326 absorb linkage for all seven delivery gaps (R19)."""
+    out = record_absorb_linkage(
+        root,
+        prd_unit_id=PRD_326_UNIT_ID,
+        prd_number=PRD_326_NUMBER,
+        gap_unit_ids=list(PRD_326_ABSORB_GAP_UNITS),
+        planning_issues=[f"planning#{num}" for num in PRD_326_PLANNING_ISSUE_NUMBERS],
+        prd_path=prd_path,
+        dry_run=dry_run,
+    )
+    return {**out, "action": "record-absorb-linkage-326"}
+
+
+# PRD 327 R15 — absorb close-out (gap-078 Notion planning-store provider)
+PRD_327_UNIT_ID = "prd-327-notion-planning-store-provider"
+PRD_327_NUMBER = "327"
+PRD_327_ABSORB_GAP_UNITS: tuple[str, ...] = (
+    "gap-078-add-notion-as-a-new-planning-store-issue-trackin",
+)
+GAP_078_UNIT_ID = PRD_327_ABSORB_GAP_UNITS[0]
+
+
+def verify_absorb_closeout_327(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Verify PRD 327 close-out discovers anchored gap-078 (R15)."""
+    resolved_cfg = cfg if cfg is not None else ps.load_workflow_config(root)
+    snap = ps.resolve_delivery_linked_units(root, resolved_cfg, PRD_327_UNIT_ID)
+    if snap.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-327",
+            "error": snap.get("error"),
+            "prdUnitId": PRD_327_UNIT_ID,
+        }
+
+    gap_ids = [
+        item["unitId"]
+        for item in snap.get("snapshot", [])
+        if item.get("artifactType") == "gap"
+    ]
+    discovered = set(gap_ids)
+    missing = [
+        gap_id
+        for gap_id in PRD_327_ABSORB_GAP_UNITS
+        if not _match_expected_absorb_gap(discovered, gap_id)
+    ]
+    return {
+        "verdict": "ok" if not missing else "fail",
+        "action": "verify-absorb-closeout-327",
+        "prdUnitId": PRD_327_UNIT_ID,
+        "discoveredCount": len(discovered),
+        "discovered": sorted(discovered),
+        "missing": missing,
+        "skipped": list(snap.get("skipped") or []),
+        "gapUnitIds": list(PRD_327_ABSORB_GAP_UNITS),
+    }
+
+
+def record_absorb_linkage_327(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 327 → gap-078 absorb linkage (R15)."""
+    out = record_absorb_linkage(
+        root,
+        prd_unit_id=PRD_327_UNIT_ID,
+        prd_number=PRD_327_NUMBER,
+        gap_unit_ids=list(PRD_327_ABSORB_GAP_UNITS),
+        prd_path=prd_path,
+        dry_run=dry_run,
+    )
+    if out.get("verdict") == "ok" and not dry_run:
+        out = {**out, "gapUnitId": GAP_078_UNIT_ID}
+    return {**out, "action": "record-absorb-linkage-327"}
+
 
 def parse_flags(rest: list[str]) -> dict[str, Any]:
     out: dict[str, Any] = {"dry_run": False}
@@ -1783,6 +2435,30 @@ def parse_flags(rest: list[str]) -> dict[str, Any]:
         elif tok == "--planning-issue" and i + 1 < len(rest):
             out["planning_issue"] = rest[i + 1]
             i += 2
+        elif tok == "--retro-json" and i + 1 < len(rest):
+            out["retro_json"] = rest[i + 1]
+            i += 2
+        elif tok == "--digest" and i + 1 < len(rest):
+            out["digest"] = rest[i + 1]
+            i += 2
+        elif tok == "--outcome" and i + 1 < len(rest):
+            out["outcome"] = rest[i + 1]
+            i += 2
+        elif tok == "--issue-id" and i + 1 < len(rest):
+            out["issue_id"] = rest[i + 1]
+            i += 2
+        elif tok == "--comment" and i + 1 < len(rest):
+            out["comment"] = rest[i + 1]
+            i += 2
+        elif tok == "--payload" and i + 1 < len(rest):
+            out["payload"] = rest[i + 1]
+            i += 2
+        elif tok == "--signal-class" and i + 1 < len(rest):
+            out["signal_class"] = rest[i + 1]
+            i += 2
+        elif tok == "--unattended":
+            out["unattended"] = True
+            i += 1
         else:
             i += 1
     return out
@@ -1793,7 +2469,7 @@ def main(argv: list[str] | None = None) -> None:
     if len(args) < 2:
         fail(
             "usage: planning_gap_capture.py <repo-root> "
-"<capture|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override|record-absorb-linkage|verify-absorb-closeout-072|verify-absorb-closeout-073> [options]"
+"<capture|capture-external-intake|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override|retro-capture|retro-confirm|retro-materialize|record-absorb-linkage|record-absorb-linkage-327|verify-absorb-closeout-072|verify-absorb-closeout-073|verify-absorb-closeout-325|verify-absorb-closeout-326|verify-absorb-closeout-327> [options]"
         )
     root = Path(args[0]).resolve()
     command = args[1]
@@ -1824,6 +2500,25 @@ def main(argv: list[str] | None = None) -> None:
             authoritative=bool(flags.get("authoritative")),
         )
         emit({"verdict": "pass", **out})
+
+    if command == "capture-external-intake":
+        signal_id = flags.get("signal_id")
+        title = flags.get("title")
+        if not signal_id or not title:
+            fail("--signal-id and --title required for capture-external-intake")
+        out = capture_external_intake(
+            root,
+            signal_id=signal_id,
+            title=title,
+            payload=flags.get("payload"),
+            outcome=str(flags.get("outcome") or "brief"),
+            issue_id=flags.get("issue_id"),
+            gap_unit_id=flags.get("unit_id"),
+            comment=flags.get("comment"),
+            signal_class=str(flags.get("signal_class") or "feedback"),
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") == "pass" else 20)
 
     if command == "confirm":
         signal_id = flags.get("signal_id")
@@ -1895,6 +2590,48 @@ def main(argv: list[str] | None = None) -> None:
         emit({"verdict": "pass", "action": "capture-verify-override", **out})
         return
 
+    if command == "retro-capture":
+        retro_json = flags.get("retro_json")
+        if not retro_json:
+            fail("--retro-json required for retro-capture")
+        retro_output = json.loads(retro_json)
+        if not isinstance(retro_output, dict):
+            fail("retro-capture requires JSON object")
+        out = capture_retro_painful(
+            root,
+            retro_output,
+            unattended=bool(flags.get("unattended")),
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") in {"pass", "skipped"} else 20)
+        return
+
+    if command == "retro-confirm":
+        signal_id = flags.get("signal_id")
+        digest = flags.get("digest")
+        if not signal_id or not digest:
+            fail("--signal-id and --digest required for retro-confirm")
+        out = confirm_retro_gap_draft(root, signal_id=signal_id, digest=digest)
+        emit({"verdict": "pass", "action": "retro-confirm", **out})
+        return
+
+    if command == "retro-materialize":
+        signal_id = flags.get("signal_id")
+        digest = flags.get("digest")
+        if not signal_id or not digest:
+            fail("--signal-id and --digest required for retro-materialize")
+        out = materialize_retro_gap_draft(
+            root,
+            signal_id=signal_id,
+            digest=digest,
+            problem=flags.get("problem"),
+            context=flags.get("context"),
+            unattended=bool(flags.get("unattended")),
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit({"verdict": "pass", **out})
+        return
+
     if command == "refresh-projection":
         try:
             from planning_migrate_issue_store import (
@@ -1926,6 +2663,24 @@ def main(argv: list[str] | None = None) -> None:
                 prd_path=prd_path,
                 dry_run=bool(flags.get("dry_run")),
             )
+        elif prd_unit == PRD_325_UNIT_ID:
+            out = record_absorb_linkage_325(
+                root,
+                prd_path=prd_path,
+                dry_run=bool(flags.get("dry_run")),
+            )
+        elif prd_unit == PRD_326_UNIT_ID:
+            out = record_absorb_linkage_326(
+                root,
+                prd_path=prd_path,
+                dry_run=bool(flags.get("dry_run")),
+            )
+        elif prd_unit == PRD_327_UNIT_ID:
+            out = record_absorb_linkage_327(
+                root,
+                prd_path=prd_path,
+                dry_run=bool(flags.get("dry_run")),
+            )
         elif prd_unit == PRD_066_UNIT_ID and not flags.get("prd_unit_id") and not flags.get("unit_id"):
             tasks_path = Path(flags["tasks_path"]).resolve() if flags.get("tasks_path") else None
             out = record_absorb_linkage_066(
@@ -1948,12 +2703,33 @@ def main(argv: list[str] | None = None) -> None:
             )
         emit(out, 0 if out.get("verdict") in {"ok", "skipped"} else 20)
 
+    if command == "record-absorb-linkage-327":
+        prd_path = Path(flags["prd_path"]).resolve() if flags.get("prd_path") else None
+        out = record_absorb_linkage_327(
+            root,
+            prd_path=prd_path,
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") in {"ok", "skipped"} else 20)
+
     if command == "verify-absorb-closeout-072":
         out = verify_absorb_closeout_072(root)
         emit(out, 0 if out.get("verdict") == "ok" else 20)
 
     if command == "verify-absorb-closeout-073":
         out = verify_absorb_closeout_073(root)
+        emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "verify-absorb-closeout-325":
+        out = verify_absorb_closeout_325(root)
+        emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "verify-absorb-closeout-326":
+        out = verify_absorb_closeout_326(root)
+        emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "verify-absorb-closeout-327":
+        out = verify_absorb_closeout_327(root)
         emit(out, 0 if out.get("verdict") == "ok" else 20)
 
     fail(f"unknown command: {command}")

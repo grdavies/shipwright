@@ -967,7 +967,7 @@ is byte-identical to today .
 | Key | Values | Meaning |
 | --- | --- | --- |
 | `planning.store.backend` | `issue-store` | Enable issue-backed planning store |
-| `planning.store.issuesProvider` | `github-issues` \| `gitlab-issues` \| `jira` \| `linear` \| `none` | Issues adapter (**independent** of `host.provider`) |
+| `planning.store.issuesProvider` | `github-issues` \| `gitlab-issues` \| `jira` \| `linear` \| `notion` \| `none` | Issues adapter (**independent** of `host.provider`) |
 | `planning.store.projectKey` | string | Project scoping key (`^[a-z][a-z0-9-]*$`) |
 | `planning.store.storeLocation.mode` | `same-repo` \| `separate-project` | Code repo vs shared planning project |
 | `planning.store.storeLocation.owner` / `.repo` | strings | Required for `separate-project` |
@@ -1103,6 +1103,61 @@ Init probes (fail-closed): `python3 scripts/planning_linear_client.py . probe-te
 `python3 scripts/planning_linear_client.py . docs-currency-gate` — operator-guide inventory before terminal merge.
 
 See `core/providers/issues/linear.md` for LCD verbs, stage-1 dogfood checklist, lock/overflow, and OAuth posture.
+
+### Notion issue-store
+
+When `planning.store.issuesProvider` is `notion`, configure the Notion adapter keys under
+`planning.store.issues` and optional derived-view budget under `planning.store.requestBudget.notion`:
+
+| Key | Values | Meaning |
+| --- | --- | --- |
+| `planning.store.issues.notionDatabaseId` | string | Primary Notion database id |
+| `planning.store.issues.databaseMap` | object | Artifact-type → database id map |
+| `planning.store.issues.workspaceId` | string | Optional workspace id (operator documentation) |
+| `planning.store.issues.credentialRef` | string | Dedicated credential reference (preferred) |
+| `planning.store.issues.tokenEnv` | string | One-release alias (default `ISSUES_NOTION_TOKEN`; **not** `host.tokenEnv`) |
+| `planning.store.issues.notionTitleProperty` | string | Title property (default `Name`) |
+| `planning.store.issues.notionStatusProperty` | string | Status property (default `Status`) |
+| `planning.store.issues.notionProjectProperty` | string | Project multi-select property (default `Project`) |
+| `planning.store.requestBudget.notion` | object | Derived-view budget (`maxCalls`, `maxPaginationDepth`, `cacheTtlSeconds`) |
+
+At least one of `notionDatabaseId` or `databaseMap` is required. Init/probe fails closed on
+missing database scope or schema mismatch.
+
+Example (Notion + same-repo planning):
+
+```json
+{
+"planning": {
+"store": {
+"backend": "issue-store",
+"issuesProvider": "notion",
+"projectKey": "my-project",
+"storeLocation": { "mode": "same-repo" },
+"issues": {
+"notionDatabaseId": "00000000-0000-0000-0000-000000000001",
+"credentialRef": "planning-work"
+},
+"requestBudget": {
+"notion": {
+"maxCalls": 300,
+"maxPaginationDepth": 5,
+"cacheTtlSeconds": 180
+}
+}
+}
+}
+}
+```
+
+Init probes (fail-closed): `planning_notion_client.probe_token` and `probe_database` via doctor
+and init surfaces; fixture mode `SW_NOTION_PROBE_FIXTURE=1` for hermetic CI.
+
+Promotion: `notion` joins the derived `SHIPPED_ISSUES_PROVIDERS` set only after a green LCD
+conformance record **and** the `docs-gate` over `core/providers/issues/notion.md` (see
+`planning_notion_client.py docs-gate` / `promotion-gate-evidence`).
+
+See `core/providers/issues/notion.md` for LCD verbs, rate-limit profile, and promotion gates.
 
 See `core/providers/planning-store/issue-store.md` and `core/providers/issues/CAPABILITIES.md`.
 

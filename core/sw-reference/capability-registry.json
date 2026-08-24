@@ -178,6 +178,14 @@
           "rateLimitProfile": "linear"
         },
         {
+          "id": "notion",
+          "status": "shipped",
+          "liveAdapter": "planning_notion_client.py",
+          "conformanceGated": true,
+          "recognition": "live-client-wired",
+          "rateLimitProfile": "notion"
+        },
+        {
           "id": "none",
           "status": "shipped",
           "liveAdapter": null,

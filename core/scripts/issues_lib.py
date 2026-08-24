@@ -50,13 +50,19 @@ def deferred_provider_message(provider: str) -> str:
 
 
 def unshipped_provider_message(provider: str) -> str:
+    gates = "conformance + promotion gates"
+    if provider == "linear":
+        gates = "conformance + OAuth docs gate"
+    elif provider == "notion":
+        gates = "conformance + docs gate"
     return (
         f"issue provider {provider!r} is recognized but not shipped (fail-closed): "
-        "conformance + OAuth docs gate must pass before live selection. "
-        "Select github-issues or jira, or use the file-store fallback (PRD 066 R20)."
+        f"{gates} must pass before live selection. "
+        "Select github-issues or jira, or use the file-store fallback (PRD 066 R20 / PRD 327)."
     )
 
-T = TypeVar("T")
+# Providers recognized with live client but gated from SHIPPED until promotion evidence.
+RECOGNIZED_NOT_SHIPPED_PROVIDERS = frozenset({"linear", "notion"})
 
 
 class IssueRevisionConflict(Exception):
@@ -441,6 +447,60 @@ class FixtureIssuesStore:
         record.body = (record.body or "") + f"\n<!-- lifecycle:key-changed:{new_key} -->"
         self._persist()
 
+    def epic_create(
+        self,
+        *,
+        title: str,
+        body: str,
+        labels: list[str],
+        project_key: str,
+        artifact_type: str,
+        unit_id: str,
+        native_links: list[dict[str, Any]] | None = None,
+    ) -> IssueRecord:
+        return self.create(
+            title=title,
+            body=body,
+            labels=labels,
+            project_key=project_key,
+            artifact_type=artifact_type,
+            unit_id=unit_id,
+            native_links=native_links,
+        )
+
+    def sub_issue_create(
+        self,
+        *,
+        title: str,
+        body: str,
+        labels: list[str],
+        project_key: str,
+        artifact_type: str,
+        unit_id: str,
+        parent_issue_id: str | None = None,
+        native_links: list[dict[str, Any]] | None = None,
+    ) -> IssueRecord:
+        child = self.create(
+            title=title,
+            body=body,
+            labels=labels,
+            project_key=project_key,
+            artifact_type=artifact_type,
+            unit_id=unit_id,
+            native_links=native_links,
+        )
+        if parent_issue_id:
+            return self.sub_issue_link(parent_issue_id, child.id)
+        return child
+
+    def sub_issue_link(self, parent_issue_id: str, child_issue_id: str) -> IssueRecord:
+        record = self._resolve_get(child_issue_id)
+        link = {"type": "sub-issue-of", "target": parent_issue_id}
+        links = list(record.native_links)
+        if link not in links:
+            links.append(link)
+        return self.update(child_issue_id, native_links=links, allow_locked=True)
+
     def clear(self) -> None:
         self._issues.clear()
         self._counter = 0
@@ -477,6 +537,7 @@ class IssuesClient:
         self._github: Any = None
         self._gitlab: Any = None
         self._linear: Any = None
+        self._notion: Any = None
         self._call_count = 0
         self._budget = resolve_call_budget()
 
@@ -489,7 +550,7 @@ class IssuesClient:
         providers = load_providers_package()
         if self.provider in DEFERRED_ISSUES_PROVIDERS:
             raise IssueCapabilityError(deferred_provider_message(self.provider))
-        if self.provider == "linear":
+        if self.provider in RECOGNIZED_NOT_SHIPPED_PROVIDERS:
             from planning_store import SHIPPED_ISSUES_PROVIDERS
 
             if self.provider not in SHIPPED_ISSUES_PROVIDERS:
@@ -503,6 +564,7 @@ class IssuesClient:
             "gitlab-issues": "_gitlab",
             "jira": "_jira",
             "linear": "_linear",
+            "notion": "_notion",
         }.get(self.provider)
         if cache_attr is None:
             raise IssueCapabilityError(
@@ -598,6 +660,37 @@ class IssuesClient:
 
     def issue_link_sync(self, issue_id: str, native_links: list[dict[str, Any]], *, if_match: str | None = None) -> IssueRecord:
         return self.sync_native_links(issue_id, native_links, if_match=if_match)
+
+    def issue_epic_create(self, **kwargs: Any) -> IssueRecord:
+        return self._with_resilience(
+            "issue-epic-create",
+            lambda: self._invoke_hierarchy_verb("epic_create", **kwargs),
+        )
+
+    def issue_sub_issue_create(self, **kwargs: Any) -> IssueRecord:
+        return self._with_resilience(
+            "issue-sub-issue-create",
+            lambda: self._invoke_hierarchy_verb("sub_issue_create", **kwargs),
+        )
+
+    def issue_sub_issue_link(self, parent_issue_id: str, child_issue_id: str) -> IssueRecord:
+        return self._with_resilience(
+            "issue-sub-issue-link",
+            lambda: self._invoke_hierarchy_verb(
+                "sub_issue_link",
+                parent_issue_id,
+                child_issue_id,
+            ),
+        )
+
+    def _invoke_hierarchy_verb(self, verb: str, *args: Any, **kwargs: Any) -> IssueRecord:
+        backend = self._live_backend()
+        method = getattr(backend, verb, None)
+        if not callable(method):
+            raise IssueCapabilityError(
+                f"hierarchy verb {verb!r} unavailable on {self.provider} backend"
+            )
+        return method(*args, **kwargs)
 
 
     def mark_tombstone(self, issue_id: str) -> None:

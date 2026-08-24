@@ -51,7 +51,7 @@ def test_github_conformance_record_matches_live_evidence() -> None:
 
 
 def test_shipped_providers_require_green_conformance_evidence() -> None:
-    """R3 — SHIPPED_ISSUES_PROVIDERS equals providers with green recorded evidence."""
+    """R3 — SHIPPED_ISSUES_PROVIDERS equals providers with green recorded evidence (+ docs gate)."""
     root = _repo_root()
     expected = set()
     for provider in CONFORMANCE_GATED_PROVIDERS:
@@ -62,6 +62,11 @@ def test_shipped_providers_require_green_conformance_evidence() -> None:
                 isinstance(dims.get(dim), dict) and dims[dim].get("verdict") == "ok"
                 for dim in CONFORMANCE_DIMENSIONS
             ):
+                if provider == "notion":
+                    from planning_notion_client import docs_gate
+
+                    if docs_gate(root).get("verdict") != "ok":
+                        continue
                 expected.add(provider)
     assert ps.SHIPPED_ISSUES_PROVIDERS == frozenset(expected)
     assert ps_facade.SHIPPED_ISSUES_PROVIDERS == frozenset(expected)
@@ -78,7 +83,7 @@ def test_shipped_status_cannot_drift_without_record() -> None:
             assert record.get("verdict") == "ok"
 
 
-@pytest.mark.parametrize("provider", ["github-issues", "jira", "linear"])
+@pytest.mark.parametrize("provider", ["github-issues", "jira", "linear", "notion"])
 def test_gated_providers_have_conformance_fixtures(provider: str) -> None:
     """Bootstrap — each gated provider has a committed green conformance record."""
     root = _repo_root()

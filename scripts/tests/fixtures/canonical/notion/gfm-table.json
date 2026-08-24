@@ -1,0 +1,108 @@
+{
+  "id": "gfm-table",
+  "provider": "notion",
+  "contract": "block-children",
+  "title": "[acme] prd:327-gfm-table",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "markdown": "| Col A | Col B |\n| --- | --- |\n| one | two |\n| three | four |\n",
+  "blocks": [
+    {
+      "object": "block",
+      "type": "table",
+      "table": {
+        "table_width": 2,
+        "has_column_header": true,
+        "has_row_header": false
+      }
+    },
+    {
+      "object": "block",
+      "type": "table_row",
+      "table_row": {
+        "cells": [
+          [
+            {
+              "type": "text",
+              "text": {
+                "content": "Col A",
+                "link": null
+              },
+              "annotations": {}
+            }
+          ],
+          [
+            {
+              "type": "text",
+              "text": {
+                "content": "Col B",
+                "link": null
+              },
+              "annotations": {}
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "object": "block",
+      "type": "table_row",
+      "table_row": {
+        "cells": [
+          [
+            {
+              "type": "text",
+              "text": {
+                "content": "one",
+                "link": null
+              },
+              "annotations": {}
+            }
+          ],
+          [
+            {
+              "type": "text",
+              "text": {
+                "content": "two",
+                "link": null
+              },
+              "annotations": {}
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "object": "block",
+      "type": "table_row",
+      "table_row": {
+        "cells": [
+          [
+            {
+              "type": "text",
+              "text": {
+                "content": "three",
+                "link": null
+              },
+              "annotations": {}
+            }
+          ],
+          [
+            {
+              "type": "text",
+              "text": {
+                "content": "four",
+                "link": null
+              },
+              "annotations": {}
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "canonical": "{\"body\":\"| Col A | Col B |\\n| --- | --- |\\n| one | two |\\n| three | four |\",\"comments\":[],\"labels\":[\"sw:prd\"],\"state\":\"open\",\"sw-canonical-version\":\"1\",\"title\":\"[acme] prd:327-gfm-table\"}",
+  "hash": "a6e1d5c3788542a128e4d8b6a595c64d550fcbde596fc661a6bca98d21b7d40b"
+}

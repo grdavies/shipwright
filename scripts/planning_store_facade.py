@@ -79,6 +79,21 @@ from planning_linear_projection import (
     r1_4_substitute_views,
     resolve_canonical_freeze_body,
 )
+from planning_notion_projection import (
+    apply_dual_property_capability as apply_notion_dual_property_capability,
+    assert_projection_mirrors_not_freeze_authority as assert_notion_projection_mirrors_not_freeze_authority,
+    check_canonical_projection_split_brain as check_notion_canonical_projection_split_brain,
+    dual_write_body_policy as notion_dual_write_body_policy,
+    dual_write_projection_mirror as dual_write_notion_projection_mirror,
+    encode_planning_edge as encode_notion_planning_edge,
+    map_artifact_to_notion_entity,
+    notion_entity_mapping,
+    notion_projection_schema_contract,
+    probe_dual_property_availability as probe_notion_dual_property_availability,
+    project_graph_to_notion_layout,
+    rebuild_projection_for_unit as rebuild_notion_projection_for_unit,
+    resolve_canonical_freeze_body as resolve_notion_canonical_freeze_body,
+)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -136,13 +151,21 @@ def _linear_live_client_wired() -> bool:
     """PRD 066 R9 — recognize Linear in ISSUES_PROVIDERS only when live client exists."""
     from _planning_pkg_loader import load_providers_package
 
-    return load_providers_package().live_client_wired()
+    return load_providers_package().linear.live_client_wired()
+
+
+def _notion_live_client_wired() -> bool:
+    """PRD 327 R9 — recognize Notion in ISSUES_PROVIDERS only when live client exists."""
+    from _planning_pkg_loader import load_providers_package
+
+    return load_providers_package().notion.live_client_wired()
 
 
 _BASE_ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira", "none"})
-ISSUES_PROVIDERS = _BASE_ISSUES_PROVIDERS | (
-    frozenset({"linear"}) if _linear_live_client_wired() else frozenset()
-)
+_ISSUES_LIVE_RECOGNITION = frozenset({"linear"}) if _linear_live_client_wired() else frozenset()
+if _notion_live_client_wired():
+    _ISSUES_LIVE_RECOGNITION = _ISSUES_LIVE_RECOGNITION | frozenset({"notion"})
+ISSUES_PROVIDERS = _BASE_ISSUES_PROVIDERS | _ISSUES_LIVE_RECOGNITION
 # PRD 057 R7 / D1: gitlab-issues is a known-but-deferred provider — supported for
 # config validation yet absent from the shipped set until a live adapter ships in a
 # follow-up unit (originating gap-039). Selection therefore fails closed with the
@@ -165,6 +188,7 @@ MIN_ISSUES_SCOPES: dict[str, list[str]] = {
     "gitlab-issues": ["api"],
     "jira": ["read:jira-work", "write:jira-work"],
     "linear": ["read", "write"],
+    "notion": [],
 }
 
 ISSUE_STORE_FALLBACK_NOTICE = (
@@ -434,6 +458,7 @@ ISSUES_CAPABILITY_INDEX_IDS: dict[str, str] = {
     "gitlab-issues": "provider.providers.issues.gitlab-issues",
     "jira": "provider.providers.issues.jira",
     "linear": "provider.providers.issues.linear",
+    "notion": "provider.providers.issues.notion",
     "none": "provider.providers.issues.none",
 }
 
@@ -442,6 +467,8 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
     from _planning_pkg_loader import load_providers_package
 
     linear_wired = _linear_live_client_wired()
+    notion_wired = _notion_live_client_wired()
+    live_recognized = _ISSUES_LIVE_RECOGNITION
     return {
         "verdict": "ok",
         "action": "issues-provider-registration",
@@ -456,13 +483,18 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
             shipped="linear" in SHIPPED_ISSUES_PROVIDERS,
             live_client_wired=linear_wired,
         ),
+        "notion": load_providers_package().notion.registration_footprint(
+            recognized="notion" in ISSUES_PROVIDERS,
+            shipped="notion" in SHIPPED_ISSUES_PROVIDERS,
+            live_client_wired=notion_wired,
+        ),
         "recognitionVsShipped": {
             provider: {
                 "recognized": provider in ISSUES_PROVIDERS,
                 "shipped": provider in SHIPPED_ISSUES_PROVIDERS,
                 "deferred": provider in DEFERRED_ISSUES_PROVIDERS,
             }
-            for provider in sorted(_BASE_ISSUES_PROVIDERS | {"linear"})
+            for provider in sorted(_BASE_ISSUES_PROVIDERS | live_recognized)
         },
     }
 
@@ -495,6 +527,17 @@ def doctor_issues_provider_stub(root: Path, cfg: dict[str, Any]) -> dict[str, An
         )
         if linear_result is not None:
             return linear_result
+    if provider == "notion":
+        from _planning_pkg_loader import load_providers_package
+
+        notion_result = load_providers_package().notion.doctor_stub_result(
+            root,
+            provider=provider,
+            issues_providers=ISSUES_PROVIDERS,
+            shipped_providers=SHIPPED_ISSUES_PROVIDERS,
+        )
+        if notion_result is not None:
+            return notion_result
     return {"verdict": "pass", "action": "doctor-issues-provider-stub", "provider": provider}
 
 
@@ -513,6 +556,7 @@ _ISSUES_PROVIDER_TO_BROKER: dict[str, str] = {
     "gitlab-issues": "gitlab",
     "jira": "jira",
     "linear": "linear",
+    "notion": "notion",
 }
 
 
@@ -4487,6 +4531,11 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
         "description": "Linear operator schema: entity map, Initiative/Cycles, typed edges (PRD 066 R6–R8/R29)",
     },
     {
+        "name": "notion_projection_schema",
+        "status": "shipped",
+        "description": "Notion operator schema: database entity map, dual_property edges, freeze mirrors (PRD 327 R5)",
+    },
+    {
         "name": "comments_relations_schema",
         "status": "shipped",
         "description": "Facade thread parentage, resolved metadata, typed relation edges (PRD 066 R17/R24)",
@@ -4587,19 +4636,62 @@ R1_BROWSE_CONTRACT: dict[str, Any] = {
 }
 
 OPERATOR_PROJECTION_MATRIX_ROWS: tuple[dict[str, Any], ...] = (
-    {"row": "prd", "linear": "project", "github-projects": "project-item", "r1": [1, 2, 3, 4]},
-    {"row": "brainstorm", "linear": "document", "github-projects": "draft-or-issue-field", "r1": [2]},
-    {"row": "gap", "linear": "issue+gap-label", "github-projects": "issue+gap-field", "r1": [1]},
-    {"row": "phase", "linear": "milestone", "github-projects": "phase-field", "r1": [3]},
-    {"row": "task", "linear": "issue/sub-issue", "github-projects": "issue-item", "r1": [3]},
-    {"row": "progress", "linear": "native-status", "github-projects": "status-field", "r1": [3, 4]},
+    {
+        "row": "prd",
+        "linear": "project",
+        "github-projects": "project-item",
+        "notion": "prd-database-page",
+        "r1": [1, 2, 3, 4],
+    },
+    {
+        "row": "brainstorm",
+        "linear": "document",
+        "github-projects": "draft-or-issue-field",
+        "notion": "brainstorm-database-page",
+        "r1": [2],
+    },
+    {
+        "row": "gap",
+        "linear": "issue+gap-label",
+        "github-projects": "issue+gap-field",
+        "notion": "gap-database-page",
+        "r1": [1],
+    },
+    {
+        "row": "phase",
+        "linear": "milestone",
+        "github-projects": "phase-field",
+        "notion": "phase-database-page+date",
+        "r1": [3],
+    },
+    {
+        "row": "task",
+        "linear": "issue/sub-issue",
+        "github-projects": "issue-item",
+        "notion": "task-database-page",
+        "r1": [3],
+    },
+    {
+        "row": "progress",
+        "linear": "native-status",
+        "github-projects": "status-field",
+        "notion": "Status-property",
+        "r1": [3, 4],
+    },
     {
         "row": "program",
         "linear": "initiative-or-substitute-views",
         "github-projects": "program-discriminator",
+        "notion": "select-or-database-row",
         "r1": [4],
     },
-    {"row": "cycle-wave", "linear": "cycle", "github-projects": "degraded-optional", "r1": []},
+    {
+        "row": "cycle-wave",
+        "linear": "cycle",
+        "github-projects": "degraded-optional",
+        "notion": "date-window-optional",
+        "r1": [],
+    },
 )
 
 FACADE_WORKFLOW_SCAN_GLOB = "scripts/*.py"
@@ -4901,6 +4993,8 @@ def issue_comments_relations_facade(record: Any, *, provider: str) -> dict[str, 
     payload["unitId"] = str(getattr(record, "unit_id", "") or "")
     if provider == "linear":
         payload["gap077AuthoringAccepted"] = False
+    if provider == "notion":
+        payload["commentMutation"] = "degraded"
     return payload
 
 
@@ -4933,7 +5027,7 @@ def _projects_live_client_wired() -> bool:
 def operator_projection_capability_matrix() -> dict[str, Any]:
     """PRD 066 R1/R3 — shared operator-projection capability matrix skeleton."""
     payload: dict[str, Any] = {
-        "backends": ["github-issues", "github-projects", "jira", "linear"],
+        "backends": ["github-issues", "github-projects", "jira", "linear", "notion"],
         "contractBackends": ["github-projects", "linear"],
         "rows": [dict(row) for row in OPERATOR_PROJECTION_MATRIX_ROWS],
         "statusTaxonomy": sorted(SEMANTIC_STATUSES),

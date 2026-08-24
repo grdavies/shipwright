@@ -1,0 +1,66 @@
+{
+  "id": "checkboxes",
+  "provider": "notion",
+  "contract": "block-children",
+  "title": "[acme] prd:327-checkboxes",
+  "state": "open",
+  "labels": [
+    "sw:prd"
+  ],
+  "markdown": "- [ ] open item\n- [x] done item\n- [ ] another\n",
+  "blocks": [
+    {
+      "object": "block",
+      "type": "to_do",
+      "to_do": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "open item",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ],
+        "checked": false
+      }
+    },
+    {
+      "object": "block",
+      "type": "to_do",
+      "to_do": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "done item",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ],
+        "checked": true
+      }
+    },
+    {
+      "object": "block",
+      "type": "to_do",
+      "to_do": {
+        "rich_text": [
+          {
+            "type": "text",
+            "text": {
+              "content": "another",
+              "link": null
+            },
+            "annotations": {}
+          }
+        ],
+        "checked": false
+      }
+    }
+  ],
+  "canonical": "{\"body\":\"- [ ] open item\\n- [x] done item\\n- [ ] another\",\"comments\":[],\"labels\":[\"sw:prd\"],\"state\":\"open\",\"sw-canonical-version\":\"1\",\"title\":\"[acme] prd:327-checkboxes\"}",
+  "hash": "e2320a7615edefd32e52153aeaf895ac7f9eddda542bf47d5219c26342952ae5"
+}

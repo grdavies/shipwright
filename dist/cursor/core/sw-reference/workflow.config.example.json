@@ -198,6 +198,13 @@
     "visibilityProfile": "specs-public",
     "store": {
       "backend": "in-repo-public",
+      "requestBudget": {
+        "notion": {
+          "maxCalls": 300,
+          "maxPaginationDepth": 5,
+          "cacheTtlSeconds": 180
+        }
+      },
       "operatorProjection": {
         "githubProjects": {
           "enabled": true,

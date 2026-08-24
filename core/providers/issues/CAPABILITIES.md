@@ -82,6 +82,7 @@ Issue-store credentials use `planning.store.issues.tokenEnv` — **distinct** fr
 | `gitlab-issues` | `ISSUES_GITLAB_TOKEN` | `api` |
 | `jira` | `ISSUES_JIRA_TOKEN` | `read:jira-work`, `write:jira-work` (PRD 047) |
 | `linear` | `ISSUES_LINEAR_TOKEN` | Team-restricted API key (`read`/`write`) |
+| `notion` | `ISSUES_NOTION_TOKEN` | integration token with database read/write on configured ids |
 | `none` | — | skipped (file-store fallback) |
 
 Probe at init via `python3 scripts/planning_store.py probe-issues-token` — fail-closed on
@@ -91,23 +92,23 @@ missing/insufficient scope; token values never appear in output or logs.
 
 Selector requires the verb capability; absent capability → fail-closed halt.
 
-| Verb / feature | github-issues | gitlab-issues | jira | linear | none |
-| --- | --- | --- | --- | --- |
-| `issue-create` | REST | REST | REST (`/rest/api/3/issue` Cloud; `/rest/api/2/issue` DC) | GraphQL | — (fallback) |
-| `issue-get` | REST | REST | REST (`GET /rest/api/3/issue/{key}`) | GraphQL | — |
-| `issue-update` | REST + ETag | REST + ETag | REST (`PUT /rest/api/3/issue/{key}`) | GraphQL + etag | — |
-| `issue-comment` | REST | REST | REST (`POST .../comment`) | GraphQL | — |
-| `issue-label` | REST | REST | REST (`update.labels`) | GraphQL labels | — |
-| `issue-lock` | REST (lock conversation) | REST (issue lock) | **degraded** (hash-authoritative; R104) | **degraded** (hash-authoritative; R10) | — |
-| `issue-search` | REST | REST | REST (JQL `POST /rest/api/3/search`) | GraphQL filter | — |
-| `issue-close` | REST (`PATCH` state=closed) | REST | REST (transition idempotent close) | GraphQL state | — |
-| `linked-pr-introspection` | gated `graphql.linked-pr` + REST fallback | REST (notes) | — | — | — |
-| `issue-milestone` | REST (milestone field) | REST (iteration) | — (047 TBD) | — (skip+notice) | — (skip+notice) |
-| `projects-projection` | gated `graphql.projects-v2` | — | — | — | — |
-| `issue-lock` GraphQL fallback | gated `graphql.issue-lock` | — | — | n/a (degraded) | — |
-| `issue-search` GraphQL fallback | gated `graphql.issue-search` | — | — | primary GraphQL | — |
-| Native confidential/private issues | not portable guarantee | bonus only | **unsupported** (project-level; R105) | team-scoped | — |
-| Flat labels | yes | yes | labels → components → custom field (R109) | yes (Label name) | — |
+| Verb / feature | github-issues | gitlab-issues | jira | linear | notion | none |
+| --- | --- | --- | --- | --- | --- | --- |
+| `issue-create` | REST | REST | REST (`/rest/api/3/issue` Cloud; `/rest/api/2/issue` DC) | GraphQL | REST (`POST /pages`) | — (fallback) |
+| `issue-get` | REST | REST | REST (`GET /rest/api/3/issue/{key}`) | GraphQL | REST (`GET /pages` + blocks) | — |
+| `issue-update` | REST + ETag | REST + ETag | REST (`PUT /rest/api/3/issue/{key}`) | GraphQL + etag | REST (`PATCH /pages`) + `last_edited_time` | — |
+| `issue-comment` | REST | REST | REST (`POST .../comment`) | GraphQL | REST (`POST /comments`) | — |
+| `issue-label` | REST | REST | REST (`update.labels`) | GraphQL labels | `multi_select` / `select` / custom field ladder | — |
+| `issue-lock` | REST (lock conversation) | REST (issue lock) | **degraded** (hash-authoritative; R104) | **degraded** (hash-authoritative; R10) | **degraded** (hash-authoritative; R10) | — |
+| `issue-search` | REST | REST | REST (JQL `POST /rest/api/3/search`) | GraphQL filter | REST (`POST /databases/.../query`) | — |
+| `issue-close` | REST (`PATCH` state=closed) | REST | REST (transition idempotent close) | GraphQL state | REST (archive/status) | — |
+| `linked-pr-introspection` | gated `graphql.linked-pr` + REST fallback | REST (notes) | — | — | — | — |
+| `issue-milestone` | REST (milestone field) | REST (iteration) | — (047 TBD) | — (skip+notice) | — (skip+notice) | — (skip+notice) |
+| `projects-projection` | gated `graphql.projects-v2` | — | — | — | — | — |
+| `issue-lock` GraphQL fallback | gated `graphql.issue-lock` | — | — | n/a (degraded) | n/a (degraded) | — |
+| `issue-search` GraphQL fallback | gated `graphql.issue-search` | — | — | primary GraphQL | n/a (REST primary) | — |
+| Native confidential/private issues | not portable guarantee | bonus only | **unsupported** (project-level; R105) | team-scoped | workspace-shared databases | — |
+| Flat labels | yes | yes | labels → components → custom field (R109) | yes (Label name) | `multi_select` ladder (R9) | — |
 
 `none` always routes to `in-repo-public` file-store fallback (R3) with a documented notice — never blocks work.
 
@@ -127,14 +128,14 @@ present; otherwise deliver degrades to a checkbox/body-encoded phase list embedd
 
 GraphQL is permitted only behind an explicit per-verb capability flag when REST lacks parity (R50).
 
-| Verb / feature | github-issues | gitlab-issues | jira | linear | none |
-| --- | --- | --- | --- | --- |
-| `issue-epic-create` | REST | REST | pending (047) | — (checkbox fallback) |
-| `issue-sub-issue-create` | REST | REST | pending (047) | — |
-| `issue-sub-issue-update` | REST | REST | pending (047) | — |
-| `issue-sub-issue-link` | REST | REST | pending (047) | — |
-| Checkbox/body fallback | yes | yes | yes | yes (only path) |
-| Per-phase API budget (R81) | composes with requestBudget | composes | composes | n/a |
+| Verb / feature | github-issues | gitlab-issues | jira | linear | notion | none |
+| --- | --- | --- | --- | --- | --- | --- |
+| `issue-epic-create` | REST | REST | pending (047) | — (checkbox fallback) | REST (parent relation) |
+| `issue-sub-issue-create` | REST | REST | pending (047) | — | REST |
+| `issue-sub-issue-update` | REST | REST | pending (047) | — | REST |
+| `issue-sub-issue-link` | REST | REST | pending (047) | — | REST (relation property) |
+| Checkbox/body fallback | yes | yes | yes | yes (only path) | yes |
+| Per-phase API budget (R81) | composes with requestBudget | composes | composes | n/a | composes |
 
 `none` and providers lacking hierarchy verbs emit a single skip notice and continue with checkbox/body
 fallback — never block deliver.
@@ -207,6 +208,15 @@ python3 scripts/planning_store.py issues-provider-registration
 `linear` promotion to the derived shipped set requires LCD conformance harness green **and**
 OAuth operator-local storage documented (`core/providers/issues/linear.md` R23).
 
+### Notion recognition vs shipped (R12, R20)
+
+| State | `notion` in `ISSUES_PROVIDERS` | `notion` in derived shipped set | Behavior |
+| --- | --- | --- | --- |
+| Stub (no live client) | no | no | Config may name `notion`; doctor **refuses** enum-only stub |
+| Shipped (post-conformance) | yes | yes | Full live round-trip after conformance + docs gate |
+`notion` promotion to the derived shipped set requires LCD conformance harness green **and**
+adapter spec documented (`core/providers/issues/notion.md` R12).
+
 ### Rate-limit map (R16)
 
 | `issuesProvider` | `issues_http` profile key |
@@ -215,6 +225,7 @@ OAuth operator-local storage documented (`core/providers/issues/linear.md` R23).
 | `jira` | `jira` |
 | `gitlab-issues` | `gitlab` |
 | `linear` | `linear` |
+| `notion` | `notion` |
 
 Override per-provider budgets via `planning.store.requestBudget.<provider>` (request count +
 complexity for Linear).
@@ -227,6 +238,7 @@ complexity for Linear).
 | `jira` | `provider.providers.issues.jira` | `core/providers/issues/jira.md` |
 | `gitlab-issues` | `provider.providers.issues.gitlab-issues` | `core/providers/issues/gitlab-issues.md` |
 | `linear` | `provider.providers.issues.linear` | `core/providers/issues/linear.md` |
+| `notion` | `provider.providers.issues.notion` | `core/providers/issues/notion.md` |
 <!-- capability-docs:end registry-derived -->
 
 ### Doctor refuses stubs (R20)
@@ -237,6 +249,9 @@ complexity for Linear).
 - **Linear stub** (configured but not in `ISSUES_PROVIDERS`) → fail with `linear-stub-refused`
 - **Linear recognized-but-unshipped** → pass with `linear-recognized-not-shipped` notice; effective
   backend remains file-store until promotion
+- **Notion stub** (configured but not in `ISSUES_PROVIDERS`) → fail with `notion-stub-refused`
+- **Notion recognized-but-unshipped** → pass with `notion-recognized-not-shipped` notice; effective
+  backend remains file-store until conformance + docs gate promotion
 - **Linear oauth via shared CI secret** without `oauthSharedCiException` → fail via
   `planning_linear_client.doctor-oauth`
 
@@ -248,5 +263,8 @@ complexity for Linear).
 | `scripts/planning_migrate.py` | Run-state scan + quiesce helpers composed by migrate |
 
 Linear-specific team scope is probed at init via `planning_linear_client.py probe-team` (not a migrate
+verb — config validation only).
+
+Notion database scope is probed at init via `planning_notion_client.py probe-database` (not a migrate
 verb — config validation only).
 

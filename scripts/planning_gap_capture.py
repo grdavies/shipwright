@@ -2309,6 +2309,73 @@ def record_absorb_linkage_326(
     return {**out, "action": "record-absorb-linkage-326"}
 
 
+# PRD 327 R15 — absorb close-out (gap-078 Notion planning-store provider)
+PRD_327_UNIT_ID = "prd-327-notion-planning-store-provider"
+PRD_327_NUMBER = "327"
+PRD_327_ABSORB_GAP_UNITS: tuple[str, ...] = (
+    "gap-078-add-notion-as-a-new-planning-store-issue-trackin",
+)
+GAP_078_UNIT_ID = PRD_327_ABSORB_GAP_UNITS[0]
+
+
+def verify_absorb_closeout_327(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Verify PRD 327 close-out discovers anchored gap-078 (R15)."""
+    resolved_cfg = cfg if cfg is not None else ps.load_workflow_config(root)
+    snap = ps.resolve_delivery_linked_units(root, resolved_cfg, PRD_327_UNIT_ID)
+    if snap.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-327",
+            "error": snap.get("error"),
+            "prdUnitId": PRD_327_UNIT_ID,
+        }
+
+    gap_ids = [
+        item["unitId"]
+        for item in snap.get("snapshot", [])
+        if item.get("artifactType") == "gap"
+    ]
+    discovered = set(gap_ids)
+    missing = [
+        gap_id
+        for gap_id in PRD_327_ABSORB_GAP_UNITS
+        if not _match_expected_absorb_gap(discovered, gap_id)
+    ]
+    return {
+        "verdict": "ok" if not missing else "fail",
+        "action": "verify-absorb-closeout-327",
+        "prdUnitId": PRD_327_UNIT_ID,
+        "discoveredCount": len(discovered),
+        "discovered": sorted(discovered),
+        "missing": missing,
+        "skipped": list(snap.get("skipped") or []),
+        "gapUnitIds": list(PRD_327_ABSORB_GAP_UNITS),
+    }
+
+
+def record_absorb_linkage_327(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 327 → gap-078 absorb linkage (R15)."""
+    out = record_absorb_linkage(
+        root,
+        prd_unit_id=PRD_327_UNIT_ID,
+        prd_number=PRD_327_NUMBER,
+        gap_unit_ids=list(PRD_327_ABSORB_GAP_UNITS),
+        prd_path=prd_path,
+        dry_run=dry_run,
+    )
+    if out.get("verdict") == "ok" and not dry_run:
+        out = {**out, "gapUnitId": GAP_078_UNIT_ID}
+    return {**out, "action": "record-absorb-linkage-327"}
+
+
 def parse_flags(rest: list[str]) -> dict[str, Any]:
     out: dict[str, Any] = {"dry_run": False}
     i = 0
@@ -2402,7 +2469,7 @@ def main(argv: list[str] | None = None) -> None:
     if len(args) < 2:
         fail(
             "usage: planning_gap_capture.py <repo-root> "
-"<capture|capture-external-intake|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override|retro-capture|retro-confirm|retro-materialize|record-absorb-linkage|verify-absorb-closeout-072|verify-absorb-closeout-073|verify-absorb-closeout-325|verify-absorb-closeout-326> [options]"
+"<capture|capture-external-intake|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override|retro-capture|retro-confirm|retro-materialize|record-absorb-linkage|record-absorb-linkage-327|verify-absorb-closeout-072|verify-absorb-closeout-073|verify-absorb-closeout-325|verify-absorb-closeout-326|verify-absorb-closeout-327> [options]"
         )
     root = Path(args[0]).resolve()
     command = args[1]
@@ -2608,6 +2675,12 @@ def main(argv: list[str] | None = None) -> None:
                 prd_path=prd_path,
                 dry_run=bool(flags.get("dry_run")),
             )
+        elif prd_unit == PRD_327_UNIT_ID:
+            out = record_absorb_linkage_327(
+                root,
+                prd_path=prd_path,
+                dry_run=bool(flags.get("dry_run")),
+            )
         elif prd_unit == PRD_066_UNIT_ID and not flags.get("prd_unit_id") and not flags.get("unit_id"):
             tasks_path = Path(flags["tasks_path"]).resolve() if flags.get("tasks_path") else None
             out = record_absorb_linkage_066(
@@ -2630,6 +2703,15 @@ def main(argv: list[str] | None = None) -> None:
             )
         emit(out, 0 if out.get("verdict") in {"ok", "skipped"} else 20)
 
+    if command == "record-absorb-linkage-327":
+        prd_path = Path(flags["prd_path"]).resolve() if flags.get("prd_path") else None
+        out = record_absorb_linkage_327(
+            root,
+            prd_path=prd_path,
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") in {"ok", "skipped"} else 20)
+
     if command == "verify-absorb-closeout-072":
         out = verify_absorb_closeout_072(root)
         emit(out, 0 if out.get("verdict") == "ok" else 20)
@@ -2644,6 +2726,10 @@ def main(argv: list[str] | None = None) -> None:
 
     if command == "verify-absorb-closeout-326":
         out = verify_absorb_closeout_326(root)
+        emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "verify-absorb-closeout-327":
+        out = verify_absorb_closeout_327(root)
         emit(out, 0 if out.get("verdict") == "ok" else 20)
 
     fail(f"unknown command: {command}")
