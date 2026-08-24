@@ -710,4 +710,8 @@ primary checkout). Repo-root cwd with an orchestrator path under `.sw-worktrees/
 `deliver:orchestrator-cwd-skew`. Primary↔mirror skew uses `wave_state.sync_canonical_state_read` /
 `repair-mirror` before terminal steps.
 
-<!-- currency: refreshed 2026-08-24T07:47:00Z for terminal prepare (PRD 327) -->
+**Phase-before-orch teardown (PRD 328):** `release_run_resources` tears down phase worktrees before the
+orchestrator worktree; terminal closeout reuses the same order. Primary cwd stays when pruning orch;
+husk/parked trees do not fail the release path.
+
+<!-- currency: refreshed 2026-08-24T22:00:00Z for terminal prepare (PRD 328) -->

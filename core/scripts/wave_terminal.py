@@ -1924,65 +1924,7 @@ def close_run_projections(root: Path, run_id: str, state: dict[str, Any]) -> dic
     return {"verdict": "pass", "closed": closed}
 
 
-def _remove_worktree(top: Path, wt_path: str) -> dict[str, Any]:
-    path = Path(wt_path)
-    if not path.is_dir():
-        return {"path": wt_path, "removed": False, "reason": "missing"}
-    proc = subprocess.run(
-        ["git", "-C", str(top), "worktree", "remove", str(path), "--force"],
-        text=True,
-        capture_output=True,
-    )
-    return {
-        "path": wt_path,
-        "removed": proc.returncode == 0,
-        "stderr": proc.stderr.strip() or None,
-    }
-
-
-def release_run_resources(root: Path, run_id: str, state: dict[str, Any]) -> dict[str, Any]:
-    """Release target lock, leases, and retained worktrees for a finalized run (R24)."""
-    from wave_run_paths import lease_path as run_lease_path
-    from wave_state import read_lock_meta, scoped_paths, target_branch_from_state
-    from wave_target_lock import release_target_lock
-
-    released: dict[str, Any] = {}
-    target = target_branch_from_state(state)
-    if target:
-        released["targetLock"] = release_target_lock(
-            root, target, run_id, finalize=True
-        )
-        lock_path = scoped_paths(root, target)["lock"]
-        if lock_path.is_file():
-            meta = read_lock_meta(lock_path)
-            holder_run = meta.get("runId")
-            if not holder_run or holder_run == run_id:
-                lock_path.unlink(missing_ok=True)
-                released["scopedDeliverLock"] = {
-                    "verdict": "pass",
-                    "path": str(lock_path),
-                }
-            else:
-                released["scopedDeliverLock"] = {
-                    "verdict": "fail",
-                    "error": "scoped-lock-run-mismatch",
-                    "holder": meta,
-                }
-    lease_file = run_lease_path(root, run_id)
-    if lease_file.is_file():
-        lease_file.unlink(missing_ok=True)
-        released["runLocalLease"] = {"verdict": "pass", "path": str(lease_file)}
-
-    top = git_top(root)
-    worktrees: list[dict[str, Any]] = []
-    orch = state.get("orchestratorWorktree")
-    if isinstance(orch, dict) and orch.get("path"):
-        worktrees.append(_remove_worktree(top, str(orch["path"])))
-    for entry in (state.get("phaseWorktrees") or {}).values():
-        if isinstance(entry, dict) and entry.get("path"):
-            worktrees.append(_remove_worktree(top, str(entry["path"])))
-    released["worktrees"] = worktrees
-    return released
+from wave_deliver_loop import release_run_resources  # PRD 328 R3–R5 — phase-before-orch teardown
 
 
 def finalize_run(
@@ -1996,6 +1938,8 @@ def finalize_run(
     """Finalize deliver run lifecycle after verified terminal merge (PRD 081 R24, PRD 276 R15)."""
     from wave_deliver_loop import (
         empty_finalize_checkpoint,
+        ensure_finalize_scripts_bootstrap,
+        finalize_checkpoint_needs_repair,
         finalize_phase_complete,
         load_finalize_checkpoint,
         mark_finalize_phase_complete,
@@ -2003,8 +1947,11 @@ def finalize_run(
         mark_finalize_phase_started,
         next_finalize_phase,
         partial_finalize_resume_payload,
+        repair_finalize_checkpoint_from_immutable,
         resume_finalize_command,
     )
+
+    ensure_finalize_scripts_bootstrap(root)
     from wave_state import (
         ensure_run_scoped_state_mirrored,
         load_run_scoped_state,
@@ -2038,6 +1985,21 @@ def finalize_run(
     if work_state.get("immutable"):
         existing = read_terminal_receipt(root, run_id)
         ckpt = load_finalize_checkpoint(root, run_id)
+        if finalize_checkpoint_needs_repair(ckpt, immutable_written=True):
+            repaired, repair_err = repair_finalize_checkpoint_from_immutable(
+                root, run_id, work_state, checkpoint=ckpt
+            )
+            if repair_err:
+                return repair_err
+            ckpt = repaired
+            return {
+                "verdict": "pass",
+                "action": "run-finalize",
+                "immutable": True,
+                "terminalReceipt": existing,
+                "checkpoint": ckpt,
+                "note": "checkpoint repaired from immutable state",
+            }
         return {
             "verdict": "pass",
             "action": "run-finalize",
