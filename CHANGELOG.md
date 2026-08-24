@@ -1052,6 +1052,7 @@
 * merge phase labels-hierarchy-and-comments-capability-gates-m into feat/notion-planning-store-provider (2518235) <!-- sw-deliver:labels-hierarchy-and-comments-capability-gates-m -->
 * merge phase docs-conformance-record-and-shipped-gate-s into feat/notion-planning-store-provider (10a6d59) <!-- sw-deliver:docs-conformance-record-and-shipped-gate-s -->
 * merge phase tests-gap-078-absorb-closeout-s into feat/notion-planning-store-provider (a303dcc) <!-- sw-deliver:tests-gap-078-absorb-closeout-s -->
+* merge phase finalize-import-bootstrap-for-planning-txn-s into feat/finalize-teardown-checkpoint-hygiene (8783014) <!-- sw-deliver:finalize-import-bootstrap-for-planning-txn-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
