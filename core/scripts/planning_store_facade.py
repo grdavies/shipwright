@@ -79,6 +79,21 @@ from planning_linear_projection import (
     r1_4_substitute_views,
     resolve_canonical_freeze_body,
 )
+from planning_notion_projection import (
+    apply_dual_property_capability as apply_notion_dual_property_capability,
+    assert_projection_mirrors_not_freeze_authority as assert_notion_projection_mirrors_not_freeze_authority,
+    check_canonical_projection_split_brain as check_notion_canonical_projection_split_brain,
+    dual_write_body_policy as notion_dual_write_body_policy,
+    dual_write_projection_mirror as dual_write_notion_projection_mirror,
+    encode_planning_edge as encode_notion_planning_edge,
+    map_artifact_to_notion_entity,
+    notion_entity_mapping,
+    notion_projection_schema_contract,
+    probe_dual_property_availability as probe_notion_dual_property_availability,
+    project_graph_to_notion_layout,
+    rebuild_projection_for_unit as rebuild_notion_projection_for_unit,
+    resolve_canonical_freeze_body as resolve_notion_canonical_freeze_body,
+)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -3976,6 +3991,37 @@ def doctor_separate_project_local_writes(root: Path, cfg: dict[str, Any]) -> dic
     return result
 
 
+def doctor_tracked_prd_bodies(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """Fail closed when tracked docs/prds bodies remain in the code repo (PRD 280 R11)."""
+    from planning_artifact_handle import issue_store_separate_project_effective
+
+    if not issue_store_separate_project_effective(root, cfg):
+        return {
+            "verdict": "pass",
+            "action": "doctor-tracked-prd-bodies",
+            "skipped": True,
+            "reason": "not-separate-project-issue-store",
+        }
+    tracked = tracked_planning_body_paths(root)
+    prd_paths = sorted(path for path in tracked if path.startswith("docs/prds/"))
+    if prd_paths:
+        return {
+            "verdict": "fail",
+            "action": "doctor-tracked-prd-bodies",
+            "halt": "tracked-prd-bodies-in-code-repo",
+            "error": "tracked docs/prds bodies forbidden in code repo under issue-store",
+            "paths": prd_paths,
+            "remediation": (
+                "run planning_store cleanup for legacy tracked bodies or migrate authoring to issue-store"
+            ),
+        }
+    return {
+        "verdict": "pass",
+        "action": "doctor-tracked-prd-bodies",
+        "checks": ["no-tracked-docs-prds-bodies"],
+    }
+
+
 def cleanup_separate_project_local_writes(root: Path, cfg: dict[str, Any], *, apply: bool = False) -> dict[str, Any]:
     """PRD 061 R3a — untrack legacy banned planning bodies in the code repo (idempotent)."""
     from planning_artifact_handle import issue_store_separate_project_effective
@@ -4485,6 +4531,11 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
         "description": "Linear operator schema: entity map, Initiative/Cycles, typed edges (PRD 066 R6–R8/R29)",
     },
     {
+        "name": "notion_projection_schema",
+        "status": "shipped",
+        "description": "Notion operator schema: database entity map, dual_property edges, freeze mirrors (PRD 327 R5)",
+    },
+    {
         "name": "comments_relations_schema",
         "status": "shipped",
         "description": "Facade thread parentage, resolved metadata, typed relation edges (PRD 066 R17/R24)",
@@ -4585,19 +4636,62 @@ R1_BROWSE_CONTRACT: dict[str, Any] = {
 }
 
 OPERATOR_PROJECTION_MATRIX_ROWS: tuple[dict[str, Any], ...] = (
-    {"row": "prd", "linear": "project", "github-projects": "project-item", "r1": [1, 2, 3, 4]},
-    {"row": "brainstorm", "linear": "document", "github-projects": "draft-or-issue-field", "r1": [2]},
-    {"row": "gap", "linear": "issue+gap-label", "github-projects": "issue+gap-field", "r1": [1]},
-    {"row": "phase", "linear": "milestone", "github-projects": "phase-field", "r1": [3]},
-    {"row": "task", "linear": "issue/sub-issue", "github-projects": "issue-item", "r1": [3]},
-    {"row": "progress", "linear": "native-status", "github-projects": "status-field", "r1": [3, 4]},
+    {
+        "row": "prd",
+        "linear": "project",
+        "github-projects": "project-item",
+        "notion": "prd-database-page",
+        "r1": [1, 2, 3, 4],
+    },
+    {
+        "row": "brainstorm",
+        "linear": "document",
+        "github-projects": "draft-or-issue-field",
+        "notion": "brainstorm-database-page",
+        "r1": [2],
+    },
+    {
+        "row": "gap",
+        "linear": "issue+gap-label",
+        "github-projects": "issue+gap-field",
+        "notion": "gap-database-page",
+        "r1": [1],
+    },
+    {
+        "row": "phase",
+        "linear": "milestone",
+        "github-projects": "phase-field",
+        "notion": "phase-database-page+date",
+        "r1": [3],
+    },
+    {
+        "row": "task",
+        "linear": "issue/sub-issue",
+        "github-projects": "issue-item",
+        "notion": "task-database-page",
+        "r1": [3],
+    },
+    {
+        "row": "progress",
+        "linear": "native-status",
+        "github-projects": "status-field",
+        "notion": "Status-property",
+        "r1": [3, 4],
+    },
     {
         "row": "program",
         "linear": "initiative-or-substitute-views",
         "github-projects": "program-discriminator",
+        "notion": "select-or-database-row",
         "r1": [4],
     },
-    {"row": "cycle-wave", "linear": "cycle", "github-projects": "degraded-optional", "r1": []},
+    {
+        "row": "cycle-wave",
+        "linear": "cycle",
+        "github-projects": "degraded-optional",
+        "notion": "date-window-optional",
+        "r1": [],
+    },
 )
 
 FACADE_WORKFLOW_SCAN_GLOB = "scripts/*.py"
@@ -4931,7 +5025,7 @@ def _projects_live_client_wired() -> bool:
 def operator_projection_capability_matrix() -> dict[str, Any]:
     """PRD 066 R1/R3 — shared operator-projection capability matrix skeleton."""
     payload: dict[str, Any] = {
-        "backends": ["github-issues", "github-projects", "jira", "linear"],
+        "backends": ["github-issues", "github-projects", "jira", "linear", "notion"],
         "contractBackends": ["github-projects", "linear"],
         "rows": [dict(row) for row in OPERATOR_PROJECTION_MATRIX_ROWS],
         "statusTaxonomy": sorted(SEMANTIC_STATUSES),
@@ -5388,6 +5482,204 @@ def write_back_gap_prereqs_061(root: Path, cfg: dict[str, Any], *, dry_run: bool
         return {"verdict": "ok", "action": "write-back-gap-prereqs", "dryRun": dry_run, "results": [], "note": "no-gap-078-079"}
     ok = all(r.get("verdict") in {"ok", "dry-run"} or r.get("skipped") for r in results)
     return {"verdict": "ok" if ok else "partial", "action": "write-back-gap-prereqs", "dryRun": dry_run, "results": results}
+
+
+def external_intake_txn(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    verb: str,
+    issue_id: str | None = None,
+    signal_id: str | None = None,
+    title: str | None = None,
+    signal_class: str = "unknown",
+    comment: str | None = None,
+    gap_unit_id: str | None = None,
+    priority: str = "medium",
+    tier: str = "build",
+    gap_class: str = "external",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Planning-store txn verbs for external issue triage lifecycle (PRD 280 R1–R3)."""
+    from planning_external_intake import (
+        TXN_VERBS,
+        VERB_TO_STATE,
+        append_transition,
+        gap_promotion_labels,
+        initial_external_intake_block,
+        outcome_for_verb,
+        parse_external_intake_block,
+        sync_external_intake_labels,
+        upsert_external_intake_block,
+        validate_transition,
+    )
+
+    if verb not in TXN_VERBS:
+        return {"verdict": "fail", "action": verb, "error": "unknown-external-intake-verb", "verb": verb}
+
+    backend = resolve_effective_backend(root, cfg)
+    if backend.get("configured") != "issue-store":
+        return {"verdict": "fail", "action": verb, "error": "issue-store-required"}
+
+    provider = str(resolve_issues_provider(cfg).get("provider") or "none")
+    pk = validate_project_key(root, cfg)
+    if pk.get("verdict") != "ok":
+        return pk
+    project_key = str(pk["projectKey"])
+    client = IssuesClient(root, provider)
+
+    if verb == "external-intake-receive":
+        if not signal_id or not title:
+            return {"verdict": "fail", "action": verb, "error": "signal-id-and-title-required"}
+        block = initial_external_intake_block(signal_id=signal_id, signal_class=signal_class)
+        body = upsert_external_intake_block("", block)
+        labels = sync_external_intake_labels([], "received")
+        if dry_run:
+            return {"verdict": "ok", "action": verb, "dryRun": True, "state": "received", "signalId": signal_id}
+        created = client.issue_create(
+            title=title,
+            body=body,
+            labels=labels,
+            project_key=project_key,
+            artifact_type="external",
+            unit_id=f"external-{signal_id}",
+        )
+        return {
+            "verdict": "ok",
+            "action": verb,
+            "issueId": str(created.id),
+            "state": "received",
+            "signalId": signal_id,
+        }
+
+    if not issue_id:
+        return {"verdict": "fail", "action": verb, "error": "issue-id-required", "verb": verb}
+
+    try:
+        current = client.issue_get(str(issue_id))
+    except Exception as exc:  # noqa: BLE001
+        return {"verdict": "fail", "action": verb, "error": str(exc), "issueId": issue_id}
+
+    block = parse_external_intake_block(current.body)
+    if not block:
+        return {"verdict": "fail", "action": verb, "error": "missing-external-intake-block", "issueId": issue_id}
+
+    from_state = str(block.get("state") or "")
+    to_state = VERB_TO_STATE[verb]
+    try:
+        validate_transition(from_state, to_state)
+    except ValueError as exc:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": str(exc),
+            "issueId": issue_id,
+            "fromState": from_state,
+            "toState": to_state,
+        }
+
+    note = comment or ""
+    updated_block = append_transition(
+        block,
+        verb=verb,
+        from_state=from_state,
+        to_state=to_state,
+        note=note,
+    )
+    body = upsert_external_intake_block(current.body, updated_block)
+    labels = sync_external_intake_labels(list(current.labels), to_state)
+
+    if verb == "external-intake-promote" and gap_unit_id:
+        from planning_github_client import merge_external_gap_promotion_labels
+
+        labels = merge_external_gap_promotion_labels(
+            labels,
+            unit_id=gap_unit_id,
+            priority=priority,
+            tier=tier,
+            gap_class=gap_class,
+        )
+        updated_block["promotedUnitId"] = gap_unit_id
+        body = upsert_external_intake_block(body, updated_block)
+
+    outcome = outcome_for_verb(verb)
+    if outcome:
+        updated_block["outcome"] = outcome
+        body = upsert_external_intake_block(body, updated_block)
+
+    if dry_run:
+        return {
+            "verdict": "ok",
+            "action": verb,
+            "dryRun": True,
+            "issueId": issue_id,
+            "fromState": from_state,
+            "toState": to_state,
+            "outcome": outcome,
+        }
+
+    redacted_comment = redact_content(comment) if comment else None
+    if labels != list(current.labels):
+        current = client.issue_label(str(issue_id), labels, if_match=current.etag)
+    if body != current.body:
+        current = client.issue_update(str(issue_id), body=body, if_match=current.etag)
+    if redacted_comment:
+        client.issue_comment(str(issue_id), redacted_comment)
+
+    return {
+        "verdict": "ok",
+        "action": verb,
+        "issueId": issue_id,
+        "fromState": from_state,
+        "toState": to_state,
+        "outcome": outcome,
+        "promotedUnitId": gap_unit_id,
+        "gapLabels": gap_promotion_labels(
+            unit_id=gap_unit_id,
+            priority=priority,
+            tier=tier,
+            gap_class=gap_class,
+        )
+        if gap_unit_id
+        else None,
+    }
+
+
+def external_intake_run_pipeline(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str,
+    duplicate: bool = False,
+    through: str = "actionability",
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Validation pipeline classify→duplicate→verify→actionability (PRD 280 R3)."""
+    steps = ["external-intake-classify"]
+    if duplicate:
+        steps.append("external-intake-duplicate-check")
+    steps.append("external-intake-verify")
+    if through == "actionability":
+        steps.append("external-intake-actionability")
+    results: list[dict[str, Any]] = []
+    for step in steps:
+        result = external_intake_txn(root, cfg, verb=step, issue_id=issue_id, dry_run=dry_run)
+        results.append(result)
+        if result.get("verdict") != "ok":
+            return {
+                "verdict": "fail",
+                "action": "external-intake-pipeline",
+                "issueId": issue_id,
+                "failedStep": step,
+                "results": results,
+            }
+    return {
+        "verdict": "ok",
+        "action": "external-intake-pipeline",
+        "issueId": issue_id,
+        "through": through,
+        "results": results,
+    }
 
 
 def resolve_absorbed_gaps_061(

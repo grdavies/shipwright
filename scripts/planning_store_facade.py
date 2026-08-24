@@ -79,6 +79,21 @@ from planning_linear_projection import (
     r1_4_substitute_views,
     resolve_canonical_freeze_body,
 )
+from planning_notion_projection import (
+    apply_dual_property_capability as apply_notion_dual_property_capability,
+    assert_projection_mirrors_not_freeze_authority as assert_notion_projection_mirrors_not_freeze_authority,
+    check_canonical_projection_split_brain as check_notion_canonical_projection_split_brain,
+    dual_write_body_policy as notion_dual_write_body_policy,
+    dual_write_projection_mirror as dual_write_notion_projection_mirror,
+    encode_planning_edge as encode_notion_planning_edge,
+    map_artifact_to_notion_entity,
+    notion_entity_mapping,
+    notion_projection_schema_contract,
+    probe_dual_property_availability as probe_notion_dual_property_availability,
+    project_graph_to_notion_layout,
+    rebuild_projection_for_unit as rebuild_notion_projection_for_unit,
+    resolve_canonical_freeze_body as resolve_notion_canonical_freeze_body,
+)
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -4516,6 +4531,11 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
         "description": "Linear operator schema: entity map, Initiative/Cycles, typed edges (PRD 066 R6–R8/R29)",
     },
     {
+        "name": "notion_projection_schema",
+        "status": "shipped",
+        "description": "Notion operator schema: database entity map, dual_property edges, freeze mirrors (PRD 327 R5)",
+    },
+    {
         "name": "comments_relations_schema",
         "status": "shipped",
         "description": "Facade thread parentage, resolved metadata, typed relation edges (PRD 066 R17/R24)",
@@ -4616,19 +4636,62 @@ R1_BROWSE_CONTRACT: dict[str, Any] = {
 }
 
 OPERATOR_PROJECTION_MATRIX_ROWS: tuple[dict[str, Any], ...] = (
-    {"row": "prd", "linear": "project", "github-projects": "project-item", "r1": [1, 2, 3, 4]},
-    {"row": "brainstorm", "linear": "document", "github-projects": "draft-or-issue-field", "r1": [2]},
-    {"row": "gap", "linear": "issue+gap-label", "github-projects": "issue+gap-field", "r1": [1]},
-    {"row": "phase", "linear": "milestone", "github-projects": "phase-field", "r1": [3]},
-    {"row": "task", "linear": "issue/sub-issue", "github-projects": "issue-item", "r1": [3]},
-    {"row": "progress", "linear": "native-status", "github-projects": "status-field", "r1": [3, 4]},
+    {
+        "row": "prd",
+        "linear": "project",
+        "github-projects": "project-item",
+        "notion": "prd-database-page",
+        "r1": [1, 2, 3, 4],
+    },
+    {
+        "row": "brainstorm",
+        "linear": "document",
+        "github-projects": "draft-or-issue-field",
+        "notion": "brainstorm-database-page",
+        "r1": [2],
+    },
+    {
+        "row": "gap",
+        "linear": "issue+gap-label",
+        "github-projects": "issue+gap-field",
+        "notion": "gap-database-page",
+        "r1": [1],
+    },
+    {
+        "row": "phase",
+        "linear": "milestone",
+        "github-projects": "phase-field",
+        "notion": "phase-database-page+date",
+        "r1": [3],
+    },
+    {
+        "row": "task",
+        "linear": "issue/sub-issue",
+        "github-projects": "issue-item",
+        "notion": "task-database-page",
+        "r1": [3],
+    },
+    {
+        "row": "progress",
+        "linear": "native-status",
+        "github-projects": "status-field",
+        "notion": "Status-property",
+        "r1": [3, 4],
+    },
     {
         "row": "program",
         "linear": "initiative-or-substitute-views",
         "github-projects": "program-discriminator",
+        "notion": "select-or-database-row",
         "r1": [4],
     },
-    {"row": "cycle-wave", "linear": "cycle", "github-projects": "degraded-optional", "r1": []},
+    {
+        "row": "cycle-wave",
+        "linear": "cycle",
+        "github-projects": "degraded-optional",
+        "notion": "date-window-optional",
+        "r1": [],
+    },
 )
 
 FACADE_WORKFLOW_SCAN_GLOB = "scripts/*.py"
@@ -4962,7 +5025,7 @@ def _projects_live_client_wired() -> bool:
 def operator_projection_capability_matrix() -> dict[str, Any]:
     """PRD 066 R1/R3 — shared operator-projection capability matrix skeleton."""
     payload: dict[str, Any] = {
-        "backends": ["github-issues", "github-projects", "jira", "linear"],
+        "backends": ["github-issues", "github-projects", "jira", "linear", "notion"],
         "contractBackends": ["github-projects", "linear"],
         "rows": [dict(row) for row in OPERATOR_PROJECTION_MATRIX_ROWS],
         "statusTaxonomy": sorted(SEMANTIC_STATUSES),
