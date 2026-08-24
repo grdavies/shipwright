@@ -1039,6 +1039,7 @@
 * merge phase prototype-evidence-contract-closure-m into feat/workflow-quality-platform (a6c7905) <!-- sw-deliver:prototype-evidence-contract-closure-m -->
 * merge phase absorb-closeout-delivery-order-note-s into feat/workflow-quality-platform (a45785b) <!-- sw-deliver:absorb-closeout-delivery-order-note-s -->
 * merge phase notion-client-canonicalization-probe-fixtures-l into feat/notion-planning-store-provider (4dc537e) <!-- sw-deliver:notion-client-canonicalization-probe-fixtures-l -->
+* merge phase provider-module-registration-issues-lib-schema-m into feat/notion-planning-store-provider (f372381) <!-- sw-deliver:provider-module-registration-issues-lib-schema-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
