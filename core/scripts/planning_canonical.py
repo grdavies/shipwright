@@ -1079,6 +1079,10 @@ def chunk_body_if_needed(
         from planning_jira_canonical import chunk_body_for_jira_cloud
 
         return chunk_body_for_jira_cloud(body, comments)
+    if provider == "notion":
+        from planning_notion_canonical import chunk_body_for_notion
+
+        return chunk_body_for_notion(body, comments)
     if len(body.encode("utf-8")) <= BODY_SIZE_LIMIT:
         return body, comments
     encoded = body.encode("utf-8")

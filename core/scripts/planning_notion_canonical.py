@@ -12,10 +12,16 @@ from typing import Any
 from planning_canonical import (
     CommentRecord,
     IssueSnapshot,
+    append_chunk_manifest_marker,
     canonical_form,
     canonical_hash,
     normalize_body,
+    MARKER_CHUNK_MANIFEST,
 )
+
+NOTION_RICH_TEXT_CHAR_LIMIT = 2000
+NOTION_BLOCK_APPEND_LIMIT = 100
+CHUNK_OVERFLOW_MARKER = "<!-- sw-chunk-overflow -->\n"
 
 SUPPORTED_CONTRACT = "block-children"
 UNSUPPORTED_BLOCK_TYPES = frozenset(
@@ -523,6 +529,106 @@ def snapshot_from_fixture(data: dict[str, Any]) -> IssueSnapshot:
         labels=list(data.get("labels") or []),
         comments=list(data.get("comments") or []),
     )
+
+
+def split_rich_text_chunks(text: str, *, limit: int = NOTION_RICH_TEXT_CHAR_LIMIT) -> list[str]:
+    """Split text so each segment fits Notion rich_text content limits (R11)."""
+    if len(text) <= limit:
+        return [text]
+    chunks: list[str] = []
+    remaining = text
+    while remaining:
+        if len(remaining) <= limit:
+            chunks.append(remaining)
+            break
+        split_at = remaining.rfind("\n", 0, limit + 1)
+        if split_at <= 0:
+            split_at = limit
+        chunks.append(remaining[:split_at])
+        remaining = remaining[split_at:].lstrip("\n")
+    return chunks
+
+
+def paginate_blocks(blocks: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
+    """Paginate block children for Notion append cap (R11)."""
+    if not blocks:
+        return []
+    batches: list[list[dict[str, Any]]] = []
+    for index in range(0, len(blocks), NOTION_BLOCK_APPEND_LIMIT):
+        batches.append(blocks[index : index + NOTION_BLOCK_APPEND_LIMIT])
+    return batches
+
+
+def _overflow_comment_chunks(overflow: str, comments: list[CommentRecord]) -> list[CommentRecord]:
+    new_comments = list(comments)
+    prefix = CHUNK_OVERFLOW_MARKER
+    remaining = overflow
+    while remaining:
+        max_piece = NOTION_RICH_TEXT_CHAR_LIMIT - len(prefix)
+        if max_piece <= 0:
+            raise RuntimeError("Notion overflow marker exceeds rich_text limit")
+        piece = remaining[:max_piece]
+        if not piece:
+            break
+        remaining = remaining[len(piece):]
+        chunk_id = f"chunk-{len(new_comments)}"
+        new_comments.append(
+            CommentRecord(
+                id=chunk_id,
+                body=f"{prefix}{piece}",
+                markers=["sw-chunk-overflow"],
+            )
+        )
+    return new_comments
+
+
+def _block_text_length(block: dict[str, Any]) -> int:
+    block_type = str(block.get("type") or "")
+    payload = block.get(block_type)
+    if not isinstance(payload, dict):
+        return 0
+    rich_text = payload.get("rich_text")
+    if not isinstance(rich_text, list):
+        return 0
+    return sum(
+        len(str(item.get("text", {}).get("content") or ""))
+        for item in rich_text
+        if isinstance(item, dict) and isinstance(item.get("text"), dict)
+    )
+
+
+def chunk_body_for_notion(
+    body: str,
+    comments: list[CommentRecord],
+) -> tuple[str, list[CommentRecord]]:
+    """Split markdown for Notion block-append and rich_text limits (R11)."""
+    blocks = markdown_to_blocks(body)
+    overflow_markdown = ""
+    if len(blocks) > NOTION_BLOCK_APPEND_LIMIT:
+        overflow_markdown = blocks_to_markdown(blocks[NOTION_BLOCK_APPEND_LIMIT:])
+        blocks = blocks[:NOTION_BLOCK_APPEND_LIMIT]
+    elif any(_block_text_length(block) > NOTION_RICH_TEXT_CHAR_LIMIT for block in blocks):
+        overflow_markdown = body
+        blocks = []
+    head = blocks_to_markdown(blocks) if blocks else ""
+    if overflow_markdown:
+        overflow_markdown = f"\n{overflow_markdown}" if head else overflow_markdown
+    extra = _overflow_comment_chunks(overflow_markdown, list(comments)) if overflow_markdown else list(comments)
+    if not extra[len(comments):]:
+        return head, extra
+    manifest = {
+        "version": 1,
+        "chunks": [
+            {"index": idx, "commentId": c.id}
+            for idx, c in enumerate(extra[len(comments):])
+        ],
+    }
+    marker = f"<!-- sw-chunk-manifest: {json.dumps(manifest, sort_keys=True, ensure_ascii=False)} -->"
+    if MARKER_CHUNK_MANIFEST.search(head):
+        head = MARKER_CHUNK_MANIFEST.sub(marker, head)
+    else:
+        head = append_chunk_manifest_marker(head, marker)
+    return head, extra
 
 
 def normalize_fixture(path: Path) -> dict[str, Any]:

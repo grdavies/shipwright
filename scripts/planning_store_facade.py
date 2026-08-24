@@ -4993,6 +4993,8 @@ def issue_comments_relations_facade(record: Any, *, provider: str) -> dict[str, 
     payload["unitId"] = str(getattr(record, "unit_id", "") or "")
     if provider == "linear":
         payload["gap077AuthoringAccepted"] = False
+    if provider == "notion":
+        payload["commentMutation"] = "degraded"
     return payload
 
 

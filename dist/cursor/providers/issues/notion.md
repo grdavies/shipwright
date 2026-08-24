@@ -33,6 +33,10 @@ requires conformance + docs gate (R20).
 | `planning.store.issues.notionTitleProperty` | Title property (default `Name`) |
 | `planning.store.issues.notionStatusProperty` | Status property (default `Status`) |
 | `planning.store.issues.notionProjectProperty` | Project multi-select property (default `Project`) |
+| `planning.store.issues.notionLabelProperty` | Label ladder property (defaults to `notionProjectProperty`) |
+| `planning.store.issues.notionParentRelationProperty` | Parent relation for epic/sub-issue linkage (default `Parent`) |
+| `planning.store.issues.labelCustomField` | Label ladder step 3 custom property name |
+| `planning.store.issues.labelSurface` | Force ladder rung: `multi_select` \| `select` \| `customField` |
 | `planning.store.requestBudget.notion` | Derived-view call budget overrides |
 
 At least one of `notionDatabaseId` or `databaseMap` is required. Init/probe fails closed on
@@ -69,13 +73,52 @@ Integration tokens are operator-local — must not be committed to the planning 
   },
   "overflow": {
     "bodySizeLimitBytes": 60000,
+    "richTextCharLimit": 2000,
+    "blockAppendLimit": 100,
     "chunkMarker": "sw-chunk-overflow"
-  }
+  },
+  "commentMutation": {
+    "capability": "degraded",
+    "update": false,
+    "delete": false,
+    "amendVia": "append-marked-comment"
+  },
+  "labelLadder": ["multi_select", "select", "labelCustomField"]
 }
 ```
 
 `issue-lock` is **degraded**: freeze immutability is hash-authoritative via `sw:frozen` +
 `sw-freeze-record`; Notion has no native conversation lock verb.
+
+`issue-comment` mutation (update/delete) is **degraded**: amendments append a new marked comment;
+the facade reports `commentMutation: degraded`.
+
+## Label degradation ladder (R9)
+
+| Step | Surface | When |
+| --- | --- | --- |
+| 1 | `multi_select` | default; init probe validates write permission |
+| 2 | `select` | when `multi_select` unavailable |
+| 3 | custom field | `planning.store.issues.labelCustomField` |
+
+`sw:project:<key>`, `sw:prd`, `sw:brainstorm`, `sw:gap`, `sw:task`, and `sw:frozen` round-trip
+through the active rung. PRD 043 R42 body marker stays authoritative for isolation on shared
+workspaces; every degradation emits exactly one operator notice.
+
+## Epic/sub-issue hierarchy (R10)
+
+`issue-epic-create`, `issue-sub-issue-create`, and `issue-sub-issue-link` use a parent **relation
+property** (`notionParentRelationProperty`) as the linkage of record — not Notion child-page
+parenting. When relation verbs are unavailable, degrade to `to_do` checkbox blocks in the epic
+body with a single operator notice; deliver continues.
+
+## Body overflow / comments (R11)
+
+- `POST /v1/comments` + `GET /v1/comments` for ordered reads
+- Hard limits: 2000 characters per `rich_text` element; 100 block children per append
+- Oversized bodies: `<!-- sw-chunk-manifest: … -->` in the head page plus ordered
+  `<!-- sw-chunk-overflow -->` comments; reassembly by immutable comment id (positional fallback
+  for synthetic placeholder ids only)
 
 ## Rate limit + retry (R4)
 

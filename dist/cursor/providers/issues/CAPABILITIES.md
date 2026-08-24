@@ -127,14 +127,14 @@ present; otherwise deliver degrades to a checkbox/body-encoded phase list embedd
 
 GraphQL is permitted only behind an explicit per-verb capability flag when REST lacks parity (R50).
 
-| Verb / feature | github-issues | gitlab-issues | jira | linear | none |
-| --- | --- | --- | --- | --- |
-| `issue-epic-create` | REST | REST | pending (047) | — (checkbox fallback) |
-| `issue-sub-issue-create` | REST | REST | pending (047) | — |
-| `issue-sub-issue-update` | REST | REST | pending (047) | — |
-| `issue-sub-issue-link` | REST | REST | pending (047) | — |
-| Checkbox/body fallback | yes | yes | yes | yes (only path) |
-| Per-phase API budget (R81) | composes with requestBudget | composes | composes | n/a |
+| Verb / feature | github-issues | gitlab-issues | jira | linear | notion | none |
+| --- | --- | --- | --- | --- | --- | --- |
+| `issue-epic-create` | REST | REST | pending (047) | — (checkbox fallback) | REST (parent relation) |
+| `issue-sub-issue-create` | REST | REST | pending (047) | — | REST |
+| `issue-sub-issue-update` | REST | REST | pending (047) | — | REST |
+| `issue-sub-issue-link` | REST | REST | pending (047) | — | REST (relation property) |
+| Checkbox/body fallback | yes | yes | yes | yes (only path) | yes |
+| Per-phase API budget (R81) | composes with requestBudget | composes | composes | n/a | composes |
 
 `none` and providers lacking hierarchy verbs emit a single skip notice and continue with checkbox/body
 fallback — never block deliver.
