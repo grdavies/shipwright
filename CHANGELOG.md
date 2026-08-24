@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.5.0](https://github.com/grdavies/shipwright/compare/v2.4.0...v2.5.0) (2026-08-24)
+
+
+### Features
+
+* **prd-326:** workflow quality platform ([#995](https://github.com/grdavies/shipwright/issues/995)) ([da5f809](https://github.com/grdavies/shipwright/commit/da5f8094451daa62e415782c6a8dcaf28ef79cfe))
+* **prd-327:** notion planning store provider ([#1003](https://github.com/grdavies/shipwright/issues/1003)) ([e38ed08](https://github.com/grdavies/shipwright/commit/e38ed0897ff08501c3cc42609dfc9c938d0b17e0))
+
 ## [2.4.0](https://github.com/grdavies/shipwright/compare/v2.3.0...v2.4.0) (2026-08-23)
 
 
