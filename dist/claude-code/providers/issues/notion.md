@@ -93,6 +93,24 @@ Integration tokens are operator-local — must not be committed to the planning 
 `issue-comment` mutation (update/delete) is **degraded**: amendments append a new marked comment;
 the facade reports `commentMutation: degraded`.
 
+## LCD verb mapping (R10)
+
+| Verb | Notion surface |
+| --- | --- |
+| `issue-create` | `POST /pages` |
+| `issue-get` | `GET /pages/{id}` + `GET /blocks/{id}/children` |
+| `issue-update` | `PATCH /pages/{id}` |
+| `issue-comment` | `POST /comments` + `GET /comments` |
+| `issue-label` | page `multi_select` / `select` / custom-field ladder |
+| `issue-lock` | **degraded** — `sw:frozen` label + hash-authoritative freeze |
+| `issue-search` | `POST /databases/{database_id}/query` (paginated) |
+| `issue-close` | `PATCH /pages/{id}` archived/status transition |
+
+Duck-type surface in `scripts/planning_notion_client.py` (`NotionIssuesClient`) matches
+`FixtureIssuesStore` verbs: `create` / `get` / `update` / `add_comment` / `set_labels` / `lock` /
+`search`, plus lifecycle hooks (`mark_tombstone`, …). Hermetic CI uses `SW_ISSUES_FIXTURE=1` or an
+injected fixture store.
+
 ## Label degradation ladder (R9)
 
 | Step | Surface | When |

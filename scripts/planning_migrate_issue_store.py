@@ -1774,7 +1774,7 @@ def _create_issue_with_lifecycle(
     if provider == "jira":
         body, extra_comments = chunk_body_for_jira_cloud(body, [])
     else:
-        body, extra_comments = chunk_body_if_needed(body, [])
+        body, extra_comments = chunk_body_if_needed(body, [], provider=provider)
 
     try:
         record = _lookup_issue_record(root, project_key, artifact.unit_id, artifact.body_path, client)

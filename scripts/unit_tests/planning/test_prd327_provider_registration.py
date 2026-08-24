@@ -50,9 +50,9 @@ def test_notion_live_client_wired() -> None:
     assert notion_provider.live_client_wired() is True
 
 
-def test_notion_recognized_not_shipped() -> None:
+def test_notion_recognized_and_shipped() -> None:
     assert "notion" in ps.ISSUES_PROVIDERS
-    assert "notion" not in ps.SHIPPED_ISSUES_PROVIDERS
+    assert "notion" in ps.SHIPPED_ISSUES_PROVIDERS
 
 
 def test_registration_footprint_notion_surface() -> None:
@@ -63,23 +63,22 @@ def test_registration_footprint_notion_surface() -> None:
     assert footprint["capabilityIndexIds"]["notion"] == "provider.providers.issues.notion"
     assert footprint["recognitionVsShipped"]["notion"] == {
         "recognized": True,
-        "shipped": False,
+        "shipped": True,
         "deferred": False,
     }
 
 
-def test_doctor_notion_recognized_not_shipped(tmp_path: Path) -> None:
+def test_doctor_notion_shipped_passes(tmp_path: Path) -> None:
     result = ps.doctor_issues_provider_stub(tmp_path, _notion_cfg())
     assert result["verdict"] == "pass"
-    assert result["notice"] == "notion-recognized-not-shipped"
+    assert result["provider"] == "notion"
+    assert "notice" not in result
 
 
 def test_doctor_notion_stub_refused_when_client_unwired(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(notion_provider, "live_client_wired", lambda: False)
-    # Re-import facade constants would be stale; doctor uses live ISSUES_PROVIDERS from import time.
-    # Stub refused path: configure notion while module reports unwired via doctor_stub issues_providers.
     result = notion_provider.doctor_stub_result(
         tmp_path,
         provider="notion",
@@ -91,11 +90,13 @@ def test_doctor_notion_stub_refused_when_client_unwired(
     assert result["error"] == "notion-stub-refused"
 
 
-def test_issues_lib_notion_unshipped_raises(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("SW_ISSUES_FIXTURE", raising=False)
+def test_issues_lib_notion_shipped_fixture_backend(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     client = issues_lib.IssuesClient(tmp_path, "notion")
-    with pytest.raises(issues_lib.IssueCapabilityError, match="not shipped"):
-        client._live_backend()
+    backend = client._live_backend()
+    assert backend is not None
 
 
 def test_issues_http_notion_ratelimit_profile() -> None:
@@ -283,4 +284,56 @@ def test_facade_project_graph_to_notion_layout() -> None:
     layout = ps.project_graph_to_notion_layout(_fixture_graph())
     assert layout["verdict"] == "pass"
     assert layout["provider"] == "notion"
+
+
+# --- PRD 327 phase 5 docs, conformance, shipped gate (R12/R13) ---
+
+
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[3]
+
+
+def test_notion_docs_gate_passes() -> None:
+    root = _repo_root()
+    result = pnc.docs_gate(root)
+    assert result["verdict"] == "ok"
+    assert result["gate"] == "docs-gate"
+
+
+def test_notion_docs_gate_missing_doc_fail_closed(tmp_path: Path) -> None:
+    """Harness FIX_ROOT copies scripts/ only — docs_gate must not raise (living-doc set-index-status-cli)."""
+    result = pnc.docs_gate(tmp_path)
+    assert result["verdict"] == "fail"
+    assert result["error"] == "missing-provider-doc"
+
+
+def test_shipped_resolution_survives_scripts_only_root(tmp_path: Path) -> None:
+    """Import-time shipped resolution must tolerate missing core/providers when conformance fixtures exist."""
+    from _planning_pkg_loader import load_submodule
+
+    pc = load_submodule("provider_conformance")
+    fixtures = (
+        _repo_root()
+        / "scripts/test/fixtures/planning-provider-conformance/notion.ok.json"
+    )
+    dest = tmp_path / "scripts/test/fixtures/planning-provider-conformance"
+    dest.mkdir(parents=True)
+    dest.joinpath("notion.ok.json").write_text(fixtures.read_text(encoding="utf-8"), encoding="utf-8")
+    shipped = pc.providers_with_green_conformance(tmp_path)
+    assert "notion" not in shipped
+
+
+def test_notion_promotion_gate_evidence_green() -> None:
+    root = _repo_root()
+    evidence = pnc.notion_promotion_gate_evidence(root)
+    assert evidence["verdict"] == "ok", evidence.get("failures")
+
+
+def test_notion_conformance_record_matches_live() -> None:
+    from _planning_pkg_loader import load_submodule
+
+    pc = load_submodule("provider_conformance")
+    root = _repo_root()
+    evidence = pc.conformance_evidence(root, "notion")
+    assert evidence["verdict"] == "ok", evidence.get("failures")
 
