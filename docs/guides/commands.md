@@ -145,8 +145,7 @@ Composition, convergence, and domain terms:
 [`graph-domain-terminology.md`](graph-domain-terminology.md).
 
 ### Deliver operator surface
-<!-- currency: planning-cache deliver path-anchor — statePath emission uses repo-anchor relative paths on macOS -->
-
+<!-- currency: refreshed 2026-08-24T21:58:00Z — terminal prepare vs wave_terminal (PRD 328 phase-before-orch teardown) -->
 
 Mechanical list / resume / finalize commands report run identity, target branch, stage, lock holder,
 and `requiresAdoption` **before** any mutation. Operators invoke them via `wave_deliver.py` (or
@@ -181,6 +180,10 @@ surfaces in `list` output — never silent fallback to repository-global plan pa
 **Finalize vs cleanup:** `finalize` (`run-finalize`) verifies the merge commit, writes the terminal receipt,
 marks the run `immutable`, and releases target-lock resources. It does **not** close planning units, absorb
 gaps, or delete worktrees — those are separate hygiene steps after merge detection.
+
+**Phase-before-orch teardown:** `release_run_resources` (shared by deliver-loop and terminal closeout)
+removes phase worktrees before the orchestrator worktree, keeps primary cwd when pruning orch, and
+tolerates husk/parked trees — never tear down orch while phase worktrees still depend on the run.
 
 **Run-state mirror + finalize checkpoint:** before terminal-ship / finalize, slug-scoped deliver state is
 mirrored into `.cursor/sw-deliver-runs/<runId>/` when run-scoped state is missing (`ensure_run_scoped_state_mirrored`).
