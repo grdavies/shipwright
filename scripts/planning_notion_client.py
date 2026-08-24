@@ -27,10 +27,19 @@ from planning_canonical import (
     compute_etag,
     parse_body_marker,
     project_label,
+    reassemble_body,
+    rewrite_chunk_manifest_ids,
     type_label,
     unit_id_from_labels,
 )
-from planning_notion_canonical import blocks_to_markdown, markdown_to_blocks
+from planning_notion_canonical import (
+    NOTION_BLOCK_APPEND_LIMIT,
+    NOTION_RICH_TEXT_CHAR_LIMIT,
+    blocks_to_markdown,
+    markdown_to_blocks,
+    paginate_blocks,
+    split_rich_text_chunks,
+)
 
 LIVE_CLIENT = True
 NOTION_API_BASE = "https://api.notion.com/v1"
@@ -57,6 +66,19 @@ LIFECYCLE_HOOKS = (
 LOCK_CAPABILITY = "degraded"
 NATIVE_ISSUE_LOCK = False
 SEARCH_PAGE_SIZE = 100
+NOTION_LABEL_DEGRADATION_LADDER = ("multi_select", "select", "customField")
+DEFAULT_PARENT_RELATION_PROPERTY = "Parent"
+SW_LABEL_MARKERS = frozenset({
+    "sw:prd",
+    "sw:brainstorm",
+    "sw:gap",
+    "sw:task",
+    FROZEN_LABEL,
+})
+_LABEL_DEGRADED_EMITTED = False
+_HIERARCHY_DEGRADED_EMITTED = False
+_RELATION_DEGRADED_EMITTED = False
+_COMMENT_MUTATION_DEGRADED_EMITTED = False
 
 
 class NotionClientError(Exception):
@@ -99,6 +121,99 @@ def resolve_project_property(cfg: dict[str, Any]) -> str:
     issues = _issues_section(cfg)
     raw = issues.get("notionProjectProperty")
     return raw.strip() if isinstance(raw, str) and raw.strip() else DEFAULT_PROJECT_PROPERTY
+
+
+def resolve_label_property(cfg: dict[str, Any]) -> str:
+    issues = _issues_section(cfg)
+    raw = issues.get("notionLabelProperty")
+    if isinstance(raw, str) and raw.strip():
+        return raw.strip()
+    return resolve_project_property(cfg)
+
+
+def resolve_parent_relation_property(cfg: dict[str, Any]) -> str:
+    issues = _issues_section(cfg)
+    raw = issues.get("notionParentRelationProperty")
+    return raw.strip() if isinstance(raw, str) and raw.strip() else DEFAULT_PARENT_RELATION_PROPERTY
+
+
+def resolve_label_custom_field(cfg: dict[str, Any]) -> str | None:
+    issues = _issues_section(cfg)
+    raw = issues.get("labelCustomField")
+    return raw.strip() if isinstance(raw, str) and raw.strip() else None
+
+
+def resolve_label_surface_config(cfg: dict[str, Any]) -> str | None:
+    issues = _issues_section(cfg)
+    raw = issues.get("labelSurface")
+    if isinstance(raw, str) and raw.strip().lower() in NOTION_LABEL_DEGRADATION_LADDER:
+        return raw.strip().lower()
+    return None
+
+
+def _emit_operator_notice(
+    notice: str,
+    message: str,
+    *,
+    flag: str,
+) -> None:
+    global _LABEL_DEGRADED_EMITTED, _HIERARCHY_DEGRADED_EMITTED, _RELATION_DEGRADED_EMITTED, _COMMENT_MUTATION_DEGRADED_EMITTED
+    emitted = {
+        "label": _LABEL_DEGRADED_EMITTED,
+        "hierarchy": _HIERARCHY_DEGRADED_EMITTED,
+        "relation": _RELATION_DEGRADED_EMITTED,
+        "comment": _COMMENT_MUTATION_DEGRADED_EMITTED,
+    }
+    if emitted.get(flag):
+        return
+    if flag == "label":
+        _LABEL_DEGRADED_EMITTED = True
+    elif flag == "hierarchy":
+        _HIERARCHY_DEGRADED_EMITTED = True
+    elif flag == "relation":
+        _RELATION_DEGRADED_EMITTED = True
+    elif flag == "comment":
+        _COMMENT_MUTATION_DEGRADED_EMITTED = True
+    payload = {"verdict": "notice", "notice": notice, "message": message}
+    print(json.dumps(payload, ensure_ascii=False), file=sys.stderr)
+
+
+def label_ladder_info(cfg: dict[str, Any], *, surface: str | None = None) -> dict[str, Any]:
+    rung = surface or resolve_label_surface_config(cfg) or "multi_select"
+    return {
+        "ladder": list(NOTION_LABEL_DEGRADATION_LADDER),
+        "surface": rung,
+        "labelProperty": resolve_label_property(cfg),
+        "bodyMarkerAuthoritative": True,
+    }
+
+
+def comment_mutation_capability() -> dict[str, Any]:
+    return {
+        "capability": "degraded",
+        "update": False,
+        "delete": False,
+        "amendVia": "append-marked-comment",
+        "notes": (
+            "Notion exposes comment create/read only; update/delete amendments append "
+            "a new marked comment and the facade reports comment mutation as degraded."
+        ),
+    }
+
+
+def overflow_chunk_policy() -> dict[str, Any]:
+    return {
+        "provider": "notion",
+        "bodySizeLimitBytes": BODY_SIZE_LIMIT,
+        "richTextCharLimit": NOTION_RICH_TEXT_CHAR_LIMIT,
+        "blockAppendLimit": NOTION_BLOCK_APPEND_LIMIT,
+        "chunkMarker": "sw-chunk-overflow",
+        "chunkVia": "planning_notion_canonical.chunk_body_for_notion",
+        "notes": (
+            "Bodies respect 2000-char rich_text and 100-block append caps; overflow uses "
+            "<!-- sw-chunk-manifest --> plus <!-- sw-chunk-overflow --> comments."
+        ),
+    }
 
 
 def resolve_database_ids(cfg: dict[str, Any]) -> list[str]:
@@ -261,7 +376,10 @@ def _validate_database_schema(
     title_property: str,
     status_property: str,
     project_property: str,
-) -> list[str]:
+    label_property: str,
+    parent_relation_property: str,
+    label_custom_field: str | None,
+) -> tuple[list[str], str, bool]:
     errors: list[str] = []
     title_type = _property_type(schema, title_property)
     if title_type != "title":
@@ -269,10 +387,29 @@ def _validate_database_schema(
     status_type = _property_type(schema, status_property)
     if status_type not in {"status", "select"}:
         errors.append(f"status-property-wrong-type:{status_property}:{status_type or 'missing'}")
-    project_type = _property_type(schema, project_property)
-    if project_type != "multi_select":
-        errors.append(f"project-property-wrong-type:{project_property}:{project_type or 'missing'}")
-    return errors
+
+    label_surface = "multi_select"
+    label_type = _property_type(schema, label_property)
+    if label_type == "multi_select":
+        label_surface = "multi_select"
+    elif label_type == "select":
+        label_surface = "select"
+    elif label_custom_field:
+        custom_type = _property_type(schema, label_custom_field)
+        if custom_type in {"rich_text", "multi_select", "select"}:
+            label_surface = "customField"
+        else:
+            errors.append(
+                f"label-custom-field-wrong-type:{label_custom_field}:{custom_type or 'missing'}"
+            )
+    else:
+        errors.append(
+            f"label-property-wrong-type:{label_property}:{label_type or 'missing'}"
+        )
+
+    relation_type = _property_type(schema, parent_relation_property)
+    relation_capable = relation_type == "relation"
+    return errors, label_surface, relation_capable
 
 
 def probe_database(root: Path, cfg: dict[str, Any], *, token: str | None = None) -> dict[str, Any]:
@@ -293,8 +430,12 @@ def probe_database(root: Path, cfg: dict[str, Any], *, token: str | None = None)
     title_property = resolve_title_property(cfg)
     status_property = resolve_status_property(cfg)
     project_property = resolve_project_property(cfg)
+    label_property = resolve_label_property(cfg)
+    parent_relation_property = resolve_parent_relation_property(cfg)
+    label_custom_field = resolve_label_custom_field(cfg)
 
     if use_fixture_probe_mode():
+        label_surface = resolve_label_surface_config(cfg) or "multi_select"
         return {
             "verdict": "ok",
             "provider": "notion",
@@ -303,10 +444,18 @@ def probe_database(root: Path, cfg: dict[str, Any], *, token: str | None = None)
             "titleProperty": title_property,
             "statusProperty": status_property,
             "projectProperty": project_property,
+            "labelProperty": label_property,
+            "labelSurface": label_surface,
+            "parentRelationProperty": parent_relation_property,
+            "labelLadder": list(NOTION_LABEL_DEGRADATION_LADDER),
+            "bodyMarkerAuthoritative": True,
+            "relationCapable": True,
         }
 
     failures: list[dict[str, Any]] = []
     checked: list[str] = []
+    checked_label_surface = resolve_label_surface_config(cfg) or "multi_select"
+    checked_relation_capable = False
     for database_id in database_ids:
         try:
             status, _, body = notion_request(
@@ -326,11 +475,14 @@ def probe_database(root: Path, cfg: dict[str, Any], *, token: str | None = None)
                 )
                 continue
             schema = _json_response(status, body, token=token or "")
-            prop_errors = _validate_database_schema(
+            prop_errors, label_surface, relation_capable = _validate_database_schema(
                 schema,
                 title_property=title_property,
                 status_property=status_property,
                 project_property=project_property,
+                label_property=label_property,
+                parent_relation_property=parent_relation_property,
+                label_custom_field=label_custom_field,
             )
             if prop_errors:
                 failures.append(
@@ -342,6 +494,8 @@ def probe_database(root: Path, cfg: dict[str, Any], *, token: str | None = None)
                 )
                 continue
             checked.append(database_id)
+            checked_label_surface = label_surface
+            checked_relation_capable = relation_capable
         except NotionClientError as exc:
             failures.append(
                 {"databaseId": database_id, "error": exc.code, "message": str(exc)}
@@ -362,6 +516,12 @@ def probe_database(root: Path, cfg: dict[str, Any], *, token: str | None = None)
         "titleProperty": title_property,
         "statusProperty": status_property,
         "projectProperty": project_property,
+        "labelProperty": label_property,
+        "labelSurface": checked_label_surface,
+        "parentRelationProperty": parent_relation_property,
+        "labelLadder": list(NOTION_LABEL_DEGRADATION_LADDER),
+        "bodyMarkerAuthoritative": True,
+        "relationCapable": checked_relation_capable,
     }
 
 
@@ -415,6 +575,94 @@ def _status_property_value(state: str, *, status_property: str) -> dict[str, Any
     name = "Done" if state == "closed" else "In progress"
     prop_type = "status"
     return {status_property: {prop_type: {"name": name}}}
+
+
+def _rich_text_payload(content: str) -> list[dict[str, Any]]:
+    return [{"type": "text", "text": {"content": content}}]
+
+
+def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
+    rich_text = raw.get("rich_text")
+    parts: list[str] = []
+    if isinstance(rich_text, list):
+        for item in rich_text:
+            if not isinstance(item, dict):
+                continue
+            if item.get("type") == "text" and isinstance(item.get("text"), dict):
+                parts.append(str(item["text"].get("content") or ""))
+    body = "".join(parts)
+    markers: list[str] = []
+    for marker in (
+        "sw-freeze-record",
+        "sw-chunk-overflow",
+        "sw-memory-pointer",
+        "lifecycle:source-removed",
+        "sw-comment-amendment",
+    ):
+        if f"<!-- {marker} -->" in body or f"<!--{marker}-->" in body:
+            markers.append(marker)
+    return CommentRecord(
+        id=str(raw.get("id") or ""),
+        body=body,
+        created_at=str(raw.get("created_time") or ""),
+        markers=markers,
+    )
+
+
+def _label_property_payload(
+    labels: list[str],
+    *,
+    property_name: str,
+    surface: str,
+    custom_field: str | None,
+) -> dict[str, Any]:
+    unique = sorted({label for label in labels if label})
+    if surface == "multi_select":
+        return {property_name: {"multi_select": [{"name": label} for label in unique]}}
+    if surface == "select":
+        primary = next(iter(unique), "")
+        return {property_name: {"select": {"name": primary} if primary else None}}
+    field_name = custom_field or property_name
+    joined = ", ".join(unique)
+    return {field_name: {"rich_text": _rich_text_payload(joined)}}
+
+
+def _labels_from_property(
+    properties: dict[str, Any],
+    *,
+    property_name: str,
+    surface: str,
+    custom_field: str | None,
+) -> list[str]:
+    field_name = custom_field if surface == "customField" and custom_field else property_name
+    prop = properties.get(field_name)
+    if not isinstance(prop, dict):
+        return []
+    if surface == "multi_select":
+        options = prop.get("multi_select")
+        if isinstance(options, list):
+            return sorted(
+                {
+                    str(item.get("name") or "")
+                    for item in options
+                    if isinstance(item, dict) and item.get("name")
+                }
+            )
+        return []
+    if surface == "select":
+        select = prop.get("select")
+        if isinstance(select, dict) and select.get("name"):
+            return [str(select.get("name") or "")]
+        return []
+    rich_text = prop.get("rich_text")
+    if isinstance(rich_text, list):
+        joined = "".join(
+            str(item.get("text", {}).get("content") or "")
+            for item in rich_text
+            if isinstance(item, dict) and isinstance(item.get("text"), dict)
+        )
+        return [part.strip() for part in joined.split(",") if part.strip()]
+    return []
 
 
 def _project_property_value(labels: list[str], *, project_property: str) -> dict[str, Any]:
@@ -475,14 +723,21 @@ def _record_from_page(
     body: str,
     project_key: str = "",
     comments: list[CommentRecord] | None = None,
+    label_property: str = DEFAULT_PROJECT_PROPERTY,
+    label_surface: str = "multi_select",
+    label_custom_field: str | None = None,
 ) -> Any:
     from issues_lib import IssueRecord
 
     properties = page.get("properties") if isinstance(page.get("properties"), dict) else {}
     title_property = DEFAULT_TITLE_PROPERTY
     status_property = DEFAULT_STATUS_PROPERTY
-    project_property = DEFAULT_PROJECT_PROPERTY
-    labels = _labels_from_properties(properties, project_property)
+    labels = _labels_from_property(
+        properties,
+        property_name=label_property,
+        surface=label_surface,
+        custom_field=label_custom_field,
+    )
     title = _title_from_properties(properties, title_property)
     state = _state_from_properties(properties, status_property)
     updated = str(page.get("last_edited_time") or "")
@@ -537,6 +792,12 @@ class NotionIssuesClient:
         self.title_property = resolve_title_property(self.cfg)
         self.status_property = resolve_status_property(self.cfg)
         self.project_property = resolve_project_property(self.cfg)
+        self.label_property = resolve_label_property(self.cfg)
+        self.parent_relation_property = resolve_parent_relation_property(self.cfg)
+        self.label_custom_field = resolve_label_custom_field(self.cfg)
+        configured_surface = resolve_label_surface_config(self.cfg)
+        self.label_surface = configured_surface or "multi_select"
+        self.relation_capable = True
         self._token = token
         self._credential = credential
         self._default_database_id = resolve_database_ids(self.cfg)[0] if resolve_database_ids(self.cfg) else ""
@@ -570,6 +831,148 @@ class NotionIssuesClient:
 
     def lock_capability(self) -> dict[str, Any]:
         return lock_capability()
+
+    def comment_mutation_capability(self) -> dict[str, Any]:
+        return comment_mutation_capability()
+
+    def label_ladder_info(self) -> dict[str, Any]:
+        return label_ladder_info(self.cfg, surface=self.label_surface)
+
+    def hierarchy_capable(self) -> bool:
+        return self.relation_capable
+
+    def _resolve_label_surface(self) -> str:
+        if self._fixture is not None:
+            return self.label_surface
+        if use_fixture_probe_mode():
+            return self.label_surface
+        probe = probe_database(self.root, self.cfg, token=self._token)
+        if probe.get("verdict") == "ok":
+            surface = probe.get("labelSurface")
+            if isinstance(surface, str) and surface in NOTION_LABEL_DEGRADATION_LADDER:
+                if surface != "multi_select" and self.label_surface == "multi_select":
+                    _emit_operator_notice(
+                        "notion-label-surface-degraded",
+                        f"Notion label surface degraded to {surface!r}; body marker remains authoritative",
+                        flag="label",
+                    )
+                self.label_surface = surface
+            relation_capable = probe.get("relationCapable")
+            if isinstance(relation_capable, bool):
+                self.relation_capable = relation_capable
+        return self.label_surface
+
+    def _label_patch(self, labels: list[str]) -> dict[str, Any]:
+        surface = self._resolve_label_surface()
+        if surface == "multi_select":
+            return _label_property_payload(
+                labels,
+                property_name=self.label_property,
+                surface=surface,
+                custom_field=self.label_custom_field,
+            )
+        if surface == "select":
+            if self.label_surface != "select":
+                _emit_operator_notice(
+                    "notion-label-surface-degraded",
+                    "Notion label surface degraded to select; body marker remains authoritative",
+                    flag="label",
+                )
+            return _label_property_payload(
+                labels,
+                property_name=self.label_property,
+                surface="select",
+                custom_field=self.label_custom_field,
+            )
+        if self.label_custom_field:
+            if self.label_surface != "customField":
+                _emit_operator_notice(
+                    "notion-label-surface-degraded",
+                    "Notion label surface degraded to labelCustomField; body marker remains authoritative",
+                    flag="label",
+                )
+            return _label_property_payload(
+                labels,
+                property_name=self.label_property,
+                surface="customField",
+                custom_field=self.label_custom_field,
+            )
+        raise NotionClientError(
+            "all Notion label ladder rungs denied",
+            code="notion-label-ladder-exhausted",
+        )
+
+    def _append_block_children(self, block_id: str, blocks: list[dict[str, Any]]) -> None:
+        for batch in paginate_blocks(blocks):
+            status, _, resp = notion_request(
+                self.root,
+                self.cfg,
+                "PATCH",
+                f"/blocks/{block_id}/children",
+                payload={"children": batch},
+                token=self._token,
+                credential=self._credential,
+            )
+            _json_response(status, resp, token=self._token or "")
+
+    def _list_comments(self, block_id: str) -> list[CommentRecord]:
+        comments: list[CommentRecord] = []
+        cursor = ""
+        while True:
+            path = f"/comments?block_id={block_id}&page_size={SEARCH_PAGE_SIZE}"
+            if cursor:
+                path += f"&start_cursor={cursor}"
+            status, _, body = notion_request(
+                self.root,
+                self.cfg,
+                "GET",
+                path,
+                token=self._token,
+                credential=self._credential,
+            )
+            data = _json_response(status, body, token=self._token or "")
+            results = data.get("results")
+            if isinstance(results, list):
+                comments.extend(
+                    [_parse_comment(item) for item in results if isinstance(item, dict)]
+                )
+            if not data.get("has_more"):
+                break
+            cursor = str(data.get("next_cursor") or "")
+            if not cursor:
+                break
+        comments.sort(key=lambda c: (c.created_at, c.id))
+        return comments
+
+    def _post_overflow_comments(
+        self,
+        issue_id: str,
+        extra: list[CommentRecord],
+        *,
+        base_count: int,
+    ) -> list[str]:
+        posted: list[str] = []
+        for comment in extra[base_count:]:
+            created = self.add_comment(issue_id, comment.body, markers=list(comment.markers))
+            posted.append(created.id)
+        return posted
+
+    def _record_from_current(
+        self,
+        page: dict[str, Any],
+        *,
+        body_md: str,
+        comments: list[CommentRecord],
+    ) -> Any:
+        return _record_from_page(
+            page,
+            body=body_md,
+            project_key=self.project_key,
+            comments=comments,
+            label_property=self.label_property,
+            label_surface=self.label_surface,
+            label_custom_field=self.label_custom_field,
+        )
 
     def _fetch_block_children(self, block_id: str) -> list[dict[str, Any]]:
         blocks: list[dict[str, Any]] = []
@@ -630,16 +1033,17 @@ class NotionIssuesClient:
             )
         head, extra = prepare_body_with_overflow(body, [])
         merged = sorted(set(labels) | {project_label(project_key)})
-        children = _strip_block_object(markdown_to_blocks(head))
+        first_batch_blocks = _strip_block_object(markdown_to_blocks(head))
+        initial_children = first_batch_blocks[:NOTION_BLOCK_APPEND_LIMIT]
         properties: dict[str, Any] = {
             self.title_property: _title_property_value(title),
             **_status_property_value("open", status_property=self.status_property),
-            **_project_property_value(merged, project_property=self.project_property),
+            **self._label_patch(merged),
         }
         payload = {
             "parent": {"database_id": self._default_database_id},
             "properties": properties,
-            "children": children,
+            "children": initial_children,
         }
         status, _, resp = notion_request(
             self.root,
@@ -652,8 +1056,15 @@ class NotionIssuesClient:
         )
         page = _json_response(status, resp, token=self._token or "")
         page_id = str(page.get("id") or "")
-        for comment in extra:
-            self.add_comment(page_id, comment.body, markers=list(comment.markers))
+        remaining_blocks = first_batch_blocks[NOTION_BLOCK_APPEND_LIMIT:]
+        if remaining_blocks:
+            self._append_block_children(page_id, remaining_blocks)
+        posted = self._post_overflow_comments(page_id, extra, base_count=0)
+        if posted:
+            head = rewrite_chunk_manifest_ids(head, posted)
+            manifest_blocks = _strip_block_object(markdown_to_blocks(head))
+            if manifest_blocks:
+                self._append_block_children(page_id, manifest_blocks[:1])
         return self.get(page_id)
 
     def get(self, issue_id: str) -> Any:
@@ -668,8 +1079,11 @@ class NotionIssuesClient:
             credential=self._credential,
         )
         page = _json_response(status, body, token=self._token or "")
-        body_md = self._page_body(issue_id)
-        return _record_from_page(page, body=body_md, project_key=self.project_key)
+        body_blocks = self._fetch_block_children(issue_id)
+        body_md = blocks_to_markdown(body_blocks)
+        comments = self._list_comments(issue_id)
+        full_body = reassemble_body(body_md, comments)
+        return self._record_from_current(page, body_md=full_body, comments=comments)
 
     def update(
         self,
@@ -710,9 +1124,7 @@ class NotionIssuesClient:
         if title is not None:
             patch_props[self.title_property] = _title_property_value(title)
         if labels is not None:
-            patch_props.update(
-                _project_property_value(labels, project_property=self.project_property)
-            )
+            patch_props.update(self._label_patch(labels))
         if state is not None:
             patch_props.update(
                 _status_property_value(state, status_property=self.status_property)
@@ -729,20 +1141,19 @@ class NotionIssuesClient:
             )
             _json_response(status, resp, token=self._token or "")
         if body is not None:
-            head, extra = prepare_body_with_overflow(body, [])
-            children = _strip_block_object(markdown_to_blocks(head))
-            status, _, resp = notion_request(
-                self.root,
-                self.cfg,
-                "PATCH",
-                f"/blocks/{issue_id}/children",
-                payload={"children": children},
-                token=self._token,
-                credential=self._credential,
-            )
-            _json_response(status, resp, token=self._token or "")
-            for comment in extra:
-                self.add_comment(issue_id, comment.body, markers=list(comment.markers))
+            head, extra = prepare_body_with_overflow(body, list(current.comments))
+            blocks = _strip_block_object(markdown_to_blocks(head))
+            first_batch = blocks[:NOTION_BLOCK_APPEND_LIMIT]
+            if first_batch:
+                self._append_block_children(issue_id, first_batch)
+            if len(blocks) > NOTION_BLOCK_APPEND_LIMIT:
+                self._append_block_children(issue_id, blocks[NOTION_BLOCK_APPEND_LIMIT:])
+            posted = self._post_overflow_comments(issue_id, extra, base_count=len(current.comments))
+            if posted:
+                head = rewrite_chunk_manifest_ids(head, posted)
+                manifest_blocks = _strip_block_object(markdown_to_blocks(head))
+                if manifest_blocks:
+                    self._append_block_children(issue_id, manifest_blocks[:1])
         return self.get(issue_id)
 
     def add_comment(
@@ -750,27 +1161,68 @@ class NotionIssuesClient:
     ) -> CommentRecord:
         if self._fixture is not None:
             return self._fixture.add_comment(issue_id, body, markers=markers)
-        payload = {
-            "parent": {"page_id": issue_id},
-            "rich_text": [{"type": "text", "text": {"content": body}}],
-        }
-        status, _, resp = notion_request(
-            self.root,
-            self.cfg,
-            "POST",
-            "/comments",
-            payload=payload,
-            token=self._token,
-            credential=self._credential,
+        marker_prefix = ""
+        if markers:
+            marker_prefix = "".join(f"<!-- {marker} -->\n" for marker in markers)
+        full_body = f"{marker_prefix}{body}" if marker_prefix else body
+        chunks = split_rich_text_chunks(full_body)
+        created: CommentRecord | None = None
+        for chunk in chunks:
+            payload = {
+                "parent": {"page_id": issue_id},
+                "rich_text": _rich_text_payload(chunk),
+            }
+            status, _, resp = notion_request(
+                self.root,
+                self.cfg,
+                "POST",
+                "/comments",
+                payload=payload,
+                token=self._token,
+                credential=self._credential,
+            )
+            data = _json_response(status, resp, token=self._token or "")
+            created = CommentRecord(
+                id=str(data.get("id") or ""),
+                body=full_body,
+                created_at=str(data.get("created_time") or ""),
+                markers=list(markers or []),
+            )
+        if created is None:
+            raise NotionClientError("comment create returned no payload", code="comment-failed")
+        return created
+
+    def amend_comment(
+        self,
+        issue_id: str,
+        comment_id: str,
+        body: str,
+        *,
+        markers: list[str] | None = None,
+    ) -> CommentRecord:
+        """Append amendment comment — Notion has no comment update (R11)."""
+        del comment_id
+        amendment_markers = list(markers or []) + ["sw-comment-amendment"]
+        _emit_operator_notice(
+            "notion-comment-mutation-degraded",
+            "Notion comment update unavailable; amendment appended as new marked comment",
+            flag="comment",
         )
-        data = _json_response(status, resp, token=self._token or "")
-        comment = CommentRecord(
-            id=str(data.get("id") or ""),
-            body=body,
-            created_at=str(data.get("created_time") or ""),
-            markers=list(markers or []),
+        return self.add_comment(issue_id, body, markers=amendment_markers)
+
+    def delete_comment(self, issue_id: str, comment_id: str) -> None:
+        """Notion has no comment delete — append tombstone amendment (R11)."""
+        del comment_id
+        _emit_operator_notice(
+            "notion-comment-mutation-degraded",
+            "Notion comment delete unavailable; tombstone appended as new marked comment",
+            flag="comment",
         )
-        return comment
+        self.add_comment(
+            issue_id,
+            "<!-- sw-comment-amendment -->\n(comment delete requested; native delete unavailable)",
+            markers=["sw-comment-amendment"],
+        )
 
     def set_labels(
         self, issue_id: str, labels: list[str], *, if_match: str | None = None
@@ -899,6 +1351,124 @@ class NotionIssuesClient:
         results.sort(key=lambda r: r.number)
         return results
 
+    def epic_create(
+        self,
+        *,
+        title: str,
+        body: str,
+        labels: list[str],
+        project_key: str,
+        artifact_type: str,
+        unit_id: str,
+    ) -> Any:
+        return self.create(
+            title=title,
+            body=body,
+            labels=labels,
+            project_key=project_key,
+            artifact_type=artifact_type,
+            unit_id=unit_id,
+        )
+
+    def sub_issue_create(
+        self,
+        *,
+        title: str,
+        body: str,
+        labels: list[str],
+        project_key: str,
+        artifact_type: str,
+        unit_id: str,
+        parent_issue_id: str | None = None,
+    ) -> Any:
+        child = self.create(
+            title=title,
+            body=body,
+            labels=labels,
+            project_key=project_key,
+            artifact_type=artifact_type,
+            unit_id=unit_id,
+        )
+        if parent_issue_id:
+            return self.sub_issue_link(parent_issue_id, child.id)
+        return child
+
+    def sub_issue_link(self, parent_issue_id: str, child_issue_id: str) -> Any:
+        if not self.relation_capable:
+            if self._fixture is not None:
+                return self._checkbox_fallback_on_epic(parent_issue_id, child_issue_id)
+            _emit_operator_notice(
+                "notion-hierarchy-relation-degraded",
+                "Notion parent relation unavailable; degrading to checkbox/body-encoded phases",
+                flag="relation",
+            )
+            return self._checkbox_fallback_on_epic(parent_issue_id, child_issue_id)
+        if self._fixture is not None:
+            link = {"type": "sub-issue-of", "target": parent_issue_id}
+            record = self._fixture.get(child_issue_id)
+            links = list(record.native_links)
+            if link not in links:
+                links.append(link)
+            return self._fixture.update(child_issue_id, native_links=links, allow_locked=True)
+        patch_props = {
+            self.parent_relation_property: {
+                "relation": [{"id": parent_issue_id}],
+            }
+        }
+        try:
+            status, _, resp = notion_request(
+                self.root,
+                self.cfg,
+                "PATCH",
+                f"/pages/{child_issue_id}",
+                payload={"properties": patch_props},
+                token=self._token,
+                credential=self._credential,
+            )
+            _json_response(status, resp, token=self._token or "")
+        except NotionClientError:
+            self.relation_capable = False
+            _emit_operator_notice(
+                "notion-hierarchy-relation-degraded",
+                "Notion parent relation write denied; degrading to checkbox/body-encoded phases",
+                flag="relation",
+            )
+            return self._checkbox_fallback_on_epic(parent_issue_id, child_issue_id)
+        return self.get(child_issue_id)
+
+    def _checkbox_fallback_on_epic(self, parent_issue_id: str, child_issue_id: str) -> Any:
+        parent = self.get(parent_issue_id)
+        child = self.get(child_issue_id)
+        checkbox_line = f"- [ ] Phase child: {child.unit_id or child_issue_id}"
+        block = f"\n{checkbox_line}\n"
+        if checkbox_line not in parent.body:
+            new_body = f"{parent.body.rstrip()}\n{checkbox_line}\n"
+            return self.update(parent_issue_id, body=new_body, if_match=parent.etag, allow_locked=True)
+        return child
+
+    def hierarchy_capability(self) -> dict[str, Any]:
+        if self.relation_capable:
+            return {
+                "verdict": "ok",
+                "mode": "epic-sub-issue",
+                "provider": "notion",
+                "notice": None,
+            }
+        _emit_operator_notice(
+            "notion-hierarchy-degraded",
+            "hierarchy verbs absent for notion; degrading to checkbox/body-encoded phase list",
+            flag="hierarchy",
+        )
+        return {
+            "verdict": "ok",
+            "mode": "checkbox",
+            "provider": "notion",
+            "notice": (
+                "hierarchy verbs absent for notion; degrading to checkbox/body-encoded phase list "
+                "— deliver continues"
+            ),
+        }
+
     def mark_tombstone(self, issue_id: str) -> None:
         if self._fixture is not None:
             self._fixture.mark_tombstone(issue_id)
@@ -974,7 +1544,7 @@ def main(argv: list[str] | None = None) -> None:
             json.dumps(
                 {
                     "verdict": "fail",
-                    "error": "usage: planning_notion_client.py <root> <probe-token|probe-database|lock-capability>",
+                    "error": "usage: planning_notion_client.py <root> <probe-token|probe-database|lock-capability|comment-mutation-capability|overflow-policy|label-ladder>",
                 }
             )
         )
@@ -988,6 +1558,12 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(probe_database(root, cfg), indent=2))
     elif cmd == "lock-capability":
         print(json.dumps(lock_capability(), indent=2))
+    elif cmd == "comment-mutation-capability":
+        print(json.dumps(comment_mutation_capability(), indent=2))
+    elif cmd == "overflow-policy":
+        print(json.dumps(overflow_chunk_policy(), indent=2))
+    elif cmd == "label-ladder":
+        print(json.dumps(label_ladder_info(cfg), indent=2))
     else:
         print(json.dumps({"verdict": "fail", "error": f"unknown command: {cmd}"}))
         raise SystemExit(2)

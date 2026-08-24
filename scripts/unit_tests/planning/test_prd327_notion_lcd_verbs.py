@@ -122,3 +122,81 @@ def test_add_comment_and_set_labels(monkeypatch: pytest.MonkeyPatch, tmp_path: P
     assert "sw:project:acme" in labeled.labels
     record = client.get(created.id)
     assert any("Operator note." in c.body for c in record.comments)
+
+
+def test_label_ladder_round_trip(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    root, store = _fixture_repo(tmp_path, monkeypatch)
+    client = NotionIssuesClient(root, fixture_store=store)
+    labels = [
+        "sw:project:acme",
+        "sw:prd",
+        "sw:brainstorm",
+        "sw:gap",
+        "sw:task",
+        FROZEN_LABEL,
+    ]
+    created = client.create(
+        title="[acme] prd:327-labels",
+        body="<!-- sw-project-key: acme -->\nLabel ladder.",
+        labels=labels,
+        project_key="acme",
+        artifact_type="prd",
+        unit_id="prd-327-labels",
+    )
+    updated = client.set_labels(created.id, labels=labels)
+    assert set(labels).issubset(set(updated.labels))
+    ladder = client.label_ladder_info()
+    assert ladder["surface"] in {"multi_select", "select", "customField"}
+    assert ladder["bodyMarkerAuthoritative"] is True
+
+
+def test_hierarchy_sub_issue_link_fixture(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    root, store = _fixture_repo(tmp_path, monkeypatch)
+    client = NotionIssuesClient(root, fixture_store=store)
+    epic = client.epic_create(
+        title="[acme] tasks:327-hierarchy",
+        body="Epic body.",
+        labels=["sw:task", "sw:project:acme"],
+        project_key="acme",
+        artifact_type="tasks",
+        unit_id="tasks-327-hierarchy",
+    )
+    child = client.sub_issue_create(
+        title="[acme] phase:327-hierarchy:1",
+        body="Phase one.",
+        labels=["sw:task", "sw:project:acme", "sw:phase:1"],
+        project_key="acme",
+        artifact_type="tasks",
+        unit_id="tasks-327-hierarchy-phase-1",
+        parent_issue_id=epic.id,
+    )
+    assert any(
+        link.get("type") == "sub-issue-of" and link.get("target") == epic.id
+        for link in child.native_links
+    )
+
+
+def test_hierarchy_checkbox_fallback(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    root, store = _fixture_repo(tmp_path, monkeypatch)
+    client = NotionIssuesClient(root, fixture_store=store)
+    client.relation_capable = False
+    epic = client.epic_create(
+        title="[acme] tasks:327-checkbox",
+        body="Epic checklist.",
+        labels=["sw:task", "sw:project:acme"],
+        project_key="acme",
+        artifact_type="tasks",
+        unit_id="tasks-327-checkbox",
+    )
+    child = client.sub_issue_create(
+        title="[acme] phase:327-checkbox:1",
+        body="Phase.",
+        labels=["sw:task", "sw:project:acme"],
+        project_key="acme",
+        artifact_type="tasks",
+        unit_id="tasks-327-checkbox-phase-1",
+        parent_issue_id=epic.id,
+    )
+    parent = client.get(epic.id)
+    assert "- [ ] Phase child:" in parent.body
+    assert child.unit_id

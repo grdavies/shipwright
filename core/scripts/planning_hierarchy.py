@@ -53,6 +53,12 @@ HIERARCHY_MATRIX: dict[str, dict[str, str]] = {
         "issue-sub-issue-update": "pending",
         "issue-sub-issue-link": "pending",
     },
+    "notion": {
+        "issue-epic-create": "REST",
+        "issue-sub-issue-create": "REST",
+        "issue-sub-issue-update": "REST",
+        "issue-sub-issue-link": "REST",
+    },
     "none": {},
 }
 

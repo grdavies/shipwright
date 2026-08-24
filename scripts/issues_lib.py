@@ -447,6 +447,60 @@ class FixtureIssuesStore:
         record.body = (record.body or "") + f"\n<!-- lifecycle:key-changed:{new_key} -->"
         self._persist()
 
+    def epic_create(
+        self,
+        *,
+        title: str,
+        body: str,
+        labels: list[str],
+        project_key: str,
+        artifact_type: str,
+        unit_id: str,
+        native_links: list[dict[str, Any]] | None = None,
+    ) -> IssueRecord:
+        return self.create(
+            title=title,
+            body=body,
+            labels=labels,
+            project_key=project_key,
+            artifact_type=artifact_type,
+            unit_id=unit_id,
+            native_links=native_links,
+        )
+
+    def sub_issue_create(
+        self,
+        *,
+        title: str,
+        body: str,
+        labels: list[str],
+        project_key: str,
+        artifact_type: str,
+        unit_id: str,
+        parent_issue_id: str | None = None,
+        native_links: list[dict[str, Any]] | None = None,
+    ) -> IssueRecord:
+        child = self.create(
+            title=title,
+            body=body,
+            labels=labels,
+            project_key=project_key,
+            artifact_type=artifact_type,
+            unit_id=unit_id,
+            native_links=native_links,
+        )
+        if parent_issue_id:
+            return self.sub_issue_link(parent_issue_id, child.id)
+        return child
+
+    def sub_issue_link(self, parent_issue_id: str, child_issue_id: str) -> IssueRecord:
+        record = self._resolve_get(child_issue_id)
+        link = {"type": "sub-issue-of", "target": parent_issue_id}
+        links = list(record.native_links)
+        if link not in links:
+            links.append(link)
+        return self.update(child_issue_id, native_links=links, allow_locked=True)
+
     def clear(self) -> None:
         self._issues.clear()
         self._counter = 0
@@ -606,6 +660,37 @@ class IssuesClient:
 
     def issue_link_sync(self, issue_id: str, native_links: list[dict[str, Any]], *, if_match: str | None = None) -> IssueRecord:
         return self.sync_native_links(issue_id, native_links, if_match=if_match)
+
+    def issue_epic_create(self, **kwargs: Any) -> IssueRecord:
+        return self._with_resilience(
+            "issue-epic-create",
+            lambda: self._invoke_hierarchy_verb("epic_create", **kwargs),
+        )
+
+    def issue_sub_issue_create(self, **kwargs: Any) -> IssueRecord:
+        return self._with_resilience(
+            "issue-sub-issue-create",
+            lambda: self._invoke_hierarchy_verb("sub_issue_create", **kwargs),
+        )
+
+    def issue_sub_issue_link(self, parent_issue_id: str, child_issue_id: str) -> IssueRecord:
+        return self._with_resilience(
+            "issue-sub-issue-link",
+            lambda: self._invoke_hierarchy_verb(
+                "sub_issue_link",
+                parent_issue_id,
+                child_issue_id,
+            ),
+        )
+
+    def _invoke_hierarchy_verb(self, verb: str, *args: Any, **kwargs: Any) -> IssueRecord:
+        backend = self._live_backend()
+        method = getattr(backend, verb, None)
+        if not callable(method):
+            raise IssueCapabilityError(
+                f"hierarchy verb {verb!r} unavailable on {self.provider} backend"
+            )
+        return method(*args, **kwargs)
 
 
     def mark_tombstone(self, issue_id: str) -> None:
