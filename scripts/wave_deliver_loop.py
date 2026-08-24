@@ -1736,6 +1736,100 @@ def repair_finalize_checkpoint_from_immutable(
     return repaired, None
 
 
+def _git_primary_toplevel(root: Path) -> Path:
+    """Primary repo top for finalize teardown git ops (PRD 328 R4)."""
+    from wave_state import canonical_repo_root
+
+    return canonical_repo_root(root)
+
+
+def _remove_registered_worktree(primary_top: Path, wt_path: str) -> dict[str, Any]:
+    """Remove a registered worktree and prune residuals to avoid orphan husks (PRD 328 R5)."""
+    from worktree import _safe_tree_remove
+
+    path = Path(wt_path)
+    if not path.is_dir():
+        return {"path": wt_path, "removed": False, "reason": "missing"}
+    proc = subprocess.run(
+        ["git", "-C", str(primary_top), "worktree", "remove", str(path), "--force"],
+        text=True,
+        capture_output=True,
+    )
+    removed = proc.returncode == 0
+    if removed:
+        subprocess.run(
+            ["git", "-C", str(primary_top), "worktree", "prune"],
+            check=False,
+        )
+        _safe_tree_remove(path)
+    return {
+        "path": wt_path,
+        "removed": removed,
+        "stderr": proc.stderr.strip() or None,
+    }
+
+
+def release_run_resources(root: Path, run_id: str, state: dict[str, Any]) -> dict[str, Any]:
+    """Release locks, leases, and retained worktrees for a finalized run (R24, PRD 328 R3–R5).
+
+    Phase worktrees are removed before the orchestrator worktree so git ops always use the
+    surviving primary/root cwd (R3/R4). Each removal prunes git metadata and residual trees
+    so happy-path resume does not hit orchestrator-branch-mismatch from orphan husks (R5).
+    """
+    from wave_run_paths import lease_path as run_lease_path
+    from wave_state import read_lock_meta, scoped_paths, target_branch_from_state
+    from wave_target_lock import release_target_lock
+
+    released: dict[str, Any] = {}
+    target = target_branch_from_state(state)
+    if target:
+        released["targetLock"] = release_target_lock(
+            root, target, run_id, finalize=True
+        )
+        lock_path = scoped_paths(root, target)["lock"]
+        if lock_path.is_file():
+            meta = read_lock_meta(lock_path)
+            holder_run = meta.get("runId")
+            if not holder_run or holder_run == run_id:
+                lock_path.unlink(missing_ok=True)
+                released["scopedDeliverLock"] = {
+                    "verdict": "pass",
+                    "path": str(lock_path),
+                }
+            else:
+                released["scopedDeliverLock"] = {
+                    "verdict": "fail",
+                    "error": "scoped-lock-run-mismatch",
+                    "holder": meta,
+                }
+    lease_file = run_lease_path(root, run_id)
+    if lease_file.is_file():
+        lease_file.unlink(missing_ok=True)
+        released["runLocalLease"] = {"verdict": "pass", "path": str(lease_file)}
+
+    primary_top = _git_primary_toplevel(root)
+    worktrees: list[dict[str, Any]] = []
+
+    phase_paths: list[str] = []
+    for entry in (state.get("phaseWorktrees") or {}).values():
+        if isinstance(entry, dict) and entry.get("path"):
+            phase_paths.append(str(entry["path"]))
+
+    orch = state.get("orchestratorWorktree")
+    orch_path: str | None = None
+    if isinstance(orch, dict) and orch.get("path"):
+        orch_path = str(orch["path"])
+
+    for wt_path in phase_paths:
+        worktrees.append(_remove_registered_worktree(primary_top, wt_path))
+    if orch_path:
+        worktrees.append(_remove_registered_worktree(primary_top, orch_path))
+
+    released["worktrees"] = worktrees
+    released["gitCwd"] = str(primary_top)
+    return released
+
+
 def ensure_terminal_ship_run_state(root: Path, state: dict[str, Any]) -> dict[str, Any]:
     """Mirror slug→run-scoped state before terminal-ship (PRD 276 R1)."""
     from wave_state import ensure_run_scoped_state_mirrored
