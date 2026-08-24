@@ -120,9 +120,12 @@ def providers_with_green_conformance(root: Path) -> frozenset[str]:
 def _provider_docs_gate_green(root: Path, provider: str) -> bool:
     if provider != "notion":
         return True
-    from planning_notion_client import docs_gate
+    try:
+        from planning_notion_client import docs_gate
 
-    return docs_gate(root).get("verdict") == "ok"
+        return docs_gate(root).get("verdict") == "ok"
+    except Exception:  # noqa: BLE001 — fail closed; never break import-time shipped resolution
+        return False
 
 
 def _dimensions_all_green(record: dict[str, Any]) -> bool:

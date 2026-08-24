@@ -300,6 +300,29 @@ def test_notion_docs_gate_passes() -> None:
     assert result["gate"] == "docs-gate"
 
 
+def test_notion_docs_gate_missing_doc_fail_closed(tmp_path: Path) -> None:
+    """Harness FIX_ROOT copies scripts/ only — docs_gate must not raise (living-doc set-index-status-cli)."""
+    result = pnc.docs_gate(tmp_path)
+    assert result["verdict"] == "fail"
+    assert result["error"] == "missing-provider-doc"
+
+
+def test_shipped_resolution_survives_scripts_only_root(tmp_path: Path) -> None:
+    """Import-time shipped resolution must tolerate missing core/providers when conformance fixtures exist."""
+    from _planning_pkg_loader import load_submodule
+
+    pc = load_submodule("provider_conformance")
+    fixtures = (
+        _repo_root()
+        / "scripts/test/fixtures/planning-provider-conformance/notion.ok.json"
+    )
+    dest = tmp_path / "scripts/test/fixtures/planning-provider-conformance"
+    dest.mkdir(parents=True)
+    dest.joinpath("notion.ok.json").write_text(fixtures.read_text(encoding="utf-8"), encoding="utf-8")
+    shipped = pc.providers_with_green_conformance(tmp_path)
+    assert "notion" not in shipped
+
+
 def test_notion_promotion_gate_evidence_green() -> None:
     root = _repo_root()
     evidence = pnc.notion_promotion_gate_evidence(root)

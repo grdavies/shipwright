@@ -265,7 +265,15 @@ def _doc_marker_gate(
 
 def docs_gate(root: Path) -> dict[str, Any]:
     """R12 — adapter spec completeness gate before notion promotion."""
-    doc = notion_provider_doc_text(root)
+    try:
+        doc = notion_provider_doc_text(root)
+    except FileNotFoundError:
+        return {
+            "verdict": "fail",
+            "gate": "docs-gate",
+            "error": "missing-provider-doc",
+            "missing": [str(NOTION_PROVIDER_DOC_REL)],
+        }
     return _doc_marker_gate(doc, NOTION_DOCS_GATE_MARKERS, gate="docs-gate")
 
 
