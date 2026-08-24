@@ -1042,6 +1042,7 @@
 * merge phase provider-module-registration-issues-lib-schema-m into feat/notion-planning-store-provider (f372381) <!-- sw-deliver:provider-module-registration-issues-lib-schema-m -->
 * merge phase operator-projection-m into feat/notion-planning-store-provider (543d993) <!-- sw-deliver:operator-projection-m -->
 * merge phase labels-hierarchy-and-comments-capability-gates-m into feat/notion-planning-store-provider (2518235) <!-- sw-deliver:labels-hierarchy-and-comments-capability-gates-m -->
+* merge phase docs-conformance-record-and-shipped-gate-s into feat/notion-planning-store-provider (10a6d59) <!-- sw-deliver:docs-conformance-record-and-shipped-gate-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
