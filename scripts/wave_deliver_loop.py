@@ -17,6 +17,7 @@ from typing import Any
 from sw_scripts_resolve import (
     CONSUMER_NO_PLUGIN_ERROR,
     ScriptsResolveError,
+    ensure_scripts_on_path,
     resolve_script,
     resolve_scripts_dir,
 )
@@ -1648,6 +1649,91 @@ def partial_finalize_resume_payload(
         "resumeCommand": checkpoint.get("resumeCommand") or resume_finalize_command(run_id),
         "note": "release before durable completion is not success; resume from last checkpoint",
     }
+
+
+def ensure_finalize_scripts_bootstrap(root: Path) -> Path:
+    """Ensure scripts/ is importable for finalize paths when ambient PYTHONPATH lacks it (PRD 328 R1)."""
+    return ensure_scripts_on_path(root)
+
+
+def finalize_checkpoint_needs_repair(
+    checkpoint: dict[str, Any] | None,
+    *,
+    immutable_written: bool,
+) -> bool:
+    """True when durable immutable state exists but the finalize ledger is incomplete (PRD 328 R2)."""
+    if not immutable_written:
+        return False
+    if not checkpoint:
+        return True
+    if checkpoint.get("status") == "complete" and finalize_phase_complete(checkpoint, "immutable"):
+        return False
+    return not finalize_phase_complete(checkpoint, "immutable")
+
+
+def repair_finalize_checkpoint_from_immutable(
+    root: Path,
+    run_id: str,
+    state: dict[str, Any],
+    *,
+    checkpoint: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Idempotently complete checkpoint after immutable write without hand-editing state (PRD 328 R2)."""
+    if not state.get("immutable"):
+        return None, None
+
+    ckpt = checkpoint if checkpoint is not None else load_finalize_checkpoint(root, run_id)
+    if ckpt and ckpt.get("status") == "complete" and finalize_phase_complete(ckpt, "immutable"):
+        return ckpt, None
+    if not finalize_checkpoint_needs_repair(ckpt, immutable_written=True):
+        return ckpt, None
+
+    merge = state.get("terminalMerge") if isinstance(state.get("terminalMerge"), dict) else {}
+    merge_commit = str(merge.get("mergeCommit") or (ckpt or {}).get("mergeCommit") or "")
+    if not merge_commit:
+        return None, partial_finalize_resume_payload(
+            root,
+            run_id,
+            ckpt or empty_finalize_checkpoint(run_id),
+            error="finalize:checkpoint-repair-merge-commit-missing",
+            failed_phase="immutable",
+        )
+
+    from wave_transition_receipt import read_terminal_receipt
+
+    receipt = read_terminal_receipt(root, run_id)
+    repaired = ckpt or empty_finalize_checkpoint(run_id, merge_commit=merge_commit)
+    if not repaired.get("mergeCommit"):
+        repaired["mergeCommit"] = merge_commit
+
+    phases = repaired.setdefault("phases", {})
+    for phase in FINALIZE_CHECKPOINT_PHASES:
+        if finalize_phase_complete(repaired, phase):
+            continue
+        entry = dict(phases.get(phase) or {})
+        entry["status"] = "complete"
+        entry["at"] = utc_now()
+        entry["repaired"] = True
+        if phase == "release":
+            entry.setdefault("result", {"verdict": "pass", "repaired": True})
+        elif phase == "projection":
+            entry.setdefault("result", {"verdict": "pass", "repaired": True})
+        elif phase == "receipt":
+            entry["result"] = {
+                "mergeCommit": merge_commit,
+                "repaired": True,
+                "receiptPresent": receipt is not None,
+            }
+        elif phase == "immutable":
+            entry["result"] = {"immutable": True, "verdict": "finalized", "repaired": True}
+        phases[phase] = entry
+
+    repaired["status"] = "complete"
+    repaired["lastCompletedPhase"] = "immutable"
+    repaired["repairedFromImmutable"] = True
+    repaired["resumeCommand"] = resume_finalize_command(run_id)
+    save_finalize_checkpoint(root, run_id, repaired)
+    return repaired, None
 
 
 def ensure_terminal_ship_run_state(root: Path, state: dict[str, Any]) -> dict[str, Any]:

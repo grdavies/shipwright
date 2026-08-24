@@ -1996,6 +1996,8 @@ def finalize_run(
     """Finalize deliver run lifecycle after verified terminal merge (PRD 081 R24, PRD 276 R15)."""
     from wave_deliver_loop import (
         empty_finalize_checkpoint,
+        ensure_finalize_scripts_bootstrap,
+        finalize_checkpoint_needs_repair,
         finalize_phase_complete,
         load_finalize_checkpoint,
         mark_finalize_phase_complete,
@@ -2003,8 +2005,11 @@ def finalize_run(
         mark_finalize_phase_started,
         next_finalize_phase,
         partial_finalize_resume_payload,
+        repair_finalize_checkpoint_from_immutable,
         resume_finalize_command,
     )
+
+    ensure_finalize_scripts_bootstrap(root)
     from wave_state import (
         ensure_run_scoped_state_mirrored,
         load_run_scoped_state,
@@ -2038,6 +2043,21 @@ def finalize_run(
     if work_state.get("immutable"):
         existing = read_terminal_receipt(root, run_id)
         ckpt = load_finalize_checkpoint(root, run_id)
+        if finalize_checkpoint_needs_repair(ckpt, immutable_written=True):
+            repaired, repair_err = repair_finalize_checkpoint_from_immutable(
+                root, run_id, work_state, checkpoint=ckpt
+            )
+            if repair_err:
+                return repair_err
+            ckpt = repaired
+            return {
+                "verdict": "pass",
+                "action": "run-finalize",
+                "immutable": True,
+                "terminalReceipt": existing,
+                "checkpoint": ckpt,
+                "note": "checkpoint repaired from immutable state",
+            }
         return {
             "verdict": "pass",
             "action": "run-finalize",
