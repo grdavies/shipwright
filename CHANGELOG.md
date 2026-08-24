@@ -1055,6 +1055,7 @@
 * merge phase finalize-import-bootstrap-for-planning-txn-s into feat/finalize-teardown-checkpoint-hygiene (8783014) <!-- sw-deliver:finalize-import-bootstrap-for-planning-txn-s -->
 * merge phase finalize-import-bootstrap-for-planning-txn-s into feat/finalize-teardown-checkpoint-hygiene (e5c938e) <!-- sw-deliver:finalize-import-bootstrap-for-planning-txn-s -->
 * merge phase finalize-import-bootstrap-for-planning-txn-s into feat/finalize-teardown-checkpoint-hygiene (9adc99e) <!-- sw-deliver:finalize-import-bootstrap-for-planning-txn-s -->
+* merge phase phase-before-orch-worktree-teardown-s into feat/finalize-teardown-checkpoint-hygiene (8188eab) <!-- sw-deliver:phase-before-orch-worktree-teardown-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
