@@ -7,7 +7,7 @@ from typing import Any
 
 from host_lib import token_present
 
-from . import github, gitlab, jira, linear
+from . import github, gitlab, jira, linear, notion
 from ._boundary import provider_import_violations
 
 PROVIDER_MODULES = {
@@ -15,6 +15,7 @@ PROVIDER_MODULES = {
     gitlab.PROVIDER_ID: gitlab,
     jira.PROVIDER_ID: jira,
     linear.PROVIDER_ID: linear,
+    notion.PROVIDER_ID: notion,
 }
 
 MIN_ISSUES_SCOPES: dict[str, list[str]] = {
@@ -22,6 +23,7 @@ MIN_ISSUES_SCOPES: dict[str, list[str]] = {
     gitlab.PROVIDER_ID: list(gitlab.MIN_SCOPES),
     jira.PROVIDER_ID: list(jira.MIN_SCOPES),
     linear.PROVIDER_ID: list(linear.MIN_SCOPES),
+    notion.PROVIDER_ID: list(notion.MIN_SCOPES),
 }
 
 __all__ = [
@@ -33,6 +35,7 @@ __all__ = [
     "gitlab",
     "jira",
     "linear",
+    "notion",
     "live_client_wired",
     "probe_issues_token",
     "provider_import_violations",
