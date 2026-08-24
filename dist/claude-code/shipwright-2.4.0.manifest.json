@@ -563,6 +563,7 @@
     "planning/providers/gitlab.py",
     "planning/providers/jira.py",
     "planning/providers/linear.py",
+    "planning/providers/notion.py",
     "planning/repository.py",
     "planning_artifact_handle.py",
     "planning_audit_journal.py",
@@ -769,5 +770,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 766
+  "moduleCount": 767
 }

@@ -1114,6 +1114,29 @@
       }
     },
     {
+      "id": "provider.providers.issues.notion",
+      "kind": "provider",
+      "sourcePath": "core/providers/issues/notion.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "planning.store.issuesProvider",
+            "equals": "notion"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "issues",
+          "adapterId": "notion",
+          "selectionFamily": "providers",
+          "gateRef": "check-gate.py"
+        }
+      }
+    },
+    {
       "id": "provider.providers.mempalace",
       "kind": "provider",
       "sourcePath": "core/providers/mempalace.md",

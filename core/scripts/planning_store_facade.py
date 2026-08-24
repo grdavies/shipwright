@@ -136,13 +136,21 @@ def _linear_live_client_wired() -> bool:
     """PRD 066 R9 — recognize Linear in ISSUES_PROVIDERS only when live client exists."""
     from _planning_pkg_loader import load_providers_package
 
-    return load_providers_package().live_client_wired()
+    return load_providers_package().linear.live_client_wired()
+
+
+def _notion_live_client_wired() -> bool:
+    """PRD 327 R9 — recognize Notion in ISSUES_PROVIDERS only when live client exists."""
+    from _planning_pkg_loader import load_providers_package
+
+    return load_providers_package().notion.live_client_wired()
 
 
 _BASE_ISSUES_PROVIDERS = frozenset({"github-issues", "gitlab-issues", "jira", "none"})
-ISSUES_PROVIDERS = _BASE_ISSUES_PROVIDERS | (
-    frozenset({"linear"}) if _linear_live_client_wired() else frozenset()
-)
+_ISSUES_LIVE_RECOGNITION = frozenset({"linear"}) if _linear_live_client_wired() else frozenset()
+if _notion_live_client_wired():
+    _ISSUES_LIVE_RECOGNITION = _ISSUES_LIVE_RECOGNITION | frozenset({"notion"})
+ISSUES_PROVIDERS = _BASE_ISSUES_PROVIDERS | _ISSUES_LIVE_RECOGNITION
 # PRD 057 R7 / D1: gitlab-issues is a known-but-deferred provider — supported for
 # config validation yet absent from the shipped set until a live adapter ships in a
 # follow-up unit (originating gap-039). Selection therefore fails closed with the
@@ -165,6 +173,7 @@ MIN_ISSUES_SCOPES: dict[str, list[str]] = {
     "gitlab-issues": ["api"],
     "jira": ["read:jira-work", "write:jira-work"],
     "linear": ["read", "write"],
+    "notion": [],
 }
 
 ISSUE_STORE_FALLBACK_NOTICE = (
@@ -434,6 +443,7 @@ ISSUES_CAPABILITY_INDEX_IDS: dict[str, str] = {
     "gitlab-issues": "provider.providers.issues.gitlab-issues",
     "jira": "provider.providers.issues.jira",
     "linear": "provider.providers.issues.linear",
+    "notion": "provider.providers.issues.notion",
     "none": "provider.providers.issues.none",
 }
 
@@ -442,6 +452,8 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
     from _planning_pkg_loader import load_providers_package
 
     linear_wired = _linear_live_client_wired()
+    notion_wired = _notion_live_client_wired()
+    live_recognized = _ISSUES_LIVE_RECOGNITION
     return {
         "verdict": "ok",
         "action": "issues-provider-registration",
@@ -456,13 +468,18 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
             shipped="linear" in SHIPPED_ISSUES_PROVIDERS,
             live_client_wired=linear_wired,
         ),
+        "notion": load_providers_package().notion.registration_footprint(
+            recognized="notion" in ISSUES_PROVIDERS,
+            shipped="notion" in SHIPPED_ISSUES_PROVIDERS,
+            live_client_wired=notion_wired,
+        ),
         "recognitionVsShipped": {
             provider: {
                 "recognized": provider in ISSUES_PROVIDERS,
                 "shipped": provider in SHIPPED_ISSUES_PROVIDERS,
                 "deferred": provider in DEFERRED_ISSUES_PROVIDERS,
             }
-            for provider in sorted(_BASE_ISSUES_PROVIDERS | {"linear"})
+            for provider in sorted(_BASE_ISSUES_PROVIDERS | live_recognized)
         },
     }
 
@@ -495,6 +512,17 @@ def doctor_issues_provider_stub(root: Path, cfg: dict[str, Any]) -> dict[str, An
         )
         if linear_result is not None:
             return linear_result
+    if provider == "notion":
+        from _planning_pkg_loader import load_providers_package
+
+        notion_result = load_providers_package().notion.doctor_stub_result(
+            root,
+            provider=provider,
+            issues_providers=ISSUES_PROVIDERS,
+            shipped_providers=SHIPPED_ISSUES_PROVIDERS,
+        )
+        if notion_result is not None:
+            return notion_result
     return {"verdict": "pass", "action": "doctor-issues-provider-stub", "provider": provider}
 
 

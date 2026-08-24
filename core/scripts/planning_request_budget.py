@@ -32,6 +32,12 @@ DEFAULT_PROVIDER_CEILINGS: dict[str, dict[str, float | int]] = {
         "alertThreshold": 0.8,
         "cacheTtlSeconds": 180,
     },
+    "notion": {
+        "maxCalls": 300,
+        "maxPaginationDepth": 5,
+        "alertThreshold": 0.8,
+        "cacheTtlSeconds": 180,
+    },
 }
 
 BUDGET_SCHEMA_VERSION = 2

@@ -50,13 +50,19 @@ def deferred_provider_message(provider: str) -> str:
 
 
 def unshipped_provider_message(provider: str) -> str:
+    gates = "conformance + promotion gates"
+    if provider == "linear":
+        gates = "conformance + OAuth docs gate"
+    elif provider == "notion":
+        gates = "conformance + docs gate"
     return (
         f"issue provider {provider!r} is recognized but not shipped (fail-closed): "
-        "conformance + OAuth docs gate must pass before live selection. "
-        "Select github-issues or jira, or use the file-store fallback (PRD 066 R20)."
+        f"{gates} must pass before live selection. "
+        "Select github-issues or jira, or use the file-store fallback (PRD 066 R20 / PRD 327)."
     )
 
-T = TypeVar("T")
+# Providers recognized with live client but gated from SHIPPED until promotion evidence.
+RECOGNIZED_NOT_SHIPPED_PROVIDERS = frozenset({"linear", "notion"})
 
 
 class IssueRevisionConflict(Exception):
@@ -477,6 +483,7 @@ class IssuesClient:
         self._github: Any = None
         self._gitlab: Any = None
         self._linear: Any = None
+        self._notion: Any = None
         self._call_count = 0
         self._budget = resolve_call_budget()
 
@@ -489,7 +496,7 @@ class IssuesClient:
         providers = load_providers_package()
         if self.provider in DEFERRED_ISSUES_PROVIDERS:
             raise IssueCapabilityError(deferred_provider_message(self.provider))
-        if self.provider == "linear":
+        if self.provider in RECOGNIZED_NOT_SHIPPED_PROVIDERS:
             from planning_store import SHIPPED_ISSUES_PROVIDERS
 
             if self.provider not in SHIPPED_ISSUES_PROVIDERS:
@@ -503,6 +510,7 @@ class IssuesClient:
             "gitlab-issues": "_gitlab",
             "jira": "_jira",
             "linear": "_linear",
+            "notion": "_notion",
         }.get(self.provider)
         if cache_attr is None:
             raise IssueCapabilityError(
