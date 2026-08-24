@@ -14,7 +14,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from sw_scripts_resolve import resolve_script
+from sw_scripts_resolve import (
+    CONSUMER_NO_PLUGIN_ERROR,
+    ScriptsResolveError,
+    ensure_scripts_on_path,
+    resolve_script,
+    resolve_scripts_dir,
+)
 
 from wave_json_io import StateCorruptError, read_json, write_json
 
@@ -1371,11 +1377,9 @@ def ensure_exclusive_run_lease(
     run_id = state.get("runId")
     if not isinstance(run_id, str) or not run_id.strip():
         return {"skipped": True, "reason": "no-run-id"}
-    from wave_lock import (
-        acquire_run_lease,
-        assert_run_lease_write,
-        heartbeat_run_lease,
-    )
+    from graph.run_ownership import default_deliver_run_ownership_provider
+
+    provider = default_deliver_run_ownership_provider(root)
 
     source_task_list = state.get("source_task_list")
     if isinstance(source_task_list, str):
@@ -1390,9 +1394,9 @@ def ensure_exclusive_run_lease(
         and isinstance(held_gen, int)
         and held_gen > 0
     ):
-        fence = assert_run_lease_write(root, run_id, held_gen)
+        fence = provider.assert_write(run_id, held_gen)
         if fence.get("verdict") == "pass":
-            hb = heartbeat_run_lease(root, run_id, held_gen)
+            hb = provider.heartbeat(run_id, held_gen)
             if hb.get("verdict") == "pass":
                 return {
                     "verdict": "pass",
@@ -1410,8 +1414,8 @@ def ensure_exclusive_run_lease(
             "run-lease-missing",
             "run-lease-stale-self",
         ):
-            acquired = acquire_run_lease(
-                root, run_id, source_task_list=task_list_arg
+            acquired = provider.acquire(
+                run_id, source_task_list=task_list_arg
             )
             if acquired.get("verdict") == "pass":
                 state["runLease"] = {
@@ -1434,7 +1438,7 @@ def ensure_exclusive_run_lease(
             lockPath=out.get("lockPath"),
         )
 
-    acquired = acquire_run_lease(root, run_id, source_task_list=task_list_arg)
+    acquired = provider.acquire(run_id, source_task_list=task_list_arg)
     if acquired.get("verdict") != "pass":
         fail(
             str(acquired.get("error") or "run-lease-held"),
@@ -1645,6 +1649,185 @@ def partial_finalize_resume_payload(
         "resumeCommand": checkpoint.get("resumeCommand") or resume_finalize_command(run_id),
         "note": "release before durable completion is not success; resume from last checkpoint",
     }
+
+
+def ensure_finalize_scripts_bootstrap(root: Path) -> Path:
+    """Ensure scripts/ is importable for finalize paths when ambient PYTHONPATH lacks it (PRD 328 R1)."""
+    return ensure_scripts_on_path(root, executor=Path(__file__))
+
+
+def finalize_checkpoint_needs_repair(
+    checkpoint: dict[str, Any] | None,
+    *,
+    immutable_written: bool,
+) -> bool:
+    """True when durable immutable state exists but the finalize ledger is incomplete (PRD 328 R2)."""
+    if not immutable_written:
+        return False
+    if not checkpoint:
+        return True
+    if checkpoint.get("status") == "complete" and finalize_phase_complete(checkpoint, "immutable"):
+        return False
+    return not finalize_phase_complete(checkpoint, "immutable")
+
+
+def repair_finalize_checkpoint_from_immutable(
+    root: Path,
+    run_id: str,
+    state: dict[str, Any],
+    *,
+    checkpoint: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
+    """Idempotently complete checkpoint after immutable write without hand-editing state (PRD 328 R2)."""
+    if not state.get("immutable"):
+        return None, None
+
+    ckpt = checkpoint if checkpoint is not None else load_finalize_checkpoint(root, run_id)
+    if ckpt and ckpt.get("status") == "complete" and finalize_phase_complete(ckpt, "immutable"):
+        return ckpt, None
+    if not finalize_checkpoint_needs_repair(ckpt, immutable_written=True):
+        return ckpt, None
+
+    merge = state.get("terminalMerge") if isinstance(state.get("terminalMerge"), dict) else {}
+    merge_commit = str(merge.get("mergeCommit") or (ckpt or {}).get("mergeCommit") or "")
+    if not merge_commit:
+        return None, partial_finalize_resume_payload(
+            root,
+            run_id,
+            ckpt or empty_finalize_checkpoint(run_id),
+            error="finalize:checkpoint-repair-merge-commit-missing",
+            failed_phase="immutable",
+        )
+
+    from wave_transition_receipt import read_terminal_receipt
+
+    receipt = read_terminal_receipt(root, run_id)
+    repaired = ckpt or empty_finalize_checkpoint(run_id, merge_commit=merge_commit)
+    if not repaired.get("mergeCommit"):
+        repaired["mergeCommit"] = merge_commit
+
+    phases = repaired.setdefault("phases", {})
+    for phase in FINALIZE_CHECKPOINT_PHASES:
+        if finalize_phase_complete(repaired, phase):
+            continue
+        entry = dict(phases.get(phase) or {})
+        entry["status"] = "complete"
+        entry["at"] = utc_now()
+        entry["repaired"] = True
+        if phase == "release":
+            entry.setdefault("result", {"verdict": "pass", "repaired": True})
+        elif phase == "projection":
+            entry.setdefault("result", {"verdict": "pass", "repaired": True})
+        elif phase == "receipt":
+            entry["result"] = {
+                "mergeCommit": merge_commit,
+                "repaired": True,
+                "receiptPresent": receipt is not None,
+            }
+        elif phase == "immutable":
+            entry["result"] = {"immutable": True, "verdict": "finalized", "repaired": True}
+        phases[phase] = entry
+
+    repaired["status"] = "complete"
+    repaired["lastCompletedPhase"] = "immutable"
+    repaired["repairedFromImmutable"] = True
+    repaired["resumeCommand"] = resume_finalize_command(run_id)
+    save_finalize_checkpoint(root, run_id, repaired)
+    return repaired, None
+
+
+def _git_primary_toplevel(root: Path) -> Path:
+    """Primary repo top for finalize teardown git ops (PRD 328 R4)."""
+    from wave_state import canonical_repo_root
+
+    return canonical_repo_root(root)
+
+
+def _remove_registered_worktree(primary_top: Path, wt_path: str) -> dict[str, Any]:
+    """Remove a registered worktree and prune residuals to avoid orphan husks (PRD 328 R5)."""
+    from worktree import _safe_tree_remove
+
+    path = Path(wt_path)
+    if not path.is_dir():
+        return {"path": wt_path, "removed": False, "reason": "missing"}
+    proc = subprocess.run(
+        ["git", "-C", str(primary_top), "worktree", "remove", str(path), "--force"],
+        text=True,
+        capture_output=True,
+    )
+    removed = proc.returncode == 0
+    if removed:
+        subprocess.run(
+            ["git", "-C", str(primary_top), "worktree", "prune"],
+            check=False,
+        )
+        _safe_tree_remove(path)
+    return {
+        "path": wt_path,
+        "removed": removed,
+        "stderr": proc.stderr.strip() or None,
+    }
+
+
+def release_run_resources(root: Path, run_id: str, state: dict[str, Any]) -> dict[str, Any]:
+    """Release locks, leases, and retained worktrees for a finalized run (R24, PRD 328 R3–R5).
+
+    Phase worktrees are removed before the orchestrator worktree so git ops always use the
+    surviving primary/root cwd (R3/R4). Each removal prunes git metadata and residual trees
+    so happy-path resume does not hit orchestrator-branch-mismatch from orphan husks (R5).
+    """
+    from wave_run_paths import lease_path as run_lease_path
+    from wave_state import read_lock_meta, scoped_paths, target_branch_from_state
+    from wave_target_lock import release_target_lock
+
+    released: dict[str, Any] = {}
+    target = target_branch_from_state(state)
+    if target:
+        released["targetLock"] = release_target_lock(
+            root, target, run_id, finalize=True
+        )
+        lock_path = scoped_paths(root, target)["lock"]
+        if lock_path.is_file():
+            meta = read_lock_meta(lock_path)
+            holder_run = meta.get("runId")
+            if not holder_run or holder_run == run_id:
+                lock_path.unlink(missing_ok=True)
+                released["scopedDeliverLock"] = {
+                    "verdict": "pass",
+                    "path": str(lock_path),
+                }
+            else:
+                released["scopedDeliverLock"] = {
+                    "verdict": "fail",
+                    "error": "scoped-lock-run-mismatch",
+                    "holder": meta,
+                }
+    lease_file = run_lease_path(root, run_id)
+    if lease_file.is_file():
+        lease_file.unlink(missing_ok=True)
+        released["runLocalLease"] = {"verdict": "pass", "path": str(lease_file)}
+
+    primary_top = _git_primary_toplevel(root)
+    worktrees: list[dict[str, Any]] = []
+
+    phase_paths: list[str] = []
+    for entry in (state.get("phaseWorktrees") or {}).values():
+        if isinstance(entry, dict) and entry.get("path"):
+            phase_paths.append(str(entry["path"]))
+
+    orch = state.get("orchestratorWorktree")
+    orch_path: str | None = None
+    if isinstance(orch, dict) and orch.get("path"):
+        orch_path = str(orch["path"])
+
+    for wt_path in phase_paths:
+        worktrees.append(_remove_registered_worktree(primary_top, wt_path))
+    if orch_path:
+        worktrees.append(_remove_registered_worktree(primary_top, orch_path))
+
+    released["worktrees"] = worktrees
+    released["gitCwd"] = str(primary_top)
+    return released
 
 
 def ensure_terminal_ship_run_state(root: Path, state: dict[str, Any]) -> dict[str, Any]:
@@ -2154,7 +2337,30 @@ def phase_mode_context_active(
     return bool(ctx and ctx.get("active") is True)
 
 
-def ship_loop_env_for_phase(state: dict[str, Any], phase_id: str, slug: str) -> dict[str, str]:
+def _resolve_ship_scripts_root(workspace: Path) -> Path:
+    result = resolve_scripts_dir(workspace)
+    if result.error:
+        raise ScriptsResolveError(result.error)
+    if result.path is None:
+        raise ScriptsResolveError("no trusted scripts root found")
+    return result.path.resolve()
+
+
+def _ship_loop_resolve_blocked(exc: ScriptsResolveError) -> dict[str, Any]:
+    msg = str(exc)
+    payload: dict[str, Any] = {"verdict": "blocked", "error": msg}
+    if msg == CONSUMER_NO_PLUGIN_ERROR:
+        payload["remediation"] = CONSUMER_NO_PLUGIN_ERROR
+    return payload
+
+
+def ship_loop_env_for_phase(
+    state: dict[str, Any],
+    phase_id: str,
+    slug: str,
+    *,
+    scripts_root: Path | str | None = None,
+) -> dict[str, str]:
     """Build explicit phase-mode dispatch env and persist worktree-scoped state."""
     task_list = str(state.get("source_task_list") or "")
     run_dir = f".cursor/sw-deliver-runs/{slug}"
@@ -2167,6 +2373,16 @@ def ship_loop_env_for_phase(state: dict[str, Any], phase_id: str, slug: str) -> 
             task_list=task_list,
             run_dir=run_dir,
         )
+        if scripts_root is None:
+            try:
+                scripts_root = _resolve_ship_scripts_root(wt)
+            except ScriptsResolveError:
+                scripts_root = None
+    resolved_root = ""
+    if scripts_root is not None:
+        resolved_root = str(
+            scripts_root.resolve() if isinstance(scripts_root, Path) else Path(scripts_root).resolve()
+        )
     target = state.get("target") if isinstance(state.get("target"), dict) else {}
     integration = str((target or {}).get("branch") or "").strip()
     env = {
@@ -2175,7 +2391,7 @@ def ship_loop_env_for_phase(state: dict[str, Any], phase_id: str, slug: str) -> 
         "SW_RUN_DIR": run_dir,
         "SW_TASK_LIST": task_list,
         "SW_PHASE_ID": str(phase_id),
-        "PYTHONPATH": "scripts",
+        "PYTHONPATH": resolved_root,
     }
     if integration:
         env["SW_INTEGRATION_BRANCH"] = integration
@@ -2208,9 +2424,13 @@ def run_ship_loop_drive(
     *,
     max_ticks: int = 64,
 ) -> tuple[int, dict[str, Any]]:
+    try:
+        ship_loop_script = resolve_script(worktree, "ship_loop.py")
+    except ScriptsResolveError as exc:
+        return 20, _ship_loop_resolve_blocked(exc)
     cmd = [
         sys.executable,
-        str(worktree / "scripts" / "ship_loop.py"),
+        str(ship_loop_script),
         str(worktree),
         "drive",
         "--phase",
@@ -2245,6 +2465,69 @@ def run_ship_loop_drive(
     return proc.returncode, data
 
 
+def _apply_phase_provision_to_state(
+    root: Path,
+    state: dict[str, Any],
+    pid: str,
+    data: dict[str, Any],
+) -> Path | None:
+    wt_path = data.get("path") or data.get("worktreePath")
+    if not wt_path:
+        wt_name = data.get("worktreeName") or data.get("name")
+        if wt_name:
+            wt_path = str((root / ".sw-worktrees" / wt_name).resolve())
+    from planning_progress import provision_deliver_hierarchy
+
+    hier = provision_deliver_hierarchy(root, state)
+    if hier.get("verdict") == "fail":
+        fail_payload(hier, "hierarchy provision failed", 20, phaseId=pid)
+    worktrees = state.setdefault("phaseWorktrees", {})
+    worktrees[pid] = {
+        "name": data.get("name") or data.get("worktreeName"),
+        "path": wt_path,
+    }
+    save_state(root, state)
+    if wt_path:
+        return Path(str(wt_path))
+    return None
+
+
+def _ensure_phase_worktree_for_dispatch(root: Path, state: dict[str, Any], pid: str) -> Path:
+    wt = phase_worktree_path(state, pid)
+    if wt is not None and wt.is_dir():
+        return wt
+    ec, data = run_wave(
+        root,
+        "phase",
+        "provision",
+        "--phase-id",
+        pid,
+        "--plan",
+        plan_rel_for_state(root, state),
+    )
+    provision_remediation = (
+        f"Provision the phase worktree before dispatch-ship "
+        f"(python3 scripts/wave.py phase provision --phase-id {pid})"
+    )
+    if ec != 0:
+        fail_payload(
+            data,
+            "phase provision failed",
+            ec or 20,
+            phaseId=pid,
+            remediation=provision_remediation,
+        )
+    wt = _apply_phase_provision_to_state(root, state, pid, data)
+    if wt is None or not wt.is_dir():
+        fail(
+            "dispatch-ship missing phase worktree after provision",
+            exit_code=20,
+            phaseId=pid,
+            remediation=provision_remediation,
+        )
+    return wt
+
+
 def execute_dispatch_ship(
     root: Path,
     state: dict[str, Any],
@@ -2259,10 +2542,12 @@ def execute_dispatch_ship(
     if lease_ec != 0:
         fail_payload(lease_data, "dispatch-ship lease acquire failed", lease_ec)
     mark_phases_in_flight(state, [pid], background=False)
-    wt = phase_worktree_path(state, pid)
-    if wt is None or not wt.is_dir():
-        fail("dispatch-ship missing phase worktree path", exit_code=20, phaseId=pid)
-    env = ship_loop_env_for_phase(state, pid, slug)
+    wt = _ensure_phase_worktree_for_dispatch(root, state, pid)
+    try:
+        scripts_root = _resolve_ship_scripts_root(wt)
+    except ScriptsResolveError as exc:
+        fail_payload(_ship_loop_resolve_blocked(exc), "ship-loop blocked", 20, phaseId=pid)
+    env = ship_loop_env_for_phase(state, pid, slug, scripts_root=scripts_root)
     ec, drive = run_ship_loop_drive(wt, slug, env)
     out: dict[str, Any] = {
         "executed": "dispatch-ship",
