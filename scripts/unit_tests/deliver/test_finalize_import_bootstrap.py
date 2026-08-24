@@ -169,7 +169,10 @@ def test_finalize_succeeds_without_ambient_pythonpath(tmp_path: Path, monkeypatc
     monkeypatch.setattr(sys, "path", [p for p in sys.path if p != scripts])
     sys.modules.pop("planning_txn", None)
 
-    with patch("wave_compound.terminal_pr_merged_via_host", return_value=merge_info):
+    with patch(
+        "wave_terminal.verify_terminal_merge_via_host",
+        return_value={"verdict": "pass", "merged": True, **merge_info},
+    ):
         payload = finalize_run(tmp_path, run_id, state, actor="tester")
 
     assert payload["verdict"] == "pass"
