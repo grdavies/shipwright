@@ -1040,6 +1040,7 @@
 * merge phase absorb-closeout-delivery-order-note-s into feat/workflow-quality-platform (a45785b) <!-- sw-deliver:absorb-closeout-delivery-order-note-s -->
 * merge phase notion-client-canonicalization-probe-fixtures-l into feat/notion-planning-store-provider (4dc537e) <!-- sw-deliver:notion-client-canonicalization-probe-fixtures-l -->
 * merge phase provider-module-registration-issues-lib-schema-m into feat/notion-planning-store-provider (f372381) <!-- sw-deliver:provider-module-registration-issues-lib-schema-m -->
+* merge phase operator-projection-m into feat/notion-planning-store-provider (543d993) <!-- sw-deliver:operator-projection-m -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
