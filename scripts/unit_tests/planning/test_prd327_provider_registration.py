@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -13,10 +14,12 @@ scripts = Path(__file__).resolve().parents[2]
 if str(scripts) not in sys.path:
     sys.path.insert(0, str(scripts))
 
+import host_lib
 import issues_http
 import issues_lib
 import planning_notion_client as pnc
 import planning_store as ps
+import planning_store_facade as ps_facade
 from planning.providers import notion as notion_provider
 from planning_notion_projection import (
     NOTION_ENTITY_MAP,
@@ -27,6 +30,7 @@ from planning_notion_projection import (
     rebuild_projection_for_unit,
     resolve_canonical_freeze_body,
 )
+from planning_request_budget import RequestBudgetLedger
 
 
 def _notion_cfg(*, with_database: bool = True) -> dict[str, Any]:
@@ -286,6 +290,137 @@ def test_facade_project_graph_to_notion_layout() -> None:
     assert layout["provider"] == "notion"
 
 
+# --- PRD 327 phase 6 registration non-regression (R14) ---
+
+
+def _github_cfg() -> dict[str, Any]:
+    return {
+        "planning": {
+            "store": {
+                "backend": "issue-store",
+                "issuesProvider": "github-issues",
+                "projectKey": "planning",
+                "issues": {"tokenEnv": "ISSUES_GITHUB_TOKEN"},
+            }
+        },
+        "host": {"provider": "github"},
+    }
+
+
+def _gitlab_cfg() -> dict[str, Any]:
+    return {
+        "planning": {
+            "store": {
+                "backend": "issue-store",
+                "issuesProvider": "gitlab-issues",
+                "projectKey": "planning",
+                "issues": {"tokenEnv": "ISSUES_GITLAB_TOKEN", "endpoint": "https://gitlab.example"},
+            }
+        },
+        "host": {"provider": "gitlab"},
+    }
+
+
+def _jira_cfg() -> dict[str, Any]:
+    return {
+        "planning": {
+            "store": {
+                "backend": "issue-store",
+                "issuesProvider": "jira",
+                "projectKey": "planning",
+                "issues": {
+                    "tokenEnv": "ISSUES_JIRA_TOKEN",
+                    "endpoint": "https://example.atlassian.net",
+                },
+            }
+        },
+        "host": {"provider": "none"},
+    }
+
+
+def _linear_cfg() -> dict[str, Any]:
+    return {
+        "planning": {
+            "store": {
+                "backend": "issue-store",
+                "issuesProvider": "linear",
+                "projectKey": "planning",
+                "issues": {
+                    "tokenEnv": "ISSUES_LINEAR_TOKEN",
+                    "teamKey": "ENG",
+                    "teamId": "team_ENG",
+                    "authMode": "api-key",
+                },
+            }
+        }
+    }
+
+
+def _none_provider_cfg() -> dict[str, Any]:
+    return {
+        "planning": {
+            "store": {
+                "backend": "issue-store",
+                "issuesProvider": "none",
+                "projectKey": "planning",
+            }
+        }
+    }
+
+
+def test_registration_nonregression_other_providers_unchanged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R14 — notion addition does not change resolution/budget/doctor for peers."""
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+
+    fake_host = lambda _root: {
+        "verdict": "ok",
+        "provider": "github",
+        "remoteUrl": "https://github.com/acme/planning.git",
+    }
+    monkeypatch.setattr(host_lib, "resolve_provider", fake_host)
+    monkeypatch.setattr(ps_facade, "resolve_provider", fake_host)
+
+    cases = (
+        ("github-issues", _github_cfg(), True, "github"),
+        ("jira", _jira_cfg(), True, "jira"),
+        ("linear", _linear_cfg(), True, "linear"),
+    )
+    for provider, cfg, shipped, rate_key in cases:
+        issues = ps.resolve_issues_provider(cfg)
+        assert issues["provider"] == provider
+        assert issues["shipped"] is shipped
+        assert issues_http.issues_ratelimit_provider(provider) == rate_key
+        assert ps.issue_store_fallback_reason(tmp_path, cfg) != "issues-provider-not-shipped"
+        resolved = ps.resolve_effective_backend(tmp_path, cfg)
+        assert resolved["configured"] == "issue-store"
+        assert resolved["effective"] == "issue-store"
+        assert resolved.get("fallbackReason") != "issues-provider-not-shipped"
+        doctor = ps.doctor_issues_provider_stub(tmp_path, cfg)
+        assert doctor["verdict"] == "pass"
+        assert doctor.get("error") != "notion-stub-refused"
+        (tmp_path / "workflow.config.json").write_text(json.dumps(cfg) + "\n", encoding="utf-8")
+        ledger = RequestBudgetLedger.from_config(tmp_path, provider)
+        assert ledger.max_calls > 0
+
+    gitlab = ps.resolve_issues_provider(_gitlab_cfg())
+    assert gitlab["provider"] == "gitlab-issues"
+    assert gitlab["shipped"] is False
+    gitlab_doctor = ps.doctor_issues_provider_stub(tmp_path, _gitlab_cfg())
+    assert gitlab_doctor["verdict"] == "fail"
+    assert gitlab_doctor["error"] == "deferred-provider-stub-refused"
+
+    none_issues = ps.resolve_issues_provider(_none_provider_cfg())
+    assert none_issues["provider"] == "none"
+    none_doctor = ps.doctor_issues_provider_stub(tmp_path, _none_provider_cfg())
+    assert none_doctor["verdict"] in {"pass", "fail"}
+    assert none_doctor.get("error") != "notion-stub-refused"
+    assert issues_http.ISSUES_PROVIDER_TO_RATELIMIT["github-issues"] == "github"
+    assert issues_http.ISSUES_PROVIDER_TO_RATELIMIT["linear"] == "linear"
+    assert issues_http.ISSUES_PROVIDER_TO_RATELIMIT["notion"] == "notion"
+
+
 # --- PRD 327 phase 5 docs, conformance, shipped gate (R12/R13) ---
 
 
@@ -329,9 +464,10 @@ def test_notion_promotion_gate_evidence_green() -> None:
     assert evidence["verdict"] == "ok", evidence.get("failures")
 
 
-def test_notion_conformance_record_matches_live() -> None:
+def test_notion_conformance_record_matches_live(monkeypatch: pytest.MonkeyPatch) -> None:
     from _planning_pkg_loader import load_submodule
 
+    monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     pc = load_submodule("provider_conformance")
     root = _repo_root()
     evidence = pc.conformance_evidence(root, "notion")
