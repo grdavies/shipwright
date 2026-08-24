@@ -1633,7 +1633,8 @@
                 "github-issues",
                 "gitlab-issues",
                 "jira",
-                "linear"
+                "linear",
+                "notion"
               ],
               "description": "Issue-backed planning provider when backend is issue-store (PRD 043)."
             },
@@ -1674,7 +1675,7 @@
                 "tokenEnv": {
                   "type": "string",
                   "deprecated": true,
-                  "description": "DEPRECATED (one release): canonical env var name for planning-project issue mutations. Prefer planning.store.issues.credentialRef; credentialRef wins when both are set. Distinct from host.tokenEnv."
+                  "description": "DEPRECATED (one release): canonical env var name for planning-project issue mutations. Prefer planning.store.issues.credentialRef; credentialRef wins when both are set. Distinct from host.tokenEnv. Default when unset: ISSUES_LINEAR_TOKEN (linear), ISSUES_NOTION_TOKEN (notion), provider-specific otherwise."
                 },
                 "rateLimit": {
                   "type": "object"
@@ -1698,6 +1699,36 @@
                 "oauthSharedCiException": {
                   "type": "boolean",
                   "description": "Explicit exception allowing authMode:oauth via shared CI secret (PRD 066 R23)."
+                },
+                "notionDatabaseId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Primary Notion database id for issue-store (PRD 327 R3). At least one of notionDatabaseId or databaseMap required when issuesProvider is notion."
+                },
+                "databaseMap": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": "Artifact-type to Notion database id map (PRD 327 R3)."
+                },
+                "workspaceId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Optional Notion workspace id for operator documentation (PRD 327)."
+                },
+                "notionTitleProperty": {
+                  "type": "string",
+                  "description": "Notion title property name (default Name)."
+                },
+                "notionStatusProperty": {
+                  "type": "string",
+                  "description": "Notion status property name (default Status)."
+                },
+                "notionProjectProperty": {
+                  "type": "string",
+                  "description": "Notion project multi-select property name (default Project)."
                 },
                 "credentialContract": {
                   "type": "object",
