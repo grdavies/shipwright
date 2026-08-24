@@ -428,4 +428,5 @@ dispatch through **GraphScheduler** (`scripts/graph/legacy_adapters.py` →
 `compile_orchestrator_graph`). User-facing command names stay `/sw-doc`, `/sw-debug`, and
 `/sw-feedback` — no graph-prefixed slash commands and no parallel operator UX. Graph `runId` is the
 generic run identity already used by deliver status/explain.
+
 <!-- currency: refreshed 2026-08-24T07:47:00Z for terminal prepare (PRD 327) -->

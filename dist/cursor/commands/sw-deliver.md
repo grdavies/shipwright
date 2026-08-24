@@ -710,4 +710,4 @@ primary checkout). Repo-root cwd with an orchestrator path under `.sw-worktrees/
 `deliver:orchestrator-cwd-skew`. Primary↔mirror skew uses `wave_state.sync_canonical_state_read` /
 `repair-mirror` before terminal steps.
 
-<!-- currency: refreshed 2026-08-23T00:43:05Z for terminal prepare (PRD 325) -->
+<!-- currency: refreshed 2026-08-24T07:47:00Z for terminal prepare (PRD 327) -->
