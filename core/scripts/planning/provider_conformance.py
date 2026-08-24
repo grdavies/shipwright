@@ -44,7 +44,8 @@ CONFORMANCE_DIMENSIONS: tuple[str, ...] = (
 )
 
 # Providers that may appear in SHIPPED_ISSUES_PROVIDERS only with green conformance evidence.
-CONFORMANCE_GATED_PROVIDERS: frozenset[str] = frozenset({"github-issues", "jira", "linear"})
+CONFORMANCE_GATED_PROVIDERS: frozenset[str] = frozenset({"github-issues", "jira", "linear", "notion"})
+DOCS_GATED_PROVIDERS: frozenset[str] = frozenset({"notion"})
 
 _SAMPLE_BODY = "---\nunitId: conf-sample\ntitle: Conformance\n---\n\n# conformance sample\n"
 
@@ -110,8 +111,18 @@ def providers_with_green_conformance(root: Path) -> frozenset[str]:
     for provider in sorted(CONFORMANCE_GATED_PROVIDERS):
         record = load_conformance_record(root, provider)
         if record.get("verdict") == "ok" and _dimensions_all_green(record):
+            if provider in DOCS_GATED_PROVIDERS and not _provider_docs_gate_green(root, provider):
+                continue
             shipped.add(provider)
     return frozenset(shipped)
+
+
+def _provider_docs_gate_green(root: Path, provider: str) -> bool:
+    if provider != "notion":
+        return True
+    from planning_notion_client import docs_gate
+
+    return docs_gate(root).get("verdict") == "ok"
 
 
 def _dimensions_all_green(record: dict[str, Any]) -> bool:

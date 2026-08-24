@@ -50,7 +50,7 @@ rows document integration contracts for adapters not yet shipped.
 | `in-repo-public` | File bodies under `docs/planning/` | `### N.` checkboxes | Checkbox + derived INDEX | Frontmatter + `sw-edges` | `sw:release:*` labels | File-native projection |
 | `none` | Same as `in-repo-public` fallback | Checkbox bodies | Checkbox + derived INDEX | Frontmatter + `sw-edges` | `sw:release:*` labels | issuesProvider none |
 | `linear` (pattern) | Project / Document / Issue | Milestones + sub-issues | Native status | IssueRelation | Cycle / Milestone | Prerequisite PRD 061 (R14) |
-| `notion` (pattern) | Database per artifact type | Relation children | Status property | dual_property relations | Date/select properties | PRD 327 R5 schema shipped; promotion gated by conformance/docs (R15) |
+| `notion` | Database per artifact type | Relation children | Status property | dual_property relations | Date/select properties | **Live** — PRD 327 R5/R12 |
 
 Conformance fixtures: `scripts/unit_tests/planning/harness_planning_061_github_projects.py`.
 

@@ -1153,6 +1153,10 @@ Example (Notion + same-repo planning):
 Init probes (fail-closed): `planning_notion_client.probe_token` and `probe_database` via doctor
 and init surfaces; fixture mode `SW_NOTION_PROBE_FIXTURE=1` for hermetic CI.
 
+Promotion: `notion` joins the derived `SHIPPED_ISSUES_PROVIDERS` set only after a green LCD
+conformance record **and** the `docs-gate` over `core/providers/issues/notion.md` (see
+`planning_notion_client.py docs-gate` / `promotion-gate-evidence`).
+
 See `core/providers/issues/notion.md` for LCD verbs, rate-limit profile, and promotion gates.
 
 See `core/providers/planning-store/issue-store.md` and `core/providers/issues/CAPABILITIES.md`.

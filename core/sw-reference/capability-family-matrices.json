@@ -295,6 +295,7 @@
         "jira",
         "gitlab-issues",
         "linear",
+        "notion",
         "none"
       ],
       "planning-store.backends": [

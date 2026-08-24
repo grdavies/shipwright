@@ -216,6 +216,98 @@ def overflow_chunk_policy() -> dict[str, Any]:
     }
 
 
+NOTION_PROVIDER_DOC_REL = Path("core/providers/issues/notion.md")
+NOTION_DOCS_GATE_MARKERS: tuple[str, ...] = (
+    "## Configuration keys",
+    "## Auth headers",
+    "Notion-Version",
+    "2022-06-28",
+    "## Capability flags",
+    "## LCD verb mapping",
+    "## Label degradation ladder",
+    "issue-lock",
+    "commentMutation",
+    "## Body overflow",
+    "## Rate limit",
+    "## Promotion gates",
+)
+NOTION_PROMOTION_GATE_FIXTURES_REL = Path("scripts/test/fixtures/planning-notion-promotion")
+NOTION_PROMOTION_GATES: tuple[str, ...] = ("docs-gate",)
+
+
+def resolve_notion_provider_doc(root: Path) -> Path:
+    candidate = (root / NOTION_PROVIDER_DOC_REL).resolve()
+    if candidate.is_file():
+        return candidate
+    raise FileNotFoundError(f"missing notion provider doc: {NOTION_PROVIDER_DOC_REL}")
+
+
+def notion_provider_doc_text(root: Path) -> str:
+    return resolve_notion_provider_doc(root).read_text(encoding="utf-8")
+
+
+def _doc_marker_gate(
+    doc: str,
+    markers: tuple[str, ...],
+    *,
+    gate: str,
+) -> dict[str, Any]:
+    missing = [marker for marker in markers if marker not in doc]
+    if missing:
+        return {
+            "verdict": "fail",
+            "gate": gate,
+            "error": "missing-doc-markers",
+            "missing": missing,
+        }
+    return {"verdict": "ok", "gate": gate, "markerCount": len(markers)}
+
+
+def docs_gate(root: Path) -> dict[str, Any]:
+    """R12 — adapter spec completeness gate before notion promotion."""
+    doc = notion_provider_doc_text(root)
+    return _doc_marker_gate(doc, NOTION_DOCS_GATE_MARKERS, gate="docs-gate")
+
+
+def notion_promotion_gate_fixture_path(root: Path, gate: str) -> Path:
+    return (root / NOTION_PROMOTION_GATE_FIXTURES_REL / f"{gate}.ok.json").resolve()
+
+
+def load_notion_promotion_gate_fixture(root: Path, gate: str) -> dict[str, Any]:
+    path = notion_promotion_gate_fixture_path(root, gate)
+    if not path.is_file():
+        return {
+            "verdict": "fail",
+            "gate": gate,
+            "error": "missing-promotion-gate-fixture",
+            "fixturePath": str(path),
+        }
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def notion_promotion_gate_evidence(root: Path) -> dict[str, Any]:
+    recorded: dict[str, Any] = {}
+    live: dict[str, Any] = {}
+    for gate in NOTION_PROMOTION_GATES:
+        recorded[gate] = load_notion_promotion_gate_fixture(root, gate)
+        live[gate] = docs_gate(root)
+    failures: list[dict[str, str]] = []
+    for gate in NOTION_PROMOTION_GATES:
+        if recorded[gate].get("verdict") != "ok":
+            failures.append({"gate": gate, "phase": "recorded", "verdict": str(recorded[gate].get("verdict"))})
+        if live[gate].get("verdict") != "ok":
+            failures.append({"gate": gate, "phase": "live", "verdict": str(live[gate].get("verdict"))})
+    return {
+        "verdict": "ok" if not failures else "fail",
+        "action": "notion-promotion-gate-evidence",
+        "gates": list(NOTION_PROMOTION_GATES),
+        "fixtureDir": str(NOTION_PROMOTION_GATE_FIXTURES_REL),
+        "recorded": recorded,
+        "live": live,
+        "failures": failures,
+    }
+
+
 def resolve_database_ids(cfg: dict[str, Any]) -> list[str]:
     issues = _issues_section(cfg)
     ids: list[str] = []
@@ -1544,7 +1636,7 @@ def main(argv: list[str] | None = None) -> None:
             json.dumps(
                 {
                     "verdict": "fail",
-                    "error": "usage: planning_notion_client.py <root> <probe-token|probe-database|lock-capability|comment-mutation-capability|overflow-policy|label-ladder>",
+                    "error": "usage: planning_notion_client.py <root> <probe-token|probe-database|lock-capability|comment-mutation-capability|overflow-policy|label-ladder|docs-gate|promotion-gate-evidence>",
                 }
             )
         )
@@ -1564,6 +1656,10 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(overflow_chunk_policy(), indent=2))
     elif cmd == "label-ladder":
         print(json.dumps(label_ladder_info(cfg), indent=2))
+    elif cmd == "docs-gate":
+        print(json.dumps(docs_gate(root), indent=2))
+    elif cmd == "promotion-gate-evidence":
+        print(json.dumps(notion_promotion_gate_evidence(root), indent=2))
     else:
         print(json.dumps({"verdict": "fail", "error": f"unknown command: {cmd}"}))
         raise SystemExit(2)

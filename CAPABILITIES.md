@@ -42,6 +42,7 @@ Generated from `core/sw-reference/capability-registry.json` via `scripts/capabil
 | `jira` | **shipped** | `planning_jira_client.py` |
 | `gitlab-issues` | **deferred / fail-closed** (PRD 057 R7 / D1, gap-039) | follow-up unit |
 | `linear` | **shipped** | `planning_linear_client.py` |
+| `notion` | **shipped** | `planning_notion_client.py` |
 | `none` | shipped (file-store fallback) | file-store fallback |
 
 Provider adapter specs live under `core/providers/issues/`. The neutral verb

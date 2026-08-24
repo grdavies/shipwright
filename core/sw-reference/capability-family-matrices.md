@@ -89,7 +89,7 @@ Library version: **1**
 
 See `CAPABILITIES.md` for shipped/deferred rows derived from `capability-registry.json`.
 
-- `issues.providers`: `github-issues`, `jira`, `gitlab-issues`, `linear`, `none`
+- `issues.providers`: `github-issues`, `jira`, `gitlab-issues`, `linear`, `notion`, `none`
 - `planning-store.backends`: `in-repo-public`, `local-synced`, `memory`, `issue-store`, `private-repo`, `encryption-at-rest`
 - `workflow.detectorCoverage`: 
 - `workflow.detectors`: `workflow.detector.migration`, `workflow.detector.auth`, `workflow.detector.api`, `workflow.detector.supply-chain`

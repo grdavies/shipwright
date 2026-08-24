@@ -355,19 +355,45 @@ def _linear_recognized(root: Path) -> bool:
     return "linear" in ps.ISSUES_PROVIDERS
 
 
+def _notion_recognized(root: Path) -> bool:
+    import planning_store_facade as ps
+
+    return "notion" in ps.ISSUES_PROVIDERS
+
+
+def _live_client_wired_recognized(root: Path, provider_id: str) -> bool:
+    if provider_id == "linear":
+        return _linear_recognized(root)
+    if provider_id == "notion":
+        return _notion_recognized(root)
+    return True
+
+
+def _notion_docs_gate_green(root: Path) -> bool:
+    if not _notion_recognized(root):
+        return False
+    from planning_notion_client import docs_gate
+
+    return docs_gate(root).get("verdict") == "ok"
+
+
 def effective_issues_status(root: Path, row: dict[str, Any]) -> str:
     """Return shipped | deferred | recognized-not-shipped."""
     declared = str(row.get("status") or "")
     provider_id = str(row.get("id") or "")
     if declared == "deferred":
         return "deferred"
-    if row.get("recognition") == "live-client-wired" and not _linear_recognized(root):
+    if row.get("recognition") == "live-client-wired" and not _live_client_wired_recognized(
+        root, provider_id
+    ):
         return "deferred"
     if row.get("conformanceGated"):
         if not _conformance_green(root, provider_id):
-            if provider_id == "linear" and _linear_recognized(root):
+            if provider_id in {"linear", "notion"} and _live_client_wired_recognized(root, provider_id):
                 return "recognized-not-shipped"
             return "deferred" if declared != "shipped" else "recognized-not-shipped"
+        if provider_id == "notion" and not _notion_docs_gate_green(root):
+            return "recognized-not-shipped"
         return "shipped"
     if declared == "shipped":
         return "shipped"
@@ -470,7 +496,10 @@ def render_root_capabilities_md(root: Path, registry: dict[str, Any]) -> str:
         ]
     )
     for row in _family_rows(registry, "issues.providers"):
-        if row.get("recognition") == "live-client-wired" and not _linear_recognized(root):
+        provider_id = str(row.get("id") or "")
+        if row.get("recognition") == "live-client-wired" and not _live_client_wired_recognized(
+            root, provider_id
+        ):
             continue
         backend_lines.append(
             f"| `{row['id']}` | {_issues_status_label(root, row)} | {_issues_adapter_cell(row)} |"
@@ -515,6 +544,34 @@ def render_issues_registry_derived(root: Path, registry: dict[str, Any]) -> str:
         "`linear` promotion to the derived shipped set requires LCD conformance harness green **and**"
     )
     lines.append("OAuth operator-local storage documented (`core/providers/issues/linear.md` R23).")
+    lines.append("")
+    lines.append("### Notion recognition vs shipped (R12, R20)")
+    lines.append("")
+    lines.append(
+        "| State | `notion` in `ISSUES_PROVIDERS` | `notion` in derived shipped set | Behavior |"
+    )
+    lines.append("| --- | --- | --- | --- |")
+    lines.append(
+        "| Stub (no live client) | no | no | Config may name `notion`; doctor **refuses** enum-only stub |"
+    )
+    notion_recognized = _notion_recognized(root)
+    notion_shipped = "notion" in derive_shipped_issues_providers(root, registry)
+    if notion_recognized and not notion_shipped:
+        lines.append(
+            "| Recognized (live client wired) | yes | no | Config validates; issue-store **falls back** to file-store |"
+        )
+    elif notion_shipped:
+        lines.append(
+            "| Shipped (post-conformance) | yes | yes | Full live round-trip after conformance + docs gate |"
+        )
+    else:
+        lines.append(
+            "| Recognized (live client wired) | no | no | Config may name `notion`; doctor **refuses** enum-only stub |"
+        )
+    lines.append(
+        "`notion` promotion to the derived shipped set requires LCD conformance harness green **and**"
+    )
+    lines.append("adapter spec documented (`core/providers/issues/notion.md` R12).")
     lines.append("")
     lines.append("### Rate-limit map (R16)")
     lines.append("")
@@ -612,6 +669,24 @@ def validate_conformance_semantics(root: Path, registry: dict[str, Any]) -> list
                 )
         elif not linear_recognized_only and not linear_row_shipped:
             errors.append("linear: missing shipped or recognized-not-shipped rendering")
+    if "`notion`" not in expected_root and _notion_recognized(root):
+        errors.append("root CAPABILITIES.md must include notion provider row when recognized")
+    elif _notion_recognized(root):
+        notion_row_shipped = "`notion` | **shipped**" in expected_root or "`notion` | shipped" in expected_root
+        notion_recognized_only = "`notion` | recognized (not shipped)" in expected_root
+        if derive_shipped_issues_providers(root, registry) >= frozenset({"notion"}):
+            if not notion_row_shipped:
+                errors.append("notion: derived shipped but root docs do not render shipped")
+            if "`notion`" not in actual_root:
+                errors.append(
+                    "notion: derived shipped but checked-in CAPABILITIES.md omits notion row"
+                )
+            if actual_matrices and "`notion`" not in actual_matrices:
+                errors.append(
+                    "notion: derived shipped but checked-in capability-family-matrices.md omits notion"
+                )
+        elif not notion_recognized_only and not notion_row_shipped:
+            errors.append("notion: missing shipped or recognized-not-shipped rendering")
     return errors
 
 
