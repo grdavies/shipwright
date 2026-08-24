@@ -176,6 +176,9 @@ def resolve_scripts_dir(
         return ScriptsResolveResult(plugin, source)
 
     if not is_shipwright_self_repo(root):
+        invoked = executor_scripts_dir(executor)
+        if invoked is not None:
+            return ScriptsResolveResult(invoked, "executor")
         return ScriptsResolveResult(None, None, CONSUMER_NO_PLUGIN_ERROR)
 
     consumer = consumer_fallback_scripts(root)

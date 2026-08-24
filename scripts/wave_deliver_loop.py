@@ -1653,7 +1653,7 @@ def partial_finalize_resume_payload(
 
 def ensure_finalize_scripts_bootstrap(root: Path) -> Path:
     """Ensure scripts/ is importable for finalize paths when ambient PYTHONPATH lacks it (PRD 328 R1)."""
-    return ensure_scripts_on_path(root)
+    return ensure_scripts_on_path(root, executor=Path(__file__))
 
 
 def finalize_checkpoint_needs_repair(
