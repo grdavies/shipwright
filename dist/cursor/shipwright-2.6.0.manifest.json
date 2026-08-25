@@ -329,6 +329,7 @@
     "execute_task_status.py",
     "execution_telemetry.py",
     "execution_telemetry_lib.py",
+    "exploration_decompose.py",
     "exploration_engine.py",
     "exploration_evidence.py",
     "exploration_model.py",
@@ -624,6 +625,7 @@
     "planning_progress.py",
     "planning_projection_ledger.py",
     "planning_query_cache.py",
+    "planning_readiness.py",
     "planning_reconcile.py",
     "planning_refusal_ledger.py",
     "planning_refusal_ledger_cli.py",
@@ -781,5 +783,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 778
+  "moduleCount": 780
 }
