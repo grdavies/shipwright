@@ -285,39 +285,6 @@
       "ciShard": 2
     },
     {
-      "id": "prd-325-absorb-closeout-fixtures",
-      "script": "scripts/test/run_pytest.py",
-      "args": [
-        "scripts/unit_tests/planning/test_prd325_absorb_closeout.py",
-        "-q"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-pytest-required-shard-4",
-      "ciShard": 4
-    },
-    {
-      "id": "prd-326-absorb-closeout-fixtures",
-      "script": "scripts/test/run_pytest.py",
-      "args": [
-        "scripts/unit_tests/planning/test_absorb_closeout_326.py",
-        "-q"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-pytest-required-shard-4",
-      "ciShard": 4
-    },
-    {
-      "id": "prd-326-order-note-fixtures",
-      "script": "scripts/test/run_pytest.py",
-      "args": [
-        "scripts/unit_tests/quality/test_prd326_order_note.py",
-        "-q"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-pytest-required-shard-4",
-      "ciShard": 4
-    },
-    {
       "id": "dispatch-binding-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -1553,6 +1520,39 @@
       "ciShard": 4
     },
     {
+      "id": "prd-325-absorb-closeout-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_prd325_absorb_closeout.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
+    },
+    {
+      "id": "prd-326-absorb-closeout-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_absorb_closeout_326.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
+    },
+    {
+      "id": "prd-326-order-note-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/quality/test_prd326_order_note.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4
+    },
+    {
       "id": "planning-doc-issue-store-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
@@ -1639,17 +1639,6 @@
       "classification": "required",
       "ciJobName": "feat-test-plan-pytest-required-shard-6",
       "ciShard": 6
-    },
-    {
-      "id": "project-doctrine-integrated-fixtures",
-      "script": "scripts/test/run_pytest.py",
-      "args": [
-        "scripts/unit_tests/docs/test_project_doctrine_integrated.py",
-        "-q"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-pytest-required-shard-4",
-      "ciShard": 4
     },
     {
       "id": "skills-spec-guard-fixtures",

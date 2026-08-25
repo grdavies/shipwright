@@ -2179,13 +2179,9 @@
       "id": "project-doctrine-integrated-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
-        "verify",
-        "pr-ci"
+        "verify"
       ],
       "verifyOrder": 68,
-      "classification": "required",
-      "ciJobName": "feat-test-plan-pytest-required-shard-4",
-      "ciShard": 4,
       "pytestPath": "scripts/unit_tests/docs/test_project_doctrine_integrated.py",
       "pathTriggers": [
         "scripts/test/run_project_doctrine_fixtures.py",
