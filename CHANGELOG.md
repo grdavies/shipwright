@@ -1080,6 +1080,7 @@
 * merge phase brownfield-baseline-synthesis-interface into feat/truth-hygiene-and-project-doctrine (65271ae) <!-- sw-deliver:brownfield-baseline-synthesis-interface -->
 * merge phase consent-gated-sw-init-adoption-flow into feat/truth-hygiene-and-project-doctrine (5d0cfc2) <!-- sw-deliver:consent-gated-sw-init-adoption-flow -->
 * merge phase consumer-architecture-doctrine-and-codebase-design-boundary into feat/truth-hygiene-and-project-doctrine (10b970f) <!-- sw-deliver:consumer-architecture-doctrine-and-codebase-design-boundary -->
+* merge phase consumer-architecture-doctrine-and-codebase-design-boundary into feat/truth-hygiene-and-project-doctrine (22a8857) <!-- sw-deliver:consumer-architecture-doctrine-and-codebase-design-boundary -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
