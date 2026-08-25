@@ -1482,7 +1482,7 @@ Baseline → doctrine promotion requires an explicit operator command (for examp
 it) and remain non-authoritative.
 
 Operator surface: `/sw-init` §5f and `python3 scripts/sw-configure.py doctrine …`. Route choices in
-the [decision tree](decision-tree.md#project-doctrine-and-architecture-routing). Layout pointers:
+the [decision tree](decision-tree.md#projectdoctrine-and-architecture-routing). Layout pointers:
 `.sw/layout.md`. Self vs consumer reference: `core/sw-reference/README.md`.
 
 ## Communication routing (caveman intensity)
