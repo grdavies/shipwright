@@ -38,7 +38,12 @@ def _load_deliver_state(root: Path) -> dict[str, Any]:
         return {}
 
 
-def _expected_head(root: Path) -> str | None:
+def _expected_head(root: Path, worktree: Path | None = None) -> str | None:
+    """Prefer phase worktree HEAD so orch/integration tips do not filter phase stamps."""
+    if worktree is not None:
+        phase_head = resolve_write_head(worktree)
+        if phase_head:
+            return phase_head
     head = resolve_write_head(root)
     return head or None
 
@@ -53,7 +58,7 @@ def discover_gap_check_status(
         phase_slug,
         STATUS_NAME,
         worktree=worktree,
-        expected_head=_expected_head(root),
+        expected_head=_expected_head(root, worktree),
         tiebreak=halt_dominant_tiebreak,
     )
 
