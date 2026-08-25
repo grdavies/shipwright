@@ -1091,6 +1091,7 @@
 * merge phase evidence-reuse-trust-and-prototype-boundaries into feat/sw-explore-first-release (0b43685) <!-- sw-deliver:evidence-reuse-trust-and-prototype-boundaries -->
 * merge phase explore-command-and-entry-paths into feat/sw-explore-first-release (f5356c5) <!-- sw-deliver:explore-command-and-entry-paths -->
 * merge phase optional-project-intelligence-integrations into feat/sw-explore-first-release (c390300) <!-- sw-deliver:optional-project-intelligence-integrations -->
+* merge phase readiness-and-planning-unit-candidate-derivation into feat/sw-explore-first-release (3386909) <!-- sw-deliver:readiness-and-planning-unit-candidate-derivation -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
