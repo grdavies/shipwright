@@ -337,7 +337,7 @@
       "sourcePath": "core/commands/sw-guide.md"
     },
     {
-      "bodyDigest": "1793ea9da422471d6c0657039b0ab8048e49c68dd52626418c883c6560d7adc2",
+      "bodyDigest": "b94f71ac6af849a865b6eb899f93378bb4d8db5093b2f15588b06e7bd689876e",
       "capabilities": [],
       "description": "Initialize and validate repo-local Shipwright config through a guided interview \u2014 scan, confirm, ask only unresolved choices \u2014 plus doctor/repair. Does not scaffold CI or migrate existing memories.",
       "id": "sw-init",
