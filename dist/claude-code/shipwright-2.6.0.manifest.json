@@ -329,6 +329,7 @@
     "execute_task_status.py",
     "execution_telemetry.py",
     "execution_telemetry_lib.py",
+    "exploration_brief.py",
     "exploration_decompose.py",
     "exploration_engine.py",
     "exploration_evidence.py",
@@ -785,5 +786,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 782
+  "moduleCount": 783
 }
