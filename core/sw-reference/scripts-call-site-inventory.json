@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-25T00:37:46Z",
+  "generatedAt": "2026-08-25T02:08:39Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -20152,19 +20152,37 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1990:effective_config_gen.py",
+      "id": "docs/guides/configuration.md:1987:effective_config_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1990,
+      "line": 1987,
+      "column": 59,
+      "script": "effective_config_gen.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:1995:effective_config_gen.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 1995,
       "column": 8,
       "script": "effective_config_gen.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1991:effective_config_gen.py",
+      "id": "docs/guides/configuration.md:2004:effective_config_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1991,
+      "line": 2004,
+      "column": 8,
+      "script": "effective_config_gen.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2005:effective_config_gen.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2005,
       "column": 8,
       "script": "effective_config_gen.py",
       "classification": "self-repo-only"
@@ -20539,48 +20557,57 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1041:wave.py",
+      "id": "docs/guides/workflows.md:1037:effective_config_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1041,
+      "line": 1037,
+      "column": 9,
+      "script": "effective_config_gen.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/workflows.md:1045:effective_config_gen.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/workflows.md",
+      "line": 1045,
+      "column": 8,
+      "script": "effective_config_gen.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/workflows.md:1057:wave.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/workflows.md",
+      "line": 1057,
       "column": 25,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1120:planning_store.py",
+      "id": "docs/guides/workflows.md:1136:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1120,
+      "line": 1136,
       "column": 12,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1121:planning_store.py",
+      "id": "docs/guides/workflows.md:1137:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1121,
+      "line": 1137,
       "column": 32,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1123:planning_cutover.py",
+      "id": "docs/guides/workflows.md:1139:planning_cutover.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1123,
+      "line": 1139,
       "column": 12,
       "script": "planning_cutover.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/workflows.md:1138:reviewer-metrics.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/workflows.md",
-      "line": 1138,
-      "column": 8,
-      "script": "reviewer-metrics.py",
       "classification": "self-repo-only"
     },
     {
@@ -20588,96 +20615,105 @@
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
       "line": 1154,
+      "column": 8,
+      "script": "reviewer-metrics.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/workflows.md:1170:reviewer-metrics.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/workflows.md",
+      "line": 1170,
       "column": 20,
       "script": "reviewer-metrics.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1189:architecture_radar.py",
+      "id": "docs/guides/workflows.md:1205:architecture_radar.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1189,
+      "line": 1205,
       "column": 8,
       "script": "architecture_radar.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1190:architecture_radar.py",
+      "id": "docs/guides/workflows.md:1206:architecture_radar.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1190,
+      "line": 1206,
       "column": 8,
       "script": "architecture_radar.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1191:architecture_radar.py",
+      "id": "docs/guides/workflows.md:1207:architecture_radar.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1191,
+      "line": 1207,
       "column": 8,
       "script": "architecture_radar.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1199:status_collect.py",
+      "id": "docs/guides/workflows.md:1215:status_collect.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1199,
+      "line": 1215,
       "column": 20,
       "script": "status_collect.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1208:domain_vocabulary.py",
+      "id": "docs/guides/workflows.md:1224:domain_vocabulary.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1208,
+      "line": 1224,
       "column": 8,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1209:domain_vocabulary.py",
+      "id": "docs/guides/workflows.md:1225:domain_vocabulary.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1209,
+      "line": 1225,
       "column": 8,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1210:domain_vocabulary.py",
+      "id": "docs/guides/workflows.md:1226:domain_vocabulary.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1210,
+      "line": 1226,
       "column": 8,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1211:domain_vocabulary.py",
+      "id": "docs/guides/workflows.md:1227:domain_vocabulary.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1211,
+      "line": 1227,
       "column": 8,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1219:status_collect.py",
+      "id": "docs/guides/workflows.md:1235:status_collect.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1219,
+      "line": 1235,
       "column": 20,
       "script": "status_collect.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1291:planning_gap_capture.py",
+      "id": "docs/guides/workflows.md:1307:planning_gap_capture.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1291,
+      "line": 1307,
       "column": 173,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
