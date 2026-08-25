@@ -1981,6 +1981,20 @@ command allowlist—`delegation.mode` does not force those onto Tasks.
 
 Greenfield `/sw-init` seeds `heuristic`. Tighten to `bind-only` when you need fail-closed binding for every spawn.
 
+### Release-please effective-config auto-regen
+
+On `release-please--branches--main` heads, the **Release dist regen** workflow
+(`.github/workflows/release-dist-regen.yml`) runs `python3 scripts/effective_config_gen.py all --write`
+alongside `python3 -m sw generate --all` and commits refreshed `dist/` plus projection outputs
+(`docs/guides/configuration.md`, `core/sw-reference/generated/effective-config.json`,
+`core/sw-reference/generated/upgrade-manifest-*.json`) in a single chore commit when anything drifts.
+
+Local remediation when automation has not run (or you are off the release-please head) remains:
+
+```bash
+python3 scripts/effective_config_gen.py all --write
+```
+
 <!-- effective-config:begin generated (scripts/effective_config_gen.py) -->
 ## Effective configuration (generated)
 
