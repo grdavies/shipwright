@@ -1,6 +1,6 @@
 ---
 name: explore
-description: Destination-first structured exploration through ask → decide → confirm — humans own intent, blocking policy, promote, and doc handoff. Use before /sw-doc when scope is unclear. Does not dispatch implementation or create PRDs/tasks.
+description: Destination-first structured exploration through ask → decide → confirm — humans own intent, blocking policy, promote, and doc handoff. Use when scope is unclear before /sw-doc. Does not dispatch implementation or create PRDs/tasks.
 ---
 # Explore (`/sw-explore`)
 
