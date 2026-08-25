@@ -1078,6 +1078,7 @@
 * merge phase repo-local-consumer-doctrine-lifecycle into feat/truth-hygiene-and-project-doctrine (e0c9ae0) <!-- sw-deliver:repo-local-consumer-doctrine-lifecycle -->
 * merge phase shipwright-self-leakage-detection-and-migration into feat/truth-hygiene-and-project-doctrine (724773f) <!-- sw-deliver:shipwright-self-leakage-detection-and-migration -->
 * merge phase brownfield-baseline-synthesis-interface into feat/truth-hygiene-and-project-doctrine (65271ae) <!-- sw-deliver:brownfield-baseline-synthesis-interface -->
+* merge phase consent-gated-sw-init-adoption-flow into feat/truth-hygiene-and-project-doctrine (5d0cfc2) <!-- sw-deliver:consent-gated-sw-init-adoption-flow -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
