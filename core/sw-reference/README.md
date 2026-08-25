@@ -11,13 +11,30 @@ runtime gates. Do not duplicate semantics in command prose; link here instead.
 | `gate-evidence.schema.json` | Per-gate evidence record shape; atomic tmp-file-plus-rename write contract |
 | `kernel-classification.json` | Kernel/guideline lineage ids; manifest validator enforces R9-only add boundary |
 | `build-chain-sot.json` | Source-of-truth map for `copy-to-core` / emitter parity |
-| `architecture-doctrine.md` | Stable `AD-<n>` doctrine statements with rationale and observable signals (PRD 326) |
+| `architecture-doctrine.md` | **Shipwright-self** `AD-<n>` statements only (PRD 326 / 330) — bundled plugin reference, not consumer project law |
 | `architecture-assessment.schema.json` | Per-repo assessment YAML contract (`pass`/`fail`/`waived`/`manual`) |
+| `project-doctrine.schema.json` | Consumer-owned `ProjectDoctrine@v1` contract (repo-local SoT) |
+| `project-baseline.schema.json` | Evidence-bearing `ProjectBaseline@v1` draft contract (never autonomous authority) |
 
 `scripts/gate_manifest_validate.py` fails closed on manifest↔lineage drift.
 `scripts/architecture_assessment.py` evaluates doctrine + assessment YAML when
 `architecture.assessment.mode` is `advisory` or `blocking` (default `off`). Config-resolvable class
 promotion cannot demote the kernel floor (verification-gate, check-gate, gap-check, secret-scan).
+
+## Shipwright-self vs consumer ProjectDoctrine (PRD 330 R3, R5, R8, R15)
+
+| Surface | Where | Authority |
+| --- | --- | --- |
+| **Bundled Shipwright-self doctrine** | `architecture-doctrine.md` (`AD-<n>`) | Plugin workflow reference only |
+| **Consumer ProjectDoctrine** | Repo-local `.sw/project-doctrine.json` | Sole consumer architecture law (SoT) |
+| **Baseline draft** | `.sw/project-baseline.draft.json` | Advisory facts until explicit promote |
+| **Issue-store projection** | `.cursor/sw-planning-projections/project-doctrine.json` | Optional mirror — never SoT |
+| **Codebase-design / assessment** | Assessment YAML + consumer vocabulary | Reference/evaluation input — not a second SoT or `/sw-codebase-design` command |
+
+Ownership and layout pointers: `.sw/layout.md` (Consumer ProjectDoctrine section). Operator adoption:
+`/sw-init` + `docs/guides/configuration.md`. Routing among baseline discovery, doctrine ownership,
+assessment, and self-reference: `docs/guides/decision-tree.md`. Leakage: `scripts/project_doctrine_leakage.py`.
+Lifecycle: `scripts/project_doctrine.py`, synthesis interface `scripts/project_baseline.py`.
 
 ## PRD 326 delivery order (R20)
 
