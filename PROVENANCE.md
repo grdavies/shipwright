@@ -23,14 +23,14 @@ stay in the environment / secret store — never committed.
 
 | Dependency | Role | Required when | Docs / adapter |
 |------------|------|---------------|----------------|
-| [CodeRabbit CLI](https://docs.coderabbit.ai/) | AI PR + local review | `review.provider: coderabbit` (default) | `core/providers/review/coderabbit.{sh,md}` |
+| [CodeRabbit CLI](https://docs.coderabbit.ai/) | AI PR + local review | `review.provider: coderabbit` (opt-in; effective default `none`) | `core/providers/review/coderabbit.{sh,md}` |
 | [Recallium](https://recallium.ai/) MCP | Durable memory provider | `memory.provider: recallium` | `core/providers/recallium.md` |
 | [Sentry](https://docs.sentry.io/) MCP | Production signal enrichment | `/sw-debug` with Sentry context | `core/skills/debug/references/sentry.md` |
 | [GitHub CLI](https://cli.github.com/) (`gh`) | CI gate, PR head, review state | `/sw-watch-ci`, `/sw-stabilize`, gate scripts | `core/scripts/check-gate.py` |
 | [Playwright](https://playwright.dev/) | Browser verification adapter | `verify.provider: playwright` | `core/providers/verify/playwright.{py,md}` |
 
-Optional at install: none of the above are required to install the plugin. `/sw-setup` validates
-what your selected providers need.
+Optional at install: none of the above are required to install the plugin. `/sw-init` validates
+what your selected providers need (`/sw-setup` is a deprecated alias).
 
 ## Update policy
 
