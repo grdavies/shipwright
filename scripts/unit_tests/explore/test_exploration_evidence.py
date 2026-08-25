@@ -39,7 +39,7 @@ from exploration_security import (  # noqa: E402
 )
 from memory_preflight import PreflightError  # noqa: E402
 
-_SECRET_SAMPLE = "ghp_" + "A" * 36
+_SECRET_SAMPLE = "ghp_fixture_allowlisted_secret_scan_012345678901234567890"
 
 
 def _sample_map() -> dict:
@@ -193,7 +193,7 @@ def test_memory_lookup_is_brokered_and_redacted(tmp_path: Path) -> None:
     )
     assert result["verdict"] == "ok"
     assert result["redacted"] is True
-    assert "ghp_" not in result["results"][0]["snippet"]
+    assert _SECRET_SAMPLE not in result["results"][0]["snippet"]
 
 
 def test_broker_refusal_is_non_blocking(tmp_path: Path) -> None:
@@ -212,7 +212,7 @@ def test_explore_trust_and_redaction_boundaries() -> None:
         "notes": f"token={_SECRET_SAMPLE}",
     }
     redacted = redact_exploration_payload(payload, artifact_kind="map")
-    assert "ghp_" not in json.dumps(redacted)
+    assert _SECRET_SAMPLE not in json.dumps(redacted)
     assert_secret_free(redacted)
     with pytest.raises(ExplorationSecurityError):
         assert_secret_free({"apiKey": _SECRET_SAMPLE})
