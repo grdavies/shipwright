@@ -1029,6 +1029,22 @@ This runs, in order:
 The SoT map lives in `.sw/layout.md` and `core/sw-reference/build-chain-sot.json`. CI enforces
 `scripts/`↔`core/scripts/` parity (`run_core_scripts_parity_fixtures.py`) and dist↔golden parity.
 
+## Release dist and effective-config auto-regen
+
+The **Release dist regen** workflow (`.github/workflows/release-dist-regen.yml`) runs only on
+`release-please--branches--main` PR heads from this repository (fork heads are excluded). It refreshes
+`dist/` via `python3 -m sw generate --all`, then runs
+`python3 scripts/effective_config_gen.py all --write` so effective-config projections stay aligned with
+the release-please version line. When either surface changes, a single chore commit stages `dist/` plus
+`docs/guides/configuration.md`, `core/sw-reference/generated/effective-config.json`, and
+`core/sw-reference/generated/upgrade-manifest-*.json`.
+
+Off that automation path, regenerate projections locally before opening a PR:
+
+```bash
+python3 scripts/effective_config_gen.py all --write
+```
+
 ## Pre-work memory search
 
 Before substantive work, every **work-performing** command runs a scoped `memory-preflight` **search**
