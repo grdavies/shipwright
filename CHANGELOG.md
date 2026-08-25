@@ -1087,6 +1087,7 @@
 * merge phase absorb-linkage-and-release-closeout into feat/truth-hygiene-and-project-doctrine (aaa7a19) <!-- sw-deliver:absorb-linkage-and-release-closeout -->
 * merge phase exploration-artifact-schemas-and-validation-ownership into feat/sw-explore-first-release (bbe2b57) <!-- sw-deliver:exploration-artifact-schemas-and-validation-ownership -->
 * merge phase exploration-storage-lifecycle-and-optimistic-revision into feat/sw-explore-first-release (0549593) <!-- sw-deliver:exploration-storage-lifecycle-and-optimistic-revision -->
+* merge phase destination-first-structured-exploration-engine into feat/sw-explore-first-release (a2d022f) <!-- sw-deliver:destination-first-structured-exploration-engine -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
