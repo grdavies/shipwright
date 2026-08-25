@@ -21,9 +21,9 @@
           "skills": 6
         },
         "mid": {
-          "commands": 7,
+          "commands": 8,
           "agents": 10,
-          "skills": 5
+          "skills": 6
         },
         "deep": {
           "commands": 4,

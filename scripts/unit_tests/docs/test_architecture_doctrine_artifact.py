@@ -15,7 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
 import architecture_assessment as aa
 
 COMMANDS_DIRS = ("core/commands", "commands")
-FORBIDDEN_COMMAND_STEMS = frozenset({"sw-explore", "sw-codebase-design"})
+FORBIDDEN_COMMAND_STEMS = frozenset({"sw-codebase-design"})
 CONSUMER_VOCABULARY_KEYS = aa.CONSUMER_VOCABULARY_KEYS
 
 ONE_STMT = """\

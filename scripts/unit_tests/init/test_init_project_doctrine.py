@@ -24,7 +24,7 @@ COMMANDS_DIRS = (
     Path("dist/cursor/commands"),
     Path("dist/claude-code/commands"),
 )
-FORBIDDEN_COMMAND_STEMS = frozenset({"sw-explore", "sw-codebase-design"})
+FORBIDDEN_COMMAND_STEMS = frozenset({"sw-codebase-design"})
 
 
 def _configure(root: Path, subcmd: str, *extra: str) -> tuple[int, dict]:
@@ -160,18 +160,18 @@ def test_explicit_accept_doctrine_creates_valid_sot(tmp_git_repo: Path) -> None:
     assert loaded["id"] == "consumer-doctrine"
 
 
-def test_no_explore_or_codebase_design_commands(repo_root: Path) -> None:
+def test_no_codebase_design_command_registered(repo_root: Path) -> None:
     found: list[str] = []
     for directory in COMMANDS_DIRS:
         root = repo_root / directory
         if not root.is_dir():
             continue
         for path in root.rglob("*"):
-            if path.stem in FORBIDDEN_COMMAND_STEMS or "sw-explore" in path.name:
-                found.append(str(path.relative_to(repo_root)))
-            if "sw-codebase-design" in path.name:
+            if path.stem in FORBIDDEN_COMMAND_STEMS or "sw-codebase-design" in path.name:
                 found.append(str(path.relative_to(repo_root)))
     assert found == [], f"unexpected forbidden command registration: {found}"
+    explore = repo_root / "core/commands/sw-explore.md"
+    assert explore.is_file(), "PRD 331 phase 5 registers /sw-explore"
     init_text = (repo_root / "core/commands/sw-init.md").read_text(encoding="utf-8")
     assert "does not register" in init_text or "does **not** register" in init_text
     assert "/sw-explore" in init_text

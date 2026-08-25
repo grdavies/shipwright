@@ -246,21 +246,14 @@ def test_interface_contract_stable_and_forbids_explore() -> None:
     assert "synthesize_baseline" in contract["callable"]
 
 
-def test_no_sw_explore_command_registered(repo_root: Path) -> None:
-    names = {
-        "sw-explore.md",
-        "sw-explore",
-        "explore.md",
+def test_sw_explore_command_registered(repo_root: Path) -> None:
+    expected = {
+        "core/commands/sw-explore.md",
+        "dist/cursor/commands/sw-explore.md",
+        "dist/claude-code/commands/sw-explore.md",
     }
-    found: list[str] = []
-    for directory in COMMANDS_DIRS:
-        root = repo_root / directory
-        if not root.is_dir():
-            continue
-        for path in root.rglob("*"):
-            if path.name in names or path.stem == "sw-explore":
-                found.append(str(path.relative_to(repo_root)))
-    assert found == [], f"unexpected /sw-explore registration: {found}"
+    missing = [rel for rel in expected if not (repo_root / rel).is_file()]
+    assert missing == [], f"missing /sw-explore registration: {missing}"
 
 
 def test_repeated_synthesis_remains_draft(baseline_schema: dict) -> None:
