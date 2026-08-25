@@ -44,3 +44,4 @@ def test_release_dist_regen_guards_release_please_head(repo_root: Path) -> None:
     body = _workflow_text(repo_root)
     assert "github.event.pull_request.head.repo.full_name == github.repository" in body
     assert "release-please--branches--main" in body
+

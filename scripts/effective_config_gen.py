@@ -179,19 +179,52 @@ def walk_properties(
         )
 
 
+def _load_existing_effective_config(root: Path) -> dict[str, Any] | None:
+    path = root / EFFECTIVE_CONFIG_REL
+    if not path.is_file():
+        return None
+    try:
+        return load_json(path)
+    except (json.JSONDecodeError, ValueError, OSError):
+        return None
+
+
+def stabilize_generated_at(doc: dict[str, Any], previous: dict[str, Any] | None) -> dict[str, Any]:
+    """Reuse prior generatedAt when payload is unchanged (PR #1008 regen storm).
+
+    ``check_drift`` already ignores ``generatedAt``; writes must too — otherwise
+    release-dist-regen commits a timestamp-only diff, pushes, and re-triggers forever.
+    """
+    if not previous:
+        return doc
+    prior_stamp = previous.get("generatedAt")
+    if not isinstance(prior_stamp, str) or not prior_stamp.strip():
+        return doc
+    if (
+        previous.get("settings") == doc.get("settings")
+        and previous.get("schemaVersion") == doc.get("schemaVersion")
+        and previous.get("shipwrightVersion") == doc.get("shipwrightVersion")
+    ):
+        stabilized = dict(doc)
+        stabilized["generatedAt"] = prior_stamp
+        return stabilized
+    return doc
+
+
 def build_effective_config(root: Path) -> dict[str, Any]:
     schema_path = root / SCHEMA_REL
     schema = load_json(schema_path)
     greenfield_overrides = flatten_patch(greenfield_posture_patch())
     settings: dict[str, dict[str, Any]] = {}
     walk_properties(schema, schema, prefix=(), settings=settings, greenfield_overrides=greenfield_overrides)
-    return {
+    doc = {
         "schemaVersion": schema_version(schema),
         "shipwrightVersion": shipwright_version(root),
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "generator": "scripts/effective_config_gen.py",
         "settings": dict(sorted(settings.items())),
     }
+    return stabilize_generated_at(doc, _load_existing_effective_config(root))
 
 
 def render_markdown_fragment(doc: dict[str, Any]) -> str:
@@ -290,23 +323,61 @@ def diff_settings(
     }
 
 
+def _load_existing_upgrade_manifest(root: Path, version: str) -> dict[str, Any] | None:
+    path = root / GENERATED_DIR_REL / f"upgrade-manifest-{version}.json"
+    if not path.is_file():
+        return None
+    try:
+        return load_json(path)
+    except (json.JSONDecodeError, ValueError, OSError):
+        return None
+
+
+def stabilize_manifest_generated_at(
+    manifest: dict[str, Any], previous_manifest: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Preserve upgrade-manifest generatedAt when only the stamp would change."""
+    if not previous_manifest:
+        return manifest
+    prior_stamp = previous_manifest.get("generatedAt")
+    if not isinstance(prior_stamp, str) or not prior_stamp.strip():
+        return manifest
+    comparable_keys = (
+        "version",
+        "previousVersion",
+        "generator",
+        "newSettings",
+        "removedSettings",
+        "changedDefaults",
+        "deprecated",
+        "schemaMigrations",
+        "newDurableStateShapes",
+        "packageCompatibility",
+        "kernelGraphVersionChanges",
+        "requiredManualActions",
+        "rollbackConcerns",
+    )
+    if all(previous_manifest.get(k) == manifest.get(k) for k in comparable_keys):
+        stabilized = dict(manifest)
+        stabilized["generatedAt"] = prior_stamp
+        return stabilized
+    return manifest
+
+
 def build_upgrade_manifest(root: Path, *, previous: dict[str, Any] | None = None) -> dict[str, Any]:
     current = build_effective_config(root)
     if previous is None:
-        path = root / EFFECTIVE_CONFIG_REL
-        if path.is_file():
-            try:
-                previous = load_json(path)
-            except (json.JSONDecodeError, ValueError):
-                previous = None
+        previous = _load_existing_effective_config(root)
     diff = diff_settings(previous, current)
-    return {
+    version = str(current.get("shipwrightVersion") or "0.0.0")
+    manifest = {
         "version": current.get("shipwrightVersion"),
         "previousVersion": (previous or {}).get("shipwrightVersion"),
         "generatedAt": current.get("generatedAt"),
         "generator": "scripts/effective_config_gen.py",
         **diff,
     }
+    return stabilize_manifest_generated_at(manifest, _load_existing_upgrade_manifest(root, version))
 
 
 def check_drift(root: Path) -> list[str]:

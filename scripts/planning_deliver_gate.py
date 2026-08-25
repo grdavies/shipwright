@@ -63,6 +63,9 @@ CANONICAL_PRDS_TASK_LIST = re.compile(r"^docs/prds/\d+-[^/]+/tasks-[^/]+\.md$")
 
 HARNESS_FIXTURE_TASK_LIST = re.compile(r"^scripts/test/fixtures/.+/tasks-[^/]+\.md$")
 
+# Thin /sw-debug → /sw-deliver packs (PRD 067); virtual bodies, not planning-graph units.
+DEBUG_DELIVER_TASK_LIST = re.compile(r"^docs/prds/debug-[^/]+/tasks-debug-[^/]+\.md$")
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -123,13 +126,22 @@ def is_harness_fixture_task_list(task_rel: str) -> bool:
     return bool(HARNESS_FIXTURE_TASK_LIST.match(task_rel.replace("\\", "/")))
 
 
+def is_debug_deliver_task_list(task_rel: str) -> bool:
+    """PRD 067 thin debug packs under docs/prds/debug-<slug>/tasks-debug-*.md."""
+    return bool(DEBUG_DELIVER_TASK_LIST.match(task_rel.replace("\\", "/")))
+
+
 def allowlist_unit_absent_from_graph(task_path: Path, task_rel: str) -> bool:
     """Documented allowlist for unit-not-in-graph pass (gap-051 R5).
 
     A task list on the canonical docs/prds/<n>-<slug>/ layout that is not yet
     frozen may legitimately be absent from the planning graph during spec seeding.
+    Frozen ``tasks-debug-*`` packs from ``/sw-debug`` are also allowlisted — they are
+    virtual bodies (not issue-store / graph units) and must still enter ``/sw-deliver``.
     """
     if is_harness_fixture_task_list(task_rel):
+        return True
+    if is_debug_deliver_task_list(task_rel):
         return True
     if not is_canonical_prds_task_list(task_rel):
         return False
