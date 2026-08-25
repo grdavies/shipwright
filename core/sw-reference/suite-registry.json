@@ -2164,6 +2164,45 @@
       "pytestPath": "scripts/unit_tests/resilience",
       "classification": "required",
       "description": "PRD 323 resilience property suite (R22 verify scope)"
+    },
+    {
+      "id": "project-doctrine-fixtures",
+      "script": "scripts/test/run_project_doctrine_fixtures.py",
+      "lanes": [
+        "internal"
+      ],
+      "pathTriggers": [
+        "scripts/test/run_project_doctrine_fixtures.py"
+      ]
+    },
+    {
+      "id": "project-doctrine-integrated-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "verifyOrder": 68,
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-4",
+      "ciShard": 4,
+      "pytestPath": "scripts/unit_tests/docs/test_project_doctrine_integrated.py",
+      "pathTriggers": [
+        "scripts/test/run_project_doctrine_fixtures.py",
+        "scripts/unit_tests/docs/test_project_doctrine_integrated.py",
+        "scripts/project_doctrine.py",
+        "scripts/project_baseline.py",
+        "scripts/project_doctrine_leakage.py",
+        "scripts/documented_defaults_check.py",
+        "core/sw-reference/project-doctrine.schema.json",
+        "core/sw-reference/project-baseline.schema.json",
+        "scripts/unit_tests/docs/test_documented_defaults.py",
+        "scripts/unit_tests/docs/test_project_doctrine_schemas.py",
+        "scripts/unit_tests/docs/test_project_doctrine_leakage.py",
+        "scripts/unit_tests/init/test_project_doctrine_lifecycle.py",
+        "scripts/unit_tests/init/test_project_baseline_synthesis.py",
+        "scripts/unit_tests/init/test_init_project_doctrine.py"
+      ]
     }
   ],
   "plans": {
@@ -2200,7 +2239,7 @@
       "triageOwner": "platform-ops"
     },
     "minimum-python": {
-      "description": "Minimum supported Python matrix leg \u2014 core guard suites only.",
+      "description": "Minimum supported Python matrix leg — core guard suites only.",
       "inherits": "pull-request-core"
     }
   },
