@@ -1429,6 +1429,62 @@ Each entry references a doctrine `AD-<n>` id with `verdict` ∈ `pass|fail|waive
 authored by a human actor (`python3 scripts/architecture_assessment.py record-waiver …`) — autonomous
 dispatch paths refuse waiver authorship (same posture as the sizing freeze override gate).
 
+Bundled `core/sw-reference/architecture-doctrine.md` is **Shipwright-self reference only**. Consumer
+project architecture law lives in repo-local ProjectDoctrine (below) — never copy bundled `AD-<n>`
+statements into consumer authority.
+
+## Consumer ProjectDoctrine
+
+Consumer repos may adopt a repo-local **ProjectDoctrine** as project architecture law. Effective
+workflow defaults stay aligned with config (for example `review.provider` defaults to **`none`**;
+CodeRabbit is opt-in via `review.provider: "coderabbit"`). Doctrine adoption is separate from those
+defaults and is always consent-gated through `/sw-init`.
+
+### Authority and projection
+
+| Artifact | Path | Role |
+| --- | --- | --- |
+| **ProjectDoctrine SoT** | `.sw/project-doctrine.json` | Sole consumer doctrine authority |
+| **Baseline draft** | `.sw/project-baseline.draft.json` | Advisory draft only — never law until promote |
+| **Optional projection** | `.cursor/sw-planning-projections/project-doctrine.json` | Mirror when issue-store planning is effective — **never** read as authority |
+| **Decline record** | `.cursor/sw-init-project-doctrine.json` | Durable skip/decline breadcrumb |
+
+Issue-store or planning-store copies are projection-only. Refreshing a projection never promotes law
+and never overrides the repo-local SoT.
+
+### Schemas
+
+| Contract | Schema |
+| --- | --- |
+| `ProjectDoctrine@v1` | `core/sw-reference/project-doctrine.schema.json` |
+| `ProjectBaseline@v1` | `core/sw-reference/project-baseline.schema.json` |
+
+Minimum fields on both: `id`, `version`, `provenance`, `confidence` and/or `expiresAt`, and
+`sourceRefs[]`. Consumer architecture vocabulary covers modules, interfaces, seams, adapters, and
+locality. Product roadmap, org chart, and runtime runbook fields are excluded from doctrine
+authority.
+
+### Consent defaults (greenfield vs brownfield)
+
+| Mode | What `/sw-init` may do | Promotes doctrine? |
+| --- | --- | --- |
+| **Greenfield** | Opt-in empty scaffold after `--confirm` | Only when you explicitly accept the scaffold |
+| **Brownfield** | Synthesize a **draft** baseline (`project-baseline-synthesis@v1`) | **Never** auto-promote — draft until explicit promote |
+
+Without `--confirm`, configurator actions return `confirm-required` and write nothing authoritative.
+
+### Explicit promote and leakage
+
+Baseline → doctrine promotion requires an explicit operator command (for example
+`python3 scripts/sw-configure.py doctrine accept-promote --confirm`). Acceptance also requires a
+**leakage-green** verdict: consumer doctrine must not carry Shipwright-self markers as project law
+(`scripts/project_doctrine_leakage.py`). Reject and decline paths leave no durable doctrine (or clear
+it) and remain non-authoritative.
+
+Operator surface: `/sw-init` §5f and `python3 scripts/sw-configure.py doctrine …`. Route choices in
+the [decision tree](decision-tree.md#projectdoctrine-and-architecture-routing). Layout pointers:
+`.sw/layout.md`. Self vs consumer reference: `core/sw-reference/README.md`.
+
 ## Communication routing (caveman intensity)
 
 Shipwright injects bundled `core/communication/caveman-core.md` on every session start. Intensity applies to

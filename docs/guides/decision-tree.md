@@ -62,3 +62,32 @@ local-capture surfaces you can reach for at any point without affecting pipeline
 `/sw-setup` and `/sw-compound`/`/sw-compound-ship` remain as one-release delegating aliases to `/sw-init` and
 `/sw-retrospective` respectively — see [commands](commands.md#deprecated-command-aliases-closed-rename-table)
 for the closed rename table. Retire call sites onto the replacement name before the alias window closes.
+
+## ProjectDoctrine and architecture routing
+
+When the question is about project architecture law, baseline facts, or assessment — not a new workflow
+command — route here. **No** `/sw-codebase-design`, `/sw-explore`, or `/sw-graph-*` entry points exist
+on this surface; use `/sw-init` and the reference/assessment paths below.
+
+```mermaid
+flowchart TD
+  start([Architecture or doctrine need?]) --> intent{What do you need?}
+  intent -->|Discover facts about an existing repo| baseline["Baseline discovery<br/>/sw-init doctrine brownfield-synthesize<br/>draft-only ProjectBaseline"]
+  intent -->|Own durable project architecture law| doctrine["Consumer doctrine ownership<br/>.sw/project-doctrine.json SoT<br/>explicit accept / promote"]
+  intent -->|Score seams against doctrine| assess["Codebase-design assessment<br/>architecture.assessment + YAML<br/>reference input — not a command"]
+  intent -->|Read plugin workflow law| selfDoc["Bundled Shipwright-self doctrine<br/>core/sw-reference/architecture-doctrine.md<br/>not consumer project law"]
+  baseline --> review["Review draft → accept-promote --confirm<br/>or reject / decline"]
+  doctrine --> leakage["Leakage-green required<br/>before acceptance sticks"]
+  assess --> doctrine
+  selfDoc --> pointer["Consumer may pointer-ref only<br/>never copy AD statements as law"]
+```
+
+| Intent | Go here | Do not |
+| --- | --- | --- |
+| **Baseline discovery** | `/sw-init` brownfield synthesize → `.sw/project-baseline.draft.json` | Treat draft as law or auto-promote |
+| **Consumer doctrine ownership** | Repo-local `.sw/project-doctrine.json` via explicit accept/promote | Read issue-store projection as authority |
+| **Codebase-design assessment** | `architecture.assessment.*` + assessment YAML / consumer vocabulary | Register a top-level `/sw-codebase-design` command |
+| **Bundled Shipwright-self doctrine** | `core/sw-reference/architecture-doctrine.md` (`AD-<n>`) | Inherit plugin self-description as project law |
+
+Greenfield empty scaffold is opt-in only. Details: [configuration](configuration.md#consumer-projectdoctrine),
+`.sw/layout.md`, `core/sw-reference/README.md`.

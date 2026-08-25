@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipwright.dev/schemas/project-doctrine/v1",
+  "title": "ProjectDoctrine@v1",
+  "description": "Repo-local consumer-owned project doctrine contract (PRD 330 R3, R8, R9, R10). Excludes product-roadmap, org-chart, and runtime-runbook authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "provenance", "sourceRefs"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable doctrine identifier within the consumer repository."
+    },
+    "version": {
+      "const": "ProjectDoctrine@v1"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "confidence": {
+      "$ref": "#/$defs/confidence"
+    },
+    "expiresAt": {
+      "type": "string",
+      "minLength": 1,
+      "description": "ISO-8601 expiry when confidence is not supplied."
+    },
+    "sourceRefs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/sourceRef"
+      }
+    },
+    "architecture": {
+      "$ref": "#/$defs/architectureVocabulary"
+    },
+    "assessment": {
+      "$ref": "#/$defs/assessmentData"
+    }
+  },
+  "anyOf": [
+    {
+      "required": ["confidence"]
+    },
+    {
+      "required": ["expiresAt"]
+    }
+  ],
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["createdAt", "source"],
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "updatedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human or machine origin label (for example operator-review, baseline-promote)."
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low", "unknown"]
+    },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri"],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "architectureEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "type": "string"
+        },
+        "rationale": {
+          "type": "string"
+        },
+        "locality": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "architectureVocabulary": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "modules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/architectureEntry"
+          }
+        },
+        "interfaces": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/architectureEntry"
+          }
+        },
+        "seams": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/architectureEntry"
+          }
+        },
+        "adapters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/architectureEntry"
+          }
+        },
+        "locality": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/architectureEntry"
+          }
+        }
+      }
+    },
+    "assessmentData": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "artifactPath": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional path to a consumer assessment artifact (read-only input)."
+        },
+        "doctrineVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lastAssessedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "verdict"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "verdict": {
+                "type": "string",
+                "enum": ["pass", "fail", "waived", "manual"]
+              },
+              "evidence": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -148,6 +148,11 @@ Capability-doc generation is checked as `capability-docs-fixtures` on the `ci-ym
 `scripts/unit_tests/capability`, including in-place regen with no `--update` flag). It is not an
 always-on `pull-request-core` job.
 
+ProjectDoctrine / ProjectBaseline acceptance
+(`project-doctrine-fixtures` / `project-doctrine-integrated-fixtures` in `suite-registry.json`) runs on
+the `internal` and `verify` lanes via `scripts/test/run_project_doctrine_fixtures.py` and the
+integrated pytest wrapper — path-triggered when doctrine schemas, lifecycle, or leakage scripts change.
+
 <!-- suite-registry.json and ci_plan_gen.py are authoritative for plan names above. -->
 
 ## Initialization and doctor checks

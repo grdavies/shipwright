@@ -286,6 +286,33 @@ Assessment YAML is opt-in via `architecture.assessment.mode` (`off` default). `w
 `waiver.{actor,reason,expires}`; expired waivers count as `fail`. Waivers cannot be authored on autonomous
 dispatch paths.
 
+Bundled `architecture-doctrine.md` is **Shipwright-self reference only** (PRD 330 R3/R8). It MUST NOT
+become consumer project law. Consumer architecture ownership lives under **Consumer ProjectDoctrine**
+below.
+
+### Consumer ProjectDoctrine and baseline (PRD 330 R8, R15)
+
+Repo-local consumer artifacts — not bundled `core/sw-reference` law. Issue-store mirrors are
+projection-only.
+
+| Artifact | Path | Owner | Lifecycle |
+| --- | --- | --- | --- |
+| **ProjectDoctrine SoT** | `.sw/project-doctrine.json` | consumer repo operator | Sole doctrine authority; create only via explicit accept/promote |
+| **ProjectBaseline draft** | `.sw/project-baseline.draft.json` | consumer repo operator | Advisory draft from brownfield synthesis; never autonomous promote |
+| **Optional issue-store projection** | `.cursor/sw-planning-projections/project-doctrine.json` | planning projection writer | Mirror when issue-store planning is effective — **never** authority |
+| **Init decline breadcrumb** | `.cursor/sw-init-project-doctrine.json` | `/sw-init` configurator | Durable skip/decline; non-authoritative |
+| **ProjectDoctrine@v1 schema** | `core/sw-reference/project-doctrine.schema.json` | platform-team (`coreAuthoredAllowlist`) | per release |
+| **ProjectBaseline@v1 schema** | `core/sw-reference/project-baseline.schema.json` | platform-team (`coreAuthoredAllowlist`) | per release |
+| **Leakage scanner** | `scripts/project_doctrine_leakage.py` | platform-team | Reject Shipwright-self markers in consumer SoT |
+| **Lifecycle CLI** | `scripts/project_doctrine.py` / `scripts/project_baseline.py` | platform-team | Scaffold, validate, draft synthesize, explicit promote |
+
+**Shipwright-self boundary:** bundled statements under `core/sw-reference/architecture-doctrine.md`
+and related plugin references stay plugin law. Valid consumer links use `shipwrightSelfRef` pointers —
+never copied bundled text as project authority.
+
+**Consent:** greenfield empty scaffold is opt-in; brownfield synthesis writes draft baseline only;
+baseline→doctrine requires explicit operator `--confirm` promote and a leakage-green verdict.
+
 
 ### Deliver run-state ledger (PRD 059 R9–R11)
 

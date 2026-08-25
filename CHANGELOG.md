@@ -1073,6 +1073,18 @@
 * merge phase extend-release-dist-regen-workflow-s into feat/release-effective-config-auto-regen (6f0c617) <!-- sw-deliver:extend-release-dist-regen-workflow-s -->
 * merge phase workflow-fixture-operator-docs-s into feat/release-effective-config-auto-regen (afea4ae) <!-- sw-deliver:workflow-fixture-operator-docs-s -->
 * merge phase post-regen-check-acceptance-s into feat/release-effective-config-auto-regen (685c29c) <!-- sw-deliver:post-regen-check-acceptance-s -->
+* merge phase default-truth-contract-and-drift-gate into feat/truth-hygiene-and-project-doctrine (47f5fcd) <!-- sw-deliver:default-truth-contract-and-drift-gate -->
+* merge phase projectdoctrine-and-projectbaseline-schemas into feat/truth-hygiene-and-project-doctrine (f6fc733) <!-- sw-deliver:projectdoctrine-and-projectbaseline-schemas -->
+* merge phase repo-local-consumer-doctrine-lifecycle into feat/truth-hygiene-and-project-doctrine (e0c9ae0) <!-- sw-deliver:repo-local-consumer-doctrine-lifecycle -->
+* merge phase shipwright-self-leakage-detection-and-migration into feat/truth-hygiene-and-project-doctrine (724773f) <!-- sw-deliver:shipwright-self-leakage-detection-and-migration -->
+* merge phase brownfield-baseline-synthesis-interface into feat/truth-hygiene-and-project-doctrine (65271ae) <!-- sw-deliver:brownfield-baseline-synthesis-interface -->
+* merge phase consent-gated-sw-init-adoption-flow into feat/truth-hygiene-and-project-doctrine (5d0cfc2) <!-- sw-deliver:consent-gated-sw-init-adoption-flow -->
+* merge phase consumer-architecture-doctrine-and-codebase-design-boundary into feat/truth-hygiene-and-project-doctrine (10b970f) <!-- sw-deliver:consumer-architecture-doctrine-and-codebase-design-boundary -->
+* merge phase consumer-architecture-doctrine-and-codebase-design-boundary into feat/truth-hygiene-and-project-doctrine (22a8857) <!-- sw-deliver:consumer-architecture-doctrine-and-codebase-design-boundary -->
+* merge phase consumer-architecture-doctrine-and-codebase-design-boundary into feat/truth-hygiene-and-project-doctrine (ea09524) <!-- sw-deliver:consumer-architecture-doctrine-and-codebase-design-boundary -->
+* merge phase operator-documentation-and-routing into feat/truth-hygiene-and-project-doctrine (d10154c) <!-- sw-deliver:operator-documentation-and-routing -->
+* merge phase build-chain-parity-and-integrated-acceptance into feat/truth-hygiene-and-project-doctrine (23bc997) <!-- sw-deliver:build-chain-parity-and-integrated-acceptance -->
+* merge phase absorb-linkage-and-release-closeout into feat/truth-hygiene-and-project-doctrine (aaa7a19) <!-- sw-deliver:absorb-linkage-and-release-closeout -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

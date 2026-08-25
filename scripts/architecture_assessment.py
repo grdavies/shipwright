@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Architecture doctrine assessment evaluator (PRD 326 R13–R15)."""
+"""Architecture doctrine assessment evaluator (PRD 326 R13–R15; PRD 330 R4–R5, R10).
+
+Shipwright-self ``AD-<n>`` statements live in ``core/sw-reference/architecture-doctrine.md``.
+Consumer architecture vocabulary and assessment data are evaluated from repo-local
+``.sw/project-doctrine.json`` (sole ProjectDoctrine SoT). Codebase-design is a read-only
+reference/assessment input — never a second SoT and never a ``/sw-codebase-design`` command.
+"""
 from __future__ import annotations
 
 import argparse
@@ -21,6 +27,13 @@ from yaml_structured import safe_load
 DOCTRINE_REL = Path("core/sw-reference/architecture-doctrine.md")
 SCHEMA_REL = Path("core/sw-reference/architecture-assessment.schema.json")
 DEFAULT_ASSESSMENT_REL = Path(".cursor/architecture-assessment.yaml")
+CONSUMER_DOCTRINE_REL = Path(".sw/project-doctrine.json")
+CONSUMER_VOCABULARY_KEYS = ("modules", "interfaces", "seams", "adapters", "locality")
+CONSUMER_FORBIDDEN_ROOT_KEYS = frozenset({"productRoadmap", "orgChart", "runtimeRunbook"})
+# Codebase-design is reference/assessment input only (PRD 330 R4 / D3) — not a workflow command.
+CODEBASE_DESIGN_IS_COMMAND = False
+BUNDLED_AD_ID_RE = re.compile(r"^AD-[0-9]+$")
+CONSUMER_ENTRY_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9._-]*$")
 DOCTRINE_VERSION_RE = re.compile(r"^\*\*Version:\*\*\s*(\d+)\s*$", re.MULTILINE)
 DOCTRINE_HEADING_RE = re.compile(r"^##\s+(AD-\d+):\s*(.+)$", re.MULTILINE)
 FIELD_RE = re.compile(r"^-\s+\*\*(Rationale|Signal|manual):\*\*\s*(.*)$", re.MULTILINE)
@@ -185,6 +198,247 @@ def parse_doctrine(root: Path, *, path: Path | None = None) -> dict[str, Any]:
     if not doc_path.is_file():
         return {"verdict": "fail", "error": "doctrine-artifact-missing", "path": str(doc_path)}
     return parse_doctrine_text(doc_path.read_text(encoding="utf-8"))
+
+
+def consumer_doctrine_path(root: Path) -> Path:
+    return root / CONSUMER_DOCTRINE_REL
+
+
+def load_consumer_doctrine(root: Path, *, path: Path | None = None) -> dict[str, Any]:
+    doc_path = path or consumer_doctrine_path(root)
+    if not doc_path.is_file():
+        return {"verdict": "skip", "error": "consumer-doctrine-missing", "path": str(doc_path)}
+    try:
+        document = json.loads(doc_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {"verdict": "fail", "error": "consumer-doctrine-parse-error", "detail": str(exc)}
+    if not isinstance(document, dict):
+        return {"verdict": "fail", "error": "consumer-doctrine-invalid"}
+    try:
+        rel = str(doc_path.resolve().relative_to(root.resolve()))
+    except ValueError:
+        rel = str(doc_path)
+    return {"verdict": "pass", "document": document, "path": rel}
+
+
+def extract_consumer_vocabulary(document: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    architecture = document.get("architecture")
+    if not isinstance(architecture, dict):
+        return {key: [] for key in CONSUMER_VOCABULARY_KEYS}
+    vocabulary: dict[str, list[dict[str, Any]]] = {}
+    for key in CONSUMER_VOCABULARY_KEYS:
+        entries = architecture.get(key)
+        vocabulary[key] = list(entries) if isinstance(entries, list) else []
+    return vocabulary
+
+
+def consumer_entry_ids(vocabulary: dict[str, list[dict[str, Any]]]) -> dict[str, str]:
+    by_id: dict[str, str] = {}
+    for category, entries in vocabulary.items():
+        for index, entry in enumerate(entries):
+            if not isinstance(entry, dict):
+                continue
+            entry_id = entry.get("id")
+            if not isinstance(entry_id, str) or not CONSUMER_ENTRY_ID_RE.fullmatch(entry_id):
+                continue
+            if entry_id in by_id:
+                by_id[entry_id] = f"{by_id[entry_id]},{category}[{index}]"
+            else:
+                by_id[entry_id] = category
+    return by_id
+
+
+def validate_consumer_doctrine_document(document: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    for key in CONSUMER_FORBIDDEN_ROOT_KEYS:
+        if key in document:
+            errors.append(f"forbidden root key: {key}")
+    if document.get("version") != "ProjectDoctrine@v1":
+        errors.append("version must be ProjectDoctrine@v1")
+    architecture = document.get("architecture")
+    if architecture is not None:
+        if not isinstance(architecture, dict):
+            errors.append("architecture must be an object")
+        else:
+            for key in architecture:
+                if key not in CONSUMER_VOCABULARY_KEYS:
+                    errors.append(f"unknown architecture key: {key}")
+            for category in CONSUMER_VOCABULARY_KEYS:
+                entries = architecture.get(category)
+                if entries is None:
+                    continue
+                if not isinstance(entries, list):
+                    errors.append(f"architecture.{category} must be a list")
+                    continue
+                for index, entry in enumerate(entries):
+                    prefix = f"architecture.{category}[{index}]"
+                    if not isinstance(entry, dict):
+                        errors.append(f"{prefix} must be an object")
+                        continue
+                    entry_id = entry.get("id")
+                    name = entry.get("name")
+                    if not isinstance(entry_id, str) or not CONSUMER_ENTRY_ID_RE.fullmatch(entry_id):
+                        errors.append(f"{prefix}: invalid id")
+                    elif BUNDLED_AD_ID_RE.fullmatch(entry_id):
+                        errors.append(
+                            f"{prefix}: id {entry_id!r} reuses bundled Shipwright-self AD id"
+                        )
+                    if not isinstance(name, str) or not name.strip():
+                        errors.append(f"{prefix}: name required")
+    assessment = document.get("assessment")
+    if assessment is not None and not isinstance(assessment, dict):
+        errors.append("assessment must be an object")
+    return errors
+
+
+def _normalize_consumer_assessment_document(loaded: dict[str, Any]) -> dict[str, Any]:
+    """Normalize read-only assessment YAML to ``entries`` (never mutates doctrine SoT)."""
+    if isinstance(loaded.get("entries"), list):
+        return {"entries": list(loaded["entries"])}
+    # Allow Shipwright-style ``assessments`` key as a read-only alias for consumer YAML.
+    if isinstance(loaded.get("assessments"), list):
+        return {"entries": list(loaded["assessments"])}
+    return loaded
+
+
+def load_consumer_assessment_yaml(root: Path, document: dict[str, Any]) -> dict[str, Any]:
+    """Load consumer assessment data as a read-only input (does not write doctrine)."""
+    assessment = document.get("assessment")
+    if not isinstance(assessment, dict):
+        return {"verdict": "skip", "error": "consumer-assessment-missing"}
+    artifact_path = assessment.get("artifactPath")
+    if isinstance(artifact_path, str) and artifact_path.strip():
+        yaml_path = root / artifact_path.strip()
+        if not yaml_path.is_file():
+            return {"verdict": "fail", "error": "consumer-assessment-artifact-missing", "path": str(yaml_path)}
+        try:
+            loaded = safe_load(yaml_path.read_text(encoding="utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            return {"verdict": "fail", "error": "consumer-assessment-parse-error", "detail": str(exc)}
+        if not isinstance(loaded, dict):
+            return {"verdict": "fail", "error": "consumer-assessment-invalid"}
+        normalized = _normalize_consumer_assessment_document(loaded)
+        return {
+            "verdict": "pass",
+            "document": normalized,
+            "source": "artifact",
+            "path": str(yaml_path),
+            "readOnly": True,
+        }
+    entries = assessment.get("entries")
+    if isinstance(entries, list):
+        return {
+            "verdict": "pass",
+            "document": {"entries": entries},
+            "source": "doctrine",
+            "readOnly": True,
+        }
+    return {"verdict": "skip", "error": "consumer-assessment-missing"}
+
+
+def evaluate_consumer_assessments(
+    root: Path,
+    *,
+    doctrine: dict[str, Any] | None = None,
+    today: date | None = None,
+) -> dict[str, Any]:
+    loaded = doctrine or load_consumer_doctrine(root)
+    if loaded.get("verdict") == "skip":
+        return {
+            "verdict": "skip",
+            "failed": [],
+            "waived": [],
+            "manual": [],
+            "entries": [],
+        }
+    if loaded.get("verdict") != "pass":
+        return {
+            "verdict": "fail",
+            "error": loaded.get("error", "consumer-doctrine-invalid"),
+            "failed": [],
+            "waived": [],
+            "manual": [],
+        }
+
+    document = loaded["document"]
+    errors = validate_consumer_doctrine_document(document)
+    if errors:
+        return {
+            "verdict": "fail",
+            "error": "consumer-doctrine-schema-invalid",
+            "errors": errors,
+            "failed": [],
+            "waived": [],
+            "manual": [],
+        }
+
+    vocabulary = extract_consumer_vocabulary(document)
+    known_ids = set(consumer_entry_ids(vocabulary))
+    assessment_result = load_consumer_assessment_yaml(root, document)
+    if assessment_result.get("verdict") == "skip":
+        return {
+            "verdict": "pass",
+            "failed": [],
+            "waived": [],
+            "manual": [],
+            "entries": sorted(known_ids),
+            "vocabulary": {key: len(vocabulary[key]) for key in CONSUMER_VOCABULARY_KEYS},
+        }
+    if assessment_result.get("verdict") != "pass":
+        return {
+            "verdict": "fail",
+            "error": assessment_result.get("error", "consumer-assessment-invalid"),
+            "failed": [],
+            "waived": [],
+            "manual": [],
+        }
+
+    assessment_doc = assessment_result["document"]
+    entries = assessment_doc.get("entries") if isinstance(assessment_doc.get("entries"), list) else []
+    failed: list[str] = []
+    waived: list[str] = []
+    manual: list[str] = []
+    seen: set[str] = set()
+
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            failed.append(f"entry[{index}]")
+            continue
+        entry_id = str(entry.get("id") or "")
+        verdict = str(entry.get("verdict") or "")
+        if not entry_id or not CONSUMER_ENTRY_ID_RE.fullmatch(entry_id):
+            failed.append(entry_id or f"entry[{index}]")
+            continue
+        if entry_id in seen:
+            failed.append(entry_id)
+            continue
+        seen.add(entry_id)
+        if entry_id not in known_ids:
+            failed.append(entry_id)
+            continue
+        if verdict == "pass":
+            continue
+        if verdict == "manual":
+            manual.append(entry_id)
+            continue
+        if verdict == "waived":
+            waiver = entry.get("waiver") if isinstance(entry.get("waiver"), dict) else {}
+            if waiver_is_expired(waiver, today=today):
+                failed.append(entry_id)
+            else:
+                waived.append(entry_id)
+            continue
+        failed.append(entry_id)
+
+    overall = "pass" if not failed else "fail"
+    return {
+        "verdict": overall,
+        "failed": sorted(failed),
+        "waived": sorted(waived),
+        "manual": sorted(manual),
+        "entries": sorted(known_ids),
+        "vocabulary": {key: len(vocabulary[key]) for key in CONSUMER_VOCABULARY_KEYS},
+    }
 
 
 def validate_assessment_document(document: Any) -> list[str]:
@@ -423,6 +677,11 @@ def evaluate(root: Path, *, today: date | None = None) -> dict[str, Any]:
         return {"verdict": "skip", "mode": mode, "failed": [], "waived": [], "manual": []}
     result = evaluate_assessments(root, today=today)
     result["mode"] = mode
+    consumer = evaluate_consumer_assessments(root, today=today)
+    result["consumer"] = consumer
+    if consumer.get("verdict") == "fail" and mode == "blocking":
+        result["verdict"] = "fail"
+        result["failed"] = sorted(set(result.get("failed", [])) | set(consumer.get("failed", [])))
     return result
 
 
@@ -442,6 +701,43 @@ def cmd_validate_doctrine(root: Path, args: argparse.Namespace) -> int:
     path = Path(args.path) if args.path else doctrine_path(root)
     result = parse_doctrine(root, path=path)
     emit(result, 0 if result.get("verdict") == "pass" else 20)
+
+
+def cmd_validate_consumer_doctrine(root: Path, args: argparse.Namespace) -> int:
+    path = Path(args.path) if args.path else consumer_doctrine_path(root)
+    loaded = load_consumer_doctrine(root, path=path)
+    if loaded.get("verdict") == "skip":
+        emit(loaded, 0)
+    if loaded.get("verdict") != "pass":
+        emit(loaded, 20)
+    errors = validate_consumer_doctrine_document(loaded["document"])
+    if errors:
+        emit(
+            {
+                "verdict": "fail",
+                "error": "consumer-doctrine-schema-invalid",
+                "errors": errors,
+            },
+            20,
+        )
+    vocabulary = extract_consumer_vocabulary(loaded["document"])
+    emit(
+        {
+            "verdict": "pass",
+            "path": loaded.get("path"),
+            "vocabulary": {key: len(vocabulary[key]) for key in CONSUMER_VOCABULARY_KEYS},
+        },
+        0,
+    )
+
+
+def cmd_evaluate_consumer(root: Path, args: argparse.Namespace) -> int:
+    today = parse_iso_date(args.today) if getattr(args, "today", None) else None
+    result = evaluate_consumer_assessments(root, today=today)
+    code = 0
+    if result.get("verdict") == "fail":
+        code = 20
+    emit(result, code)
 
 
 def cmd_validate_assessment(root: Path, args: argparse.Namespace) -> int:
@@ -558,11 +854,17 @@ def build_parser() -> argparse.ArgumentParser:
     validate_doctrine = sub.add_parser("validate-doctrine")
     validate_doctrine.add_argument("--path")
 
+    validate_consumer = sub.add_parser("validate-consumer-doctrine")
+    validate_consumer.add_argument("--path")
+
     validate_assessment = sub.add_parser("validate-assessment")
     validate_assessment.add_argument("--path")
 
     evaluate_cmd = sub.add_parser("evaluate")
     evaluate_cmd.add_argument("--today", help="ISO date override for waiver expiry tests")
+
+    evaluate_consumer_cmd = sub.add_parser("evaluate-consumer")
+    evaluate_consumer_cmd.add_argument("--today", help="ISO date override for waiver expiry tests")
 
     record_waiver = sub.add_parser("record-waiver")
     record_waiver.add_argument("id")
@@ -581,10 +883,14 @@ def main(argv: list[str] | None = None) -> int:
     command = args.command or "evaluate"
     if command == "validate-doctrine":
         return cmd_validate_doctrine(root, args)
+    if command == "validate-consumer-doctrine":
+        return cmd_validate_consumer_doctrine(root, args)
     if command == "validate-assessment":
         return cmd_validate_assessment(root, args)
     if command == "record-waiver":
         return cmd_record_waiver(root, args)
+    if command == "evaluate-consumer":
+        return cmd_evaluate_consumer(root, args)
     return cmd_evaluate(root, args)
 
 
