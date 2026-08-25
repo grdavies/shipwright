@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,8 @@ from effective_config_gen import (
     check_drift,
     diff_settings,
     render_markdown_fragment,
+    stabilize_generated_at,
+    stabilize_manifest_generated_at,
 )
 
 
@@ -91,3 +94,94 @@ def test_build_upgrade_manifest_has_version(repo_root: Path) -> None:
     manifest = build_upgrade_manifest(repo_root)
     assert manifest["version"]
     assert "newSettings" in manifest
+
+
+def test_stabilize_generated_at_preserves_stamp_when_settings_unchanged() -> None:
+    previous = {
+        "schemaVersion": "config.schema.json",
+        "shipwrightVersion": "2.6.0",
+        "generatedAt": "2026-08-25T05:23:22Z",
+        "settings": {"a": {"schemaDefault": 1}},
+    }
+    fresh = {
+        "schemaVersion": "config.schema.json",
+        "shipwrightVersion": "2.6.0",
+        "generatedAt": "2026-08-25T05:24:12Z",
+        "settings": {"a": {"schemaDefault": 1}},
+    }
+    out = stabilize_generated_at(fresh, previous)
+    assert out["generatedAt"] == "2026-08-25T05:23:22Z"
+
+
+def test_stabilize_generated_at_refreshes_when_version_changes() -> None:
+    previous = {
+        "schemaVersion": "config.schema.json",
+        "shipwrightVersion": "2.5.0",
+        "generatedAt": "2026-08-24T00:00:00Z",
+        "settings": {"a": {"schemaDefault": 1}},
+    }
+    fresh = {
+        "schemaVersion": "config.schema.json",
+        "shipwrightVersion": "2.6.0",
+        "generatedAt": "2026-08-25T05:23:22Z",
+        "settings": {"a": {"schemaDefault": 1}},
+    }
+    out = stabilize_generated_at(fresh, previous)
+    assert out["generatedAt"] == "2026-08-25T05:23:22Z"
+
+
+def test_stabilize_manifest_generated_at_idempotent() -> None:
+    previous = {
+        "version": "2.6.0",
+        "previousVersion": "2.5.0",
+        "generatedAt": "2026-08-25T05:23:22Z",
+        "generator": "scripts/effective_config_gen.py",
+        "newSettings": [],
+        "removedSettings": [],
+        "changedDefaults": [],
+        "deprecated": [],
+        "schemaMigrations": [],
+        "newDurableStateShapes": [],
+        "packageCompatibility": {"shipwright": "2.6.0"},
+        "kernelGraphVersionChanges": [],
+        "requiredManualActions": [],
+        "rollbackConcerns": [],
+    }
+    fresh = dict(previous)
+    fresh["generatedAt"] = "2026-08-25T05:34:16Z"
+    out = stabilize_manifest_generated_at(fresh, previous)
+    assert out["generatedAt"] == "2026-08-25T05:23:22Z"
+
+
+def test_all_write_twice_is_idempotent(repo_root: Path, tmp_path: Path) -> None:
+    """Double all --write must not churn generatedAt (release-dist-regen storm guard)."""
+    mini = tmp_path / "repo"
+    mini.mkdir()
+    for rel in (
+        "core/sw-reference/config.schema.json",
+        "docs/guides/configuration.md",
+        "version.txt",
+    ):
+        src = repo_root / rel
+        dst = mini / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    (mini / "scripts").mkdir()
+    sys.path.insert(0, str(repo_root / "scripts"))
+    from effective_config_gen import cmd_all
+
+    assert cmd_all(mini, write=True) == 0
+    first_cfg = (mini / "core/sw-reference/generated/effective-config.json").read_text(encoding="utf-8")
+    version = (mini / "version.txt").read_text(encoding="utf-8").strip()
+    first_manifest = (
+        mini / "core/sw-reference/generated" / f"upgrade-manifest-{version}.json"
+    ).read_text(encoding="utf-8")
+    time.sleep(1.05)  # cross second boundary so a naive now() stamp would differ
+    assert cmd_all(mini, write=True) == 0
+    second_cfg = (mini / "core/sw-reference/generated/effective-config.json").read_text(encoding="utf-8")
+    second_manifest = (
+        mini / "core/sw-reference/generated" / f"upgrade-manifest-{version}.json"
+    ).read_text(encoding="utf-8")
+    assert second_cfg == first_cfg
+    assert second_manifest == first_manifest
+    assert check_drift(mini) == []
