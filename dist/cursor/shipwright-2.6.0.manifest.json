@@ -330,8 +330,10 @@
     "execution_telemetry.py",
     "execution_telemetry_lib.py",
     "exploration_engine.py",
+    "exploration_evidence.py",
     "exploration_model.py",
     "exploration_policy.py",
+    "exploration_security.py",
     "exploration_store.py",
     "failure-signature-escalate.py",
     "failure-signature-record.py",
@@ -779,5 +781,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 776
+  "moduleCount": 778
 }
