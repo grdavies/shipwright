@@ -1075,6 +1075,7 @@
 * merge phase post-regen-check-acceptance-s into feat/release-effective-config-auto-regen (685c29c) <!-- sw-deliver:post-regen-check-acceptance-s -->
 * merge phase default-truth-contract-and-drift-gate into feat/truth-hygiene-and-project-doctrine (47f5fcd) <!-- sw-deliver:default-truth-contract-and-drift-gate -->
 * merge phase projectdoctrine-and-projectbaseline-schemas into feat/truth-hygiene-and-project-doctrine (f6fc733) <!-- sw-deliver:projectdoctrine-and-projectbaseline-schemas -->
+* merge phase repo-local-consumer-doctrine-lifecycle into feat/truth-hygiene-and-project-doctrine (e0c9ae0) <!-- sw-deliver:repo-local-consumer-doctrine-lifecycle -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
