@@ -508,7 +508,7 @@
       "sourcePath": "core/commands/sw-start.md"
     },
     {
-      "bodyDigest": "29b75ab3a3626d1193822c6be27a3d9d4b2475e60c1fd1a1d525884a7aa4de98",
+      "bodyDigest": "62b80633c67958b6d49a366e4e2d566074f5aab9784ea82bad3bdc65db4d0729",
       "capabilities": [],
       "description": "Derive and reconcile PRD living status from git facts. Does not modify frozen PRDs or merge PRs.",
       "id": "sw-status",
