@@ -27,6 +27,9 @@ jobs:
       - name: Regenerate dist/
         run: python3 -m sw generate --all
 
+      - name: Regenerate effective-config projections
+        run: python3 scripts/effective_config_gen.py all --write
+
       - name: Assert breaking release targets major X.0.0
         run: |
           VERSION="$(tr -d '[:space:]' < version.txt)"
@@ -38,14 +41,17 @@ jobs:
             fi
           fi
 
-      - name: Commit refreshed dist/
+      - name: Commit refreshed dist/ and projections
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dist/
+          git add docs/guides/configuration.md
+          git add core/sw-reference/generated/effective-config.json
+          git add core/sw-reference/generated/upgrade-manifest-*.json
           if git diff --cached --quiet; then
-            echo "dist/ already up to date"
+            echo "dist/ and projections already up to date"
             exit 0
           fi
-          git commit -m "chore: regenerate dist/ for release"
+          git commit -m "chore: regenerate dist/ and effective-config projections for release"
           git push origin HEAD:${{ github.event.pull_request.head.ref }}
