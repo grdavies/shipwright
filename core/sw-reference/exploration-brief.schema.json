@@ -1,0 +1,227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipwright.dev/schemas/exploration-brief/v1",
+  "title": "ExplorationBrief@v1",
+  "description": "Explore-to-doc handoff artifact bound to exploration revision (PRD 331 R14, R20, R41, R46). Never creates PRDs or tasks.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "version",
+    "sourceRevision",
+    "explorationMapId",
+    "destination",
+    "readiness",
+    "planningUnitCandidates",
+    "invalidation",
+    "emittedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "const": "ExplorationBrief@v1"
+    },
+    "sourceRevision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "ExplorationMap revision binding; stale brief derivations fail closed (R41)."
+    },
+    "explorationMapId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "destination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement"],
+      "properties": {
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/decisionSummary"
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidenceSummary"
+      }
+    },
+    "remainingUncertainty": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/uncertaintyEntry"
+      }
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["readinessId", "readyForDocHandoff"],
+      "properties": {
+        "readinessId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "readyForDocHandoff": {
+          "type": "boolean"
+        }
+      }
+    },
+    "planningUnitCandidates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/planningUnitCandidate"
+      },
+      "description": "Candidate units only — no PRD, task, branch, or implementation dispatch (R20)."
+    },
+    "invalidation": {
+      "$ref": "#/$defs/invalidation"
+    },
+    "emittedAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authorityBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["createsPrds", "createsTasks", "dispatchesImplementation"],
+      "properties": {
+        "createsPrds": {
+          "type": "boolean",
+          "const": false
+        },
+        "createsTasks": {
+          "type": "boolean",
+          "const": false
+        },
+        "dispatchesImplementation": {
+          "type": "boolean",
+          "const": false
+        }
+      }
+    }
+  },
+  "$defs": {
+    "decisionSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["nodeId", "title", "status"],
+      "properties": {
+        "nodeId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "resolved", "superseded", "cancelled"]
+        },
+        "resolution": {
+          "type": "string"
+        }
+      }
+    },
+    "evidenceSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["refId", "kind"],
+      "properties": {
+        "refId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["ResearchEvidence", "PrototypeEvidence"]
+        },
+        "claim": {
+          "type": "string"
+        },
+        "trust": {
+          "type": "string",
+          "enum": ["trusted", "untrusted"]
+        }
+      }
+    },
+    "uncertaintyEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "classification"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "type": "string",
+          "enum": ["blocking", "non-blocking", "deferred"]
+        }
+      }
+    },
+    "planningUnitCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "rationale"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,62}$"
+          }
+        }
+      }
+    },
+    "invalidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["valid", "stale", "superseded"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "invalidatedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "supersededByRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}
