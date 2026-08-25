@@ -686,7 +686,9 @@ def test_storage_lifecycle_precedes_consumers(repo_root: Path) -> None:
     for rel in EXPLORATION_SCHEMA_FILES:
         assert (repo_root / rel).is_file()
     store_module = repo_root / "scripts" / "exploration_store.py"
-    assert not store_module.is_file(), "consumer store must not ship before schema phase"
+    model_module = repo_root / "scripts" / "exploration_model.py"
+    assert store_module.is_file(), "schema phase must precede exploration store"
+    assert model_module.is_file(), "schema phase must precede exploration model"
 
 
 def test_decomposition_emits_candidates_without_writes(brief_schema: dict[str, Any]) -> None:
