@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-25T00:37:46Z",
+  "generatedAt": "2026-08-25T01:52:34Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -374,6 +374,15 @@
       "tree": ".github/workflows",
       "file": ".github/workflows/release-dist-regen.yml",
       "line": 31,
+      "column": 21,
+      "script": "effective_config_gen.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/release-dist-regen.yml:34:effective_config_gen.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/release-dist-regen.yml",
+      "line": 34,
       "column": 21,
       "script": "effective_config_gen.py",
       "classification": "self-repo-only"

@@ -30,6 +30,9 @@ jobs:
       - name: Regenerate effective-config projections
         run: python3 scripts/effective_config_gen.py all --write
 
+      - name: Verify effective-config projections are current
+        run: python3 scripts/effective_config_gen.py check
+
       - name: Assert breaking release targets major X.0.0
         run: |
           VERSION="$(tr -d '[:space:]' < version.txt)"
