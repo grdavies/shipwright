@@ -1073,6 +1073,7 @@
 * merge phase extend-release-dist-regen-workflow-s into feat/release-effective-config-auto-regen (6f0c617) <!-- sw-deliver:extend-release-dist-regen-workflow-s -->
 * merge phase workflow-fixture-operator-docs-s into feat/release-effective-config-auto-regen (afea4ae) <!-- sw-deliver:workflow-fixture-operator-docs-s -->
 * merge phase post-regen-check-acceptance-s into feat/release-effective-config-auto-regen (685c29c) <!-- sw-deliver:post-regen-check-acceptance-s -->
+* merge phase default-truth-contract-and-drift-gate into feat/truth-hygiene-and-project-doctrine (47f5fcd) <!-- sw-deliver:default-truth-contract-and-drift-gate -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
