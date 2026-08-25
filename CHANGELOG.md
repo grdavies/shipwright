@@ -1057,6 +1057,7 @@
 * merge phase finalize-import-bootstrap-for-planning-txn-s into feat/finalize-teardown-checkpoint-hygiene (9adc99e) <!-- sw-deliver:finalize-import-bootstrap-for-planning-txn-s -->
 * merge phase phase-before-orch-worktree-teardown-s into feat/finalize-teardown-checkpoint-hygiene (8188eab) <!-- sw-deliver:phase-before-orch-worktree-teardown-s -->
 * merge phase regressions-and-docs-s into feat/finalize-teardown-checkpoint-hygiene (5617cd7) <!-- sw-deliver:regressions-and-docs-s -->
+* merge phase extend-release-dist-regen-workflow-s into feat/release-effective-config-auto-regen (6f0c617) <!-- sw-deliver:extend-release-dist-regen-workflow-s -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
