@@ -638,6 +638,7 @@
     "port_w1_behavioral.py",
     "port_wave_behavioral.py",
     "primary_checkout_guard.py",
+    "project_doctrine.py",
     "publish_surface_audit.py",
     "quality_config_freeze.py",
     "quality_provider.py",
@@ -772,5 +773,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 769
+  "moduleCount": 770
 }
