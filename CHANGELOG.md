@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.6.0](https://github.com/grdavies/shipwright/compare/v2.5.0...v2.6.0) (2026-08-25)
+
+
+### Features
+
+* **prd-328:** finalize teardown checkpoint hygiene ([#1007](https://github.com/grdavies/shipwright/issues/1007)) ([51fb466](https://github.com/grdavies/shipwright/commit/51fb46674bd7bc1f8a34658de7a5db9877aab5fb))
+* **prd-329:** release effective config auto regen ([#1012](https://github.com/grdavies/shipwright/issues/1012)) ([20e9f18](https://github.com/grdavies/shipwright/commit/20e9f18beabc26714ba2e7ec4805441b206ebe8c))
+
+
+### Bug Fixes
+
+* **release:** stop release-dist-regen generatedAt commit storm ([#1013](https://github.com/grdavies/shipwright/issues/1013)) ([904143f](https://github.com/grdavies/shipwright/commit/904143fddf1631d81223ce3878491c3a68adcf8c))
+
 ## [2.5.0](https://github.com/grdavies/shipwright/compare/v2.4.0...v2.5.0) (2026-08-24)
 
 
