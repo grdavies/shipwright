@@ -10,6 +10,7 @@ import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from copy import deepcopy
 from typing import Any, Mapping
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -17,6 +18,7 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from gate_evidence import digest_bytes, utc_now  # noqa: E402
+from exploration_policy import DEFAULT_INTERACTION_MODE  # noqa: E402
 
 SCHEMA_REL = Path("core/sw-reference/handoff-bundle.schema.json")
 SCHEMA_VERSION = "HandoffBundle@v1"
@@ -438,6 +440,221 @@ def export_bundle(
     return {"verdict": "pass", "bundle": bundle, "readOnly": True}
 
 
+def _extract_exploration_context(bundle: Mapping[str, Any]) -> dict[str, Any] | None:
+    extensions = bundle.get("extensions")
+    if isinstance(extensions, dict):
+        exploration = extensions.get("exploration")
+        if isinstance(exploration, dict) and exploration.get("explorationMapId"):
+            return dict(exploration)
+        cursor = extensions.get("cursor")
+        if isinstance(cursor, dict):
+            exploration = cursor.get("exploration")
+            if isinstance(exploration, dict) and exploration.get("explorationMapId"):
+                return dict(exploration)
+    current_state = bundle.get("currentState")
+    if isinstance(current_state, dict):
+        exploration = current_state.get("exploration")
+        if isinstance(exploration, dict) and exploration.get("explorationMapId"):
+            return dict(exploration)
+    return None
+
+
+def _notebook_provenance(map_document: Mapping[str, Any]) -> dict[str, Any]:
+    provenance = map_document.get("provenance")
+    if not isinstance(provenance, dict):
+        return {}
+    notebook = provenance.get("notebook")
+    if isinstance(notebook, dict):
+        return dict(notebook)
+    notebook_id = str(provenance.get("notebookId") or "").strip()
+    if notebook_id:
+        payload: dict[str, Any] = {"notebookId": notebook_id}
+        source = provenance.get("source")
+        if isinstance(source, str) and source.strip():
+            payload["source"] = source.strip()
+        return payload
+    source = provenance.get("source")
+    if isinstance(source, str) and source.strip():
+        return {"source": source.strip()}
+    return {}
+
+
+def build_exploration_resume_context(
+    map_document: Mapping[str, Any],
+    *,
+    brief: Mapping[str, Any] | None = None,
+    interaction_state: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build exploration resume payload for HandoffBundle (PRD 331 R15, R39, R45)."""
+    map_id = str(map_document.get("id") or "").strip()
+    revision = int(map_document.get("revision", 1))
+    if not map_id:
+        raise ValueError("missing-map-id")
+    mode = DEFAULT_INTERACTION_MODE
+    state: dict[str, Any] = {"mode": mode}
+    if interaction_state:
+        if isinstance(interaction_state.get("mode"), str) and interaction_state["mode"].strip():
+            state["mode"] = interaction_state["mode"].strip()
+        for key in ("activeNodeId", "lastPrompt", "phase", "mapId", "expectedRevision"):
+            value = interaction_state.get(key)
+            if isinstance(value, str) and value.strip():
+                state[key] = value.strip()
+            elif isinstance(value, int):
+                state[key] = value
+    recovery = (
+        f"Resume with `/sw-explore resume --map-id {map_id}` when map revision {revision} matches. "
+        "If the live map advanced, re-export the handoff bundle — stale revisions fail closed."
+    )
+    context: dict[str, Any] = {
+        "explorationMapId": map_id,
+        "revision": revision,
+        "mapRevision": revision,
+        "notebookProvenance": _notebook_provenance(map_document),
+        "interactionState": state,
+        "recoveryInstructions": recovery,
+    }
+    if brief is not None:
+        context["briefId"] = str(brief.get("id") or "")
+        brief_revision = brief.get("sourceRevision")
+        if isinstance(brief_revision, int):
+            context["briefSourceRevision"] = brief_revision
+        readiness = brief.get("readiness")
+        context["brief"] = {
+            "id": str(brief.get("id") or ""),
+            "sourceRevision": brief_revision,
+            "readyForDocHandoff": bool(
+                isinstance(readiness, dict) and readiness.get("readyForDocHandoff")
+            ),
+            "invalidation": deepcopy(brief.get("invalidation") or {"state": "valid"}),
+        }
+        if isinstance(readiness, dict):
+            context["forwardHandoffReady"] = bool(readiness.get("readyForDocHandoff"))
+    return context
+
+
+def _attach_exploration_context(bundle: dict[str, Any], exploration: Mapping[str, Any]) -> dict[str, Any]:
+    updated = dict(bundle)
+    current_state = dict(updated.get("currentState") or {})
+    current_state["exploration"] = dict(exploration)
+    updated["currentState"] = current_state
+    extensions = dict(updated.get("extensions") or {})
+    extensions["exploration"] = dict(exploration)
+    cursor = dict(extensions.get("cursor") or {})
+    cursor["exploration"] = dict(exploration)
+    extensions["cursor"] = cursor
+    updated["extensions"] = extensions
+    updated["nextAction"] = {
+        "action": "resume-exploration",
+        "detail": str(exploration.get("recoveryInstructions") or ""),
+        "command": f"/sw-explore resume --map-id {exploration.get('explorationMapId')}",
+    }
+    updated["workflowDigest"] = build_workflow_digest(updated)
+    updated["bundleDigest"] = digest_payload(updated)
+    return updated
+
+
+def export_exploration_bundle(
+    root: Path,
+    map_document: Mapping[str, Any],
+    *,
+    brief: Mapping[str, Any] | None = None,
+    interaction_state: Mapping[str, Any] | None = None,
+    goal: str | None = None,
+    ttl_seconds: int = DEFAULT_FRESHNESS_TTL_SECONDS,
+    handoff_degraded: bool = False,
+    base_ref: str | None = None,
+) -> dict[str, Any]:
+    """Export HandoffBundle with cross-session exploration resume context (R15, R39, R45)."""
+    from exploration_brief import emit_brief
+
+    map_id = str(map_document.get("id") or "").strip()
+    if not map_id:
+        return {"verdict": "fail", "error": "handoff:missing-map-id"}
+    live_brief = brief or emit_brief(map_document)
+    exploration = build_exploration_resume_context(
+        map_document,
+        brief=live_brief,
+        interaction_state=interaction_state,
+    )
+    result = export_bundle(
+        root,
+        unit_id=map_id,
+        goal=goal or f"Resume exploration {map_id}",
+        ttl_seconds=ttl_seconds,
+        handoff_degraded=handoff_degraded if handoff_degraded else True,
+        base_ref=base_ref,
+    )
+    if result.get("verdict") != "pass" or not isinstance(result.get("bundle"), dict):
+        return result
+    bundle = _attach_exploration_context(result["bundle"], exploration)
+    validation = validate_bundle(bundle, root=root)
+    if validation.get("verdict") != "pass":
+        return validation
+    redacted = redact_bundle_text(root, canonical_json(bundle))
+    try:
+        bundle = json.loads(redacted)
+    except json.JSONDecodeError:
+        return {"verdict": "fail", "error": "handoff:redaction-invalid-json"}
+    bundle = _attach_exploration_context(bundle, exploration)
+    validation = validate_bundle(bundle, root=root)
+    if validation.get("verdict") != "pass":
+        return validation
+    return {"verdict": "pass", "bundle": bundle, "brief": live_brief, "readOnly": True}
+
+
+def import_exploration_resume(
+    root: Path,
+    bundle: Mapping[str, Any] | str | Path,
+    *,
+    allow_stale: bool = False,
+    expected_revision: int | None = None,
+) -> dict[str, Any]:
+    """Validate imported bundle and return exploration resume context (never resumes deliver)."""
+    result = import_bundle(root, bundle, allow_stale=allow_stale)
+    if result.get("verdict") != "pass":
+        return result
+    clean = result["bundle"]
+    exploration = _extract_exploration_context(clean)
+    if exploration is None:
+        return {"verdict": "fail", "error": "handoff:missing-exploration-context"}
+    live_revision = exploration.get("revision") or exploration.get("mapRevision")
+    if expected_revision is not None and live_revision != expected_revision:
+        return {
+            "verdict": "halt",
+            "error": "handoff:stale-revision",
+            "expectedRevision": expected_revision,
+            "bundleRevision": live_revision,
+            "resumeCommand": f"/sw-explore resume --map-id {exploration.get('explorationMapId')}",
+        }
+    brief = exploration.get("brief")
+    brief_revision = exploration.get("briefSourceRevision")
+    if isinstance(brief, dict):
+        invalidation = brief.get("invalidation")
+        if isinstance(invalidation, dict) and invalidation.get("state") != "valid":
+            return {
+                "verdict": "halt",
+                "error": "handoff:brief-invalidated",
+                "invalidation": invalidation,
+                "resumeCommand": str(exploration.get("recoveryInstructions") or ""),
+            }
+    elif isinstance(brief_revision, int) and exploration.get("briefId"):
+        invalidation_state = exploration.get("invalidation")
+        if isinstance(invalidation_state, dict) and invalidation_state.get("state") != "valid":
+            return {
+                "verdict": "halt",
+                "error": "handoff:brief-invalidated",
+                "invalidation": invalidation_state,
+                "resumeCommand": str(exploration.get("recoveryInstructions") or ""),
+            }
+    return {
+        "verdict": "pass",
+        "bundle": clean,
+        "exploration": exploration,
+        "resumeCommand": str(exploration.get("recoveryInstructions") or ""),
+        "foreignHarnessResumeForbidden": True,
+    }
+
+
 def import_bundle(
     root: Path,
     bundle: Mapping[str, Any] | str | Path,
@@ -541,6 +758,68 @@ def cmd_import(args: argparse.Namespace) -> int:
     return 20
 
 
+def _read_json_file(path: str) -> dict[str, Any] | None:
+    if not path:
+        return None
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    return payload if isinstance(payload, dict) else None
+
+
+def cmd_export_exploration(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve() if args.root else repo_root()
+    map_document = _read_json_file(args.map_json)
+    if map_document is None:
+        print(json.dumps({"verdict": "fail", "error": "handoff:invalid-map-json"}, indent=2))
+        return 20
+    brief = _read_json_file(args.brief_json)
+    interaction = _read_json_file(args.interaction_json)
+    result = export_exploration_bundle(
+        root,
+        map_document,
+        brief=brief,
+        interaction_state=interaction,
+        goal=args.goal or None,
+        ttl_seconds=int(args.ttl_seconds),
+        handoff_degraded=bool(args.handoff_degraded),
+        base_ref=args.base_ref or None,
+    )
+    if args.out and result.get("verdict") == "pass" and isinstance(result.get("bundle"), dict):
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(
+            json.dumps(result["bundle"], ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        result = {**result, "path": str(out_path)}
+    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+    verdict = str(result.get("verdict") or "")
+    if verdict == "pass":
+        return 0
+    if verdict == "halt":
+        return 21
+    return 20
+
+
+def cmd_import_exploration(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve() if args.root else repo_root()
+    expected_revision = None
+    if str(args.expected_revision or "").strip():
+        expected_revision = int(args.expected_revision)
+    result = import_exploration_resume(
+        root,
+        Path(args.path),
+        allow_stale=bool(args.allow_stale),
+        expected_revision=expected_revision,
+    )
+    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+    verdict = str(result.get("verdict") or "")
+    if verdict == "pass":
+        return 0
+    if verdict == "halt":
+        return 21
+    return 20
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="HandoffBundle@v1 export/import (PRD 280 gap-324)")
     parser.add_argument("--root", default="", help="Repository root (default: git root from cwd)")
@@ -565,6 +844,29 @@ def main(argv: list[str] | None = None) -> int:
     import_cmd.add_argument("path")
     import_cmd.add_argument("--allow-stale", action="store_true")
     import_cmd.set_defaults(func=cmd_import)
+
+    export_exploration = sub.add_parser(
+        "export-exploration",
+        help="Export bundle with exploration resume context",
+    )
+    export_exploration.add_argument("--map-json", required=True, help="Path to ExplorationMap JSON")
+    export_exploration.add_argument("--brief-json", default="", help="Optional precomputed brief JSON")
+    export_exploration.add_argument("--interaction-json", default="", help="Optional interaction state JSON")
+    export_exploration.add_argument("--goal", default="")
+    export_exploration.add_argument("--ttl-seconds", default=str(DEFAULT_FRESHNESS_TTL_SECONDS))
+    export_exploration.add_argument("--handoff-degraded", action="store_true")
+    export_exploration.add_argument("--base-ref", default="")
+    export_exploration.add_argument("--out", default="")
+    export_exploration.set_defaults(func=cmd_export_exploration)
+
+    import_exploration = sub.add_parser(
+        "import-exploration",
+        help="Import bundle and return exploration resume context",
+    )
+    import_exploration.add_argument("path")
+    import_exploration.add_argument("--allow-stale", action="store_true")
+    import_exploration.add_argument("--expected-revision", default="")
+    import_exploration.set_defaults(func=cmd_import_exploration)
 
     args = parser.parse_args(argv)
     return int(args.func(args))
