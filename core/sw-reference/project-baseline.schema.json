@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipwright.dev/schemas/project-baseline/v1",
+  "title": "ProjectBaseline@v1",
+  "description": "Evidence-bearing draft baseline facts for consumer repos (PRD 330 R6, R9, R14). Never grants autonomous product or doctrine authority.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "version", "provenance", "status", "facts"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "const": "ProjectBaseline@v1"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "status": {
+      "const": "draft",
+      "description": "Baseline remains draft until an explicit operator promote creates doctrine."
+    },
+    "confidence": {
+      "$ref": "#/$defs/confidence"
+    },
+    "expiresAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "facts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fact"
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/conflict"
+      }
+    }
+  },
+  "anyOf": [
+    {
+      "required": ["confidence"]
+    },
+    {
+      "required": ["expiresAt"]
+    }
+  ],
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["createdAt", "source"],
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "updatedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actor": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["high", "medium", "low", "unknown"]
+    },
+    "sourceEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri"],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "quote": {
+          "type": "string"
+        },
+        "accessedAt": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "claim", "sourceEvidence"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claim": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceEvidence": {
+          "$ref": "#/$defs/sourceEvidence"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "expiresAt": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["confidence"]
+        },
+        {
+          "required": ["expiresAt"]
+        }
+      ]
+    },
+    "conflictObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["factId", "claim", "sourceEvidence"],
+      "properties": {
+        "factId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "claim": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceEvidence": {
+          "$ref": "#/$defs/sourceEvidence"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        }
+      }
+    },
+    "conflict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "observations", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": ["open", "acknowledged"]
+        },
+        "observations": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/conflictObservation"
+          }
+        }
+      }
+    }
+  }
+}

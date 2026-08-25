@@ -96,6 +96,8 @@
     "planning-import-inventory.json",
     "planning-privacy-notice.md",
     "planning-unit.schema.json",
+    "project-baseline.schema.json",
+    "project-doctrine.schema.json",
     "pr-test-plan.manifest.json",
     "quality-signal.schema.json",
     "root-cause-record.schema.json",
