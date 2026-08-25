@@ -299,6 +299,70 @@ def preflight(root: Path, *, loader: RulesLoader | None = None) -> dict[str, Any
     }
 
 
+def exploration_query(
+    root: Path,
+    query: str,
+    *,
+    preflight_loader: Callable[[Path], dict[str, Any]] | None = None,
+    query_fn: Callable[[Path, str, dict[str, Any]], dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Exploration query mode — redacted historical context or non-blocking degraded result (R19, R42)."""
+    cleaned = str(query or "").strip()
+    if not cleaned:
+        return {
+            "verdict": "degraded",
+            "source": "memory",
+            "status": "absent",
+            "blocking": False,
+            "nonBlocking": True,
+            "cause": "empty-query",
+            "results": [],
+            "redacted": True,
+        }
+    try:
+        from exploration_security import lookup_historical_context
+
+        result = lookup_historical_context(
+            root,
+            cleaned,
+            preflight=preflight_loader or preflight,
+            query_fn=query_fn,
+        )
+    except PreflightError as exc:
+        return {
+            "verdict": "degraded",
+            "source": "memory",
+            "status": "degraded",
+            "blocking": False,
+            "nonBlocking": True,
+            "cause": exc.cause,
+            "results": [],
+            "redacted": True,
+        }
+    except Exception as exc:  # noqa: BLE001 — exploration must not block on provider faults
+        return {
+            "verdict": "degraded",
+            "source": "memory",
+            "status": "degraded",
+            "blocking": False,
+            "nonBlocking": True,
+            "cause": "memory-provider-failure",
+            "results": [],
+            "redacted": True,
+            "error": str(exc),
+        }
+    status = "available" if result.get("verdict") == "ok" else "degraded"
+    return {
+        **result,
+        "source": "memory",
+        "status": status,
+        "blocking": False,
+        "nonBlocking": True,
+        "mode": "exploration-query",
+        "redacted": bool(result.get("redacted", True)),
+    }
+
+
 def assert_write_binding(
     root: Path,
     operation: str,
@@ -361,6 +425,9 @@ def dispatch_mutating_store(
     return out
 
 
+HistoricalSearchFn = Callable[[Path, str, dict[str, Any]], dict[str, Any]]
+
+
 def memory_sync_store_path(
     root: Path,
     *,
@@ -410,6 +477,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     resolve_p.add_argument("--operation", default="memory-sync")
     resolve_p.add_argument("--category", default=None)
+    query_p = sub.add_parser(
+        "exploration-query",
+        help="Exploration historical query — redacted context or non-blocking degrade",
+    )
+    query_p.add_argument("--query", default="")
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
     command = args.command or "rules-load"
@@ -423,6 +495,8 @@ def main(argv: list[str] | None = None) -> int:
                 operation=str(args.operation),
                 category=args.category,
             )
+        elif command == "exploration-query":
+            result = exploration_query(root, str(args.query))
         else:
             result = preflight(root)
     except MemoryWriteBindingError as exc:

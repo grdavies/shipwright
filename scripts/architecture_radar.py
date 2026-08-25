@@ -392,6 +392,103 @@ def emit_gap_drafts(
     }
 
 
+def explore_radar_adapter(root: Path) -> dict[str, Any]:
+    """Explore-facing radar adapter with explicit degraded status (PRD 331 R17, R42)."""
+    try:
+        scored = score_candidates(root)
+        candidates = scored.get("candidates") or []
+        return {
+            "verdict": "ok",
+            "source": "radar",
+            "status": "available",
+            "blocking": False,
+            "nonBlocking": True,
+            "candidateCount": len(candidates),
+            "topCandidates": candidates[:5],
+            "readOnly": True,
+        }
+    except SystemExit as exc:
+        return {
+            "verdict": "degraded",
+            "source": "radar",
+            "status": "degraded",
+            "blocking": False,
+            "nonBlocking": True,
+            "cause": "radar-unavailable",
+            "candidateCount": 0,
+            "topCandidates": [],
+            "readOnly": True,
+            "error": str(exc),
+        }
+    except Exception as exc:  # noqa: BLE001 — explore adapter must not block
+        return {
+            "verdict": "degraded",
+            "source": "radar",
+            "status": "degraded",
+            "blocking": False,
+            "nonBlocking": True,
+            "cause": "radar-provider-failure",
+            "candidateCount": 0,
+            "topCandidates": [],
+            "readOnly": True,
+            "error": str(exc),
+        }
+
+
+def explore_vocabulary_adapter(root: Path) -> dict[str, Any]:
+    """Explore-facing vocabulary adapter with explicit degraded status (PRD 331 R18, R42)."""
+    try:
+        from domain_vocabulary import list_terms
+
+        listed = list_terms(root)
+        terms = listed.get("terms") if isinstance(listed.get("terms"), list) else []
+        compact = [
+            {
+                "slug": item.get("slug"),
+                "canonicalName": (item.get("term") or {}).get("canonicalName"),
+                "definition": (item.get("term") or {}).get("definition"),
+            }
+            for item in terms
+            if isinstance(item, dict)
+        ]
+        status = "available" if compact else "absent"
+        return {
+            "verdict": "ok" if compact else "degraded",
+            "source": "vocabulary",
+            "status": status,
+            "blocking": False,
+            "nonBlocking": True,
+            "termCount": len(compact),
+            "terms": compact[:20],
+            "readOnly": True,
+        }
+    except SystemExit:
+        return {
+            "verdict": "degraded",
+            "source": "vocabulary",
+            "status": "degraded",
+            "blocking": False,
+            "nonBlocking": True,
+            "cause": "vocabulary-unavailable",
+            "termCount": 0,
+            "terms": [],
+            "readOnly": True,
+        }
+    except Exception as exc:  # noqa: BLE001 — explore adapter must not block
+        return {
+            "verdict": "degraded",
+            "source": "vocabulary",
+            "status": "degraded",
+            "blocking": False,
+            "nonBlocking": True,
+            "cause": "vocabulary-provider-failure",
+            "termCount": 0,
+            "terms": [],
+            "readOnly": True,
+            "error": str(exc),
+        }
+
+
 def cmd_emit_candidates(root: Path, *, confirm: bool, scan_id: str | None = None) -> dict[str, Any]:
     doc = load_scan(root, scan_id)
     candidates = doc.get("candidates") or []
