@@ -335,6 +335,7 @@
     "exploration_policy.py",
     "exploration_security.py",
     "exploration_store.py",
+    "explore_command_contract.py",
     "failure-signature-escalate.py",
     "failure-signature-record.py",
     "failure_signature_escalate.py",
@@ -781,5 +782,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 778
+  "moduleCount": 779
 }

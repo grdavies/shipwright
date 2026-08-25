@@ -292,6 +292,15 @@
       "sourcePath": "core/commands/sw-execute.md"
     },
     {
+      "bodyDigest": "3b4e93c3d4e1bd3fab5da9bdf4a1427e49501fca64b182023d8ff47ea7954905",
+      "capabilities": [],
+      "description": "Destination-first structured exploration before planning \u2014 idea, notebook, resume, promote, and explicit doc handoff. Does not create PRDs/tasks, dispatch implementation, or resolve Quick/Standard/Full tier at entry.",
+      "id": "sw-explore",
+      "kind": "command",
+      "model": null,
+      "sourcePath": "core/commands/sw-explore.md"
+    },
+    {
       "bodyDigest": "9653cd2e11c9eae44544e2c027758f7eeedc0c8e74cb11e126de683145c34744",
       "capabilities": [],
       "description": "Unified inbound-signals intake \u2014 normalizes production, review, and retro feedback and routes to debug, gap-capture, or brainstorm without analyzing or authoring.",
@@ -391,7 +400,7 @@
       "sourcePath": "core/commands/sw-migrate.md"
     },
     {
-      "bodyDigest": "70752bfc09929ef3e579c703002d334365cb75acd9f79c590d11d2e48cd7d3fd",
+      "bodyDigest": "699052a025e681b840ae2ac1dff34e76b738c2aa0a8a1b50a0202ddb8ff101cc",
       "capabilities": [],
       "description": "Capture a one-line idea, task, or note into the local notebook outside the planning store, with confirm-first graduation to a gap or brainstorm. Does not write to the planning store directly or replace /sw-feedback gap-capture.",
       "id": "sw-note",
@@ -638,6 +647,15 @@
       "kind": "skill",
       "model": null,
       "sourcePath": "core/skills/execute-discipline/SKILL.md"
+    },
+    {
+      "bodyDigest": "f8dc23fed53379a673c1503f57a028883a8088305ec4a1d3b5bbaf796115b92c",
+      "capabilities": [],
+      "description": "Destination-first structured exploration through ask \u2192 decide \u2192 confirm \u2014 humans own intent, blocking policy, promote, and doc handoff. Use when scope is unclear before /sw-doc. Does not dispatch implementation or create PRDs/tasks.",
+      "id": "explore",
+      "kind": "skill",
+      "model": null,
+      "sourcePath": "core/skills/explore/SKILL.md"
     },
     {
       "bodyDigest": "fdbf509c8758aff98a73e87183d8eb92c293fc11fe45cac54926b8c8e677a293",

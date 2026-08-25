@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-25T14:06:02Z",
+  "generatedAt": "2026-08-25T22:16:14Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -1459,6 +1459,15 @@
       "classification": "consumer-capable"
     },
     {
+      "id": "core/commands/sw-explore.md:51:sw_bootstrap.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-explore.md",
+      "line": 51,
+      "column": 43,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
       "id": "core/commands/sw-feedback-close.md:24:feedback-closure-gate.py",
       "tree": "core/commands",
       "file": "core/commands/sw-feedback-close.md",
@@ -2512,28 +2521,28 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-note.md:72:sw_bootstrap.py",
+      "id": "core/commands/sw-note.md:73:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-note.md",
-      "line": 72,
+      "line": 73,
       "column": 27,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-note.md:89:sw_bootstrap.py",
+      "id": "core/commands/sw-note.md:95:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-note.md",
-      "line": 89,
+      "line": 95,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-note.md:96:sw_bootstrap.py",
+      "id": "core/commands/sw-note.md:102:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-note.md",
-      "line": 96,
+      "line": 102,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -5617,6 +5626,15 @@
       "classification": "self-repo-only"
     },
     {
+      "id": "core/skills/explore/SKILL.md:11:sw_bootstrap.py",
+      "tree": "core/skills",
+      "file": "core/skills/explore/SKILL.md",
+      "line": 11,
+      "column": 43,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
       "id": "core/skills/feedback-closure/SKILL.md:16:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/feedback-closure/SKILL.md",
@@ -8596,6 +8614,15 @@
       "classification": "consumer-capable"
     },
     {
+      "id": "dist/claude-code/commands/sw-explore.md:51:sw_bootstrap.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-explore.md",
+      "line": 51,
+      "column": 43,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
       "id": "dist/claude-code/commands/sw-feedback-close.md:24:feedback-closure-gate.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-feedback-close.md",
@@ -9649,28 +9676,28 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-note.md:72:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-note.md:73:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-note.md",
-      "line": 72,
+      "line": 73,
       "column": 27,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-note.md:89:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-note.md:95:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-note.md",
-      "line": 89,
+      "line": 95,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-note.md:96:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-note.md:102:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-note.md",
-      "line": 96,
+      "line": 102,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -11870,6 +11897,15 @@
       "column": 8,
       "script": "execution_telemetry.py",
       "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/explore/SKILL.md:11:sw_bootstrap.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/explore/SKILL.md",
+      "line": 11,
+      "column": 43,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
     },
     {
       "id": "dist/claude-code/skills/feedback-closure/SKILL.md:16:sw_bootstrap.py",
@@ -14527,6 +14563,15 @@
       "classification": "consumer-capable"
     },
     {
+      "id": "dist/cursor/commands/sw-explore.md:51:sw_bootstrap.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-explore.md",
+      "line": 51,
+      "column": 43,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
+    },
+    {
       "id": "dist/cursor/commands/sw-feedback-close.md:24:feedback-closure-gate.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-feedback-close.md",
@@ -15580,28 +15625,28 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-note.md:72:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-note.md:73:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-note.md",
-      "line": 72,
+      "line": 73,
       "column": 27,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-note.md:89:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-note.md:95:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-note.md",
-      "line": 89,
+      "line": 95,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-note.md:96:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-note.md:102:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-note.md",
-      "line": 96,
+      "line": 102,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -17801,6 +17846,15 @@
       "column": 8,
       "script": "execution_telemetry.py",
       "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/explore/SKILL.md:11:sw_bootstrap.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/explore/SKILL.md",
+      "line": 11,
+      "column": 43,
+      "script": "sw_bootstrap.py",
+      "classification": "consumer-capable"
     },
     {
       "id": "dist/cursor/skills/feedback-closure/SKILL.md:16:sw_bootstrap.py",
