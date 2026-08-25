@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipwright.dev/schemas/planning-readiness/v1",
+  "title": "PlanningReadiness@v1",
+  "description": "Deterministic planning readiness derived from exploration state (PRD 331 R11, R12, R41, R46).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "version",
+    "sourceRevision",
+    "explorationMapId",
+    "unknowns",
+    "invalidation",
+    "computedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "const": "PlanningReadiness@v1"
+    },
+    "sourceRevision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "ExplorationMap revision this readiness was computed from; stale derivations fail closed (R41)."
+    },
+    "explorationMapId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "unknowns": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/classifiedUnknown"
+      }
+    },
+    "summary": {
+      "$ref": "#/$defs/readinessSummary"
+    },
+    "invalidation": {
+      "$ref": "#/$defs/invalidation"
+    },
+    "computedAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "readyForDocHandoff": {
+      "type": "boolean",
+      "description": "True only when no blocking unknowns remain and invalidation state is valid."
+    }
+  },
+  "$defs": {
+    "unknownClassification": {
+      "type": "string",
+      "enum": ["blocking", "non-blocking", "deferred"]
+    },
+    "classifiedUnknown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "classification"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "$ref": "#/$defs/unknownClassification"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceNodeId": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        }
+      }
+    },
+    "readinessSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blockingCount", "nonBlockingCount", "deferredCount"],
+      "properties": {
+        "blockingCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nonBlockingCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "deferredCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "narrative": {
+          "type": "string"
+        }
+      }
+    },
+    "invalidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": ["valid", "stale", "superseded"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "invalidatedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "supersededByRevision": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

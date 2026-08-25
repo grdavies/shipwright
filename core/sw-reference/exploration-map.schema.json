@@ -1,0 +1,339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://shipwright.dev/schemas/exploration-map/v1",
+  "title": "ExplorationMap@v1",
+  "description": "Provider-neutral canonical exploration map (PRD 331 R8, R9, R37, R44, R46). Projections and provider visualizations MUST remain below this semantics layer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "version",
+    "revision",
+    "destination",
+    "structuredFields",
+    "nodes",
+    "persistenceTriggers",
+    "provenance"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable exploration map identity for resume and handoff."
+    },
+    "version": {
+      "const": "ExplorationMap@v1"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Optimistic revision for concurrent resume; stale writes fail closed (R41)."
+    },
+    "destination": {
+      "$ref": "#/$defs/destination"
+    },
+    "structuredFields": {
+      "$ref": "#/$defs/structuredFields"
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/explorationNode"
+      }
+    },
+    "persistenceTriggers": {
+      "$ref": "#/$defs/persistenceTriggers"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "supersededNodeIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]{0,62}$"
+      },
+      "description": "Decision supersession provenance; dependent outputs invalidate when revision advances (R13, R41)."
+    }
+  },
+  "$defs": {
+    "destination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["statement", "nonCommittal"],
+      "properties": {
+        "statement": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Destination-first statement before large graph expansion (R4); not an implementation commitment."
+        },
+        "nonCommittal": {
+          "type": "boolean",
+          "const": true,
+          "description": "Destination remains explicitly non-committal until operator promote/handoff."
+        },
+        "updatedAt": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "structuredFields": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "problem": { "type": "string" },
+        "outcomes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "successCriteria": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "constraints": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "nonGoals": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "knownFacts": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "unknowns": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/structuredUnknown" }
+        },
+        "stakeholders": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "evidenceNeeds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "candidateApproaches": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "risks": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "planningUnitCandidates": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/planningUnitCandidateHint" },
+          "description": "Structured hints only — never auto-create PRDs or tasks (R20)."
+        }
+      }
+    },
+    "structuredUnknown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "statement", "classification"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "type": "string",
+          "enum": ["blocking", "non-blocking", "deferred"]
+        }
+      }
+    },
+    "planningUnitCandidateHint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rationale": {
+          "type": "string"
+        }
+      }
+    },
+    "persistenceTriggers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blockingUnknowns", "resumeRequired", "promoteReceipt"],
+      "properties": {
+        "blockingUnknowns": {
+          "type": "boolean",
+          "description": "True when blocking unknowns warrant map persistence (R37)."
+        },
+        "resumeRequired": {
+          "type": "boolean",
+          "description": "True when multi-session resume requires persistence (R37)."
+        },
+        "promoteReceipt": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["receiptId", "issuedAt"],
+          "properties": {
+            "receiptId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "issuedAt": {
+              "type": "string",
+              "minLength": 1
+            },
+            "actor": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "description": "Explicit operator promote receipt — never always-on persistence (R37)."
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["createdAt", "source"],
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "updatedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Provider-neutral source label (conversation, notebook, resume, etc.)."
+        },
+        "notebookId": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "nodeType": {
+      "type": "string",
+      "enum": ["question", "decision", "evidence", "discovery"]
+    },
+    "nodeStatus": {
+      "type": "string",
+      "enum": ["open", "resolved", "superseded", "cancelled"]
+    },
+    "evidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "refId"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["ResearchEvidence", "PrototypeEvidence"]
+        },
+        "refId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trust": {
+          "type": "string",
+          "enum": ["trusted", "untrusted"]
+        },
+        "productionEligible": {
+          "type": "boolean",
+          "const": false,
+          "description": "PrototypeEvidence remains non-production-eligible (R44)."
+        }
+      }
+    },
+    "explorationNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "status"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        },
+        "type": {
+          "$ref": "#/$defs/nodeType"
+        },
+        "status": {
+          "$ref": "#/$defs/nodeStatus"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolution": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidenceRef": {
+          "$ref": "#/$defs/evidenceRef"
+        },
+        "supersedes": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,62}$"
+        },
+        "linkedNodeIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,62}$"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "question" } },
+            "required": ["type"]
+          },
+          "then": { "required": ["statement"] }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "decision" } },
+            "required": ["type"]
+          },
+          "then": { "required": ["title"] }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "evidence" } },
+            "required": ["type"]
+          },
+          "then": { "required": ["evidenceRef"] }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "discovery" } },
+            "required": ["type"]
+          },
+          "then": { "required": ["statement"] }
+        }
+      ]
+    }
+  }
+}
