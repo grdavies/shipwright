@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-25T08:43:29Z",
+  "generatedAt": "2026-08-25T09:53:07Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -7210,10 +7210,10 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/architecture-doctrine.md:16:zero-shell-guard.py",
+      "id": "core/sw-reference/architecture-doctrine.md:57:zero-shell-guard.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/architecture-doctrine.md",
-      "line": 16,
+      "line": 57,
       "column": 23,
       "script": "zero-shell-guard.py",
       "classification": "self-repo-only"
