@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-24T22:07:33Z",
+  "generatedAt": "2026-08-25T00:37:46Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -367,6 +367,15 @@
       "line": 209,
       "column": 21,
       "script": "test/skills-spec-guard.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/release-dist-regen.yml:31:effective_config_gen.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/release-dist-regen.yml",
+      "line": 31,
+      "column": 21,
+      "script": "effective_config_gen.py",
       "classification": "self-repo-only"
     },
     {
