@@ -14,6 +14,7 @@ REPO_ROOT = SCRIPT_DIR.parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+
 from _sw.cli import run_module_main
 from init_credential_migration import (
     apply_guided_single_identity,
@@ -33,10 +34,24 @@ from init_profile_report import (
     load_workflow_config,
     render_classification_markdown,
 )
+import project_baseline as _project_baseline
+import project_doctrine as _project_doctrine
+from project_doctrine_leakage import evaluate_doctrine as _evaluate_doctrine_leakage
 from wave_preflight import CI_PRESENCE_SATISFIED, scan_ci_workflows
 
 # UX side-channel keys — never persisted to workflow.config.json (PRD 324 R11).
 DRAFT_SIDE_CHANNEL_KEYS = frozenset({"verifyGaps", "projectTypeDetection"})
+
+# Consent-gated ProjectDoctrine adoption (PRD 330 R6/R11/R12/R14) — decline marker only.
+DOCTRINE_DECLINE_REL = Path(".cursor/sw-init-project-doctrine.json")
+# Future /sw-explore handoff surface — never registered as a command in this PRD.
+FUTURE_EXPLORE_HANDOFF = {
+    "command": "/sw-explore",
+    "status": "not-shipped",
+    "prd": "331",
+    "consumes": _project_baseline.SYNTHESIS_INTERFACE_VERSION,
+    "registersCommands": [],
+}
 
 
 def _plugin_root() -> Path:
@@ -436,6 +451,375 @@ def cmd_write_draft(root: Path, *, accept: bool, write_verify: bool, config: str
     return 0
 
 
+def _doctrine_flag(rest: list[str], name: str) -> bool:
+    return name in rest
+
+
+def _doctrine_opt(rest: list[str], name: str, default: str = "") -> str:
+    i = 0
+    while i < len(rest):
+        if rest[i] == name and i + 1 < len(rest):
+            return rest[i + 1]
+        i += 1
+    return default
+
+
+def _doctrine_config_root(root: Path, rest: list[str]) -> Path:
+    override = _doctrine_opt(rest, "--root")
+    if override:
+        return Path(override).expanduser().resolve()
+    return root.resolve()
+
+
+def load_doctrine_decline(root: Path) -> dict | None:
+    path = root / DOCTRINE_DECLINE_REL
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def record_doctrine_decline(root: Path, *, reason: str = "operator-decline") -> dict:
+    path = root / DOCTRINE_DECLINE_REL
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "declined": True,
+        "reason": reason,
+        "authoritative": False,
+        "promoted": False,
+    }
+    path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    return {
+        "verdict": "pass",
+        "action": "decline",
+        "declined": True,
+        "authoritative": False,
+        "promoted": False,
+        "declinePath": DOCTRINE_DECLINE_REL.as_posix(),
+        "reason": reason,
+    }
+
+
+def clear_doctrine_decline(root: Path) -> None:
+    path = root / DOCTRINE_DECLINE_REL
+    if path.is_file():
+        path.unlink()
+
+
+def _confirm_required(action: str) -> dict:
+    return {
+        "verdict": "confirm-required",
+        "action": action,
+        "cause": "confirm-required",
+        "authoritative": False,
+        "promoted": False,
+        "remediation": f"Re-run with --confirm to proceed ({action}).",
+    }
+
+
+def _clear_draft_artifacts(root: Path) -> bool:
+    removed = False
+    for path in (
+        _project_doctrine.baseline_draft_path(root),
+        _project_baseline.draft_path(root),
+    ):
+        if path.is_file():
+            path.unlink()
+            removed = True
+    return removed
+
+
+def build_doctrine_discover(root: Path) -> dict:
+    """Read-only doctrine discovery for /sw-init (never writes doctrine)."""
+    observations = _project_baseline.discover_observations(root)
+    status = _project_doctrine.status_report(root)
+    decline = load_doctrine_decline(root)
+    declined = bool(decline and decline.get("declined"))
+    mode = "greenfield"
+    if observations:
+        mode = "brownfield"
+    elif status.get("hasDoctrine"):
+        mode = "existing"
+    return {
+        "verdict": "pass",
+        "action": "plan",
+        "authoritative": False,
+        "promoted": False,
+        "writesDoctrine": False,
+        "mode": mode,
+        "observationCount": len(observations),
+        "observations": observations,
+        "status": status,
+        "declined": declined,
+        "declineRecord": decline,
+        "offers": {
+            "skip": "python3 scripts/sw-configure.py doctrine skip",
+            "decline": "python3 scripts/sw-configure.py doctrine decline",
+            "greenfieldScaffold": (
+                "python3 scripts/sw-configure.py doctrine greenfield-scaffold --confirm"
+            ),
+            "brownfieldSynthesize": (
+                "python3 scripts/sw-configure.py doctrine brownfield-synthesize --confirm"
+            ),
+            "review": "python3 scripts/sw-configure.py doctrine review",
+            "acceptPromote": (
+                "python3 scripts/sw-configure.py doctrine accept-promote --confirm"
+            ),
+            "acceptDoctrine": (
+                "python3 scripts/sw-configure.py doctrine accept-doctrine --confirm"
+            ),
+            "reject": "python3 scripts/sw-configure.py doctrine reject",
+        },
+        "autoPromote": False,
+        "futureExploreHandoff": FUTURE_EXPLORE_HANDOFF,
+        "synthesisInterface": _project_baseline.interface_contract(),
+    }
+
+
+def _synthesize_brownfield_draft(root: Path, *, actor: str) -> dict:
+    baseline = _project_baseline.synthesize_from_root(root, actor=actor)
+    advisory = _project_baseline.write_draft(root, baseline)
+    lifecycle = _project_doctrine.write_baseline_draft(root, baseline, actor=actor)
+    ok = advisory.get("verdict") == "pass" and lifecycle.verdict == "pass"
+    return {
+        "verdict": "pass" if ok else "fail",
+        "action": "brownfield-synthesize",
+        "authoritative": False,
+        "promoted": False,
+        "status": "draft",
+        "autoPromote": False,
+        "advisoryDraft": advisory,
+        "lifecycleDraft": lifecycle.to_dict(),
+        "baseline": baseline,
+        "remediation": (
+            "Review with doctrine review, then accept-promote --confirm — never auto-promotes."
+        ),
+        "futureExploreHandoff": FUTURE_EXPLORE_HANDOFF,
+    }
+
+
+def _accept_doctrine_document(root: Path, doc: dict, *, actor: str, action: str) -> dict:
+    leakage = _evaluate_doctrine_leakage(doc)
+    if leakage.get("verdict") != "pass":
+        return {
+            "verdict": "fail",
+            "action": action,
+            "cause": "leakage-not-green",
+            "authoritative": False,
+            "promoted": False,
+            "leakage": leakage,
+        }
+    result = _project_doctrine.accept_doctrine(root, doc, actor=actor)
+    if result.verdict == "pass":
+        clear_doctrine_decline(root)
+    return {
+        **result.to_dict(),
+        "action": action,
+        "authoritative": result.verdict == "pass",
+        "promoted": result.verdict == "pass",
+        "leakage": leakage,
+    }
+
+
+def cmd_doctrine(root: Path, subcmd: str, rest: list[str]) -> int:
+    """Consent-gated ProjectDoctrine adoption surface for /sw-init (PRD 330 R6/R11/R12/R14)."""
+    config_root = _doctrine_config_root(root, rest)
+    confirm = _doctrine_flag(rest, "--confirm")
+    actor = _doctrine_opt(rest, "--actor", "operator") or "operator"
+    file_opt = _doctrine_opt(rest, "--file")
+    reason = _doctrine_opt(rest, "--reason", "operator-decline") or "operator-decline"
+
+    aliases = {
+        "": "plan",
+        "discover": "plan",
+        "status": "plan",
+        "synthesize-draft": "brownfield-synthesize",
+        "scaffold-greenfield": "greenfield-scaffold",
+        "promote": "accept-promote",
+        "accept": "accept-doctrine",
+    }
+    action = aliases.get(subcmd, subcmd)
+
+    if action == "plan":
+        payload = build_doctrine_discover(config_root)
+        print(json.dumps(payload, indent=2))
+        return 0
+
+    if action == "review":
+        status = _project_doctrine.status_report(config_root)
+        draft = _project_doctrine.load_baseline_draft(config_root)
+        doctrine = _project_doctrine.load_doctrine(config_root)
+        candidate = doctrine
+        if candidate is None and file_opt:
+            candidate = _project_doctrine.load_json(Path(file_opt))
+        leakage = (
+            _evaluate_doctrine_leakage(candidate) if isinstance(candidate, dict) else None
+        )
+        payload = {
+            "verdict": "pass",
+            "action": "review",
+            "authoritative": False,
+            "promoted": bool(status.get("hasDoctrine")),
+            "status": status,
+            "baselineDraft": draft,
+            "doctrine": doctrine,
+            "leakage": leakage,
+            "choices": ["accept-promote", "accept-doctrine", "reject", "decline", "skip"],
+            "autoPromote": False,
+            "futureExploreHandoff": FUTURE_EXPLORE_HANDOFF,
+        }
+        print(json.dumps(payload, indent=2))
+        return 0
+
+    if action == "skip":
+        payload = record_doctrine_decline(config_root, reason=reason or "operator-skip")
+        payload["action"] = "skip"
+        print(json.dumps(payload, indent=2))
+        return 0
+
+    if action in ("decline", "reject"):
+        removed = _project_doctrine.reject_adoption(config_root)
+        draft_removed = _clear_draft_artifacts(config_root)
+        decline = record_doctrine_decline(config_root, reason=reason)
+        payload = {
+            "verdict": "pass" if removed.verdict == "pass" else removed.verdict,
+            "action": action,
+            "authoritative": False,
+            "promoted": False,
+            "doctrineRemoved": removed.verdict == "pass",
+            "draftRemoved": draft_removed,
+            "decline": decline,
+        }
+        print(json.dumps(payload, indent=2))
+        return 0 if payload["verdict"] == "pass" else 1
+
+    if action == "greenfield-scaffold":
+        if not confirm:
+            print(json.dumps(_confirm_required(action), indent=2))
+            return 1
+        clear_doctrine_decline(config_root)
+        result = _project_doctrine.scaffold_greenfield(
+            config_root, actor=actor, confirm=True
+        )
+        doctrine = _project_doctrine.load_doctrine(config_root)
+        leakage = (
+            _evaluate_doctrine_leakage(doctrine)
+            if isinstance(doctrine, dict)
+            else {"verdict": "fail", "findings": [{"rule": "missing-doctrine"}]}
+        )
+        payload = {
+            **result.to_dict(),
+            "action": action,
+            "authoritative": result.verdict == "pass",
+            "promoted": False,
+            "leakage": leakage,
+        }
+        if result.verdict == "pass" and leakage.get("verdict") != "pass":
+            _project_doctrine.reject_adoption(config_root)
+            payload["verdict"] = "fail"
+            payload["cause"] = "leakage-not-green"
+            payload["authoritative"] = False
+        print(json.dumps(payload, indent=2))
+        return 0 if payload.get("verdict") == "pass" else 1
+
+    if action == "brownfield-synthesize":
+        if not confirm:
+            print(json.dumps(_confirm_required(action), indent=2))
+            return 1
+        payload = _synthesize_brownfield_draft(config_root, actor=actor)
+        print(json.dumps(payload, indent=2))
+        return 0 if payload["verdict"] == "pass" else 1
+
+    if action == "accept-promote":
+        if not confirm:
+            print(json.dumps(_confirm_required(action), indent=2))
+            return 1
+        result = _project_doctrine.promote_baseline(
+            config_root, actor=actor, confirm=True
+        )
+        doctrine = _project_doctrine.load_doctrine(config_root)
+        leakage = (
+            _evaluate_doctrine_leakage(doctrine)
+            if isinstance(doctrine, dict)
+            else {"verdict": "fail", "findings": [{"rule": "missing-doctrine"}]}
+        )
+        payload = {
+            **result.to_dict(),
+            "action": action,
+            "authoritative": result.verdict == "pass",
+            "promoted": result.verdict == "pass",
+            "leakage": leakage,
+        }
+        if result.verdict == "pass" and leakage.get("verdict") != "pass":
+            _project_doctrine.reject_adoption(config_root)
+            payload["verdict"] = "fail"
+            payload["cause"] = "leakage-not-green"
+            payload["authoritative"] = False
+            payload["promoted"] = False
+        elif result.verdict == "pass":
+            clear_doctrine_decline(config_root)
+        print(json.dumps(payload, indent=2))
+        return 0 if payload.get("verdict") == "pass" else 1
+
+    if action == "accept-doctrine":
+        if not confirm:
+            print(json.dumps(_confirm_required(action), indent=2))
+            return 1
+        if file_opt:
+            doc = _project_doctrine.load_json(Path(file_opt))
+        else:
+            doc = _project_doctrine.load_doctrine(config_root)
+        if doc is None:
+            print(
+                json.dumps(
+                    {
+                        "verdict": "fail",
+                        "action": action,
+                        "cause": "missing-input",
+                        "authoritative": False,
+                        "promoted": False,
+                        "remediation": "Pass --file <reviewed-doctrine.json> or accept-promote first.",
+                    },
+                    indent=2,
+                )
+            )
+            return 1
+        payload = _accept_doctrine_document(
+            config_root, doc, actor=actor, action=action
+        )
+        print(json.dumps(payload, indent=2))
+        return 0 if payload.get("verdict") == "pass" else 1
+
+    print(
+        json.dumps(
+            {
+                "verdict": "fail",
+                "error": f"unknown doctrine command: {subcmd}",
+                "allowed": [
+                    "plan",
+                    "review",
+                    "skip",
+                    "decline",
+                    "greenfield-scaffold",
+                    "brownfield-synthesize",
+                    "accept-promote",
+                    "accept-doctrine",
+                    "reject",
+                ],
+            }
+        ),
+        file=sys.stderr,
+    )
+    return 2
+
+
+# Alias kept for callers / docs that say project-doctrine.
+cmd_project_doctrine = cmd_doctrine
+
+
 def cmd_portability_check(root: Path, config: str) -> int:
     config_path = config or str(root / ".cursor/workflow.config.json")
     subprocess.run(
@@ -481,7 +865,8 @@ def main(argv: list[str] | None = None) -> int:
     if not args or args[0] in ("-h", "--help"):
         print(
             "usage: sw-configure.py detect|schema-version|shipwright-version|"
-            "drift-check|portability-check|findings|write-draft|credential|ci-stub",
+            "drift-check|portability-check|findings|write-draft|credential|ci-stub|"
+            "doctrine",
             file=sys.stderr,
         )
         return 2 if args else 0
@@ -545,6 +930,9 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"verdict": "fail", "error": "credential subcommand required"}), file=sys.stderr)
             return 2
         return cmd_credential(root, subcmd, sub_rest)
+    if cmd in ("doctrine", "project-doctrine"):
+        subcmd, sub_rest = _credential_argv(rest)
+        return cmd_doctrine(root, subcmd, sub_rest)
     print(json.dumps({"verdict": "fail", "error": f"unknown command: {cmd}"}), file=sys.stderr)
     return 2
 

@@ -386,6 +386,40 @@ base-preflight reports decline rather than a silent gap.
 Optional `--wire-verify` on plan/apply opts into wiring `python3 scripts/check-gate.py` into the
 stub job; default placeholder body cannot be mistaken for a Shipwright verify gate.
 
+### 5f. Consent-gated ProjectDoctrine adoption (PRD 330 R6, R11, R12, R14)
+
+After credential/CI surfaces (or on doctor re-run), offer **opt-in** consumer ProjectDoctrine adoption.
+Repo-local `.sw/project-doctrine.json` is the sole authority; issue-store projections are never read as
+law. Brownfield synthesis emits **draft-only** `ProjectBaseline@v1` facts; only explicit operator
+confirmation can promote to doctrine. Acceptance requires a **leakage-green** verdict from
+`project_doctrine_leakage.py` on the repo-local SoT.
+
+**Discovery (read-only — never writes doctrine):**
+
+```bash
+python3 scripts/sw-configure.py doctrine plan
+python3 scripts/sw-configure.py doctrine review
+```
+
+**Operator choices (each decline path is non-authoritative):**
+
+| Choice | Command | Writes doctrine? |
+| --- | --- | --- |
+| Skip | `python3 scripts/sw-configure.py doctrine skip` | No — durable decline record only |
+| Decline | `python3 scripts/sw-configure.py doctrine decline` | No — removes draft/doctrine + decline record |
+| Greenfield scaffold | `python3 scripts/sw-configure.py doctrine greenfield-scaffold --confirm` | Yes — opt-in empty scaffold |
+| Brownfield synthesize | `python3 scripts/sw-configure.py doctrine brownfield-synthesize --confirm` | No — draft baseline only |
+| Accept promote | `python3 scripts/sw-configure.py doctrine accept-promote --confirm` | Yes — explicit baseline→doctrine |
+| Accept doctrine | `python3 scripts/sw-configure.py doctrine accept-doctrine --confirm` | Yes — reviewed doctrine into SoT |
+| Reject | `python3 scripts/sw-configure.py doctrine reject` | No — clears draft/doctrine |
+
+Brownfield draft synthesis uses the stable `project-baseline-synthesis@v1` interface
+(`scripts/project_baseline.py`). Future PRD 331 `/sw-explore` is the documented consumer — **this
+release does not register** `/sw-explore`, `/sw-codebase-design`, or any `/sw-graph-*` command.
+
+Greenfield scaffold and brownfield synthesis both require `--confirm`; without it the configurator
+returns `confirm-required` and performs no promotion.
+
 ### 5d. Portability self-check (R24/R25)
 
 Before first `/sw-ship`:
