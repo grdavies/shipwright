@@ -103,6 +103,18 @@ def validate_effective_config_drift(root: Path) -> str | None:
     return errors[0]
 
 
+def validate_documented_defaults_drift(root: Path) -> str | None:
+    """Fail-closed when documented operator defaults drift from effective config (PRD 330 R2)."""
+    checker = root / "scripts" / "documented_defaults_check.py"
+    if not checker.is_file():
+        return None
+    try:
+        from documented_defaults_check import validate_documented_defaults
+    except ImportError:
+        return None
+    return validate_documented_defaults(root)
+
+
 def validate_resilience_verify_scope(root: Path, cfg: dict[str, Any]) -> str | None:
     """Fail-closed readiness check for resilience verify scope wiring (PRD 323 R22)."""
     runner = root / RESILIENCE_RUNNER_REL
@@ -1238,6 +1250,16 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
         jsonio.emit(payload)
         return 30, payload
 
+    documented_defaults_err = validate_documented_defaults_drift(root)
+    if documented_defaults_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": f"documentedDefaults:{documented_defaults_err}",
+            "source": "local-evidence",
+        }
+        jsonio.emit(payload)
+        return 30, payload
+
     resilience_err = validate_resilience_verify_scope(root, cfg)
     if resilience_err:
         payload = {
@@ -1374,6 +1396,12 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     effective_config_err = validate_effective_config_drift(root)
     if effective_config_err:
         payload = {"verdict": "blocked", "reason": f"effectiveConfig:{effective_config_err}"}
+        jsonio.emit(payload)
+        return 30, payload
+
+    documented_defaults_err = validate_documented_defaults_drift(root)
+    if documented_defaults_err:
+        payload = {"verdict": "blocked", "reason": f"documentedDefaults:{documented_defaults_err}"}
         jsonio.emit(payload)
         return 30, payload
 
