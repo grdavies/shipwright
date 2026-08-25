@@ -1082,6 +1082,7 @@
 * merge phase consumer-architecture-doctrine-and-codebase-design-boundary into feat/truth-hygiene-and-project-doctrine (10b970f) <!-- sw-deliver:consumer-architecture-doctrine-and-codebase-design-boundary -->
 * merge phase consumer-architecture-doctrine-and-codebase-design-boundary into feat/truth-hygiene-and-project-doctrine (22a8857) <!-- sw-deliver:consumer-architecture-doctrine-and-codebase-design-boundary -->
 * merge phase consumer-architecture-doctrine-and-codebase-design-boundary into feat/truth-hygiene-and-project-doctrine (ea09524) <!-- sw-deliver:consumer-architecture-doctrine-and-codebase-design-boundary -->
+* merge phase operator-documentation-and-routing into feat/truth-hygiene-and-project-doctrine (d10154c) <!-- sw-deliver:operator-documentation-and-routing -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
