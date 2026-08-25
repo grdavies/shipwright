@@ -117,11 +117,41 @@
       "additionalProperties": false,
       "properties": {
         "cursor": { "type": "object", "additionalProperties": true },
-        "claude": { "type": "object", "additionalProperties": true }
+        "claude": { "type": "object", "additionalProperties": true },
+        "exploration": { "$ref": "#/$defs/explorationExtension" }
       }
     }
   },
   "$defs": {
+    "explorationExtension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "explorationMapId",
+        "revision",
+        "interactionState",
+        "recoveryInstructions"
+      ],
+      "properties": {
+        "explorationMapId": { "type": "string", "minLength": 1 },
+        "revision": { "type": "integer", "minimum": 1 },
+        "notebookProvenance": { "type": "object", "additionalProperties": true },
+        "interactionState": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode"],
+          "properties": {
+            "mode": { "type": "string", "minLength": 1 },
+            "activeNodeId": { "type": "string" },
+            "lastPrompt": { "type": "string" }
+          }
+        },
+        "briefId": { "type": "string" },
+        "briefSourceRevision": { "type": "integer", "minimum": 1 },
+        "recoveryInstructions": { "type": "string", "minLength": 1 },
+        "forwardHandoffReady": { "type": "boolean" }
+      }
+    },
     "decisionEntry": {
       "type": "object",
       "additionalProperties": false,
