@@ -1097,6 +1097,7 @@
 * merge phase bare-sw-route-selection-and-operator-controls into feat/sw-explore-first-release (495f4f6) <!-- sw-deliver:bare-sw-route-selection-and-operator-controls -->
 * merge phase explore-and-doc-bidirectional-handoff into feat/sw-explore-first-release (6d68a3c) <!-- sw-deliver:explore-and-doc-bidirectional-handoff -->
 * merge phase quality-metrics-and-atomic-acceptance-gate into feat/sw-explore-first-release (168209e) <!-- sw-deliver:quality-metrics-and-atomic-acceptance-gate -->
+* merge phase workflow-contracts-taxonomy-and-adopter-documentation into feat/sw-explore-first-release (9ccf570) <!-- sw-deliver:workflow-contracts-taxonomy-and-adopter-documentation -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
