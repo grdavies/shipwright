@@ -49,7 +49,7 @@ Load `skills/living-status/SKILL.md`.
    | `divergenceCount` | Number of divergence rows in the last artifact |
 
    Missing artifacts return `present: false` with `verdict: pass` — status does not treat absence as an error.
-1. **Triage recommendation explain (PRD 332 R8, R16, R17)** — read-only advisory intelligence for tier
+1. **Triage recommendation explain** — read-only advisory intelligence for tier
    classification (never mutates evidence or registry stores; **no new slash command**):
 
    ```bash

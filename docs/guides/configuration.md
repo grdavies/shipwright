@@ -880,7 +880,7 @@ Fixture suite: `python3 scripts/test/run_execute_orchestration_fixtures.py` (reg
 
 Advisory project intelligence for triage, doc entry, and dispatch compression shares one config namespace
 under `planning.intelligence`. Schema authority: `core/sw-reference/config.schema.json`. No property in this
-namespace overrides safety-kernel vetoes (D6).
+namespace overrides safety-kernel vetoes.
 
 #### TriageEvidence weights and freshness
 
@@ -926,7 +926,7 @@ evidence cannot advance a revision.
 `rolled_back`, restoring the prior active revision and its `evidenceRef`. Dispatch and triage paths record
 qualifying runs without adding commands.
 
-#### Terminology parity (PRD 332 R17)
+#### Terminology parity
 
 Use the same vocabulary across this guide, `docs/guides/workflows.md`, `core/commands/sw-status.md`, and
 `.sw/layout.md`:
@@ -960,7 +960,7 @@ through `scripts/dispatch_prompt.py`. Compression is **available but default-off
 | `contextCompression.strategies.log` | `compress` | Log excerpt strategy |
 | `contextCompression.strategies.prose` | `compress` | Prose strategy |
 
-**Measured rollout phases (PRD 332 R7):**
+**Measured rollout phases:**
 
 | Phase | Behavior |
 | --- | --- |

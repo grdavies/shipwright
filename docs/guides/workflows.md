@@ -64,7 +64,7 @@ QK -->|yes| IMPL[Manual /sw-ship]
 QK -->|no| DOC[Enter /sw-doc → /sw-deliver run]
 ```
 
-### Evidence-backed triage and planning entry (PRD 332)
+### Evidence-backed triage and planning entry
 
 Deterministic tier classification in `scripts/triage_lib.py` remains authoritative. Project intelligence
 feeds **advisory** `TriageEvidence@v1` through existing triage and doc-entry surfaces — no new slash
@@ -79,7 +79,7 @@ hard veto and required gates cannot be lowered or bypassed (D3, D6).
 | --- | --- | --- |
 | `architecture-radar` | `scripts/architecture_radar.py` | `absent` + reason (never coerced to numeric zero) |
 | `workflow-history` | `scripts/workflow_intelligence.py` | `absent` + reason |
-| `exploration-findings` | `scripts/exploration_intelligence.py` | `absent` + reason (contract-only — PRD 331 owns execution UX) |
+| `exploration-findings` | `scripts/exploration_intelligence.py` | `absent` + reason (contract-only — exploration execution UX lives elsewhere) |
 | `decision-graph` | `scripts/decision_graph/frontier.py` | `absent` + reason |
 | `verification-capability` | `scripts/host_doctor_lib.py` | `absent` + reason |
 
@@ -1308,7 +1308,7 @@ through `/sw-status`, `/sw-prd`, `/sw-doc-review`, and `/sw-retrospective`.
 | `planning.intelligence.triageEvidence.freshness.defaultTtlSeconds` | `86400` | Default evidence envelope TTL when producers omit explicit expiry |
 | `planning.intelligence.capabilityPromotion.families.*` | see schema | N-run metric thresholds per capability family |
 
-### Triage evidence and measured promotion (PRD 332)
+### Triage evidence and measured promotion
 
 First registry consumers: triage recommendation (`triage.recommendation`), exploration inference
 (`exploration.inference`, contract-only producer), and context compression (`context.compression`). Promotion
