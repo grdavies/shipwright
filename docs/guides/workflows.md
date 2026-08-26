@@ -248,7 +248,7 @@ already holds the destination branch.
 
 ---
 
-## Explore workstream — optional pre-planning (PRD 331)
+## Explore workstream — optional pre-planning
 
 Use `/sw-explore` when product scope, destination, or acceptance boundaries are still open **before**
 `/sw-doc`. Explore is **optional** — operators may skip directly to Specify or Build when tier and

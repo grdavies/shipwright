@@ -100,7 +100,7 @@ flowchart TD
 Greenfield empty scaffold is opt-in only. Details: [configuration](configuration.md#consumer-projectdoctrine),
 `.sw/layout.md`, `core/sw-reference/README.md`.
 
-## Explore glossary (PRD 331)
+## Explore glossary
 
 | Term | Meaning |
 | --- | --- |
