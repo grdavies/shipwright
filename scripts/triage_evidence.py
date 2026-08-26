@@ -38,6 +38,16 @@ SIGNAL_EXPLORATION_FINDINGS = "exploration-findings"
 SIGNAL_DECISION_GRAPH = "decision-graph"
 SIGNAL_VERIFICATION_CAPABILITY = "verification-capability"
 
+EXPLORATION_FINDING_VERSION = "ExplorationFinding@v1"
+EXPLORATION_INFERENCE_CAPABILITY_ID = "exploration.inference"
+EXPLORATION_INFERENCE_CONSUMER_VERSION = "ExplorationInferenceConsumer@v1"
+VALID_EXPLORATION_SOURCES = frozenset({"repository", "radar", "vocabulary", "memory"})
+EXPLORATION_SAFETY_VETO_MATRIX: dict[str, Any] = {
+    "consumers": ("triage", "doc-entry", "compression"),
+    "vetoPrecedence": "safety-floor-before-advisory",
+    "overrideAllowed": False,
+}
+
 DEFAULT_PRODUCER_WEIGHTS: dict[str, float] = {
     SIGNAL_ARCHITECTURE_RADAR: 0.6,
     SIGNAL_WORKFLOW_HISTORY: 0.4,
@@ -502,12 +512,91 @@ def adapt_workflow_history_signal(
     )
 
 
+def validate_exploration_finding(finding: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate one exploration finding for the inference consumer contract (R5, R14–R16)."""
+    if not isinstance(finding, Mapping):
+        raise TriageEvidenceError("exploration-finding-must-be-object")
+    if str(finding.get("version") or "") != EXPLORATION_FINDING_VERSION:
+        raise TriageEvidenceError("invalid-exploration-finding-version")
+    finding_id = str(finding.get("findingId") or "").strip()
+    if not finding_id:
+        raise TriageEvidenceError("exploration-finding-id-required")
+    source = str(finding.get("source") or "").strip()
+    if source not in VALID_EXPLORATION_SOURCES:
+        raise TriageEvidenceError("invalid-exploration-source")
+    strength = finding.get("strength")
+    if not isinstance(strength, (int, float)) or not WEIGHT_MIN <= float(strength) <= WEIGHT_MAX:
+        raise TriageEvidenceError("invalid-exploration-strength")
+    observed_at = str(finding.get("observedAt") or "").strip()
+    if not observed_at:
+        raise TriageEvidenceError("exploration-observed-at-required")
+    parsed: dict[str, Any] = {
+        "version": EXPLORATION_FINDING_VERSION,
+        "findingId": finding_id,
+        "source": source,
+        "strength": float(strength),
+        "observedAt": observed_at,
+    }
+    summary = finding.get("summary")
+    if summary is not None:
+        parsed["summary"] = str(summary)
+    assert_secret_free(parsed)
+    return parsed
+
+
+def build_exploration_inference_consumer_contract() -> dict[str, Any]:
+    """Consumer contract for exploration inference — no runner or command UX (R15, R16)."""
+    return {
+        "version": EXPLORATION_INFERENCE_CONSUMER_VERSION,
+        "capabilityId": EXPLORATION_INFERENCE_CAPABILITY_ID,
+        "producerPath": PRODUCER_PATHS[SIGNAL_EXPLORATION_FINDINGS],
+        "contractOnly": True,
+        "executionUx": "none",
+        "missingProducerBehavior": {
+            "signalState": SIGNAL_STATE_ABSENT,
+            "defaultReason": "exploration-producer-unavailable",
+        },
+        "safetyVetoMatrix": dict(EXPLORATION_SAFETY_VETO_MATRIX),
+    }
+
+
+def apply_exploration_inference_safety_veto(
+    aggregation: Mapping[str, Any],
+    *,
+    promotion_state: str,
+) -> dict[str, Any]:
+    """Apply the exploration safety veto matrix before promotion (R14)."""
+    from capability_promotion import STATE_ACTIVE
+
+    result = dict(aggregation)
+    veto_precedence = "safety-floor" if aggregation.get("safetyFloorScore") is not None else "advisory"
+    result["explorationInference"] = {
+        "promotionState": promotion_state,
+        "authoritative": promotion_state == STATE_ACTIVE,
+        "vetoPrecedence": veto_precedence,
+        "overrideAllowed": EXPLORATION_SAFETY_VETO_MATRIX["overrideAllowed"],
+    }
+    return result
+
+
+def exploration_findings_from_snapshot(snapshot: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Extract validated exploration findings from an intelligence snapshot."""
+    raw = snapshot.get("findings")
+    if not isinstance(raw, list):
+        return []
+    validated: list[dict[str, Any]] = []
+    for item in raw:
+        validated.append(validate_exploration_finding(item))
+    return validated
+
+
 def adapt_exploration_findings_signal(
     root: Path,
     *,
     weights: Mapping[str, float] | None = None,
     collector: Any | None = None,
     query: str = "",
+    promotion_state: str | None = None,
 ) -> dict[str, Any]:
     """Adapt exploration findings when present; otherwise emit absent (R1, R15)."""
     from exploration_intelligence import collect_exploration_intelligence
@@ -529,13 +618,24 @@ def adapt_exploration_findings_signal(
             absent_reason=reason,
             producer_path=producer_path,
         )
-    value = _clamp_unit(len(non_repository) / max(1, len(non_repository)))
-    return build_signal(
+    findings = exploration_findings_from_snapshot(snapshot)
+    if findings:
+        strength = _clamp_unit(sum(item["strength"] for item in findings) / len(findings))
+    else:
+        strength = _clamp_unit(len(non_repository) / max(1, len(non_repository)))
+    signal = build_signal(
         SIGNAL_EXPLORATION_FINDINGS,
         weight=weight,
-        value=value,
+        value=strength,
         producer_path=producer_path,
+        payload_extra={"findingCount": len(findings) or len(non_repository)},
     )
+    if promotion_state is not None:
+        signal["explorationInference"] = apply_exploration_inference_safety_veto(
+            {"safetyFloorScore": None, "advisoryScore": strength},
+            promotion_state=promotion_state,
+        )["explorationInference"]
+    return signal
 
 
 def adapt_decision_graph_uncertainty_signal(
