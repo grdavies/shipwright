@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.0](https://github.com/grdavies/shipwright/compare/v2.6.0...v2.7.0) (2026-08-26)
+
+
+### Features
+
+* **prd-330:** truth hygiene and project doctrine ([#1024](https://github.com/grdavies/shipwright/issues/1024)) ([21feb77](https://github.com/grdavies/shipwright/commit/21feb77b0e4689a58369767f85a90d41d4fc3e4d))
+* **prd-331:** sw explore first release ([#1039](https://github.com/grdavies/shipwright/issues/1039)) ([4546853](https://github.com/grdavies/shipwright/commit/45468534a505a9ba4b40df0fc112cc242e0d4002))
+
 ## [2.6.0](https://github.com/grdavies/shipwright/compare/v2.5.0...v2.6.0) (2026-08-25)
 
 
