@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -16,11 +17,24 @@ from triage_evidence import (  # noqa: E402
     EVIDENCE_VERSION,
     SAFETY_CLASS_ADVISORY,
     SAFETY_CLASS_SAFETY_FLOOR,
+    SIGNAL_ARCHITECTURE_RADAR,
+    SIGNAL_DECISION_GRAPH,
+    SIGNAL_EXPLORATION_FINDINGS,
     SIGNAL_STATE_ABSENT,
+    SIGNAL_VERIFICATION_CAPABILITY,
+    SIGNAL_WORKFLOW_HISTORY,
+    adapt_architecture_radar_signal,
+    adapt_decision_graph_uncertainty_signal,
+    adapt_exploration_findings_signal,
+    adapt_verification_capability_signal,
+    adapt_workflow_history_signal,
+    aggregate_project_intelligence_for_triage,
+    aggregate_weighted_advisory,
     build_explain,
     build_signal,
     build_triage_evidence,
     canonical_json,
+    collect_project_intelligence_signals,
     compute_payload_digest,
     compute_producer_signature,
     invalidate_signal,
@@ -160,3 +174,123 @@ def test_build_explain_stable_ordering() -> None:
     explain = build_explain([second, first])
     ids = [item["id"] for item in explain["components"]]
     assert ids == ["alpha", "beta"]
+
+
+def test_multi_producer_aggregation_stable_ordering() -> None:
+    """Many-signal weighting with deterministic contribution ordering."""
+    signals = [
+        build_signal(SIGNAL_ARCHITECTURE_RADAR, weight=0.6, value=0.8),
+        build_signal(SIGNAL_WORKFLOW_HISTORY, weight=0.4, value=0.5),
+        build_signal(SIGNAL_DECISION_GRAPH, weight=0.5, value=0.2),
+    ]
+    aggregation = aggregate_weighted_advisory(signals)
+    assert aggregation["rankingClass"] == "advisory"
+    assert aggregation["advisoryScore"] == pytest.approx(0.52, rel=1e-3)
+    contribution_ids = [item["id"] for item in aggregation["contributions"]]
+    assert contribution_ids == sorted(contribution_ids)
+
+
+def test_missing_exploration_emits_absent_not_zero() -> None:
+    def _absent_exploration(_root: Path, **kwargs: object) -> dict[str, Any]:
+        return build_signal(
+            SIGNAL_EXPLORATION_FINDINGS,
+            weight=0.5,
+            state=SIGNAL_STATE_ABSENT,
+            absent_reason="exploration-findings-missing",
+        )
+
+    signals = collect_project_intelligence_signals(
+        Path("."),
+        adapters={
+            "architecture-radar": lambda root, **kwargs: build_signal(
+                SIGNAL_ARCHITECTURE_RADAR, weight=0.6, value=0.5
+            ),
+            "workflow-history": lambda root, **kwargs: build_signal(
+                SIGNAL_WORKFLOW_HISTORY, weight=0.4, value=0.5
+            ),
+            "exploration-findings": _absent_exploration,
+            "decision-graph": lambda root, **kwargs: build_signal(
+                SIGNAL_DECISION_GRAPH, weight=0.5, value=0.3
+            ),
+            "verification-capability": lambda root, **kwargs: build_signal(
+                SIGNAL_VERIFICATION_CAPABILITY,
+                weight=0.3,
+                value=1.0,
+                safety_class=SAFETY_CLASS_SAFETY_FLOOR,
+            ),
+        },
+    )
+    exploration = next(item for item in signals if item["id"] == SIGNAL_EXPLORATION_FINDINGS)
+    assert exploration["state"] == SIGNAL_STATE_ABSENT
+    aggregation = aggregate_weighted_advisory(signals)
+    assert SIGNAL_EXPLORATION_FINDINGS in aggregation["absent"]
+    assert aggregation["advisoryScore"] is not None
+    assert "value" not in exploration
+
+
+def test_stale_history_excluded_from_advisory_score() -> None:
+    fresh = build_signal(SIGNAL_ARCHITECTURE_RADAR, weight=0.6, value=0.8)
+    stale = build_signal(
+        SIGNAL_WORKFLOW_HISTORY,
+        weight=0.4,
+        value=0.9,
+        expires_at=_past_iso(),
+    )
+    aggregation = aggregate_weighted_advisory([fresh, stale])
+    assert aggregation["advisoryScore"] == pytest.approx(0.8, rel=1e-3)
+    assert SIGNAL_WORKFLOW_HISTORY in aggregation["excludedStale"]
+
+
+def test_decision_graph_uncertainty_contribution() -> None:
+    signal = build_signal(SIGNAL_DECISION_GRAPH, weight=0.5, value=0.75)
+    aggregation = aggregate_weighted_advisory([signal])
+    contribution = aggregation["contributions"][0]
+    assert contribution["contribution"] == pytest.approx(0.375, rel=1e-3)
+
+
+def test_safety_veto_precedence_in_aggregation() -> None:
+    safety = build_signal(
+        SIGNAL_VERIFICATION_CAPABILITY,
+        weight=0.3,
+        value=0.0,
+        safety_class=SAFETY_CLASS_SAFETY_FLOOR,
+    )
+    advisory = build_signal(SIGNAL_ARCHITECTURE_RADAR, weight=0.6, value=0.95)
+    aggregation = aggregate_weighted_advisory([safety, advisory])
+    assert aggregation["rankingClass"] == "safety-floor"
+    assert aggregation["safetyFloorScore"] == 0.0
+    assert aggregation["advisoryScore"] == pytest.approx(0.95, rel=1e-3)
+
+
+def test_aggregate_project_intelligence_document_includes_explain_block(tmp_path: Path) -> None:
+    document = aggregate_project_intelligence_for_triage(
+        tmp_path,
+        unit_id="332-prd-project-intelligence-triage-and-capability-promotion",
+        adapters={
+            "architecture-radar": lambda root, **kwargs: build_signal(
+                SIGNAL_ARCHITECTURE_RADAR, weight=0.6, value=0.5
+            ),
+            "workflow-history": lambda root, **kwargs: build_signal(
+                SIGNAL_WORKFLOW_HISTORY, weight=0.4, value=0.5
+            ),
+            "exploration-findings": lambda root, **kwargs: build_signal(
+                SIGNAL_EXPLORATION_FINDINGS,
+                weight=0.5,
+                state=SIGNAL_STATE_ABSENT,
+                absent_reason="exploration-findings-missing",
+            ),
+            "decision-graph": lambda root, **kwargs: build_signal(
+                SIGNAL_DECISION_GRAPH, weight=0.5, value=0.25
+            ),
+            "verification-capability": lambda root, **kwargs: build_signal(
+                SIGNAL_VERIFICATION_CAPABILITY,
+                weight=0.3,
+                value=1.0,
+                safety_class=SAFETY_CLASS_SAFETY_FLOOR,
+            ),
+        },
+    )
+    assert document["version"] == EVIDENCE_VERSION
+    assert "aggregation" in document["explain"]
+    assert document["explain"]["aggregation"]["rankingClass"] == "safety-floor"
+    parse_triage_evidence(document)
