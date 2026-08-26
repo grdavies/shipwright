@@ -1094,6 +1094,7 @@
 * merge phase readiness-and-planning-unit-candidate-derivation into feat/sw-explore-first-release (3386909) <!-- sw-deliver:readiness-and-planning-unit-candidate-derivation -->
 * merge phase exploration-brief-handoff-bundle-and-resume into feat/sw-explore-first-release (c510ba0) <!-- sw-deliver:exploration-brief-handoff-bundle-and-resume -->
 * merge phase visualization-and-status-projections into feat/sw-explore-first-release (2f2e166) <!-- sw-deliver:visualization-and-status-projections -->
+* merge phase bare-sw-route-selection-and-operator-controls into feat/sw-explore-first-release (495f4f6) <!-- sw-deliver:bare-sw-route-selection-and-operator-controls -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
