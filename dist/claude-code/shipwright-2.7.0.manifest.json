@@ -731,6 +731,7 @@
     "tournament_lib.py",
     "traceability-check.py",
     "traceability_bind.py",
+    "triage_evidence.py",
     "triage_lib.py",
     "two_track_lib.py",
     "upgrade-gate.py",
@@ -790,5 +791,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 787
+  "moduleCount": 788
 }
