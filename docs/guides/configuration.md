@@ -876,20 +876,102 @@ Fixture suite: `python3 scripts/test/run_execute_orchestration_fixtures.py` (reg
 `execute-orchestration-fixtures` in the PR test-plan manifest).
 
 
+### Project intelligence — evidence and promotion (`planning.intelligence.triageEvidence.*`, `planning.intelligence.capabilityPromotion.*`)
+
+Advisory project intelligence for triage, doc entry, and dispatch compression shares one config namespace
+under `planning.intelligence`. Schema authority: `core/sw-reference/config.schema.json`. No property in this
+namespace overrides safety-kernel vetoes (D6).
+
+#### TriageEvidence weights and freshness
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `planning.intelligence.triageEvidence.weights.architecture-radar` | `0.6` | Weight for architecture-radar producer (0.0–1.0) |
+| `planning.intelligence.triageEvidence.weights.workflow-history` | `0.4` | Weight for historical workflow outcomes |
+| `planning.intelligence.triageEvidence.weights.exploration-findings` | `0.5` | Weight for exploration findings when producer is present |
+| `planning.intelligence.triageEvidence.weights.decision-graph` | `0.5` | Weight for DecisionGraph uncertainty signal |
+| `planning.intelligence.triageEvidence.weights.verification-capability` | `0.3` | Weight for verification capability signal |
+| `planning.intelligence.triageEvidence.freshness.defaultTtlSeconds` | `86400` | Default freshness envelope TTL (60–604800 seconds) |
+
+**Freshness semantics:** evidence envelopes bind `digest` to producer payload bytes — not clock-only
+freshness. Expired envelopes, digest mismatches, and invalidated records exclude signals from weighted merge
+(`excludedStale`). Missing producers emit `absent` with an explicit reason; absent signals are never coerced
+to numeric zero.
+
+#### CapabilityPromotion family thresholds
+
+Registry families and config keys align one-to-one:
+
+| Family key | Capability id | Consumer |
+| --- | --- | --- |
+| `triage-recommendation` | `triage.recommendation` | `/sw-triage`, doc rescore |
+| `exploration-inference` | `exploration.inference` | TriageEvidence producer contract only (no execution UX) |
+| `context-compression` | `context.compression` | `dispatch_prompt.py` measured rollout |
+
+Each family accepts the same metric object (`capabilityPromotionFamilyThresholds`):
+
+| Metric | Default | Meaning |
+| --- | --- | --- |
+| `minQualifyingRuns` | `3` | Qualifying runs required before `candidate → active` (1–100) |
+| `maxFalsePositiveRate` | `0.05` | Upper bound on false-positive rate across the qualifying window |
+| `maxVetoConflictRate` | `0.02` | Upper bound on safety-veto conflicts vs advisory recommendations |
+| `minShadowAgreement` | `0.85` | Minimum shadow agreement before activation |
+
+**Promotion states:** `shadow` (advisory recorded, not applied) → `candidate` (metrics accumulating) →
+`active` (advisory may apply when veto-safe) → `rolled_back` (restores prior active revision + evidence ref).
+Illegal transitions fail closed in `scripts/capability_promotion.py`. Stale or insufficient qualifying-run
+evidence cannot advance a revision.
+
+**Rollback:** regression (veto-conflict rate, false-positive rate, or shadow agreement breach) triggers
+`rolled_back`, restoring the prior active revision and its `evidenceRef`. Dispatch and triage paths record
+qualifying runs without adding commands.
+
+#### Terminology parity (PRD 332 R17)
+
+Use the same vocabulary across this guide, `docs/guides/workflows.md`, `core/commands/sw-status.md`, and
+`.sw/layout.md`:
+
+| Term | Meaning |
+| --- | --- |
+| `TriageEvidence@v1` | Versioned advisory evidence bundle with weighted signals and explain payload |
+| `freshness envelope` | Digest-bound record: `digest`, `observedAt`, `producerPath`, `producerSignature`, optional `expiresAt`, invalidation |
+| `absent` | Producer unavailable — explicit reason, never numeric zero |
+| `excludedStale` | Signal rejected by freshness, expiry, or digest mismatch |
+| `safety-floor` | Signal class that enforces minimum tier before advisory promotion |
+| `non-authoritative` | Explain/status authority label — recommendations do not override deterministic gates |
+| `CapabilityPromotion@v1` | Durable registry format at `.cursor/capability-promotion-registry.json` |
+| `shadow` / `candidate` / `active` / `rolled_back` | Measured promotion states (only legal transitions permitted) |
+| `qualifying run` | One observed dispatch/triage window with fresh `evidenceRef` and family metrics |
+| `CompressionEvidence@v1` | Dispatch compression evidence class appended to `.cursor/compression-dispatch-evidence.jsonl` |
+
 ### Context compression (`contextCompression.*`)
 
 Task-dispatch prompt construction for `/sw-doc-review`, `/sw-ship`, and gap-check closer dispatches routes
 through `scripts/dispatch_prompt.py`. Compression is **available but default-off** — the shipped posture keeps
-`contextCompression.enabled: false` until the Phase 12 parity milestone passes.
+`contextCompression.enabled: false` until operator promotion evidence satisfies family thresholds.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `contextCompression.enabled` | `false` | When `true`, large context blocks may be summarized before spawn |
+| `contextCompression.phase` | `lossless` | Measured rollout phase: `lossless`, `shadow-lossy`, or `active-lossy` |
 | `contextCompression.thresholdTokens` | `8000` | Token-estimate ceiling before compression/path-ref policy applies |
 | `contextCompression.strategies.json` | `compress` | Strategy for JSON blocks: `compress`, `path-reference`, or `passthrough` |
 | `contextCompression.strategies.diff` | `path-reference` | Unified-diff blocks prefer path references when file-backed |
 | `contextCompression.strategies.log` | `compress` | Log excerpt strategy |
 | `contextCompression.strategies.prose` | `compress` | Prose strategy |
+
+**Measured rollout phases (PRD 332 R7):**
+
+| Phase | Behavior |
+| --- | --- |
+| `lossless` | Baseline — path references and lossless transforms only |
+| `shadow-lossy` | Lossy output computed and recorded; dispatch context unchanged (non-authoritative) |
+| `active-lossy` | Lossy output may replace dispatch context only when `context.compression` registry state is `active` and safety vetoes pass |
+
+`active-lossy` without a valid promotion decision falls back to lossless/shadow behavior. Each dispatch records
+`CompressionEvidence@v1` metrics (shadow agreement, veto conflicts, token delta, retrieve-key validity) to
+`.cursor/compression-dispatch-evidence.jsonl` for N-run threshold evaluation under
+`planning.intelligence.capabilityPromotion.families.context-compression`.
 
 **Path-reference policy :** file-backed blocks that do not need summarization emit a path reference
 instead of inlining content. **Recoverable path :** lossy compression stores orchestrator-only CCR keys;
