@@ -231,3 +231,185 @@ def test_record_qualifying_run_idempotent() -> None:
     twice = record_qualifying_run(once, "compression.lossy", 1, run)
     revision = twice["capabilities"]["compression.lossy"]["revisions"]["1"]
     assert len(revision["qualifyingRuns"]) == 1
+
+
+def _triage_registry_with_state(state: str, *, revision: int = 1, prior_active: dict | None = None) -> dict:
+    runs = [_good_run(f"run-{idx}", observed_at=f"2026-08-2{idx}T10:00:00Z") for idx in range(3)]
+    rev = build_revision_record(
+        revision=revision,
+        state=state,
+        capability_family="triage-intelligence",
+        evidence_class="TriageEvidence@v1",
+        evidence_ref="sha256:" + ("b" * 64),
+        thresholds=_thresholds(),
+        qualifying_runs=runs if state == STATE_ACTIVE else [],
+        prior_active=prior_active,
+    )
+    return build_registry(
+        {
+            "triage.recommendation": build_capability_record(
+                "triage.recommendation",
+                capability_family="triage-intelligence",
+                revisions={revision: rev},
+                active_revision=revision,
+            )
+        }
+    )
+
+
+def test_shadow_only_advice_does_not_promote_tier() -> None:
+    """first-consumers-only: shadow registry state keeps advisory non-authoritative."""
+    from triage_evidence import SAFETY_CLASS_SAFETY_FLOOR, build_signal, build_triage_evidence
+    from triage_lib import CAPABILITY_TRIAGE_RECOMMENDATION, classify_tier
+
+    registry = _triage_registry_with_state(STATE_SHADOW)
+    evidence = build_triage_evidence(
+        [
+            build_signal("architecture-radar", weight=0.6, value=0.95),
+            build_signal(
+                "verification-capability",
+                weight=0.3,
+                value=1.0,
+                safety_class=SAFETY_CLASS_SAFETY_FLOOR,
+            ),
+        ]
+    )
+    result = classify_tier(
+        description="rename only",
+        file_count=1,
+        triage_evidence=evidence,
+        promotion_registry=registry,
+        promotion_capability_id=CAPABILITY_TRIAGE_RECOMMENDATION,
+    )
+    assert result.tier == "quick"
+    assert result.advisory_tier == "full"
+    assert result.explain is not None
+    assert result.explain["promotion"]["state"] == STATE_SHADOW
+
+
+def test_active_triage_promotion_applies_advisory() -> None:
+    from triage_evidence import SAFETY_CLASS_SAFETY_FLOOR, build_signal, build_triage_evidence
+    from triage_lib import classify_tier
+
+    registry = _triage_registry_with_state(STATE_ACTIVE)
+    evidence = build_triage_evidence(
+        [
+            build_signal("architecture-radar", weight=0.6, value=0.95),
+            build_signal(
+                "verification-capability",
+                weight=0.3,
+                value=1.0,
+                safety_class=SAFETY_CLASS_SAFETY_FLOOR,
+            ),
+        ]
+    )
+    result = classify_tier(
+        description="rename only",
+        file_count=1,
+        triage_evidence=evidence,
+        promotion_registry=registry,
+    )
+    assert result.tier == "full"
+    assert result.advisory_tier == "full"
+
+
+def test_veto_conflict_metrics_recorded() -> None:
+    from triage_evidence import SAFETY_CLASS_SAFETY_FLOOR, build_signal, build_triage_evidence
+    from triage_lib import classify_tier
+
+    registry = _triage_registry_with_state(STATE_SHADOW)
+    evidence = build_triage_evidence(
+        [
+            build_signal("architecture-radar", weight=0.6, value=0.5),
+            build_signal(
+                "verification-capability",
+                weight=0.3,
+                value=0.0,
+                safety_class=SAFETY_CLASS_SAFETY_FLOOR,
+            ),
+        ]
+    )
+    classify_tier(
+        description="rename only",
+        file_count=1,
+        triage_evidence=evidence,
+        promotion_registry=registry,
+        promotion_run_id="run-veto-conflict",
+        promotion_observed_at="2026-08-21T10:00:00Z",
+    )
+    runs = registry["capabilities"]["triage.recommendation"]["revisions"]["1"]["qualifyingRuns"]
+    assert len(runs) == 1
+    assert runs[0]["vetoConflictRate"] == 1.0
+
+
+def test_exploration_producer_absence_explicit() -> None:
+    """exploration-contract-boundary: missing producer emits absent with reason."""
+    from triage_evidence import (
+        SIGNAL_EXPLORATION_FINDINGS,
+        SIGNAL_STATE_ABSENT,
+        build_exploration_inference_consumer_contract,
+        build_signal,
+    )
+
+    contract = build_exploration_inference_consumer_contract()
+    assert contract["executionUx"] == "none"
+    assert contract["contractOnly"] is True
+    signal = build_signal(
+        SIGNAL_EXPLORATION_FINDINGS,
+        weight=0.5,
+        state=SIGNAL_STATE_ABSENT,
+        absent_reason=contract["missingProducerBehavior"]["defaultReason"],
+    )
+    assert signal["state"] == SIGNAL_STATE_ABSENT
+    assert "value" not in signal
+
+
+def test_invalid_exploration_evidence_refused() -> None:
+    from triage_evidence import TriageEvidenceError, validate_exploration_finding
+
+    with pytest.raises(TriageEvidenceError, match="invalid-exploration-finding-version"):
+        validate_exploration_finding({"version": "ExplorationFinding@v0", "findingId": "x"})
+    with pytest.raises(TriageEvidenceError, match="invalid-exploration-strength"):
+        validate_exploration_finding(
+            {
+                "version": "ExplorationFinding@v1",
+                "findingId": "finding-1",
+                "source": "radar",
+                "strength": 1.5,
+                "observedAt": "2026-08-21T10:00:00Z",
+            }
+        )
+
+
+def test_regression_rollback_restores_prior_active_via_triage_binding() -> None:
+    """Promotion regression rollback through triage consumer binding."""
+    from triage_evidence import build_signal, build_triage_evidence
+    from triage_lib import classify_tier
+
+    prior_ref = "sha256:" + ("1" * 64)
+    registry = _triage_registry_with_state(
+        STATE_ACTIVE,
+        revision=2,
+        prior_active={"revision": 1, "evidenceRef": prior_ref, "state": STATE_ACTIVE},
+    )
+    rev1 = build_revision_record(
+        revision=1,
+        state=STATE_ACTIVE,
+        capability_family="triage-intelligence",
+        evidence_class="TriageEvidence@v1",
+        evidence_ref=prior_ref,
+        thresholds=_thresholds(),
+    )
+    registry["capabilities"]["triage.recommendation"]["revisions"]["1"] = rev1
+
+    evidence = build_triage_evidence([build_signal("architecture-radar", weight=0.6, value=0.5)])
+    classify_tier(
+        description="rename only",
+        file_count=1,
+        triage_evidence=evidence,
+        promotion_registry=registry,
+        promotion_regression_detected=True,
+    )
+    capability = registry["capabilities"]["triage.recommendation"]
+    assert capability["activeRevision"] == 1
+    assert capability["revisions"]["2"]["state"] == STATE_ROLLED_BACK
