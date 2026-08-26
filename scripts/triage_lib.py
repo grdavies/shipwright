@@ -65,6 +65,7 @@ class TierResult:
     floor_tier: str | None = None
     mechanical_tier: str | None = None
     advisory_tier: str | None = None
+    veto_tier: str | None = None
     matched_risk_triggers: list[str] = field(default_factory=list)
     matched_ambiguity: list[str] = field(default_factory=list)
     override: str | None = None
@@ -72,14 +73,16 @@ class TierResult:
     prior_tier: str | None = None
     reduction_path: str | None = None
     signals: list[str] = field(default_factory=list)
+    explain: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "tier": self.tier,
             "baseTier": self.base_tier,
             "floorTier": self.floor_tier,
             "mechanicalTier": self.mechanical_tier,
             "advisoryTier": self.advisory_tier,
+            "vetoTier": self.veto_tier,
             "matchedRiskTriggers": list(self.matched_risk_triggers),
             "matchedAmbiguity": list(self.matched_ambiguity),
             "override": self.override,
@@ -88,6 +91,9 @@ class TierResult:
             "reductionPath": self.reduction_path,
             "signals": list(self.signals),
         }
+        if self.explain is not None:
+            payload["explain"] = self.explain
+        return payload
 
 
 def _normalize(text: str) -> str:
@@ -237,6 +243,135 @@ def merge_tier_monotonic(
     return result
 
 
+ADVISORY_SCORE_QUICK_MAX = 0.34
+ADVISORY_SCORE_STANDARD_MAX = 0.67
+SAFETY_VETO_FULL_MAX = 0.0
+SAFETY_VETO_STANDARD_MAX = 0.5
+
+
+def advisory_tier_from_score(score: float | None) -> str | None:
+    """Map a fresh advisory score to a triage tier; absent scores stay unset."""
+    if score is None:
+        return None
+    value = float(score)
+    if value >= ADVISORY_SCORE_STANDARD_MAX:
+        return TIER_FULL
+    if value >= ADVISORY_SCORE_QUICK_MAX:
+        return TIER_STANDARD
+    return TIER_QUICK
+
+
+def safety_veto_tier_from_aggregation(aggregation: Mapping[str, Any]) -> str | None:
+    """Fresh safety-floor evidence enforces a minimum tier before advisory promotion."""
+    safety_score = aggregation.get("safetyFloorScore")
+    if safety_score is None:
+        return None
+    value = float(safety_score)
+    if value <= SAFETY_VETO_FULL_MAX:
+        return TIER_FULL
+    if value < SAFETY_VETO_STANDARD_MAX:
+        return TIER_STANDARD
+    return None
+
+
+def evidence_aggregation(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    from triage_evidence import aggregate_weighted_advisory
+
+    explain = evidence.get("explain")
+    if isinstance(explain, Mapping):
+        aggregation = explain.get("aggregation")
+        if isinstance(aggregation, Mapping):
+            return dict(aggregation)
+    signals = evidence.get("signals")
+    if isinstance(signals, list):
+        return aggregate_weighted_advisory(signals)
+    return {}
+
+
+def _build_evidence_explain(
+    evidence: Mapping[str, Any],
+    aggregation: Mapping[str, Any],
+) -> dict[str, Any]:
+    explain = evidence.get("explain")
+    payload = dict(explain) if isinstance(explain, Mapping) else {}
+    payload["aggregation"] = dict(aggregation)
+    payload["authority"] = "non-authoritative"
+    payload["absent"] = list(aggregation.get("absent") or [])
+    payload["excludedStale"] = list(aggregation.get("excludedStale") or [])
+    return payload
+
+
+def apply_veto_first_evidence(
+    mechanical: TierResult,
+    evidence: Mapping[str, Any] | None,
+) -> TierResult:
+    """Apply safety veto then advisory promotion; evidence explain is non-authoritative."""
+    if evidence is None:
+        return mechanical
+    from triage_evidence import parse_triage_evidence
+
+    parsed = parse_triage_evidence(evidence)
+    aggregation = evidence_aggregation(parsed)
+    explain = _build_evidence_explain(parsed, aggregation)
+    veto_tier = safety_veto_tier_from_aggregation(aggregation)
+    advisory_tier = advisory_tier_from_score(aggregation.get("advisoryScore"))
+
+    vetoed = mechanical
+    extra_signals: list[str] = []
+    if veto_tier:
+        vetoed = TierResult(
+            tier=_tier_max([mechanical.tier, veto_tier]),
+            base_tier=mechanical.base_tier,
+            floor_tier=mechanical.floor_tier,
+            mechanical_tier=mechanical.mechanical_tier or mechanical.tier,
+            matched_risk_triggers=list(mechanical.matched_risk_triggers),
+            matched_ambiguity=list(mechanical.matched_ambiguity),
+            override=mechanical.override,
+            misroute_promoted=mechanical.misroute_promoted,
+            prior_tier=mechanical.prior_tier,
+            signals=list(mechanical.signals) + [f"safety_veto: floor -> {veto_tier}"],
+            veto_tier=veto_tier,
+        )
+        extra_signals.append(f"safety_veto: floor -> {veto_tier}")
+
+    if mechanical.override:
+        result = TierResult(
+            tier=mechanical.tier,
+            base_tier=mechanical.base_tier,
+            floor_tier=mechanical.floor_tier,
+            mechanical_tier=mechanical.mechanical_tier,
+            advisory_tier=advisory_tier,
+            veto_tier=veto_tier,
+            matched_risk_triggers=list(mechanical.matched_risk_triggers),
+            matched_ambiguity=list(mechanical.matched_ambiguity),
+            override=mechanical.override,
+            misroute_promoted=mechanical.misroute_promoted,
+            prior_tier=mechanical.prior_tier,
+            reduction_path=mechanical.reduction_path,
+            signals=list(mechanical.signals) + extra_signals,
+            explain=explain,
+        )
+        return result
+
+    merged = merge_tier_monotonic(vetoed, advisory_tier)
+    return TierResult(
+        tier=merged.tier,
+        base_tier=merged.base_tier,
+        floor_tier=merged.floor_tier,
+        mechanical_tier=merged.mechanical_tier,
+        advisory_tier=advisory_tier,
+        veto_tier=veto_tier,
+        matched_risk_triggers=list(merged.matched_risk_triggers),
+        matched_ambiguity=list(merged.matched_ambiguity),
+        override=merged.override,
+        misroute_promoted=merged.misroute_promoted,
+        prior_tier=merged.prior_tier,
+        reduction_path=merged.reduction_path,
+        signals=list(merged.signals) + extra_signals,
+        explain=explain,
+    )
+
+
 def classify_tier(
     *,
     description: str = "",
@@ -244,6 +379,7 @@ def classify_tier(
     file_count: int | None = None,
     override_tier: str | None = None,
     advisory_tier: str | None = None,
+    triage_evidence: Mapping[str, Any] | None = None,
     prior_tier: str | None = None,
     re_score: bool = False,
     authorized_reduction_to: str | None = None,
@@ -257,6 +393,8 @@ def classify_tier(
         prior_tier=prior_tier,
         re_score=re_score,
     )
+    if triage_evidence is not None:
+        return apply_veto_first_evidence(mechanical, triage_evidence)
     if mechanical.override:
         return mechanical
     return merge_tier_monotonic(
