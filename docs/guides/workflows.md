@@ -248,6 +248,55 @@ already holds the destination branch.
 
 ---
 
+## Explore workstream — optional pre-planning (PRD 331)
+
+Use `/sw-explore` when product scope, destination, or acceptance boundaries are still open **before**
+`/sw-doc`. Explore is **optional** — operators may skip directly to Specify or Build when tier and
+acceptance criteria are already clear.
+
+**Entry paths**
+
+| Path | Command | Notes |
+| --- | --- | --- |
+| idea | `/sw-explore idea <text>` or `/sw-explore <text>` | Destination-first structured capture |
+| notebook | `/sw-explore --from-notebook <id>` | Graduates `/sw-note` with bidirectional provenance |
+| resume | `/sw-explore resume <map-id>` | Optimistic revision — stale writes fail closed |
+| promote | `/sw-explore promote <map-id> --trigger <name>` | Human confirm before graph expansion |
+| handoff | `/sw-explore handoff <map-id> --to doc` | Explicit forward route after readiness/brief |
+
+**Authority boundaries**
+
+- Humans own intent, blocking-unknown classification, promote triggers, and doc handoff — agents propose only.
+- Explore **never** dispatches `/sw-deliver`, `/sw-ship`, `/sw-execute`, or opens implementation worktrees.
+- Explore **does not** create PRDs, tasks, branches, or issue-store planning units (no mega-planning).
+- Prototype evidence remains **non-production-eligible**; memory lookup routes through `memory-preflight` brokers only.
+
+**Intelligence degradation**
+
+Optional project-intelligence hooks (architecture radar, vocabulary, historical memory) are **degradable**:
+absence or provider failure surfaces advisory state and exploration continues on canonical map data.
+
+**Explore ↔ doc handoff**
+
+| Direction | Trigger | Route |
+| --- | --- | --- |
+| Explore → doc | Readiness + brief + human confirm | `/sw-explore handoff … --to doc` → `/sw-doc` |
+| Doc → explore | Insufficient readiness / blocking unknowns | `/sw-doc` backward route → `/sw-explore resume` |
+
+Loop guards and decline receipts are enforced in `scripts/workflow_extensions.py`; never nested orchestrator dispatch.
+
+```mermaid
+flowchart LR
+  CAP["/sw-note capture"] --> EXP["/sw-explore<br/>(optional)"]
+  EXP --> RDY{Readiness + brief?}
+  RDY -->|no| EXP
+  RDY -->|yes + confirm| DOC["/sw-doc"]
+  DOC -->|not ready| EXP
+  DOC --> DEL["/sw-deliver run"]
+```
+
+---
+
 ## Documentation workstream — spec before code
 
 Use when tier is **Standard** or **Full** and you need a reviewed plan before implementation.
