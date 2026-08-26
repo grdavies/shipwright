@@ -33,6 +33,82 @@ from planning_readiness import compute_readiness  # noqa: E402
 
 RADAR_LAST_REL = Path(".cursor/sw-architecture-radar/last.json")
 VOCAB_DIVERGENCE_LAST_REL = Path(".cursor/sw-vocabulary-divergence/last.json")
+TRIAGE_RECOMMENDATION_AUTHORITY = "non-authoritative"
+
+
+def _load_triage_evidence_weights(root: Path) -> dict[str, float] | None:
+    """Read optional producer weights from planning.intelligence.triageEvidence.weights."""
+    from check_gate_lib import load_workflow_config
+
+    cfg = load_workflow_config(root)
+    planning = cfg.get("planning")
+    if not isinstance(planning, dict):
+        return None
+    intelligence = planning.get("intelligence")
+    if not isinstance(intelligence, dict):
+        return None
+    triage_evidence = intelligence.get("triageEvidence")
+    if not isinstance(triage_evidence, dict):
+        return None
+    weights = triage_evidence.get("weights")
+    if not isinstance(weights, dict) or not weights:
+        return None
+    return {str(key): float(value) for key, value in weights.items()}
+
+
+def collect_triage_recommendation_explain(
+    root: Path,
+    *,
+    unit_id: str | None = None,
+    description: str = "",
+    file_count: int | None = None,
+    query: str = "",
+) -> dict[str, Any]:
+    """Read-only triage recommendation explain payload for /sw-status (PRD 332 R8, R16)."""
+    from capability_promotion import read_registry, registry_path
+    from triage_evidence import aggregate_project_intelligence_for_triage
+    from triage_lib import CAPABILITY_TRIAGE_RECOMMENDATION, classify_tier, resolve_capability_promotion_binding
+
+    root = root.resolve()
+    weights = _load_triage_evidence_weights(root)
+    evidence = aggregate_project_intelligence_for_triage(
+        root,
+        unit_id=unit_id,
+        weights=weights,
+        query=query,
+    )
+    registry = read_registry(registry_path(root))
+    promotion = resolve_capability_promotion_binding(registry, CAPABILITY_TRIAGE_RECOMMENDATION)
+    tier_result = classify_tier(
+        description=description,
+        file_count=file_count,
+        triage_evidence=evidence,
+        promotion_registry=registry,
+    )
+    explain = tier_result.explain if isinstance(tier_result.explain, dict) else {}
+    aggregation = explain.get("aggregation") if isinstance(explain.get("aggregation"), Mapping) else {}
+    evidence_explain = evidence.get("explain") if isinstance(evidence.get("explain"), Mapping) else {}
+    evidence_timestamp = evidence_explain.get("computedAt")
+
+    return {
+        "verdict": "pass",
+        "readOnly": True,
+        "authority": TRIAGE_RECOMMENDATION_AUTHORITY,
+        "productAuthority": False,
+        "recommendation": {
+            "appliedTier": tier_result.tier,
+            "deterministicTier": tier_result.mechanical_tier or tier_result.base_tier,
+            "advisoryTier": tier_result.advisory_tier,
+            "vetoTier": tier_result.veto_tier,
+            "floorTier": tier_result.floor_tier,
+        },
+        "contributions": list(aggregation.get("contributions") or []),
+        "absent": list(aggregation.get("absent") or []),
+        "excludedStale": list(aggregation.get("excludedStale") or []),
+        "promotion": promotion,
+        "evidenceTimestamp": evidence_timestamp,
+        "explain": explain,
+    }
 
 
 def _read_json_object(path: Path) -> dict[str, Any] | None:
@@ -385,6 +461,20 @@ def cmd_vocabulary_divergence_last(args: argparse.Namespace) -> int:
     return 0 if payload.get("verdict") == "pass" else 20
 
 
+def cmd_triage_recommendation_explain(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve() if args.root else Path.cwd()
+    file_count = int(args.file_count) if args.file_count is not None else None
+    payload = collect_triage_recommendation_explain(
+        root,
+        unit_id=args.unit_id or None,
+        description=args.description or "",
+        file_count=file_count,
+        query=args.query or "",
+    )
+    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0 if payload.get("verdict") == "pass" else 20
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Operator status collectors for /sw-status")
     parser.add_argument("--root", default="", help="Repository root (default: cwd)")
@@ -422,6 +512,16 @@ def main(argv: list[str] | None = None) -> int:
     explain_decision.add_argument("--map-id", required=True)
     explain_decision.add_argument("--decision-id", required=True)
     explain_decision.set_defaults(func=cmd_explain_decision)
+
+    triage_explain = sub.add_parser(
+        "triage-recommendation-explain",
+        help="Read-only triage recommendation explain with evidence contributions (advisory only)",
+    )
+    triage_explain.add_argument("--unit-id", default="")
+    triage_explain.add_argument("--description", default="")
+    triage_explain.add_argument("--file-count", type=int, default=None)
+    triage_explain.add_argument("--query", default="")
+    triage_explain.set_defaults(func=cmd_triage_recommendation_explain)
 
     args = parser.parse_args(argv)
     return int(args.func(args))

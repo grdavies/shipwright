@@ -2005,6 +2005,87 @@
                   "description": "When true, divergence severity error blocks spec-rigor; default advisory."
                 }
               }
+            },
+            "triageEvidence": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "TriageEvidence@v1 producer weights and freshness policy (PRD 332 R6, R17).",
+              "properties": {
+                "weights": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Bounded per-producer advisory weights (0.0–1.0).",
+                  "properties": {
+                    "architecture-radar": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.6
+                    },
+                    "workflow-history": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.4
+                    },
+                    "exploration-findings": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.5
+                    },
+                    "decision-graph": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.5
+                    },
+                    "verification-capability": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1,
+                      "default": 0.3
+                    }
+                  }
+                },
+                "freshness": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Digest-bound freshness defaults for advisory evidence envelopes.",
+                  "properties": {
+                    "defaultTtlSeconds": {
+                      "type": "integer",
+                      "minimum": 60,
+                      "maximum": 604800,
+                      "default": 86400,
+                      "description": "Default evidence envelope TTL when producers omit explicit expiry."
+                    }
+                  }
+                }
+              }
+            },
+            "capabilityPromotion": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Measured capability promotion thresholds by family (PRD 332 R4, R12). No safety-veto override.",
+              "properties": {
+                "families": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Family-specific N-run metric thresholds for shadow→candidate→active rollout.",
+                  "properties": {
+                    "triage-recommendation": {
+                      "$ref": "#/definitions/capabilityPromotionFamilyThresholds"
+                    },
+                    "exploration-inference": {
+                      "$ref": "#/definitions/capabilityPromotionFamilyThresholds"
+                    },
+                    "context-compression": {
+                      "$ref": "#/definitions/capabilityPromotionFamilyThresholds"
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -2262,11 +2343,21 @@
     "contextCompression": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Task-dispatch context compression (PRD 058 gap-083 R26). Default off.",
+      "description": "Task-dispatch context compression (PRD 058 gap-083 R26; PRD 332 measured rollout). Default off.",
       "properties": {
         "enabled": {
           "type": "boolean",
           "default": false
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "lossless",
+            "shadow-lossy",
+            "active-lossy"
+          ],
+          "default": "lossless",
+          "description": "Measured compression rollout phase; active-lossy requires registry promotion (PRD 332 R7)."
         },
         "thresholdTokens": {
           "type": "integer",
@@ -2564,6 +2655,37 @@
         "medium": {
           "type": "integer",
           "minimum": 0
+        }
+      }
+    },
+    "capabilityPromotionFamilyThresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "N-run promotion metrics for one capability family (PRD 332 R12).",
+      "properties": {
+        "minQualifyingRuns": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 3
+        },
+        "maxFalsePositiveRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.05
+        },
+        "maxVetoConflictRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.02
+        },
+        "minShadowAgreement": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.85
         }
       }
     }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "config.schema.json",
   "shipwrightVersion": "2.7.0",
-  "generatedAt": "2026-08-26T08:23:38Z",
+  "generatedAt": "2026-08-26T22:15:34Z",
   "generator": "scripts/effective_config_gen.py",
   "settings": {
     "agentsFile": {
@@ -97,6 +97,14 @@
       "greenfieldDefault": false,
       "migrationDefault": false,
       "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "contextCompression.phase": {
+      "schemaDefault": "lossless",
+      "greenfieldDefault": "lossless",
+      "migrationDefault": "lossless",
+      "runtimeFallback": "lossless",
       "deprecatedSince": null,
       "removedIn": null
     },
@@ -1076,6 +1084,102 @@
       "deprecatedSince": null,
       "removedIn": null
     },
+    "planning.intelligence.capabilityPromotion.families.context-compression.maxFalsePositiveRate": {
+      "schemaDefault": 0.05,
+      "greenfieldDefault": 0.05,
+      "migrationDefault": 0.05,
+      "runtimeFallback": 0.05,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.capabilityPromotion.families.context-compression.maxVetoConflictRate": {
+      "schemaDefault": 0.02,
+      "greenfieldDefault": 0.02,
+      "migrationDefault": 0.02,
+      "runtimeFallback": 0.02,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.capabilityPromotion.families.context-compression.minQualifyingRuns": {
+      "schemaDefault": 3,
+      "greenfieldDefault": 3,
+      "migrationDefault": 3,
+      "runtimeFallback": 3,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.capabilityPromotion.families.context-compression.minShadowAgreement": {
+      "schemaDefault": 0.85,
+      "greenfieldDefault": 0.85,
+      "migrationDefault": 0.85,
+      "runtimeFallback": 0.85,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.capabilityPromotion.families.exploration-inference.maxFalsePositiveRate": {
+      "schemaDefault": 0.05,
+      "greenfieldDefault": 0.05,
+      "migrationDefault": 0.05,
+      "runtimeFallback": 0.05,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.capabilityPromotion.families.exploration-inference.maxVetoConflictRate": {
+      "schemaDefault": 0.02,
+      "greenfieldDefault": 0.02,
+      "migrationDefault": 0.02,
+      "runtimeFallback": 0.02,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.capabilityPromotion.families.exploration-inference.minQualifyingRuns": {
+      "schemaDefault": 3,
+      "greenfieldDefault": 3,
+      "migrationDefault": 3,
+      "runtimeFallback": 3,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.capabilityPromotion.families.exploration-inference.minShadowAgreement": {
+      "schemaDefault": 0.85,
+      "greenfieldDefault": 0.85,
+      "migrationDefault": 0.85,
+      "runtimeFallback": 0.85,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.capabilityPromotion.families.triage-recommendation.maxFalsePositiveRate": {
+      "schemaDefault": 0.05,
+      "greenfieldDefault": 0.05,
+      "migrationDefault": 0.05,
+      "runtimeFallback": 0.05,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.capabilityPromotion.families.triage-recommendation.maxVetoConflictRate": {
+      "schemaDefault": 0.02,
+      "greenfieldDefault": 0.02,
+      "migrationDefault": 0.02,
+      "runtimeFallback": 0.02,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.capabilityPromotion.families.triage-recommendation.minQualifyingRuns": {
+      "schemaDefault": 3,
+      "greenfieldDefault": 3,
+      "migrationDefault": 3,
+      "runtimeFallback": 3,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.capabilityPromotion.families.triage-recommendation.minShadowAgreement": {
+      "schemaDefault": 0.85,
+      "greenfieldDefault": 0.85,
+      "migrationDefault": 0.85,
+      "runtimeFallback": 0.85,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
     "planning.intelligence.radar.postMerge": {
       "schemaDefault": false,
       "greenfieldDefault": false,
@@ -1105,6 +1209,54 @@
       "greenfieldDefault": 30,
       "migrationDefault": 30,
       "runtimeFallback": 30,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.triageEvidence.freshness.defaultTtlSeconds": {
+      "schemaDefault": 86400,
+      "greenfieldDefault": 86400,
+      "migrationDefault": 86400,
+      "runtimeFallback": 86400,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.triageEvidence.weights.architecture-radar": {
+      "schemaDefault": 0.6,
+      "greenfieldDefault": 0.6,
+      "migrationDefault": 0.6,
+      "runtimeFallback": 0.6,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.triageEvidence.weights.decision-graph": {
+      "schemaDefault": 0.5,
+      "greenfieldDefault": 0.5,
+      "migrationDefault": 0.5,
+      "runtimeFallback": 0.5,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.triageEvidence.weights.exploration-findings": {
+      "schemaDefault": 0.5,
+      "greenfieldDefault": 0.5,
+      "migrationDefault": 0.5,
+      "runtimeFallback": 0.5,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.triageEvidence.weights.verification-capability": {
+      "schemaDefault": 0.3,
+      "greenfieldDefault": 0.3,
+      "migrationDefault": 0.3,
+      "runtimeFallback": 0.3,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "planning.intelligence.triageEvidence.weights.workflow-history": {
+      "schemaDefault": 0.4,
+      "greenfieldDefault": 0.4,
+      "migrationDefault": 0.4,
+      "runtimeFallback": 0.4,
       "deprecatedSince": null,
       "removedIn": null
     },
