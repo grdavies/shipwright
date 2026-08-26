@@ -1106,6 +1106,7 @@
 * merge phase explore-and-doc-bidirectional-handoff into feat/sw-explore-first-release (6d68a3c) <!-- sw-deliver:explore-and-doc-bidirectional-handoff -->
 * merge phase quality-metrics-and-atomic-acceptance-gate into feat/sw-explore-first-release (168209e) <!-- sw-deliver:quality-metrics-and-atomic-acceptance-gate -->
 * merge phase workflow-contracts-taxonomy-and-adopter-documentation into feat/sw-explore-first-release (9ccf570) <!-- sw-deliver:workflow-contracts-taxonomy-and-adopter-documentation -->
+* merge phase define-evidence-and-freshness-contracts-medium into feat/project-intelligence-triage-and-capability-promotion (4ac82be) <!-- sw-deliver:define-evidence-and-freshness-contracts-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
