@@ -265,7 +265,7 @@
       "sourcePath": "core/commands/sw-deliver.md"
     },
     {
-      "bodyDigest": "adf2b69ee2162d409a7fb998ff0ebd455002f6fc316c57d6028ba6255997b4cf",
+      "bodyDigest": "dfb438fd3ab9fa3424a6e7c8b4e88e2add39147fcc8f3dcff91ee646aa0b8993",
       "capabilities": [],
       "description": "Orchestrate the doc pipeline through task freeze, then branch on doc.afterTasks before dispatching implementation. Does not inline implementation.",
       "id": "sw-doc",
