@@ -334,6 +334,7 @@
     "exploration_engine.py",
     "exploration_evidence.py",
     "exploration_intelligence.py",
+    "exploration_metrics.py",
     "exploration_model.py",
     "exploration_policy.py",
     "exploration_projection.py",
@@ -788,5 +789,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 785
+  "moduleCount": 786
 }

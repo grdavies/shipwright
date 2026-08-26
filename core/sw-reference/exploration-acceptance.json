@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "prd": "331-prd-sw-explore-first-release",
+  "description": "First-release atomic acceptance boundary for /sw-explore (R32, R38, R40).",
+  "coreGates": [
+    "entry_paths",
+    "exploration_map",
+    "planning_readiness",
+    "exploration_brief",
+    "authority_anti_goals",
+    "doc_explore_routing"
+  ],
+  "degradedAllowed": [
+    "repositoryDiscovery",
+    "architectureRadar",
+    "domainVocabulary",
+    "historicalMemory"
+  ],
+  "metrics": {
+    "prematureDocRate": {
+      "max": 0.05,
+      "description": "Fraction of exploration sessions with premature /sw-doc routing attempts."
+    },
+    "resumeSuccessRate": {
+      "min": 0.9,
+      "description": "Successful /sw-explore resume attempts over total resume attempts."
+    },
+    "authorityBoundaryViolations": {
+      "max": 0,
+      "description": "Implementation dispatch or policy bypass attempts from explore (must be zero)."
+    }
+  },
+  "checklist": [
+    {
+      "id": "entry_paths",
+      "label": "Entry paths (idea, notebook, resume, promote, handoff)",
+      "blocking": true,
+      "requirements": ["R1", "R2", "R3", "R7"]
+    },
+    {
+      "id": "exploration_map",
+      "label": "ExplorationMap@v1 lifecycle and destination-first model",
+      "blocking": true,
+      "requirements": ["R4", "R5", "R6", "R8", "R9", "R37", "R41"]
+    },
+    {
+      "id": "planning_readiness",
+      "label": "PlanningReadiness@v1 classification",
+      "blocking": true,
+      "requirements": ["R11", "R12", "R41"]
+    },
+    {
+      "id": "exploration_brief",
+      "label": "ExplorationBrief@v1 revision-bound handoff",
+      "blocking": true,
+      "requirements": ["R14", "R15", "R27", "R41"]
+    },
+    {
+      "id": "authority_anti_goals",
+      "label": "Authority boundaries and closed anti-goals",
+      "blocking": true,
+      "requirements": ["R31", "R34", "R48"]
+    },
+    {
+      "id": "doc_explore_routing",
+      "label": "Bidirectional explore↔doc routing with loop guard",
+      "blocking": true,
+      "requirements": ["R26", "R27", "R50"]
+    },
+    {
+      "id": "projection_status",
+      "label": "Projection/status surfaces with accessible fallback",
+      "blocking": true,
+      "requirements": ["R22", "R23", "R45"]
+    },
+    {
+      "id": "intelligence_hooks",
+      "label": "Project intelligence hooks (degraded visibility, non-blocking)",
+      "blocking": false,
+      "requirements": ["R16", "R17", "R18", "R19", "R21", "R38", "R42"]
+    },
+    {
+      "id": "quality_metrics",
+      "label": "First-release quality metrics instrumentation",
+      "blocking": true,
+      "requirements": ["R33", "R40"]
+    }
+  ]
+}
