@@ -206,6 +206,7 @@
     "capability_migration_legacy.py",
     "capability_migration_parity.py",
     "capability_precedence.py",
+    "capability_promotion.py",
     "capability_run_log.py",
     "capability_select.py",
     "capability_trust.py",
@@ -791,5 +792,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 788
+  "moduleCount": 789
 }
