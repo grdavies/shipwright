@@ -712,6 +712,7 @@
     "sw_mutate.py",
     "sw_recallium_url.py",
     "sw_resolve_plugin_root.py",
+    "sw_router.py",
     "sw_scripts_inventory.py",
     "sw_scripts_resolve.py",
     "sw_scripts_rewrite.py",
@@ -787,5 +788,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 784
+  "moduleCount": 785
 }
