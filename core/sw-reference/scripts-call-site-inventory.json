@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-25T23:18:53Z",
+  "generatedAt": "2026-08-26T00:12:01Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -3862,37 +3862,46 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw.md:26:shipwright-state.py",
+      "id": "core/commands/sw.md:43:shipwright-state.py",
       "tree": "core/commands",
       "file": "core/commands/sw.md",
-      "line": 26,
+      "line": 43,
       "column": 8,
       "script": "shipwright-state.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw.md:27:wave_living_docs.py",
+      "id": "core/commands/sw.md:44:wave_living_docs.py",
       "tree": "core/commands",
       "file": "core/commands/sw.md",
-      "line": 27,
+      "line": 44,
       "column": 8,
       "script": "wave_living_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw.md:28:planning-graph.py",
+      "id": "core/commands/sw.md:45:planning-graph.py",
       "tree": "core/commands",
       "file": "core/commands/sw.md",
-      "line": 28,
+      "line": 45,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw.md:64:sw_bootstrap.py",
+      "id": "core/commands/sw.md:46:sw_router.py",
       "tree": "core/commands",
       "file": "core/commands/sw.md",
-      "line": 64,
+      "line": 46,
+      "column": 8,
+      "script": "sw_router.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw.md:126:sw_bootstrap.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw.md",
+      "line": 126,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -11044,37 +11053,46 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw.md:26:shipwright-state.py",
+      "id": "dist/claude-code/commands/sw.md:43:shipwright-state.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw.md",
-      "line": 26,
+      "line": 43,
       "column": 8,
       "script": "shipwright-state.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw.md:27:wave_living_docs.py",
+      "id": "dist/claude-code/commands/sw.md:44:wave_living_docs.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw.md",
-      "line": 27,
+      "line": 44,
       "column": 8,
       "script": "wave_living_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw.md:28:planning-graph.py",
+      "id": "dist/claude-code/commands/sw.md:45:planning-graph.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw.md",
-      "line": 28,
+      "line": 45,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw.md:64:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw.md:46:sw_router.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw.md",
-      "line": 64,
+      "line": 46,
+      "column": 8,
+      "script": "sw_router.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw.md:126:sw_bootstrap.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw.md",
+      "line": 126,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -17020,37 +17038,46 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw.md:26:shipwright-state.py",
+      "id": "dist/cursor/commands/sw.md:43:shipwright-state.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw.md",
-      "line": 26,
+      "line": 43,
       "column": 8,
       "script": "shipwright-state.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw.md:27:wave_living_docs.py",
+      "id": "dist/cursor/commands/sw.md:44:wave_living_docs.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw.md",
-      "line": 27,
+      "line": 44,
       "column": 8,
       "script": "wave_living_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw.md:28:planning-graph.py",
+      "id": "dist/cursor/commands/sw.md:45:planning-graph.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw.md",
-      "line": 28,
+      "line": 45,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw.md:64:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw.md:46:sw_router.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw.md",
-      "line": 64,
+      "line": 46,
+      "column": 8,
+      "script": "sw_router.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw.md:126:sw_bootstrap.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw.md",
+      "line": 126,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
