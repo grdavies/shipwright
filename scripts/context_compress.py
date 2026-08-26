@@ -48,12 +48,28 @@ _FENCE_RE = re.compile(r"^(```+|~~~+)(.*)$", re.MULTILINE)
 _SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
 
+MODE_LOSSLESS = "lossless"
+MODE_SHADOW_LOSSY = "shadow-lossy"
+MODE_ACTIVE_LOSSY = "active-lossy"
+VALID_COMPRESSION_MODES = frozenset({MODE_LOSSLESS, MODE_SHADOW_LOSSY, MODE_ACTIVE_LOSSY})
+
+
 @dataclass(frozen=True)
 class CompressResult:
     compressed: bool
     text: str
     contentType: str
     retrieveKey: str | None = None
+
+
+@dataclass(frozen=True)
+class ModeCompressResult:
+    """Authoritative dispatch output plus optional shadow lossy run (PRD 332 R7)."""
+
+    mode: str
+    authoritative: CompressResult
+    shadow: CompressResult | None = None
+    safety_veto: bool = False
 
 
 class ContextRetrieveError(Exception):
@@ -107,6 +123,65 @@ def detect_content_type(text: str) -> str:
     if _looks_like_log(stripped):
         return CONTENT_LOG
     return CONTENT_PROSE
+
+
+def _validate_compression_mode(mode: str) -> str:
+    normalized = (mode or "").strip()
+    if normalized not in VALID_COMPRESSION_MODES:
+        raise ValueError(f"invalid compression mode: {mode!r}")
+    return normalized
+
+
+def compress_with_mode(
+    text: str,
+    *,
+    mode: str,
+    content_type: str | None = None,
+    budget_tokens: int | None = None,
+    root: Path | None = None,
+    safety_veto: bool = False,
+) -> ModeCompressResult:
+    """Run lossy compression under measured rollout modes (PRD 332 R7, R14)."""
+    resolved_mode = _validate_compression_mode(mode)
+    ctype = content_type or detect_content_type(text)
+    if ctype not in CONTENT_TYPES:
+        ctype = CONTENT_PROSE
+
+    if safety_veto and resolved_mode == MODE_ACTIVE_LOSSY:
+        resolved_mode = MODE_SHADOW_LOSSY
+
+    lossy = compress(
+        text,
+        content_type=ctype,
+        budget_tokens=budget_tokens,
+        root=root,
+    )
+    lossless = CompressResult(compressed=False, text=text, contentType=ctype, retrieveKey=None)
+
+    if resolved_mode == MODE_LOSSLESS:
+        return ModeCompressResult(
+            mode=MODE_LOSSLESS,
+            authoritative=lossless,
+            shadow=lossy if lossy.compressed else None,
+            safety_veto=safety_veto,
+        )
+
+    if resolved_mode == MODE_SHADOW_LOSSY:
+        return ModeCompressResult(
+            mode=MODE_SHADOW_LOSSY,
+            authoritative=lossless,
+            shadow=lossy if lossy.compressed else None,
+            safety_veto=safety_veto,
+        )
+
+    # active-lossy — authoritative uses lossy output when compression applied
+    authoritative = lossy if lossy.compressed else lossless
+    return ModeCompressResult(
+        mode=MODE_ACTIVE_LOSSY,
+        authoritative=authoritative,
+        shadow=lossy if lossy.compressed and authoritative.text != lossy.text else None,
+        safety_veto=safety_veto,
+    )
 
 
 def compress(
