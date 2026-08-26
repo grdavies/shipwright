@@ -1110,6 +1110,7 @@
 * merge phase build-the-capabilitypromotion-registry-medium into feat/project-intelligence-triage-and-capability-promotion (aca4faa) <!-- sw-deliver:build-the-capabilitypromotion-registry-medium -->
 * merge phase aggregate-project-intelligence-for-triage-medium into feat/project-intelligence-triage-and-capability-promotion (ab3af0b) <!-- sw-deliver:aggregate-project-intelligence-for-triage-medium -->
 * merge phase wire-triage-and-planning-entry-with-veto-first-semantics-medium into feat/project-intelligence-triage-and-capability-promotion (e8fc1b0) <!-- sw-deliver:wire-triage-and-planning-entry-with-veto-first-semantics-medium -->
+* merge phase register-first-promotion-consumers-medium into feat/project-intelligence-triage-and-capability-promotion (feae799) <!-- sw-deliver:register-first-promotion-consumers-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
