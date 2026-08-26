@@ -6,8 +6,15 @@ Quick routing for the `sw-` command surface and per-worktree state. Pair with th
 
 ```mermaid
 flowchart TD
-  start([What do you need?]) --> newScope{New product scope<br/>or unclear design?}
-  newScope -->|yes| doc["/sw-doc<br/>(or /sw-brainstorm → … → /sw-tasks)"]
+  start([What do you need?]) --> capture{Capture only<br/>or quick note?}
+  capture -->|yes| note["/sw-note"]
+  capture -->|no| exploreQ{Scope unclear<br/>before spec?}
+  exploreQ -->|yes| explore["/sw-explore<br/>(optional — resume/promote/handoff)"]
+  exploreQ -->|no| newScope{Frozen spec ready<br/>or still need PRD?}
+  explore --> docHandoff{Readiness + brief<br/>+ human confirm?}
+  docHandoff -->|yes| doc["/sw-doc"]
+  docHandoff -->|no| explore
+  newScope -->|need spec| doc
   newScope -->|no| bug{Production bug<br/>or incident signal?}
   bug -->|yes| debug["/sw-debug"]
   bug -->|no| feedback{Inbound feedback<br/>to classify?}
@@ -66,8 +73,9 @@ for the closed rename table. Retire call sites onto the replacement name before 
 ## ProjectDoctrine and architecture routing
 
 When the question is about project architecture law, baseline facts, or assessment — not a new workflow
-command — route here. **No** `/sw-codebase-design`, `/sw-explore`, or `/sw-graph-*` entry points exist
-on this surface; use `/sw-init` and the reference/assessment paths below.
+command — route here. **No** `/sw-codebase-design` or `/sw-graph-*` entry points exist on this surface;
+use `/sw-init` and the reference/assessment paths below. Pre-planning exploration uses `/sw-explore`
+(optional) and is documented separately in the main entry tree above.
 
 ```mermaid
 flowchart TD
@@ -91,3 +99,15 @@ flowchart TD
 
 Greenfield empty scaffold is opt-in only. Details: [configuration](configuration.md#consumer-projectdoctrine),
 `.sw/layout.md`, `core/sw-reference/README.md`.
+
+## Explore glossary
+
+| Term | Meaning |
+| --- | --- |
+| **destination** | Non-committal outcome statement captured before graph expansion in `/sw-explore`. |
+| **ExplorationMap** | Canonical `ExplorationMap@v1` session artifact (`scripts/exploration_store.py`). |
+| **readiness** | `PlanningReadiness@v1` classification of blocking / non-blocking / deferred unknowns. |
+| **brief** | `ExplorationBrief@v1` handoff bundle proposing planning-unit candidates without creating PRDs/tasks. |
+| **promote** | Operator-confirmed conversation → graph promotion (`/sw-explore promote`). |
+| **degraded** | Optional intelligence hooks absent or failed — exploration continues with advisory notice. |
+| **skip explore** | Route directly to `/sw-doc` or implementation when scope, acceptance criteria, and tier are already clear. |
