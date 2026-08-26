@@ -329,6 +329,19 @@
     "execute_task_status.py",
     "execution_telemetry.py",
     "execution_telemetry_lib.py",
+    "exploration_architecture.py",
+    "exploration_brief.py",
+    "exploration_decompose.py",
+    "exploration_engine.py",
+    "exploration_evidence.py",
+    "exploration_intelligence.py",
+    "exploration_metrics.py",
+    "exploration_model.py",
+    "exploration_policy.py",
+    "exploration_projection.py",
+    "exploration_security.py",
+    "exploration_store.py",
+    "explore_command_contract.py",
     "failure-signature-escalate.py",
     "failure-signature-record.py",
     "failure_signature_escalate.py",
@@ -618,6 +631,7 @@
     "planning_progress.py",
     "planning_projection_ledger.py",
     "planning_query_cache.py",
+    "planning_readiness.py",
     "planning_reconcile.py",
     "planning_refusal_ledger.py",
     "planning_refusal_ledger_cli.py",
@@ -700,6 +714,7 @@
     "sw_mutate.py",
     "sw_recallium_url.py",
     "sw_resolve_plugin_root.py",
+    "sw_router.py",
     "sw_scripts_inventory.py",
     "sw_scripts_resolve.py",
     "sw_scripts_rewrite.py",
@@ -775,5 +790,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 772
+  "moduleCount": 787
 }

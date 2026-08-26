@@ -40,7 +40,7 @@ COMMANDS_DIRS = (
     Path("dist/cursor/commands"),
     Path("dist/claude-code/commands"),
 )
-FORBIDDEN_COMMAND_STEMS = frozenset({"sw-explore", "sw-codebase-design"})
+FORBIDDEN_COMMAND_STEMS = frozenset({"sw-codebase-design"})
 
 
 def _obs(key: str, claim: str, uri: str, *, confidence: str = "high") -> dict:
@@ -229,9 +229,7 @@ def scenario_no_new_command(root: Path) -> None:
         for path in base.rglob("*"):
             if not path.is_file():
                 continue
-            if path.stem in FORBIDDEN_COMMAND_STEMS or "sw-explore" in path.name:
-                found.append(str(path.relative_to(root)))
-            if "sw-codebase-design" in path.name:
+            if path.stem in FORBIDDEN_COMMAND_STEMS or "sw-codebase-design" in path.name:
                 found.append(str(path.relative_to(root)))
     if found:
         raise AssertionError(f"unexpected forbidden command registration: {found}")

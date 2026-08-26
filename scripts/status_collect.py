@@ -20,6 +20,16 @@ from decision_graph.journal import (  # noqa: E402
     receipts_by_node_from_journal,
 )
 from decision_graph.receipt import receipt_blocks_node  # noqa: E402
+from exploration_intelligence import collect_intelligence_context  # noqa: E402
+from exploration_projection import (  # noqa: E402
+    ExplorationProjectionError,
+    build_local_projection,
+    load_map_from_store,
+    project_frontier,
+)
+from exploration_security import prepare_status_payload  # noqa: E402
+from exploration_store import ExplorationStore  # noqa: E402
+from planning_readiness import compute_readiness  # noqa: E402
 
 RADAR_LAST_REL = Path(".cursor/sw-architecture-radar/last.json")
 VOCAB_DIVERGENCE_LAST_REL = Path(".cursor/sw-vocabulary-divergence/last.json")
@@ -194,6 +204,149 @@ def collect_decision_frontier_summary(
     }
 
 
+def _exploration_nodes(map_document: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    indexed: dict[str, dict[str, Any]] = {}
+    for node in map_document.get("nodes") or []:
+        if isinstance(node, dict) and isinstance(node.get("id"), str):
+            indexed[node["id"]] = dict(node)
+    return indexed
+
+
+def collect_exploration_summary(
+    root: Path,
+    map_id: str,
+    *,
+    store: ExplorationStore | None = None,
+) -> dict[str, Any]:
+    """Read-only exploration status summary without mutating canonical state (R23)."""
+    root = root.resolve()
+    try:
+        map_document = load_map_from_store(root, map_id, store=store)
+    except ExplorationProjectionError as exc:
+        return {"verdict": "fail", "readOnly": True, "explorationMapId": map_id, "error": str(exc)}
+
+    readiness = compute_readiness(map_document)
+    intelligence = collect_intelligence_context(root)
+    projection_bundle = project_frontier(map_document)
+    local_projection = projection_bundle.get("local") if isinstance(projection_bundle.get("local"), dict) else {}
+
+    payload: dict[str, Any] = {
+        "verdict": "pass",
+        "readOnly": True,
+        "explorationMapId": map_id,
+        "revision": map_document.get("revision"),
+        "destination": (map_document.get("destination") or {}).get("statement")
+        if isinstance(map_document.get("destination"), dict)
+        else None,
+        "readiness": {
+            "readinessId": readiness.get("id"),
+            "readyForDocHandoff": readiness.get("readyForDocHandoff"),
+            "sourceRevision": readiness.get("sourceRevision"),
+            "invalidation": readiness.get("invalidation"),
+            "summary": readiness.get("summary"),
+        },
+        "degradation": {
+            "blocking": intelligence.get("blocking"),
+            "degradedSources": intelligence.get("degradedSources") or [],
+            "status": intelligence.get("status"),
+        },
+        "frontier": local_projection.get("frontier"),
+        "projection": {
+            "mode": local_projection.get("mode"),
+            "visualizationAvailable": local_projection.get("visualizationAvailable"),
+            "textFallback": local_projection.get("textFallback"),
+        },
+        "interactionState": local_projection.get("interactionState"),
+    }
+    return prepare_status_payload(payload)
+
+
+def collect_explain_decision(
+    root: Path,
+    map_id: str,
+    decision_id: str,
+    *,
+    store: ExplorationStore | None = None,
+) -> dict[str, Any]:
+    """Explain active or superseded decision nodes without mutating state (R23)."""
+    root = root.resolve()
+    try:
+        map_document = load_map_from_store(root, map_id, store=store)
+    except ExplorationProjectionError as exc:
+        return {
+            "verdict": "fail",
+            "readOnly": True,
+            "explorationMapId": map_id,
+            "decisionId": decision_id,
+            "error": str(exc),
+        }
+
+    nodes = _exploration_nodes(map_document)
+    if decision_id not in nodes:
+        return {
+            "verdict": "fail",
+            "readOnly": True,
+            "explorationMapId": map_id,
+            "decisionId": decision_id,
+            "error": "decision-not-found",
+        }
+
+    node = nodes[decision_id]
+    if str(node.get("type") or "") != "decision":
+        return {
+            "verdict": "fail",
+            "readOnly": True,
+            "explorationMapId": map_id,
+            "decisionId": decision_id,
+            "error": "not-a-decision-node",
+        }
+
+    superseded_ids = {
+        str(node_id)
+        for node_id in (map_document.get("supersededNodeIds") or [])
+        if isinstance(node_id, str)
+    }
+    status = str(node.get("status") or "")
+    superseded = decision_id in superseded_ids or status == "superseded"
+    successor_ids = [
+        node_id
+        for node_id, candidate in sorted(nodes.items())
+        if str(candidate.get("supersedes") or "") == decision_id
+    ]
+    reason = str(node.get("rationale") or node.get("statement") or node.get("title") or "").strip()
+    if superseded and not reason:
+        reason = "Decision superseded by a successor node."
+
+    payload: dict[str, Any] = {
+        "verdict": "pass",
+        "readOnly": True,
+        "explorationMapId": map_id,
+        "revision": map_document.get("revision"),
+        "decisionId": decision_id,
+        "status": status,
+        "superseded": superseded,
+        "active": not superseded and status in {"open", "active", "resolved"},
+        "reason": reason,
+        "successorDecisionIds": successor_ids,
+        "supersedes": node.get("supersedes"),
+    }
+    return prepare_status_payload(payload)
+
+
+def cmd_exploration_summary(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve() if args.root else Path.cwd()
+    payload = collect_exploration_summary(root, args.map_id)
+    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0 if payload.get("verdict") == "pass" else 20
+
+
+def cmd_explain_decision(args: argparse.Namespace) -> int:
+    root = Path(args.root).resolve() if args.root else Path.cwd()
+    payload = collect_explain_decision(root, args.map_id, args.decision_id)
+    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0 if payload.get("verdict") == "pass" else 20
+
+
 def cmd_decision_frontier(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve() if args.root else Path.cwd()
     unit_id = args.unit_id
@@ -254,6 +407,21 @@ def main(argv: list[str] | None = None) -> int:
         help="Latest vocabulary divergence artifact summary (read-only)",
     )
     vocab_last.set_defaults(func=cmd_vocabulary_divergence_last)
+
+    explore_summary = sub.add_parser(
+        "exploration-summary",
+        help="Exploration map summary with readiness, degradation, and frontier projection",
+    )
+    explore_summary.add_argument("--map-id", required=True)
+    explore_summary.set_defaults(func=cmd_exploration_summary)
+
+    explain_decision = sub.add_parser(
+        "explain-decision",
+        help="Explain an active or superseded exploration decision node",
+    )
+    explain_decision.add_argument("--map-id", required=True)
+    explain_decision.add_argument("--decision-id", required=True)
+    explain_decision.set_defaults(func=cmd_explain_decision)
 
     args = parser.parse_args(argv)
     return int(args.func(args))

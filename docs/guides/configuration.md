@@ -1695,6 +1695,14 @@ Issue-store `separate-project` mode remains authoritative via `planning_store.pu
 receives projections only through **materialize at deliver entry** (`.cursor/planning-materialized/`).
 Helper: `scripts/workflow_extensions.py` (`require_extension`, `extension_enabled`).
 
+**Explore ↔ doc handoff (same helper module):** when explore maps and `/sw-doc` exchange routes,
+`workflow_extensions.py` owns proposal/confirm/decline helpers (`propose_explore_forward_handoff`,
+`propose_doc_backward_route`, `apply_*_confirm` / `apply_*_decline` / `apply_doc_backward_cancel`),
+loop-guard recovery (`recover_from_loop_guard`), and contract validation
+(`validate_doc_explore_handoff_contract`). Operator UX stays on `/sw-explore handoff` and `/sw-doc`
+backward readiness — no nested orchestrator dispatch. See `docs/guides/workflows.md` (Explore
+workstream) for the human-facing route table.
+
 ## Optional integrations
 
 | Integration | Config | When to enable |

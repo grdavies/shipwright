@@ -9,7 +9,7 @@ Generated from `core/sw-reference/kernel-classification.json` and `core/sw-refer
 | --- | ---: | ---: | ---: |
 | `cheap` | 22 | 7 | 13 |
 | `build` | 6 | 8 | 6 |
-| `mid` | 7 | 10 | 5 |
+| `mid` | 8 | 10 | 6 |
 | `deep` | 4 | 4 | 3 |
 
 ## Graph node kinds

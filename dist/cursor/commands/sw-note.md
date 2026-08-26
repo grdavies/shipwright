@@ -64,19 +64,25 @@ scratch, not a planning artifact).
 
 ## Graduate (confirm-first, bidirectional provenance)
 
-`/sw-note graduate <id> --to gap|brainstorm` promotes a notebook item into a real planning artifact:
+`/sw-note graduate <id> --to gap|brainstorm|explore` promotes a notebook item into a real planning artifact
+or exploration session:
 
 1. **Confirm-first** — always show the item and the target artifact type; require explicit `proceed` before
-   any planning-store or brainstorm-doc write. Never auto-graduate.
+   any planning-store, brainstorm-doc, or exploration-map write. Never auto-graduate.
 2. On confirm:
    - `--to gap` → `python3 scripts/sw_bootstrap.py planning_gap_capture.py -- <repo> capture --signal-id notebook:<id> --title "<text>"`
    - `--to brainstorm` → hand off to `/sw-brainstorm` with the note text as the seed input (does not write the
      brainstorm doc itself — `/sw-brainstorm` owns that).
+   - `--to explore` → hand off to `/sw-explore --from-notebook <id>` with the note text as the seed
+     destination; `/sw-explore` owns map creation via `scripts/exploration_engine.py`.
 3. **Bidirectional provenance** — on successful graduation:
-   - Notebook item: set `graduatedTo: <gap-unit-id | brainstorm-path>` and `graduatedAt: <now>`.
+   - Notebook item: set `graduatedTo: <gap-unit-id | brainstorm-path | explore:<map-id>>` and
+     `graduatedAt: <now>`.
    - Target artifact: record a back-pointer to the notebook item id (e.g. a `notebookRef: <id>` line in the
-     gap unit body, or a note in the brainstorm doc's Key Decisions when seeded from a notebook item) so
-     either side can be traced from the other.
+     gap unit body, a note in the brainstorm doc's Key Decisions when seeded from a notebook item, or
+     `provenance.notebookId` on the `ExplorationMap@v1`) so either side can be traced from the other.
+     Graduation to explore is **reversible** — resume via `/sw-explore resume <map-id>` or
+     `/sw-explore --from-notebook <id>` preserves the round trip.
 4. Graduated items are never deleted from the notebook — they remain as closed-with-provenance history.
 
 ## Session-start index injection (opt-in, redact-or-skip)

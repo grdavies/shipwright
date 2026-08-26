@@ -49,6 +49,29 @@ Load `skills/living-status/SKILL.md`.
    | `divergenceCount` | Number of divergence rows in the last artifact |
 
    Missing artifacts return `present: false` with `verdict: pass` — status does not treat absence as an error.
+1. **Exploration summary and explain-decision (PRD 331 R23, R45)** — read-only exploration status
+   projections (never mutate canonical maps or persistence stores):
+
+   ```bash
+   python3 scripts/status_collect.py exploration-summary --map-id <exploration-map-id>
+   python3 scripts/status_collect.py explain-decision --map-id <exploration-map-id> --decision-id <node-id>
+   python3 scripts/exploration_projection.py project --map-id <exploration-map-id>
+   ```
+
+   | Field | Meaning |
+   | --- | --- |
+   | `readOnly` | Always true — collectors never mutate canonical exploration state |
+   | `explorationMapId` / `revision` | Live map identity and optimistic revision |
+   | `readiness` | Derived `PlanningReadiness@v1` summary (`readyForDocHandoff`, invalidation) |
+   | `degradation` | Optional intelligence hook degradation (`degradedSources`, non-blocking) |
+   | `frontier` | Open frontier nodes from `exploration_projection.py` (below canonical semantics) |
+   | `projection.textFallback` | Accessible plain-text fallback when provider visualization is unavailable |
+   | `interactionState` | Current ask/decide/confirm interaction state when present on the map |
+   | `explain-decision.reason` | Active/superseded rationale without mutating the map |
+   | `explain-decision.successorDecisionIds` | Successor decisions when a node was superseded |
+
+   Provider-backed visualizations remain redacted projections via `exploration_security.py`; local text
+   fallback is always available when visualization is absent or degraded.
 1. **Measurement and learning (PRD 280 R10)** — read-only rule effectiveness summaries and workflow
    intelligence cohort drill-down (never mutates telemetry stores):
 

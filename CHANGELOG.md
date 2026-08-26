@@ -1085,6 +1085,19 @@
 * merge phase operator-documentation-and-routing into feat/truth-hygiene-and-project-doctrine (d10154c) <!-- sw-deliver:operator-documentation-and-routing -->
 * merge phase build-chain-parity-and-integrated-acceptance into feat/truth-hygiene-and-project-doctrine (23bc997) <!-- sw-deliver:build-chain-parity-and-integrated-acceptance -->
 * merge phase absorb-linkage-and-release-closeout into feat/truth-hygiene-and-project-doctrine (aaa7a19) <!-- sw-deliver:absorb-linkage-and-release-closeout -->
+* merge phase exploration-artifact-schemas-and-validation-ownership into feat/sw-explore-first-release (bbe2b57) <!-- sw-deliver:exploration-artifact-schemas-and-validation-ownership -->
+* merge phase exploration-storage-lifecycle-and-optimistic-revision into feat/sw-explore-first-release (0549593) <!-- sw-deliver:exploration-storage-lifecycle-and-optimistic-revision -->
+* merge phase destination-first-structured-exploration-engine into feat/sw-explore-first-release (a2d022f) <!-- sw-deliver:destination-first-structured-exploration-engine -->
+* merge phase evidence-reuse-trust-and-prototype-boundaries into feat/sw-explore-first-release (0b43685) <!-- sw-deliver:evidence-reuse-trust-and-prototype-boundaries -->
+* merge phase explore-command-and-entry-paths into feat/sw-explore-first-release (f5356c5) <!-- sw-deliver:explore-command-and-entry-paths -->
+* merge phase optional-project-intelligence-integrations into feat/sw-explore-first-release (c390300) <!-- sw-deliver:optional-project-intelligence-integrations -->
+* merge phase readiness-and-planning-unit-candidate-derivation into feat/sw-explore-first-release (3386909) <!-- sw-deliver:readiness-and-planning-unit-candidate-derivation -->
+* merge phase exploration-brief-handoff-bundle-and-resume into feat/sw-explore-first-release (c510ba0) <!-- sw-deliver:exploration-brief-handoff-bundle-and-resume -->
+* merge phase visualization-and-status-projections into feat/sw-explore-first-release (2f2e166) <!-- sw-deliver:visualization-and-status-projections -->
+* merge phase bare-sw-route-selection-and-operator-controls into feat/sw-explore-first-release (495f4f6) <!-- sw-deliver:bare-sw-route-selection-and-operator-controls -->
+* merge phase explore-and-doc-bidirectional-handoff into feat/sw-explore-first-release (6d68a3c) <!-- sw-deliver:explore-and-doc-bidirectional-handoff -->
+* merge phase quality-metrics-and-atomic-acceptance-gate into feat/sw-explore-first-release (168209e) <!-- sw-deliver:quality-metrics-and-atomic-acceptance-gate -->
+* merge phase workflow-contracts-taxonomy-and-adopter-documentation into feat/sw-explore-first-release (9ccf570) <!-- sw-deliver:workflow-contracts-taxonomy-and-adopter-documentation -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

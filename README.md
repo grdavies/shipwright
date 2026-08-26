@@ -30,11 +30,26 @@ on `/sw-deliver` is opt-in only — see [configuration](docs/guides/configuratio
 
 ```mermaid
 flowchart LR
- DOC["1 · Document<br/>/sw-doc"] --> SHIP["2 · Implement<br/>/sw-deliver"]
- SHIP --> MERGE([You merge — only human gate])
- MERGE --> COMPOUND["3 · Compound<br/>/sw-compound-ship"]
- OPS["Debug & feedback<br/>/sw-debug · /sw-feedback"] -.-> DOC
- COMPOUND -.->|learnings| DOC
+ CAP["Capture<br/>/sw-note · /sw-feedback"] --> EXP["Explore<br/>/sw-explore<br/>(optional)"]
+ CAP --> SPEC["Specify<br/>/sw-doc"]
+ EXP --> SPEC
+ SPEC --> BUILD["Build<br/>/sw-deliver · /sw-ship"]
+ BUILD --> MERGE([You merge — only human gate])
+ MERGE --> LEARN["Learn<br/>/sw-retrospective"]
+ OPS["Debug<br/>/sw-debug"] -.-> SPEC
+ LEARN -.->|learnings| CAP
+```
+
+**Adopter lifecycle:** **Capture → Explore → Specify → Build → Learn**. Capture (`/sw-note`,
+`/sw-feedback`) and Explore (`/sw-explore`) are **optional** — skip either when scope is already clear
+and route directly to `/sw-doc` or `/sw-deliver run`. Routing examples:
+
+```text
+/sw-note add "billing portal idea"          # Capture only
+/sw-explore idea "billing portal pricing"   # Optional explore before spec
+/sw-doc                                      # Specify → freeze → tasks
+/sw-deliver run docs/prds/<n>-*/tasks-*.md  # Build to merge gate
+/sw-retrospective --post-merge             # Learn after merge
 ```
 
 > New here? Read **[Getting started](docs/guides/getting-started.md)** for guided persona paths, or

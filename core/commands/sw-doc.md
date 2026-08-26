@@ -172,6 +172,47 @@ absent (R13). File-store repos: byte-identical file authoring (R9).
 Private/memory units are refused against a public issue store — route to `memory` or
 `local-synced` backends instead.
 
+## Explore entry (`--from-explore`) (PRD 331 R26, R39, R50)
+
+When invoked as `/sw-doc --from-explore <map-id>` (forward handoff from `/sw-explore` or bounded
+`/sw` routing), **readiness is checked before any doc-chain step runs**. Insufficient readiness
+routes **backward** to structured exploration — never silent persistence and never nested
+orchestrator dispatch.
+
+### Readiness gate
+
+```bash
+python3 scripts/workflow_extensions.py doc-backward-propose \
+  --map-json '<ExplorationMap@v1>' [--readiness-json '<PlanningReadiness@v1>'] \
+  [--route-history '["doc","explore"]']
+```
+
+1. Load the live `ExplorationMap@v1` and `PlanningReadiness@v1` for `<map-id>` (recompute when absent).
+2. When `readyForDocHandoff` is **false**, call `propose_doc_backward_route` in
+   `scripts/workflow_extensions.py` — emit a **reasoned, cancelable** backward proposal:
+   - stable `reason.code` (e.g. `doc-readiness-insufficient`) with blocking unknown evidence
+   - declared persistence effects (explore resume only — **on confirm**)
+   - `loopGuardToken` from the shared explore↔doc loop guard (`sw_router.py`, R50)
+   - `readOnlyUntilConfirm: true` — **no silent persistence**
+3. When `readyForDocHandoff` is **true**, continue the tier-gated doc chain below — do **not** auto-seed
+   implementation; `/sw-doc` still does not inline `/sw-deliver`.
+
+### Operator controls (backward)
+
+| Action | Module | Effect |
+| --- | --- | --- |
+| **Cancel** | `apply_doc_backward_cancel` | `verdict: cancelled`; empty persistence effects |
+| **Confirm** | `apply_doc_backward_confirm` | Returns `/sw-explore resume <map-id>` for in-turn dispatch — **does not** nest `/sw-doc` or `/sw-deliver` |
+| **Override inject** | `refuse_handoff_dispatch` | Refuses nested orchestrator or implementation dispatch during handoff |
+
+Forward handoff (**explore → doc**) is implemented in `scripts/workflow_extensions.py`
+(`propose_explore_forward_handoff`, human confirm via `apply_explore_forward_confirm`) — requires a
+valid revision-bound brief, declared doc persistence effects, loop-guard token, and explicit operator
+confirm; **never implements** PRDs, tasks, or deliver dispatch (R27, R31).
+
+Loop recovery after repeated explore↔doc alternation uses `recover_from_loop_guard` — operator must
+break the cycle via `capture`, `deliver`, or `resume` (R50).
+
 
 ## Procedure
 
