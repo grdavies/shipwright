@@ -49,6 +49,34 @@ Load `skills/living-status/SKILL.md`.
    | `divergenceCount` | Number of divergence rows in the last artifact |
 
    Missing artifacts return `present: false` with `verdict: pass` — status does not treat absence as an error.
+1. **Triage recommendation explain (PRD 332 R8, R16, R17)** — read-only advisory intelligence for tier
+   classification (never mutates evidence or registry stores; **no new slash command**):
+
+   ```bash
+   python3 scripts/status_collect.py triage-recommendation-explain \
+     [--unit-id <unit-id>] [--description "<work>"] [--file-count N] [--query "<text>"]
+   ```
+
+   | Field | Meaning |
+   | --- | --- |
+   | `readOnly` | Always true — collectors never mutate artifacts or registry |
+   | `authority` | Always `non-authoritative` — recommendations do not override deterministic triage |
+   | `productAuthority` | Always false — status explain is not a product decision surface |
+   | `recommendation.appliedTier` | Final tier after mechanical scoring, safety veto, and promotion-gated advisory |
+   | `recommendation.deterministicTier` | Mechanical/file-count/risk/ambiguity tier before advisory merge |
+   | `recommendation.advisoryTier` | Weighted advisory tier when computable |
+   | `recommendation.vetoTier` | Safety-floor veto tier when fresh safety evidence requires a floor |
+   | `recommendation.floorTier` | Risk-keyword floor tier when present |
+   | `contributions[]` | Per-producer weighted contributions to the advisory score |
+   | `absent[]` | Producers unavailable with explicit reasons (not numeric zero) |
+   | `excludedStale[]` | Signals excluded by freshness, expiry, or digest mismatch |
+   | `promotion.capabilityId` / `revision` / `state` | Active registry binding (`shadow`, `candidate`, `active`, `rolled_back`) |
+   | `promotion.evidenceRef` | Digest-bound evidence reference for the active revision |
+   | `evidenceTimestamp` | `computedAt` from the evidence explain payload when present |
+
+   Advisory recommendations remain non-authoritative: deterministic gates, safety-floor vetoes, and required
+   workflow gates are unchanged. Configuration and storage layout: `docs/guides/configuration.md`,
+   `.sw/layout.md`, `docs/guides/workflows.md` (**Evidence-backed triage and planning entry**).
 1. **Exploration summary and explain-decision (PRD 331 R23, R45)** — read-only exploration status
    projections (never mutate canonical maps or persistence stores):
 
