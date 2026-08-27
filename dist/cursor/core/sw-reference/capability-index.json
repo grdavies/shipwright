@@ -837,6 +837,30 @@
       }
     },
     {
+      "id": "provider.providers.execution.remote",
+      "kind": "provider",
+      "sourcePath": "core/providers/execution/remote.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "graphExecution.execution.backend",
+            "equals": "remote"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "execution",
+          "adapterId": "remote",
+          "selectionFamily": "providers",
+          "status": "spec-stub",
+          "programPriority": "P2"
+        }
+      }
+    },
+    {
       "id": "provider.providers.host.CAPABILITIES",
       "kind": "provider",
       "sourcePath": "core/providers/host/CAPABILITIES.md",

@@ -418,6 +418,7 @@
     "graph/packages/trust.py",
     "graph/profiles.py",
     "graph/quick_ship_compile.py",
+    "graph/remote_execution_backend.py",
     "graph/resource_pools.py",
     "graph/reviewer_metrics/__init__.py",
     "graph/reviewer_metrics/calibration.py",
@@ -796,5 +797,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 793
+  "moduleCount": 794
 }
