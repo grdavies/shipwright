@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "revision": "1",
+  "authorityPath": ".sw/program-priorities.json",
+  "description": "Sole authoritative program priority and release sequence (PRD 333 R5/R6/R18/R20).",
+  "priorityTiers": {
+    "P0": {
+      "rank": 0,
+      "label": "P0",
+      "programs": [
+        "eval-corpus",
+        "handoff-bundle"
+      ]
+    },
+    "P1": {
+      "rank": 1,
+      "label": "P1",
+      "programs": [
+        "planning-store-parity"
+      ]
+    },
+    "P2": {
+      "rank": 2,
+      "label": "P2",
+      "programs": [
+        "gitlab-planning-store",
+        "remote-execution",
+        "upstream-provenance"
+      ]
+    },
+    "P3": {
+      "rank": 3,
+      "label": "P3",
+      "programs": [
+        "workflow-package-marketplace",
+        "adopter-documentation"
+      ]
+    }
+  },
+  "releaseSequence": [
+    {
+      "id": "v2.5.1",
+      "theme": "truth",
+      "order": 1
+    },
+    {
+      "id": "v2.6",
+      "theme": "explore+intel",
+      "order": 2
+    },
+    {
+      "id": "v2.7",
+      "theme": "adaptive orchestration",
+      "order": 3
+    }
+  ],
+  "providerFollowOn": [
+    {
+      "id": "gitlab-planning-store",
+      "order": 1,
+      "tier": "P2"
+    },
+    {
+      "id": "remote-execution",
+      "order": 2,
+      "tier": "P2"
+    },
+    {
+      "id": "upstream-provenance",
+      "order": 3,
+      "tier": "P2"
+    },
+    {
+      "id": "workflow-package-marketplace",
+      "order": 4,
+      "tier": "P3"
+    }
+  ]
+}
