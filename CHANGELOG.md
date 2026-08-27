@@ -1117,6 +1117,7 @@
 * merge phase generate-mirrors-and-verify-durable-closeout-small into feat/project-intelligence-triage-and-capability-promotion (b1d6955) <!-- sw-deliver:generate-mirrors-and-verify-durable-closeout-small -->
 * merge phase external-consumer-evaluation-corpus into feat/eval-corpus-handoff-and-platform-providers (14ddf67) <!-- sw-deliver:external-consumer-evaluation-corpus -->
 * merge phase authoritative-enhancement-ranking-and-release-sequence into feat/eval-corpus-handoff-and-platform-providers (66b4445) <!-- sw-deliver:authoritative-enhancement-ranking-and-release-sequence -->
+* merge phase corpus-metrics-cadence-and-release-gate into feat/eval-corpus-handoff-and-platform-providers (85fabaf) <!-- sw-deliver:corpus-metrics-cadence-and-release-gate -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
