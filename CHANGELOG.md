@@ -1114,6 +1114,7 @@
 * merge phase expose-explainability-and-configuration-medium into feat/project-intelligence-triage-and-capability-promotion (8129363) <!-- sw-deliver:expose-explainability-and-configuration-medium -->
 * merge phase document-operator-contracts-and-storage-medium into feat/project-intelligence-triage-and-capability-promotion (8997da1) <!-- sw-deliver:document-operator-contracts-and-storage-medium -->
 * merge phase generate-mirrors-and-verify-durable-closeout-small into feat/project-intelligence-triage-and-capability-promotion (b046d5a) <!-- sw-deliver:generate-mirrors-and-verify-durable-closeout-small -->
+* merge phase generate-mirrors-and-verify-durable-closeout-small into feat/project-intelligence-triage-and-capability-promotion (b1d6955) <!-- sw-deliver:generate-mirrors-and-verify-durable-closeout-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
