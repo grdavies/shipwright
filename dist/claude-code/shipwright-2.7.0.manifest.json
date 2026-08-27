@@ -630,6 +630,7 @@
     "planning_park.py",
     "planning_path_redirect.py",
     "planning_paths.py",
+    "planning_priority_projection.py",
     "planning_progress.py",
     "planning_projection_ledger.py",
     "planning_query_cache.py",
@@ -793,5 +794,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 790
+  "moduleCount": 791
 }

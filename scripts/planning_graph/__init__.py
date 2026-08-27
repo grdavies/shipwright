@@ -354,5 +354,14 @@ def main(argv: list[str] | None = None) -> None:
         from planning_scheduler import cmd_next
 
         cmd_next(root, rest)
+    elif command == "priority-projection":
+        from planning_priority_projection import project_from_repo
+
+        try:
+            emit(project_from_repo(root))
+        except FileNotFoundError as exc:
+            fail(str(exc), exit_code=20)
+        except ValueError as exc:
+            fail(str(exc), exit_code=20)
     else:
         fail(f"unknown command: {command}")
