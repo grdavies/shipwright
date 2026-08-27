@@ -1,0 +1,71 @@
+# PRD 333 R1, R14 — scheduled external-consumer eval corpus with release gate evidence.
+name: eval-corpus
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/eval_corpus.py"
+      - "scripts/eval_corpus_manifest.py"
+      - "scripts/test/fixtures/external-consumer-eval/**"
+      - "scripts/unit_tests/eval/**"
+      - ".github/workflows/eval-corpus.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  eval-corpus:
+    name: eval-corpus
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run versioned corpus
+        id: corpus-run
+        run: |
+          PYTHONPATH=scripts python3 scripts/eval_corpus.py run \
+            --out .cursor/sw-eval-corpus/report.json
+
+      - name: Evaluate release gate
+        id: corpus-gate
+        run: |
+          set +e
+          PYTHONPATH=scripts python3 scripts/eval_corpus.py gate \
+            --report .cursor/sw-eval-corpus/report.json \
+            --out .cursor/sw-eval-corpus/gate.json
+          ec=$?
+          set -e
+          echo "gate_exit=$ec" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Fail release readiness unless green or attributable waiver
+        env:
+          SW_EVAL_CORPUS_WAIVER: ${{ vars.SW_EVAL_CORPUS_WAIVER }}
+        run: |
+          if [ -n "${SW_EVAL_CORPUS_WAIVER}" ] && [ -f "${SW_EVAL_CORPUS_WAIVER}" ]; then
+            PYTHONPATH=scripts python3 scripts/eval_corpus.py gate \
+              --report .cursor/sw-eval-corpus/report.json \
+              --waiver "${SW_EVAL_CORPUS_WAIVER}"
+            exit $?
+          fi
+          test "${{ steps.corpus-gate.outputs.gate_exit }}" -eq 0
+
+      - name: Publish bounded evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-corpus-evidence
+          path: |
+            .cursor/sw-eval-corpus/report.json
+            .cursor/sw-eval-corpus/gate.json
+          if-no-files-found: ignore
+          retention-days: 14
