@@ -321,6 +321,7 @@
     "domain_vocabulary.py",
     "effective_config_gen.py",
     "env-read-guard.py",
+    "eval_corpus.py",
     "eval_corpus_manifest.py",
     "evidence-read.py",
     "evidence_read.py",
@@ -794,5 +795,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 791
+  "moduleCount": 792
 }
