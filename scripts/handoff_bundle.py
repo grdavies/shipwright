@@ -25,6 +25,9 @@ SCHEMA_VERSION = "HandoffBundle@v1"
 DEFAULT_FRESHNESS_TTL_SECONDS = 86400
 RESOLVED_STATUSES = frozenset({"resolved", "closed", "done", "cancelled"})
 UNRESOLVED_STATUSES = frozenset({"open", "blocked", "unknown"})
+SUPPORTED_HARNESSES = frozenset({"cursor", "claude-code"})
+SESSION_TRANSITIONS = frozenset({"resume", "switch"})
+MODEL_TRANSITIONS = frozenset({"same", "changed", "unknown"})
 
 
 def repo_root(start: Path | None = None) -> Path:
@@ -53,7 +56,122 @@ def canonical_json(value: Any) -> str:
 
 def digest_payload(payload: Mapping[str, Any]) -> str:
     material = {k: v for k, v in payload.items() if k != "bundleDigest"}
+    transition = material.get("transitionProvenance")
+    if isinstance(transition, dict):
+        transition_copy = dict(transition)
+        transition_copy.pop("integrity", None)
+        material["transitionProvenance"] = transition_copy
     return f"sha256:{hashlib.sha256(canonical_json(material).encode('utf-8')).hexdigest()}"
+
+
+def detect_harness() -> str:
+    """Detect the active harness (cursor | claude-code | unknown)."""
+    explicit = os.environ.get("SW_SETUP_PLATFORM", "").strip()
+    if explicit in SUPPORTED_HARNESSES:
+        return explicit
+    if os.environ.get("CURSOR_AGENT") or os.environ.get("CURSOR_PLUGIN_ROOT"):
+        return "cursor"
+    if (
+        os.environ.get("CLAUDE_CODE")
+        or os.environ.get("CLAUDE_CODE_SSE_PORT")
+        or os.environ.get("CLAUDE_PLUGIN_ROOT")
+    ):
+        return "claude-code"
+    return "unknown"
+
+
+def detect_model_id() -> str:
+    """Best-effort active model identifier for transition provenance."""
+    for key in ("SW_ACTIVE_MODEL", "CURSOR_MODEL", "ANTHROPIC_MODEL"):
+        value = os.environ.get(key, "").strip()
+        if value:
+            return value
+    ship_state = _shipwright_state(Path.cwd())
+    model = ship_state.get("activeModel") or ship_state.get("modelId")
+    return str(model).strip() if model else "unknown"
+
+
+def classify_model_transition(source_model: str, destination_model: str) -> str:
+    source = (source_model or "").strip()
+    destination = (destination_model or "").strip()
+    if not source or not destination or source == "unknown" or destination == "unknown":
+        return "unknown"
+    return "same" if source == destination else "changed"
+
+
+def build_transition_provenance(
+    bundle: Mapping[str, Any],
+    *,
+    source_harness: str,
+    destination_harness: str | None = None,
+    session_transition: str,
+    source_model: str | None = None,
+    destination_model: str | None = None,
+    model_transition: str | None = None,
+    head_sha: str | None = None,
+    extensions: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Build transition provenance for cross-harness export/import (PRD 333 R3, R15)."""
+    if session_transition not in SESSION_TRANSITIONS:
+        raise ValueError(f"invalid session transition: {session_transition}")
+    destination = destination_harness or detect_harness()
+    source_model_id = (source_model or detect_model_id()).strip() or "unknown"
+    destination_model_id = (destination_model or detect_model_id()).strip() or "unknown"
+    transition = model_transition or classify_model_transition(source_model_id, destination_model_id)
+    if transition not in MODEL_TRANSITIONS:
+        raise ValueError(f"invalid model transition: {transition}")
+    provenance: dict[str, Any] = {
+        "sourceHarness": source_harness,
+        "destinationHarness": destination,
+        "sessionTransition": session_transition,
+        "modelTransition": transition,
+        "integrity": {
+            "workflowDigest": str(bundle.get("workflowDigest") or ""),
+            "bundleDigest": str(bundle.get("bundleDigest") or ""),
+        },
+    }
+    if source_model_id != "unknown":
+        provenance["sourceModel"] = source_model_id
+    if destination_model_id != "unknown":
+        provenance["destinationModel"] = destination_model_id
+    resolved_head = head_sha or str(bundle.get("headSha") or "")
+    if resolved_head:
+        provenance["integrity"]["headSha"] = resolved_head
+    if extensions:
+        provenance["extensions"] = dict(extensions)
+    return provenance
+
+
+def attach_transition_provenance(bundle: dict[str, Any], provenance: Mapping[str, Any]) -> dict[str, Any]:
+    updated = dict(bundle)
+    updated["transitionProvenance"] = dict(provenance)
+    updated["workflowDigest"] = build_workflow_digest(updated)
+    updated["bundleDigest"] = digest_payload(updated)
+    integrity = dict(updated["transitionProvenance"].get("integrity") or {})
+    integrity["workflowDigest"] = str(updated["workflowDigest"])
+    integrity["bundleDigest"] = str(updated["bundleDigest"])
+    updated["transitionProvenance"]["integrity"] = integrity
+    return updated
+
+
+def _validate_transition_provenance(document: Mapping[str, Any]) -> dict[str, Any] | None:
+    provenance = document.get("transitionProvenance")
+    if provenance is None:
+        return None
+    if not isinstance(provenance, dict):
+        return {"verdict": "fail", "error": "handoff:transition-invalid"}
+    integrity = provenance.get("integrity")
+    if not isinstance(integrity, dict):
+        return {"verdict": "fail", "error": "handoff:transition-integrity-missing"}
+    if str(integrity.get("workflowDigest") or "") != str(document.get("workflowDigest") or ""):
+        return {"verdict": "fail", "error": "handoff:transition-integrity-mismatch", "field": "workflowDigest"}
+    if str(integrity.get("bundleDigest") or "") != str(document.get("bundleDigest") or ""):
+        return {"verdict": "fail", "error": "handoff:transition-integrity-mismatch", "field": "bundleDigest"}
+    head_sha = str(document.get("headSha") or "")
+    integrity_head = str(integrity.get("headSha") or "")
+    if head_sha and integrity_head and head_sha != integrity_head:
+        return {"verdict": "fail", "error": "handoff:transition-integrity-mismatch", "field": "headSha"}
+    return None
 
 
 def validate_bundle(document: Mapping[str, Any], *, root: Path | None = None) -> dict[str, Any]:
@@ -94,6 +212,9 @@ def validate_bundle(document: Mapping[str, Any], *, root: Path | None = None) ->
         pass
     except Exception as exc:  # noqa: BLE001
         return {"verdict": "fail", "error": "handoff:schema-invalid", "detail": str(exc)}
+    transition_issue = _validate_transition_provenance(document)
+    if transition_issue is not None:
+        return transition_issue
     return {"verdict": "pass"}
 
 
@@ -438,6 +559,129 @@ def export_bundle(
     if validation.get("verdict") != "pass":
         return validation
     return {"verdict": "pass", "bundle": bundle, "readOnly": True}
+
+
+def export_for_transition(
+    root: Path,
+    *,
+    source_harness: str,
+    destination_harness: str,
+    session_transition: str,
+    source_model: str | None = None,
+    destination_model: str | None = None,
+    model_transition: str | None = None,
+    unit_id: str | None = None,
+    phase_slug: str | None = None,
+    run_id: str | None = None,
+    goal: str | None = None,
+    ttl_seconds: int = DEFAULT_FRESHNESS_TTL_SECONDS,
+    handoff_degraded: bool = False,
+    base_ref: str | None = None,
+) -> dict[str, Any]:
+    """Export a bundle with explicit cross-harness transition provenance (PRD 333 R3)."""
+    if source_harness not in SUPPORTED_HARNESSES:
+        return {"verdict": "fail", "error": "handoff:unsupported-source-harness", "harness": source_harness}
+    if destination_harness not in SUPPORTED_HARNESSES:
+        return {"verdict": "fail", "error": "handoff:unsupported-destination-harness", "harness": destination_harness}
+    if session_transition not in SESSION_TRANSITIONS:
+        return {"verdict": "fail", "error": "handoff:invalid-session-transition", "transition": session_transition}
+    root = repo_root(root)
+    if not root.is_dir():
+        return {"verdict": "fail", "error": "handoff:missing-durable-state"}
+    ship_state = _shipwright_state(root)
+    if not unit_id and not phase_slug and not ship_state:
+        return {"verdict": "fail", "error": "handoff:missing-durable-state"}
+    result = export_bundle(
+        root,
+        unit_id=unit_id,
+        phase_slug=phase_slug,
+        run_id=run_id,
+        goal=goal,
+        ttl_seconds=ttl_seconds,
+        handoff_degraded=handoff_degraded,
+        base_ref=base_ref,
+    )
+    if result.get("verdict") != "pass" or not isinstance(result.get("bundle"), dict):
+        return result
+    provenance = build_transition_provenance(
+        result["bundle"],
+        source_harness=source_harness,
+        destination_harness=destination_harness,
+        session_transition=session_transition,
+        source_model=source_model,
+        destination_model=destination_model,
+        model_transition=model_transition,
+        head_sha=str(result["bundle"].get("headSha") or resolve_head_sha(root)),
+    )
+    bundle = attach_transition_provenance(result["bundle"], provenance)
+    validation = validate_bundle(bundle, root=root)
+    if validation.get("verdict") != "pass":
+        return validation
+    return {
+        "verdict": "pass",
+        "bundle": bundle,
+        "transitionProvenance": provenance,
+        "readOnly": True,
+        "foreignHarnessResumeForbidden": True,
+    }
+
+
+def import_cross_harness(
+    root: Path,
+    bundle: Mapping[str, Any] | str | Path,
+    *,
+    destination_harness: str | None = None,
+    destination_model: str | None = None,
+    allow_stale: bool = False,
+    require_transition: bool = True,
+) -> dict[str, Any]:
+    """Import bundle with cross-harness transition validation; never resumes deliver."""
+    root = repo_root(root)
+    destination = destination_harness or detect_harness()
+    if destination not in SUPPORTED_HARNESSES:
+        return {"verdict": "fail", "error": "handoff:unsupported-destination-harness", "harness": destination}
+    result = import_bundle(root, bundle, allow_stale=allow_stale)
+    if result.get("verdict") != "pass":
+        return result
+    clean = result["bundle"]
+    provenance = clean.get("transitionProvenance")
+    if require_transition and not isinstance(provenance, dict):
+        return {
+            "verdict": "halt",
+            "error": "handoff:missing-transition-provenance",
+            "foreignHarnessResumeForbidden": True,
+        }
+    if isinstance(provenance, dict):
+        expected_destination = str(provenance.get("destinationHarness") or "")
+        if expected_destination in SUPPORTED_HARNESSES and expected_destination != destination:
+            return {
+                "verdict": "halt",
+                "error": "handoff:destination-harness-mismatch",
+                "expectedHarness": expected_destination,
+                "activeHarness": destination,
+                "foreignHarnessResumeForbidden": True,
+            }
+        destination_model_id = (destination_model or detect_model_id()).strip() or "unknown"
+        source_model = str(provenance.get("sourceModel") or "unknown")
+        declared_transition = str(provenance.get("modelTransition") or "unknown")
+        observed_transition = classify_model_transition(source_model, destination_model_id)
+        if declared_transition in MODEL_TRANSITIONS and observed_transition in MODEL_TRANSITIONS:
+            if declared_transition != "unknown" and observed_transition != "unknown":
+                if declared_transition != observed_transition:
+                    return {
+                        "verdict": "halt",
+                        "error": "handoff:model-transition-mismatch",
+                        "declared": declared_transition,
+                        "observed": observed_transition,
+                        "foreignHarnessResumeForbidden": True,
+                    }
+    return {
+        **result,
+        "destinationHarness": destination,
+        "sessionTransition": str((provenance or {}).get("sessionTransition") or ""),
+        "modelTransition": str((provenance or {}).get("modelTransition") or ""),
+        "transitionAccepted": True,
+    }
 
 
 def _extract_exploration_context(bundle: Mapping[str, Any]) -> dict[str, Any] | None:
