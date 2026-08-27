@@ -1120,6 +1120,7 @@
 * merge phase corpus-metrics-cadence-and-release-gate into feat/eval-corpus-handoff-and-platform-providers (85fabaf) <!-- sw-deliver:corpus-metrics-cadence-and-release-gate -->
 * merge phase handoffbundle-cross-harness-runtime-completion into feat/eval-corpus-handoff-and-platform-providers (e2caa61) <!-- sw-deliver:handoffbundle-cross-harness-runtime-completion -->
 * merge phase context-switch-hook-replacement into feat/eval-corpus-handoff-and-platform-providers (5fdf094) <!-- sw-deliver:context-switch-hook-replacement -->
+* merge phase planning-store-semantic-parity-harness into feat/eval-corpus-handoff-and-platform-providers (007a3fb) <!-- sw-deliver:planning-store-semantic-parity-harness -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
