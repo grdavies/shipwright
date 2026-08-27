@@ -1,7 +1,7 @@
 ---
 metadata:
   shipwright-capability:
-    version: 2
+    version: 1
     triggers:
       -
         type: phase_default

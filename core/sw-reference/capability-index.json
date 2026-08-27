@@ -1188,7 +1188,7 @@
       "sourcePath": "core/providers/planning-store/CAPABILITIES.md",
       "executable": true,
       "capability": {
-        "version": 2,
+        "version": 1,
         "triggers": [
           {
             "type": "phase_default",
