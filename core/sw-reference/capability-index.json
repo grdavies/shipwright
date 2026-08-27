@@ -1188,7 +1188,7 @@
       "sourcePath": "core/providers/planning-store/CAPABILITIES.md",
       "executable": true,
       "capability": {
-        "version": 1,
+        "version": 2,
         "triggers": [
           {
             "type": "phase_default",
@@ -1198,7 +1198,8 @@
         ],
         "metadata": {
           "providerFamily": "planning-store",
-          "selectionFamily": "providers"
+          "selectionFamily": "providers",
+          "matrixVersion": "2.0.0"
         }
       }
     },
