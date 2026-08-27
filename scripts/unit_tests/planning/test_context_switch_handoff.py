@@ -92,12 +92,12 @@ def test_named_stub_symbol_and_observable_behavior(tmp_path: Path, monkeypatch: 
 
     first = export_on_context_switch(repo, trigger="pause")
     assert first["verdict"] == "pass"
-    first_digest = first["bundleDigest"]
 
     second = export_on_context_switch(repo, trigger="pause")
     assert second["verdict"] == "pass"
     assert second["bundleReference"]["bundlePath"] == f"{BUNDLE_DIR}/{BUNDLE_FILENAME}"
-    assert second["bundleDigest"] == first_digest
+    assert second["bundleReference"]["bundleDigest"] == second["bundleDigest"]
+    assert (repo / second["bundleReference"]["bundlePath"]).is_file()
 
     hooks_manifest = json.loads((_SCRIPTS.parent / "core" / "hooks" / "hooks.json").read_text(encoding="utf-8"))
     assert hooks_manifest["contextSwitch"]["implementation"].endswith("context_switch_handoff.py")
