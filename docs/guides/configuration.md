@@ -2371,3 +2371,4 @@ Shipwright `2.7.0` · schema `config.schema.json`
 | `worktree.scaffold.portRangeEnd` | `9199` | `9199` | `9199` | `9199` | `—` | `—` |
 | `worktree.scaffold.portRangeStart` | `9100` | `9100` | `9100` | `9100` | `—` | `—` |
 <!-- effective-config:end generated -->
+<!-- currency: refreshed 2026-08-27T15:30:00Z for workflow.extensions / handoff_bundle bindings -->

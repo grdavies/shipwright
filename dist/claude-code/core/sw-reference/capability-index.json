@@ -1198,7 +1198,8 @@
         ],
         "metadata": {
           "providerFamily": "planning-store",
-          "selectionFamily": "providers"
+          "selectionFamily": "providers",
+          "matrixVersion": "2.0.0"
         }
       }
     },
