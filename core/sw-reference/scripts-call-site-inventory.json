@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-27T01:20:46Z",
+  "generatedAt": "2026-08-27T09:18:11Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -205,6 +205,60 @@
       "line": 39,
       "column": 21,
       "script": "closeout_ci.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:35:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 35,
+      "column": 37,
+      "script": "eval_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:35:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 35,
+      "column": 10,
+      "script": "eval_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:42:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 42,
+      "column": 37,
+      "script": "eval_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:42:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 42,
+      "column": 10,
+      "script": "eval_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:55:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 55,
+      "column": 39,
+      "script": "eval_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:55:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 55,
+      "column": 12,
+      "script": "eval_corpus.py",
       "classification": "self-repo-only"
     },
     {
