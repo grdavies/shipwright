@@ -64,6 +64,65 @@ QK -->|yes| IMPL[Manual /sw-ship]
 QK -->|no| DOC[Enter /sw-doc → /sw-deliver run]
 ```
 
+### Evidence-backed triage and planning entry
+
+Deterministic tier classification in `scripts/triage_lib.py` remains authoritative. Project intelligence
+feeds **advisory** `TriageEvidence@v1` through existing triage and doc-entry surfaces — no new slash
+commands. Recommendations are **non-authoritative** (`authority: non-authoritative`); the safety-floor
+hard veto and required gates cannot be lowered or bypassed (D3, D6).
+
+#### Producer inputs
+
+`scripts/triage_evidence.py` aggregates fresh producer signals into one evidence bundle:
+
+| Producer signal | Source module | When unavailable |
+| --- | --- | --- |
+| `architecture-radar` | `scripts/architecture_radar.py` | `absent` + reason (never coerced to numeric zero) |
+| `workflow-history` | `scripts/workflow_intelligence.py` | `absent` + reason |
+| `exploration-findings` | `scripts/exploration_intelligence.py` | `absent` + reason (contract-only — exploration execution UX lives elsewhere) |
+| `decision-graph` | `scripts/decision_graph/frontier.py` | `absent` + reason |
+| `verification-capability` | `scripts/host_doctor_lib.py` | `absent` + reason |
+
+Each signal carries an explicit weight, `present` or `absent` state, optional `safety-floor` class, and a
+**freshness envelope** (`digest`, `observedAt`, `producerPath`, `producerSignature`, optional `expiresAt`,
+invalidation metadata). Clock-only timestamps without digest binding are rejected.
+
+#### Weighted advisory merge and veto order
+
+Merge order is fixed and deterministic:
+
+1. **Mechanical tier** — file count, risk keywords, ambiguity markers (existing `/sw-triage` scoring).
+2. **Safety-floor veto** — fresh `safety-floor` signals enforce a minimum tier before any advisory promotion.
+3. **Promotion-gated advisory** — weighted advisory score maps to a tier only when the capability registry
+   reports `active` for `triage.recommendation`; otherwise advisory output is recorded in `explain` but not
+   applied (`promotion_shadow` signal).
+
+Weighted merge (`aggregate_weighted_advisory`) exposes each contribution, `absent` producers, and
+`excludedStale` dispositions in the explain payload. Stale, expired, or digest-mismatched advisory signals
+are excluded; fresh safety-floor inputs outrank stale advisory evidence.
+
+Doc-entry rescore (`scripts/doc_rescore.py`) reads the same contract — deterministic rescore and safety
+gates run first; there is no config or CLI override for safety-kernel vetoes.
+
+#### Read-only status explanation
+
+Inspect the live recommendation without mutating stores:
+
+```bash
+python3 scripts/status_collect.py triage-recommendation-explain \
+  [--unit-id <unit-id>] [--description "<work description>"] [--file-count N] [--query "<text>"]
+```
+
+Returns `recommendation` (applied/deterministic/advisory/veto/floor tiers), weighted `contributions`,
+`absent` and `excludedStale` lists, `promotion` binding (`capabilityId`, `revision`, `state`,
+`evidenceRef`), and `evidenceTimestamp`. `readOnly: true` and `productAuthority: false` always — see
+`core/commands/sw-status.md`.
+
+Storage layout for producer artifacts, the capability registry, and compression evidence logs lives in
+`.sw/layout.md` (**Project intelligence evidence and promotion stores**). Configuration keys:
+`planning.intelligence.triageEvidence.*`, `planning.intelligence.capabilityPromotion.*`, and
+`contextCompression.phase` — see `docs/guides/configuration.md`.
+
 ### Quick tier workflow
 
 No spec artifacts — no frozen task list, so **`/sw-deliver` does not apply**. Triage routes to the
@@ -1245,6 +1304,27 @@ through `/sw-status`, `/sw-prd`, `/sw-doc-review`, and `/sw-retrospective`.
 | `planning.intelligence.radar.schedule` | `null` | Optional maintenance schedule; `null` disables scheduled scans |
 | `planning.intelligence.radar.windows.*` | see schema | Git-churn window and activity-bias thresholds |
 | `planning.intelligence.vocabulary.strictMode` | `false` | When true, divergence `error` severity blocks spec-rigor; default advisory |
+| `planning.intelligence.triageEvidence.weights.*` | see schema | Bounded per-producer advisory weights (0.0–1.0) |
+| `planning.intelligence.triageEvidence.freshness.defaultTtlSeconds` | `86400` | Default evidence envelope TTL when producers omit explicit expiry |
+| `planning.intelligence.capabilityPromotion.families.*` | see schema | N-run metric thresholds per capability family |
+
+### Triage evidence and measured promotion
+
+First registry consumers: triage recommendation (`triage.recommendation`), exploration inference
+(`exploration.inference`, contract-only producer), and context compression (`context.compression`). Promotion
+states follow `shadow → candidate → active → rolled_back`; rollback restores the prior active revision.
+
+| Concern | Contract |
+| --- | --- |
+| Evidence contract | `TriageEvidence@v1` in `scripts/triage_evidence.py` |
+| Triage merge | `scripts/triage_lib.py` — veto-first, promotion-gated advisory |
+| Doc entry | `scripts/doc_rescore.py` — shared evidence read, no veto override |
+| Registry | `.cursor/capability-promotion-registry.json` (`CapabilityPromotion@v1`) |
+| Status explain | `python3 scripts/status_collect.py triage-recommendation-explain` |
+| Tests | `scripts/unit_tests/planning/test_triage_evidence.py`, `test_capability_promotion.py`, `test_status_collect_intelligence.py` |
+
+Operator configuration and terminology parity: `docs/guides/configuration.md` (**Project intelligence —
+evidence and promotion**).
 
 ### Architecture radar
 

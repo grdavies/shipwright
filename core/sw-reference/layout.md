@@ -92,6 +92,9 @@ docs/decisions/
 │   └── <scanId>/                    # per-scan candidates + scoring payload
 ├── sw-vocabulary-divergence/        # read-only vocabulary divergence artifacts (PRD 280 R7–R11)
 │   └── last.json                    # latest check-divergence summary
+├── capability-promotion-registry.json  # CapabilityPromotion@v1 durable registry (PRD 332 R4, R11)
+├── compression-dispatch-evidence.jsonl # append-only CompressionEvidence@v1 dispatch log (PRD 332 R7)
+├── hooks/state/context-compress-cache/ # lossless/shadow compression cache (dispatch_prompt.py)
 └── sw-decision-evidence/            # hash-linked research evidence records (PRD 326)
     └── <parentDecisionId>.json      # ResearchEvidence@v1 per parent decision node
 ```
@@ -803,6 +806,35 @@ commands; extend existing doc/status/retro paths only.
 
 Operator detail: `docs/guides/workflows.md` (**Codebase Intelligence**);
 `core/commands/sw-status.md` (last-artifact collectors).
+
+### Project intelligence evidence and promotion stores (PRD 332 R6, R11, R17)
+
+Gitignored operator-local stores for measured capability rollout and dispatch compression evidence.
+`TriageEvidence@v1` freshness envelopes are computed in-process from producer artifacts — they are not
+written to a separate envelope directory. Invalidation is digest-bound: envelope `digest` mismatch, explicit
+invalidation metadata, or expiry excludes signals from merge (`excludedStale`).
+
+| Surface | Canonical path | Writer | Retention / invalidation |
+| --- | --- | --- | --- |
+| Capability registry | `.cursor/capability-promotion-registry.json` | `scripts/capability_promotion.py` | Durable `CapabilityPromotion@v1`; rollback restores prior active revision + `evidenceRef` |
+| Compression dispatch log | `.cursor/compression-dispatch-evidence.jsonl` | `scripts/dispatch_prompt.py` | Append-only `CompressionEvidence@v1`; feeds N-run promotion metrics |
+| Compression cache | `.cursor/hooks/state/context-compress-cache/` | `scripts/context_compress.py` | Operator-local; lossless baseline + shadow outputs |
+| Radar producer artifacts | `.cursor/sw-architecture-radar/` | `scripts/architecture_radar.py` | Read-only; referenced by triage evidence producer |
+| Divergence producer artifacts | `.cursor/sw-vocabulary-divergence/` | `scripts/domain_vocabulary.py` | Read-only; referenced by exploration/triage producers |
+| Workflow history signal | *(derived at read time)* | `scripts/workflow_intelligence.py` | No separate envelope store — freshness validated per producer contract |
+
+**Ownership:** triage and doc-entry paths read producer artifacts and the registry; only promotion and
+dispatch modules mutate registry rows or append compression evidence. Status collectors (`status_collect.py`)
+are read-only.
+
+**Generated-reference parity:** runtime modules mirror to `core/scripts/` and distribution zipapps through
+the repository build chain — do not hand-edit `dist/` or `core/scripts/` copies of
+`triage_evidence.py`, `capability_promotion.py`, `triage_lib.py`, `context_compress.py`, or
+`dispatch_prompt.py`.
+
+Operator detail: `docs/guides/workflows.md` (**Evidence-backed triage and planning entry**,
+**Triage evidence and measured promotion**); `docs/guides/configuration.md` (**Project intelligence —
+evidence and promotion**, **Terminology parity**).
 
 ### Verify `no-baseline` evidence matrix (planning#641 / #642, PRD 094 R7/R17)
 
