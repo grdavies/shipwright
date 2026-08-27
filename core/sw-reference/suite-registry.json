@@ -1886,6 +1886,24 @@
       ]
     },
     {
+      "id": "planning-333-provider-semantic-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 68,
+      "pytestPath": "scripts/unit_tests/planning/test_provider_semantic_parity.py",
+      "ciShard": 2,
+      "pathTriggers": [
+        "core/providers/planning-store/CAPABILITIES.md",
+        "scripts/planning/provider_conformance.py",
+        "scripts/test/fixtures/planning-store-conformance/"
+      ]
+    },
+    {
       "id": "planning-native-links-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [

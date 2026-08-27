@@ -1482,6 +1482,21 @@
       "ciShard": 2
     },
     {
+      "id": "planning-333-provider-semantic-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_provider_semantic_parity.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "provider-semantic-parity",
+        "corpus-evidence-binding"
+      ],
+      "ciShard": 2
+    },
+    {
       "id": "planning-native-links-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
