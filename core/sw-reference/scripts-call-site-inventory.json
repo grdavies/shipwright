@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-27T00:53:38Z",
+  "generatedAt": "2026-08-27T01:20:46Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -6724,12 +6724,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/retro/SKILL.md:95:planning_gap_capture.py",
+      "id": "core/skills/retro/SKILL.md:95:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/retro/SKILL.md",
       "line": 95,
       "column": 18,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -13051,12 +13051,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/retro/SKILL.md:95:planning_gap_capture.py",
+      "id": "dist/claude-code/skills/retro/SKILL.md:95:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/retro/SKILL.md",
       "line": 95,
       "column": 18,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
@@ -19054,12 +19054,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/retro/SKILL.md:95:planning_gap_capture.py",
+      "id": "dist/cursor/skills/retro/SKILL.md:95:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/retro/SKILL.md",
       "line": 95,
       "column": 18,
-      "script": "planning_gap_capture.py",
+      "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
