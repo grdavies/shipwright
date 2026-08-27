@@ -92,7 +92,7 @@ See `core/commands/sw-retrospective.md` **Closeout hardening implications** and
 ### Optional painful → gap handoff (when config enabled)
 
 After emitting structured retro output, when `retrospective.gapCapture.enabled` is true, hand off painful
-items to `python3 scripts/planning_gap_capture.py retro-capture --retro-json <path>` — drafts only.
+items to `python3 scripts/sw_bootstrap.py planning_gap_capture.py -- retro-capture --retro-json <path>` — drafts only.
 Confirm and materialize are separate operator steps with digest-bound ack (see `references/output-contract.md`
 and `/sw-retrospective` PRD 275 section). Default config leaves this path disabled.
 
