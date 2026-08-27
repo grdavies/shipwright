@@ -102,10 +102,8 @@ Until all gates are green, `register_gitlab_planning_store_stub()` reports
 
 ## Operator surfaces
 
-```bash
-python3 scripts/planning_store.py resolve-backend   # MUST NOT report shipped for stub
-python3 -m planning.backends.gitlab                   # conformance metadata only
-```
+- `planning_store_facade.planning_store_p2_stub_registration_footprint()` — conformance metadata for P2 stubs.
+- `scripts/planning/backends/gitlab.py` — stub registration (`register_gitlab_planning_store_stub`).
 
 See also: `core/providers/planning-store/CAPABILITIES.md`, `.sw/program-priorities.json`
 (`gitlab-planning-store` is first in `providerFollowOn`).
