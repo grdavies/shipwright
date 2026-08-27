@@ -1922,6 +1922,24 @@
       ]
     },
     {
+      "id": "graph-333-remote-execution-stub-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 70,
+      "pytestPath": "scripts/unit_tests/graph/test_remote_execution_stub.py",
+      "ciShard": 2,
+      "pathTriggers": [
+        "core/providers/execution/remote.md",
+        "scripts/graph/remote_execution_backend.py",
+        "scripts/graph/execution_backend.py"
+      ]
+    },
+    {
       "id": "planning-native-links-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
