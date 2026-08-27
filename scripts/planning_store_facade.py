@@ -144,6 +144,8 @@ PlanningStoreBackend = _planning_pkg.PlanningStoreBackend
 DEFAULT_BACKEND = "in-repo-public"
 SHIPPED_BACKENDS = frozenset({"in-repo-public", "local-synced", "planning-cache", "issue-store"})
 DEFERRED_BACKENDS = frozenset({"private-repo", "encryption-at-rest"})
+# PRD 333 phase 7 — P2 planning-store spec stubs (metadata only; not in ALL_BACKENDS).
+P2_PLANNING_STORE_STUBS = frozenset({"gitlab-planning-store"})
 ALL_BACKENDS = SHIPPED_BACKENDS | DEFERRED_BACKENDS
 BACKEND_CONFIG_ALIASES = {"memory": "planning-cache"}
 
@@ -496,6 +498,22 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
             }
             for provider in sorted(_BASE_ISSUES_PROVIDERS | live_recognized)
         },
+    }
+
+
+def planning_store_p2_stub_registration_footprint() -> dict[str, Any]:
+    """PRD 333 phase 7 — P2 planning-store spec stubs (metadata only, not shipped)."""
+    from _planning_pkg_loader import load_backends_package
+
+    backends = load_backends_package()
+    registration = backends.register_gitlab_planning_store_stub()
+    return {
+        "verdict": "ok",
+        "action": "planning-store-p2-stub-registration",
+        "stubs": {backends.GITLAB_PLANNING_STORE_BACKEND_ID: registration},
+        "p2Stubs": sorted(P2_PLANNING_STORE_STUBS),
+        "shippedBackends": sorted(SHIPPED_BACKENDS),
+        "allBackends": sorted(ALL_BACKENDS),
     }
 
 
