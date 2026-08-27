@@ -1,0 +1,86 @@
+{
+  "schemaVersion": "EvalCorpus@v1",
+  "corpusVersion": "1.0.0",
+  "manifestId": "external-consumer-eval-v1",
+  "compositionRules": {
+    "minimumRepositories": 3,
+    "requiredClassifications": [
+      "greenfield",
+      "brownfield",
+      "mixed-planning-store"
+    ],
+    "holdoutIsolation": true,
+    "secretFree": true
+  },
+  "repositories": [
+    {
+      "repositoryId": "ext-greenfield-same-repo",
+      "classification": "greenfield",
+      "planningStoreMode": "same-repo",
+      "fixtureVersion": "1.0.0",
+      "holdout": false,
+      "sourceRevision": "a8b5d8bff028833fde25e6031f847fd4ac82ee7e",
+      "remoteUrl": "https://github.com/shipwright-fixtures/eval-greenfield-same-repo",
+      "expectedOutcomes": [
+        {
+          "scenario": "workflow-init",
+          "status": "pass"
+        },
+        {
+          "scenario": "planning-freeze",
+          "status": "pass"
+        }
+      ]
+    },
+    {
+      "repositoryId": "ext-brownfield-separate-project",
+      "classification": "brownfield",
+      "planningStoreMode": "separate-project",
+      "fixtureVersion": "1.0.0",
+      "holdout": false,
+      "sourceRevision": "094f7ab5c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6",
+      "remoteUrl": "https://github.com/shipwright-fixtures/eval-brownfield-separate-project",
+      "expectedOutcomes": [
+        {
+          "scenario": "deliver-phase-ship",
+          "status": "pass"
+        },
+        {
+          "scenario": "issue-store-materialize",
+          "status": "pass"
+        }
+      ]
+    },
+    {
+      "repositoryId": "ext-mixed-planning-store",
+      "classification": "mixed-planning-store",
+      "planningStoreMode": "mixed",
+      "fixtureVersion": "1.0.0",
+      "holdout": false,
+      "sourceRevision": "45468534aabbccdd11223344556677889900aabb",
+      "remoteUrl": "https://github.com/shipwright-fixtures/eval-mixed-planning-store",
+      "expectedOutcomes": [
+        {
+          "scenario": "cross-mode-reconcile",
+          "status": "pass"
+        }
+      ]
+    },
+    {
+      "repositoryId": "ext-holdout-regression",
+      "classification": "brownfield",
+      "planningStoreMode": "same-repo",
+      "fixtureVersion": "1.0.0",
+      "holdout": true,
+      "sourceRevision": "21feb77bdeadbeefcafebabe1234567890abcdef",
+      "remoteUrl": "https://github.com/shipwright-fixtures/eval-holdout-regression",
+      "expectedOutcomes": [
+        {
+          "scenario": "holdout-workflow-regression",
+          "status": "pass",
+          "detail": "Excluded from scheduled eval metrics; used for release holdout gate only."
+        }
+      ]
+    }
+  ]
+}

@@ -64,6 +64,7 @@
     "deterministic-regen-paths.json",
     "execute-dependency-rules.json",
     "execute-step-plan.schema.json",
+    "eval-corpus.schema.json",
     "exploration-acceptance.json",
     "exploration-brief.schema.json",
     "exploration-map.schema.json",
