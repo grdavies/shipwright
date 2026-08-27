@@ -743,7 +743,7 @@
       "sourcePath": "core/skills/rca-core/SKILL.md"
     },
     {
-      "bodyDigest": "3e87a5464fd96de570107c995cad7e8949d59c2989c85c0e18251e27a94488af",
+      "bodyDigest": "1806de8e5dc14867a5e099aa1313a9d73a2372ddca3bd735035c89aeb4ded2fe",
       "capabilities": [],
       "description": "Post-ship retrospective \u2014 what went well, painful, and should change; learning candidates for compounding. Use when running /sw-retrospective after phase or merge milestones. Report-only by default; does not auto-apply rules.",
       "id": "retro",
