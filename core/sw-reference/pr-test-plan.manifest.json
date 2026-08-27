@@ -1527,6 +1527,21 @@
       "ciShard": 2
     },
     {
+      "id": "planning-333-upstream-provenance-stub-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_upstream_provenance_stub.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "upstream-provenance-stub",
+        "p2-spec-not-shipped"
+      ],
+      "ciShard": 2
+    },
+    {
       "id": "planning-native-links-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
