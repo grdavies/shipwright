@@ -108,7 +108,6 @@ mutation or parity claim.
 
 - `scripts/upstream_provenance.py register` — conformance metadata for P2 stub.
 - `scripts/upstream_provenance.py analyze` — validates bounded inputs; returns `not-enabled`.
-- `python3 scripts/sw_bootstrap.py upstream_provenance.py -- analyze ...` — bootstrap dispatch.
 
 See also: `.sw/program-priorities.json` (`upstream-provenance` follows `remote-execution`
 in `providerFollowOn`).
