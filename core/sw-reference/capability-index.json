@@ -1340,6 +1340,30 @@
       }
     },
     {
+      "id": "provider.providers.provenance.upstream",
+      "kind": "provider",
+      "sourcePath": "core/providers/provenance/upstream.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "provenance.upstream.analyzer",
+            "equals": "enabled"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "provenance",
+          "adapterId": "upstream-provenance",
+          "selectionFamily": "providers",
+          "status": "spec-stub",
+          "programPriority": "P2"
+        }
+      }
+    },
+    {
       "id": "provider.providers.quality.CAPABILITIES",
       "kind": "provider",
       "sourcePath": "core/providers/quality/CAPABILITIES.md",
