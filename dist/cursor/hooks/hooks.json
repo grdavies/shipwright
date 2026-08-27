@@ -20,6 +20,15 @@
       {
         "command": "python3 \"${CURSOR_PLUGIN_ROOT}/hooks/before-task-dispatch.py\""
       }
+    ],
+    "contextSwitch": [
+      {
+        "command": "python3 \"${CURSOR_PLUGIN_ROOT}/hooks/context-switch-handoff.py\" --trigger context-switch",
+        "metadata": {
+          "trigger": "context-switch",
+          "event": "pause"
+        }
+      }
     ]
   },
   "kernelHookSlots": [
@@ -27,7 +36,9 @@
     "stop"
   ],
   "manifestHookSlots": [
+    "contextSwitch",
     "preToolUse",
     "sessionStart"
-  ]
+  ],
+  "canonicalManifest": "core/hooks/hooks.json"
 }

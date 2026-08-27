@@ -63,6 +63,17 @@ import hook_adapter  # noqa: E402
 if __name__ == "__main__":
     raise SystemExit(hook_adapter.run_stop(_REPO))
 ''',
+    "context-switch-handoff.py": '''#!/usr/bin/env python3
+"""Thin Cursor entrypoint — context-switch HandoffBundle export (PRD 333 R3)."""
+from __future__ import annotations
+import sys
+from pathlib import Path
+_REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO / "core" / "hooks"))
+import context_switch_handoff  # noqa: E402
+if __name__ == "__main__":
+    raise SystemExit(context_switch_handoff.main())
+''',
     "before-task-dispatch.py": '''#!/usr/bin/env python3
 """Thin Cursor entrypoint — delegates to core before_task_dispatch (PRD 012 R5)."""
 from __future__ import annotations
@@ -171,10 +182,19 @@ class CursorEmitter(EmitterBase):
                 "preToolUse": [
                     {"command": 'python3 "${CURSOR_PLUGIN_ROOT}/hooks/before-task-dispatch.py"'}
                 ],
+                "contextSwitch": [
+                    {
+                        "command": 'python3 "${CURSOR_PLUGIN_ROOT}/hooks/context-switch-handoff.py" --trigger context-switch',
+                        "metadata": {"trigger": "context-switch", "event": "pause"},
+                    }
+                ],
             },
             "kernelHookSlots": sorted(KERNEL_HOOK_SLOTS),
-            "manifestHookSlots": sorted(MANIFEST_HOOK_SLOTS),
+            "manifestHookSlots": sorted({*MANIFEST_HOOK_SLOTS, "contextSwitch"}),
         }
+        canonical_hooks = repo_root / "core" / "hooks" / "hooks.json"
+        if canonical_hooks.is_file():
+            hooks_json["canonicalManifest"] = str(canonical_hooks.relative_to(repo_root))
         (hooks_dir / "hooks.json").write_text(
             json.dumps(hooks_json, indent=2) + "\n",
             encoding="utf-8",
