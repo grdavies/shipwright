@@ -1106,6 +1106,15 @@
 * merge phase explore-and-doc-bidirectional-handoff into feat/sw-explore-first-release (6d68a3c) <!-- sw-deliver:explore-and-doc-bidirectional-handoff -->
 * merge phase quality-metrics-and-atomic-acceptance-gate into feat/sw-explore-first-release (168209e) <!-- sw-deliver:quality-metrics-and-atomic-acceptance-gate -->
 * merge phase workflow-contracts-taxonomy-and-adopter-documentation into feat/sw-explore-first-release (9ccf570) <!-- sw-deliver:workflow-contracts-taxonomy-and-adopter-documentation -->
+* merge phase define-evidence-and-freshness-contracts-medium into feat/project-intelligence-triage-and-capability-promotion (4ac82be) <!-- sw-deliver:define-evidence-and-freshness-contracts-medium -->
+* merge phase build-the-capabilitypromotion-registry-medium into feat/project-intelligence-triage-and-capability-promotion (aca4faa) <!-- sw-deliver:build-the-capabilitypromotion-registry-medium -->
+* merge phase aggregate-project-intelligence-for-triage-medium into feat/project-intelligence-triage-and-capability-promotion (ab3af0b) <!-- sw-deliver:aggregate-project-intelligence-for-triage-medium -->
+* merge phase wire-triage-and-planning-entry-with-veto-first-semantics-medium into feat/project-intelligence-triage-and-capability-promotion (e8fc1b0) <!-- sw-deliver:wire-triage-and-planning-entry-with-veto-first-semantics-medium -->
+* merge phase register-first-promotion-consumers-medium into feat/project-intelligence-triage-and-capability-promotion (feae799) <!-- sw-deliver:register-first-promotion-consumers-medium -->
+* merge phase expose-explainability-and-configuration-medium into feat/project-intelligence-triage-and-capability-promotion (8129363) <!-- sw-deliver:expose-explainability-and-configuration-medium -->
+* merge phase document-operator-contracts-and-storage-medium into feat/project-intelligence-triage-and-capability-promotion (8997da1) <!-- sw-deliver:document-operator-contracts-and-storage-medium -->
+* merge phase generate-mirrors-and-verify-durable-closeout-small into feat/project-intelligence-triage-and-capability-promotion (b046d5a) <!-- sw-deliver:generate-mirrors-and-verify-durable-closeout-small -->
+* merge phase generate-mirrors-and-verify-durable-closeout-small into feat/project-intelligence-triage-and-capability-promotion (b1d6955) <!-- sw-deliver:generate-mirrors-and-verify-durable-closeout-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

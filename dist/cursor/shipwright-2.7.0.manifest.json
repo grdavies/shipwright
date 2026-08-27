@@ -206,6 +206,7 @@
     "capability_migration_legacy.py",
     "capability_migration_parity.py",
     "capability_precedence.py",
+    "capability_promotion.py",
     "capability_run_log.py",
     "capability_select.py",
     "capability_trust.py",
@@ -731,6 +732,7 @@
     "tournament_lib.py",
     "traceability-check.py",
     "traceability_bind.py",
+    "triage_evidence.py",
     "triage_lib.py",
     "two_track_lib.py",
     "upgrade-gate.py",
@@ -790,5 +792,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 787
+  "moduleCount": 789
 }

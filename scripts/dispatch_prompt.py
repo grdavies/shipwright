@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -12,8 +13,31 @@ from pathlib import Path
 from typing import Any
 
 from _sw.cli import build_parser, run_module_main
+from capability_promotion import (
+    CapabilityPromotionError,
+    STATE_ACTIVE,
+    STATE_CANDIDATE,
+    STATE_ROLLED_BACK,
+    STATE_SHADOW,
+    attach_run_from_evidence_ref,
+    get_capability,
+    get_revision,
+    read_registry,
+    record_qualifying_run,
+    registry_path,
+    rollback_active_revision,
+    write_registry,
+)
 from check_gate_lib import load_workflow_config
-from context_compress import compress, detect_content_type, estimate_tokens, retrieve
+from context_compress import (
+    MODE_ACTIVE_LOSSY,
+    MODE_LOSSLESS,
+    MODE_SHADOW_LOSSY,
+    compress_with_mode,
+    detect_content_type,
+    estimate_tokens,
+    retrieve,
+)
 from dispatch_intensity_check import format_intensity_directive, validate_retrieve_key_guard
 from dispatch_budget_lib import format_partial_result_handoff, resolve_token_budget
 
@@ -25,6 +49,15 @@ SURFACE_SHIP_PHASE = "ship-phase"
 INTENSITY_SOURCE_DELIVER_PHASE_SHIP = "deliver.phase-ship"
 SURFACE_DOC_REVIEW = "doc-review"
 TELEMETRY_SURFACES = frozenset({SURFACE_SHIP_PHASE, SURFACE_DOC_REVIEW})
+
+COMPRESSION_CAPABILITY_ID = "context.compression"
+COMPRESSION_CAPABILITY_FAMILY = "context-compression"
+COMPRESSION_EVIDENCE_CLASS = "CompressionEvidence@v1"
+COMPRESSION_EVIDENCE_LOG_REL = Path(".cursor/compression-dispatch-evidence.jsonl")
+DEFAULT_COMPRESSION_PHASE = MODE_LOSSLESS
+
+REGRESSION_FALSE_POSITIVE_THRESHOLD = 0.5
+REGRESSION_VETO_CONFLICT_THRESHOLD = 0.5
 
 
 def utc_now() -> str:
@@ -48,6 +81,7 @@ class ProcessedBlock:
     compressed: bool = False
     retrieve_keys: list[str] = field(default_factory=list)
     used_path_reference: bool = False
+    compression_evidence: dict[str, Any] | None = None
 
 
 @dataclass
@@ -57,6 +91,8 @@ class DispatchPromptResult:
     tokens_before: int = 0
     tokens_after: int = 0
     compression_applied: bool = False
+    compression_mode: str = MODE_LOSSLESS
+    compression_evidence: dict[str, Any] | None = None
 
 
 def load_context_compression_config(
@@ -90,7 +126,212 @@ def load_context_compression_config(
         "enabled": bool(enabled),
         "thresholdTokens": int(threshold) if threshold is not None else DEFAULT_THRESHOLD_TOKENS,
         "strategies": merged_strategies,
+        "phase": block.get("phase", DEFAULT_COMPRESSION_PHASE),
     }
+
+
+def resolve_compression_mode(
+    root: Path,
+    *,
+    config_phase: str | None = None,
+) -> tuple[str, int | None, str | None]:
+    """Resolve rollout mode from registry active revision (PRD 332 R7)."""
+    registry_mode, revision, state = _resolve_compression_mode_from_registry(root)
+    configured = (config_phase or "").strip()
+    if configured and configured != DEFAULT_COMPRESSION_PHASE:
+        return configured, revision, state
+    return registry_mode, revision, state
+
+
+def _compression_evidence_digest(metrics: dict[str, Any]) -> str:
+    material = json.dumps(metrics, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+
+def _retrieve_key_valid(retrieve_key: str | None, *, root: Path, original: str) -> bool:
+    if not retrieve_key:
+        return False
+    try:
+        restored = retrieve(retrieve_key, root=root)
+    except Exception:
+        return False
+    redacted = redact_content(original)
+    return restored == redacted or redacted.strip() in restored
+
+
+def _safety_veto_for_text(text: str) -> bool:
+    return contains_raw_transcript(text)
+
+
+def _resolve_compression_mode_from_registry(root: Path) -> tuple[str, int | None, str | None]:
+    registry = read_registry(registry_path(root))
+    try:
+        capability = get_capability(registry, COMPRESSION_CAPABILITY_ID)
+    except CapabilityPromotionError:
+        return MODE_LOSSLESS, None, None
+
+    revision = int(capability.get("activeRevision", 0))
+    try:
+        rev_record = get_revision(capability, revision)
+    except CapabilityPromotionError:
+        return MODE_LOSSLESS, None, None
+
+    state = str(rev_record.get("state") or "")
+    if state == STATE_ACTIVE:
+        return MODE_ACTIVE_LOSSY, revision, state
+    if state in {STATE_SHADOW, STATE_CANDIDATE}:
+        return MODE_SHADOW_LOSSY, revision, state
+    if state == STATE_ROLLED_BACK:
+        return MODE_LOSSLESS, revision, state
+    return MODE_LOSSLESS, revision, state
+
+
+def compute_compression_metrics(
+    original: str,
+    mode_result: Any,
+    *,
+    root: Path,
+    capability_revision: int | None,
+    safety_veto: bool,
+    configured_mode: str,
+) -> dict[str, Any]:
+    """Derive shadow agreement and regression signals for one dispatch (PRD 332 R7, R12)."""
+    authoritative = mode_result.authoritative
+    shadow = mode_result.shadow
+    lossless_tokens = estimate_tokens(original)
+    authoritative_tokens = estimate_tokens(authoritative.text)
+    shadow_tokens = estimate_tokens(shadow.text) if shadow is not None else authoritative_tokens
+
+    retrieve_valid = False
+    if shadow is not None and shadow.retrieveKey:
+        retrieve_valid = _retrieve_key_valid(shadow.retrieveKey, root=root, original=original)
+    elif authoritative.retrieveKey:
+        retrieve_valid = _retrieve_key_valid(authoritative.retrieveKey, root=root, original=original)
+
+    shadow_agreement = 1.0
+    false_positive = False
+    if shadow is not None and shadow.compressed:
+        shadow_agreement = 1.0 if retrieve_valid else 0.0
+        false_positive = not retrieve_valid
+
+    veto_conflict = bool(
+        safety_veto and configured_mode == MODE_ACTIVE_LOSSY and mode_result.mode != MODE_ACTIVE_LOSSY
+    )
+
+    token_delta = max(0, lossless_tokens - shadow_tokens)
+    metrics: dict[str, Any] = {
+        "version": COMPRESSION_EVIDENCE_CLASS,
+        "mode": mode_result.mode,
+        "configuredMode": configured_mode,
+        "shadowAgreement": shadow_agreement,
+        "falsePositive": false_positive,
+        "falsePositiveRate": 1.0 if false_positive else 0.0,
+        "vetoConflict": veto_conflict,
+        "vetoConflictRate": 1.0 if veto_conflict else 0.0,
+        "tokenDelta": token_delta,
+        "tokensLossless": lossless_tokens,
+        "tokensAuthoritative": authoritative_tokens,
+        "tokensShadow": shadow_tokens,
+        "retrieveKeyValid": retrieve_valid,
+        "capabilityRevision": capability_revision,
+        "safetyVeto": safety_veto,
+        "shadowNonAuthoritative": mode_result.mode == MODE_SHADOW_LOSSY and shadow is not None,
+    }
+    metrics["evidenceRef"] = f"sha256:{_compression_evidence_digest(metrics)}"
+    return metrics
+
+
+def _append_compression_evidence_log(root: Path, entry: dict[str, Any]) -> Path:
+    path = root / COMPRESSION_EVIDENCE_LOG_REL
+    path.parent.mkdir(parents=True, exist_ok=True)
+    line = json.dumps({**entry, "at": utc_now()}, ensure_ascii=False) + "\n"
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(line)
+    os.chmod(path, 0o600)
+    return path
+
+
+def record_compression_dispatch_evidence(
+    metrics: dict[str, Any],
+    *,
+    root: Path,
+    dispatch_id: str | None = None,
+    phase_slug: str | None = None,
+    run_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Persist compression metrics and update promotion registry when configured (PRD 332 R12, R16)."""
+    repo = root.resolve()
+    entry = {
+        "event": "compression-dispatch-evidence",
+        "dispatchId": dispatch_id,
+        "phaseSlug": phase_slug,
+        **metrics,
+    }
+    _append_compression_evidence_log(repo, entry)
+    if run_dir is not None:
+        _append_compression_evidence_log(run_dir, entry)
+
+    registry_updates: dict[str, Any] = {"recorded": False, "rollback": None}
+    revision = metrics.get("capabilityRevision")
+    if revision is None:
+        return registry_updates
+
+    registry = read_registry(registry_path(repo))
+    try:
+        capability = get_capability(registry, COMPRESSION_CAPABILITY_ID)
+        rev_record = get_revision(capability, int(revision))
+    except CapabilityPromotionError:
+        return registry_updates
+
+    evidence_ref = str(metrics.get("evidenceRef") or "")
+    if not evidence_ref:
+        return registry_updates
+
+    disposition = "fresh"
+    if evidence_ref.startswith("stale:") or evidence_ref.startswith("absent:"):
+        disposition = evidence_ref.split(":", 1)[0]
+
+    run_id = dispatch_id or f"dispatch-{utc_now()}"
+    qualifying = attach_run_from_evidence_ref(
+        run_id=run_id,
+        observed_at=utc_now(),
+        false_positive_rate=float(metrics.get("falsePositiveRate", 0.0)),
+        veto_conflict_rate=float(metrics.get("vetoConflictRate", 0.0)),
+        shadow_agreement=float(metrics.get("shadowAgreement", 0.0)),
+        evidence_ref=evidence_ref if disposition == "fresh" else f"{disposition}:{evidence_ref}",
+    )
+    registry = record_qualifying_run(
+        registry,
+        COMPRESSION_CAPABILITY_ID,
+        int(revision),
+        qualifying,
+    )
+    registry_updates["recorded"] = True
+
+    state = str(rev_record.get("state") or "")
+    if state == STATE_ACTIVE:
+        if metrics.get("falsePositiveRate", 0.0) >= REGRESSION_FALSE_POSITIVE_THRESHOLD:
+            registry = rollback_active_revision(
+                registry,
+                COMPRESSION_CAPABILITY_ID,
+                int(revision),
+                reason="compression-false-positive-regression",
+            )
+            registry_updates["rollback"] = "compression-false-positive-regression"
+        elif metrics.get("vetoConflictRate", 0.0) >= REGRESSION_VETO_CONFLICT_THRESHOLD:
+            registry = rollback_active_revision(
+                registry,
+                COMPRESSION_CAPABILITY_ID,
+                int(revision),
+                reason="compression-veto-conflict-regression",
+            )
+            registry_updates["rollback"] = "compression-veto-conflict-regression"
+
+    write_registry(registry_path(repo), registry)
+    return registry_updates
+
+
+from planning_store import contains_raw_transcript, redact_content
 
 
 def _resolve_block_text(block: ContextBlock, root: Path) -> tuple[str, bool, str | None]:
@@ -128,6 +369,8 @@ def process_context_block(
     *,
     config: dict[str, Any],
     root: Path,
+    compression_mode: str | None = None,
+    capability_revision: int | None = None,
 ) -> ProcessedBlock:
     """Process a single context block per compression/path-ref policy."""
     text, file_backed, display_path = _resolve_block_text(block, root)
@@ -141,19 +384,15 @@ def process_context_block(
 
     strategies = config.get("strategies", DEFAULT_STRATEGIES)
     strategy = _strategy_for_content_type(strategies, content_type)
+    resolved_mode = compression_mode or str(config.get("phase", DEFAULT_COMPRESSION_PHASE))
+    safety_veto = _safety_veto_for_text(text)
 
     if strategy == "passthrough":
         return ProcessedBlock(text=f"{_format_block_header(label)}{text}")
 
     needs_summarization = token_count > threshold
 
-    if file_backed and block.allow_path_reference and display_path and not needs_summarization:
-        return ProcessedBlock(
-            text=_format_path_reference(label, display_path),
-            used_path_reference=True,
-        )
-
-    if file_backed and block.allow_path_reference and display_path and needs_summarization:
+    if file_backed and block.allow_path_reference and display_path:
         return ProcessedBlock(
             text=_format_path_reference(label, display_path),
             used_path_reference=True,
@@ -162,26 +401,41 @@ def process_context_block(
     if not needs_summarization:
         return ProcessedBlock(text=f"{_format_block_header(label)}{text}")
 
-    result = compress(
+    mode_result = compress_with_mode(
         text,
+        mode=resolved_mode,
         content_type=content_type,
         budget_tokens=threshold,
         root=root,
+        safety_veto=safety_veto,
     )
+    authoritative = mode_result.authoritative
     retrieve_keys: list[str] = []
-    body = result.text
-    if result.compressed and result.retrieveKey:
-        retrieve_keys.append(result.retrieveKey)
+    body = authoritative.text
+    compressed = authoritative.compressed and mode_result.mode == MODE_ACTIVE_LOSSY
+    if compressed and authoritative.retrieveKey:
+        retrieve_keys.append(authoritative.retrieveKey)
         body += (
             "\n\n*(Content summarized — orchestrator may re-dispatch with fuller context "
             "via recoverable retrieve.)*"
         )
 
-    return ProcessedBlock(
-        text=f"{_format_block_header(label, summarized=result.compressed)}{body}",
-        compressed=result.compressed,
+    processed = ProcessedBlock(
+        text=f"{_format_block_header(label, summarized=compressed)}{body}",
+        compressed=compressed,
         retrieve_keys=retrieve_keys,
     )
+    if mode_result.shadow is not None or mode_result.mode != MODE_LOSSLESS:
+        metrics = compute_compression_metrics(
+            text,
+            mode_result,
+            root=root,
+            capability_revision=capability_revision,
+            safety_veto=safety_veto,
+            configured_mode=resolved_mode,
+        )
+        processed.compression_evidence = metrics
+    return processed
 
 
 def build_deliver_phase_ship_prompt(
@@ -219,30 +473,39 @@ def build_task_dispatch_prompt(
     """Assemble a Task-dispatch prompt with directive, optional compression, and body."""
     repo = (root or Path.cwd()).resolve()
     config = load_context_compression_config(repo, config_path)
+    compression_mode, capability_revision, _ = resolve_compression_mode(
+        repo,
+        config_phase=str(config.get("phase", DEFAULT_COMPRESSION_PHASE)),
+    )
 
     directive = format_intensity_directive(intensity, intensity_source)
     parts = [directive]
     retrieve_keys: list[str] = []
     tokens_before = estimate_tokens(directive) + estimate_tokens(body)
     compression_applied = False
+    compression_evidence: dict[str, Any] | None = None
 
-    for block in primary_context_blocks or []:
-        processed = process_context_block(block, config=config, root=repo)
-        if processed.text:
-            parts.append(processed.text)
-            tokens_before += estimate_tokens(processed.text)
-        retrieve_keys.extend(processed.retrieve_keys)
-        if processed.compressed:
-            compression_applied = True
-
-    for block in context_blocks or []:
-        processed = process_context_block(block, config=config, root=repo)
-        if processed.text:
-            parts.append(processed.text)
-            tokens_before += estimate_tokens(processed.text)
-        retrieve_keys.extend(processed.retrieve_keys)
-        if processed.compressed:
-            compression_applied = True
+    block_groups = [
+        primary_context_blocks or [],
+        context_blocks or [],
+    ]
+    for blocks in block_groups:
+        for block in blocks:
+            processed = process_context_block(
+                block,
+                config=config,
+                root=repo,
+                compression_mode=compression_mode,
+                capability_revision=capability_revision,
+            )
+            if processed.text:
+                parts.append(processed.text)
+                tokens_before += estimate_tokens(processed.text)
+            retrieve_keys.extend(processed.retrieve_keys)
+            if processed.compressed:
+                compression_applied = True
+            if processed.compression_evidence is not None:
+                compression_evidence = processed.compression_evidence
 
     if include_partial_handoff:
         token_budget = resolve_token_budget(config)
@@ -260,6 +523,8 @@ def build_task_dispatch_prompt(
         tokens_before=tokens_before,
         tokens_after=estimate_tokens(prompt),
         compression_applied=compression_applied,
+        compression_mode=compression_mode,
+        compression_evidence=compression_evidence,
     )
 
 
@@ -295,7 +560,10 @@ def build_dispatch_telemetry_entry(
         "tokensBefore": result.tokens_before,
         "tokensAfter": result.tokens_after,
         "compressionApplied": result.compression_applied,
+        "compressionMode": result.compression_mode,
     }
+    if result.compression_evidence is not None:
+        entry["compressionEvidence"] = result.compression_evidence
     if dispatch_id:
         entry["dispatchId"] = dispatch_id
     if phase_slug:
@@ -454,6 +722,14 @@ def main(argv: list[str] | None = None) -> int:
             compression_enabled=config.get("enabled"),
         )
         telemetry_sink = str(sink)
+        if result.compression_evidence is not None:
+            record_compression_dispatch_evidence(
+                result.compression_evidence,
+                root=root,
+                dispatch_id=args.dispatch_id,
+                phase_slug=args.phase_slug,
+                run_dir=run_dir,
+            )
     if args.json:
         payload: dict[str, Any] = {
             "out": str(args.out),
@@ -461,8 +737,11 @@ def main(argv: list[str] | None = None) -> int:
             "tokensBefore": result.tokens_before,
             "tokensAfter": result.tokens_after,
             "compressionApplied": result.compression_applied,
+            "compressionMode": result.compression_mode,
             "contextCompressionEnabled": config.get("enabled"),
         }
+        if result.compression_evidence is not None:
+            payload["compressionEvidence"] = result.compression_evidence
         if telemetry_sink:
             payload["telemetrySink"] = telemetry_sink
         print(json.dumps(payload, indent=2))

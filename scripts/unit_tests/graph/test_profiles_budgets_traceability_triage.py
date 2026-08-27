@@ -28,7 +28,22 @@ from graph.traceability import (  # noqa: E402
     evaluate_evidence_predicate,
     stable_trace_ref_id,
 )
-from triage_lib import classify_tier, merge_tier_monotonic, classify_mechanical  # noqa: E402
+from triage_evidence import (  # noqa: E402
+    SAFETY_CLASS_ADVISORY,
+    SAFETY_CLASS_SAFETY_FLOOR,
+    SIGNAL_ARCHITECTURE_RADAR,
+    SIGNAL_VERIFICATION_CAPABILITY,
+    build_signal,
+    build_triage_evidence,
+)
+from triage_lib import (  # noqa: E402
+    advisory_tier_from_score,
+    apply_veto_first_evidence,
+    classify_mechanical,
+    classify_tier,
+    merge_tier_monotonic,
+)
+from doc_rescore import evaluate_rescore  # noqa: E402
 
 
 def test_profile_rejects_cache_loop_bounds_budget_halt_nonready() -> None:
@@ -113,6 +128,77 @@ def test_triage_monotonic_union_one_file_auth_not_quick() -> None:
     )
     assert reduced.tier == "standard"
     assert reduced.reduction_path == "human-waiver"
+
+
+def _evidence_with_scores(*, advisory: float, safety: float) -> dict:
+    signals = [
+        build_signal(
+            SIGNAL_VERIFICATION_CAPABILITY,
+            weight=0.3,
+            value=safety,
+            safety_class=SAFETY_CLASS_SAFETY_FLOOR,
+        ),
+        build_signal(
+            SIGNAL_ARCHITECTURE_RADAR,
+            weight=0.6,
+            value=advisory,
+            safety_class=SAFETY_CLASS_ADVISORY,
+        ),
+    ]
+    document = build_triage_evidence(signals)
+    from triage_evidence import aggregate_weighted_advisory
+
+    explain = dict(document["explain"])
+    explain["aggregation"] = aggregate_weighted_advisory(signals)
+    document["explain"] = explain
+    return document
+
+
+def test_safety_veto_wins_over_conflicting_advisory_triage() -> None:
+    """safety-veto-wins: conflicting advisory cannot lower the safety floor."""
+    evidence = _evidence_with_scores(advisory=0.1, safety=0.0)
+    result = classify_tier(description="rename variable in helper", file_count=1, triage_evidence=evidence)
+    assert result.tier == "full"
+    assert result.veto_tier == "full"
+    assert result.explain is not None
+    assert result.explain["authority"] == "non-authoritative"
+    assert advisory_tier_from_score(0.1) == "quick"
+    assert result.tier != advisory_tier_from_score(0.1)
+
+
+def test_safety_veto_wins_over_conflicting_advisory_doc_entry() -> None:
+    """hard-veto-authority: doc entry applies the same veto-first contract as triage."""
+    evidence = _evidence_with_scores(advisory=0.1, safety=0.0)
+    result = evaluate_rescore(
+        current_tier="Quick",
+        proposed_tier="Quick",
+        triage_evidence=evidence,
+    )
+    assert result["verdict"] == "pass"
+    assert result["appliedTier"] == "Full"
+    assert result["receipt"]["evidence"]["vetoTier"] == "Full"
+    assert result["receipt"]["evidence"]["authority"] == "non-authoritative"
+
+
+def test_no_veto_override_surface_on_doc_entry() -> None:
+    """no-veto-override-surface: bypass fields are refused fail-closed."""
+    result = evaluate_rescore(
+        current_tier="Standard",
+        proposed_tier="Quick",
+        signals={"vetoOverride": True},
+    )
+    assert result["verdict"] == "fail"
+    assert result["error"] == "veto-override-forbidden:vetoOverride"
+    assert result["halt"] == "doc-loop:veto-override-forbidden"
+
+
+def test_advisory_promotion_only_after_veto_floor() -> None:
+    mechanical = classify_mechanical(description="small tweak", file_count=1)
+    evidence = _evidence_with_scores(advisory=0.95, safety=1.0)
+    result = apply_veto_first_evidence(mechanical, evidence)
+    assert result.tier == "full"
+    assert result.advisory_tier == "full"
+    assert result.veto_tier is None
 
 
 def test_invariants_and_capability_docs_regenerated() -> None:

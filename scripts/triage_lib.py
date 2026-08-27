@@ -65,6 +65,7 @@ class TierResult:
     floor_tier: str | None = None
     mechanical_tier: str | None = None
     advisory_tier: str | None = None
+    veto_tier: str | None = None
     matched_risk_triggers: list[str] = field(default_factory=list)
     matched_ambiguity: list[str] = field(default_factory=list)
     override: str | None = None
@@ -72,14 +73,16 @@ class TierResult:
     prior_tier: str | None = None
     reduction_path: str | None = None
     signals: list[str] = field(default_factory=list)
+    explain: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "tier": self.tier,
             "baseTier": self.base_tier,
             "floorTier": self.floor_tier,
             "mechanicalTier": self.mechanical_tier,
             "advisoryTier": self.advisory_tier,
+            "vetoTier": self.veto_tier,
             "matchedRiskTriggers": list(self.matched_risk_triggers),
             "matchedAmbiguity": list(self.matched_ambiguity),
             "override": self.override,
@@ -88,6 +91,9 @@ class TierResult:
             "reductionPath": self.reduction_path,
             "signals": list(self.signals),
         }
+        if self.explain is not None:
+            payload["explain"] = self.explain
+        return payload
 
 
 def _normalize(text: str) -> str:
@@ -237,6 +243,312 @@ def merge_tier_monotonic(
     return result
 
 
+ADVISORY_SCORE_QUICK_MAX = 0.34
+ADVISORY_SCORE_STANDARD_MAX = 0.67
+SAFETY_VETO_FULL_MAX = 0.0
+SAFETY_VETO_STANDARD_MAX = 0.5
+
+CAPABILITY_TRIAGE_RECOMMENDATION = "triage.recommendation"
+CAPABILITY_EXPLORATION_INFERENCE = "exploration.inference"
+
+
+def advisory_tier_from_score(score: float | None) -> str | None:
+    """Map a fresh advisory score to a triage tier; absent scores stay unset."""
+    if score is None:
+        return None
+    value = float(score)
+    if value >= ADVISORY_SCORE_STANDARD_MAX:
+        return TIER_FULL
+    if value >= ADVISORY_SCORE_QUICK_MAX:
+        return TIER_STANDARD
+    return TIER_QUICK
+
+
+def safety_veto_tier_from_aggregation(aggregation: Mapping[str, Any]) -> str | None:
+    """Fresh safety-floor evidence enforces a minimum tier before advisory promotion."""
+    safety_score = aggregation.get("safetyFloorScore")
+    if safety_score is None:
+        return None
+    value = float(safety_score)
+    if value <= SAFETY_VETO_FULL_MAX:
+        return TIER_FULL
+    if value < SAFETY_VETO_STANDARD_MAX:
+        return TIER_STANDARD
+    return None
+
+
+def evidence_aggregation(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    from triage_evidence import aggregate_weighted_advisory
+
+    explain = evidence.get("explain")
+    if isinstance(explain, Mapping):
+        aggregation = explain.get("aggregation")
+        if isinstance(aggregation, Mapping):
+            return dict(aggregation)
+    signals = evidence.get("signals")
+    if isinstance(signals, list):
+        return aggregate_weighted_advisory(signals)
+    return {}
+
+
+def _build_evidence_explain(
+    evidence: Mapping[str, Any],
+    aggregation: Mapping[str, Any],
+    *,
+    promotion_binding: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    explain = evidence.get("explain")
+    payload = dict(explain) if isinstance(explain, Mapping) else {}
+    payload["aggregation"] = dict(aggregation)
+    payload["authority"] = "non-authoritative"
+    payload["absent"] = list(aggregation.get("absent") or [])
+    payload["excludedStale"] = list(aggregation.get("excludedStale") or [])
+    if promotion_binding is not None:
+        payload["promotion"] = dict(promotion_binding)
+    return payload
+
+
+def resolve_capability_promotion_binding(
+    registry: Mapping[str, Any] | None,
+    capability_id: str,
+) -> dict[str, Any]:
+    """Resolve active revision promotion state for a registry consumer (R4, R5)."""
+    from capability_promotion import CapabilityPromotionError, STATE_SHADOW, get_capability, get_revision
+
+    if registry is None:
+        return {
+            "capabilityId": capability_id,
+            "revision": None,
+            "state": STATE_SHADOW,
+            "evidenceRef": None,
+            "evidenceClass": None,
+        }
+    try:
+        capability = get_capability(registry, capability_id)
+        active_revision = int(capability["activeRevision"])
+        revision = get_revision(capability, active_revision)
+        return {
+            "capabilityId": capability_id,
+            "revision": active_revision,
+            "state": str(revision.get("state") or STATE_SHADOW),
+            "evidenceRef": revision.get("evidenceRef"),
+            "evidenceClass": revision.get("evidenceClass"),
+        }
+    except CapabilityPromotionError:
+        return {
+            "capabilityId": capability_id,
+            "revision": None,
+            "state": STATE_SHADOW,
+            "evidenceRef": None,
+            "evidenceClass": None,
+        }
+
+
+def advisory_promotion_authoritative(promotion_binding: Mapping[str, Any]) -> bool:
+    from capability_promotion import STATE_ACTIVE
+
+    return str(promotion_binding.get("state") or "") == STATE_ACTIVE
+
+
+def detect_veto_conflict(
+    mechanical_tier: str,
+    advisory_tier: str | None,
+    veto_tier: str | None,
+) -> bool:
+    """True when a safety veto overrules an advisory recommendation (R5, R12)."""
+    if veto_tier is None or advisory_tier is None:
+        return False
+    advisory_merged = _tier_max([mechanical_tier, advisory_tier])
+    veto_merged = _tier_max([mechanical_tier, veto_tier])
+    return TIER_ORDER[veto_merged] > TIER_ORDER[advisory_merged]
+
+
+def _replace_registry(registry: dict[str, Any], updated: Mapping[str, Any]) -> dict[str, Any]:
+    registry.clear()
+    registry.update(updated)
+    return registry
+
+
+def record_triage_promotion_run(
+    registry: Mapping[str, Any],
+    *,
+    capability_id: str = CAPABILITY_TRIAGE_RECOMMENDATION,
+    run_id: str,
+    observed_at: str,
+    veto_conflict: bool,
+    shadow_agreement: float,
+    evidence_ref: str,
+) -> dict[str, Any]:
+    """Record one qualifying promotion run, including veto-conflict metrics (R5, R12)."""
+    from capability_promotion import attach_run_from_evidence_ref, record_qualifying_run
+
+    binding = resolve_capability_promotion_binding(registry, capability_id)
+    revision = binding.get("revision")
+    if revision is None:
+        return dict(registry)
+    run = attach_run_from_evidence_ref(
+        run_id=run_id,
+        observed_at=observed_at,
+        false_positive_rate=0.0,
+        veto_conflict_rate=1.0 if veto_conflict else 0.0,
+        shadow_agreement=shadow_agreement,
+        evidence_ref=evidence_ref,
+    )
+    updated = record_qualifying_run(registry, capability_id, int(revision), run)
+    if isinstance(registry, dict):
+        return _replace_registry(registry, updated)
+    return updated
+
+
+def maybe_rollback_triage_promotion(
+    registry: Mapping[str, Any],
+    *,
+    capability_id: str = CAPABILITY_TRIAGE_RECOMMENDATION,
+    regression_detected: bool,
+    reason: str = "veto-conflict-regression",
+) -> dict[str, Any]:
+    """Rollback to the prior active revision when regression is detected (R11, R12)."""
+    from capability_promotion import CapabilityPromotionError, STATE_ACTIVE, rollback_active_revision
+
+    if not regression_detected:
+        return dict(registry) if not isinstance(registry, dict) else registry
+    binding = resolve_capability_promotion_binding(registry, capability_id)
+    if str(binding.get("state") or "") != STATE_ACTIVE:
+        return dict(registry) if not isinstance(registry, dict) else registry
+    revision = binding.get("revision")
+    if revision is None:
+        return dict(registry) if not isinstance(registry, dict) else registry
+    try:
+        updated = rollback_active_revision(registry, capability_id, int(revision), reason=reason)
+    except CapabilityPromotionError:
+        return dict(registry) if not isinstance(registry, dict) else registry
+    if isinstance(registry, dict):
+        return _replace_registry(registry, updated)
+    return updated
+
+
+def apply_veto_first_evidence(
+    mechanical: TierResult,
+    evidence: Mapping[str, Any] | None,
+    *,
+    promotion_registry: Mapping[str, Any] | None = None,
+    capability_id: str = CAPABILITY_TRIAGE_RECOMMENDATION,
+    run_id: str | None = None,
+    observed_at: str | None = None,
+    regression_detected: bool = False,
+) -> TierResult:
+    """Apply safety veto then promotion-gated advisory merge; evidence explain is non-authoritative."""
+    if evidence is None:
+        return mechanical
+    from gate_evidence import utc_now
+    from triage_evidence import parse_triage_evidence
+
+    if promotion_registry is not None and regression_detected:
+        maybe_rollback_triage_promotion(
+            promotion_registry,
+            capability_id=capability_id,
+            regression_detected=True,
+        )
+
+    parsed = parse_triage_evidence(evidence)
+    aggregation = evidence_aggregation(parsed)
+    promotion_binding: dict[str, Any] | None = None
+    authoritative = True
+    if promotion_registry is not None:
+        promotion_binding = resolve_capability_promotion_binding(promotion_registry, capability_id)
+        authoritative = advisory_promotion_authoritative(promotion_binding)
+    explain = _build_evidence_explain(parsed, aggregation, promotion_binding=promotion_binding)
+    veto_tier = safety_veto_tier_from_aggregation(aggregation)
+    advisory_tier = advisory_tier_from_score(aggregation.get("advisoryScore"))
+    veto_conflict = detect_veto_conflict(mechanical.tier, advisory_tier, veto_tier)
+
+    vetoed = mechanical
+    extra_signals: list[str] = []
+    if veto_tier:
+        vetoed = TierResult(
+            tier=_tier_max([mechanical.tier, veto_tier]),
+            base_tier=mechanical.base_tier,
+            floor_tier=mechanical.floor_tier,
+            mechanical_tier=mechanical.mechanical_tier or mechanical.tier,
+            matched_risk_triggers=list(mechanical.matched_risk_triggers),
+            matched_ambiguity=list(mechanical.matched_ambiguity),
+            override=mechanical.override,
+            misroute_promoted=mechanical.misroute_promoted,
+            prior_tier=mechanical.prior_tier,
+            signals=list(mechanical.signals) + [f"safety_veto: floor -> {veto_tier}"],
+            veto_tier=veto_tier,
+        )
+        extra_signals.append(f"safety_veto: floor -> {veto_tier}")
+
+    if promotion_registry is not None and run_id and promotion_binding.get("revision") is not None:
+        evidence_ref = str(promotion_binding.get("evidenceRef") or "sha256:" + ("0" * 64))
+        shadow_agreement = 1.0 if not veto_conflict else 0.0
+        record_triage_promotion_run(
+            promotion_registry,
+            capability_id=capability_id,
+            run_id=run_id,
+            observed_at=observed_at or utc_now(),
+            veto_conflict=veto_conflict,
+            shadow_agreement=shadow_agreement,
+            evidence_ref=evidence_ref,
+        )
+
+    if mechanical.override:
+        return TierResult(
+            tier=mechanical.tier,
+            base_tier=mechanical.base_tier,
+            floor_tier=mechanical.floor_tier,
+            mechanical_tier=mechanical.mechanical_tier,
+            advisory_tier=advisory_tier,
+            veto_tier=veto_tier,
+            matched_risk_triggers=list(mechanical.matched_risk_triggers),
+            matched_ambiguity=list(mechanical.matched_ambiguity),
+            override=mechanical.override,
+            misroute_promoted=mechanical.misroute_promoted,
+            prior_tier=mechanical.prior_tier,
+            reduction_path=mechanical.reduction_path,
+            signals=list(mechanical.signals) + extra_signals,
+            explain=explain,
+        )
+
+    if not authoritative:
+        extra_signals.append(f"promotion_shadow: advisory={advisory_tier} not applied")
+        return TierResult(
+            tier=vetoed.tier,
+            base_tier=vetoed.base_tier,
+            floor_tier=vetoed.floor_tier,
+            mechanical_tier=vetoed.mechanical_tier,
+            advisory_tier=advisory_tier,
+            veto_tier=veto_tier,
+            matched_risk_triggers=list(vetoed.matched_risk_triggers),
+            matched_ambiguity=list(vetoed.matched_ambiguity),
+            override=vetoed.override,
+            misroute_promoted=vetoed.misroute_promoted,
+            prior_tier=vetoed.prior_tier,
+            reduction_path=vetoed.reduction_path,
+            signals=list(vetoed.signals) + extra_signals,
+            explain=explain,
+        )
+
+    merged = merge_tier_monotonic(vetoed, advisory_tier)
+    return TierResult(
+        tier=merged.tier,
+        base_tier=merged.base_tier,
+        floor_tier=merged.floor_tier,
+        mechanical_tier=merged.mechanical_tier,
+        advisory_tier=advisory_tier,
+        veto_tier=veto_tier,
+        matched_risk_triggers=list(merged.matched_risk_triggers),
+        matched_ambiguity=list(merged.matched_ambiguity),
+        override=merged.override,
+        misroute_promoted=merged.misroute_promoted,
+        prior_tier=merged.prior_tier,
+        reduction_path=merged.reduction_path,
+        signals=list(merged.signals) + extra_signals,
+        explain=explain,
+    )
+
+
 def classify_tier(
     *,
     description: str = "",
@@ -244,6 +556,12 @@ def classify_tier(
     file_count: int | None = None,
     override_tier: str | None = None,
     advisory_tier: str | None = None,
+    triage_evidence: Mapping[str, Any] | None = None,
+    promotion_registry: Mapping[str, Any] | None = None,
+    promotion_capability_id: str = CAPABILITY_TRIAGE_RECOMMENDATION,
+    promotion_run_id: str | None = None,
+    promotion_observed_at: str | None = None,
+    promotion_regression_detected: bool = False,
     prior_tier: str | None = None,
     re_score: bool = False,
     authorized_reduction_to: str | None = None,
@@ -257,6 +575,16 @@ def classify_tier(
         prior_tier=prior_tier,
         re_score=re_score,
     )
+    if triage_evidence is not None:
+        return apply_veto_first_evidence(
+            mechanical,
+            triage_evidence,
+            promotion_registry=promotion_registry,
+            capability_id=promotion_capability_id,
+            run_id=promotion_run_id,
+            observed_at=promotion_observed_at,
+            regression_detected=promotion_regression_detected,
+        )
     if mechanical.override:
         return mechanical
     return merge_tier_monotonic(
