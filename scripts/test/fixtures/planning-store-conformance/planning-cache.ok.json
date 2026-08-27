@@ -1,0 +1,38 @@
+{
+  "verdict": "ok",
+  "backend": "planning-cache",
+  "action": "planning-store-conformance-record",
+  "matrixVersion": "2.0.0",
+  "verbs": {
+    "put": {
+      "verdict": "ok",
+      "verb": "put",
+      "hash": "9dfc6ecefa5eeb1b"
+    },
+    "get": {
+      "verdict": "ok",
+      "verb": "get"
+    },
+    "exists": {
+      "verdict": "ok",
+      "verb": "exists"
+    },
+    "materialize": {
+      "verdict": "ok",
+      "verb": "materialize"
+    },
+    "freeze": {
+      "verdict": "ok",
+      "verb": "freeze",
+      "degradationId": "frontmatter-hash-authoritative",
+      "declared": true
+    }
+  },
+  "corpusScenarioIds": [
+    "cross-mode-reconcile",
+    "issue-store-materialize",
+    "planning-freeze"
+  ],
+  "corpusVersion": "1.0.0",
+  "writtenAt": 1787833555
+}
