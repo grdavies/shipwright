@@ -113,7 +113,7 @@ def test_malformed_revision_rejected() -> None:
 
 def test_secret_like_values_rejected() -> None:
     raw = _fixture_corpus()
-    raw["repositories"][0]["remoteUrl"] = "https://example.com/?token=ghp_abcdefghijklmnopqrstuvwxyz123456"
+    raw["repositories"][0]["remoteUrl"] = "https://example.com/?password=fixture-not-a-real-secret"
     manifest = EvalCorpusManifest.from_dict(raw)
     with pytest.raises(EvalCorpusManifestError, match="secret-like material"):
         validate_manifest(manifest)
