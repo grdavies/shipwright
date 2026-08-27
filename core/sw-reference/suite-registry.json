@@ -1904,6 +1904,24 @@
       ]
     },
     {
+      "id": "planning-333-gitlab-planning-store-stub-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 69,
+      "pytestPath": "scripts/unit_tests/planning/test_gitlab_planning_store_stub.py",
+      "ciShard": 2,
+      "pathTriggers": [
+        "core/providers/planning-store/gitlab.md",
+        "scripts/planning/backends/gitlab.py",
+        "scripts/planning_store_facade.py"
+      ]
+    },
+    {
       "id": "planning-native-links-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [

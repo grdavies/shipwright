@@ -17,15 +17,27 @@ from .issues_helpers import (
     save_issue_unit_index,
     save_put_journal,
 )
+from .gitlab import (
+    BACKEND_ID as GITLAB_PLANNING_STORE_BACKEND_ID,
+    GitlabPlanningStoreStubBackend,
+    conformance_metadata_only as gitlab_planning_store_conformance_metadata,
+    gitlab_planning_store_parity_gate,
+    register_gitlab_planning_store_stub,
+)
 from .local_synced import LocalSyncedBackend
 from .memory_cache import ReplicatedPlanningCacheBackend
 
 __all__ = [
     "ISSUE_STORE_TXN_ID",
     "ISSUE_UNIT_INDEX",
+    "GITLAB_PLANNING_STORE_BACKEND_ID",
+    "GitlabPlanningStoreStubBackend",
     "InRepoPublicBackend",
     "IssueStoreBackend",
     "LocalSyncedBackend",
+    "gitlab_planning_store_conformance_metadata",
+    "gitlab_planning_store_parity_gate",
+    "register_gitlab_planning_store_stub",
     "ReplicatedPlanningCacheBackend",
     "PUT_JOURNAL_PATH",
     "issue_index_key",

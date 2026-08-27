@@ -562,6 +562,7 @@
     "planning/__init__.py",
     "planning/backends/__init__.py",
     "planning/backends/_common.py",
+    "planning/backends/gitlab.py",
     "planning/backends/in_repo.py",
     "planning/backends/issues.py",
     "planning/backends/issues_helpers.py",
@@ -795,5 +796,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 792
+  "moduleCount": 793
 }

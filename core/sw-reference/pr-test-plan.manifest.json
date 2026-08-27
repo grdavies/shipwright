@@ -1497,6 +1497,21 @@
       "ciShard": 2
     },
     {
+      "id": "planning-333-gitlab-planning-store-stub-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_gitlab_planning_store_stub.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "gitlab-planning-store-stub",
+        "p2-spec-not-shipped"
+      ],
+      "ciShard": 2
+    },
+    {
       "id": "planning-native-links-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [

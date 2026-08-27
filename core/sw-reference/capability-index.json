@@ -1204,6 +1204,30 @@
       }
     },
     {
+      "id": "provider.providers.planning-store.gitlab",
+      "kind": "provider",
+      "sourcePath": "core/providers/planning-store/gitlab.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "planning.store.backend",
+            "equals": "gitlab-planning-store"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "planning-store",
+          "adapterId": "gitlab-planning-store",
+          "selectionFamily": "providers",
+          "status": "spec-stub",
+          "programPriority": "P2"
+        }
+      }
+    },
+    {
       "id": "provider.providers.planning-store.in-repo",
       "kind": "provider",
       "sourcePath": "core/providers/planning-store/in-repo.md",
