@@ -741,6 +741,7 @@
     "triage_lib.py",
     "two_track_lib.py",
     "upgrade-gate.py",
+    "upstream_provenance.py",
     "validate_descriptor.py",
     "variance_probe.py",
     "verify-baseline.py",
@@ -797,5 +798,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 794
+  "moduleCount": 795
 }
