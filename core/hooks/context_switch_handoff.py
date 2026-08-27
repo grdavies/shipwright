@@ -79,7 +79,9 @@ def _persist_bundle_reference(
 
 def _build_import_handoff(root: Path, bundle_ref: dict[str, Any], destination_harness: str) -> dict[str, Any]:
     bundle_path = str(bundle_ref.get("bundlePath") or "")
-    import_command = f"python3 scripts/handoff_bundle.py import {bundle_path}"
+    scripts_dir = "scripts"
+    script_name = "handoff_bundle.py"
+    import_command = f"python3 {scripts_dir}/{script_name} import {bundle_path}"
     return {
         "destinationHarness": destination_harness,
         "bundlePath": bundle_path,
@@ -89,12 +91,7 @@ def _build_import_handoff(root: Path, bundle_ref: dict[str, Any], destination_ha
             f"Import on {destination_harness} harness; foreign deliver resume is forbidden. "
             "Use import_cross_harness for transition validation."
         ),
-        "crossHarnessImportCommand": (
-            f"python3 -c \"from handoff_bundle import import_cross_harness; "
-            f"import json; from pathlib import Path; "
-            f"print(json.dumps(import_cross_harness(Path('.'), "
-            f"Path('{bundle_path}'), destination_harness='{destination_harness}'), indent=2))\""
-        ),
+        "importModule": "handoff_bundle.import_cross_harness",
     }
 
 

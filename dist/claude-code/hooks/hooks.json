@@ -19,6 +19,16 @@
       {
         "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
       }
+    ],
+    "ContextSwitch": [
+      {
+        "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-switch-handoff.py\" --trigger context-switch",
+        "metadata": {
+          "trigger": "context-switch",
+          "event": "pause"
+        }
+      }
     ]
-  }
+  },
+  "canonicalManifest": "core/hooks/hooks.json"
 }
