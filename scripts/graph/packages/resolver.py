@@ -24,6 +24,11 @@ from graph.packages.trust import (
 PACKAGE_KIND = "WorkflowPackage"
 PACKAGE_SCHEMA_VERSION = 1
 DEFAULT_CATALOG_ROOT = Path(".sw/workflows/packages")
+DEFAULT_PACKAGE_REGISTRY = "local-catalog"
+
+SHIPPED_PACKAGE_REGISTRIES: frozenset[str] = frozenset({DEFAULT_PACKAGE_REGISTRY})
+P3_PACKAGE_REGISTRY_STUBS: frozenset[str] = frozenset({"marketplace"})
+ALL_PACKAGE_REGISTRIES: frozenset[str] = SHIPPED_PACKAGE_REGISTRIES | P3_PACKAGE_REGISTRY_STUBS
 
 
 class PackageResolverError(RuntimeError):
@@ -153,3 +158,56 @@ class PackageResolver:
         if identity != pin:
             raise PackageResolverError(f"package identity mismatch: {identity}!={pin}")
         return document
+
+
+def package_registry_kind(cfg: Mapping[str, Any]) -> str:
+    """Resolve configured package registry — defaults to local catalog (R18)."""
+    graph_exec = cfg.get("graphExecution") or {}
+    packages = graph_exec.get("packages") or {}
+    return str(packages.get("registry") or DEFAULT_PACKAGE_REGISTRY).strip().lower()
+
+
+def package_registry_default_off(cfg: Mapping[str, Any]) -> bool:
+    """True when workflow config does not silently select marketplace."""
+    from graph.packages.marketplace import marketplace_default_off
+
+    return marketplace_default_off(cfg)
+
+
+def resolve_registry_package(
+    raw_reference: Mapping[str, Any],
+    *,
+    cfg: Mapping[str, Any],
+    trust_store: TrustAnchorStore | None = None,
+) -> dict[str, Any]:
+    """Route package resolution by registry kind — marketplace fails closed (P3 stub)."""
+    registry_kind = package_registry_kind(cfg)
+    if registry_kind == "marketplace":
+        from graph.packages.marketplace import resolve_marketplace_package
+
+        return resolve_marketplace_package(raw_reference, trust_store=trust_store)
+    if registry_kind not in SHIPPED_PACKAGE_REGISTRIES:
+        raise PackageResolverError(f"unknown package registry: {registry_kind}")
+    raise PackageResolverError(
+        "registry package resolution requires lockfile context; use PackageResolver"
+    )
+
+
+def package_p3_stub_registration_footprint() -> dict[str, Any]:
+    """PRD 333 phase 10 — P3 marketplace registry spec stubs (metadata only, not shipped)."""
+    from graph.packages.marketplace import (
+        ALL_PACKAGE_REGISTRIES as MARKETPLACE_ALL_REGISTRIES,
+        REGISTRY_ID,
+        SHIPPED_PACKAGE_REGISTRIES as MARKETPLACE_SHIPPED_REGISTRIES,
+        register_marketplace_registry_stub,
+    )
+
+    registration = register_marketplace_registry_stub()
+    return {
+        "verdict": "ok",
+        "action": "package-p3-stub-registration",
+        "stubs": {REGISTRY_ID: registration},
+        "p3Stubs": sorted(P3_PACKAGE_REGISTRY_STUBS),
+        "shippedRegistries": sorted(MARKETPLACE_SHIPPED_REGISTRIES),
+        "allRegistries": sorted(MARKETPLACE_ALL_REGISTRIES),
+    }

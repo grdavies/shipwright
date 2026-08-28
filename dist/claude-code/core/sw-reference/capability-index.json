@@ -1594,6 +1594,30 @@
       }
     },
     {
+      "id": "provider.providers.workflow-package.marketplace",
+      "kind": "provider",
+      "sourcePath": "core/providers/workflow-package/marketplace.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "graphExecution.packages.registry",
+            "equals": "marketplace"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "workflow-package",
+          "adapterId": "marketplace",
+          "selectionFamily": "providers",
+          "status": "spec-stub",
+          "programPriority": "P3"
+        }
+      }
+    },
+    {
       "id": "rule.checks-gate",
       "kind": "rule",
       "sourcePath": "core/rules/checks-gate.mdc",

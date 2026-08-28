@@ -414,6 +414,7 @@
     "graph/packages/approval_tuple.py",
     "graph/packages/compile.py",
     "graph/packages/lockfile.py",
+    "graph/packages/marketplace.py",
     "graph/packages/resolver.py",
     "graph/packages/trust.py",
     "graph/profiles.py",
@@ -798,5 +799,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 795
+  "moduleCount": 796
 }

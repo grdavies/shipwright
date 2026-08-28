@@ -26,10 +26,17 @@ from graph.packages.lockfile import (
     validate_lock_transitive_closure,
 )
 from graph.packages.resolver import (
+    ALL_PACKAGE_REGISTRIES,
+    P3_PACKAGE_REGISTRY_STUBS,
+    SHIPPED_PACKAGE_REGISTRIES,
     PackageResolver,
     PackageResolverError,
     ResolvedPackage,
     discover_packages,
+    package_p3_stub_registration_footprint,
+    package_registry_default_off,
+    package_registry_kind,
+    resolve_registry_package,
 )
 from graph.packages.trust import (
     TrustAnchorError,
@@ -40,7 +47,10 @@ from graph.packages.trust import (
 )
 
 __all__ = [
+    "ALL_PACKAGE_REGISTRIES",
     "LOCKFILE_SCHEMA_VERSION",
+    "P3_PACKAGE_REGISTRY_STUBS",
+    "SHIPPED_PACKAGE_REGISTRIES",
     "AdoptionMetrics",
     "ExpansionApproval",
     "ExpansionTuple",
@@ -61,9 +71,13 @@ __all__ = [
     "expansion_requires_reapproval",
     "load_lockfile",
     "load_trust_anchors",
+    "package_p3_stub_registration_footprint",
+    "package_registry_default_off",
+    "package_registry_kind",
     "record_expansion_tuple_on_receipt",
     "report_adoption_metrics",
     "require_lock_edit_approval",
+    "resolve_registry_package",
     "resolve_trusted_packages",
     "sign_package_content",
     "validate_lock_transitive_closure",
