@@ -14,6 +14,7 @@ if str(scripts) not in sys.path:
     sys.path.insert(0, str(scripts))
 
 from doc_loop import (
+    cmd_doc_loop,
     consume_agent_stage,
     doc_run_directory,
     doc_state_path,
@@ -57,6 +58,42 @@ def test_fresh_agent_restores_next_action_from_state(repo: Path) -> None:
     assert payload["action"] == "doc-loop"
     assert payload["awaitAgent"] is True
     assert payload["next"]["stage"] == "triage"
+
+
+def test_consume_advances_exactly_one_agent_stage(
+    repo: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    provisioned = provision_doc_run(repo, topic="one-shot-consume", tier="Full")
+    run_id = str(provisioned["runId"])
+    outcome = {
+        "verdict": "pass",
+        "tier": "Full",
+        "source": "test",
+    }
+
+    with pytest.raises(SystemExit) as exc_info:
+        cmd_doc_loop(
+            repo,
+            [
+                "--run-id",
+                run_id,
+                "--consume",
+                "--outcome",
+                json.dumps(outcome),
+            ],
+        )
+
+    assert exc_info.value.code in (None, 0)
+    payload = json.loads(capsys.readouterr().out)
+    assert [step["executed"] for step in payload["stepsTaken"]] == ["triage"]
+    assert payload["awaitAgent"] is True
+    assert payload["next"]["stage"] == "brainstorm"
+
+    state = load_doc_state(repo, run_id)
+    assert state["stage"] == "brainstorm"
+    assert state["verdict"] == "running"
+    assert len(list((doc_run_directory(repo, run_id) / "receipts").glob("*.json"))) == 1
 
 
 def _verified_freeze(stage: str) -> dict:

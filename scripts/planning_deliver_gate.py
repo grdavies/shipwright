@@ -128,7 +128,11 @@ def is_harness_fixture_task_list(task_rel: str) -> bool:
 
 def is_debug_deliver_task_list(task_rel: str) -> bool:
     """PRD 067 thin debug packs under docs/prds/debug-<slug>/tasks-debug-*.md."""
-    return bool(DEBUG_DELIVER_TASK_LIST.match(task_rel.replace("\\", "/")))
+    normalized = task_rel.replace("\\", "/")
+    marker = ".cursor/planning-materialized/"
+    if marker in normalized:
+        normalized = normalized.split(marker, 1)[1]
+    return bool(DEBUG_DELIVER_TASK_LIST.match(normalized))
 
 
 def allowlist_unit_absent_from_graph(task_path: Path, task_rel: str) -> bool:

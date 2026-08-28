@@ -1296,6 +1296,10 @@ def ensure_doc_run_lease_for_mutation(root: Path, state: dict[str, Any], run_id:
 def cmd_doc_loop(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     consume = has_flag(args, "--consume")
+    agent_outcome_raw = parse_kv(args, "--outcome")
+    agent_outcome: dict[str, Any] | None = None
+    if agent_outcome_raw:
+        agent_outcome = json.loads(agent_outcome_raw)
     ack_checkpoint = has_flag(args, "--ack-checkpoint")
     ack_related_work = has_flag(args, "--ack-related-work")
     max_steps = int(parse_kv(args, "--max-steps", "8") or "8")
@@ -1398,13 +1402,10 @@ def cmd_doc_loop(root: Path, args: list[str]) -> None:
 
         if stage in AGENT_STAGES:
             if consume:
-                agent_outcome_raw = parse_kv(args, "--outcome")
-                outcome: dict[str, Any] | None = None
-                if agent_outcome_raw:
-                    outcome = json.loads(agent_outcome_raw)
-                result = consume_agent_stage(root, state, stage, outcome=outcome)
+                result = consume_agent_stage(root, state, stage, outcome=agent_outcome)
                 steps_taken.append(result)
                 resumed = True
+                consume = False
                 continue
             emit(handshake_payload(state=state, step=step, resumed=resumed, stepsTaken=steps_taken))
 
