@@ -1,20 +1,26 @@
 # Synthesis pipeline
 
 Post-persona merge for `/sw-doc-review`. Transport-aware: file-store collects in-IDE JSON; issue-store reads
-marker-delimited `sw:doc-review` comments under a review-round manifest (R69).
+marker-delimited `sw-doc-review` comments under a review-round manifest (R69 / PRD 341 bootstrap).
 
 ## Review-round manifest (R69) — issue-store only
 
-At synthesis checkpoint open (PRD 043 R33 exclusive checkpoint):
+**Sequence (GitHub issue-store bootstrap):** `doc-review-round-open` → persona `doc-review-round-post`(s) →
+`doc-review-round-read` + `doc-review-round-verify` → synthesis steps below → `doc-review-round-close`.
+Unsupported providers halt with `doc-review-transport-unavailable` — do not synthesize from issue comments.
 
-1. **Pin** — record ordered persona-comment IDs + revisions in a review-round manifest (checkpoint-scoped).
-2. **Read-back** — paginated, concurrency-checked fetch of pinned comments only.
-3. **Verify** — each comment: bot authorship + `sw:doc-review` marker present; forged/non-bot comments rejected.
-4. **Fail closed** — any add/edit/delete to pinned comments before synthesis completes **fail closed** with
-   `doc-review-comment-drift`.
-5. **Exclude from freeze hash** — `sw:doc-review` marker comments are excluded from PRD 043 R35 canonicalization.
+At synthesis checkpoint:
 
-Manifest shape mirrors PRD 043 R9 freeze-record pinning (ordered IDs + revisions at checkpoint open).
+1. **Open** — `doc-review-round-open` writes the manifest on the issue body (`roundId`, `unitId`, `issueId`, `pins`).
+2. **Post / pin** — each `doc-review-round-post` adds a brokered `sw-doc-review` comment and appends a manifest pin.
+3. **Read-back** — `doc-review-round-read` returns pinned rows; binding is re-checked on every refreshed read.
+4. **Verify** — `doc-review-round-verify` checks bot authorship, `sw-doc-review` marker, envelope consistency,
+   manifest binding, and pin parity; fail closed with `doc-review-comment-drift`. Manifest mutations are one
+   etag-guarded update per verb — `revision-conflict` halts without automatic retry; re-run the whole verb.
+5. **Synthesize** — only after verify passes; apply autofix routing below.
+6. **Close** — `doc-review-round-close` after synthesis (verify runs again before close).
+
+Manifest pins are excluded from PRD 043 R35 canonicalization (`sw-doc-review` marker comments).
 
 ## Steps
 

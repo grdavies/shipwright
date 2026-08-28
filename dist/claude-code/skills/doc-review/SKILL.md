@@ -24,26 +24,78 @@ Multi-persona review for PRDs and decision records. Pattern borrowed from compou
 
 | `planning.store.backend` | Findings transport |
 | --- | --- |
-| `issue-store` | Marker-delimited `sw:doc-review` comments on the PRD artifact issue via `issue-comment` verb |
+| `issue-store` | Marker-delimited `sw-doc-review` comments on the PRD artifact issue (GitHub issue-store bootstrap; PRD 341) |
 | default (file-store) | In-IDE parallel sub-agent panel + JSON synthesis (unchanged) |
 
 Under issue-store, persona selection and dispatch binding are identical to file-store; only the **transport**
-changes. Human review feedback uses a separate comment channel (no `sw:doc-review` marker).
+changes. Human review feedback uses a separate comment channel (no `sw-doc-review` marker).
 
-### Issue-store transport
+**Provider gate:** `doc-review-txn` is **GitHub issue-store only** today. Jira, Linear, Notion, file-store, and
+other backends return `doc-review-transport-unavailable` — halt; do not fall back to in-IDE transport.
+
+**Bootstrap scope (PRD 341):** this is the approved temporary GitHub issue-store transport API. Provider-side
+immutable manifest comments and completion receipts remain **frozen-PRD reconciliation work** — do not extend
+this bootstrap slice to full PRD 341 without an explicit planning handoff.
+
+### Issue-store transport (`sw-doc-review` marker)
+
+Prose label: “doc-review marker”; **implementation marker string:** `sw-doc-review` (HTML comment
+`<!-- sw-doc-review -->` … `<!-- /sw-doc-review -->`).
 
 1. Resolve the PRD artifact issue ref from the planning store (`planning_store` + PRD 043 identification).
-2. For each selected persona, dispatch the review Task (binding unchanged) and post findings as a structured
-   comment on the PRD issue:
-   - **Author:** plugin token only (bot-authored; PRD 043 R12 read-time verification).
-   - **Marker:** `sw:doc-review` system marker delimits persona payload — **excluded** from PRD 043 R35
-     canonicalization (cannot poison freeze verification).
+2. **Open round** — before any persona post, write the review-round manifest on the issue body:
+
+```bash
+python3 scripts/planning_store.py doc-review-txn \
+  --verb doc-review-round-open \
+  --issue-id <issue-number> \
+  --unit-id <unit-id> \
+  --round-id <round-id>
+```
+
+3. For each selected persona, dispatch the review Task (binding unchanged), then **post** findings:
+
+```bash
+python3 scripts/planning_store.py doc-review-txn \
+  --verb doc-review-round-post \
+  --issue-id <issue-number> \
+  --unit-id <unit-id> \
+  --round-id <round-id> \
+  --persona <persona-id> \
+  --payload-json '<findings-json>'
+```
+
+   - **Author:** brokered GitHub principal immutable numeric id (never login string).
+   - **Marker:** `sw-doc-review` delimits persona payload — **excluded** from PRD 043 R35 canonicalization.
    - **Payload:** JSON findings per `references/findings-schema.json` inside marker fences.
-3. **Human channel:** operator notes post as plain comments without the `sw:doc-review` marker.
-4. **Synthesis:** open a **review-round manifest** at checkpoint (PRD 043 R33 exclusive checkpoint) pinning
-   ordered persona-comment IDs + revisions; fail closed on any add/edit/delete before synthesis completes.
-   See `references/synthesis.md` **Review-round manifest (R69)**.
-5. Apply `safe_auto` / gate `gated_auto` / `manual` identically to file-store synthesis.
+   - **Pins:** each successful post appends a manifest pin (comment id + revision + digest).
+
+4. **Human channel:** operator notes post as plain comments without the `sw-doc-review` marker.
+5. **Read / verify before synthesis** — after all persona posts, read pins and verify integrity (fail closed on
+   drift or manifest binding mismatch). **Revision conflict is fail-closed:** each verb performs one etag-guarded
+   manifest update; on `revision-conflict` the operator re-runs the whole verb after refreshing state — there is
+   no automatic in-verb retry.
+
+```bash
+python3 scripts/planning_store.py doc-review-txn \
+  --verb doc-review-round-read \
+  --issue-id <issue-number> --unit-id <unit-id> --round-id <round-id>
+
+python3 scripts/planning_store.py doc-review-txn \
+  --verb doc-review-round-verify \
+  --issue-id <issue-number> --unit-id <unit-id> --round-id <round-id>
+```
+
+6. Run synthesis (`references/synthesis.md`) only when verify returns `verdict: ok`.
+7. **Close round** after synthesis completes:
+
+```bash
+python3 scripts/planning_store.py doc-review-txn \
+  --verb doc-review-round-close \
+  --issue-id <issue-number> --unit-id <unit-id> --round-id <round-id>
+```
+
+8. Apply `safe_auto` / gate `gated_auto` / `manual` identically to file-store synthesis.
 
 **IDE fallback:** when `backend != issue-store`, the procedure below (parallel panel + JSON synthesis) is the
 sole transport — byte-identical behavior to pre-045.

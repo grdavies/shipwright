@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-28T01:11:49Z",
+  "generatedAt": "2026-08-28T20:13:05Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -5536,73 +5536,118 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/doc-review/SKILL.md:75:doc-review-select.py",
+      "id": "core/skills/doc-review/SKILL.md:49:planning_store.py",
       "tree": "core/skills",
       "file": "core/skills/doc-review/SKILL.md",
-      "line": 75,
+      "line": 49,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/doc-review/SKILL.md:59:planning_store.py",
+      "tree": "core/skills",
+      "file": "core/skills/doc-review/SKILL.md",
+      "line": 59,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/doc-review/SKILL.md:80:planning_store.py",
+      "tree": "core/skills",
+      "file": "core/skills/doc-review/SKILL.md",
+      "line": 80,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/doc-review/SKILL.md:84:planning_store.py",
+      "tree": "core/skills",
+      "file": "core/skills/doc-review/SKILL.md",
+      "line": 84,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/doc-review/SKILL.md:93:planning_store.py",
+      "tree": "core/skills",
+      "file": "core/skills/doc-review/SKILL.md",
+      "line": 93,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/doc-review/SKILL.md:127:doc-review-select.py",
+      "tree": "core/skills",
+      "file": "core/skills/doc-review/SKILL.md",
+      "line": 127,
       "column": 64,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/doc-review/SKILL.md:119:doc-review-select.py",
+      "id": "core/skills/doc-review/SKILL.md:171:doc-review-select.py",
       "tree": "core/skills",
       "file": "core/skills/doc-review/SKILL.md",
-      "line": 119,
+      "line": 171,
       "column": 8,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/doc-review/SKILL.md:176:sw_bootstrap.py",
+      "id": "core/skills/doc-review/SKILL.md:228:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/doc-review/SKILL.md",
-      "line": 176,
+      "line": 228,
       "column": 19,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/doc-review/SKILL.md:178:wave.py",
+      "id": "core/skills/doc-review/SKILL.md:230:wave.py",
       "tree": "core/skills",
       "file": "core/skills/doc-review/SKILL.md",
-      "line": 178,
+      "line": 230,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/doc-review/SKILL.md:180:resolve-intensity.py",
+      "id": "core/skills/doc-review/SKILL.md:232:resolve-intensity.py",
       "tree": "core/skills",
       "file": "core/skills/doc-review/SKILL.md",
-      "line": 180,
+      "line": 232,
       "column": 25,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/doc-review/SKILL.md:185:dispatch_prompt.py",
+      "id": "core/skills/doc-review/SKILL.md:237:dispatch_prompt.py",
       "tree": "core/skills",
       "file": "core/skills/doc-review/SKILL.md",
-      "line": 185,
+      "line": 237,
       "column": 8,
       "script": "dispatch_prompt.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/doc-review/SKILL.md:192:dispatch-check.py",
+      "id": "core/skills/doc-review/SKILL.md:244:dispatch-check.py",
       "tree": "core/skills",
       "file": "core/skills/doc-review/SKILL.md",
-      "line": 192,
+      "line": 244,
       "column": 8,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/doc-review/SKILL.md:211:doc-review-select.py",
+      "id": "core/skills/doc-review/SKILL.md:263:doc-review-select.py",
       "tree": "core/skills",
       "file": "core/skills/doc-review/SKILL.md",
-      "line": 211,
+      "line": 263,
       "column": 31,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
@@ -11863,73 +11908,118 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:75:doc-review-select.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:49:planning_store.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 75,
+      "line": 49,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:59:planning_store.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/doc-review/SKILL.md",
+      "line": 59,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:80:planning_store.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/doc-review/SKILL.md",
+      "line": 80,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:84:planning_store.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/doc-review/SKILL.md",
+      "line": 84,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:93:planning_store.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/doc-review/SKILL.md",
+      "line": 93,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:127:doc-review-select.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/doc-review/SKILL.md",
+      "line": 127,
       "column": 64,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:119:doc-review-select.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:171:doc-review-select.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 119,
+      "line": 171,
       "column": 8,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:176:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:228:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 176,
+      "line": 228,
       "column": 19,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:178:wave.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:230:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 178,
+      "line": 230,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:180:resolve-intensity.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:232:resolve-intensity.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 180,
+      "line": 232,
       "column": 25,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:185:dispatch_prompt.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:237:dispatch_prompt.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 185,
+      "line": 237,
       "column": 8,
       "script": "dispatch_prompt.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:192:dispatch-check.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:244:dispatch-check.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 192,
+      "line": 244,
       "column": 8,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:211:doc-review-select.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:263:doc-review-select.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 211,
+      "line": 263,
       "column": 31,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
@@ -17866,73 +17956,118 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:75:doc-review-select.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:49:planning_store.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 75,
+      "line": 49,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/doc-review/SKILL.md:59:planning_store.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/doc-review/SKILL.md",
+      "line": 59,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/doc-review/SKILL.md:80:planning_store.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/doc-review/SKILL.md",
+      "line": 80,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/doc-review/SKILL.md:84:planning_store.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/doc-review/SKILL.md",
+      "line": 84,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/doc-review/SKILL.md:93:planning_store.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/doc-review/SKILL.md",
+      "line": 93,
+      "column": 8,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/doc-review/SKILL.md:127:doc-review-select.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/doc-review/SKILL.md",
+      "line": 127,
       "column": 64,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:119:doc-review-select.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:171:doc-review-select.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 119,
+      "line": 171,
       "column": 8,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:176:sw_bootstrap.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:228:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 176,
+      "line": 228,
       "column": 19,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:178:wave.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:230:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 178,
+      "line": 230,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:180:resolve-intensity.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:232:resolve-intensity.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 180,
+      "line": 232,
       "column": 25,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:185:dispatch_prompt.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:237:dispatch_prompt.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 185,
+      "line": 237,
       "column": 8,
       "script": "dispatch_prompt.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:192:dispatch-check.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:244:dispatch-check.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 192,
+      "line": 244,
       "column": 8,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:211:doc-review-select.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:263:doc-review-select.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 211,
+      "line": 263,
       "column": 31,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
@@ -20539,190 +20674,190 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1819:generate-pr-test-plan-ci-workflow.py",
+      "id": "docs/guides/configuration.md:1891:generate-pr-test-plan-ci-workflow.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1819,
+      "line": 1891,
       "column": 8,
       "script": "generate-pr-test-plan-ci-workflow.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1835:test/run_suite_registry_fixtures.py",
+      "id": "docs/guides/configuration.md:1907:test/run_suite_registry_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1835,
+      "line": 1907,
       "column": 49,
       "script": "test/run_suite_registry_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1837:test/run_pr_test_plan_fixtures.py",
+      "id": "docs/guides/configuration.md:1909:test/run_pr_test_plan_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1837,
+      "line": 1909,
       "column": 9,
       "script": "test/run_pr_test_plan_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1893:capability_docs.py",
+      "id": "docs/guides/configuration.md:1965:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1893,
+      "line": 1965,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1896:capability_docs.py",
+      "id": "docs/guides/configuration.md:1968:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1896,
+      "line": 1968,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1899:capability_docs.py",
+      "id": "docs/guides/configuration.md:1971:capability_docs.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1899,
+      "line": 1971,
       "column": 8,
       "script": "capability_docs.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1915:test/run_pilot_fixtures.py",
+      "id": "docs/guides/configuration.md:1987:test/run_pilot_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1915,
+      "line": 1987,
       "column": 24,
       "script": "test/run_pilot_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1925:test/run_emitter_fixtures.py",
+      "id": "docs/guides/configuration.md:1997:test/run_emitter_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1925,
+      "line": 1997,
       "column": 8,
       "script": "test/run_emitter_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1972:phase_sizing.py",
+      "id": "docs/guides/configuration.md:2044:phase_sizing.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1972,
+      "line": 2044,
       "column": 8,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1986:phase_sizing_corpus.py",
+      "id": "docs/guides/configuration.md:2058:phase_sizing_corpus.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1986,
+      "line": 2058,
       "column": 27,
       "script": "phase_sizing_corpus.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1986:phase_sizing_corpus.py",
+      "id": "docs/guides/configuration.md:2058:phase_sizing_corpus.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1986,
+      "line": 2058,
       "column": 0,
       "script": "phase_sizing_corpus.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:1991:test/run_phase_sizing_corpus_fixtures.py",
+      "id": "docs/guides/configuration.md:2063:test/run_phase_sizing_corpus_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 1991,
+      "line": 2063,
       "column": 9,
       "script": "test/run_phase_sizing_corpus_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:2026:reviewer-metrics.py",
+      "id": "docs/guides/configuration.md:2098:reviewer-metrics.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 2026,
+      "line": 2098,
       "column": 23,
       "script": "reviewer-metrics.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:2057:test/run_inefficiency_scan_fixtures.py",
+      "id": "docs/guides/configuration.md:2129:test/run_inefficiency_scan_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 2057,
+      "line": 2129,
       "column": 24,
       "script": "test/run_inefficiency_scan_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:2061:test/run_behavioral_anomaly_fixtures.py",
+      "id": "docs/guides/configuration.md:2133:test/run_behavioral_anomaly_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 2061,
+      "line": 2133,
       "column": 9,
       "script": "test/run_behavioral_anomaly_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:2072:loop_health.py",
+      "id": "docs/guides/configuration.md:2144:loop_health.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 2072,
+      "line": 2144,
       "column": 14,
       "script": "loop_health.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:2087:test/run_loop_autonomy_invariant_fixtures.py",
+      "id": "docs/guides/configuration.md:2159:test/run_loop_autonomy_invariant_fixtures.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 2087,
+      "line": 2159,
       "column": 24,
       "script": "test/run_loop_autonomy_invariant_fixtures.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:2133:effective_config_gen.py",
+      "id": "docs/guides/configuration.md:2205:effective_config_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 2133,
+      "line": 2205,
       "column": 59,
       "script": "effective_config_gen.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:2141:effective_config_gen.py",
+      "id": "docs/guides/configuration.md:2213:effective_config_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 2141,
+      "line": 2213,
       "column": 8,
       "script": "effective_config_gen.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:2150:effective_config_gen.py",
+      "id": "docs/guides/configuration.md:2222:effective_config_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 2150,
+      "line": 2222,
       "column": 8,
       "script": "effective_config_gen.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/configuration.md:2151:effective_config_gen.py",
+      "id": "docs/guides/configuration.md:2223:effective_config_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/configuration.md",
-      "line": 2151,
+      "line": 2223,
       "column": 8,
       "script": "effective_config_gen.py",
       "classification": "self-repo-only"
@@ -21275,186 +21410,6 @@
       "column": 173,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
-    },
-    {
-      "id": "docs/guides/configuration.md:1891:generate-pr-test-plan-ci-workflow.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 1891,
-      "column": 1,
-      "script": "generate-pr-test-plan-ci-workflow.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:1907:test/run_suite_registry_fixtures.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 1907,
-      "column": 1,
-      "script": "test/run_suite_registry_fixtures.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:1909:test/run_pr_test_plan_fixtures.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 1909,
-      "column": 1,
-      "script": "test/run_pr_test_plan_fixtures.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:1965:capability_docs.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 1965,
-      "column": 1,
-      "script": "capability_docs.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:1968:capability_docs.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 1968,
-      "column": 1,
-      "script": "capability_docs.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:1971:capability_docs.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 1971,
-      "column": 1,
-      "script": "capability_docs.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:1987:test/run_pilot_fixtures.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 1987,
-      "column": 1,
-      "script": "test/run_pilot_fixtures.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:1997:test/run_emitter_fixtures.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 1997,
-      "column": 1,
-      "script": "test/run_emitter_fixtures.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2044:phase_sizing.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2044,
-      "column": 1,
-      "script": "phase_sizing.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2058:phase_sizing_corpus.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2058,
-      "column": 1,
-      "script": "phase_sizing_corpus.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2063:test/run_phase_sizing_corpus_fixtures.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2063,
-      "column": 1,
-      "script": "test/run_phase_sizing_corpus_fixtures.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2098:reviewer-metrics.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2098,
-      "column": 1,
-      "script": "reviewer-metrics.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2129:test/run_inefficiency_scan_fixtures.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2129,
-      "column": 1,
-      "script": "test/run_inefficiency_scan_fixtures.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2133:test/run_behavioral_anomaly_fixtures.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2133,
-      "column": 1,
-      "script": "test/run_behavioral_anomaly_fixtures.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2144:loop_health.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2144,
-      "column": 1,
-      "script": "loop_health.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2159:test/run_loop_autonomy_invariant_fixtures.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2159,
-      "column": 1,
-      "script": "test/run_loop_autonomy_invariant_fixtures.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2205:effective_config_gen.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2205,
-      "column": 1,
-      "script": "effective_config_gen.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2213:effective_config_gen.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2213,
-      "column": 1,
-      "script": "effective_config_gen.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2222:effective_config_gen.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2222,
-      "column": 1,
-      "script": "effective_config_gen.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/configuration.md:2223:effective_config_gen.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/configuration.md",
-      "line": 2223,
-      "column": 1,
-      "script": "effective_config_gen.py",
-      "classification": "self-repo-only"
     }
   ]
 }
