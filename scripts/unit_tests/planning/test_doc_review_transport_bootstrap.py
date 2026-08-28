@@ -30,7 +30,61 @@ from planning_doc_review_transport import (
     validate_doc_review_envelope,
 )
 from planning_github_client import GitHubIssuesClient, _parse_comment
-from planning_store_facade import doc_review_txn, load_workflow_config
+from planning_store_facade import (
+    complete_review_round,
+    doc_review_txn,
+    facade_surface,
+    load_workflow_config,
+    open_review_manifest,
+    post_review_finding,
+    read_review_manifest,
+    verify_review_manifest,
+)
+
+_DOC_REVIEW_FACADE_BY_VERB = {
+    "doc-review-round-open": open_review_manifest,
+    "doc-review-round-post": post_review_finding,
+    "doc-review-round-read": read_review_manifest,
+    "doc-review-round-verify": verify_review_manifest,
+    "doc-review-round-close": complete_review_round,
+}
+
+
+def _doc_review(
+    repo: Path,
+    cfg: dict,
+    *,
+    verb: str,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    persona: str | None = None,
+    payload: dict[str, Any] | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    facade_fn = _DOC_REVIEW_FACADE_BY_VERB.get(verb)
+    if facade_fn is None:
+        return doc_review_txn(
+            repo,
+            cfg,
+            verb=verb,
+            issue_id=issue_id,
+            unit_id=unit_id,
+            round_id=round_id,
+            persona=persona,
+            payload=payload,
+            dry_run=dry_run,
+        )
+    kwargs: dict[str, Any] = {
+        "issue_id": issue_id,
+        "unit_id": unit_id,
+        "round_id": round_id,
+        "dry_run": dry_run,
+    }
+    if verb == "doc-review-round-post":
+        kwargs["persona"] = persona
+        kwargs["payload"] = payload
+    return facade_fn(repo, cfg, **kwargs)
 
 
 def _init_repo(tmp_path: Path) -> None:
@@ -114,7 +168,7 @@ class TestCapabilityGate:
     def test_file_store_fails_closed(self, transport_repo: Path) -> None:
         cfg = _issue_store_cfg(backend="file-store")
         (transport_repo / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             load_workflow_config(transport_repo),
             verb="doc-review-round-open",
@@ -128,7 +182,7 @@ class TestCapabilityGate:
     def test_jira_provider_fails_closed(self, transport_repo: Path) -> None:
         cfg = _issue_store_cfg(provider="jira")
         (transport_repo / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             load_workflow_config(transport_repo),
             verb="doc-review-round-open",
@@ -147,7 +201,7 @@ class TestLifecycle:
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
 
-        opened = doc_review_txn(
+        opened = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -158,7 +212,7 @@ class TestLifecycle:
         assert opened["verdict"] == "ok"
         assert opened["status"] == "open"
 
-        posted = doc_review_txn(
+        posted = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -172,7 +226,7 @@ class TestLifecycle:
         assert posted["commentId"]
         assert posted["authorId"] == FIXTURE_GITHUB_PRINCIPAL_ID
 
-        retry = doc_review_txn(
+        retry = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -186,7 +240,7 @@ class TestLifecycle:
         assert retry["idempotent"] is True
         assert retry["commentId"] == posted["commentId"]
 
-        read_back = doc_review_txn(
+        read_back = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-read",
@@ -199,7 +253,7 @@ class TestLifecycle:
         assert read_back["pins"][0]["persona"] == "coherence"
         assert read_back["pins"][0]["bodySnapshot"]
 
-        verified = doc_review_txn(
+        verified = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-verify",
@@ -209,7 +263,7 @@ class TestLifecycle:
         )
         assert verified["verdict"] == "ok"
 
-        closed = doc_review_txn(
+        closed = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-close",
@@ -225,7 +279,7 @@ class TestLifecycle:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -233,7 +287,7 @@ class TestLifecycle:
             unit_id=unit_id,
             round_id="round-b",
         )
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -245,7 +299,7 @@ class TestLifecycle:
         )
         changed = _sample_payload("coherence")
         changed["findings"][0]["title"] = "Different title"
-        conflict = doc_review_txn(
+        conflict = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -261,7 +315,7 @@ class TestLifecycle:
 
 class TestDriftDetection:
     def _open_and_post(self, repo: Path, cfg: dict, unit_id: str) -> None:
-        doc_review_txn(
+        _doc_review(
             repo,
             cfg,
             verb="doc-review-round-open",
@@ -269,7 +323,7 @@ class TestDriftDetection:
             unit_id=unit_id,
             round_id="round-drift",
         )
-        doc_review_txn(
+        _doc_review(
             repo,
             cfg,
             verb="doc-review-round-post",
@@ -291,7 +345,7 @@ class TestDriftDetection:
         record.comments[0].body = record.comments[0].body.replace("Example finding", "Edited finding")
         record.comments[0].revision = "edited-revision"
         store._persist()
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-verify",
@@ -314,7 +368,7 @@ class TestDriftDetection:
         record = store.get("887")
         record.comments.clear()
         store._persist()
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-verify",
@@ -350,7 +404,7 @@ class TestDriftDetection:
             )
         )
         store._persist()
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-verify",
@@ -372,7 +426,7 @@ class TestDriftDetection:
         record = store.get("887")
         record.comments[0].author_id = "forged-user"
         store._persist()
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-verify",
@@ -394,7 +448,7 @@ class TestDriftDetection:
         record = store.get("887")
         record.comments[0].body = "<!-- sw-doc-review -->\nnot-json\n<!-- /sw-doc-review -->"
         store._persist()
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-verify",
@@ -411,7 +465,7 @@ class TestDriftDetection:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -432,7 +486,7 @@ class TestDriftDetection:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -457,7 +511,7 @@ class TestDriftDetection:
             )
 
         monkeypatch.setattr(IssuesClient, "issue_comment", _raise_mismatch)
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -483,7 +537,7 @@ class TestDriftDetection:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -491,7 +545,7 @@ class TestDriftDetection:
             unit_id=unit_id,
             round_id="round-conflict-bind",
         )
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -509,7 +563,7 @@ class TestDriftDetection:
             raise IssueRevisionConflict("revision-conflict", expected="etag-a", actual="etag-b")
 
         monkeypatch.setattr(IssuesClient, "issue_update", _flaky_update)
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-close",
@@ -574,7 +628,7 @@ class TestMultiRoundCoexistence:
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
 
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -582,7 +636,7 @@ class TestMultiRoundCoexistence:
             unit_id=unit_id,
             round_id="round-one",
         )
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -592,7 +646,7 @@ class TestMultiRoundCoexistence:
             persona="coherence",
             payload=_sample_payload("coherence"),
         )
-        closed_one = doc_review_txn(
+        closed_one = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-close",
@@ -602,7 +656,7 @@ class TestMultiRoundCoexistence:
         )
         assert closed_one["verdict"] == "ok"
 
-        opened_two = doc_review_txn(
+        opened_two = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -612,7 +666,7 @@ class TestMultiRoundCoexistence:
         )
         assert opened_two["verdict"] == "ok"
 
-        posted_two = doc_review_txn(
+        posted_two = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -624,7 +678,7 @@ class TestMultiRoundCoexistence:
         )
         assert posted_two["verdict"] == "ok"
 
-        verified = doc_review_txn(
+        verified = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-verify",
@@ -637,7 +691,7 @@ class TestMultiRoundCoexistence:
 
 class TestCloseIntegrity:
     def _open_and_post(self, repo: Path, cfg: dict, unit_id: str, round_id: str = "round-close") -> None:
-        doc_review_txn(
+        _doc_review(
             repo,
             cfg,
             verb="doc-review-round-open",
@@ -645,7 +699,7 @@ class TestCloseIntegrity:
             unit_id=unit_id,
             round_id=round_id,
         )
-        doc_review_txn(
+        _doc_review(
             repo,
             cfg,
             verb="doc-review-round-post",
@@ -669,7 +723,7 @@ class TestCloseIntegrity:
         record.comments[0].revision = "edited-revision"
         store._persist()
 
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-close",
@@ -689,7 +743,7 @@ class TestCloseIntegrity:
         _seed_issue(store, unit_id=unit_id, issue_id="887")
         self._open_and_post(transport_repo, cfg, unit_id)
 
-        first = doc_review_txn(
+        first = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-close",
@@ -700,7 +754,7 @@ class TestCloseIntegrity:
         assert first["verdict"] == "ok"
         assert first.get("idempotent") is not True
 
-        second = doc_review_txn(
+        second = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-close",
@@ -720,7 +774,7 @@ class TestUnpinnedCommentRecovery:
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
 
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -728,7 +782,7 @@ class TestUnpinnedCommentRecovery:
             unit_id=unit_id,
             round_id="round-unpin",
         )
-        posted = doc_review_txn(
+        posted = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -747,7 +801,7 @@ class TestUnpinnedCommentRecovery:
         record.body = upsert_review_round_block(record.body, manifest)
         store._persist()
 
-        retry = doc_review_txn(
+        retry = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -762,7 +816,7 @@ class TestUnpinnedCommentRecovery:
         assert retry.get("reconciled") is True
         assert retry["commentId"] == posted["commentId"]
 
-        read_back = doc_review_txn(
+        read_back = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-read",
@@ -900,18 +954,21 @@ class TestIssuesClientCommentBackwardCompat:
 
         client = IssuesClient(transport_repo, "github-issues")
         monkeypatch.setattr(client, "_live_backend", lambda: GitHubBackend())
-        client.issue_comment(
-            "887",
-            "review",
-            markers=["sw-doc-review"],
-            author_id=FIXTURE_GITHUB_PRINCIPAL_ID,
-        )
+        from planning.backends.issues import doc_review_facade_issue_comment_scope
+
+        with doc_review_facade_issue_comment_scope():
+            client.issue_comment(
+                "887",
+                "review",
+                markers=["sw-doc-review"],
+                author_id=FIXTURE_GITHUB_PRINCIPAL_ID,
+            )
         assert captured["kwargs"]["author_id"] == FIXTURE_GITHUB_PRINCIPAL_ID
 
 
 class TestManifestBinding:
     def _open_round(self, repo: Path, cfg: dict, unit_id: str) -> None:
-        doc_review_txn(
+        _doc_review(
             repo,
             cfg,
             verb="doc-review-round-open",
@@ -928,7 +985,7 @@ class TestManifestBinding:
         self._open_round(transport_repo, cfg, unit_id)
         _tamper_manifest(transport_repo, "887", unitId="wrong-unit")
 
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-verify",
@@ -948,7 +1005,7 @@ class TestManifestBinding:
         self._open_round(transport_repo, cfg, unit_id)
         _tamper_manifest(transport_repo, "887", issueId="999")
 
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-read",
@@ -968,7 +1025,7 @@ class TestManifestBinding:
         self._open_round(transport_repo, cfg, unit_id)
         _tamper_manifest(transport_repo, "887", unitId="wrong-unit")
 
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -986,7 +1043,7 @@ class TestMalformedMarkedComments:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -1008,7 +1065,7 @@ class TestMalformedMarkedComments:
         )
         store._persist()
 
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-verify",
@@ -1040,7 +1097,7 @@ class TestEnvelopeConsistency:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -1049,7 +1106,7 @@ class TestEnvelopeConsistency:
             round_id="round-env",
         )
         payload = _sample_payload("coherence")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -1069,7 +1126,7 @@ class TestEnvelopeConsistency:
         )
         store._persist()
 
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-verify",
@@ -1086,7 +1143,7 @@ class TestEnvelopeConsistency:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -1095,7 +1152,7 @@ class TestEnvelopeConsistency:
             round_id="round-env2",
         )
         payload = _sample_payload("product")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -1115,7 +1172,7 @@ class TestEnvelopeConsistency:
         )
         store._persist()
 
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-verify",
@@ -1146,7 +1203,7 @@ class TestRevisionConflictHandling:
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
         self._force_update_conflict(monkeypatch)
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -1163,7 +1220,7 @@ class TestRevisionConflictHandling:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -1171,7 +1228,7 @@ class TestRevisionConflictHandling:
             unit_id=unit_id,
             round_id="round-conflict-post",
         )
-        posted = doc_review_txn(
+        posted = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -1184,7 +1241,7 @@ class TestRevisionConflictHandling:
         assert posted["verdict"] == "ok"
         _tamper_manifest(transport_repo, "887", pins=[])
         self._force_update_conflict(monkeypatch)
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -1202,7 +1259,7 @@ class TestRevisionConflictHandling:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -1210,7 +1267,7 @@ class TestRevisionConflictHandling:
             unit_id=unit_id,
             round_id="round-conflict-close",
         )
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -1221,7 +1278,7 @@ class TestRevisionConflictHandling:
             payload=_sample_payload("coherence"),
         )
         self._force_update_conflict(monkeypatch)
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-close",
@@ -1237,7 +1294,7 @@ class TestRevisionConflictHandling:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -1246,7 +1303,7 @@ class TestRevisionConflictHandling:
             round_id="round-toctou-read",
         )
         _tamper_manifest(transport_repo, "887", unitId="tampered-unit")
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-read",
@@ -1267,7 +1324,7 @@ class TestRevisionConflictHandling:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -1275,7 +1332,7 @@ class TestRevisionConflictHandling:
             unit_id=unit_id,
             round_id="round-concurrent-pins",
         )
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -1310,7 +1367,7 @@ class TestRevisionConflictHandling:
             return IssuesClient.issue_update(self, issue_id, **kwargs)
 
         monkeypatch.setattr(IssuesClient, "issue_update", _conflict_on_manifest_update)
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -1371,7 +1428,7 @@ class TestIdempotencyRefresh:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id, issue_id="887")
-        doc_review_txn(
+        _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-open",
@@ -1394,7 +1451,7 @@ class TestIdempotencyRefresh:
             )
         )
         store._persist()
-        out = doc_review_txn(
+        out = _doc_review(
             transport_repo,
             cfg,
             verb="doc-review-round-post",
@@ -1419,9 +1476,7 @@ class TestDocReviewCli:
                 str(Path(__file__).resolve().parents[2] / "planning_store.py"),
                 "--root",
                 str(transport_repo),
-                "doc-review-txn",
-                "--verb",
-                "doc-review-round-post",
+                "post-review-finding",
                 "--issue-id",
                 "887",
                 "--unit-id",

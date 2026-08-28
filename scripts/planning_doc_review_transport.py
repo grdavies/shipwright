@@ -853,12 +853,15 @@ def execute_doc_review_txn(
         }
 
     try:
-        posted = client.issue_comment(
-            str(issue_id),
-            body,
-            markers=["sw-doc-review"],
-            author_id=author_id,
-        )
+        from planning.backends.issues import doc_review_facade_issue_comment_scope
+
+        with doc_review_facade_issue_comment_scope():
+            posted = client.issue_comment(
+                str(issue_id),
+                body,
+                markers=["sw-doc-review"],
+                author_id=author_id,
+            )
     except IssueCommentAuthorshipMismatch as exc:
         return {
             "verdict": "fail",

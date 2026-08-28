@@ -2,9 +2,14 @@
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Callable
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
+
+from planning_canonical import DOC_REVIEW_MARKER
 
 from ._common import content_hash, finalize_materialize_from_get, log_operation
 from .issues_helpers import (
@@ -28,6 +33,47 @@ def _ps():
 
 def fail(error: str, exit_code: int = 2, **extra):
     _ps().fail(error, exit_code, **extra)
+
+
+DOC_REVIEW_COMMENT_MARKER = DOC_REVIEW_MARKER
+_DOC_REVIEW_OPEN_MARKER = re.compile(r"<!--\s*sw-doc-review\s*-->", re.IGNORECASE)
+_DOC_REVIEW_FACADE_AUTHORIZED: ContextVar[bool] = ContextVar(
+    "doc_review_facade_authorized",
+    default=False,
+)
+
+
+class DocReviewCommentFacadeRequired(Exception):
+    """Doc-review marked issue-comment refused outside facade-validated path (PRD 341 R1/R2)."""
+
+    def __init__(self, message: str = "doc-review-comment-facade-required") -> None:
+        self.code = "doc-review-comment-facade-required"
+        super().__init__(message)
+
+
+def is_doc_review_comment_write(body: str, markers: list[str] | None) -> bool:
+    marker_list = list(markers or [])
+    if DOC_REVIEW_COMMENT_MARKER in marker_list:
+        return True
+    text = body or ""
+    return bool(_DOC_REVIEW_OPEN_MARKER.search(text))
+
+
+def assert_adapter_issue_comment_allowed(body: str, markers: list[str] | None) -> None:
+    """Refuse sw-doc-review comment writes unless the facade authorized the post (PRD 341 R2)."""
+    if not is_doc_review_comment_write(body, markers):
+        return
+    if not _DOC_REVIEW_FACADE_AUTHORIZED.get():
+        raise DocReviewCommentFacadeRequired()
+
+
+@contextmanager
+def doc_review_facade_issue_comment_scope() -> Iterator[None]:
+    token = _DOC_REVIEW_FACADE_AUTHORIZED.set(True)
+    try:
+        yield
+    finally:
+        _DOC_REVIEW_FACADE_AUTHORIZED.reset(token)
 
 
 class IssueStoreBackend(PlanningStoreBackend):
@@ -54,6 +100,17 @@ class IssueStoreBackend(PlanningStoreBackend):
 
     def _mutate_journal(self, mutator: Callable[[dict[str, Any]], None]) -> None:
         mutate_put_journal(self.root, mutator)
+
+    def _adapter_issue_comment(
+        self,
+        issue_id: str,
+        body: str,
+        *,
+        markers: list[str] | None = None,
+        **kwargs: Any,
+    ):
+        assert_adapter_issue_comment_allowed(body, markers)
+        return self._client.issue_comment(issue_id, body, markers=markers, **kwargs)
 
     def _guard_duplicate_open_tasks_mint(self, unit_id: str) -> None:
         """Refuse minting a second open tasks issue for the same PRD slug (PRD 068 R8)."""
@@ -285,7 +342,7 @@ class IssueStoreBackend(PlanningStoreBackend):
             f"brainstormUnit: {brainstorm.unit_id}\n"
         )
         self._guard_write_secrets(pointer, path_hint="freeze-memory-pointer")
-        self._client.issue_comment(brainstorm.id, pointer, markers=["sw-memory-pointer"])
+        self._adapter_issue_comment(brainstorm.id, pointer, markers=["sw-memory-pointer"])
         closed = self._client.issue_update(brainstorm.id, state="closed", if_match=brainstorm.etag)
         return {"memoryUnitId": mem_result.unit_id, "brainstormUnitId": brainstorm.unit_id, "etag": closed.etag}
 
@@ -505,7 +562,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         chunk_comment_ids: list[str] = []
         for comment in extra_comments:
             self._guard_write_secrets(comment.body, path_hint=body_path)
-            posted = self._client.issue_comment(record.id, comment.body, markers=comment.markers)
+            posted = self._adapter_issue_comment(record.id, comment.body, markers=comment.markers)
             chunk_comment_ids.append(posted.id)
             record = self._client.issue_get(record.id)
 
@@ -602,7 +659,7 @@ class IssueStoreBackend(PlanningStoreBackend):
             digest = _ps().canonical_hash(self._record_to_snapshot(record))
             freeze_body = _ps().build_freeze_record_body(digest)
             self._guard_write_secrets(freeze_body, path_hint="sw-freeze-record")
-            self._client.issue_comment(record.id, freeze_body, markers=["sw-freeze-record"])
+            self._adapter_issue_comment(record.id, freeze_body, markers=["sw-freeze-record"])
             record = self._client.issue_get(record.id)
         except _ps().IssueRevisionConflict as exc:
             _ps().fail("revision-conflict", code="revision-conflict", expected=exc.expected, actual=exc.actual)
@@ -722,7 +779,7 @@ class IssueStoreBackend(PlanningStoreBackend):
         freeze_body = _ps().build_freeze_record_body(digest)
         try:
             self._guard_write_secrets(freeze_body, path_hint="sw-freeze-record")
-            self._client.issue_comment(fresh.id, freeze_body, markers=["sw-freeze-record"])
+            self._adapter_issue_comment(fresh.id, freeze_body, markers=["sw-freeze-record"])
             after = self._client.issue_get(fresh.id)
         except IssueRevisionConflict as exc:
             return {
