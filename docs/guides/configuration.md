@@ -1785,7 +1785,7 @@ loop-guard recovery (`recover_from_loop_guard`), and contract validation
 backward readiness — no nested orchestrator dispatch. See `docs/guides/workflows.md` (Explore
 workstream) for the human-facing route table.
 
-## External eval corpus, HandoffBundle, and provider stubs (PRD 333)
+## External eval corpus, HandoffBundle, and provider stubs
 
 Shipped in this release train: the **external consumer eval corpus**, **HandoffBundle** cross-harness
 runtime, **planning-store semantic parity** harness, and **program priority authority**. P2/P3 platform
