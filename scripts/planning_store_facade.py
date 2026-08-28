@@ -15,6 +15,7 @@ import subprocess
 import sys
 import urllib.parse
 from abc import ABC, abstractmethod
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from collections.abc import Callable
@@ -1855,13 +1856,14 @@ def _collect_eligible_open_gaps_for_numeric_ref(
     if record is not None:
         _consider(record)
 
-    search = getattr(client, "issue_search", None)
-    if not callable(search):
-        return matches
     records = gap_catalog
     if records is None:
         try:
-            records = list(search(project_key=project_key, artifact_type="gap"))
+            records = _search_issue_records(
+                client,
+                project_key=project_key,
+                artifact_type="gap",
+            )
         except (
             IssueCapabilityError,
             IssueBudgetExhausted,
@@ -1941,21 +1943,23 @@ def _resolve_numeric_absorb_refs_to_gaps(
     gap_catalog: list[Any] | None = None
     if len(refs) > 1:
         client = shared._client
-        search = getattr(client, "issue_search", None)
-        if callable(search):
-            pmis = _migrate_issue_store()
-            key_result = pmis.validate_project_key(root, cfg)
-            if key_result.get("verdict") == "ok":
-                project_key = str(key_result["projectKey"])
-                try:
-                    gap_catalog = list(search(project_key=project_key, artifact_type="gap"))
-                except (
-                    IssueCapabilityError,
-                    IssueBudgetExhausted,
-                    IssueTombstone,
-                    IssueTransferred,
-                ) as exc:
-                    raise _planning_issue_ref_provider_error(refs[0], exc) from exc
+        pmis = _migrate_issue_store()
+        key_result = pmis.validate_project_key(root, cfg)
+        if key_result.get("verdict") == "ok":
+            project_key = str(key_result["projectKey"])
+            try:
+                gap_catalog = _search_issue_records(
+                    client,
+                    project_key=project_key,
+                    artifact_type="gap",
+                )
+            except (
+                IssueCapabilityError,
+                IssueBudgetExhausted,
+                IssueTombstone,
+                IssueTransferred,
+            ) as exc:
+                raise _planning_issue_ref_provider_error(refs[0], exc) from exc
 
     for ref in refs:
         try:
@@ -2059,13 +2063,14 @@ def _collect_gap_units_matching_absorb_target(
             message=str(key_result.get("message") or "invalid project key"),
         )
     project_key = str(key_result["projectKey"])
-    search = getattr(backend._client, "issue_search", None)
-    if not callable(search):
-        return matches
     records = gap_catalog
     if records is None:
         try:
-            records = list(search(project_key=project_key, artifact_type="gap"))
+            records = _search_issue_records(
+                backend._client,
+                project_key=project_key,
+                artifact_type="gap",
+            )
         except (
             IssueCapabilityError,
             IssueBudgetExhausted,
@@ -2449,19 +2454,17 @@ def _lookup_planning_issue_record_for_ref(
                 IssueTransferred,
             ) as exc:
                 raise _planning_issue_ref_provider_error(ref, exc) from exc
-        search = getattr(client, "issue_search", None)
-        if callable(search):
-            try:
-                for record in search(project_key=project_key):
-                    if int(getattr(record, "number", 0) or 0) == issue_num:
-                        return record
-            except (
-                IssueCapabilityError,
-                IssueBudgetExhausted,
-                IssueTombstone,
-                IssueTransferred,
-            ) as exc:
-                raise _planning_issue_ref_provider_error(ref, exc) from exc
+        try:
+            for record in _search_issue_records(client, project_key=project_key):
+                if int(getattr(record, "number", 0) or 0) == issue_num:
+                    return record
+        except (
+            IssueCapabilityError,
+            IssueBudgetExhausted,
+            IssueTombstone,
+            IssueTransferred,
+        ) as exc:
+            raise _planning_issue_ref_provider_error(ref, exc) from exc
     return None
 
 
@@ -2519,15 +2522,14 @@ def resolve_planning_issue_ref_to_gap(
                 record, ref=ref, skip_meta=skip_meta
             )
 
-    search = getattr(client, "issue_search", None)
-    if not callable(search):
-        if skip_meta is not None:
-            skip_meta["reason"] = "planning-issue-unresolved"
-        return None
     records = gap_catalog
     if records is None:
         try:
-            records = list(search(project_key=project_key, artifact_type="gap"))
+            records = _search_issue_records(
+                client,
+                project_key=project_key,
+                artifact_type="gap",
+            )
         except (
             IssueCapabilityError,
             IssueBudgetExhausted,
@@ -2599,9 +2601,12 @@ def gap_has_absorb_provenance(
             return True
     if shared is not None:
         gap_path = _default_body_path(gap_unit_id, "gap")
-        gap_fetch = shared.get(gap_unit_id, gap_path)
-        if gap_fetch.verdict == "ok" and gap_fetch.content:
-            gap_fm = _migrate_issue_store().parse_frontmatter_fields(gap_fetch.content)
+        gap_record = _lookup_issue_record(shared, gap_unit_id, gap_path)
+        if gap_record is not None:
+            gap_content = strip_markers_and_edges(
+                reassemble_body(gap_record.body, gap_record.comments)
+            )
+            gap_fm = _migrate_issue_store().parse_frontmatter_fields(gap_content)
             absorbed_by = str(gap_fm.get("absorbed-by") or gap_fm.get("absorbed_by") or "").strip()
             if absorbed_by == prd_unit_id:
                 return True
@@ -2683,7 +2688,60 @@ def _closure_labels_for(record: Any, artifact_type: str) -> list[str]:
     return sorted(set(out))
 
 
+_DOCTOR_ISSUE_CATALOG: ContextVar[dict[str, Any] | None] = ContextVar(
+    "doctor_issue_catalog",
+    default=None,
+)
+
+
+def _search_issue_records(
+    client: Any,
+    *,
+    project_key: str,
+    artifact_type: str | None = None,
+    unit_id: str | None = None,
+    labels: list[str] | None = None,
+) -> list[Any]:
+    catalog = _DOCTOR_ISSUE_CATALOG.get()
+    if catalog is None:
+        search = getattr(client, "issue_search", None)
+        if not callable(search):
+            return []
+        return list(
+            search(
+                project_key=project_key,
+                artifact_type=artifact_type,
+                unit_id=unit_id,
+                labels=labels,
+            )
+        )
+    records = list(catalog.values())
+    if artifact_type:
+        records = [record for record in records if _record_artifact_type(record) == artifact_type]
+    if unit_id:
+        records = [
+            record
+            for record in records
+            if str(getattr(record, "unit_id", "") or "") == unit_id
+        ]
+    if labels:
+        required = set(labels)
+        records = [
+            record
+            for record in records
+            if required.issubset(set(getattr(record, "labels", []) or []))
+        ]
+    return records
+
+
 def _lookup_issue_record(backend: "IssueStoreBackend", unit_id: str, body_path: str) -> Any:
+    catalog = _DOCTOR_ISSUE_CATALOG.get()
+    if catalog is not None:
+        for candidate in unit_id_lookup_candidates(backend.root, unit_id):
+            record = catalog.get(candidate)
+            if record is not None:
+                return record
+        return None
     try:
         return backend._lookup_record(unit_id, body_path)
     except IssueNotFound:
@@ -2691,6 +2749,26 @@ def _lookup_issue_record(backend: "IssueStoreBackend", unit_id: str, body_path: 
     except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
         handle_issue_client_error(exc)
         return None
+
+
+def _find_linked_brainstorm_record(
+    backend: "IssueStoreBackend",
+    prd_unit_id: str,
+) -> Any | None:
+    catalog = _DOCTOR_ISSUE_CATALOG.get()
+    if catalog is None:
+        return backend._find_linked_brainstorm(prd_unit_id)
+    for record in catalog.values():
+        if _record_artifact_type(record) != "brainstorm":
+            continue
+        full_body = reassemble_body(record.body, record.comments)
+        edges = parse_edges_block(full_body) or {}
+        if any(
+            isinstance(edge, dict) and edge.get("target") == prd_unit_id
+            for edge in edges.get("edges") or []
+        ):
+            return record
+    return None
 
 
 def _default_body_path(unit_id: str, artifact_type: str) -> str:
@@ -2807,7 +2885,7 @@ def resolve_delivery_linked_units(
         brainstorm_unit = Path(brainstorm_ref).stem
         if not brainstorm_unit.startswith("brainstorm"):
             brainstorm_unit = f"brainstorm-{brainstorm_unit}"
-    linked = backend._find_linked_brainstorm(prd_unit)
+    linked = _find_linked_brainstorm_record(backend, prd_unit)
     if linked is not None:
         brainstorm_unit = str(getattr(linked, "unit_id", "") or brainstorm_unit)
     if brainstorm_unit and brainstorm_unit not in units:
@@ -3326,6 +3404,27 @@ def audit_closure_completeness(
     }
 
 
+def _doctor_prd_has_absorption_evidence(record: Any, unit_id: str) -> bool:
+    """Return whether a PRD can contribute absorbed units without provider lookups."""
+    full_body = reassemble_body(
+        str(getattr(record, "body", "") or ""),
+        list(getattr(record, "comments", []) or []),
+    )
+    fm, edges = _resolve_prd_absorption_context(record, unit_id, full_body)
+    if _parse_absorbs_targets(fm.get("absorbs", "")):
+        return True
+    if parse_planning_issues_refs(fm.get("planningIssues", "")):
+        return True
+    for edge in (edges or {}).get("edges") or []:
+        if not isinstance(edge, dict):
+            continue
+        target = str(edge.get("target", "")).strip()
+        rel = str(edge.get("rel") or edge.get("relationship") or "depends").strip().lower()
+        if target and rel == "absorbs":
+            return True
+    return False
+
+
 def _doctor_absorb_pollution_check_prd(
     root: Path,
     cfg: dict[str, Any],
@@ -3335,6 +3434,8 @@ def _doctor_absorb_pollution_check_prd(
 ) -> None:
     labels = list(getattr(record, "labels", []) or [])
     if status_from_labels(labels) != "complete" and str(getattr(record, "state", "")) != "closed":
+        return
+    if not _doctor_prd_has_absorption_evidence(record, unit_id):
         return
     audit = audit_closure_completeness(root, cfg, unit_id)
     if audit.get("openRemaining"):
@@ -3361,6 +3462,15 @@ def _doctor_absorb_pollution_scoped_record(
         artifact_type="prd",
     )
     return matches[0] if matches else None
+
+
+def _doctor_issue_catalog(records: list[Any]) -> dict[str, Any]:
+    catalog: dict[str, Any] = {}
+    for record in records:
+        unit_id = str(getattr(record, "unit_id", "") or "").strip()
+        if unit_id:
+            catalog[unit_id] = record
+    return catalog
 
 
 def doctor_absorb_pollution(
@@ -3398,11 +3508,28 @@ def doctor_absorb_pollution(
         unit_id = str(getattr(record, "unit_id", "") or prd_unit_id)
         _doctor_absorb_pollution_check_prd(root, cfg, record, unit_id, pollution)
     else:
-        for record in search(project_key=project_key, artifact_type="prd"):
-            unit_id = str(getattr(record, "unit_id", "") or "")
-            if not unit_id:
-                continue
-            _doctor_absorb_pollution_check_prd(root, cfg, record, unit_id, pollution)
+        existing_catalog = _DOCTOR_ISSUE_CATALOG.get()
+        records = (
+            list(existing_catalog.values())
+            if existing_catalog is not None
+            else list(search(project_key=project_key))
+        )
+        token = (
+            None
+            if existing_catalog is not None
+            else _DOCTOR_ISSUE_CATALOG.set(_doctor_issue_catalog(records))
+        )
+        try:
+            for record in records:
+                if _record_artifact_type(record) != "prd":
+                    continue
+                unit_id = str(getattr(record, "unit_id", "") or "")
+                if not unit_id:
+                    continue
+                _doctor_absorb_pollution_check_prd(root, cfg, record, unit_id, pollution)
+        finally:
+            if token is not None:
+                _DOCTOR_ISSUE_CATALOG.reset(token)
 
     if pollution:
         resume = (
@@ -3539,9 +3666,20 @@ def doctor_absorb_asymmetry(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     if key_result.get("verdict") != "ok":
         return {"verdict": "fail", "action": "doctor-absorb-asymmetry", "error": key_result.get("error")}
 
+    project_key = str(key_result["projectKey"])
     asymmetries: list[dict[str, str]] = []
     prd_cache: dict[str, tuple[dict[str, str], dict[str, Any]] | None] = {}
-    for record in pmis.list_gap_issue_records(root, cfg):
+    catalog = _DOCTOR_ISSUE_CATALOG.get()
+    gap_records = (
+        _search_issue_records(
+            backend._client,
+            project_key=project_key,
+            artifact_type="gap",
+        )
+        if catalog is not None
+        else pmis.list_gap_issue_records(root, cfg)
+    )
+    for record in gap_records:
         unit_id = str(getattr(record, "unit_id", "") or "")
         if not unit_id:
             continue
@@ -4198,17 +4336,33 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         if projection.get("state") == "projection-unavailable":
             checks.append("projection-unavailable")
 
-    pollution = doctor_absorb_pollution(root, cfg)
-    if pollution.get("verdict") == "fail":
-        return pollution
-    if pollution.get("checks"):
-        checks.extend(pollution.get("checks", []))
+    catalog_token = None
+    pmis = _migrate_issue_store()
+    if pmis.issue_store_effective(root, cfg):
+        backend = get_backend(root, cfg, override="issue-store")
+        key_result = pmis.validate_project_key(root, cfg)
+        if isinstance(backend, IssueStoreBackend) and key_result.get("verdict") == "ok":
+            records = list(
+                backend._client.issue_search(
+                    project_key=str(key_result["projectKey"]),
+                )
+            )
+            catalog_token = _DOCTOR_ISSUE_CATALOG.set(_doctor_issue_catalog(records))
+    try:
+        pollution = doctor_absorb_pollution(root, cfg)
+        if pollution.get("verdict") == "fail":
+            return pollution
+        if pollution.get("checks"):
+            checks.extend(pollution.get("checks", []))
 
-    asymmetry = doctor_absorb_asymmetry(root, cfg)
-    if asymmetry.get("verdict") == "fail":
-        return asymmetry
-    if asymmetry.get("checks"):
-        checks.extend(asymmetry.get("checks", []))
+        asymmetry = doctor_absorb_asymmetry(root, cfg)
+        if asymmetry.get("verdict") == "fail":
+            return asymmetry
+        if asymmetry.get("checks"):
+            checks.extend(asymmetry.get("checks", []))
+    finally:
+        if catalog_token is not None:
+            _DOCTOR_ISSUE_CATALOG.reset(catalog_token)
 
     if not checks and skipped_reasons:
         return {
