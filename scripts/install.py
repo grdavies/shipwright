@@ -63,6 +63,8 @@ def install(dest: Path, *, src: Path | None = None, install_hooks: bool = True) 
         dest.unlink()
 
     dest.mkdir(parents=True, exist_ok=True)
+    # Mirror unlinks destination-entry symlinks before copy so a leftover
+    # scripts/ (or nested) symlink cannot redirect the install into another repo.
     mirror.mirror(
         source,
         dest,
