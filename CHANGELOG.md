@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.8.2](https://github.com/grdavies/shipwright/compare/v2.8.1...v2.8.2) (2026-08-28)
+
+
+### Bug Fixes
+
+* **doc:** preserve one-stage handoff boundaries ([#1069](https://github.com/grdavies/shipwright/issues/1069)) ([72ba0d3](https://github.com/grdavies/shipwright/commit/72ba0d37c26d9d3ceb70bdc8848d094ae664635d))
+* **planning:** bound doctor issue-store searches ([#1067](https://github.com/grdavies/shipwright/issues/1067)) ([4c13c61](https://github.com/grdavies/shipwright/commit/4c13c61904c1a8167ed7979014863589646b7123))
+
 ## [2.8.1](https://github.com/grdavies/shipwright/compare/v2.8.0...v2.8.1) (2026-08-28)
 
 
