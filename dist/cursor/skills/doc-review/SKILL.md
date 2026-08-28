@@ -41,6 +41,7 @@ this bootstrap slice to full PRD 341 without an explicit planning handoff.
 
 Prose label: “doc-review marker”; **implementation marker string:** `sw-doc-review` (HTML comment
 `<!-- sw-doc-review -->` … `<!-- /sw-doc-review -->`).
+PRD 045's legacy transport spelling `sw:doc-review` refers to this same marker family.
 
 1. Resolve the PRD artifact issue ref from the planning store (`planning_store` + PRD 043 identification).
 2. **Open round** — before any persona post, write the review-round manifest on the issue body:
