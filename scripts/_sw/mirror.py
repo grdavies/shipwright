@@ -5,7 +5,6 @@ from __future__ import annotations
 import fnmatch
 import os
 import shutil
-import stat
 from pathlib import Path
 
 
@@ -19,14 +18,23 @@ def _matches_excludes(rel_posix: str, excludes: list[str]) -> bool:
     return False
 
 
+def _replace_dst_symlink(target: Path) -> None:
+    """Unlink a destination symlink so copy never writes through an escaped root."""
+    if target.is_symlink():
+        target.unlink()
+
+
 def _copy_file(src: Path, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
+    _replace_dst_symlink(dst)
     if src.is_symlink():
         link_to = os.readlink(src)
         if dst.exists() or dst.is_symlink():
             dst.unlink()
         dst.symlink_to(link_to)
         return
+    if dst.exists() and dst.is_dir() and not dst.is_symlink():
+        shutil.rmtree(dst)
     shutil.copy2(src, dst)
 
 
@@ -37,6 +45,9 @@ def _copy_tree(src: Path, dst: Path, excludes: list[str], rel_prefix: str = "") 
             continue
         target = dst / entry.name
         if entry.is_dir() and not entry.is_symlink():
+            _replace_dst_symlink(target)
+            if target.exists() and not target.is_dir():
+                target.unlink()
             target.mkdir(parents=True, exist_ok=True)
             _copy_tree(entry, target, excludes, rel)
             continue

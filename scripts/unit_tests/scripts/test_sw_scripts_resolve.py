@@ -12,6 +12,7 @@ from sw_scripts_resolve import (
     is_shipwright_self_repo,
     iter_plugin_script_candidates,
     plugin_install_scripts,
+    plugin_scripts_contained,
     resolve_script,
     resolve_scripts_dir,
     scripts_dir_is_trusted,
@@ -183,6 +184,30 @@ def test_plugin_install_helper_uses_local_constant(tmp_path: Path, monkeypatch: 
     monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", plugin_scripts)
     monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "cache")
     assert plugin_install_scripts() == plugin_scripts.resolve()
+
+
+def test_plugin_install_refuses_symlink_escaped_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+    escaped = tmp_path / "open-vddk" / "sw-shipwright-runtime" / "scripts"
+    _seed_trusted_scripts(escaped)
+    (escaped / "wave_deliver.py").write_text("# escaped\n", encoding="utf-8")
+
+    plugin_scripts = tmp_path / "local" / "shipwright" / "scripts"
+    plugin_scripts.parent.mkdir(parents=True)
+    plugin_scripts.symlink_to(escaped)
+
+    monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", plugin_scripts)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "missing-cache")
+
+    assert plugin_scripts_contained(plugin_scripts) is False
+    assert plugin_install_scripts() is None
+    result = resolve_scripts_dir(consumer)
+    assert result.path is None
+    assert result.error == CONSUMER_NO_PLUGIN_ERROR
 
 
 def test_iter_plugin_script_candidates_includes_local_and_cache(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

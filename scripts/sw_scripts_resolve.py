@@ -65,6 +65,47 @@ def scripts_dir_is_trusted(path: Path) -> bool:
     return all((resolved / marker).is_file() for marker in TRUST_MARKERS)
 
 
+def _lexical_parent(path: Path) -> Path:
+    """Parent of ``path`` without following a symlink on ``path`` itself."""
+    parent = path.parent
+    try:
+        return parent.resolve()
+    except OSError:
+        return parent
+
+
+def _is_contained(resolved: Path, root: Path) -> bool:
+    try:
+        resolved.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+def plugin_scripts_contained(candidate: Path) -> bool:
+    """True when ``candidate.resolve()`` stays inside a plugin install tree.
+
+    Trust markers are not enough: a ``scripts`` symlink that escapes
+    ``~/.cursor/plugins/{local,cache}/…/shipwright`` must fail closed.
+    Containment uses the lexical plugin parent so a dangling or escaped
+    ``PLUGIN_LOCAL_SCRIPTS`` symlink cannot redefine the allowed root.
+    """
+    try:
+        resolved = candidate.resolve()
+    except OSError:
+        return False
+    local_root = _lexical_parent(PLUGIN_LOCAL_SCRIPTS)
+    if _is_contained(resolved, local_root):
+        return True
+    try:
+        cache_root = PLUGIN_CACHE_ROOT.resolve() if PLUGIN_CACHE_ROOT.exists() else PLUGIN_CACHE_ROOT
+    except OSError:
+        cache_root = PLUGIN_CACHE_ROOT
+    if not _is_contained(resolved, cache_root):
+        return False
+    return "shipwright" in resolved.parts
+
+
 def compute_scripts_root_hash(scripts_root: Path) -> str:
     """Stable SHA256 digest over the resolved scripts root trust-marker set."""
     resolved = scripts_root.resolve()
@@ -126,6 +167,8 @@ def iter_plugin_script_candidates() -> Iterable[Path]:
 
 def plugin_install_scripts() -> Path | None:
     for candidate in iter_plugin_script_candidates():
+        if not plugin_scripts_contained(candidate):
+            continue
         if scripts_dir_is_trusted(candidate):
             return candidate.resolve()
     return None
