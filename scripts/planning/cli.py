@@ -60,6 +60,7 @@ def main() -> None:
         "progress-update",
         "external-intake-txn",
         "external-intake-pipeline",
+        "doc-review-txn",
         "migrate-orphan-phase-issues",
         "projection-refresh",
         "probe-projection",
@@ -320,6 +321,48 @@ def main() -> None:
             cfg,
             issue_id=issue_id,
             duplicate="--duplicate" in rest,
+            dry_run="--dry-run" in rest,
+        )
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
+    elif args.command == "doc-review-txn":
+        verb = _require(rest, "--verb")
+        payload_raw = _optional(rest, "--payload-json")
+        payload: dict[str, Any] | None = None
+        if payload_raw:
+            try:
+                parsed_payload = json.loads(payload_raw)
+            except json.JSONDecodeError as exc:
+                emit(
+                    {
+                        "verdict": "fail",
+                        "action": "doc-review-txn",
+                        "error": "invalid-payload-json",
+                        "detail": str(exc),
+                    },
+                    20,
+                )
+                return
+            if not isinstance(parsed_payload, dict):
+                emit(
+                    {
+                        "verdict": "fail",
+                        "action": "doc-review-txn",
+                        "error": "invalid-payload-json",
+                        "detail": "payload-json must decode to an object",
+                    },
+                    20,
+                )
+                return
+            payload = parsed_payload
+        result = doc_review_txn(
+            root,
+            cfg,
+            verb=verb,
+            issue_id=_optional(rest, "--issue-id"),
+            unit_id=_optional(rest, "--unit-id"),
+            round_id=_optional(rest, "--round-id"),
+            persona=_optional(rest, "--persona"),
+            payload=payload,
             dry_run="--dry-run" in rest,
         )
         emit(result, 0 if result.get("verdict") == "ok" else 20)

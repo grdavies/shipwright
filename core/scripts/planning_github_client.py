@@ -12,6 +12,7 @@ from urllib.parse import quote
 
 import issues_broker
 import issues_http
+from issues_broker import IssueCommentAuthorshipMismatch
 from credentials.model import Resolution, ResolvedToken
 from host_lib import (
     github_api_base,
@@ -19,6 +20,7 @@ from host_lib import (
     load_workflow_config,
 )
 from planning_canonical import (
+    DOC_REVIEW_MARKER,
     FROZEN_LABEL,
     MARKER_ARTIFACT_TYPE,
     MARKER_UNIT_ID,
@@ -143,14 +145,27 @@ def _label_names(payload: dict[str, Any]) -> list[str]:
 def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
     body = str(raw.get("body") or "")
     markers: list[str] = []
-    for marker in ("sw-freeze-record", "sw-chunk-overflow", "sw-memory-pointer", "lifecycle:source-removed"):
+    for marker in (
+        "sw-freeze-record",
+        "sw-chunk-overflow",
+        "sw-memory-pointer",
+        DOC_REVIEW_MARKER,
+        "lifecycle:source-removed",
+    ):
         if f"<!-- {marker} -->" in body or f"<!--{marker}-->" in body:
             markers.append(marker)
+    user = raw.get("user")
+    author_id = ""
+    if isinstance(user, dict):
+        author_id = str(user.get("id") or "")
+    updated_at = str(raw.get("updated_at") or raw.get("created_at") or "")
     return CommentRecord(
         id=str(raw.get("id", "")),
         body=body,
         created_at=str(raw.get("created_at", "")),
         markers=markers,
+        author_id=author_id,
+        revision=updated_at,
     )
 
 
@@ -334,11 +349,29 @@ class GitHubIssuesClient:
         base = f"{self.api_base}/repos/{self.owner}/{self.repo}/issues/{issue_number}"
         return f"{base}{suffix}"
 
+    def authenticated_principal_id(self) -> str:
+        payload = self._http_json("GET", f"{self.api_base}/user", self.headers)
+        if not isinstance(payload, dict):
+            raise RuntimeError("GitHub /user returned no payload")
+        user_id = payload.get("id")
+        if user_id is None:
+            raise RuntimeError("GitHub /user missing immutable id")
+        return str(user_id)
+
     def _list_comments(self, issue_number: int) -> list[CommentRecord]:
-        payload = self._http_json("GET", self._issue_url(issue_number, "/comments"), self.headers)
-        if not isinstance(payload, list):
-            return []
-        return [_parse_comment(item) for item in payload if isinstance(item, dict)]
+        comments: list[CommentRecord] = []
+        per_page = 100
+        page = 1
+        while page <= 100:
+            url = f"{self._issue_url(issue_number, '/comments')}?per_page={per_page}&page={page}"
+            payload = self._http_json("GET", url, self.headers)
+            if not isinstance(payload, list) or not payload:
+                break
+            comments.extend(_parse_comment(item) for item in payload if isinstance(item, dict))
+            if len(payload) < per_page:
+                break
+            page += 1
+        return comments
 
     def _read_parent_issue_number(self, issue_number: int) -> str | None:
         if not self._native_links_capable():
@@ -544,7 +577,14 @@ class GitHubIssuesClient:
                 self._sync_native_links(number, db_id, native_links, current=current.native_links)
         return self._get_issue(issue_id)
 
-    def add_comment(self, issue_id: str, body: str, *, markers: list[str] | None = None) -> CommentRecord:
+    def add_comment(
+        self,
+        issue_id: str,
+        body: str,
+        *,
+        markers: list[str] | None = None,
+        author_id: str = "",
+    ) -> CommentRecord:
         number = _issue_number(issue_id)
         created = self._http_json("POST", self._issue_url(number, "/comments"), self.headers, {"body": body})
         if not isinstance(created, dict):
@@ -552,6 +592,13 @@ class GitHubIssuesClient:
         comment = _parse_comment(created)
         if markers:
             comment.markers = list(markers)
+        if author_id and comment.author_id != author_id:
+            raise IssueCommentAuthorshipMismatch(
+                "doc-review authorship mismatch",
+                expected=author_id,
+                actual=comment.author_id,
+                comment_id=comment.id,
+            )
         return comment
 
     def set_labels(self, issue_id: str, labels: list[str], *, if_match: str | None = None) -> Any:

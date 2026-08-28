@@ -323,6 +323,11 @@ from planning_canonical import (  # noqa: E402
     serialize_comment_facade,
     serialize_relation_facade,
 )
+from planning_doc_review_transport import (  # noqa: E402
+    TXN_VERBS,
+    execute_doc_review_txn,
+    require_github_issue_store,
+)
 
 BANNED_MEMORY_CLASSES = frozenset({"discussion", "progress"})
 RAW_TRANSCRIPT_MARKERS = (
@@ -4712,6 +4717,11 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
         "status": "shipped",
         "description": "Facade thread parentage, resolved metadata, typed relation edges (PRD 066 R17/R24)",
     },
+    {
+        "name": "doc_review_txn",
+        "status": "shipped",
+        "description": "Issue-store doc-review round lifecycle via brokered comments (PRD 341 bootstrap)",
+    },
 )
 
 ISSUES_CLIENT_ALLOWLIST = frozenset({
@@ -5854,6 +5864,55 @@ def external_intake_run_pipeline(
         "through": through,
         "results": results,
     }
+
+
+def doc_review_txn(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    verb: str,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    persona: str | None = None,
+    payload: dict[str, Any] | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Planning-store txn verbs for issue-store doc-review comment transport (PRD 341 bootstrap)."""
+    if verb not in TXN_VERBS:
+        return {"verdict": "fail", "action": verb, "error": "unknown-doc-review-verb", "verb": verb}
+
+    effective = resolve_effective_backend(root, cfg)
+    provider = str(resolve_issues_provider(cfg).get("provider") or "none")
+    blocked = require_github_issue_store(effective=effective, provider=provider)
+    if blocked is not None:
+        blocked["action"] = verb
+        return blocked
+
+    if not issue_id or not unit_id or not round_id:
+        return {"verdict": "fail", "action": verb, "error": "issue-unit-round-required"}
+
+    pk = validate_project_key(root, cfg)
+    if pk.get("verdict") != "ok":
+        return {"verdict": "fail", "action": verb, "error": pk.get("message") or "invalid project key"}
+
+    client = IssuesClient(root, provider)
+    try:
+        author_id = client.authenticated_principal_id()
+    except Exception as exc:  # noqa: BLE001
+        return {"verdict": "fail", "action": verb, "error": "doc-review-author-unresolved", "detail": str(exc)}
+
+    return execute_doc_review_txn(
+        client,
+        verb=verb,
+        issue_id=str(issue_id),
+        unit_id=unit_id,
+        round_id=round_id,
+        persona=persona,
+        payload=payload,
+        dry_run=dry_run,
+        author_id=author_id,
+    )
 
 
 def resolve_absorbed_gaps_061(
