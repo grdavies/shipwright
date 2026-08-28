@@ -9,6 +9,7 @@ from debug_deliver_handoff import (
     materialize_debug_pack,
     unit_id_for,
 )
+from planning_deliver_gate import allowlist_unit_absent_from_graph
 
 
 def test_materialize_writes_tasks_debug_pack(tmp_path: Path) -> None:
@@ -22,7 +23,10 @@ def test_materialize_writes_tasks_debug_pack(tmp_path: Path) -> None:
     )
     assert out["verdict"] == "ok"
     assert out["unitId"] == "tasks-debug-null-pointer"
-    assert out["resumeCommand"].startswith("/sw-deliver run --unit-id ")
+    assert out["resumeCommand"] == (
+        "/sw-deliver run --task-list "
+        ".cursor/planning-materialized/docs/prds/debug-null-pointer/tasks-debug-null-pointer.md"
+    )
     path = tmp_path / out["materializedPath"]
     assert path.is_file()
     body = path.read_text(encoding="utf-8")
@@ -40,6 +44,20 @@ def test_pre_confirm_guard_blocks_execute() -> None:
 
 def test_unit_id_grammar() -> None:
     assert unit_id_for("foo-bar") == "tasks-debug-foo-bar"
+
+
+def test_materialized_debug_pack_is_allowlisted_without_graph_unit(tmp_path: Path) -> None:
+    task_path = (
+        tmp_path
+        / ".cursor/planning-materialized/docs/prds/debug-null-pointer/tasks-debug-null-pointer.md"
+    )
+    task_path.parent.mkdir(parents=True)
+    task_path.write_text("---\nfrozen: true\n---\n", encoding="utf-8")
+
+    assert allowlist_unit_absent_from_graph(
+        task_path,
+        ".cursor/planning-materialized/docs/prds/debug-null-pointer/tasks-debug-null-pointer.md",
+    )
 
 
 def test_debug_pack_forbids_execute_before_confirm() -> None:

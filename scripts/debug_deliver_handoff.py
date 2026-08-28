@@ -105,7 +105,8 @@ def materialize_debug_pack(
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(body, encoding="utf-8")
 
-    deliver_ref = f"--unit-id {unit_id}"
+    materialized_path = str(dest.relative_to(root))
+    deliver_ref = f"--task-list {materialized_path}"
     resume = f"/sw-deliver run {deliver_ref}"
     out: dict[str, Any] = {
         "verdict": "ok",
@@ -113,7 +114,7 @@ def materialize_debug_pack(
         "unitId": unit_id,
         "slug": slug,
         "bodyPath": rel,
-        "materializedPath": str(dest.relative_to(root)),
+        "materializedPath": materialized_path,
         "frozen": True,
         "phaseCount": 1,
         "deliverEntryRef": deliver_ref,
