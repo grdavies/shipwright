@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.8.0](https://github.com/grdavies/shipwright/compare/v2.7.0...v2.8.0) (2026-08-28)
+
+
+### Features
+
+* **prd-332:** project intelligence triage and capability promotion ([#1051](https://github.com/grdavies/shipwright/issues/1051)) ([a8b5d8b](https://github.com/grdavies/shipwright/commit/a8b5d8bff028833fde25e6031f847fd4ac82ee7e))
+* **prd-333:** eval corpus handoff and platform providers ([#1064](https://github.com/grdavies/shipwright/issues/1064)) ([615b111](https://github.com/grdavies/shipwright/commit/615b111256567a78d23175ec142d618e6b105c78))
+
 ## [2.7.0](https://github.com/grdavies/shipwright/compare/v2.6.0...v2.7.0) (2026-08-26)
 
 
