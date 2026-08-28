@@ -1124,6 +1124,7 @@
 * merge phase p2-gitlab-planning-store-specification-and-conformance-stub into feat/eval-corpus-handoff-and-platform-providers (08d0504) <!-- sw-deliver:p2-gitlab-planning-store-specification-and-conformance-stub -->
 * merge phase p2-remote-execution-trust-specification-and-stub into feat/eval-corpus-handoff-and-platform-providers (242d976) <!-- sw-deliver:p2-remote-execution-trust-specification-and-stub -->
 * merge phase p2-upstream-provenance-specification-and-stub into feat/eval-corpus-handoff-and-platform-providers (6617f9d) <!-- sw-deliver:p2-upstream-provenance-specification-and-stub -->
+* merge phase p3-workflowpackage-marketplace-specification-and-stub into feat/eval-corpus-handoff-and-platform-providers (5c05ba2) <!-- sw-deliver:p3-workflowpackage-marketplace-specification-and-stub -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
