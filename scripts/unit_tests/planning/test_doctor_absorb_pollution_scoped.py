@@ -6,7 +6,7 @@ import json
 import subprocess
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -96,7 +96,10 @@ def test_scoped_doctor_index_hit_skips_project_wide_search(
     def _fake_get_backend(_root: Path, _cfg: dict[str, Any], override: str | None = None) -> IssueStoreBackend:
         return backend
 
-    with patch("planning_store_facade.get_backend", side_effect=_fake_get_backend):
+    with patch.dict(
+        doctor_absorb_pollution.__globals__,
+        {"get_backend": _fake_get_backend},
+    ):
         with patch.object(backend._client, "issue_search", side_effect=_tracking_search):
             result = doctor_absorb_pollution(root, cfg, prd_unit_id=prd_unit)
 
@@ -119,10 +122,16 @@ def test_project_doctor_skips_closure_audit_for_prd_without_absorbs(
         for number in range(1, 131)
     ]
 
-    with patch("planning_store_facade.get_backend", return_value=backend):
+    audit = Mock()
+    with patch.dict(
+        doctor_absorb_pollution.__globals__,
+        {
+            "get_backend": Mock(return_value=backend),
+            "audit_closure_completeness": audit,
+        },
+    ):
         with patch.object(backend._client, "issue_search", return_value=records) as search:
-            with patch("planning_store_facade.audit_closure_completeness") as audit:
-                result = doctor_absorb_pollution(root, cfg)
+            result = doctor_absorb_pollution(root, cfg)
 
     assert result["verdict"] == "pass", result
     search.assert_called_once_with(project_key="absorb-069")
@@ -145,13 +154,16 @@ def test_project_doctor_audits_complete_prd_with_absorbs(
         assert _lookup_issue_record(backend, "tasks-not-present", "docs/prds/tasks-not-present.md") is None
         return {"openRemaining": ["gap-123-open"]}
 
-    with patch("planning_store_facade.get_backend", return_value=backend):
+    audit = Mock(side_effect=_audit_from_catalog)
+    with patch.dict(
+        doctor_absorb_pollution.__globals__,
+        {
+            "get_backend": Mock(return_value=backend),
+            "audit_closure_completeness": audit,
+        },
+    ):
         with patch.object(backend._client, "issue_search", return_value=[record]) as search:
-            with patch(
-                "planning_store_facade.audit_closure_completeness",
-                side_effect=_audit_from_catalog,
-            ) as audit:
-                result = doctor_absorb_pollution(root, cfg)
+            result = doctor_absorb_pollution(root, cfg)
 
     assert result["verdict"] == "fail", result
     assert result["pollution"] == [
