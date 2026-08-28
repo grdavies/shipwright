@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.1](https://github.com/grdavies/shipwright/compare/v2.8.0...v2.8.1) (2026-08-28)
+
+
+### Bug Fixes
+
+* **install:** refuse symlink-escaped plugin scripts roots ([#1065](https://github.com/grdavies/shipwright/issues/1065)) ([30b96b7](https://github.com/grdavies/shipwright/commit/30b96b7c8f1ccedcfdfaedaac9c9039c99ea39cf))
+
 ## [2.8.0](https://github.com/grdavies/shipwright/compare/v2.7.0...v2.8.0) (2026-08-28)
 
 
