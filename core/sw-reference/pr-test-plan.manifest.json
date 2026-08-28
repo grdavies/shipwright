@@ -1482,6 +1482,66 @@
       "ciShard": 2
     },
     {
+      "id": "planning-333-provider-semantic-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_provider_semantic_parity.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "provider-semantic-parity",
+        "corpus-evidence-binding"
+      ],
+      "ciShard": 2
+    },
+    {
+      "id": "planning-333-gitlab-planning-store-stub-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_gitlab_planning_store_stub.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "gitlab-planning-store-stub",
+        "p2-spec-not-shipped"
+      ],
+      "ciShard": 2
+    },
+    {
+      "id": "graph-333-remote-execution-stub-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/graph/test_remote_execution_stub.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "remote-execution-trust-stub",
+        "p2-spec-not-shipped"
+      ],
+      "ciShard": 2
+    },
+    {
+      "id": "planning-333-upstream-provenance-stub-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_upstream_provenance_stub.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "upstream-provenance-stub",
+        "p2-spec-not-shipped"
+      ],
+      "ciShard": 2
+    },
+    {
       "id": "planning-native-links-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [

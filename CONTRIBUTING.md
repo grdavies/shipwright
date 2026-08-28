@@ -154,6 +154,7 @@ the `internal` and `verify` lanes via `scripts/test/run_project_doctrine_fixture
 integrated pytest wrapper — path-triggered when doctrine schemas, lifecycle, or leakage scripts change.
 
 <!-- suite-registry.json and ci_plan_gen.py are authoritative for plan names above. -->
+<!-- PRD 333: provider/parity stub suites may register in suite-registry without enabling remote/marketplace paths. -->
 
 ## Initialization and doctor checks
 
@@ -178,4 +179,4 @@ Re-run the matching doctor after remediation; codes are designed for CI log grep
 
 Open a [discussion](https://github.com/grdavies/shipwright/discussions) or file an issue if something is
 unclear before starting large changes.
-<!-- currency: refreshed 2026-08-23T17:30:00Z for terminal prepare (PRD 326) — suite-registry phase-13 suites -->
+<!-- currency: refreshed 2026-08-28T01:52:41Z for terminal prepare after PRD 333 suite-registry + marketplace/provenance stubs -->

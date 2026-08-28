@@ -321,6 +321,8 @@
     "domain_vocabulary.py",
     "effective_config_gen.py",
     "env-read-guard.py",
+    "eval_corpus.py",
+    "eval_corpus_manifest.py",
     "evidence-read.py",
     "evidence_read.py",
     "execute_failure.py",
@@ -412,10 +414,12 @@
     "graph/packages/approval_tuple.py",
     "graph/packages/compile.py",
     "graph/packages/lockfile.py",
+    "graph/packages/marketplace.py",
     "graph/packages/resolver.py",
     "graph/packages/trust.py",
     "graph/profiles.py",
     "graph/quick_ship_compile.py",
+    "graph/remote_execution_backend.py",
     "graph/resource_pools.py",
     "graph/reviewer_metrics/__init__.py",
     "graph/reviewer_metrics/calibration.py",
@@ -560,6 +564,7 @@
     "planning/__init__.py",
     "planning/backends/__init__.py",
     "planning/backends/_common.py",
+    "planning/backends/gitlab.py",
     "planning/backends/in_repo.py",
     "planning/backends/issues.py",
     "planning/backends/issues_helpers.py",
@@ -629,6 +634,7 @@
     "planning_park.py",
     "planning_path_redirect.py",
     "planning_paths.py",
+    "planning_priority_projection.py",
     "planning_progress.py",
     "planning_projection_ledger.py",
     "planning_query_cache.py",
@@ -736,6 +742,7 @@
     "triage_lib.py",
     "two_track_lib.py",
     "upgrade-gate.py",
+    "upstream_provenance.py",
     "validate_descriptor.py",
     "variance_probe.py",
     "verify-baseline.py",
@@ -792,5 +799,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 789
+  "moduleCount": 796
 }

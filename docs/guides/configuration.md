@@ -1785,6 +1785,78 @@ loop-guard recovery (`recover_from_loop_guard`), and contract validation
 backward readiness — no nested orchestrator dispatch. See `docs/guides/workflows.md` (Explore
 workstream) for the human-facing route table.
 
+## External eval corpus, HandoffBundle, and provider stubs
+
+Shipped in this release train: the **external consumer eval corpus**, **HandoffBundle** cross-harness
+runtime, **planning-store semantic parity** harness, and **program priority authority**. P2/P3 platform
+providers (GitLab planning store, remote execution, upstream provenance, WorkflowPackage marketplace) ship
+as **specification + conformance stubs only** — default-off, not registered as shipped backends.
+
+### Eval corpus configuration
+
+| Surface | Path / command | Role |
+| --- | --- | --- |
+| Schema | `core/sw-reference/eval-corpus.schema.json` | Versioned manifest contract (repository mix, holdout, fixture revisions) |
+| Fixture manifest | `scripts/test/fixtures/external-consumer-eval/corpus.json` | Deterministic public/synthetic fixtures — no production secrets |
+| Runner | `scripts/eval_corpus.py` | Deterministic metrics: scenario pass rate, semantic parity, handoff continuity, false-positive rate, elapsed time |
+| CI workflow | `.github/workflows/eval-corpus.yml` | Scheduled (Mondays 07:00 UTC) + `workflow_dispatch` + path-filtered PR runs |
+
+**Composition rules:** at least three external repositories spanning greenfield, brownfield, and mixed
+planning-store modes; holdout fixtures are isolated from release-gate metrics. Release readiness requires
+corpus green **or** an attributable waiver (`SW_EVAL_CORPUS_WAIVER` env var pointing at a signed waiver
+document). See [glossary](glossary.md) for **corpus** and **holdout** definitions.
+
+### HandoffBundle configuration
+
+| Surface | Config / command | Role |
+| --- | --- | --- |
+| Extension flag | `workflow.extensions.handoffBundle` | Default `false` until operator opt-in |
+| Schema | `core/sw-reference/handoff-bundle.schema.json` | Portable bundle with transition provenance and digest validation |
+| Runtime | `scripts/handoff_bundle.py` | Export/import across Cursor and Claude Code harnesses |
+| Context-switch hook | `core/hooks/context_switch_handoff.py` | Validated export on pause; fail-closed on export failure |
+| Status export | `/sw-status --export-handoff` / `wave_status.py export-handoff` | Operator surface when extension is enabled |
+
+**Transition matrix:** session resume/switch, same-model and model-change cells, stale/tampered bundles,
+missing durable state, and partial import failures are all covered by conformance tests. Recovery routing:
+see [decision tree](decision-tree.md#adoption-and-provider-readiness).
+
+### Program priority authority
+
+| Surface | Path | Role |
+| --- | --- | --- |
+| Authority | `.sw/program-priorities.json` | Sole authoritative P0–P3 ranking and release sequence |
+| Projection | `scripts/planning_priority_projection.py` | Read-only labels/index/graph metadata — **not** authority |
+
+Projections MUST NOT be edited as planning truth. Priority tier and provider follow-on order (GitLab →
+remote execution → upstream provenance → marketplace) are defined only in the authority file.
+
+### Planning-store provider configuration
+
+| Provider | Status | Spec / stub | Shipped? |
+| --- | --- | --- | --- |
+| Issue-store (GitHub) | **shipped** | `planning.store.backend: issue-store` | yes |
+| GitLab planning store | **spec + stub** | `core/providers/planning-store/gitlab.md`, `scripts/planning/backends/gitlab.py` | **no** — not in shipped registry |
+| Remote execution | **spec + stub** | `core/providers/execution/remote.md`, `scripts/graph/remote_execution_backend.py` | **no** — default-off |
+| Upstream provenance | **spec + stub** | `core/providers/provenance/upstream.md`, `scripts/upstream_provenance.py` | **no** — not-enabled response only |
+| WorkflowPackage marketplace | **spec + stub** | `core/providers/workflow-package/marketplace.md`, `scripts/graph/packages/marketplace.py` | **no** — disabled resolver |
+
+**Capability matrix:** `core/providers/planning-store/CAPABILITIES.md` (matrix version `2.0.0`) is the
+authoritative contract for semantic parity claims. Conformance evidence binds via
+`scripts/planning/provider_conformance.py` to eval-corpus scenario identifiers. Parity claims without
+corpus evidence fail closed.
+
+### `/sw-status` visibility
+
+`/sw-status` surfaces deliver-run progress, phase verdict, and gate evidence for the active worktree.
+When `workflow.extensions.handoffBundle` is enabled, status also exposes HandoffBundle export guidance
+(`--export-handoff`). Eval corpus gate results publish as CI artifacts under
+`.cursor/sw-eval-corpus/` when the workflow runs; operators inspect `report.json` and `gate.json` for
+release readiness. Program priority projections appear in planning graph/index views when
+`planning_priority_projection.py` is invoked — always derived from `.sw/program-priorities.json`.
+
+**Do not** configure P2/P3 stubs as shipped providers. Enabling them requires a follow-on delivery unit
+with green corpus and conformance evidence.
+
 ## Optional integrations
 
 | Integration | Config | When to enable |
@@ -2371,3 +2443,4 @@ Shipwright `2.7.0` · schema `config.schema.json`
 | `worktree.scaffold.portRangeEnd` | `9199` | `9199` | `9199` | `9199` | `—` | `—` |
 | `worktree.scaffold.portRangeStart` | `9100` | `9100` | `9100` | `9100` | `—` | `—` |
 <!-- effective-config:end generated -->
+<!-- currency: refreshed 2026-08-27T15:30:00Z for workflow.extensions / handoff_bundle bindings -->

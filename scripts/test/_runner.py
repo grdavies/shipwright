@@ -329,6 +329,23 @@ def _resolve_scope() -> str:
 
 
 RESILIENCE_PYTEST_PATH = "scripts/unit_tests/resilience"
+EVAL_CORPUS_SCRIPT = "scripts/eval_corpus.py"
+
+
+def run_eval_corpus(
+    root: Path,
+    *,
+    argv: list[str] | None = None,
+) -> int:
+    """Run deterministic external-consumer eval corpus (PRD 333 R1/R14)."""
+    script = root / EVAL_CORPUS_SCRIPT
+    if not script.is_file():
+        print(f"FAIL missing eval corpus script: {script}", file=sys.stderr)
+        return 1
+    env = _suite_env(root)
+    cmd = [sys.executable, str(script), *(argv or ["run"])]
+    completed = subprocess.run(cmd, cwd=str(root), env=env, shell=False)
+    return completed.returncode
 
 
 def run_pytest_scope(
@@ -433,6 +450,12 @@ def main(argv: list[str] | None = None) -> int:
     p_pytest.add_argument("--scope", default="full", choices=["fast", "phase", "full"])
     p_pytest.add_argument("pytest_args", nargs=argparse.REMAINDER)
 
+    p_eval_corpus = sub.add_parser(
+        "run-eval-corpus",
+        help="Run deterministic external-consumer eval corpus",
+    )
+    p_eval_corpus.add_argument("eval_corpus_args", nargs=argparse.REMAINDER)
+
     sub.add_parser("run-all-tests", help="Run all .test files")
 
     p_report = sub.add_parser("coverage-report", help="Print coverage summary from a trace coverdir")
@@ -460,6 +483,11 @@ def main(argv: list[str] | None = None) -> int:
         if forwarded and forwarded[0] == "--":
             forwarded = forwarded[1:]
         return run_pytest_scope(root, scope=args.scope, pytest_args=forwarded or None)
+    if args.cmd == "run-eval-corpus":
+        forwarded = list(getattr(args, "eval_corpus_args", None) or [])
+        if forwarded and forwarded[0] == "--":
+            forwarded = forwarded[1:]
+        return run_eval_corpus(root, argv=forwarded or None)
     if args.cmd == "list":
         return cmd_list(args)
     if args.cmd == "run-all-tests":

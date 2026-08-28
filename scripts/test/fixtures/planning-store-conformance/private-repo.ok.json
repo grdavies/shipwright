@@ -1,0 +1,45 @@
+{
+  "verdict": "ok",
+  "backend": "private-repo",
+  "action": "planning-store-conformance-record",
+  "matrixVersion": "2.0.0",
+  "verbs": {
+    "put": {
+      "verdict": "ok",
+      "verb": "put",
+      "degradationId": "backend-deferred-inert",
+      "inert": true
+    },
+    "get": {
+      "verdict": "ok",
+      "verb": "get",
+      "degradationId": "backend-deferred-inert",
+      "inert": true
+    },
+    "exists": {
+      "verdict": "ok",
+      "verb": "exists",
+      "degradationId": "backend-deferred-inert",
+      "inert": true
+    },
+    "materialize": {
+      "verdict": "ok",
+      "verb": "materialize",
+      "degradationId": "backend-deferred-inert",
+      "inert": true
+    },
+    "freeze": {
+      "verdict": "ok",
+      "verb": "freeze",
+      "degradationId": "backend-deferred-inert",
+      "inert": true
+    }
+  },
+  "corpusScenarioIds": [
+    "cross-mode-reconcile",
+    "issue-store-materialize",
+    "planning-freeze"
+  ],
+  "corpusVersion": "1.0.0",
+  "writtenAt": 1787833555
+}

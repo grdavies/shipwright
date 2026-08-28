@@ -766,4 +766,50 @@ def create_execution_backend(
             clock=clock,
         )
 
+    if backend_kind == "remote":
+        from graph.remote_execution_backend import (
+            RemoteExecutionStubBackend,
+            register_remote_execution_stub,
+            remote_execution_trust_gate,
+            resolve_remote_execution_config,
+        )
+
+        registration = register_remote_execution_stub()
+        gate = remote_execution_trust_gate(
+            {
+                "backend": registration["backendId"],
+                "trustMatrixVersion": registration["trustMatrixVersion"],
+                "dimensions": {},
+                "corpusScenarioIds": [],
+                "trustComplete": False,
+                "enabled": False,
+                "shipped": False,
+            }
+        )
+        config = resolve_remote_execution_config(cfg, root=repo_root)
+        return RemoteExecutionStubBackend(config=config, root=repo_root, gate=gate)
+
     return LocalSyncExecutionBackend(executor, clock=clock)
+
+
+P2_EXECUTION_STUBS = frozenset({"remote"})
+
+
+def execution_p2_stub_registration_footprint() -> dict[str, Any]:
+    """PRD 333 phase 8 — P2 execution spec stubs (metadata only, not shipped)."""
+    from graph.remote_execution_backend import (
+        ALL_EXECUTION_BACKENDS,
+        BACKEND_ID,
+        SHIPPED_EXECUTION_BACKENDS,
+        register_remote_execution_stub,
+    )
+
+    registration = register_remote_execution_stub()
+    return {
+        "verdict": "ok",
+        "action": "execution-p2-stub-registration",
+        "stubs": {BACKEND_ID: registration},
+        "p2Stubs": sorted(P2_EXECUTION_STUBS),
+        "shippedBackends": sorted(SHIPPED_EXECUTION_BACKENDS),
+        "allBackends": sorted(ALL_EXECUTION_BACKENDS),
+    }

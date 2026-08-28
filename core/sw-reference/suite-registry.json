@@ -1886,6 +1886,77 @@
       ]
     },
     {
+      "id": "planning-333-provider-semantic-parity-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 68,
+      "pytestPath": "scripts/unit_tests/planning/test_provider_semantic_parity.py",
+      "ciShard": 2,
+      "pathTriggers": [
+        "core/providers/planning-store/CAPABILITIES.md",
+        "scripts/planning/provider_conformance.py",
+        "scripts/test/fixtures/planning-store-conformance/"
+      ]
+    },
+    {
+      "id": "planning-333-gitlab-planning-store-stub-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 69,
+      "pytestPath": "scripts/unit_tests/planning/test_gitlab_planning_store_stub.py",
+      "ciShard": 2,
+      "pathTriggers": [
+        "core/providers/planning-store/gitlab.md",
+        "scripts/planning/backends/gitlab.py",
+        "scripts/planning_store_facade.py"
+      ]
+    },
+    {
+      "id": "graph-333-remote-execution-stub-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 70,
+      "pytestPath": "scripts/unit_tests/graph/test_remote_execution_stub.py",
+      "ciShard": 2,
+      "pathTriggers": [
+        "core/providers/execution/remote.md",
+        "scripts/graph/remote_execution_backend.py",
+        "scripts/graph/execution_backend.py"
+      ]
+    },
+    {
+      "id": "planning-333-upstream-provenance-stub-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "verify",
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 71,
+      "pytestPath": "scripts/unit_tests/planning/test_upstream_provenance_stub.py",
+      "ciShard": 2,
+      "pathTriggers": [
+        "core/providers/provenance/upstream.md",
+        "scripts/upstream_provenance.py"
+      ]
+    },
+    {
       "id": "planning-native-links-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
@@ -2304,6 +2375,11 @@
         "scripts/test/memory-eval/**",
         "scripts/memory_redact.py",
         "scripts/memory_redaction*.py",
+        "scripts/eval_corpus.py",
+        "scripts/eval_corpus_manifest.py",
+        "scripts/test/fixtures/external-consumer-eval/**",
+        "core/sw-reference/eval-corpus.schema.json",
+        "scripts/unit_tests/eval/**",
         "providers/**",
         "scripts/unit_tests/memory/test_memory_eval*.py",
         "scripts/unit_tests/memory/test_redaction*.py",

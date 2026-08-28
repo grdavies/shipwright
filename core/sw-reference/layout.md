@@ -1411,4 +1411,6 @@ records are enumerated by `planning_backend_control.py list` and surfaced in `pl
 | --- | --- |
 | Deliver durable state (`.cursor/sw-deliver-state.<slug>.json`, locks, merge queue) | Repo root (primary checkout) |
 | Hook ephemeral state (`.cursor/hooks/state/*`) | R20-resolved active root (worktree when aligned) |
-<!-- currency: refreshed 2026-08-24T07:46:00Z for terminal prepare (PRD 327) -->
+**PRD 333 absorb closeout:** numeric absorb / ten-gap linkage remains on the facade boundary (planning_store_facade / planning_gap_capture); terminal finalize still fails closed on incomplete absorb audit.
+
+<!-- currency: refreshed 2026-08-28T01:52:41Z for terminal prepare (PRD 333 planning facade + absorb closeout) -->

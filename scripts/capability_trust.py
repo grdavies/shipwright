@@ -20,7 +20,7 @@ KERNEL_HOOK_SOURCE_MARKERS = (
 )
 
 # Manifest hooks may only augment non-safety emitter slots.
-MANIFEST_HOOK_SLOTS = frozenset({"sessionStart", "preToolUse"})
+MANIFEST_HOOK_SLOTS = frozenset({"sessionStart", "preToolUse", "contextSwitch"})
 
 PROVIDER_GATES = frozenset({"check-gate.py", "review-local-resolve.py"})
 MEMORY_GATES = frozenset({"check-gate.py", "memory-preflight"})

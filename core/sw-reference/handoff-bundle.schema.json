@@ -112,6 +112,52 @@
       "type": "boolean",
       "description": "True when DecisionGraph export was unavailable but operator acked degraded export."
     },
+    "transitionProvenance": {
+      "type": "object",
+      "description": "Explicit cross-harness session/model transition metadata (PRD 333 R3, R15).",
+      "additionalProperties": false,
+      "required": [
+        "sourceHarness",
+        "sessionTransition",
+        "modelTransition",
+        "integrity"
+      ],
+      "properties": {
+        "sourceHarness": {
+          "type": "string",
+          "enum": ["cursor", "claude-code", "unknown"]
+        },
+        "destinationHarness": {
+          "type": "string",
+          "enum": ["cursor", "claude-code", "unknown"]
+        },
+        "sessionTransition": {
+          "type": "string",
+          "enum": ["resume", "switch"]
+        },
+        "modelTransition": {
+          "type": "string",
+          "enum": ["same", "changed", "unknown"]
+        },
+        "sourceModel": { "type": "string", "minLength": 1 },
+        "destinationModel": { "type": "string", "minLength": 1 },
+        "integrity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["workflowDigest", "bundleDigest"],
+          "properties": {
+            "workflowDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+            "bundleDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+            "headSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+          }
+        },
+        "extensions": {
+          "type": "object",
+          "additionalProperties": true,
+          "maxProperties": 8
+        }
+      }
+    },
     "extensions": {
       "type": "object",
       "additionalProperties": false,

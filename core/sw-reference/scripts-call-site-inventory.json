@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-27T01:20:46Z",
+  "generatedAt": "2026-08-28T01:11:49Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -205,6 +205,60 @@
       "line": 39,
       "column": 21,
       "script": "closeout_ci.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:35:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 35,
+      "column": 37,
+      "script": "eval_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:35:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 35,
+      "column": 10,
+      "script": "eval_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:42:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 42,
+      "column": 37,
+      "script": "eval_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:42:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 42,
+      "column": 10,
+      "script": "eval_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:55:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 55,
+      "column": 39,
+      "script": "eval_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/eval-corpus.yml:55:eval_corpus.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/eval-corpus.yml",
+      "line": 55,
+      "column": 12,
+      "script": "eval_corpus.py",
       "classification": "self-repo-only"
     },
     {
@@ -21221,6 +21275,186 @@
       "column": 173,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
+    },
+    {
+      "id": "docs/guides/configuration.md:1891:generate-pr-test-plan-ci-workflow.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 1891,
+      "column": 1,
+      "script": "generate-pr-test-plan-ci-workflow.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:1907:test/run_suite_registry_fixtures.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 1907,
+      "column": 1,
+      "script": "test/run_suite_registry_fixtures.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:1909:test/run_pr_test_plan_fixtures.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 1909,
+      "column": 1,
+      "script": "test/run_pr_test_plan_fixtures.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:1965:capability_docs.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 1965,
+      "column": 1,
+      "script": "capability_docs.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:1968:capability_docs.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 1968,
+      "column": 1,
+      "script": "capability_docs.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:1971:capability_docs.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 1971,
+      "column": 1,
+      "script": "capability_docs.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:1987:test/run_pilot_fixtures.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 1987,
+      "column": 1,
+      "script": "test/run_pilot_fixtures.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:1997:test/run_emitter_fixtures.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 1997,
+      "column": 1,
+      "script": "test/run_emitter_fixtures.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2044:phase_sizing.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2044,
+      "column": 1,
+      "script": "phase_sizing.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2058:phase_sizing_corpus.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2058,
+      "column": 1,
+      "script": "phase_sizing_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2063:test/run_phase_sizing_corpus_fixtures.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2063,
+      "column": 1,
+      "script": "test/run_phase_sizing_corpus_fixtures.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2098:reviewer-metrics.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2098,
+      "column": 1,
+      "script": "reviewer-metrics.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2129:test/run_inefficiency_scan_fixtures.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2129,
+      "column": 1,
+      "script": "test/run_inefficiency_scan_fixtures.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2133:test/run_behavioral_anomaly_fixtures.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2133,
+      "column": 1,
+      "script": "test/run_behavioral_anomaly_fixtures.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2144:loop_health.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2144,
+      "column": 1,
+      "script": "loop_health.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2159:test/run_loop_autonomy_invariant_fixtures.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2159,
+      "column": 1,
+      "script": "test/run_loop_autonomy_invariant_fixtures.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2205:effective_config_gen.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2205,
+      "column": 1,
+      "script": "effective_config_gen.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2213:effective_config_gen.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2213,
+      "column": 1,
+      "script": "effective_config_gen.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2222:effective_config_gen.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2222,
+      "column": 1,
+      "script": "effective_config_gen.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:2223:effective_config_gen.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 2223,
+      "column": 1,
+      "script": "effective_config_gen.py",
+      "classification": "self-repo-only"
     }
   ]
 }

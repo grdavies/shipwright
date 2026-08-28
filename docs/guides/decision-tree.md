@@ -100,6 +100,38 @@ flowchart TD
 Greenfield empty scaffold is opt-in only. Details: [configuration](configuration.md#consumer-projectdoctrine),
 `.sw/layout.md`, `core/sw-reference/README.md`.
 
+## Adoption and provider readiness
+
+Route adoption questions and provider enablement checks here before opening a new gap or PRD.
+
+```mermaid
+flowchart TD
+  start([Adoption or provider question?]) --> corpusQ{Eval corpus<br/>failure or waiver?}
+  corpusQ -->|red gate| corpusFix["Inspect .cursor/sw-eval-corpus/gate.json<br/>Fix fixture or file attributable waiver"]
+  corpusQ -->|green or waived| handoffQ{HandoffBundle<br/>recovery needed?}
+  handoffQ -->|stale/tampered/missing| handoffRec["Re-export via /sw-status --export-handoff<br/>or context-switch hook; see configuration § HandoffBundle"]
+  handoffQ -->|no| parityQ{Provider parity<br/>or conformance claim?}
+  parityQ -->|claim without evidence| parityBlock["Refuse claim — bind CAPABILITIES.md matrix version<br/>+ eval-corpus scenario ids via provider_conformance.py"]
+  parityQ -->|evidence present| remoteQ{Remote execution<br/>enablement?}
+  remoteQ -->|trust prerequisites unmet| remoteBlock["Read core/providers/execution/remote.md trust matrix<br/>Identity, isolation, credentials, integrity, audit"]
+  remoteQ -->|prerequisites green| marketQ{Marketplace<br/>package resolution?}
+  marketQ -->|unpinned/unsigned/revoked| marketRefuse["Fail closed — core/providers/workflow-package/marketplace.md<br/>Digest pinning + signer policy required"]
+  marketQ -->|policy satisfied but stub| stubNotice["Stub returns not-enabled — no remote resolution<br/>Follow-on unit required for shipped registry"]
+  stubNotice --> gitlabDoc{GitLab planning<br/>store setup?}
+  gitlabDoc -->|future adapter| gitlabFuture["Spec: core/providers/planning-store/gitlab.md<br/>Not shipped — setup docs arrive with adapter promotion"]
+  gitlabDoc -->|not applicable| status["/sw-status for deliver progress<br/>+ configuration § provider stubs"]
+```
+
+| Symptom | Route | Do not |
+| --- | --- | --- |
+| Corpus gate red on release | Fix failing scenarios or file waiver (`SW_EVAL_CORPUS_WAIVER`) | Bypass gate without attributable waiver |
+| Holdout leakage in metrics | Re-separate holdout fixtures per eval-corpus schema | Mix holdout into release-gate partition |
+| Handoff import failure | Re-export bundle; check transition provenance digest | Resume a foreign harness run |
+| Parity claim rejected | Refresh conformance evidence with corpus scenario ids | Register stub as shipped backend |
+| Remote exec enablement blocked | Complete trust-matrix prerequisites in remote.md | Enable on-by-default without audit evidence |
+| Marketplace resolution refused | Pin digest, verify signer, check revocation policy | Install from unpinned remote registry |
+| GitLab store desired | Read gitlab.md spec; wait for follow-on promotion | Configure `gitlab` as shipped `planning.store.backend` today |
+
 ## Explore glossary
 
 | Term | Meaning |

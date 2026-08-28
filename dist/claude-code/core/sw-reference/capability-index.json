@@ -837,6 +837,30 @@
       }
     },
     {
+      "id": "provider.providers.execution.remote",
+      "kind": "provider",
+      "sourcePath": "core/providers/execution/remote.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "graphExecution.execution.backend",
+            "equals": "remote"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "execution",
+          "adapterId": "remote",
+          "selectionFamily": "providers",
+          "status": "spec-stub",
+          "programPriority": "P2"
+        }
+      }
+    },
+    {
       "id": "provider.providers.host.CAPABILITIES",
       "kind": "provider",
       "sourcePath": "core/providers/host/CAPABILITIES.md",
@@ -1198,7 +1222,32 @@
         ],
         "metadata": {
           "providerFamily": "planning-store",
-          "selectionFamily": "providers"
+          "selectionFamily": "providers",
+          "matrixVersion": "2.0.0"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.planning-store.gitlab",
+      "kind": "provider",
+      "sourcePath": "core/providers/planning-store/gitlab.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "planning.store.backend",
+            "equals": "gitlab-planning-store"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "planning-store",
+          "adapterId": "gitlab-planning-store",
+          "selectionFamily": "providers",
+          "status": "spec-stub",
+          "programPriority": "P2"
         }
       }
     },
@@ -1287,6 +1336,30 @@
           "providerFamily": "planning-store",
           "adapterId": "memory",
           "selectionFamily": "providers"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.provenance.upstream",
+      "kind": "provider",
+      "sourcePath": "core/providers/provenance/upstream.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "provenance.upstream.analyzer",
+            "equals": "enabled"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "provenance",
+          "adapterId": "upstream-provenance",
+          "selectionFamily": "providers",
+          "status": "spec-stub",
+          "programPriority": "P2"
         }
       }
     },
@@ -1517,6 +1590,30 @@
           "adapterId": "stub",
           "selectionFamily": "providers",
           "gateRef": "check-gate.py"
+        }
+      }
+    },
+    {
+      "id": "provider.providers.workflow-package.marketplace",
+      "kind": "provider",
+      "sourcePath": "core/providers/workflow-package/marketplace.md",
+      "executable": true,
+      "capability": {
+        "version": 1,
+        "triggers": [
+          {
+            "type": "config_flag",
+            "selectionFamily": "providers",
+            "key": "graphExecution.packages.registry",
+            "equals": "marketplace"
+          }
+        ],
+        "metadata": {
+          "providerFamily": "workflow-package",
+          "adapterId": "marketplace",
+          "selectionFamily": "providers",
+          "status": "spec-stub",
+          "programPriority": "P3"
         }
       }
     },

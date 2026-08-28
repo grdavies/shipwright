@@ -185,6 +185,19 @@ if __name__ == "__main__":
     raise SystemExit(hook_adapter.dispatch(_REPO))
 '''
         (hooks_dir / "claude-hook.py").write_text(wrapper, encoding="utf-8")
+        context_switch_shim = '''#!/usr/bin/env python3
+"""Thin Claude Code entrypoint — context-switch HandoffBundle export (PRD 333 R3)."""
+from __future__ import annotations
+import sys
+from pathlib import Path
+_REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO / "core" / "hooks"))
+import context_switch_handoff  # noqa: E402
+if __name__ == "__main__":
+    raise SystemExit(context_switch_handoff.main())
+'''
+        (hooks_dir / "context-switch-handoff.py").write_text(context_switch_shim, encoding="utf-8")
+        (hooks_dir / "context-switch-handoff.py").chmod(0o755)
         hooks_json = {
             "hooks": {
                 "SessionStart": [
@@ -199,8 +212,17 @@ if __name__ == "__main__":
                 "PreToolUse": [
                     {"command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py"'}
                 ],
+                "ContextSwitch": [
+                    {
+                        "command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/context-switch-handoff.py" --trigger context-switch',
+                        "metadata": {"trigger": "context-switch", "event": "pause"},
+                    }
+                ],
             }
         }
+        canonical_hooks = repo_root / "core" / "hooks" / "hooks.json"
+        if canonical_hooks.is_file():
+            hooks_json["canonicalManifest"] = str(canonical_hooks.relative_to(repo_root))
         (hooks_dir / "hooks.json").write_text(
             json.dumps(hooks_json, indent=2) + "\n",
             encoding="utf-8",
