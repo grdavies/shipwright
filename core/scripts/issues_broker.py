@@ -18,6 +18,23 @@ class IssuesBrokerError(RuntimeError):
         super().__init__(message)
 
 
+class IssueCommentAuthorshipMismatch(Exception):
+    """Posted comment author_id does not match brokered principal (doc-review bootstrap)."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        expected: str,
+        actual: str,
+        comment_id: str = "",
+    ) -> None:
+        super().__init__(message)
+        self.expected = expected
+        self.actual = actual
+        self.comment_id = comment_id
+
+
 def token_from_credential(credential: Resolution | ResolvedToken | None) -> tuple[str | None, str | None]:
     """Return (token, refusal_reason). Refusal precedes any header attachment."""
     if isinstance(credential, Resolution):

@@ -58,6 +58,9 @@ def main() -> None:
         "doctor",
         "cleanup",
         "progress-update",
+        "external-intake-txn",
+        "external-intake-pipeline",
+        "doc-review-txn",
         "migrate-orphan-phase-issues",
         "projection-refresh",
         "probe-projection",
@@ -281,6 +284,86 @@ def main() -> None:
             task_list=task_list,
             checked_phase_ids=checked,
             task_ref=task_ref,
+        )
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
+    elif args.command == "external-intake-txn":
+        from workflow_extensions import require_extension
+
+        disabled = require_extension("externalIntake", root=root, cfg=cfg)
+        if disabled is not None:
+            emit({**disabled, "action": "external-intake-txn"}, 20)
+        verb = _require(rest, "--verb")
+        result = external_intake_txn(
+            root,
+            cfg,
+            verb=verb,
+            issue_id=_optional(rest, "--issue-id"),
+            signal_id=_optional(rest, "--signal-id"),
+            title=_optional(rest, "--title"),
+            signal_class=_optional(rest, "--signal-class") or "unknown",
+            comment=_optional(rest, "--comment"),
+            gap_unit_id=_optional(rest, "--gap-unit-id"),
+            priority=_optional(rest, "--priority") or "medium",
+            tier=_optional(rest, "--tier") or "build",
+            gap_class=_optional(rest, "--gap-class") or "external",
+            dry_run="--dry-run" in rest,
+        )
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
+    elif args.command == "external-intake-pipeline":
+        from workflow_extensions import require_extension
+
+        disabled = require_extension("externalIntake", root=root, cfg=cfg)
+        if disabled is not None:
+            emit({**disabled, "action": "external-intake-pipeline"}, 20)
+        issue_id = _require(rest, "--issue-id")
+        result = external_intake_run_pipeline(
+            root,
+            cfg,
+            issue_id=issue_id,
+            duplicate="--duplicate" in rest,
+            dry_run="--dry-run" in rest,
+        )
+        emit(result, 0 if result.get("verdict") == "ok" else 20)
+    elif args.command == "doc-review-txn":
+        verb = _require(rest, "--verb")
+        payload_raw = _optional(rest, "--payload-json")
+        payload: dict[str, Any] | None = None
+        if payload_raw:
+            try:
+                parsed_payload = json.loads(payload_raw)
+            except json.JSONDecodeError as exc:
+                emit(
+                    {
+                        "verdict": "fail",
+                        "action": "doc-review-txn",
+                        "error": "invalid-payload-json",
+                        "detail": str(exc),
+                    },
+                    20,
+                )
+                return
+            if not isinstance(parsed_payload, dict):
+                emit(
+                    {
+                        "verdict": "fail",
+                        "action": "doc-review-txn",
+                        "error": "invalid-payload-json",
+                        "detail": "payload-json must decode to an object",
+                    },
+                    20,
+                )
+                return
+            payload = parsed_payload
+        result = doc_review_txn(
+            root,
+            cfg,
+            verb=verb,
+            issue_id=_optional(rest, "--issue-id"),
+            unit_id=_optional(rest, "--unit-id"),
+            round_id=_optional(rest, "--round-id"),
+            persona=_optional(rest, "--persona"),
+            payload=payload,
+            dry_run="--dry-run" in rest,
         )
         emit(result, 0 if result.get("verdict") == "ok" else 20)
     elif args.command == "migrate-orphan-phase-issues":

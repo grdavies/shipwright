@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "planning-import-inventory/v1",
-  "generatedAt": "2026-08-19T09:15:12Z",
+  "generatedAt": "2026-08-28T20:00:00Z",
   "generatedBy": "planning_import_inventory.py",
   "canonicalModule": "scripts/planning_store_facade.py",
   "trees": [
@@ -5990,6 +5990,7 @@
       "clear-issue-fixture",
       "close-delivery-units",
       "comments-relations-schema",
+      "doc-review-txn",
       "doctor",
       "exists",
       "freeze",
@@ -6042,6 +6043,8 @@
       "--no-distill",
       "--parent-issue-id",
       "--path",
+      "--payload-json",
+      "--persona",
       "--phase-id",
       "--planning-issue",
       "--prd-unit",
@@ -6051,12 +6054,14 @@
       "--register",
       "--resync",
       "--root",
+      "--round-id",
       "--task-list",
       "--task-ref",
       "--tasks-unit-id",
       "--unit-id",
       "--units-file",
-      "--units-json"
+      "--units-json",
+      "--verb"
     ]
   }
 }

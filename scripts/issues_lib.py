@@ -26,6 +26,7 @@ ISSUE_VERBS = frozenset({
 })
 
 DEFAULT_CALL_BUDGET = 500
+FIXTURE_GITHUB_PRINCIPAL_ID = "900001"
 JIRA_CLOUD_CALL_BUDGET = 300
 JIRA_DC_CALL_BUDGET = 200
 JIRA_JQL_PAGE_CAP = 5
@@ -161,6 +162,8 @@ class IssueRecord:
                     "body": c.body,
                     "created_at": c.created_at,
                     "markers": c.markers,
+                    "author_id": c.author_id,
+                    "revision": c.revision,
                     "parent_id": c.parent_id,
                     "resolved_at": c.resolved_at,
                     "resolving_comment_id": c.resolving_comment_id,
@@ -200,6 +203,8 @@ class IssueRecord:
                     body=str(raw.get("body", "")),
                     created_at=str(raw.get("created_at", "")),
                     markers=list(raw.get("markers") or []),
+                    author_id=str(raw.get("author_id", "") or ""),
+                    revision=str(raw.get("revision", "") or ""),
                     parent_id=str(raw.get("parent_id", "") or ""),
                     resolved_at=str(raw.get("resolved_at", "") or ""),
                     resolving_comment_id=str(raw.get("resolving_comment_id", "") or ""),
@@ -353,13 +358,23 @@ class FixtureIssuesStore:
         self._persist()
         return record
 
-    def add_comment(self, issue_id: str, body: str, *, markers: list[str] | None = None) -> CommentRecord:
+    def add_comment(
+        self,
+        issue_id: str,
+        body: str,
+        *,
+        markers: list[str] | None = None,
+        author_id: str = "",
+    ) -> CommentRecord:
         record = self._resolve_get(issue_id)
+        created_at = str(int(time.time()))
         comment = CommentRecord(
             id=f"comment-{len(record.comments)}",
             body=body,
-            created_at=str(int(time.time())),
+            created_at=created_at,
             markers=list(markers or []),
+            author_id=author_id,
+            revision=created_at,
         )
         record.comments.append(comment)
         record.touch()
@@ -407,6 +422,9 @@ class FixtureIssuesStore:
     def find_by_unit(self, project_key: str, unit_id: str) -> IssueRecord | None:
         matches = self.search(project_key=project_key, unit_id=unit_id)
         return matches[0] if matches else None
+
+    def authenticated_principal_id(self) -> str:
+        return FIXTURE_GITHUB_PRINCIPAL_ID
 
     def mark_tombstone(self, issue_id: str) -> None:
         record = self._issues.get(issue_id)
@@ -621,14 +639,32 @@ class IssuesClient:
     def issue_get(self, issue_id: str) -> IssueRecord:
         return self._with_resilience("issue-get", lambda: self._live_backend().get(issue_id))
 
+    def authenticated_principal_id(self) -> str:
+        return self._with_resilience(
+            "issue-principal",
+            lambda: str(self._live_backend().authenticated_principal_id()),
+        )
+
     def issue_update(self, issue_id: str, **kwargs: Any) -> IssueRecord:
         return self._with_resilience("issue-update", lambda: self._live_backend().update(issue_id, **kwargs))
 
-    def issue_comment(self, issue_id: str, body: str, *, markers: list[str] | None = None) -> CommentRecord:
-        return self._with_resilience(
-            "issue-comment",
-            lambda: self._live_backend().add_comment(issue_id, body, markers=markers),
-        )
+    def issue_comment(
+        self,
+        issue_id: str,
+        body: str,
+        *,
+        markers: list[str] | None = None,
+        author_id: str = "",
+    ) -> CommentRecord:
+        def _run() -> CommentRecord:
+            kwargs: dict[str, Any] = {}
+            if markers is not None:
+                kwargs["markers"] = markers
+            if author_id:
+                kwargs["author_id"] = author_id
+            return self._live_backend().add_comment(issue_id, body, **kwargs)
+
+        return self._with_resilience("issue-comment", _run)
 
     def issue_label(self, issue_id: str, labels: list[str], *, if_match: str | None = None) -> IssueRecord:
         return self._with_resilience(

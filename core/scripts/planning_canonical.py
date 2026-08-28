@@ -34,12 +34,13 @@ SW_EDGES_FENCE = re.compile(
 )
 GENERIC_CODE_FENCE = re.compile(r"```(?:\w+)?\s*\n(.*?)\n```", re.DOTALL)
 
-EXCLUDED_COMMENT_MARKERS = frozenset({"sw-freeze-record", "sw-chunk-overflow"})
+EXCLUDED_COMMENT_MARKERS = frozenset({"sw-freeze-record", "sw-chunk-overflow", "sw-doc-review"})
 # PRD 061 R18 — structural/provider markers excluded from inbound authoring sync.
 INBOUND_COMMENT_EXCLUDED_MARKERS = frozenset(
     {"sw-freeze-record", "sw-chunk-overflow", "sw-memory-pointer", "sw-doc-review"}
 )
 FREEZE_RECORD_MARKER = "sw-freeze-record"
+DOC_REVIEW_MARKER = "sw-doc-review"
 FROZEN_LABEL = "sw:frozen"
 FREEZE_INCOMPLETE_LABEL = "sw:freeze-incomplete"
 FREEZE_HASH_PATTERN = re.compile(r"sw-freeze-hash:\s*([a-f0-9]{64})")
@@ -97,6 +98,9 @@ class CommentRecord:
     body: str
     created_at: str = ""
     markers: list[str] = field(default_factory=list)
+    # PRD 341 — immutable provider author identity + revision for integrity checks.
+    author_id: str = ""
+    revision: str = ""
     # PRD 066 R24 — thread parentage + resolved metadata (optional; flat providers omit).
     parent_id: str = ""
     resolved_at: str = ""
@@ -134,7 +138,7 @@ def comment_thread_status(comment: CommentRecord) -> str:
 
 def serialize_comment_facade(comment: CommentRecord) -> dict[str, Any]:
     """Normative facade projection for a single comment (R24)."""
-    return {
+    out: dict[str, Any] = {
         "id": comment.id,
         "body": comment.body,
         "createdAt": comment.created_at,
@@ -144,6 +148,11 @@ def serialize_comment_facade(comment: CommentRecord) -> dict[str, Any]:
         "resolvingCommentId": comment.resolving_comment_id or None,
         "threadStatus": comment_thread_status(comment),
     }
+    if comment.author_id:
+        out["authorId"] = comment.author_id
+    if comment.revision:
+        out["revision"] = comment.revision
+    return out
 
 
 def serialize_relation_facade(relation: RelationRecord) -> dict[str, Any]:
@@ -165,6 +174,8 @@ def normalize_flat_provider_comments(comments: list[CommentRecord]) -> list[Comm
             body=comment.body,
             created_at=comment.created_at,
             markers=list(comment.markers),
+            author_id=comment.author_id,
+            revision=comment.revision,
             parent_id="",
             resolved_at="",
             resolving_comment_id="",
