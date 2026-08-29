@@ -60,7 +60,11 @@ def main() -> None:
         "progress-update",
         "external-intake-txn",
         "external-intake-pipeline",
-        "doc-review-txn",
+        "post-review-finding",
+        "open-review-manifest",
+        "read-review-manifest",
+        "verify-review-manifest",
+        "complete-review-round",
         "migrate-orphan-phase-issues",
         "projection-refresh",
         "probe-projection",
@@ -324,8 +328,21 @@ def main() -> None:
             dry_run="--dry-run" in rest,
         )
         emit(result, 0 if result.get("verdict") == "ok" else 20)
-    elif args.command == "doc-review-txn":
-        verb = _require(rest, "--verb")
+    elif args.command in (
+        "post-review-finding",
+        "open-review-manifest",
+        "read-review-manifest",
+        "verify-review-manifest",
+        "complete-review-round",
+    ):
+        action_map = {
+            "post-review-finding": "post_review_finding",
+            "open-review-manifest": "open_review_manifest",
+            "read-review-manifest": "read_review_manifest",
+            "verify-review-manifest": "verify_review_manifest",
+            "complete-review-round": "complete_review_round",
+        }
+        action = action_map[args.command]
         payload_raw = _optional(rest, "--payload-json")
         payload: dict[str, Any] | None = None
         if payload_raw:
@@ -335,7 +352,7 @@ def main() -> None:
                 emit(
                     {
                         "verdict": "fail",
-                        "action": "doc-review-txn",
+                        "action": action,
                         "error": "invalid-payload-json",
                         "detail": str(exc),
                     },
@@ -346,7 +363,7 @@ def main() -> None:
                 emit(
                     {
                         "verdict": "fail",
-                        "action": "doc-review-txn",
+                        "action": action,
                         "error": "invalid-payload-json",
                         "detail": "payload-json must decode to an object",
                     },
@@ -354,10 +371,10 @@ def main() -> None:
                 )
                 return
             payload = parsed_payload
-        result = doc_review_txn(
+        facade_fn = globals()[action]
+        result = facade_fn(
             root,
             cfg,
-            verb=verb,
             issue_id=_optional(rest, "--issue-id"),
             unit_id=_optional(rest, "--unit-id"),
             round_id=_optional(rest, "--round-id"),

@@ -25,32 +25,41 @@ DOC_REVIEW_COMMENT_DRIFT = "doc-review-comment-drift"
 DOC_REVIEW_PIN_CONFLICT = "doc-review-pin-conflict"
 DOC_REVIEW_ROUND_MALFORMED = "doc-review-round-malformed"
 
+# Colon (`sw:doc-review`) and hyphen/HTML (`sw-doc-review`) are one marker family (PRD 341 R4).
+_DOC_REVIEW_NAME = r"sw[:-]doc-review"
+_DOC_REVIEW_ROUND_NAME = r"sw[:-]doc-review-round"
+
 DOC_REVIEW_OPEN_MARKER = re.compile(
-    r"<!--\s*sw-doc-review\s*-->",
+    rf"<!--\s*{_DOC_REVIEW_NAME}\s*-->",
     re.IGNORECASE,
 )
 DOC_REVIEW_CLOSE_MARKER = re.compile(
-    r"<!--\s*/sw-doc-review\s*-->",
+    rf"<!--\s*/{_DOC_REVIEW_NAME}\s*-->",
     re.IGNORECASE,
 )
 DOC_REVIEW_JSON_FENCE = re.compile(
-    r"<!--\s*sw-doc-review\s*-->\s*```(?:json)?\s*\n(.*?)\n```\s*<!--\s*/sw-doc-review\s*-->",
+    rf"<!--\s*{_DOC_REVIEW_NAME}\s*-->\s*```(?:json|sw-doc-review)?\s*\n(.*?)\n```\s*<!--\s*/{_DOC_REVIEW_NAME}\s*-->",
     re.DOTALL | re.IGNORECASE,
 )
 DOC_REVIEW_ROUND_OPEN_MARKER = re.compile(
-    r"<!--\s*sw-doc-review-round\s*-->",
+    rf"<!--\s*{_DOC_REVIEW_ROUND_NAME}\s*-->",
     re.IGNORECASE,
 )
 DOC_REVIEW_ROUND_CLOSE_MARKER = re.compile(
-    r"<!--\s*/sw-doc-review-round\s*-->",
+    rf"<!--\s*/{_DOC_REVIEW_ROUND_NAME}\s*-->",
     re.IGNORECASE,
 )
 DOC_REVIEW_ROUND_JSON_FENCE = re.compile(
-    r"<!--\s*sw-doc-review-round\s*-->\s*```(?:json)?\s*\n(.*?)\n```\s*<!--\s*/sw-doc-review-round\s*-->",
+    rf"<!--\s*{_DOC_REVIEW_ROUND_NAME}\s*-->\s*```(?:json|sw-doc-review)?\s*\n(.*?)\n```\s*<!--\s*/{_DOC_REVIEW_ROUND_NAME}\s*-->",
     re.DOTALL | re.IGNORECASE,
 )
 LEGACY_INLINE_ROUND_MARKER = re.compile(
-    r"<!--\s*sw-doc-review-round:\s*\{",
+    rf"<!--\s*{_DOC_REVIEW_ROUND_NAME}:\s*\{{",
+    re.IGNORECASE,
+)
+# Bare prose fences without HTML wrappers are never typed doc-review (R4/R42).
+RAW_DOC_REVIEW_PROSE_FENCE = re.compile(
+    r"```(?:sw-doc-review|sw:doc-review)\b",
     re.IGNORECASE,
 )
 
@@ -169,7 +178,8 @@ def envelope_error_for_comment(comment: CommentRecord) -> str | None:
 
 
 def is_marked_doc_review_comment(comment: CommentRecord) -> bool:
-    if DOC_REVIEW_MARKER in comment.markers:
+    markers = {str(m).strip().lower() for m in (comment.markers or [])}
+    if DOC_REVIEW_MARKER.lower() in markers or "sw:doc-review" in markers:
         return True
     body = comment.body or ""
     return bool(DOC_REVIEW_OPEN_MARKER.search(body) and DOC_REVIEW_CLOSE_MARKER.search(body))
@@ -240,6 +250,11 @@ def inspect_review_round_block(body: str) -> tuple[dict[str, Any], str | None]:
     if LEGACY_INLINE_ROUND_MARKER.search(text):
         return {}, "legacy-inline-round-block"
     matches = list(DOC_REVIEW_ROUND_JSON_FENCE.finditer(text))
+    # Strip typed HTML-wrapped fences before scanning for raw prose fences.
+    remainder = DOC_REVIEW_ROUND_JSON_FENCE.sub("", text)
+    remainder = DOC_REVIEW_JSON_FENCE.sub("", remainder)
+    if RAW_DOC_REVIEW_PROSE_FENCE.search(remainder):
+        return {}, "raw-prose-fence"
     open_count = len(DOC_REVIEW_ROUND_OPEN_MARKER.findall(text))
     close_count = len(DOC_REVIEW_ROUND_CLOSE_MARKER.findall(text))
     if len(matches) > 1 or open_count > 1 or close_count > 1:
@@ -264,7 +279,12 @@ def parse_review_round_block(body: str) -> dict[str, Any]:
 
 def strip_review_round_blocks(body: str) -> str:
     text = DOC_REVIEW_ROUND_JSON_FENCE.sub("", body or "")
-    text = re.sub(r"<!--\s*sw-doc-review-round:.*?-->", "", text, flags=re.DOTALL)
+    text = re.sub(
+        rf"<!--\s*{_DOC_REVIEW_ROUND_NAME}:.*?-->",
+        "",
+        text,
+        flags=re.DOTALL | re.IGNORECASE,
+    )
     text = DOC_REVIEW_ROUND_OPEN_MARKER.sub("", text)
     text = DOC_REVIEW_ROUND_CLOSE_MARKER.sub("", text)
     return text.strip()
@@ -853,12 +873,15 @@ def execute_doc_review_txn(
         }
 
     try:
-        posted = client.issue_comment(
-            str(issue_id),
-            body,
-            markers=["sw-doc-review"],
-            author_id=author_id,
-        )
+        from planning.backends.issues import doc_review_facade_issue_comment_scope
+
+        with doc_review_facade_issue_comment_scope():
+            posted = client.issue_comment(
+                str(issue_id),
+                body,
+                markers=["sw-doc-review"],
+                author_id=author_id,
+            )
     except IssueCommentAuthorshipMismatch as exc:
         return {
             "verdict": "fail",

@@ -656,6 +656,16 @@ class IssuesClient:
         markers: list[str] | None = None,
         author_id: str = "",
     ) -> CommentRecord:
+        from planning.backends.issues import (
+            DocReviewCommentFacadeRequired,
+            assert_adapter_issue_comment_allowed,
+        )
+
+        try:
+            assert_adapter_issue_comment_allowed(body, markers)
+        except DocReviewCommentFacadeRequired as exc:
+            raise IssueCapabilityError(str(exc)) from exc
+
         def _run() -> CommentRecord:
             kwargs: dict[str, Any] = {}
             if markers is not None:
