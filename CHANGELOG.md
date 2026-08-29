@@ -1150,6 +1150,7 @@
 * merge phase p3-workflowpackage-marketplace-specification-and-stub into feat/eval-corpus-handoff-and-platform-providers (5c05ba2) <!-- sw-deliver:p3-workflowpackage-marketplace-specification-and-stub -->
 * merge phase adopter-documentation-and-absorbed-gap-closeout into feat/eval-corpus-handoff-and-platform-providers (420a31c) <!-- sw-deliver:adopter-documentation-and-absorbed-gap-closeout -->
 * merge phase facade-only-review-surface into feat/issue-store-doc-review-transport (0e35125) <!-- sw-deliver:facade-only-review-surface -->
+* merge phase post-then-open-and-occ-versus-hash into feat/issue-store-doc-review-transport (97d99f3) <!-- sw-deliver:post-then-open-and-occ-versus-hash -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
