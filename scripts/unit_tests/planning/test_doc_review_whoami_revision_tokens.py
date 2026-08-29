@@ -20,7 +20,7 @@ from planning_doc_review_transport import (
     comment_revision_token,
     pin_from_comment,
 )
-from planning_store_facade import load_workflow_config, open_review_manifest, post_review_finding
+from planning_store_facade import load_workflow_config, post_review_finding
 from unit_tests.planning.test_doc_review_transport_bootstrap import (
     _doc_review,
     _fixture_bot,
@@ -54,12 +54,6 @@ class TestBodySha256V1:
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id)
         cfg = load_workflow_config(transport_repo)
-        assert (
-            open_review_manifest(
-                transport_repo, cfg, issue_id="887", unit_id=unit_id, round_id="round-rev"
-            )["verdict"]
-            == "ok"
-        )
         posted = post_review_finding(
             transport_repo,
             cfg,
@@ -106,12 +100,6 @@ class TestWhoamiAuthorship:
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id)
         cfg = load_workflow_config(transport_repo)
-        assert (
-            open_review_manifest(
-                transport_repo, cfg, issue_id="887", unit_id=unit_id, round_id="round-auth"
-            )["verdict"]
-            == "ok"
-        )
         payload = _sample_payload("coherence")
         payload["authorId"] = "999999"
         out = post_review_finding(

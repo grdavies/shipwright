@@ -25,7 +25,6 @@ from planning_doc_review_transport import (
 )
 from planning_store_facade import (
     load_workflow_config,
-    open_review_manifest,
     post_review_finding,
 )
 
@@ -107,17 +106,6 @@ def _sample_payload(persona: str = "coherence") -> dict:
     }
 
 
-def _open_round(repo: Path, *, unit_id: str, round_id: str, issue_id: str = "887") -> None:
-    out = open_review_manifest(
-        repo,
-        load_workflow_config(repo),
-        issue_id=issue_id,
-        unit_id=unit_id,
-        round_id=round_id,
-    )
-    assert out["verdict"] == "ok", out
-
-
 def _post(
     repo: Path,
     *,
@@ -143,7 +131,6 @@ class TestFindingsSchemaGate:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id)
-        _open_round(transport_repo, unit_id=unit_id, round_id="round-schema")
         bad: dict[str, Any] = {"reviewer": "coherence", "findings": [{"title": "nope"}]}
         out = _post(
             transport_repo,
@@ -160,7 +147,6 @@ class TestFindingsSchemaGate:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id)
-        _open_round(transport_repo, unit_id=unit_id, round_id="round-persona")
         payload = _sample_payload("coherence")
         payload["reviewer"] = "security"
         out = _post(
@@ -180,7 +166,6 @@ class TestIdempotentReplay:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id)
-        _open_round(transport_repo, unit_id=unit_id, round_id="round-replay")
         first = _post(
             transport_repo,
             unit_id=unit_id,
@@ -206,7 +191,6 @@ class TestIdempotentReplay:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id)
-        _open_round(transport_repo, unit_id=unit_id, round_id="round-order")
         payload_a = _sample_payload("coherence")
         first = _post(
             transport_repo,
@@ -251,7 +235,6 @@ class TestIdempotentReplay:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id)
-        _open_round(transport_repo, unit_id=unit_id, round_id="round-dup")
         payload = _sample_payload("coherence")
         first = _post(
             transport_repo,
@@ -304,7 +287,6 @@ class TestIdempotentReplay:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id)
-        _open_round(transport_repo, unit_id=unit_id, round_id="round-page")
         monkeypatch.setattr(transport, "comments_pagination_complete", lambda _record: False)
         out = _post(
             transport_repo,
@@ -322,7 +304,6 @@ class TestPayloadSizeBound:
         store = get_fixture_store(transport_repo)
         unit_id = "341-prd-doc-review-transport"
         _seed_issue(store, unit_id=unit_id)
-        _open_round(transport_repo, unit_id=unit_id, round_id="round-size")
         payload = _sample_payload("coherence")
         payload["findings"][0]["evidence"] = ["x" * DOC_REVIEW_COMMENT_SIZE_CAP]
         body = build_doc_review_comment_body(
