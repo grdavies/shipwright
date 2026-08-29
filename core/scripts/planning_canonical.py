@@ -34,8 +34,19 @@ SW_EDGES_FENCE = re.compile(
 )
 GENERIC_CODE_FENCE = re.compile(r"```(?:\w+)?\s*\n(.*?)\n```", re.DOTALL)
 
-EXCLUDED_COMMENT_MARKERS = frozenset({"sw-freeze-record", "sw-chunk-overflow", "sw-doc-review"})
-# PRD 061 R18 — structural/provider markers excluded from inbound authoring sync.
+EXCLUDED_COMMENT_MARKERS = frozenset(
+    {
+        "sw-freeze-record",
+        "sw-chunk-overflow",
+        "sw-doc-review",
+        "sw:doc-review",
+        "sw:doc-review-completion",
+        "sw-doc-review-completion",
+        "sw-doc-review-round",
+        "sw:doc-review-round",
+    }
+)
+# PRD 061 R18 / PRD 341 R25 — structural/provider markers excluded from inbound authoring sync.
 INBOUND_COMMENT_EXCLUDED_MARKERS = frozenset(
     {
         "sw-freeze-record",
@@ -45,11 +56,22 @@ INBOUND_COMMENT_EXCLUDED_MARKERS = frozenset(
         "sw:doc-review",
         "sw:doc-review-completion",
         "sw-doc-review-completion",
+        "sw-doc-review-round",
+        "sw:doc-review-round",
     }
 )
 FREEZE_RECORD_MARKER = "sw-freeze-record"
 DOC_REVIEW_MARKER = "sw-doc-review"
 DOC_REVIEW_COMPLETION_MARKER = "sw:doc-review-completion"
+# Body-block witness excluded from freeze hash but never deleted from the live issue (R31/D22).
+_DOC_REVIEW_ROUND_FENCE = re.compile(
+    r"<!--\s*sw[:-]doc-review-round\s*-->\s*```(?:json|sw-doc-review)?\s*\n.*?\n```\s*<!--\s*/sw[:-]doc-review-round\s*-->\s*",
+    re.DOTALL | re.IGNORECASE,
+)
+_DOC_REVIEW_ROUND_INLINE = re.compile(
+    r"<!--\s*sw[:-]doc-review-round:\s*\{.*?\}\s*-->\s*",
+    re.DOTALL | re.IGNORECASE,
+)
 FROZEN_LABEL = "sw:frozen"
 FREEZE_INCOMPLETE_LABEL = "sw:freeze-incomplete"
 FREEZE_HASH_PATTERN = re.compile(r"sw-freeze-hash:\s*([a-f0-9]{64})")
@@ -116,10 +138,16 @@ class CommentRecord:
     resolving_comment_id: str = ""
 
     def excluded_from_canonical(self) -> bool:
-        return any(m in EXCLUDED_COMMENT_MARKERS for m in self.markers) or any(
-            f"<!-- {m} -->" in self.body or f"<!--{m}-->" in self.body
-            for m in EXCLUDED_COMMENT_MARKERS
-        )
+        if any(m in EXCLUDED_COMMENT_MARKERS for m in self.markers):
+            return True
+        body = self.body or ""
+        for m in EXCLUDED_COMMENT_MARKERS:
+            if f"<!-- {m} -->" in body or f"<!--{m}-->" in body:
+                return True
+        # Colon/hyphen family open markers (PRD 341 R4/R24).
+        if re.search(r"<!--\s*sw[:-]doc-review(?:-completion|-round)?\s*-->", body, re.IGNORECASE):
+            return True
+        return False
 
 
 @dataclass
@@ -1285,8 +1313,18 @@ def canonical_comments(comments: list[CommentRecord]) -> list[dict[str, str]]:
     return [{"id": c.id, "body": normalize_body(c.body)} for c in included]
 
 
+def strip_doc_review_witness_for_hash(body: str) -> str:
+    """Exclude the live review-round witness from freeze hashing (R24/R31/D22).
+
+    Does not mutate the issue body — only the hash input is stripped.
+    """
+    text = _DOC_REVIEW_ROUND_FENCE.sub("", body or "")
+    text = _DOC_REVIEW_ROUND_INLINE.sub("", text)
+    return text
+
+
 def is_inbound_authoring_comment(comment: CommentRecord) -> bool:
-    """R18 — human/operator comments suitable for authoring/deliver consumers."""
+    """R18 / PRD 341 R25 — human/operator comments suitable for authoring/deliver consumers."""
     if comment.excluded_from_canonical():
         return False
     if any(marker in INBOUND_COMMENT_EXCLUDED_MARKERS for marker in comment.markers):
@@ -1295,6 +1333,8 @@ def is_inbound_authoring_comment(comment: CommentRecord) -> bool:
     for marker in INBOUND_COMMENT_EXCLUDED_MARKERS:
         if f"<!-- {marker}" in body or f"<!--{marker}" in body:
             return False
+    if re.search(r"<!--\s*sw[:-]doc-review(?:-completion|-round)?\s*-->", body or "", re.IGNORECASE):
+        return False
     if CHUNK_TOKEN_MARKER_PREFIX in body or "sw-chunk-manifest:" in body:
         return False
     return bool(normalize_body(body))
@@ -1309,10 +1349,12 @@ def inbound_authoring_comments(comments: list[CommentRecord]) -> list[CommentRec
 
 def canonical_form(snapshot: IssueSnapshot) -> str:
     full_body = reassemble_body(snapshot.body, snapshot.comments)
+    # Live witness remains on the issue; freeze hash excludes it (R31/D22).
+    hashed_body = strip_doc_review_witness_for_hash(full_body)
     payload = {
         "sw-canonical-version": CANONICAL_VERSION,
         "title": normalize_body(snapshot.title),
-        "body": normalize_body(full_body),
+        "body": normalize_body(hashed_body),
         "state": snapshot.state,
         "labels": sorted(snapshot.labels),
         "comments": canonical_comments(snapshot.comments),
