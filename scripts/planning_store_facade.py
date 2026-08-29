@@ -6094,10 +6094,35 @@ def _doc_review_transport_txn(
         return {"verdict": "fail", "action": verb, "error": pk.get("message") or "invalid project key"}
 
     client = IssuesClient(root, provider)
-    try:
-        author_id = client.authenticated_principal_id()
-    except Exception as exc:  # noqa: BLE001
-        return {"verdict": "fail", "action": verb, "error": "doc-review-author-unresolved", "detail": str(exc)}
+    from planning.backends.issues import (
+        assert_doc_review_authorship,
+        resolve_doc_review_author_principal,
+    )
+
+    whoami = resolve_doc_review_author_principal(client)
+    if whoami.get("verdict") != "ok":
+        whoami = dict(whoami)
+        whoami["action"] = verb
+        return whoami
+    author_id = str(whoami["authorPrincipal"])
+
+    claimed = None
+    if isinstance(payload, dict):
+        for key in ("authorId", "author", "authorPrincipal", "claimedAuthor"):
+            raw = payload.get(key)
+            if raw is not None and str(raw).strip():
+                claimed = str(raw).strip()
+                break
+    # Payload claims never prove authorship — refuse when they disagree with whoami.
+    if claimed is not None:
+        rejected = assert_doc_review_authorship(
+            expected_principal=author_id,
+            comment_author_id=author_id,
+            payload_claimed_author=claimed,
+        )
+        if rejected is not None:
+            rejected["action"] = verb
+            return rejected
 
     return execute_doc_review_txn(
         client,

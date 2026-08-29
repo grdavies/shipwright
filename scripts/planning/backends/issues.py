@@ -76,6 +76,87 @@ def doc_review_facade_issue_comment_scope() -> Iterator[None]:
         _DOC_REVIEW_FACADE_AUTHORIZED.reset(token)
 
 
+def resolve_doc_review_author_principal(client: Any) -> dict[str, Any]:
+    """Resolve whoami principal for doc-review authorship (PRD 341 R14/R15, D4).
+
+    GitHub v1 expects numeric ``user.id``. Application identity is not stable on PAT
+    paths, so ``stableApplicationId`` is false.
+    """
+    getter = getattr(client, "authenticated_principal_id", None)
+    if getter is None:
+        return {
+            "verdict": "fail",
+            "error": "doc-review-author-unresolved",
+            "detail": "whoami-unavailable",
+        }
+    try:
+        principal = str(getter() or "").strip()
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "verdict": "fail",
+            "error": "doc-review-author-unresolved",
+            "detail": str(exc),
+        }
+    if not principal:
+        return {
+            "verdict": "fail",
+            "error": "doc-review-author-unresolved",
+            "detail": "whoami-empty",
+        }
+    # Numeric GitHub ids are digits; non-empty fixture ids also accepted.
+    return {
+        "verdict": "ok",
+        "authorPrincipal": principal,
+        "stableApplicationId": False,
+    }
+
+
+def assert_doc_review_authorship(
+    *,
+    expected_principal: str,
+    comment_author_id: str,
+    payload_claimed_author: str | None = None,
+) -> dict[str, Any] | None:
+    """Fail closed when authorship is not whoami-backed (PRD 341 R14/R16).
+
+    Payload-claimed authors and broker account strings never satisfy authorship.
+    """
+    expected = str(expected_principal or "").strip()
+    actual = str(comment_author_id or "").strip()
+    claimed = str(payload_claimed_author or "").strip()
+    if claimed and claimed != expected:
+        return {
+            "verdict": "fail",
+            "error": "doc-review-authorship-rejected",
+            "detail": "payload-claimed-author",
+            "expectedPrincipal": expected,
+            "payloadClaimedAuthor": claimed,
+        }
+    if claimed and not actual:
+        return {
+            "verdict": "fail",
+            "error": "doc-review-authorship-rejected",
+            "detail": "payload-claim-without-provider-author",
+            "expectedPrincipal": expected,
+        }
+    if not expected:
+        return {
+            "verdict": "fail",
+            "error": "doc-review-authorship-rejected",
+            "detail": "expected-principal-missing",
+        }
+    if actual != expected:
+        return {
+            "verdict": "fail",
+            "error": "doc-review-authorship-rejected",
+            "detail": "whoami-mismatch",
+            "expectedPrincipal": expected,
+            "actualAuthorId": actual,
+        }
+    return None
+
+
+
 class IssueStoreBackend(PlanningStoreBackend):
     backend_id = "issue-store"
 

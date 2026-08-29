@@ -25,6 +25,8 @@ DOC_REVIEW_TRANSPORT_UNAVAILABLE = "doc-review-transport-unavailable"
 DOC_REVIEW_COMMENT_DRIFT = "doc-review-comment-drift"
 DOC_REVIEW_PIN_CONFLICT = "doc-review-pin-conflict"
 DOC_REVIEW_ROUND_MALFORMED = "doc-review-round-malformed"
+BODY_SHA256_V1_PREFIX = "body-sha256/v1:"
+DOC_REVIEW_AUTHORSHIP_REJECTED = "doc-review-authorship-rejected"
 DOC_REVIEW_PAYLOAD_TOO_LARGE = "doc-review-payload-too-large"
 DOC_REVIEW_FINDINGS_SCHEMA_INVALID = "doc-review-findings-schema-invalid"
 DOC_REVIEW_IDEMPOTENCY_AMBIGUOUS = "doc-review-idempotency-ambiguous"
@@ -128,8 +130,27 @@ def payload_hash(payload: dict[str, Any]) -> str:
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
 
+def normalize_comment_body_for_digest(body: str) -> str:
+    """Normalize comment body bytes for revision digests (PRD 341 R17/R18).
+
+    UTF-8 text with CRLF and bare CR converted to LF. No Unicode NFC and no trim.
+    """
+    return (body or "").replace("\r\n", "\n").replace("\r", "\n")
+
+
 def body_digest(body: str) -> str:
-    return hashlib.sha256((body or "").encode("utf-8")).hexdigest()
+    material = normalize_comment_body_for_digest(body).encode("utf-8")
+    return hashlib.sha256(material).hexdigest()
+
+
+def body_sha256_v1(body: str) -> str:
+    """GitHub v1 revision token — never ``updated_at`` (PRD 341 R17/R18, D5)."""
+    return f"{BODY_SHA256_V1_PREFIX}{body_digest(body)}"
+
+
+def comment_revision_token(comment: CommentRecord) -> str:
+    """Authoritative revision for doc-review pins."""
+    return body_sha256_v1(comment.body or "")
 
 
 def build_doc_review_comment_body(*, round_id: str, persona: str, payload: dict[str, Any]) -> str:
@@ -439,7 +460,7 @@ def pin_from_comment(comment: CommentRecord) -> DocReviewPin | None:
         return None
     return DocReviewPin(
         comment_id=str(comment.id),
-        revision=str(comment.revision or comment.created_at or ""),
+        revision=comment_revision_token(comment),
         author_id=str(comment.author_id or ""),
         persona=persona,
         idempotency_key=str(parsed.get("idempotencyKey") or idempotency_key(round_id, persona)),
@@ -636,9 +657,10 @@ def verify_round_integrity(
         if envelope_err is not None:
             return drift_failure(kind="malformed", commentId=comment_id, detail=envelope_err)
         expected_revision = str(row.get("revision") or "")
-        actual_revision = str(comment.revision or comment.created_at or "")
+        actual_revision = comment_revision_token(comment)
         if expected_revision and actual_revision != expected_revision:
-            return drift_failure(kind="edit", commentId=comment_id)
+            # updated_at / provider revision metadata is never authoritative for new pins.
+            return drift_failure(kind="edit", commentId=comment_id, detail="revision-token-mismatch")
         expected_digest = str(row.get("bodyDigest") or "")
         if expected_digest and body_digest(comment.body) != expected_digest:
             return drift_failure(kind="edit", commentId=comment_id)
