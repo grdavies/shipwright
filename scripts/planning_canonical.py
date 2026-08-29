@@ -37,10 +37,19 @@ GENERIC_CODE_FENCE = re.compile(r"```(?:\w+)?\s*\n(.*?)\n```", re.DOTALL)
 EXCLUDED_COMMENT_MARKERS = frozenset({"sw-freeze-record", "sw-chunk-overflow", "sw-doc-review"})
 # PRD 061 R18 — structural/provider markers excluded from inbound authoring sync.
 INBOUND_COMMENT_EXCLUDED_MARKERS = frozenset(
-    {"sw-freeze-record", "sw-chunk-overflow", "sw-memory-pointer", "sw-doc-review"}
+    {
+        "sw-freeze-record",
+        "sw-chunk-overflow",
+        "sw-memory-pointer",
+        "sw-doc-review",
+        "sw:doc-review",
+        "sw:doc-review-completion",
+        "sw-doc-review-completion",
+    }
 )
 FREEZE_RECORD_MARKER = "sw-freeze-record"
 DOC_REVIEW_MARKER = "sw-doc-review"
+DOC_REVIEW_COMPLETION_MARKER = "sw:doc-review-completion"
 FROZEN_LABEL = "sw:frozen"
 FREEZE_INCOMPLETE_LABEL = "sw:freeze-incomplete"
 FREEZE_HASH_PATTERN = re.compile(r"sw-freeze-hash:\s*([a-f0-9]{64})")

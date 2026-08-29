@@ -54,6 +54,26 @@ def _fits_label_limit(name: str) -> bool:
     return len(name) <= GITHUB_LABEL_MAX_LEN
 
 
+def merge_external_gap_promotion_labels(
+    labels: list[str],
+    *,
+    unit_id: str,
+    priority: str = "medium",
+    tier: str = "build",
+    gap_class: str = "external",
+) -> list[str]:
+    """Apply sw:gap vocabulary when promoting external intake issues (PRD 280 R6)."""
+    from planning_external_intake import gap_promotion_labels
+
+    promoted = gap_promotion_labels(
+        unit_id=unit_id,
+        priority=priority,
+        tier=tier,
+        gap_class=gap_class,
+    )
+    return sorted({name for name in set(labels) | set(promoted) if _fits_label_limit(name)})
+
+
 def _store_section(cfg: dict[str, Any]) -> dict[str, Any]:
     planning = cfg.get("planning") if isinstance(cfg.get("planning"), dict) else {}
     store = planning.get("store")
@@ -150,6 +170,9 @@ def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
         "sw-chunk-overflow",
         "sw-memory-pointer",
         DOC_REVIEW_MARKER,
+        "sw:doc-review",
+        "sw:doc-review-completion",
+        "sw-doc-review-completion",
         "lifecycle:source-removed",
     ):
         if f"<!-- {marker} -->" in body or f"<!--{marker}-->" in body:
