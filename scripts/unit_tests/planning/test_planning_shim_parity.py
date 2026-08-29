@@ -118,6 +118,14 @@ def test_monkeypatched_function_visible_through_shim(tmp_path: Path) -> None:
     canonical = shim._load_canonical()
     assert canonical.greet("x") == "hello:x"
 
+    # Isolated shim loads a stub facade into sys.modules; drop it so later shard tests
+    # import the real scripts/planning_store_facade (not the tmp_path minimal stub).
+    sys.modules.pop("planning_store_facade", None)
+    sys.modules.pop("planning_store_shim_under_test", None)
+    planning_store = sys.modules.get("planning_store")
+    if planning_store is not None and hasattr(planning_store, "_cached"):
+        planning_store._cached = None
+
 
 def test_inventory_records_cli_surface() -> None:
     inventory = build_inventory(REPO_ROOT)

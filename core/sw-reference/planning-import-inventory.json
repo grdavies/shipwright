@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "planning-import-inventory/v1",
-  "generatedAt": "2026-08-28T20:00:00Z",
+  "generatedAt": "2026-08-28T22:52:32Z",
   "generatedBy": "planning_import_inventory.py",
   "canonicalModule": "scripts/planning_store_facade.py",
   "trees": [
@@ -132,6 +132,11 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/capability_docs.py",
+          "line": 361,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/test/fixtures/planning-gitlab-demotion/harness.py",
           "line": 61,
           "kind": "attribute-access"
@@ -150,9 +155,14 @@
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
           "line": 114,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 67,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 5
+      "siteCount": 7
     },
     {
       "name": "InRepoPublicBackend",
@@ -230,12 +240,12 @@
         },
         {
           "file": "scripts/deliver_closeout.py",
-          "line": 551,
+          "line": 714,
           "kind": "import-from"
         },
         {
           "file": "scripts/deliver_closeout.py",
-          "line": 861,
+          "line": 1024,
           "kind": "import-from"
         },
         {
@@ -462,12 +472,12 @@
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1296,
+          "line": 1729,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1602,
+          "line": 1729,
           "kind": "attribute-access"
         }
       ],
@@ -524,23 +534,28 @@
       "name": "SHIPPED_ISSUES_PROVIDERS",
       "sites": [
         {
+          "file": "core/issues_lib.py",
+          "line": 572,
+          "kind": "import-from"
+        },
+        {
           "file": "core/scripts/issues_lib.py",
-          "line": 493,
+          "line": 572,
           "kind": "import-from"
         },
         {
           "file": "core/scripts/planning/providers/__init__.py",
-          "line": 111,
+          "line": 114,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/issues_lib.py",
-          "line": 493,
+          "line": 572,
           "kind": "import-from"
         },
         {
           "file": "scripts/planning/providers/__init__.py",
-          "line": 111,
+          "line": 114,
           "kind": "attribute-access"
         },
         {
@@ -555,12 +570,12 @@
         },
         {
           "file": "scripts/unit_tests/planning/test_github_provider_conformance.py",
-          "line": 66,
+          "line": 71,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/unit_tests/planning/test_github_provider_conformance.py",
-          "line": 74,
+          "line": 79,
           "kind": "attribute-access"
         },
         {
@@ -582,9 +597,19 @@
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
           "line": 138,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 68,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 99,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 12
+      "siteCount": 15
     },
     {
       "name": "SemanticStatusError",
@@ -607,22 +632,22 @@
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1136,
+          "line": 1569,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1164,
+          "line": 1597,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1442,
+          "line": 1569,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1470,
+          "line": 1597,
           "kind": "attribute-access"
         },
         {
@@ -638,22 +663,22 @@
       "sites": [
         {
           "file": "core/scripts/credentials/doctor.py",
-          "line": 370,
+          "line": 717,
           "kind": "import-from"
         },
         {
           "file": "core/scripts/init_credential_migration.py",
-          "line": 421,
+          "line": 737,
           "kind": "import-from"
         },
         {
           "file": "scripts/credentials/doctor.py",
-          "line": 370,
+          "line": 717,
           "kind": "import-from"
         },
         {
           "file": "scripts/init_credential_migration.py",
-          "line": 421,
+          "line": 737,
           "kind": "import-from"
         }
       ],
@@ -690,18 +715,23 @@
       "name": "_default_body_path",
       "sites": [
         {
+          "file": "core/scripts/domain_vocabulary.py",
+          "line": 397,
+          "kind": "import-from"
+        },
+        {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1254,
+          "line": 1687,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1327,
+          "line": 1760,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1427,
+          "line": 1860,
           "kind": "attribute-access"
         },
         {
@@ -715,18 +745,23 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/domain_vocabulary.py",
+          "line": 397,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1560,
+          "line": 1687,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1633,
+          "line": 1760,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1733,
+          "line": 1860,
           "kind": "attribute-access"
         },
         {
@@ -800,6 +835,21 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/unit_tests/planning/test_prd330_absorb_linkage.py",
+          "line": 207,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd332_absorb_linkage.py",
+          "line": 164,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd333_absorb_closeout.py",
+          "line": 164,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_put_edge_preservation.py",
           "line": 13,
           "kind": "import-from"
@@ -810,7 +860,7 @@
           "kind": "import-from"
         }
       ],
-      "siteCount": 24
+      "siteCount": 29
     },
     {
       "name": "_fail",
@@ -916,12 +966,12 @@
       "sites": [
         {
           "file": "core/scripts/credentials/doctor.py",
-          "line": 339,
+          "line": 686,
           "kind": "import-from"
         },
         {
           "file": "scripts/credentials/doctor.py",
-          "line": 339,
+          "line": 686,
           "kind": "import-from"
         },
         {
@@ -947,12 +997,12 @@
         },
         {
           "file": "scripts/deliver_closeout.py",
-          "line": 551,
+          "line": 714,
           "kind": "import-from"
         },
         {
           "file": "scripts/deliver_closeout.py",
-          "line": 861,
+          "line": 1024,
           "kind": "import-from"
         }
       ],
@@ -963,7 +1013,7 @@
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1024,
+          "line": 1442,
           "kind": "attribute-access"
         },
         {
@@ -973,7 +1023,7 @@
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1330,
+          "line": 1442,
           "kind": "attribute-access"
         },
         {
@@ -990,16 +1040,32 @@
       "siteCount": 5
     },
     {
+      "name": "_planning_store",
+      "sites": [
+        {
+          "file": "core/scripts/planning_cutover.py",
+          "line": 26,
+          "kind": "import-module"
+        },
+        {
+          "file": "scripts/planning_cutover.py",
+          "line": 26,
+          "kind": "import-module"
+        }
+      ],
+      "siteCount": 2
+    },
+    {
       "name": "_prd_number_from_unit_id",
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1326,
+          "line": 1759,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1632,
+          "line": 1759,
           "kind": "attribute-access"
         }
       ],
@@ -1374,18 +1440,28 @@
         },
         {
           "file": "core/scripts/wave_deliver_loop.py",
-          "line": 3963,
+          "line": 4248,
           "kind": "import-from"
         },
         {
           "file": "scripts/deliver_closeout.py",
-          "line": 164,
+          "line": 327,
           "kind": "import-from"
         },
         {
           "file": "scripts/unit_tests/deliver/test_prd070_selfwake.py",
           "line": 100,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/deliver/test_prd325_closeout_run_scoped.py",
+          "line": 144,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_absorb_closeout_326.py",
+          "line": 13,
+          "kind": "import-from"
         },
         {
           "file": "scripts/unit_tests/planning/test_closure_completeness.py",
@@ -1408,12 +1484,27 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/unit_tests/planning/test_prd325_absorb_closeout.py",
+          "line": 13,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 28,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd330_absorb_linkage.py",
+          "line": 14,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/wave_deliver_loop.py",
-          "line": 3963,
+          "line": 4248,
           "kind": "import-from"
         }
       ],
-      "siteCount": 9
+      "siteCount": 14
     },
     {
       "name": "authority_io_block",
@@ -1489,12 +1580,12 @@
         },
         {
           "file": "core/scripts/wave_deliver_loop.py",
-          "line": 3953,
+          "line": 4238,
           "kind": "import-from"
         },
         {
           "file": "scripts/deliver_closeout.py",
-          "line": 861,
+          "line": 1024,
           "kind": "import-from"
         },
         {
@@ -1509,7 +1600,7 @@
         },
         {
           "file": "scripts/wave_deliver_loop.py",
-          "line": 3953,
+          "line": 4238,
           "kind": "import-from"
         }
       ],
@@ -1586,9 +1677,14 @@
           "file": "scripts/context_compress.py",
           "line": 21,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/dispatch_prompt.py",
+          "line": 334,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 2
+      "siteCount": 3
     },
     {
       "name": "content_hash",
@@ -1646,6 +1742,11 @@
       "name": "discover_absorbed_units_anchored",
       "sites": [
         {
+          "file": "scripts/unit_tests/planning/test_absorb_closeout_326.py",
+          "line": 13,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_numeric_absorb_closeout.py",
           "line": 13,
           "kind": "import-from"
@@ -1664,9 +1765,39 @@
           "file": "scripts/unit_tests/planning/test_prd073_absorb_closeout.py",
           "line": 14,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd325_absorb_closeout.py",
+          "line": 13,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 28,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd330_absorb_linkage.py",
+          "line": 14,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd331_absorb_traceability.py",
+          "line": 14,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd332_absorb_linkage.py",
+          "line": 14,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd333_absorb_closeout.py",
+          "line": 14,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 4
+      "siteCount": 11
     },
     {
       "name": "doctor",
@@ -1706,7 +1837,7 @@
       "sites": [
         {
           "file": "core/scripts/wave_deliver_loop.py",
-          "line": 3963,
+          "line": 4248,
           "kind": "import-from"
         },
         {
@@ -1716,7 +1847,7 @@
         },
         {
           "file": "scripts/wave_deliver_loop.py",
-          "line": 3963,
+          "line": 4248,
           "kind": "import-from"
         }
       ],
@@ -1734,9 +1865,29 @@
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
           "line": 178,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 85,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 409,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 419,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 425,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 2
+      "siteCount": 6
     },
     {
       "name": "doctor_separate_project_local_writes",
@@ -1833,22 +1984,22 @@
       "sites": [
         {
           "file": "core/scripts/planning/identity.py",
-          "line": 166,
+          "line": 170,
           "kind": "import-from"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1140,
+          "line": 1573,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1150,
+          "line": 1583,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1154,
+          "line": 1587,
           "kind": "attribute-access"
         },
         {
@@ -1863,17 +2014,17 @@
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1446,
+          "line": 1573,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1456,
+          "line": 1583,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1460,
+          "line": 1587,
           "kind": "attribute-access"
         },
         {
@@ -1931,21 +2082,31 @@
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1306,
+          "line": 1739,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1612,
+          "line": 1739,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_absorb_closeout_326.py",
+          "line": 13,
+          "kind": "import-from"
         },
         {
           "file": "scripts/unit_tests/planning/test_numeric_absorb_closeout.py",
           "line": 13,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd325_absorb_closeout.py",
+          "line": 13,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 3
+      "siteCount": 5
     },
     {
       "name": "gate_prd_060_r1_r7",
@@ -2013,6 +2174,11 @@
           "kind": "import-from"
         },
         {
+          "file": "core/scripts/domain_vocabulary.py",
+          "line": 26,
+          "kind": "import-from"
+        },
+        {
           "file": "core/scripts/memory_decision_snapshot.py",
           "line": 232,
           "kind": "import-from"
@@ -2029,17 +2195,17 @@
         },
         {
           "file": "core/scripts/planning_deliver_gate.py",
-          "line": 265,
+          "line": 277,
           "kind": "import-from"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 293,
+          "line": 296,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1354,
+          "line": 1787,
           "kind": "attribute-access"
         },
         {
@@ -2109,12 +2275,12 @@
         },
         {
           "file": "scripts/deliver_closeout.py",
-          "line": 551,
+          "line": 714,
           "kind": "import-from"
         },
         {
           "file": "scripts/deliver_closeout.py",
-          "line": 861,
+          "line": 1024,
           "kind": "import-from"
         },
         {
@@ -2130,6 +2296,11 @@
         {
           "file": "scripts/doc_loop.py",
           "line": 522,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/domain_vocabulary.py",
+          "line": 26,
           "kind": "import-from"
         },
         {
@@ -2149,7 +2320,7 @@
         },
         {
           "file": "scripts/planning_deliver_gate.py",
-          "line": 265,
+          "line": 281,
           "kind": "import-from"
         },
         {
@@ -2159,7 +2330,7 @@
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1660,
+          "line": 1787,
           "kind": "attribute-access"
         },
         {
@@ -2333,11 +2504,6 @@
           "kind": "import-from"
         },
         {
-          "file": "scripts/unit_tests/planning/test_doctor_absorb_pollution_scoped.py",
-          "line": 81,
-          "kind": "attribute-access"
-        },
-        {
           "file": "scripts/unit_tests/planning/test_planning_backend_adapters.py",
           "line": 109,
           "kind": "attribute-access"
@@ -2363,12 +2529,32 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/unit_tests/planning/test_prd330_absorb_linkage.py",
+          "line": 207,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd332_absorb_linkage.py",
+          "line": 164,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd333_absorb_closeout.py",
+          "line": 164,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_workflow_extensions_doc_handoff.py",
+          "line": 20,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/wave_living_docs.py",
           "line": 292,
           "kind": "import-from"
         }
       ],
-      "siteCount": 78
+      "siteCount": 83
     },
     {
       "name": "git_root",
@@ -2539,9 +2725,14 @@
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
           "line": 224,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 404,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 5
+      "siteCount": 6
     },
     {
       "name": "issue_store_private_enough",
@@ -2593,9 +2784,14 @@
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
           "line": 98,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 72,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 1
+      "siteCount": 2
     },
     {
       "name": "issues_section",
@@ -2757,7 +2953,7 @@
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 320,
+          "line": 323,
           "kind": "attribute-access"
         },
         {
@@ -2885,22 +3081,42 @@
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 254,
+          "line": 257,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1325,
+          "line": 876,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1598,
+          "line": 1758,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1674,
+          "line": 2031,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_gap_capture.py",
+          "line": 2107,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_gap_capture.py",
+          "line": 2180,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_gap_capture.py",
+          "line": 2260,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_gap_capture.py",
+          "line": 2326,
           "kind": "attribute-access"
         },
         {
@@ -2965,22 +3181,52 @@
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 764,
+          "line": 876,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1631,
+          "line": 1758,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1904,
+          "line": 2031,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1980,
+          "line": 2107,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2180,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2260,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2326,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2403,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2479,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2571,
           "kind": "attribute-access"
         },
         {
@@ -3079,7 +3325,7 @@
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 45
+      "siteCount": 55
     },
     {
       "name": "materialize_from_store",
@@ -3223,6 +3469,17 @@
       "siteCount": 1
     },
     {
+      "name": "notion_projection_schema_contract",
+      "sites": [
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 285,
+          "kind": "attribute-access"
+        }
+      ],
+      "siteCount": 1
+    },
+    {
       "name": "operator_projection_adapter_complete_claim",
       "sites": [
         {
@@ -3285,9 +3542,14 @@
           "file": "scripts/unit_tests/planning/test_prd066_operator_projection_contract.py",
           "line": 174,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 290,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 6
+      "siteCount": 7
     },
     {
       "name": "operator_projection_contract",
@@ -3346,12 +3608,12 @@
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1290,
+          "line": 1723,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1596,
+          "line": 1723,
           "kind": "attribute-access"
         }
       ],
@@ -3576,6 +3838,17 @@
       "siteCount": 2
     },
     {
+      "name": "project_graph_to_notion_layout",
+      "sites": [
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 297,
+          "kind": "attribute-access"
+        }
+      ],
+      "siteCount": 1
+    },
+    {
       "name": "projection_is_dirty",
       "sites": [
         {
@@ -3659,6 +3932,11 @@
       "name": "ps",
       "sites": [
         {
+          "file": "core/planning/backends/issues.py",
+          "line": 29,
+          "kind": "import-module"
+        },
+        {
           "file": "core/scripts/nightly-failure-notify.py",
           "line": 182,
           "kind": "import-module"
@@ -3700,7 +3978,7 @@
         },
         {
           "file": "core/scripts/planning/providers/__init__.py",
-          "line": 100,
+          "line": 103,
           "kind": "import-module"
         },
         {
@@ -3810,7 +4088,7 @@
         },
         {
           "file": "scripts/planning/backends/issues.py",
-          "line": 24,
+          "line": 29,
           "kind": "import-module"
         },
         {
@@ -3820,7 +4098,7 @@
         },
         {
           "file": "scripts/planning/providers/__init__.py",
-          "line": 100,
+          "line": 103,
           "kind": "import-module"
         },
         {
@@ -4099,6 +4377,11 @@
           "kind": "import-module"
         },
         {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 24,
+          "kind": "import-module"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_remaining_transport_broker.py",
           "line": 16,
           "kind": "import-module"
@@ -4124,7 +4407,7 @@
           "kind": "import-module"
         }
       ],
-      "siteCount": 93
+      "siteCount": 95
     },
     {
       "name": "put",
@@ -4136,12 +4419,12 @@
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 296,
+          "line": 299,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/docs_worktree.py",
-          "line": 64,
+          "line": 114,
           "kind": "attribute-access"
         },
         {
@@ -4180,6 +4463,51 @@
     {
       "name": "py",
       "sites": [
+        {
+          "file": "core/planning_store_facade.py",
+          "line": 1655,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/planning_store_facade.py",
+          "line": 3147,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/planning_store_facade.py",
+          "line": 3355,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/planning_store_facade.py",
+          "line": 3393,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/planning_store_facade.py",
+          "line": 3541,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/planning_store_facade.py",
+          "line": 3699,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/planning_store_facade.py",
+          "line": 3893,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/planning_store_facade.py",
+          "line": 4748,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/planning_store_facade.py",
+          "line": 4776,
+          "kind": "attribute-access"
+        },
         {
           "file": "core/scripts/build_zipapp.py",
           "line": 33,
@@ -4277,52 +4605,52 @@
         },
         {
           "file": "core/scripts/planning_store_facade.py",
-          "line": 1587,
+          "line": 1638,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_store_facade.py",
-          "line": 2828,
+          "line": 3053,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_store_facade.py",
-          "line": 3036,
+          "line": 3261,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_store_facade.py",
-          "line": 3074,
+          "line": 3299,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_store_facade.py",
-          "line": 3173,
+          "line": 3398,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_store_facade.py",
-          "line": 3320,
+          "line": 3545,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_store_facade.py",
-          "line": 3514,
+          "line": 3739,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_store_facade.py",
-          "line": 4292,
+          "line": 4553,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_store_facade.py",
-          "line": 4320,
+          "line": 4581,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/wave_deliver_loop.py",
-          "line": 3971,
+          "line": 4256,
           "kind": "attribute-access"
         },
         {
@@ -4536,6 +4864,11 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/unit_tests/planning/test_doc_review_transport_bootstrap.py",
+          "line": 1476,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_planning_cli_parity.py",
           "line": 17,
           "kind": "attribute-access"
@@ -4587,11 +4920,11 @@
         },
         {
           "file": "scripts/wave_deliver_loop.py",
-          "line": 3971,
+          "line": 4256,
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 82
+      "siteCount": 92
     },
     {
       "name": "read_issue_unit_index_locked",
@@ -4648,9 +4981,14 @@
           "file": "scripts/context_compress.py",
           "line": 21,
           "kind": "import-from"
+        },
+        {
+          "file": "scripts/dispatch_prompt.py",
+          "line": 334,
+          "kind": "import-from"
         }
       ],
-      "siteCount": 2
+      "siteCount": 3
     },
     {
       "name": "refuse_banned_living_doc_write",
@@ -4662,7 +5000,7 @@
         },
         {
           "file": "scripts/reconcile_lib.py",
-          "line": 224,
+          "line": 237,
           "kind": "import-from"
         }
       ],
@@ -4818,28 +5156,78 @@
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1599,
+          "line": 2032,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1675,
+          "line": 2108,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_gap_capture.py",
+          "line": 2181,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_gap_capture.py",
+          "line": 2261,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "core/scripts/planning_gap_capture.py",
+          "line": 2327,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/deliver_closeout.py",
-          "line": 861,
+          "line": 1024,
           "kind": "import-from"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1905,
+          "line": 2032,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1981,
+          "line": 2108,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2181,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2261,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2327,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2404,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2480,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/planning_gap_capture.py",
+          "line": 2572,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_absorb_closeout_326.py",
+          "line": 13,
+          "kind": "import-from"
         },
         {
           "file": "scripts/unit_tests/planning/test_closeout_gap_only_discovery.py",
@@ -4887,12 +5275,42 @@
           "kind": "import-from"
         },
         {
+          "file": "scripts/unit_tests/planning/test_prd325_absorb_closeout.py",
+          "line": 13,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 28,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd330_absorb_linkage.py",
+          "line": 14,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd332_absorb_linkage.py",
+          "line": 14,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd333_absorb_closeout.py",
+          "line": 14,
+          "kind": "import-from"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_resolve_gap_provider_errors.py",
+          "line": 13,
+          "kind": "import-from"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_short_gap_absorb_expand.py",
           "line": 13,
           "kind": "import-from"
         }
       ],
-      "siteCount": 16
+      "siteCount": 32
     },
     {
       "name": "resolve_effective_backend",
@@ -4918,13 +5336,8 @@
           "kind": "import-from"
         },
         {
-          "file": "core/scripts/planning_cutover.py",
-          "line": 26,
-          "kind": "import-from"
-        },
-        {
           "file": "core/scripts/planning_deliver_gate.py",
-          "line": 199,
+          "line": 211,
           "kind": "import-from"
         },
         {
@@ -5013,13 +5426,8 @@
           "kind": "import-from"
         },
         {
-          "file": "scripts/planning_cutover.py",
-          "line": 26,
-          "kind": "import-from"
-        },
-        {
           "file": "scripts/planning_deliver_gate.py",
-          "line": 199,
+          "line": 215,
           "kind": "import-from"
         },
         {
@@ -5076,6 +5484,11 @@
           "file": "scripts/planning_visibility.py",
           "line": 448,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/publish_surface_audit.py",
+          "line": 89,
+          "kind": "import-from"
         },
         {
           "file": "scripts/spec_union_056.py",
@@ -5208,6 +5621,11 @@
           "kind": "attribute-access"
         },
         {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 405,
+          "kind": "attribute-access"
+        },
+        {
           "file": "scripts/unit_tests/planning/test_resolve_backend_authority.py",
           "line": 58,
           "kind": "attribute-access"
@@ -5244,13 +5662,18 @@
       "name": "resolve_issues_credential",
       "sites": [
         {
+          "file": "core/issues_lib.py",
+          "line": 566,
+          "kind": "import-from"
+        },
+        {
           "file": "core/scripts/closeout_ci.py",
           "line": 137,
           "kind": "import-from"
         },
         {
           "file": "core/scripts/issues_lib.py",
-          "line": 487,
+          "line": 566,
           "kind": "import-from"
         },
         {
@@ -5265,7 +5688,7 @@
         },
         {
           "file": "core/scripts/planning_github_client.py",
-          "line": 226,
+          "line": 241,
           "kind": "import-from"
         },
         {
@@ -5300,7 +5723,7 @@
         },
         {
           "file": "scripts/issues_lib.py",
-          "line": 487,
+          "line": 566,
           "kind": "import-from"
         },
         {
@@ -5315,7 +5738,7 @@
         },
         {
           "file": "scripts/planning_github_client.py",
-          "line": 226,
+          "line": 261,
           "kind": "import-from"
         },
         {
@@ -5354,24 +5777,24 @@
           "kind": "attribute-access"
         }
       ],
-      "siteCount": 22
+      "siteCount": 23
     },
     {
       "name": "resolve_issues_provider",
       "sites": [
         {
           "file": "core/scripts/credentials/doctor.py",
-          "line": 339,
+          "line": 686,
           "kind": "import-from"
         },
         {
           "file": "core/scripts/credentials/doctor.py",
-          "line": 370,
+          "line": 717,
           "kind": "import-from"
         },
         {
           "file": "core/scripts/init_credential_migration.py",
-          "line": 421,
+          "line": 737,
           "kind": "import-from"
         },
         {
@@ -5381,7 +5804,7 @@
         },
         {
           "file": "core/scripts/planning/providers/__init__.py",
-          "line": 102,
+          "line": 105,
           "kind": "attribute-access"
         },
         {
@@ -5396,17 +5819,17 @@
         },
         {
           "file": "scripts/credentials/doctor.py",
-          "line": 339,
+          "line": 686,
           "kind": "import-from"
         },
         {
           "file": "scripts/credentials/doctor.py",
-          "line": 370,
+          "line": 717,
           "kind": "import-from"
         },
         {
           "file": "scripts/init_credential_migration.py",
-          "line": 421,
+          "line": 737,
           "kind": "import-from"
         },
         {
@@ -5416,7 +5839,7 @@
         },
         {
           "file": "scripts/planning/providers/__init__.py",
-          "line": 102,
+          "line": 105,
           "kind": "attribute-access"
         },
         {
@@ -5458,16 +5881,31 @@
           "file": "scripts/unit_tests/planning/test_prd066_registration_nonregression.py",
           "line": 221,
           "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 400,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 416,
+          "kind": "attribute-access"
+        },
+        {
+          "file": "scripts/unit_tests/planning/test_prd327_provider_registration.py",
+          "line": 423,
+          "kind": "attribute-access"
         }
       ],
-      "siteCount": 20
+      "siteCount": 23
     },
     {
       "name": "resolve_issues_token_env",
       "sites": [
         {
           "file": "core/scripts/planning/providers/__init__.py",
-          "line": 118,
+          "line": 121,
           "kind": "attribute-access"
         },
         {
@@ -5482,7 +5920,7 @@
         },
         {
           "file": "scripts/planning/providers/__init__.py",
-          "line": 118,
+          "line": 121,
           "kind": "attribute-access"
         },
         {
@@ -5534,22 +5972,22 @@
       "sites": [
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1293,
+          "line": 1726,
           "kind": "attribute-access"
         },
         {
           "file": "core/scripts/planning_gap_capture.py",
-          "line": 1440,
+          "line": 1873,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1599,
+          "line": 1726,
           "kind": "attribute-access"
         },
         {
           "file": "scripts/planning_gap_capture.py",
-          "line": 1746,
+          "line": 1873,
           "kind": "attribute-access"
         }
       ],
@@ -5575,7 +6013,7 @@
         },
         {
           "file": "core/scripts/planning_github_client.py",
-          "line": 67,
+          "line": 69,
           "kind": "import-from"
         },
         {
@@ -5590,7 +6028,7 @@
         },
         {
           "file": "scripts/docs_worktree.py",
-          "line": 44,
+          "line": 94,
           "kind": "import-from"
         },
         {
@@ -5605,7 +6043,7 @@
         },
         {
           "file": "scripts/planning_github_client.py",
-          "line": 67,
+          "line": 89,
           "kind": "import-from"
         },
         {
@@ -5794,7 +6232,7 @@
         },
         {
           "file": "scripts/docs_worktree.py",
-          "line": 44,
+          "line": 94,
           "kind": "import-from"
         },
         {
@@ -5981,7 +6419,7 @@
       "siteCount": 1
     }
   ],
-  "symbolCount": 158,
+  "symbolCount": 161,
   "cli": {
     "subcommands": [
       "bitbucket-issue-store-guidance",
@@ -5990,9 +6428,11 @@
       "clear-issue-fixture",
       "close-delivery-units",
       "comments-relations-schema",
-      "doc-review-txn",
+      "complete-review-round",
       "doctor",
       "exists",
+      "external-intake-pipeline",
+      "external-intake-txn",
       "freeze",
       "get",
       "issues-provider-registration",
@@ -6007,13 +6447,16 @@
       "materialize",
       "materialize-from-store",
       "migrate-orphan-phase-issues",
+      "open-review-manifest",
       "operator-projection-contract",
+      "post-review-finding",
       "probe-issues-token",
       "probe-jira-init",
       "probe-projection",
       "progress-update",
       "projection-refresh",
       "put",
+      "read-review-manifest",
       "resolve-absorbed-gaps-061",
       "resolve-backend",
       "resolve-issues",
@@ -6022,6 +6465,7 @@
       "validate-project-key",
       "verify-absorb-linkage-066",
       "verify-frozen-hash",
+      "verify-review-manifest",
       "write-back-gap-prereqs"
     ],
     "flags": [
@@ -6032,12 +6476,15 @@
       "--body-path",
       "--brainstorm-unit",
       "--checked-phase-ids",
+      "--comment",
       "--content",
       "--content-class",
       "--dest",
       "--dry-run",
+      "--duplicate",
       "--fixture",
       "--force",
+      "--gap-class",
       "--gap-unit-id",
       "--issue-id",
       "--no-distill",
@@ -6049,15 +6496,20 @@
       "--planning-issue",
       "--prd-unit",
       "--prd-unit-id",
+      "--priority",
       "--project-key",
       "--provider",
       "--register",
       "--resync",
       "--root",
       "--round-id",
+      "--signal-class",
+      "--signal-id",
       "--task-list",
       "--task-ref",
       "--tasks-unit-id",
+      "--tier",
+      "--title",
       "--unit-id",
       "--units-file",
       "--units-json",
