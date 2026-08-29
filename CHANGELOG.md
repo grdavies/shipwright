@@ -1154,6 +1154,7 @@
 * merge phase verify-and-drift into feat/issue-store-doc-review-transport (7438ee3) <!-- sw-deliver:verify-and-drift -->
 * merge phase complete-and-receipt into feat/issue-store-doc-review-transport (475d9df) <!-- sw-deliver:complete-and-receipt -->
 * merge phase freeze-hash-exclusion-and-channel-isolation into feat/issue-store-doc-review-transport (c2bcf84) <!-- sw-deliver:freeze-hash-exclusion-and-channel-isolation -->
+* merge phase capabilities-credentials-and-budget into feat/issue-store-doc-review-transport (98fc779) <!-- sw-deliver:capabilities-credentials-and-budget -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
