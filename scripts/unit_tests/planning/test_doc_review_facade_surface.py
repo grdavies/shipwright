@@ -133,7 +133,12 @@ class TestAdapterIssueCommentGuard:
             unit_id=unit_id,
             round_id="round-facade",
             persona="coherence",
-            payload={"findings": [], "residual_risks": [], "deferred_questions": []},
+            payload={
+                "reviewer": "coherence",
+                "findings": [],
+                "residual_risks": [],
+                "deferred_questions": [],
+            },
         )
         assert posted["verdict"] == "ok"
         assert posted.get("facadeOperation") == "post_review_finding"
