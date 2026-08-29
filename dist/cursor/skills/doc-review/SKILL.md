@@ -20,22 +20,31 @@ Multi-persona review for PRDs and decision records. Pattern borrowed from compou
 
 **Model tier:** inherit — runtime parent floor (R9); `resolve-model-tier.py --skill doc-review` returns inherit with `modelId: null`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
 
-## Transport (PRD 045 R24/R69)
+## Transport (PRD 045 R24/R69; PRD 341 R33)
 
 | `planning.store.backend` | Findings transport |
 | --- | --- |
-| `issue-store` | Marker-delimited `sw-doc-review` comments on the PRD artifact issue (GitHub issue-store bootstrap; PRD 341) |
-| default (file-store) | In-IDE parallel sub-agent panel + JSON synthesis (unchanged) |
+| `issue-store` | Facade review-round ops (`post` → `open` → `verify` → `complete`) via marker-delimited `sw-doc-review` comments (GitHub; PRD 341) |
+| default (file-store) | In-IDE parallel sub-agent panel + JSON synthesis |
 
-Under issue-store, persona selection and dispatch binding are identical to file-store; only the **transport**
-changes. Human review feedback uses a separate comment channel (no `sw-doc-review` marker).
+Under issue-store, persona **selection** and **dispatch binding** are identical to file-store; only the
+**transport** changes. Human review feedback uses a separate comment channel (no `sw-doc-review` marker).
 
-**Provider gate:** `doc-review-txn` is **GitHub issue-store only** today. Jira, Linear, Notion, file-store, and
-other backends return `doc-review-transport-unavailable` — halt; do not fall back to in-IDE transport.
+### File-store byte-identical path (R33)
 
-**Bootstrap scope (PRD 341):** this is the approved temporary GitHub issue-store transport API. Provider-side
-immutable manifest comments and completion receipts remain **frozen-PRD reconciliation work** — do not extend
-this bootstrap slice to full PRD 341 without an explicit planning handoff.
+When the effective backend is **not** `issue-store`, document review must keep the existing in-IDE persona
+JSON transport with **byte-identical** selection, dispatch, synthesis, bounded-loop, and autofix behavior.
+PRD 341 issue-store facade work must not alter file-store goldens, selector outputs for identical
+`signal_context`, or the file-store procedure below. Regression lock:
+`scripts/unit_tests/doc/test_doc_loop_state.py` (persona-selection + findings-schema hashes).
+
+**Provider gate:** issue-store review transport is **GitHub issue-store only** today. Jira, Linear, Notion,
+file-store, and other backends return `doc-review-provider-unsupported` / transport refusal — halt; do not
+fall back to in-IDE transport from an issue-store session, and do not route file-store reviews through the
+GitHub facade.
+
+**IDE fallback:** when `backend != issue-store`, the procedure under **Selection** / parallel panel + JSON
+synthesis is the sole transport — byte-identical to the pre-341 file-store path.
 
 ### Issue-store transport (`sw-doc-review` marker)
 
@@ -97,9 +106,6 @@ python3 scripts/planning_store.py doc-review-txn \
 ```
 
 8. Apply `safe_auto` / gate `gated_auto` / `manual` identically to file-store synthesis.
-
-**IDE fallback:** when `backend != issue-store`, the procedure below (parallel panel + JSON synthesis) is the
-sole transport — byte-identical behavior to pre-045.
 
 ## Doc types
 
