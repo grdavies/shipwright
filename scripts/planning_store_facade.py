@@ -6075,6 +6075,47 @@ def doc_review_txn(
     return {"verdict": "fail", "action": verb, "error": "unknown-doc-review-verb", "verb": verb}
 
 
+class _DocReviewBudgetClient:
+    """Charge ``document-review`` on each listing/revalidation ``issue_get`` (R40/D8)."""
+
+    def __init__(self, client: Any, ledger: Any) -> None:
+        self._client = client
+        self._ledger = ledger
+        self._list_pages = 0
+        self.last_budget_failure: dict[str, Any] | None = None
+
+    def issue_get(self, issue_id: str) -> Any:
+        from planning_doc_review_transport import (
+            DOC_REVIEW_BUDGET_OPERATION,
+            budget_exhausted_failure,
+        )
+        from planning_request_budget import BudgetExhausted
+
+        self._list_pages += 1
+        depth = int(getattr(self._ledger, "max_pagination_depth", 0) or 0)
+        if depth and self._list_pages > depth:
+            self.last_budget_failure = budget_exhausted_failure(
+                detail="pagination-depth",
+                pages=self._list_pages,
+                maxPaginationDepth=depth,
+            )
+            raise BudgetExhausted("doc-review pagination depth exhausted")
+        try:
+            # Listing/revalidation always charge the dedicated class (critical = within facade txn).
+            self._ledger.charge(DOC_REVIEW_BUDGET_OPERATION, critical=True)
+        except BudgetExhausted as exc:
+            self.last_budget_failure = budget_exhausted_failure(
+                detail=str(exc),
+                pages=self._list_pages,
+                maxCalls=getattr(self._ledger, "max_calls", None),
+            )
+            raise
+        return self._client.issue_get(issue_id)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._client, name)
+
+
 def _doc_review_transport_txn(
     root: Path,
     cfg: dict[str, Any],
@@ -6089,10 +6130,24 @@ def _doc_review_transport_txn(
     ordered_comment_ids: list[str] | None = None,
     manifest_idempotency_key: str | None = None,
     body_path: str | None = None,
+    authorize_from_cache: bool = False,
 ) -> dict[str, Any]:
     """Issue-store doc-review transport verbs (facade-internal)."""
     if verb not in TXN_VERBS:
         return {"verdict": "fail", "action": verb, "error": "unknown-doc-review-verb", "verb": verb}
+
+    # Cache cannot authorize open or complete (R40/D8).
+    if authorize_from_cache and verb in {
+        "doc-review-round-open",
+        "doc-review-round-close",
+        "doc-review-round-verify",
+    }:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": "doc-review-cache-not-authoritative",
+            "verb": verb,
+        }
 
     effective = resolve_effective_backend(root, cfg)
     provider = str(resolve_issues_provider(cfg).get("provider") or "none")
@@ -6108,13 +6163,39 @@ def _doc_review_transport_txn(
     if pk.get("verdict") != "ok":
         return {"verdict": "fail", "action": verb, "error": pk.get("message") or "invalid project key"}
 
+    # R3 — credentials only through resolver/broker (never ambient env / selector body).
+    fixture_mode = (os.environ.get("SW_ISSUES_FIXTURE") or "").strip() == "1"
+    if not fixture_mode:
+        from credentials.model import ResolutionState
+
+        resolution = resolve_issues_credential(root, issues_provider=provider, cfg=cfg)
+        if resolution.state is ResolutionState.UNRESOLVED:
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": "doc-review-credentials-unresolved",
+                "reason": resolution.reason or "unresolved",
+            }
+        if str(resolution.ref).startswith("tokenEnv:"):
+            # tokenEnv alias is resolver-mediated but still ambient — refuse for doc-review (R3).
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": "doc-review-credentials-ambient-refused",
+                "reason": "credentialRef-required",
+            }
+
     client = IssuesClient(root, provider)
     from planning.backends.issues import (
         assert_doc_review_authorship,
         resolve_doc_review_author_principal,
     )
+    from planning_request_budget import BudgetExhausted, RequestBudgetLedger
 
-    whoami = resolve_doc_review_author_principal(client)
+    ledger = RequestBudgetLedger.from_config(root, provider)
+    budget_client = _DocReviewBudgetClient(client, ledger)
+
+    whoami = resolve_doc_review_author_principal(budget_client)
     if whoami.get("verdict") != "ok":
         whoami = dict(whoami)
         whoami["action"] = verb
@@ -6139,20 +6220,30 @@ def _doc_review_transport_txn(
             rejected["action"] = verb
             return rejected
 
-    return execute_doc_review_txn(
-        client,
-        verb=verb,
-        issue_id=str(issue_id),
-        unit_id=unit_id,
-        round_id=round_id,
-        persona=persona,
-        payload=payload,
-        dry_run=dry_run,
-        author_id=author_id,
-        ordered_comment_ids=ordered_comment_ids,
-        manifest_idempotency_key=manifest_idempotency_key,
-        body_path=body_path,
-    )
+    try:
+        return execute_doc_review_txn(
+            budget_client,
+            verb=verb,
+            issue_id=str(issue_id),
+            unit_id=unit_id,
+            round_id=round_id,
+            persona=persona,
+            payload=payload,
+            dry_run=dry_run,
+            author_id=author_id,
+            ordered_comment_ids=ordered_comment_ids,
+            manifest_idempotency_key=manifest_idempotency_key,
+            body_path=body_path,
+        )
+    except BudgetExhausted:
+        failure = budget_client.last_budget_failure or {
+            "verdict": "fail",
+            "error": "doc-review-budget-exhausted",
+            "budgetClass": "document-review",
+        }
+        failure = dict(failure)
+        failure["action"] = verb
+        return failure
 
 
 def resolve_absorbed_gaps_061(

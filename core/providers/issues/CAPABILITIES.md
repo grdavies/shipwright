@@ -228,7 +228,28 @@ adapter spec documented (`core/providers/issues/notion.md` R12).
 | `notion` | `notion` |
 
 Override per-provider budgets via `planning.store.requestBudget.<provider>` (request count +
-complexity for Linear).
+complexity for Linear). Document-review listing/revalidation charges class `document-review`
+under the same ledger (PRD 341 R40).
+
+## Document-review capability floor (PRD 341 R3 / R27 / D6)
+
+Issue-store document review obtains credentials **only** through `credentials.resolver` /
+`credentials.send_path` (broker). Ambient env vars, selector bodies, and config-embedded tokens
+are refused on the doc-review facade path.
+
+Providers advertise a structured `docReviewComments` record. Mandatory fields: `post`,
+`stableIds`, `verifiableAuthorPrincipal`, `completeFullBody`, `completePagination`.
+`nativeRevision` is optional when complete bodies support fallback hashing; `stableApplicationId`
+is optional when the provider lacks a stable app identity.
+
+| Provider | `docReviewComments` | Notes |
+| --- | --- | --- |
+| `github-issues` | advertised after conformance suite | `stableApplicationId: false`, `nativeRevision: false`; body-hash revision tokens |
+| fixture (`SW_ISSUES_FIXTURE`) | same floor as github-issues | Shared provider-conformance cases (R30) |
+| `gitlab-issues`, `jira`, `linear`, `notion` | unsupported | Preflight → `doc-review-provider-unsupported` before any persona write (R28) |
+
+Missing any mandatory capability fails closed with `doc-review-provider-unsupported` and the
+missing capability names — no partial write.
 
 ### Capability index entries (R16)
 

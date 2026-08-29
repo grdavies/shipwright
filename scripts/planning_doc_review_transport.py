@@ -22,6 +22,8 @@ from planning_canonical import (
 )
 
 DOC_REVIEW_TRANSPORT_UNAVAILABLE = "doc-review-transport-unavailable"
+DOC_REVIEW_PROVIDER_UNSUPPORTED = "doc-review-provider-unsupported"
+DOC_REVIEW_BUDGET_EXHAUSTED = "doc-review-budget-exhausted"
 DOC_REVIEW_COMMENT_DRIFT = "doc-review-comment-drift"
 DOC_REVIEW_BODY_DRIFT = "doc-review-body-drift"
 DOC_REVIEW_PIN_CONFLICT = "doc-review-pin-conflict"
@@ -37,6 +39,30 @@ DOC_REVIEW_MANIFEST_CONFLICT = "doc-review-manifest-conflict"
 DOC_REVIEW_MANIFEST_API_VERSION = "shipwright.dev/doc-review-manifest/v1"
 DOC_REVIEW_COMPLETION_API_VERSION = "shipwright.dev/doc-review-completion/v1"
 DOC_REVIEW_COMPLETION_MARKER = "sw:doc-review-completion"
+DOC_REVIEW_BUDGET_OPERATION = "document-review"
+
+# Mandatory docReviewComments fields (PRD 341 R27). Optional: nativeRevision, stableApplicationId.
+DOC_REVIEW_MANDATORY_CAPABILITIES = (
+    "post",
+    "stableIds",
+    "verifiableAuthorPrincipal",
+    "completeFullBody",
+    "completePagination",
+)
+
+# Adapter-owned capability floor. github-issues + fixture advertise after conformance (R27/R30).
+# Other providers default unsupported until individually enabled (R28/D6).
+DOC_REVIEW_CAPABILITIES_BY_PROVIDER: dict[str, dict[str, bool]] = {
+    "github-issues": {
+        "post": True,
+        "stableIds": True,
+        "verifiableAuthorPrincipal": True,
+        "stableApplicationId": False,
+        "nativeRevision": False,
+        "completeFullBody": True,
+        "completePagination": True,
+    },
+}
 
 # GitHub issue comment body hard cap (characters). Provider-neutral facade uses this as the
 # default size bound for findings comments (PRD 341 R39).
@@ -864,11 +890,63 @@ def drift_failure(*, kind: str, detail: str = "", **extra: Any) -> dict[str, Any
     return out
 
 
+def doc_review_capabilities_for(provider: str) -> dict[str, bool]:
+    """Return adapter-owned ``docReviewComments`` record (defaults all false)."""
+    declared = DOC_REVIEW_CAPABILITIES_BY_PROVIDER.get(provider)
+    if isinstance(declared, dict):
+        return {
+            "post": bool(declared.get("post")),
+            "stableIds": bool(declared.get("stableIds")),
+            "verifiableAuthorPrincipal": bool(declared.get("verifiableAuthorPrincipal")),
+            "stableApplicationId": bool(declared.get("stableApplicationId")),
+            "nativeRevision": bool(declared.get("nativeRevision")),
+            "completeFullBody": bool(declared.get("completeFullBody")),
+            "completePagination": bool(declared.get("completePagination")),
+        }
+    return {name: False for name in (*DOC_REVIEW_MANDATORY_CAPABILITIES, "stableApplicationId", "nativeRevision")}
+
+
+def missing_doc_review_capabilities(provider: str) -> list[str]:
+    caps = doc_review_capabilities_for(provider)
+    missing = [name for name in DOC_REVIEW_MANDATORY_CAPABILITIES if not caps.get(name)]
+    # nativeRevision optional only when completeFullBody supports fallback hashing.
+    if not caps.get("nativeRevision") and not caps.get("completeFullBody"):
+        if "completeFullBody" not in missing:
+            missing.append("nativeRevision-or-completeFullBody")
+    return missing
+
+
+def provider_unsupported(*, provider: str, missing: list[str] | None = None) -> dict[str, Any]:
+    """Typed preflight refusal before any persona write (R28)."""
+    names = list(missing) if missing is not None else missing_doc_review_capabilities(provider)
+    return {
+        "verdict": "fail",
+        "error": DOC_REVIEW_PROVIDER_UNSUPPORTED,
+        "provider": provider,
+        "missingCapabilities": names,
+        "docReviewComments": doc_review_capabilities_for(provider),
+    }
+
+
+def budget_exhausted_failure(*, detail: str = "", **extra: Any) -> dict[str, Any]:
+    """Typed budget/pagination-depth exhaustion (R40) — never silent."""
+    out: dict[str, Any] = {
+        "verdict": "fail",
+        "error": DOC_REVIEW_BUDGET_EXHAUSTED,
+        "budgetClass": DOC_REVIEW_BUDGET_OPERATION,
+    }
+    if detail:
+        out["detail"] = detail
+    out.update(extra)
+    return out
+
+
 def require_github_issue_store(*, effective: dict[str, Any], provider: str) -> dict[str, Any] | None:
     if effective.get("configured") != "issue-store":
         return transport_unavailable(reason="issue-store-required")
-    if provider != "github-issues":
-        return transport_unavailable(reason=f"unsupported-issues-provider:{provider}")
+    missing = missing_doc_review_capabilities(provider)
+    if missing:
+        return provider_unsupported(provider=provider, missing=missing)
     return None
 
 
