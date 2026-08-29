@@ -38,8 +38,10 @@ DOC_REVIEW_UNPINNED_FINDINGS = "doc-review-unpinned-findings"
 DOC_REVIEW_MANIFEST_CONFLICT = "doc-review-manifest-conflict"
 DOC_REVIEW_MANIFEST_API_VERSION = "shipwright.dev/doc-review-manifest/v1"
 DOC_REVIEW_COMPLETION_API_VERSION = "shipwright.dev/doc-review-completion/v1"
+DOC_REVIEW_FINDINGS_API_VERSION = "shipwright.dev/doc-review-finding/v1"
 DOC_REVIEW_COMPLETION_MARKER = "sw:doc-review-completion"
 DOC_REVIEW_BUDGET_OPERATION = "document-review"
+DOC_REVIEW_MIXED_SCHEMA = "doc-review-mixed-schema"
 
 # Mandatory docReviewComments fields (PRD 341 R27). Optional: nativeRevision, stableApplicationId.
 DOC_REVIEW_MANDATORY_CAPABILITIES = (
@@ -208,9 +210,95 @@ def body_sha256_v1(body: str) -> str:
     return f"{BODY_SHA256_V1_PREFIX}{body_digest(body)}"
 
 
+def is_body_sha256_v1_token(token: str) -> bool:
+    return str(token or "").startswith(BODY_SHA256_V1_PREFIX)
+
+
 def comment_revision_token(comment: CommentRecord) -> str:
-    """Authoritative revision for doc-review pins."""
+    """Authoritative revision for new-round doc-review pins (body-sha256/v1)."""
     return body_sha256_v1(comment.body or "")
+
+
+def bootstrap_pin_revision(comment: CommentRecord) -> str:
+    """Shipped #1070 pin token — comment ``updated_at`` / provider revision (R43)."""
+    return str(comment.revision or "")
+
+
+def is_bootstrap_manifest(manifest: dict[str, Any] | None) -> bool:
+    """True when the body witness predates DocReviewManifest apiVersion (R35/R43)."""
+    if not isinstance(manifest, dict) or not manifest:
+        return False
+    if not str(manifest.get("roundId") or "").strip():
+        return False
+    api = str(manifest.get("apiVersion") or "").strip()
+    return api != DOC_REVIEW_MANIFEST_API_VERSION
+
+
+def is_v1_finding_envelope(envelope: dict[str, Any] | None) -> bool:
+    if not isinstance(envelope, dict):
+        return False
+    api = str(envelope.get("apiVersion") or "").strip()
+    kind = str(envelope.get("kind") or "").strip()
+    return api == DOC_REVIEW_FINDINGS_API_VERSION or kind == "DocReviewFinding"
+
+
+def normalize_finding_envelope(raw: dict[str, Any] | None) -> dict[str, Any]:
+    """Dual-read bootstrap ``{round, persona, payload}`` and v1 DocReviewFinding (R43)."""
+    if not isinstance(raw, dict) or not raw:
+        return {}
+    out = dict(raw)
+    if is_v1_finding_envelope(out):
+        if not str(out.get("round") or "").strip() and out.get("roundId") is not None:
+            out["round"] = str(out.get("roundId") or "")
+        if not str(out.get("persona") or "").strip() and out.get("personaId") is not None:
+            out["persona"] = str(out.get("personaId") or "")
+        if not isinstance(out.get("payload"), dict):
+            findings = out.get("findings")
+            if isinstance(findings, dict):
+                out["payload"] = findings
+    else:
+        # Bootstrap shipped shape may omit derived key/hash (R43).
+        if not str(out.get("roundId") or "").strip() and out.get("round") is not None:
+            out["roundId"] = str(out.get("round") or "")
+        if not str(out.get("personaId") or "").strip() and out.get("persona") is not None:
+            out["personaId"] = str(out.get("persona") or "")
+        if not isinstance(out.get("findings"), dict) and isinstance(out.get("payload"), dict):
+            out["findings"] = out["payload"]
+
+    round_id = str(out.get("round") or out.get("roundId") or "").strip()
+    persona = str(out.get("persona") or out.get("personaId") or "").strip()
+    payload = out.get("payload")
+    if not isinstance(payload, dict) and isinstance(out.get("findings"), dict):
+        payload = out["findings"]
+        out["payload"] = payload
+    if round_id:
+        out["round"] = round_id
+    if persona:
+        out["persona"] = persona
+    if isinstance(payload, dict):
+        if not str(out.get("idempotencyKey") or "").strip() and round_id and persona:
+            out["idempotencyKey"] = idempotency_key(round_id, persona)
+        if not str(out.get("payloadHash") or "").strip():
+            out["payloadHash"] = payload_hash(payload)
+    return out
+
+
+def pin_revision_matches(
+    expected: str,
+    comment: CommentRecord,
+    *,
+    bootstrap: bool,
+) -> bool:
+    """Compare pinned revision tokens under bootstrap vs v1 rules (R18/R43)."""
+    token = str(expected or "")
+    if not token:
+        return True
+    actual_v1 = comment_revision_token(comment)
+    if token == actual_v1:
+        return True
+    if bootstrap and not is_body_sha256_v1_token(token):
+        return token == bootstrap_pin_revision(comment)
+    return False
 
 
 def stripped_artifact_hash(body: str) -> str:
@@ -253,7 +341,45 @@ def normalize_manifest_block(raw: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
-def build_doc_review_comment_body(*, round_id: str, persona: str, payload: dict[str, Any]) -> str:
+def build_doc_review_comment_body(
+    *,
+    round_id: str,
+    persona: str,
+    payload: dict[str, Any],
+    unit_id: str | None = None,
+    body_path: str | None = None,
+) -> str:
+    """Build a v1 DocReviewFinding comment body (R43 — new rounds require apiVersion)."""
+    artifact: dict[str, Any] = {}
+    if unit_id:
+        artifact["unitId"] = unit_id
+    if body_path:
+        artifact["bodyPath"] = body_path
+    envelope = {
+        "apiVersion": DOC_REVIEW_FINDINGS_API_VERSION,
+        "kind": "DocReviewFinding",
+        "artifact": artifact,
+        "roundId": round_id,
+        "personaId": persona,
+        "idempotencyKey": idempotency_key(round_id, persona),
+        "payloadHash": payload_hash(payload),
+        "findings": payload,
+    }
+    raw = json.dumps(envelope, indent=2, sort_keys=True, ensure_ascii=False)
+    return (
+        f"<!-- {DOC_REVIEW_MARKER} -->\n"
+        f"```json\n{raw}\n```\n"
+        f"<!-- /{DOC_REVIEW_MARKER} -->\n"
+    )
+
+
+def build_bootstrap_finding_comment_body(
+    *,
+    round_id: str,
+    persona: str,
+    payload: dict[str, Any],
+) -> str:
+    """Shipped #1070 finding envelope ``{round, persona, payload}`` (+ derived fields)."""
     envelope = {
         "round": round_id,
         "persona": persona,
@@ -394,13 +520,31 @@ def parse_doc_review_comment(body: str) -> dict[str, Any] | None:
     return parsed if isinstance(parsed, dict) else None
 
 
-def validate_doc_review_envelope(envelope: dict[str, Any]) -> str | None:
-    """Return a stable malformed detail when envelope fields disagree."""
-    round_id = str(envelope.get("round") or "").strip()
-    persona = str(envelope.get("persona") or "").strip()
-    key = str(envelope.get("idempotencyKey") or "").strip()
-    digest = str(envelope.get("payloadHash") or "").strip()
-    payload = envelope.get("payload")
+def validate_doc_review_envelope(
+    envelope: dict[str, Any],
+    *,
+    require_v1: bool = False,
+) -> str | None:
+    """Return a stable malformed detail when envelope fields disagree.
+
+    Bootstrap shipped envelopes ``{round, persona, payload}`` are accepted unless
+    ``require_v1`` is set (new-round open — R43).
+    """
+    if require_v1 and not is_v1_finding_envelope(envelope):
+        return "missing-api-version"
+    if is_v1_finding_envelope(envelope):
+        api = str(envelope.get("apiVersion") or "").strip()
+        if api and api != DOC_REVIEW_FINDINGS_API_VERSION:
+            return "unsupported-api-version"
+        kind = str(envelope.get("kind") or "").strip()
+        if kind and kind != "DocReviewFinding":
+            return "unsupported-kind"
+    normalized = normalize_finding_envelope(envelope)
+    round_id = str(normalized.get("round") or "").strip()
+    persona = str(normalized.get("persona") or "").strip()
+    key = str(normalized.get("idempotencyKey") or "").strip()
+    digest = str(normalized.get("payloadHash") or "").strip()
+    payload = normalized.get("payload")
     if not round_id:
         return "missing-round"
     if not persona:
@@ -441,7 +585,8 @@ def comment_round_id(comment: CommentRecord) -> str | None:
         return None
     if validate_doc_review_envelope(parsed) is not None:
         return None
-    round_id = str(parsed.get("round") or "").strip()
+    normalized = normalize_finding_envelope(parsed)
+    round_id = str(normalized.get("round") or "").strip()
     return round_id or None
 
 
@@ -483,7 +628,8 @@ def find_comments_by_idempotency_key(
             continue
         if validate_doc_review_envelope(parsed) is not None:
             continue
-        if str(parsed.get("idempotencyKey") or "") == key:
+        normalized = normalize_finding_envelope(parsed)
+        if str(normalized.get("idempotencyKey") or "") == key:
             matches.append(comment)
     return matches
 
@@ -590,12 +736,15 @@ def envelope_immutable_equal(left: dict[str, Any], right: dict[str, Any]) -> boo
 
     JSON key order and presentation whitespace do not create a conflict; payload
     comparison uses sorted-key hashing already applied by :func:`payload_hash`.
+    Bootstrap and v1 finding shapes compare equal after normalize (R43).
     """
+    left_n = normalize_finding_envelope(left)
+    right_n = normalize_finding_envelope(right)
     for field in ("round", "persona", "idempotencyKey", "payloadHash"):
-        if str(left.get(field) or "") != str(right.get(field) or ""):
+        if str(left_n.get(field) or "") != str(right_n.get(field) or ""):
             return False
-    left_payload = left.get("payload")
-    right_payload = right.get("payload")
+    left_payload = left_n.get("payload")
+    right_payload = right_n.get("payload")
     if not isinstance(left_payload, dict) or not isinstance(right_payload, dict):
         return False
     return payload_hash(left_payload) == payload_hash(right_payload)
@@ -667,9 +816,10 @@ def pin_from_comment(comment: CommentRecord) -> DocReviewPin | None:
         return None
     if validate_doc_review_envelope(parsed) is not None:
         return None
-    round_id = str(parsed.get("round") or "")
-    persona = str(parsed.get("persona") or "")
-    payload = parsed.get("payload")
+    normalized = normalize_finding_envelope(parsed)
+    round_id = str(normalized.get("round") or "")
+    persona = str(normalized.get("persona") or "")
+    payload = normalized.get("payload")
     if not isinstance(payload, dict):
         return None
     return DocReviewPin(
@@ -677,8 +827,8 @@ def pin_from_comment(comment: CommentRecord) -> DocReviewPin | None:
         revision=comment_revision_token(comment),
         author_id=str(comment.author_id or ""),
         persona=persona,
-        idempotency_key=str(parsed.get("idempotencyKey") or idempotency_key(round_id, persona)),
-        payload_hash=str(parsed.get("payloadHash") or payload_hash(payload)),
+        idempotency_key=str(normalized.get("idempotencyKey") or idempotency_key(round_id, persona)),
+        payload_hash=str(normalized.get("payloadHash") or payload_hash(payload)),
         body_digest=body_digest(comment.body),
         body_snapshot=comment.body,
     )
@@ -1051,7 +1201,9 @@ def verify_round_integrity(
 
     for comment in collect_malformed_doc_review_comments(comments):
         parsed = parse_doc_review_comment(comment.body)
-        comment_round = str(parsed.get("round") or "").strip() if parsed else ""
+        comment_round = ""
+        if parsed:
+            comment_round = str(normalize_finding_envelope(parsed).get("round") or "").strip()
         if not comment_round or comment_round == round_id:
             return drift_failure(
                 kind="malformed",
@@ -1064,6 +1216,7 @@ def verify_round_integrity(
     marked_ids = {comment.id for comment in marked}
     pin_order: list[str] = []
     pinned_ids: set[str] = set()
+    bootstrap = is_bootstrap_manifest(manifest)
 
     seen_keys: set[str] = set()
     seen_comments: set[str] = set()
@@ -1098,9 +1251,12 @@ def verify_round_integrity(
         if envelope_err is not None:
             return drift_failure(kind="malformed", commentId=comment_id, detail=envelope_err)
         expected_revision = str(row.get("revision") or "")
-        actual_revision = comment_revision_token(comment)
-        if expected_revision and actual_revision != expected_revision:
-            # updated_at / provider revision metadata is never authoritative for new pins.
+        if expected_revision and not pin_revision_matches(
+            expected_revision,
+            comment,
+            bootstrap=bootstrap,
+        ):
+            # New rounds: body-sha256/v1 only. Bootstrap in-flight: also updated_at (R43).
             return drift_failure(kind="edit", commentId=comment_id, detail="revision-token-mismatch")
         expected_digest = str(row.get("bodyDigest") or "")
         if expected_digest and body_digest(comment.body) != expected_digest:
@@ -1277,6 +1433,25 @@ def execute_doc_review_txn(
             order_err["issueId"] = issue_id
             order_err["roundId"] = round_id
             return order_err
+        # R43 — new rounds require apiVersion finding envelopes; mixed schema refuses.
+        # In-flight bootstrap body witnesses (no DocReviewManifest apiVersion) keep shipped envelopes.
+        opening_bootstrap = is_bootstrap_manifest(manifest) and str(manifest.get("roundId") or "") == round_id
+        if not opening_bootstrap:
+            mixed_ids: list[str] = []
+            for comment in collect_round_doc_review_comments(list(record.comments), round_id):
+                parsed = parse_doc_review_comment(comment.body)
+                if parsed is None or not is_v1_finding_envelope(parsed):
+                    mixed_ids.append(str(comment.id))
+            if mixed_ids:
+                return {
+                    "verdict": "fail",
+                    "action": verb,
+                    "error": DOC_REVIEW_MIXED_SCHEMA,
+                    "issueId": issue_id,
+                    "roundId": round_id,
+                    "commentIds": mixed_ids,
+                    "detail": "new-round-requires-apiVersion-finding-envelopes",
+                }
         pins, pin_err = pin_rows_from_ordered_comments(list(record.comments), ordered_comment_ids=ordered)
         if pin_err is not None:
             pin_err["action"] = verb
@@ -1662,7 +1837,17 @@ def execute_doc_review_txn(
                     "driftKind": "author-mismatch",
                     "commentId": existing.id,
                 }
-            # Pins are written only at open; post never mutates an opened body witness (R9/R36).
+            # Pins: new rounds write only at open (R9/R36). Bootstrap open-then-post
+            # already recorded pins when the comment was first posted.
+            revision_out = (
+                bootstrap_pin_revision(existing)
+                if (
+                    is_bootstrap_manifest(manifest)
+                    and str(manifest.get("roundId") or "") == round_id
+                    and str(manifest.get("status") or "") == "open"
+                )
+                else comment_revision_token(existing)
+            )
             return {
                 "verdict": "ok",
                 "action": verb,
@@ -1670,14 +1855,32 @@ def execute_doc_review_txn(
                 "roundId": round_id,
                 "persona": persona,
                 "commentId": existing.id,
-                "revision": comment_revision_token(existing),
+                "revision": revision_out,
                 "authorId": existing.author_id or author_id,
                 "idempotent": True,
                 "reconciled": False,
                 "pin": pin.as_dict(include_snapshot=True),
             }
 
-        body = build_doc_review_comment_body(round_id=round_id, persona=persona, payload=payload)
+        bootstrap_open = (
+            is_bootstrap_manifest(manifest)
+            and str(manifest.get("roundId") or "") == round_id
+            and str(manifest.get("status") or "") == "open"
+        )
+        if bootstrap_open:
+            # In-flight #1070 open-then-post: keep shipped envelope shape (R35/R43).
+            body = build_bootstrap_finding_comment_body(
+                round_id=round_id, persona=persona, payload=payload
+            )
+        else:
+            # New rounds: apiVersion DocReviewFinding envelopes (R43).
+            body = build_doc_review_comment_body(
+                round_id=round_id,
+                persona=persona,
+                payload=payload,
+                unit_id=unit_id,
+                body_path=body_path,
+            )
         if len(body) > DOC_REVIEW_COMMENT_SIZE_CAP:
             return {
                 "verdict": "fail",
@@ -1733,6 +1936,48 @@ def execute_doc_review_txn(
         if pin is None:
             return {"verdict": "fail", "action": verb, "error": "doc-review-comment-malformed"}
 
+        revision_out = comment_revision_token(posted)
+        if bootstrap_open:
+            # Open-then-post: append updated_at-style pin onto the body witness (R35/R43).
+            pin_revision = bootstrap_pin_revision(posted)
+            revision_out = pin_revision
+            pin_row = {
+                "persona": persona,
+                "personaId": persona,
+                "commentId": str(posted.id),
+                "revision": pin_revision,
+                "revisionToken": pin_revision,
+                "authorId": posted.author_id or author_id,
+                "idempotencyKey": key,
+                "payloadHash": digest,
+                "bodyDigest": body_digest(posted.body),
+            }
+            # Comment write bumps etag — re-read before OCC pin append.
+            fresh = client.issue_get(str(issue_id))
+            fresh_manifest, fresh_err = inspect_review_round_block(fresh.body)
+            if fresh_err:
+                return manifest_malformed_result(
+                    action=verb, issue_id=str(issue_id), detail=fresh_err
+                )
+            updated_manifest = dict(fresh_manifest)
+            pins = list(updated_manifest.get("pins") or [])
+            if isinstance(pins, list):
+                pins = [p for p in pins if isinstance(p, dict)]
+            else:
+                pins = []
+            pins.append(pin_row)
+            updated_manifest["pins"] = pins
+            conflict = apply_manifest_update(
+                client,
+                issue_id=str(issue_id),
+                verb=verb,
+                record_body=fresh.body,
+                etag=fresh.etag,
+                manifest_block=updated_manifest,
+            )
+            if conflict is not None:
+                return conflict
+
         return {
             "verdict": "ok",
             "action": verb,
@@ -1740,7 +1985,7 @@ def execute_doc_review_txn(
             "roundId": round_id,
             "persona": persona,
             "commentId": posted.id,
-            "revision": comment_revision_token(posted),
+            "revision": revision_out,
             "authorId": posted.author_id or author_id,
             "idempotent": False,
             "reconciled": False,

@@ -7,6 +7,7 @@ import json
 from planning_doc_review_transport import (
     build_doc_review_comment_body,
     inspect_review_round_block,
+    normalize_finding_envelope,
     parse_doc_review_comment,
     payload_hash,
     render_review_round_block,
@@ -68,4 +69,4 @@ def test_hyphen_form_still_parses() -> None:
     )
     parsed = parse_doc_review_comment(body)
     assert parsed is not None
-    assert parsed["round"] == "round-hyphen"
+    assert normalize_finding_envelope(parsed)["round"] == "round-hyphen"

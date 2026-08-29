@@ -23,6 +23,7 @@ from planning_doc_review_transport import (
     build_doc_review_comment_body,
     idempotency_key,
     inspect_review_round_block,
+    normalize_finding_envelope,
     parse_doc_review_comment,
     parse_review_round_block,
     payload_hash,
@@ -614,9 +615,10 @@ class TestCanonicalExclusion:
         )
         parsed = parse_doc_review_comment(body)
         assert parsed is not None
-        assert parsed["round"] == "round-parse"
-        assert parsed["persona"] == "feasibility"
-        assert parsed["payload"]["reviewer"] == "feasibility"
+        normalized = normalize_finding_envelope(parsed)
+        assert normalized["round"] == "round-parse"
+        assert normalized["persona"] == "feasibility"
+        assert normalized["payload"]["reviewer"] == "feasibility"
 
 
 class TestMultiRoundCoexistence:
