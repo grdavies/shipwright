@@ -23,6 +23,7 @@ from planning_canonical import (
 
 DOC_REVIEW_TRANSPORT_UNAVAILABLE = "doc-review-transport-unavailable"
 DOC_REVIEW_COMMENT_DRIFT = "doc-review-comment-drift"
+DOC_REVIEW_BODY_DRIFT = "doc-review-body-drift"
 DOC_REVIEW_PIN_CONFLICT = "doc-review-pin-conflict"
 DOC_REVIEW_ROUND_MALFORMED = "doc-review-round-malformed"
 BODY_SHA256_V1_PREFIX = "body-sha256/v1:"
@@ -31,6 +32,9 @@ DOC_REVIEW_PAYLOAD_TOO_LARGE = "doc-review-payload-too-large"
 DOC_REVIEW_FINDINGS_SCHEMA_INVALID = "doc-review-findings-schema-invalid"
 DOC_REVIEW_IDEMPOTENCY_AMBIGUOUS = "doc-review-idempotency-ambiguous"
 DOC_REVIEW_PAGINATION_INCOMPLETE = "doc-review-pagination-incomplete"
+DOC_REVIEW_UNPINNED_FINDINGS = "doc-review-unpinned-findings"
+DOC_REVIEW_MANIFEST_CONFLICT = "doc-review-manifest-conflict"
+DOC_REVIEW_MANIFEST_API_VERSION = "shipwright.dev/doc-review-manifest/v1"
 
 # GitHub issue comment body hard cap (characters). Provider-neutral facade uses this as the
 # default size bound for findings comments (PRD 341 R39).
@@ -125,6 +129,11 @@ def idempotency_key(round_id: str, persona: str) -> str:
     return f"{round_id}:{persona}"
 
 
+def default_manifest_idempotency_key(round_id: str) -> str:
+    """Default manifest idempotency scope when callers omit an explicit key (R12)."""
+    return f"{round_id}:manifest"
+
+
 def payload_hash(payload: dict[str, Any]) -> str:
     material = json.dumps(payload, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
@@ -151,6 +160,46 @@ def body_sha256_v1(body: str) -> str:
 def comment_revision_token(comment: CommentRecord) -> str:
     """Authoritative revision for doc-review pins."""
     return body_sha256_v1(comment.body or "")
+
+
+def stripped_artifact_hash(body: str) -> str:
+    """Canonical hash of the issue body with the live witness excluded (R10/D12/D24).
+
+    ``artifactHash`` is never the issue etag. Body-drift compares this value only.
+    """
+    return body_sha256_v1(strip_review_round_blocks(body or ""))
+
+
+def normalize_pin_row(row: dict[str, Any]) -> dict[str, Any]:
+    """Dual-read bootstrap pin rows and v1 ordinal/revisionToken rows (R11)."""
+    out = dict(row)
+    if not str(out.get("revision") or "").strip() and out.get("revisionToken") is not None:
+        out["revision"] = str(out.get("revisionToken") or "")
+    if not str(out.get("revisionToken") or "").strip() and out.get("revision") is not None:
+        out["revisionToken"] = str(out.get("revision") or "")
+    if not str(out.get("persona") or "").strip() and out.get("personaId") is not None:
+        out["persona"] = str(out.get("personaId") or "")
+    if not str(out.get("personaId") or "").strip() and out.get("persona") is not None:
+        out["personaId"] = str(out.get("persona") or "")
+    return out
+
+
+def normalize_manifest_block(raw: dict[str, Any]) -> dict[str, Any]:
+    """Dual-read bootstrap body JSON and v1 DocReviewManifest envelopes (R11).
+
+    Comment-manifest dual-read is out of scope for this unit — body-block variants only.
+    """
+    if not raw:
+        return {}
+    out = dict(raw)
+    artifact = out.get("artifact")
+    if isinstance(artifact, dict):
+        if not str(out.get("unitId") or "").strip() and artifact.get("unitId") is not None:
+            out["unitId"] = str(artifact.get("unitId") or "")
+    pins = out.get("pins")
+    if isinstance(pins, list):
+        out["pins"] = [normalize_pin_row(p) if isinstance(p, dict) else p for p in pins]
+    return out
 
 
 def build_doc_review_comment_body(*, round_id: str, persona: str, payload: dict[str, Any]) -> str:
@@ -420,7 +469,7 @@ def inspect_review_round_block(body: str) -> tuple[dict[str, Any], str | None]:
         return {}, "malformed-round-block"
     if not isinstance(parsed, dict):
         return {}, "malformed-round-block"
-    return parsed, None
+    return normalize_manifest_block(parsed), None
 
 
 def parse_review_round_block(body: str) -> dict[str, Any]:
@@ -476,13 +525,141 @@ def pin_index(pins: list[Any]) -> tuple[dict[str, dict[str, Any]], dict[str, dic
     for row in pins:
         if not isinstance(row, dict):
             continue
-        comment_id = str(row.get("commentId") or "")
-        key = str(row.get("idempotencyKey") or "")
+        normalized = normalize_pin_row(row)
+        comment_id = str(normalized.get("commentId") or "")
+        key = str(normalized.get("idempotencyKey") or "")
         if comment_id:
-            by_comment[comment_id] = row
+            by_comment[comment_id] = normalized
         if key:
-            by_key[key] = row
+            by_key[key] = normalized
     return by_comment, by_key
+
+
+def pin_rows_from_ordered_comments(
+    comments: list[CommentRecord],
+    *,
+    ordered_comment_ids: list[str],
+) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+    """Build exhaustive ordered pins; refuse when ordered ids are not a permutation (R36)."""
+    by_id = {str(comment.id): comment for comment in comments}
+    pins: list[dict[str, Any]] = []
+    for ordinal, comment_id in enumerate(ordered_comment_ids):
+        comment = by_id.get(str(comment_id))
+        if comment is None:
+            return [], {
+                "verdict": "fail",
+                "error": DOC_REVIEW_UNPINNED_FINDINGS,
+                "detail": "ordered-comment-missing",
+                "commentId": str(comment_id),
+            }
+        pin = pin_from_comment(comment)
+        if pin is None:
+            return [], {
+                "verdict": "fail",
+                "error": DOC_REVIEW_UNPINNED_FINDINGS,
+                "detail": "ordered-comment-invalid",
+                "commentId": str(comment_id),
+            }
+        pins.append(
+            {
+                "ordinal": ordinal,
+                "personaId": pin.persona,
+                "persona": pin.persona,
+                "commentId": pin.comment_id,
+                "revisionToken": pin.revision,
+                "revision": pin.revision,
+                "authorId": pin.author_id,
+                "idempotencyKey": pin.idempotency_key,
+                "payloadHash": pin.payload_hash,
+                "bodyDigest": pin.body_digest,
+            }
+        )
+    return pins, None
+
+
+def resolve_exhaustive_ordered_ids(
+    comments: list[CommentRecord],
+    *,
+    round_id: str,
+    ordered_comment_ids: list[str] | None,
+) -> tuple[list[str], dict[str, Any] | None]:
+    """Require ``ordered_comment_ids`` to be a permutation of every validated finding (R9/R36)."""
+    validated = collect_round_doc_review_comments(comments, round_id)
+    validated_ids = [str(comment.id) for comment in validated]
+    if ordered_comment_ids is None:
+        ordered = list(validated_ids)
+    else:
+        ordered = [str(cid) for cid in ordered_comment_ids]
+    if len(ordered) != len(set(ordered)):
+        return [], {
+            "verdict": "fail",
+            "error": DOC_REVIEW_UNPINNED_FINDINGS,
+            "detail": "duplicate-ordered-comment-id",
+            "orderedCommentIds": ordered,
+        }
+    if set(ordered) != set(validated_ids) or len(ordered) != len(validated_ids):
+        return [], {
+            "verdict": "fail",
+            "error": DOC_REVIEW_UNPINNED_FINDINGS,
+            "detail": "ordered-ids-not-exhaustive-permutation",
+            "orderedCommentIds": ordered,
+            "validatedCommentIds": validated_ids,
+        }
+    return ordered, None
+
+
+def build_open_manifest_block(
+    *,
+    round_id: str,
+    unit_id: str,
+    issue_id: str,
+    manifest_key: str,
+    etag: str,
+    body: str,
+    pins: list[dict[str, Any]],
+    body_path: str | None = None,
+    opened_at: str | None = None,
+) -> dict[str, Any]:
+    """GitHub v1 body-block open payload with OCC etag + stripped hash split (R9/R10)."""
+    artifact: dict[str, Any] = {"unitId": unit_id}
+    if body_path:
+        artifact["bodyPath"] = body_path
+    return {
+        "apiVersion": DOC_REVIEW_MANIFEST_API_VERSION,
+        "kind": "DocReviewManifest",
+        "artifact": artifact,
+        "roundId": round_id,
+        "idempotencyKey": manifest_key,
+        "openedAt": opened_at or utc_now(),
+        "artifactRevision": etag,
+        "artifactHash": stripped_artifact_hash(body),
+        "status": "open",
+        "unitId": unit_id,
+        "issueId": str(issue_id),
+        "pins": pins,
+    }
+
+
+def manifest_immutable_equal(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    """Semantic equality for manifest open replay (R12). Etag OCC is not compared."""
+    left_n = normalize_manifest_block(left)
+    right_n = normalize_manifest_block(right)
+    for field in ("roundId", "idempotencyKey", "unitId", "issueId", "artifactHash"):
+        if str(left_n.get(field) or "") != str(right_n.get(field) or ""):
+            return False
+    left_pins = left_n.get("pins") if isinstance(left_n.get("pins"), list) else []
+    right_pins = right_n.get("pins") if isinstance(right_n.get("pins"), list) else []
+    if len(left_pins) != len(right_pins):
+        return False
+    for left_row, right_row in zip(left_pins, right_pins):
+        if not isinstance(left_row, dict) or not isinstance(right_row, dict):
+            return False
+        ln = normalize_pin_row(left_row)
+        rn = normalize_pin_row(right_row)
+        for field in ("ordinal", "commentId", "revision", "persona", "idempotencyKey"):
+            if str(ln.get(field) or "") != str(rn.get(field) or ""):
+                return False
+    return True
 
 
 def merge_pin_into_manifest(
@@ -531,9 +708,15 @@ def transport_unavailable(*, reason: str = "") -> dict[str, Any]:
 
 
 def drift_failure(*, kind: str, detail: str = "", **extra: Any) -> dict[str, Any]:
+    """Typed drift envelope (R20/R32).
+
+    Comment pin add/edit/delete/reorder/substitute → ``doc-review-comment-drift``.
+    Stripped-body hash mismatch → ``doc-review-body-drift`` (never etag-only).
+    """
+    error = DOC_REVIEW_BODY_DRIFT if kind == "body" else DOC_REVIEW_COMMENT_DRIFT
     out: dict[str, Any] = {
         "verdict": "fail",
-        "error": DOC_REVIEW_COMMENT_DRIFT,
+        "error": error,
         "driftKind": kind,
     }
     if detail:
@@ -598,12 +781,44 @@ def verify_manifest_binding(
     return None
 
 
+def verify_body_artifact_hash(
+    *,
+    manifest: dict[str, Any],
+    body: str,
+) -> dict[str, Any] | None:
+    """Fail closed when stripped body hash drifts (R19/R20/R32).
+
+    Compares ``manifest.artifactHash`` to ``stripped_artifact_hash(body)`` only —
+    issue etag changes are OCC and must not surface as body-drift.
+    """
+    expected = str(manifest.get("artifactHash") or "").strip()
+    if not expected:
+        return None
+    actual = stripped_artifact_hash(body)
+    if actual != expected:
+        return drift_failure(
+            kind="body",
+            detail="stripped-hash-mismatch",
+            expectedArtifactHash=expected,
+            actualArtifactHash=actual,
+        )
+    return None
+
+
 def verify_round_integrity(
     *,
     manifest: dict[str, Any],
     comments: list[CommentRecord],
     expected_author_id: str,
+    body: str | None = None,
 ) -> dict[str, Any] | None:
+    """Re-read pin + optional body hash integrity (R19–R21/R32).
+
+    Marker, schema, authorship, and revision failures are fail-closed comment-drift.
+    Pin add/edit/delete/reorder/substitute → ``doc-review-comment-drift``.
+    Stripped-hash mismatch → ``doc-review-body-drift``.
+    """
+    manifest = normalize_manifest_block(manifest)
     pins_raw = manifest.get("pins")
     if not isinstance(pins_raw, list):
         return drift_failure(kind="malformed", detail="manifest-missing-pins")
@@ -611,6 +826,11 @@ def verify_round_integrity(
     round_id = str(manifest.get("roundId") or "")
     if not round_id:
         return drift_failure(kind="malformed", detail="manifest-missing-round-id")
+
+    if body is not None:
+        body_drift = verify_body_artifact_hash(manifest=manifest, body=body)
+        if body_drift is not None:
+            return body_drift
 
     for comment in collect_malformed_doc_review_comments(comments):
         parsed = parse_doc_review_comment(comment.body)
@@ -625,13 +845,15 @@ def verify_round_integrity(
     by_id = {str(comment.id): comment for comment in comments}
     marked = collect_round_doc_review_comments(comments, round_id)
     marked_ids = {comment.id for comment in marked}
-    pinned_ids = {str(row.get("commentId") or "") for row in pins_raw if isinstance(row, dict)}
+    pin_order: list[str] = []
+    pinned_ids: set[str] = set()
 
     seen_keys: set[str] = set()
     seen_comments: set[str] = set()
     for row in pins_raw:
         if not isinstance(row, dict):
             return drift_failure(kind="malformed", detail="invalid-pin-row")
+        row = normalize_pin_row(row)
         comment_id = str(row.get("commentId") or "")
         key = str(row.get("idempotencyKey") or "")
         if key:
@@ -642,12 +864,14 @@ def verify_round_integrity(
             if comment_id in seen_comments:
                 return drift_failure(kind="malformed", detail="duplicate-comment-id", commentId=comment_id)
             seen_comments.add(comment_id)
+            pin_order.append(comment_id)
+            pinned_ids.add(comment_id)
 
         comment = by_id.get(comment_id)
         if comment is None:
             return drift_failure(kind="delete", commentId=comment_id)
         if not is_marked_doc_review_comment(comment):
-            return drift_failure(kind="malformed", commentId=comment_id)
+            return drift_failure(kind="malformed", commentId=comment_id, detail="bad-marker")
         if comment_round_id(comment) != round_id:
             return drift_failure(kind="malformed", commentId=comment_id, detail="round-mismatch")
         parsed = parse_doc_review_comment(comment.body)
@@ -682,10 +906,20 @@ def verify_round_integrity(
     if missing_ids:
         return drift_failure(kind="delete", commentIds=sorted(missing_ids))
 
+    marked_order = [str(comment.id) for comment in marked]
+    if pin_order and marked_order and pin_order != marked_order:
+        return drift_failure(
+            kind="reorder",
+            detail="pin-order-mismatch",
+            expectedOrder=pin_order,
+            actualOrder=marked_order,
+        )
+
     return None
 
 
 def manifest_response(manifest: dict[str, Any], *, comments: list[CommentRecord] | None = None) -> dict[str, Any]:
+    manifest = normalize_manifest_block(manifest)
     pins = manifest.get("pins")
     if not isinstance(pins, list):
         pins = []
@@ -694,7 +928,7 @@ def manifest_response(manifest: dict[str, Any], *, comments: list[CommentRecord]
     for row in pins:
         if not isinstance(row, dict):
             continue
-        item = dict(row)
+        item = normalize_pin_row(row)
         comment_id = str(item.get("commentId") or "")
         comment = by_id.get(comment_id)
         if comment is not None:
@@ -707,6 +941,10 @@ def manifest_response(manifest: dict[str, Any], *, comments: list[CommentRecord]
         "issueId": manifest.get("issueId"),
         "openedAt": manifest.get("openedAt"),
         "closedAt": manifest.get("closedAt"),
+        "idempotencyKey": manifest.get("idempotencyKey"),
+        "artifactRevision": manifest.get("artifactRevision"),
+        "artifactHash": manifest.get("artifactHash"),
+        "apiVersion": manifest.get("apiVersion"),
         "pins": enriched or pins,
     }
 
@@ -759,6 +997,9 @@ def execute_doc_review_txn(
     payload: dict[str, Any] | None = None,
     dry_run: bool = False,
     author_id: str,
+    ordered_comment_ids: list[str] | None = None,
+    manifest_idempotency_key: str | None = None,
+    body_path: str | None = None,
 ) -> dict[str, Any]:
     """Issue-store doc-review transport verbs (GitHub bootstrap). Fail-closed on drift and revision conflict."""
     try:
@@ -797,9 +1038,78 @@ def execute_doc_review_txn(
             return bind_err
 
     if verb == "doc-review-round-open":
+        # R13 — refuse open when comment pagination is incomplete.
+        if not comments_pagination_complete(record):
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_PAGINATION_INCOMPLETE,
+                "issueId": issue_id,
+                "roundId": round_id,
+            }
+        manifest_key = str(manifest_idempotency_key or "").strip() or default_manifest_idempotency_key(
+            round_id
+        )
+        ordered, order_err = resolve_exhaustive_ordered_ids(
+            list(record.comments),
+            round_id=round_id,
+            ordered_comment_ids=ordered_comment_ids,
+        )
+        if order_err is not None:
+            order_err["action"] = verb
+            order_err["issueId"] = issue_id
+            order_err["roundId"] = round_id
+            return order_err
+        pins, pin_err = pin_rows_from_ordered_comments(list(record.comments), ordered_comment_ids=ordered)
+        if pin_err is not None:
+            pin_err["action"] = verb
+            pin_err["issueId"] = issue_id
+            pin_err["roundId"] = round_id
+            return pin_err
+        proposed = build_open_manifest_block(
+            round_id=round_id,
+            unit_id=unit_id,
+            issue_id=str(issue_id),
+            manifest_key=manifest_key,
+            etag=str(record.etag or ""),
+            body=record.body,
+            pins=pins,
+            body_path=body_path,
+            opened_at=str(manifest.get("openedAt") or "") or None,
+        )
         if manifest.get("status") == "open" and manifest.get("roundId") == round_id:
+            existing_key = str(manifest.get("idempotencyKey") or "").strip()
+            if existing_key and existing_key != manifest_key:
+                return {
+                    "verdict": "fail",
+                    "action": verb,
+                    "error": "doc-review-round-already-open",
+                    "openRoundId": manifest.get("roundId"),
+                    "idempotencyKey": existing_key,
+                }
+            compare_existing = dict(manifest)
+            if not existing_key:
+                compare_existing["idempotencyKey"] = manifest_key
+            if not str(compare_existing.get("artifactHash") or "").strip():
+                compare_existing["artifactHash"] = proposed.get("artifactHash")
+            if not manifest_immutable_equal(compare_existing, proposed):
+                return {
+                    "verdict": "fail",
+                    "action": verb,
+                    "error": DOC_REVIEW_MANIFEST_CONFLICT,
+                    "issueId": issue_id,
+                    "roundId": round_id,
+                    "idempotencyKey": manifest_key,
+                }
             out = manifest_response(manifest, comments=list(record.comments))
-            out.update({"verdict": "ok", "action": verb, "issueId": issue_id})
+            out.update(
+                {
+                    "verdict": "ok",
+                    "action": verb,
+                    "issueId": issue_id,
+                    "idempotent": True,
+                }
+            )
             return out
         if manifest.get("status") == "open" and manifest.get("roundId") != round_id:
             return {
@@ -808,14 +1118,23 @@ def execute_doc_review_txn(
                 "error": "doc-review-round-already-open",
                 "openRoundId": manifest.get("roundId"),
             }
-        opened = {
-            "roundId": round_id,
-            "status": "open",
-            "unitId": unit_id,
-            "issueId": str(issue_id),
-            "openedAt": utc_now(),
-            "pins": [],
-        }
+        if manifest.get("roundId") == round_id and manifest.get("status") == "closed":
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": "doc-review-round-already-closed",
+                "roundId": round_id,
+            }
+        opened = build_open_manifest_block(
+            round_id=round_id,
+            unit_id=unit_id,
+            issue_id=str(issue_id),
+            manifest_key=manifest_key,
+            etag=str(record.etag or ""),
+            body=record.body,
+            pins=pins,
+            body_path=body_path,
+        )
         if dry_run:
             return {"verdict": "ok", "action": verb, "dryRun": True, **manifest_response(opened)}
         conflict = apply_manifest_update(
@@ -828,8 +1147,16 @@ def execute_doc_review_txn(
         )
         if conflict is not None:
             return conflict
-        out = manifest_response(opened)
-        out.update({"verdict": "ok", "action": verb, "issueId": issue_id, "status": "open"})
+        out = manifest_response(opened, comments=list(record.comments))
+        out.update(
+            {
+                "verdict": "ok",
+                "action": verb,
+                "issueId": issue_id,
+                "status": "open",
+                "idempotent": False,
+            }
+        )
         return out
 
     if verb == "doc-review-round-close":
@@ -845,6 +1172,7 @@ def execute_doc_review_txn(
                 manifest=manifest,
                 comments=list(refreshed.comments),
                 expected_author_id=author_id,
+                body=refreshed.body,
             )
             if drift is not None:
                 drift["action"] = verb
@@ -869,6 +1197,7 @@ def execute_doc_review_txn(
             manifest=manifest,
             comments=list(refreshed.comments),
             expected_author_id=author_id,
+            body=refreshed.body,
         )
         if drift is not None:
             drift["action"] = verb
@@ -891,6 +1220,177 @@ def execute_doc_review_txn(
             return conflict
         return {"verdict": "ok", "action": verb, "issueId": issue_id, "roundId": round_id, "status": "closed"}
 
+    if verb == "doc-review-round-post":
+        # Post-then-open (R36): findings collect before the body witness opens.
+        if manifest.get("roundId") == round_id and manifest.get("status") == "closed":
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": "doc-review-round-already-closed",
+                "roundId": round_id,
+            }
+        if not persona:
+            return {"verdict": "fail", "action": verb, "error": "persona-required"}
+        if not isinstance(payload, dict):
+            return {"verdict": "fail", "action": verb, "error": "payload-required"}
+
+        schema_err = validate_findings_payload(payload, persona=persona)
+        if schema_err is not None:
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_FINDINGS_SCHEMA_INVALID,
+                "detail": schema_err,
+                "persona": persona,
+                "roundId": round_id,
+            }
+
+        # Fresh issue_get materializes the complete comment set before reconcile/retry (R8).
+        record = client.issue_get(str(issue_id))
+        if not comments_pagination_complete(record):
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_PAGINATION_INCOMPLETE,
+                "issueId": issue_id,
+                "roundId": round_id,
+            }
+        manifest, manifest_err = inspect_review_round_block(record.body)
+        if manifest_err:
+            return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
+        bind_err = _binding_for_round(manifest)
+        if bind_err is not None:
+            return bind_err
+
+        key = idempotency_key(round_id, persona)
+        digest = payload_hash(payload)
+        matches = find_comments_by_idempotency_key(list(record.comments), round_id=round_id, key=key)
+        if len(matches) > 1:
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_IDEMPOTENCY_AMBIGUOUS,
+                "persona": persona,
+                "roundId": round_id,
+                "matchCount": len(matches),
+                "commentIds": [str(c.id) for c in matches],
+            }
+        existing = matches[0] if matches else None
+        if existing is not None:
+            existing_parsed = parse_doc_review_comment(existing.body)
+            if existing_parsed is None or validate_doc_review_envelope(existing_parsed) is not None:
+                return {"verdict": "fail", "action": verb, "error": "doc-review-comment-malformed"}
+            proposed = {
+                "round": round_id,
+                "persona": persona,
+                "idempotencyKey": key,
+                "payloadHash": digest,
+                "payload": payload,
+            }
+            if not envelope_immutable_equal(existing_parsed, proposed):
+                return {
+                    "verdict": "fail",
+                    "action": verb,
+                    "error": "doc-review-idempotency-conflict",
+                    "persona": persona,
+                    "roundId": round_id,
+                }
+            pin = pin_from_comment(existing)
+            if pin is None:
+                return {"verdict": "fail", "action": verb, "error": "doc-review-comment-malformed"}
+            if existing.author_id and existing.author_id != author_id:
+                return {
+                    "verdict": "fail",
+                    "action": verb,
+                    "error": DOC_REVIEW_COMMENT_DRIFT,
+                    "driftKind": "author-mismatch",
+                    "commentId": existing.id,
+                }
+            # Pins are written only at open; post never mutates an opened body witness (R9/R36).
+            return {
+                "verdict": "ok",
+                "action": verb,
+                "issueId": issue_id,
+                "roundId": round_id,
+                "persona": persona,
+                "commentId": existing.id,
+                "revision": comment_revision_token(existing),
+                "authorId": existing.author_id or author_id,
+                "idempotent": True,
+                "reconciled": False,
+                "pin": pin.as_dict(include_snapshot=True),
+            }
+
+        body = build_doc_review_comment_body(round_id=round_id, persona=persona, payload=payload)
+        if len(body) > DOC_REVIEW_COMMENT_SIZE_CAP:
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_PAYLOAD_TOO_LARGE,
+                "persona": persona,
+                "roundId": round_id,
+                "size": len(body),
+                "limit": DOC_REVIEW_COMMENT_SIZE_CAP,
+            }
+        if dry_run:
+            return {
+                "verdict": "ok",
+                "action": verb,
+                "dryRun": True,
+                "issueId": issue_id,
+                "roundId": round_id,
+                "persona": persona,
+                "authorId": author_id,
+            }
+
+        try:
+            from planning.backends.issues import doc_review_facade_issue_comment_scope
+
+            with doc_review_facade_issue_comment_scope():
+                posted = client.issue_comment(
+                    str(issue_id),
+                    body,
+                    markers=["sw-doc-review"],
+                    author_id=author_id,
+                )
+        except IssueCommentAuthorshipMismatch as exc:
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_COMMENT_DRIFT,
+                "driftKind": "author-mismatch",
+                "commentId": exc.comment_id,
+                "expectedAuthorId": exc.expected,
+                "actualAuthorId": exc.actual,
+            }
+
+        if posted.author_id and posted.author_id != author_id:
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_COMMENT_DRIFT,
+                "driftKind": "author-mismatch",
+                "commentId": posted.id,
+            }
+
+        pin = pin_from_comment(posted)
+        if pin is None:
+            return {"verdict": "fail", "action": verb, "error": "doc-review-comment-malformed"}
+
+        return {
+            "verdict": "ok",
+            "action": verb,
+            "issueId": issue_id,
+            "roundId": round_id,
+            "persona": persona,
+            "commentId": posted.id,
+            "revision": comment_revision_token(posted),
+            "authorId": posted.author_id or author_id,
+            "idempotent": False,
+            "reconciled": False,
+            "pin": pin.as_dict(include_snapshot=True),
+        }
+
     if manifest.get("roundId") != round_id or manifest.get("status") != "open":
         return {
             "verdict": "fail",
@@ -912,7 +1412,16 @@ def execute_doc_review_txn(
         return out
 
     if verb == "doc-review-round-verify":
+        # R19 — re-enumerate comments + body before completion; refuse incomplete pages.
         refreshed = client.issue_get(str(issue_id))
+        if not comments_pagination_complete(refreshed):
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_PAGINATION_INCOMPLETE,
+                "issueId": issue_id,
+                "roundId": round_id,
+            }
         manifest, manifest_err = inspect_review_round_block(refreshed.body)
         if manifest_err:
             return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
@@ -923,230 +1432,18 @@ def execute_doc_review_txn(
             manifest=manifest,
             comments=list(refreshed.comments),
             expected_author_id=author_id,
+            body=refreshed.body,
         )
         if drift is not None:
             drift["action"] = verb
             drift["issueId"] = issue_id
             return drift
-        return {"verdict": "ok", "action": verb, "issueId": issue_id, "roundId": round_id}
-
-    if verb != "doc-review-round-post":
-        return {"verdict": "fail", "action": verb, "error": "unknown-doc-review-verb", "verb": verb}
-
-    if not persona:
-        return {"verdict": "fail", "action": verb, "error": "persona-required"}
-    if not isinstance(payload, dict):
-        return {"verdict": "fail", "action": verb, "error": "payload-required"}
-
-    schema_err = validate_findings_payload(payload, persona=persona)
-    if schema_err is not None:
-        return {
-            "verdict": "fail",
-            "action": verb,
-            "error": DOC_REVIEW_FINDINGS_SCHEMA_INVALID,
-            "detail": schema_err,
-            "persona": persona,
-            "roundId": round_id,
-        }
-
-    # Fresh issue_get materializes the complete comment set before reconcile/retry (R8).
-    record = client.issue_get(str(issue_id))
-    if not comments_pagination_complete(record):
-        return {
-            "verdict": "fail",
-            "action": verb,
-            "error": DOC_REVIEW_PAGINATION_INCOMPLETE,
-            "issueId": issue_id,
-            "roundId": round_id,
-        }
-    manifest, manifest_err = inspect_review_round_block(record.body)
-    if manifest_err:
-        return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
-
-    key = idempotency_key(round_id, persona)
-    digest = payload_hash(payload)
-    matches = find_comments_by_idempotency_key(list(record.comments), round_id=round_id, key=key)
-    if len(matches) > 1:
-        return {
-            "verdict": "fail",
-            "action": verb,
-            "error": DOC_REVIEW_IDEMPOTENCY_AMBIGUOUS,
-            "persona": persona,
-            "roundId": round_id,
-            "matchCount": len(matches),
-            "commentIds": [str(c.id) for c in matches],
-        }
-    existing = matches[0] if matches else None
-    if existing is not None:
-        existing_parsed = parse_doc_review_comment(existing.body)
-        if existing_parsed is None or validate_doc_review_envelope(existing_parsed) is not None:
-            return {"verdict": "fail", "action": verb, "error": "doc-review-comment-malformed"}
-        proposed = {
-            "round": round_id,
-            "persona": persona,
-            "idempotencyKey": key,
-            "payloadHash": digest,
-            "payload": payload,
-        }
-        if not envelope_immutable_equal(existing_parsed, proposed):
-            return {
-                "verdict": "fail",
-                "action": verb,
-                "error": "doc-review-idempotency-conflict",
-                "persona": persona,
-                "roundId": round_id,
-            }
-        pin = pin_from_comment(existing)
-        if pin is None:
-            return {"verdict": "fail", "action": verb, "error": "doc-review-comment-malformed"}
-        if existing.author_id and existing.author_id != author_id:
-            return {
-                "verdict": "fail",
-                "action": verb,
-                "error": DOC_REVIEW_COMMENT_DRIFT,
-                "driftKind": "author-mismatch",
-                "commentId": existing.id,
-            }
-        bind_err = _binding_for_round(manifest)
-        if bind_err is not None:
-            return bind_err
-        if manifest.get("roundId") != round_id or manifest.get("status") != "open":
-            return {
-                "verdict": "fail",
-                "action": verb,
-                "error": "doc-review-round-manifest-missing",
-                "issueId": issue_id,
-                "roundId": round_id,
-            }
-        pins, reconciled, conflict = merge_pin_into_manifest(list(manifest.get("pins") or []), pin)
-        if conflict is not None:
-            conflict["action"] = verb
-            conflict["issueId"] = issue_id
-            return conflict
-        if reconciled:
-            manifest["pins"] = pins
-            pin_conflict = apply_manifest_update(
-                client,
-                issue_id=str(issue_id),
-                verb=verb,
-                record_body=record.body,
-                etag=record.etag,
-                manifest_block=manifest,
-            )
-            if pin_conflict is not None:
-                return pin_conflict
         return {
             "verdict": "ok",
             "action": verb,
             "issueId": issue_id,
             "roundId": round_id,
-            "persona": persona,
-            "commentId": existing.id,
-            "revision": existing.revision or existing.created_at,
-            "authorId": existing.author_id or author_id,
-            "idempotent": True,
-            "reconciled": reconciled,
-            "pin": pin.as_dict(include_snapshot=True),
+            "artifactHash": str(manifest.get("artifactHash") or ""),
         }
 
-    body = build_doc_review_comment_body(round_id=round_id, persona=persona, payload=payload)
-    if len(body) > DOC_REVIEW_COMMENT_SIZE_CAP:
-        return {
-            "verdict": "fail",
-            "action": verb,
-            "error": DOC_REVIEW_PAYLOAD_TOO_LARGE,
-            "persona": persona,
-            "roundId": round_id,
-            "size": len(body),
-            "limit": DOC_REVIEW_COMMENT_SIZE_CAP,
-        }
-    if dry_run:
-        return {
-            "verdict": "ok",
-            "action": verb,
-            "dryRun": True,
-            "issueId": issue_id,
-            "roundId": round_id,
-            "persona": persona,
-            "authorId": author_id,
-        }
-
-    try:
-        from planning.backends.issues import doc_review_facade_issue_comment_scope
-
-        with doc_review_facade_issue_comment_scope():
-            posted = client.issue_comment(
-                str(issue_id),
-                body,
-                markers=["sw-doc-review"],
-                author_id=author_id,
-            )
-    except IssueCommentAuthorshipMismatch as exc:
-        return {
-            "verdict": "fail",
-            "action": verb,
-            "error": DOC_REVIEW_COMMENT_DRIFT,
-            "driftKind": "author-mismatch",
-            "commentId": exc.comment_id,
-            "expectedAuthorId": exc.expected,
-            "actualAuthorId": exc.actual,
-        }
-
-    if posted.author_id and posted.author_id != author_id:
-        return {
-            "verdict": "fail",
-            "action": verb,
-            "error": DOC_REVIEW_COMMENT_DRIFT,
-            "driftKind": "author-mismatch",
-            "commentId": posted.id,
-        }
-
-    pin = pin_from_comment(posted)
-    if pin is None:
-        return {"verdict": "fail", "action": verb, "error": "doc-review-comment-malformed"}
-
-    refreshed = client.issue_get(str(issue_id))
-    manifest, manifest_err = inspect_review_round_block(refreshed.body)
-    if manifest_err:
-        return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
-    bind_err = _binding_for_round(manifest)
-    if bind_err is not None:
-        return bind_err
-    if manifest.get("roundId") != round_id or manifest.get("status") != "open":
-        return {
-            "verdict": "fail",
-            "action": verb,
-            "error": "doc-review-round-manifest-missing",
-            "issueId": issue_id,
-            "roundId": round_id,
-        }
-    pins, reconciled, conflict = merge_pin_into_manifest(list(manifest.get("pins") or []), pin)
-    if conflict is not None:
-        conflict["action"] = verb
-        conflict["issueId"] = issue_id
-        return conflict
-    manifest["pins"] = pins
-    pin_conflict = apply_manifest_update(
-        client,
-        issue_id=str(issue_id),
-        verb=verb,
-        record_body=refreshed.body,
-        etag=refreshed.etag,
-        manifest_block=manifest,
-    )
-    if pin_conflict is not None:
-        return pin_conflict
-
-    return {
-        "verdict": "ok",
-        "action": verb,
-        "issueId": issue_id,
-        "roundId": round_id,
-        "persona": persona,
-        "commentId": posted.id,
-        "revision": posted.revision or posted.created_at,
-        "authorId": posted.author_id or author_id,
-        "idempotent": False,
-        "reconciled": reconciled,
-        "pin": pin.as_dict(include_snapshot=True),
-    }
+    return {"verdict": "fail", "action": verb, "error": "unknown-doc-review-verb", "verb": verb}
