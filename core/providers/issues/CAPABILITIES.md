@@ -228,8 +228,18 @@ adapter spec documented (`core/providers/issues/notion.md` R12).
 | `notion` | `notion` |
 
 Override per-provider budgets via `planning.store.requestBudget.<provider>` (request count +
-complexity for Linear). Document-review listing/revalidation charges class `document-review`
-under the same ledger (PRD 341 R40).
+complexity for Linear).
+
+### Capability index entries (R16)
+
+| Provider | Index id | Source |
+| --- | --- | --- |
+| `github-issues` | `provider.providers.issues.github-issues` | `core/providers/issues/github-issues.md` |
+| `jira` | `provider.providers.issues.jira` | `core/providers/issues/jira.md` |
+| `gitlab-issues` | `provider.providers.issues.gitlab-issues` | `core/providers/issues/gitlab-issues.md` |
+| `linear` | `provider.providers.issues.linear` | `core/providers/issues/linear.md` |
+| `notion` | `provider.providers.issues.notion` | `core/providers/issues/notion.md` |
+<!-- capability-docs:end registry-derived -->
 
 ## Document-review capability floor (PRD 341 R3 / R27 / D6)
 
@@ -242,6 +252,9 @@ Providers advertise a structured `docReviewComments` record. Mandatory fields: `
 `nativeRevision` is optional when complete bodies support fallback hashing; `stableApplicationId`
 is optional when the provider lacks a stable app identity.
 
+Document-review listing/revalidation charges class `document-review` under
+`planning.store.requestBudget` (R40).
+
 | Provider | `docReviewComments` | Notes |
 | --- | --- | --- |
 | `github-issues` | advertised after conformance suite | `stableApplicationId: false`, `nativeRevision: false`; body-hash revision tokens |
@@ -250,17 +263,6 @@ is optional when the provider lacks a stable app identity.
 
 Missing any mandatory capability fails closed with `doc-review-provider-unsupported` and the
 missing capability names — no partial write.
-
-### Capability index entries (R16)
-
-| Provider | Index id | Source |
-| --- | --- | --- |
-| `github-issues` | `provider.providers.issues.github-issues` | `core/providers/issues/github-issues.md` |
-| `jira` | `provider.providers.issues.jira` | `core/providers/issues/jira.md` |
-| `gitlab-issues` | `provider.providers.issues.gitlab-issues` | `core/providers/issues/gitlab-issues.md` |
-| `linear` | `provider.providers.issues.linear` | `core/providers/issues/linear.md` |
-| `notion` | `provider.providers.issues.notion` | `core/providers/issues/notion.md` |
-<!-- capability-docs:end registry-derived -->
 
 ### Doctor refuses stubs (R20)
 
