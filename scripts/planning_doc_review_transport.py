@@ -23,6 +23,7 @@ from planning_canonical import (
 
 DOC_REVIEW_TRANSPORT_UNAVAILABLE = "doc-review-transport-unavailable"
 DOC_REVIEW_COMMENT_DRIFT = "doc-review-comment-drift"
+DOC_REVIEW_BODY_DRIFT = "doc-review-body-drift"
 DOC_REVIEW_PIN_CONFLICT = "doc-review-pin-conflict"
 DOC_REVIEW_ROUND_MALFORMED = "doc-review-round-malformed"
 BODY_SHA256_V1_PREFIX = "body-sha256/v1:"
@@ -707,9 +708,15 @@ def transport_unavailable(*, reason: str = "") -> dict[str, Any]:
 
 
 def drift_failure(*, kind: str, detail: str = "", **extra: Any) -> dict[str, Any]:
+    """Typed drift envelope (R20/R32).
+
+    Comment pin add/edit/delete/reorder/substitute → ``doc-review-comment-drift``.
+    Stripped-body hash mismatch → ``doc-review-body-drift`` (never etag-only).
+    """
+    error = DOC_REVIEW_BODY_DRIFT if kind == "body" else DOC_REVIEW_COMMENT_DRIFT
     out: dict[str, Any] = {
         "verdict": "fail",
-        "error": DOC_REVIEW_COMMENT_DRIFT,
+        "error": error,
         "driftKind": kind,
     }
     if detail:
@@ -774,12 +781,43 @@ def verify_manifest_binding(
     return None
 
 
+def verify_body_artifact_hash(
+    *,
+    manifest: dict[str, Any],
+    body: str,
+) -> dict[str, Any] | None:
+    """Fail closed when stripped body hash drifts (R19/R20/R32).
+
+    Compares ``manifest.artifactHash`` to ``stripped_artifact_hash(body)`` only —
+    issue etag changes are OCC and must not surface as body-drift.
+    """
+    expected = str(manifest.get("artifactHash") or "").strip()
+    if not expected:
+        return None
+    actual = stripped_artifact_hash(body)
+    if actual != expected:
+        return drift_failure(
+            kind="body",
+            detail="stripped-hash-mismatch",
+            expectedArtifactHash=expected,
+            actualArtifactHash=actual,
+        )
+    return None
+
+
 def verify_round_integrity(
     *,
     manifest: dict[str, Any],
     comments: list[CommentRecord],
     expected_author_id: str,
+    body: str | None = None,
 ) -> dict[str, Any] | None:
+    """Re-read pin + optional body hash integrity (R19–R21/R32).
+
+    Marker, schema, authorship, and revision failures are fail-closed comment-drift.
+    Pin add/edit/delete/reorder/substitute → ``doc-review-comment-drift``.
+    Stripped-hash mismatch → ``doc-review-body-drift``.
+    """
     manifest = normalize_manifest_block(manifest)
     pins_raw = manifest.get("pins")
     if not isinstance(pins_raw, list):
@@ -788,6 +826,11 @@ def verify_round_integrity(
     round_id = str(manifest.get("roundId") or "")
     if not round_id:
         return drift_failure(kind="malformed", detail="manifest-missing-round-id")
+
+    if body is not None:
+        body_drift = verify_body_artifact_hash(manifest=manifest, body=body)
+        if body_drift is not None:
+            return body_drift
 
     for comment in collect_malformed_doc_review_comments(comments):
         parsed = parse_doc_review_comment(comment.body)
@@ -802,11 +845,8 @@ def verify_round_integrity(
     by_id = {str(comment.id): comment for comment in comments}
     marked = collect_round_doc_review_comments(comments, round_id)
     marked_ids = {comment.id for comment in marked}
-    pinned_ids = {
-        str(normalize_pin_row(row).get("commentId") or "")
-        for row in pins_raw
-        if isinstance(row, dict)
-    }
+    pin_order: list[str] = []
+    pinned_ids: set[str] = set()
 
     seen_keys: set[str] = set()
     seen_comments: set[str] = set()
@@ -824,12 +864,14 @@ def verify_round_integrity(
             if comment_id in seen_comments:
                 return drift_failure(kind="malformed", detail="duplicate-comment-id", commentId=comment_id)
             seen_comments.add(comment_id)
+            pin_order.append(comment_id)
+            pinned_ids.add(comment_id)
 
         comment = by_id.get(comment_id)
         if comment is None:
             return drift_failure(kind="delete", commentId=comment_id)
         if not is_marked_doc_review_comment(comment):
-            return drift_failure(kind="malformed", commentId=comment_id)
+            return drift_failure(kind="malformed", commentId=comment_id, detail="bad-marker")
         if comment_round_id(comment) != round_id:
             return drift_failure(kind="malformed", commentId=comment_id, detail="round-mismatch")
         parsed = parse_doc_review_comment(comment.body)
@@ -863,6 +905,15 @@ def verify_round_integrity(
     missing_ids = pinned_ids - marked_ids
     if missing_ids:
         return drift_failure(kind="delete", commentIds=sorted(missing_ids))
+
+    marked_order = [str(comment.id) for comment in marked]
+    if pin_order and marked_order and pin_order != marked_order:
+        return drift_failure(
+            kind="reorder",
+            detail="pin-order-mismatch",
+            expectedOrder=pin_order,
+            actualOrder=marked_order,
+        )
 
     return None
 
@@ -1121,6 +1172,7 @@ def execute_doc_review_txn(
                 manifest=manifest,
                 comments=list(refreshed.comments),
                 expected_author_id=author_id,
+                body=refreshed.body,
             )
             if drift is not None:
                 drift["action"] = verb
@@ -1145,6 +1197,7 @@ def execute_doc_review_txn(
             manifest=manifest,
             comments=list(refreshed.comments),
             expected_author_id=author_id,
+            body=refreshed.body,
         )
         if drift is not None:
             drift["action"] = verb
@@ -1359,7 +1412,16 @@ def execute_doc_review_txn(
         return out
 
     if verb == "doc-review-round-verify":
+        # R19 — re-enumerate comments + body before completion; refuse incomplete pages.
         refreshed = client.issue_get(str(issue_id))
+        if not comments_pagination_complete(refreshed):
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_PAGINATION_INCOMPLETE,
+                "issueId": issue_id,
+                "roundId": round_id,
+            }
         manifest, manifest_err = inspect_review_round_block(refreshed.body)
         if manifest_err:
             return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
@@ -1370,11 +1432,18 @@ def execute_doc_review_txn(
             manifest=manifest,
             comments=list(refreshed.comments),
             expected_author_id=author_id,
+            body=refreshed.body,
         )
         if drift is not None:
             drift["action"] = verb
             drift["issueId"] = issue_id
             return drift
-        return {"verdict": "ok", "action": verb, "issueId": issue_id, "roundId": round_id}
+        return {
+            "verdict": "ok",
+            "action": verb,
+            "issueId": issue_id,
+            "roundId": round_id,
+            "artifactHash": str(manifest.get("artifactHash") or ""),
+        }
 
     return {"verdict": "fail", "action": verb, "error": "unknown-doc-review-verb", "verb": verb}
