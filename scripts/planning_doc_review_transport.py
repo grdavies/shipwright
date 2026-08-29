@@ -8,6 +8,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 
 from issues_broker import IssueCommentAuthorshipMismatch
@@ -24,6 +25,20 @@ DOC_REVIEW_TRANSPORT_UNAVAILABLE = "doc-review-transport-unavailable"
 DOC_REVIEW_COMMENT_DRIFT = "doc-review-comment-drift"
 DOC_REVIEW_PIN_CONFLICT = "doc-review-pin-conflict"
 DOC_REVIEW_ROUND_MALFORMED = "doc-review-round-malformed"
+DOC_REVIEW_PAYLOAD_TOO_LARGE = "doc-review-payload-too-large"
+DOC_REVIEW_FINDINGS_SCHEMA_INVALID = "doc-review-findings-schema-invalid"
+DOC_REVIEW_IDEMPOTENCY_AMBIGUOUS = "doc-review-idempotency-ambiguous"
+DOC_REVIEW_PAGINATION_INCOMPLETE = "doc-review-pagination-incomplete"
+
+# GitHub issue comment body hard cap (characters). Provider-neutral facade uses this as the
+# default size bound for findings comments (PRD 341 R39).
+DOC_REVIEW_COMMENT_SIZE_CAP = 65536
+
+_FINDINGS_SCHEMA_REL = Path("core/skills/doc-review/references/findings-schema.json")
+_FINDINGS_SEVERITIES = frozenset({"P0", "P1", "P2", "P3"})
+_FINDINGS_AUTOFIX = frozenset({"safe_auto", "gated_auto", "manual"})
+_FINDINGS_TYPES = frozenset({"error", "omission"})
+_FINDINGS_CONFIDENCE = frozenset({0, 25, 50, 75, 100})
 
 # Colon (`sw:doc-review`) and hyphen/HTML (`sw-doc-review`) are one marker family (PRD 341 R4).
 _DOC_REVIEW_NAME = r"sw[:-]doc-review"
@@ -219,12 +234,14 @@ def collect_malformed_doc_review_comments(comments: list[CommentRecord]) -> list
     return malformed
 
 
-def find_comment_by_idempotency_key(
+def find_comments_by_idempotency_key(
     comments: list[CommentRecord],
     *,
     round_id: str,
     key: str,
-) -> CommentRecord | None:
+) -> list[CommentRecord]:
+    """Return every valid round comment carrying ``key`` (PRD 341 R8)."""
+    matches: list[CommentRecord] = []
     for comment in collect_round_doc_review_comments(comments, round_id):
         parsed = parse_doc_review_comment(comment.body)
         if not parsed:
@@ -232,8 +249,121 @@ def find_comment_by_idempotency_key(
         if validate_doc_review_envelope(parsed) is not None:
             continue
         if str(parsed.get("idempotencyKey") or "") == key:
-            return comment
+            matches.append(comment)
+    return matches
+
+
+def find_comment_by_idempotency_key(
+    comments: list[CommentRecord],
+    *,
+    round_id: str,
+    key: str,
+) -> CommentRecord | None:
+    """Return the sole matching comment, or None when zero matches.
+
+    Callers that must fail closed on duplicates should use
+    :func:`find_comments_by_idempotency_key` (PRD 341 R8).
+    """
+    matches = find_comments_by_idempotency_key(comments, round_id=round_id, key=key)
+    if len(matches) != 1:
+        return None
+    return matches[0]
+
+
+def comments_pagination_complete(record: Any) -> bool:
+    """Fail closed when the provider cannot prove terminal pagination (R8/R13)."""
+    flag = getattr(record, "comments_complete", None)
+    if flag is None:
+        # Fixture / fully-materialized IssueRecord comments are terminal.
+        return True
+    return bool(flag)
+
+
+def validate_findings_payload(payload: dict[str, Any], *, persona: str) -> str | None:
+    """Validate persona findings against findings-schema.json (PRD 341 R5/R6).
+
+    Lightweight structural checks mirror the JSON Schema without requiring jsonschema.
+    """
+    if not isinstance(payload, dict):
+        return "payload-not-object"
+    required = ("reviewer", "findings", "residual_risks", "deferred_questions")
+    for field in required:
+        if field not in payload:
+            return f"missing-{field}"
+    reviewer = payload.get("reviewer")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        return "invalid-reviewer"
+    if reviewer.strip() != persona:
+        return "reviewer-persona-mismatch"
+    findings = payload.get("findings")
+    if not isinstance(findings, list):
+        return "findings-not-array"
+    residual = payload.get("residual_risks")
+    deferred = payload.get("deferred_questions")
+    if not isinstance(residual, list) or not isinstance(deferred, list):
+        return "risks-or-questions-not-array"
+    for item in residual:
+        if not isinstance(item, str):
+            return "residual-risk-not-string"
+    for item in deferred:
+        if not isinstance(item, str):
+            return "deferred-question-not-string"
+    required_finding = (
+        "title",
+        "severity",
+        "section",
+        "why_it_matters",
+        "finding_type",
+        "autofix_class",
+        "confidence",
+        "evidence",
+    )
+    for idx, finding in enumerate(findings):
+        if not isinstance(finding, dict):
+            return f"finding-{idx}-not-object"
+        for field in required_finding:
+            if field not in finding:
+                return f"finding-{idx}-missing-{field}"
+        title = finding.get("title")
+        if not isinstance(title, str) or not title or len(title) > 100:
+            return f"finding-{idx}-invalid-title"
+        if finding.get("severity") not in _FINDINGS_SEVERITIES:
+            return f"finding-{idx}-invalid-severity"
+        if not isinstance(finding.get("section"), str):
+            return f"finding-{idx}-invalid-section"
+        if not isinstance(finding.get("why_it_matters"), str):
+            return f"finding-{idx}-invalid-why"
+        if finding.get("finding_type") not in _FINDINGS_TYPES:
+            return f"finding-{idx}-invalid-type"
+        if finding.get("autofix_class") not in _FINDINGS_AUTOFIX:
+            return f"finding-{idx}-invalid-autofix"
+        suggested = finding.get("suggested_fix", None)
+        if suggested is not None and not isinstance(suggested, str):
+            return f"finding-{idx}-invalid-suggested-fix"
+        if finding.get("confidence") not in _FINDINGS_CONFIDENCE:
+            return f"finding-{idx}-invalid-confidence"
+        evidence = finding.get("evidence")
+        if not isinstance(evidence, list) or not evidence or not all(isinstance(e, str) for e in evidence):
+            return f"finding-{idx}-invalid-evidence"
+    # Keep schema path discoverable for docs-currency / future jsonschema wiring.
+    _ = _FINDINGS_SCHEMA_REL
     return None
+
+
+def envelope_immutable_equal(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    """Semantic equality for idempotent replay (PRD 341 R38).
+
+    JSON key order and presentation whitespace do not create a conflict; payload
+    comparison uses sorted-key hashing already applied by :func:`payload_hash`.
+    """
+    for field in ("round", "persona", "idempotencyKey", "payloadHash"):
+        if str(left.get(field) or "") != str(right.get(field) or ""):
+            return False
+    left_payload = left.get("payload")
+    right_payload = right.get("payload")
+    if not isinstance(left_payload, dict) or not isinstance(right_payload, dict):
+        return False
+    return payload_hash(left_payload) == payload_hash(right_payload)
 
 
 def render_review_round_block(block: dict[str, Any]) -> str:
@@ -786,20 +916,57 @@ def execute_doc_review_txn(
     if not isinstance(payload, dict):
         return {"verdict": "fail", "action": verb, "error": "payload-required"}
 
+    schema_err = validate_findings_payload(payload, persona=persona)
+    if schema_err is not None:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": DOC_REVIEW_FINDINGS_SCHEMA_INVALID,
+            "detail": schema_err,
+            "persona": persona,
+            "roundId": round_id,
+        }
+
+    # Fresh issue_get materializes the complete comment set before reconcile/retry (R8).
     record = client.issue_get(str(issue_id))
+    if not comments_pagination_complete(record):
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": DOC_REVIEW_PAGINATION_INCOMPLETE,
+            "issueId": issue_id,
+            "roundId": round_id,
+        }
     manifest, manifest_err = inspect_review_round_block(record.body)
     if manifest_err:
         return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
 
     key = idempotency_key(round_id, persona)
     digest = payload_hash(payload)
-    existing = find_comment_by_idempotency_key(list(record.comments), round_id=round_id, key=key)
+    matches = find_comments_by_idempotency_key(list(record.comments), round_id=round_id, key=key)
+    if len(matches) > 1:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": DOC_REVIEW_IDEMPOTENCY_AMBIGUOUS,
+            "persona": persona,
+            "roundId": round_id,
+            "matchCount": len(matches),
+            "commentIds": [str(c.id) for c in matches],
+        }
+    existing = matches[0] if matches else None
     if existing is not None:
         existing_parsed = parse_doc_review_comment(existing.body)
         if existing_parsed is None or validate_doc_review_envelope(existing_parsed) is not None:
             return {"verdict": "fail", "action": verb, "error": "doc-review-comment-malformed"}
-        existing_hash = str(existing_parsed.get("payloadHash") or "")
-        if existing_hash != digest:
+        proposed = {
+            "round": round_id,
+            "persona": persona,
+            "idempotencyKey": key,
+            "payloadHash": digest,
+            "payload": payload,
+        }
+        if not envelope_immutable_equal(existing_parsed, proposed):
             return {
                 "verdict": "fail",
                 "action": verb,
@@ -861,6 +1028,16 @@ def execute_doc_review_txn(
         }
 
     body = build_doc_review_comment_body(round_id=round_id, persona=persona, payload=payload)
+    if len(body) > DOC_REVIEW_COMMENT_SIZE_CAP:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": DOC_REVIEW_PAYLOAD_TOO_LARGE,
+            "persona": persona,
+            "roundId": round_id,
+            "size": len(body),
+            "limit": DOC_REVIEW_COMMENT_SIZE_CAP,
+        }
     if dry_run:
         return {
             "verdict": "ok",
