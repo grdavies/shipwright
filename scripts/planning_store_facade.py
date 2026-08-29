@@ -6040,7 +6040,7 @@ def complete_review_round(
     round_id: str | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Facade entry — close a verified doc-review round (PRD 341 phase 1 / R1)."""
+    """Facade entry — re-verify, OCC-close, append completion receipt (PRD 341 R22/R23/D21)."""
     return _doc_review_facade_invoke(
         root,
         cfg,

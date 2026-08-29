@@ -35,6 +35,8 @@ DOC_REVIEW_PAGINATION_INCOMPLETE = "doc-review-pagination-incomplete"
 DOC_REVIEW_UNPINNED_FINDINGS = "doc-review-unpinned-findings"
 DOC_REVIEW_MANIFEST_CONFLICT = "doc-review-manifest-conflict"
 DOC_REVIEW_MANIFEST_API_VERSION = "shipwright.dev/doc-review-manifest/v1"
+DOC_REVIEW_COMPLETION_API_VERSION = "shipwright.dev/doc-review-completion/v1"
+DOC_REVIEW_COMPLETION_MARKER = "sw:doc-review-completion"
 
 # GitHub issue comment body hard cap (characters). Provider-neutral facade uses this as the
 # default size bound for findings comments (PRD 341 R39).
@@ -49,6 +51,7 @@ _FINDINGS_CONFIDENCE = frozenset({0, 25, 50, 75, 100})
 # Colon (`sw:doc-review`) and hyphen/HTML (`sw-doc-review`) are one marker family (PRD 341 R4).
 _DOC_REVIEW_NAME = r"sw[:-]doc-review"
 _DOC_REVIEW_ROUND_NAME = r"sw[:-]doc-review-round"
+_DOC_REVIEW_COMPLETION_NAME = r"sw[:-]doc-review-completion"
 
 DOC_REVIEW_OPEN_MARKER = re.compile(
     rf"<!--\s*{_DOC_REVIEW_NAME}\s*-->",
@@ -72,6 +75,18 @@ DOC_REVIEW_ROUND_CLOSE_MARKER = re.compile(
 )
 DOC_REVIEW_ROUND_JSON_FENCE = re.compile(
     rf"<!--\s*{_DOC_REVIEW_ROUND_NAME}\s*-->\s*```(?:json|sw-doc-review)?\s*\n(.*?)\n```\s*<!--\s*/{_DOC_REVIEW_ROUND_NAME}\s*-->",
+    re.DOTALL | re.IGNORECASE,
+)
+DOC_REVIEW_COMPLETION_OPEN_MARKER = re.compile(
+    rf"<!--\s*{_DOC_REVIEW_COMPLETION_NAME}\s*-->",
+    re.IGNORECASE,
+)
+DOC_REVIEW_COMPLETION_CLOSE_MARKER = re.compile(
+    rf"<!--\s*/{_DOC_REVIEW_COMPLETION_NAME}\s*-->",
+    re.IGNORECASE,
+)
+DOC_REVIEW_COMPLETION_JSON_FENCE = re.compile(
+    rf"<!--\s*{_DOC_REVIEW_COMPLETION_NAME}\s*-->\s*```(?:json|sw-doc-review)?\s*\n(.*?)\n```\s*<!--\s*/{_DOC_REVIEW_COMPLETION_NAME}\s*-->",
     re.DOTALL | re.IGNORECASE,
 )
 LEGACY_INLINE_ROUND_MARKER = re.compile(
@@ -132,6 +147,16 @@ def idempotency_key(round_id: str, persona: str) -> str:
 def default_manifest_idempotency_key(round_id: str) -> str:
     """Default manifest idempotency scope when callers omit an explicit key (R12)."""
     return f"{round_id}:manifest"
+
+
+def body_manifest_id(*, issue_id: str, round_id: str) -> str:
+    """Stable manifest id for body-block authority (not a provider comment id)."""
+    return f"body-manifest:{issue_id}:{round_id}"
+
+
+def default_completion_idempotency_key(*, round_id: str, manifest_id: str) -> str:
+    """Completion idempotency scope (artifact, round, manifest, key) — R23."""
+    return f"{round_id}:completion:{manifest_id}"
 
 
 def payload_hash(payload: dict[str, Any]) -> str:
@@ -216,6 +241,120 @@ def build_doc_review_comment_body(*, round_id: str, persona: str, payload: dict[
         f"```json\n{raw}\n```\n"
         f"<!-- /{DOC_REVIEW_MARKER} -->\n"
     )
+
+
+def build_completion_receipt_body(
+    *,
+    unit_id: str,
+    round_id: str,
+    manifest_id: str,
+    manifest_revision_token: str,
+    idempotency_key_value: str,
+    completed_at: str | None = None,
+    body_path: str | None = None,
+    verification: str = "verified",
+) -> str:
+    """Build an ``sw:doc-review-completion`` receipt comment body (R22)."""
+    artifact: dict[str, Any] = {"unitId": unit_id}
+    if body_path:
+        artifact["bodyPath"] = body_path
+    envelope = {
+        "apiVersion": DOC_REVIEW_COMPLETION_API_VERSION,
+        "kind": "DocReviewCompletion",
+        "artifact": artifact,
+        "roundId": round_id,
+        "manifestId": manifest_id,
+        "manifestRevisionToken": manifest_revision_token,
+        "idempotencyKey": idempotency_key_value,
+        "verification": verification,
+        "completedAt": completed_at or utc_now(),
+    }
+    raw = json.dumps(envelope, indent=2, sort_keys=True, ensure_ascii=False)
+    return (
+        f"<!-- {DOC_REVIEW_COMPLETION_MARKER} -->\n"
+        f"```json\n{raw}\n```\n"
+        f"<!-- /{DOC_REVIEW_COMPLETION_MARKER} -->\n"
+    )
+
+
+def parse_completion_receipt(body: str) -> dict[str, Any] | None:
+    match = DOC_REVIEW_COMPLETION_JSON_FENCE.search(body or "")
+    if not match:
+        return None
+    try:
+        parsed = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
+
+def validate_completion_receipt(envelope: dict[str, Any]) -> str | None:
+    if str(envelope.get("apiVersion") or "") != DOC_REVIEW_COMPLETION_API_VERSION:
+        return "completion-api-version"
+    if str(envelope.get("kind") or "") != "DocReviewCompletion":
+        return "completion-kind"
+    if not str(envelope.get("roundId") or "").strip():
+        return "missing-round"
+    if not str(envelope.get("manifestId") or "").strip():
+        return "missing-manifest-id"
+    if not str(envelope.get("idempotencyKey") or "").strip():
+        return "missing-idempotency-key"
+    if not str(envelope.get("verification") or "").strip():
+        return "missing-verification"
+    if not str(envelope.get("completedAt") or "").strip():
+        return "missing-completed-at"
+    artifact = envelope.get("artifact")
+    if not isinstance(artifact, dict) or not str(artifact.get("unitId") or "").strip():
+        return "missing-artifact-unit"
+    return None
+
+
+def is_marked_completion_receipt(comment: CommentRecord) -> bool:
+    markers = {str(m).strip().lower() for m in (comment.markers or [])}
+    if DOC_REVIEW_COMPLETION_MARKER.lower() in markers or "sw-doc-review-completion" in markers:
+        return True
+    body = comment.body or ""
+    return bool(
+        DOC_REVIEW_COMPLETION_OPEN_MARKER.search(body) and DOC_REVIEW_COMPLETION_CLOSE_MARKER.search(body)
+    )
+
+
+def find_completion_receipts(
+    comments: list[CommentRecord],
+    *,
+    round_id: str,
+    idempotency_key_value: str,
+) -> list[tuple[CommentRecord, dict[str, Any]]]:
+    """Return validated completion receipts matching round + idempotency key."""
+    matches: list[tuple[CommentRecord, dict[str, Any]]] = []
+    for comment in comments:
+        if not is_marked_completion_receipt(comment):
+            continue
+        parsed = parse_completion_receipt(comment.body or "")
+        if parsed is None:
+            continue
+        if validate_completion_receipt(parsed) is not None:
+            continue
+        if str(parsed.get("roundId") or "") != round_id:
+            continue
+        if str(parsed.get("idempotencyKey") or "") != idempotency_key_value:
+            continue
+        matches.append((comment, parsed))
+    return matches
+
+
+def completion_receipt_equal(left: dict[str, Any], right: dict[str, Any]) -> bool:
+    """Logical equality for completion replay (R23) — ignore completedAt drift."""
+    for field in ("apiVersion", "kind", "roundId", "manifestId", "manifestRevisionToken", "idempotencyKey", "verification"):
+        if str(left.get(field) or "") != str(right.get(field) or ""):
+            return False
+    left_art = left.get("artifact") if isinstance(left.get("artifact"), dict) else {}
+    right_art = right.get("artifact") if isinstance(right.get("artifact"), dict) else {}
+    if str(left_art.get("unitId") or "") != str(right_art.get("unitId") or ""):
+        return False
+    if str(left_art.get("bodyPath") or "") != str(right_art.get("bodyPath") or ""):
+        return False
+    return True
 
 
 def parse_doc_review_comment(body: str) -> dict[str, Any] | None:
@@ -1160,14 +1299,63 @@ def execute_doc_review_txn(
         return out
 
     if verb == "doc-review-round-close":
+        # D21/R22/R23 — re-verify, OCC-set status closed (pins unchanged), append one receipt.
         refreshed = client.issue_get(str(issue_id))
+        if not comments_pagination_complete(refreshed):
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_PAGINATION_INCOMPLETE,
+                "issueId": issue_id,
+                "roundId": round_id,
+            }
         manifest, manifest_err = inspect_review_round_block(refreshed.body)
         if manifest_err:
             return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
         bind_err = _binding_for_round(manifest)
         if bind_err is not None:
             return bind_err
+
+        manifest_id = body_manifest_id(issue_id=str(issue_id), round_id=round_id)
+        completion_key = default_completion_idempotency_key(
+            round_id=round_id,
+            manifest_id=manifest_id,
+        )
+        manifest_revision = str(
+            manifest.get("artifactRevision") or refreshed.etag or ""
+        )
+        art = manifest.get("artifact") if isinstance(manifest.get("artifact"), dict) else {}
+        receipt_body_path = str(art.get("bodyPath") or body_path or "") or None
+
+        existing_receipts = find_completion_receipts(
+            list(refreshed.comments),
+            round_id=round_id,
+            idempotency_key_value=completion_key,
+        )
+        if len(existing_receipts) > 1:
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_IDEMPOTENCY_AMBIGUOUS,
+                "roundId": round_id,
+                "matchCount": len(existing_receipts),
+                "commentIds": [str(c.id) for c, _ in existing_receipts],
+            }
+
         if manifest.get("roundId") == round_id and manifest.get("status") == "closed":
+            if existing_receipts:
+                comment, envelope = existing_receipts[0]
+                return {
+                    "verdict": "ok",
+                    "action": verb,
+                    "issueId": issue_id,
+                    "roundId": round_id,
+                    "status": "closed",
+                    "idempotent": True,
+                    "receiptCommentId": comment.id,
+                    "receipt": envelope,
+                }
+            # Closed without receipt — verify then append receipt only (pins untouched).
             drift = verify_round_integrity(
                 manifest=manifest,
                 comments=list(refreshed.comments),
@@ -1178,14 +1366,54 @@ def execute_doc_review_txn(
                 drift["action"] = verb
                 drift["issueId"] = issue_id
                 return drift
+            if dry_run:
+                return {
+                    "verdict": "ok",
+                    "action": verb,
+                    "dryRun": True,
+                    "status": "closed",
+                    "roundId": round_id,
+                    "receiptPending": True,
+                }
+            completed_at = utc_now()
+            receipt_body = build_completion_receipt_body(
+                unit_id=unit_id,
+                round_id=round_id,
+                manifest_id=manifest_id,
+                manifest_revision_token=manifest_revision,
+                idempotency_key_value=completion_key,
+                completed_at=completed_at,
+                body_path=receipt_body_path,
+            )
+            try:
+                posted = client.issue_comment(
+                    str(issue_id),
+                    receipt_body,
+                    markers=[DOC_REVIEW_COMPLETION_MARKER, "sw-doc-review-completion"],
+                    author_id=author_id,
+                )
+            except IssueCommentAuthorshipMismatch as exc:
+                return {
+                    "verdict": "fail",
+                    "action": verb,
+                    "error": DOC_REVIEW_COMMENT_DRIFT,
+                    "driftKind": "author-mismatch",
+                    "commentId": exc.comment_id,
+                    "expectedAuthorId": exc.expected,
+                    "actualAuthorId": exc.actual,
+                }
+            envelope = parse_completion_receipt(posted.body or receipt_body) or {}
             return {
                 "verdict": "ok",
                 "action": verb,
                 "issueId": issue_id,
                 "roundId": round_id,
                 "status": "closed",
-                "idempotent": True,
+                "idempotent": False,
+                "receiptCommentId": posted.id,
+                "receipt": envelope,
             }
+
         if manifest.get("roundId") != round_id or manifest.get("status") != "open":
             return {
                 "verdict": "fail",
@@ -1193,6 +1421,7 @@ def execute_doc_review_txn(
                 "error": "doc-review-round-not-open",
                 "roundId": round_id,
             }
+
         drift = verify_round_integrity(
             manifest=manifest,
             comments=list(refreshed.comments),
@@ -1203,11 +1432,22 @@ def execute_doc_review_txn(
             drift["action"] = verb
             drift["issueId"] = issue_id
             return drift
+
         if dry_run:
-            return {"verdict": "ok", "action": verb, "dryRun": True, "status": "closed", "roundId": round_id}
+            return {
+                "verdict": "ok",
+                "action": verb,
+                "dryRun": True,
+                "status": "closed",
+                "roundId": round_id,
+            }
+
+        # OCC close — status + closedAt only; pins / artifactHash / revision untouched.
         closed = dict(manifest)
         closed["status"] = "closed"
         closed["closedAt"] = utc_now()
+        if "pins" in manifest and isinstance(manifest.get("pins"), list):
+            closed["pins"] = [dict(p) if isinstance(p, dict) else p for p in manifest["pins"]]
         conflict = apply_manifest_update(
             client,
             issue_id=str(issue_id),
@@ -1218,7 +1458,45 @@ def execute_doc_review_txn(
         )
         if conflict is not None:
             return conflict
-        return {"verdict": "ok", "action": verb, "issueId": issue_id, "roundId": round_id, "status": "closed"}
+
+        completed_at = utc_now()
+        receipt_body = build_completion_receipt_body(
+            unit_id=unit_id,
+            round_id=round_id,
+            manifest_id=manifest_id,
+            manifest_revision_token=manifest_revision,
+            idempotency_key_value=completion_key,
+            completed_at=completed_at,
+            body_path=receipt_body_path,
+        )
+        try:
+            posted = client.issue_comment(
+                str(issue_id),
+                receipt_body,
+                markers=[DOC_REVIEW_COMPLETION_MARKER, "sw-doc-review-completion"],
+                author_id=author_id,
+            )
+        except IssueCommentAuthorshipMismatch as exc:
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": DOC_REVIEW_COMMENT_DRIFT,
+                "driftKind": "author-mismatch",
+                "commentId": exc.comment_id,
+                "expectedAuthorId": exc.expected,
+                "actualAuthorId": exc.actual,
+            }
+        envelope = parse_completion_receipt(posted.body or receipt_body) or {}
+        return {
+            "verdict": "ok",
+            "action": verb,
+            "issueId": issue_id,
+            "roundId": round_id,
+            "status": "closed",
+            "idempotent": False,
+            "receiptCommentId": posted.id,
+            "receipt": envelope,
+        }
 
     if verb == "doc-review-round-post":
         # Post-then-open (R36): findings collect before the body witness opens.
