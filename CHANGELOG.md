@@ -1152,6 +1152,7 @@
 * merge phase facade-only-review-surface into feat/issue-store-doc-review-transport (0e35125) <!-- sw-deliver:facade-only-review-surface -->
 * merge phase post-then-open-and-occ-versus-hash into feat/issue-store-doc-review-transport (97d99f3) <!-- sw-deliver:post-then-open-and-occ-versus-hash -->
 * merge phase verify-and-drift into feat/issue-store-doc-review-transport (7438ee3) <!-- sw-deliver:verify-and-drift -->
+* merge phase complete-and-receipt into feat/issue-store-doc-review-transport (475d9df) <!-- sw-deliver:complete-and-receipt -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
