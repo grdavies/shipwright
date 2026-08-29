@@ -5906,6 +5906,9 @@ def _doc_review_facade_invoke(
     persona: str | None = None,
     payload: dict[str, Any] | None = None,
     dry_run: bool = False,
+    ordered_comment_ids: list[str] | None = None,
+    idempotency_key: str | None = None,
+    body_path: str | None = None,
 ) -> dict[str, Any]:
     verb = DOC_REVIEW_FACADE_ACTION_TO_VERB.get(action)
     if verb is None:
@@ -5925,6 +5928,9 @@ def _doc_review_facade_invoke(
         persona=persona,
         payload=payload,
         dry_run=dry_run,
+        ordered_comment_ids=ordered_comment_ids,
+        manifest_idempotency_key=idempotency_key,
+        body_path=body_path,
     )
     if isinstance(result, dict):
         result["facadeOperation"] = action
@@ -5938,9 +5944,12 @@ def open_review_manifest(
     issue_id: str | None = None,
     unit_id: str | None = None,
     round_id: str | None = None,
+    idempotency_key: str | None = None,
+    ordered_comment_ids: list[str] | None = None,
+    body_path: str | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Facade entry — open doc-review round manifest (PRD 341 phase 1 / R1)."""
+    """Facade entry — open doc-review round manifest after exhaustive pins (PRD 341 R9/R36)."""
     return _doc_review_facade_invoke(
         root,
         cfg,
@@ -5949,6 +5958,9 @@ def open_review_manifest(
         unit_id=unit_id,
         round_id=round_id,
         dry_run=dry_run,
+        ordered_comment_ids=ordered_comment_ids,
+        idempotency_key=idempotency_key,
+        body_path=body_path,
     )
 
 
@@ -6074,6 +6086,9 @@ def _doc_review_transport_txn(
     persona: str | None = None,
     payload: dict[str, Any] | None = None,
     dry_run: bool = False,
+    ordered_comment_ids: list[str] | None = None,
+    manifest_idempotency_key: str | None = None,
+    body_path: str | None = None,
 ) -> dict[str, Any]:
     """Issue-store doc-review transport verbs (facade-internal)."""
     if verb not in TXN_VERBS:
@@ -6134,6 +6149,9 @@ def _doc_review_transport_txn(
         payload=payload,
         dry_run=dry_run,
         author_id=author_id,
+        ordered_comment_ids=ordered_comment_ids,
+        manifest_idempotency_key=manifest_idempotency_key,
+        body_path=body_path,
     )
 
 

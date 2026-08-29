@@ -16,7 +16,6 @@ from planning_store_facade import (
     doc_review_txn,
     facade_surface,
     load_workflow_config,
-    open_review_manifest,
     post_review_finding,
 )
 
@@ -118,14 +117,6 @@ class TestAdapterIssueCommentGuard:
         store._issues["887"] = record
         store._persist()
         cfg = load_workflow_config(facade_repo)
-        opened = open_review_manifest(
-            facade_repo,
-            cfg,
-            issue_id="887",
-            unit_id=unit_id,
-            round_id="round-facade",
-        )
-        assert opened["verdict"] == "ok"
         posted = post_review_finding(
             facade_repo,
             cfg,
