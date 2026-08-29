@@ -17,6 +17,7 @@ from issues_lib import FIXTURE_GITHUB_PRINCIPAL_ID, FixtureIssuesStore, IssueRev
 from planning_canonical import CommentRecord, IssueSnapshot, canonical_hash
 from planning_doc_review_transport import (
     DOC_REVIEW_COMMENT_DRIFT,
+    DOC_REVIEW_PROVIDER_UNSUPPORTED,
     DOC_REVIEW_ROUND_MALFORMED,
     DOC_REVIEW_TRANSPORT_UNAVAILABLE,
     build_doc_review_comment_body,
@@ -234,7 +235,7 @@ class TestCapabilityGate:
             round_id="round-1",
         )
         assert out["verdict"] == "fail"
-        assert out["error"] == DOC_REVIEW_TRANSPORT_UNAVAILABLE
+        assert out["error"] == DOC_REVIEW_PROVIDER_UNSUPPORTED
 
 
 class TestLifecycle:
