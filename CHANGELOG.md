@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.9.0](https://github.com/grdavies/shipwright/compare/v2.8.2...v2.9.0) (2026-08-30)
+
+
+### Features
+
+* **prd-341:** issue store doc review transport ([#1084](https://github.com/grdavies/shipwright/issues/1084)) ([5f4180d](https://github.com/grdavies/shipwright/commit/5f4180ddefa76831f155d5181f593a6098ab9811))
+
+
+### Bug Fixes
+
+* **planning:** bootstrap issue-store doc review transport ([#1070](https://github.com/grdavies/shipwright/issues/1070)) ([5240c91](https://github.com/grdavies/shipwright/commit/5240c91cc1f9cbdad576859fd4530956e9dc3841))
+
 ## [2.8.2](https://github.com/grdavies/shipwright/compare/v2.8.1...v2.8.2) (2026-08-28)
 
 
