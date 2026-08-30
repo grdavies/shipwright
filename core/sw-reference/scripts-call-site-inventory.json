@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-30T01:18:57Z",
+  "generatedAt": "2026-08-30T01:24:08Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -11863,73 +11863,73 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:105:doc-review-select.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:107:doc-review-select.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 105,
+      "line": 107,
       "column": 64,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:149:doc-review-select.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:151:doc-review-select.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 149,
+      "line": 151,
       "column": 8,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:206:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:208:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 206,
+      "line": 208,
       "column": 19,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:208:wave.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:210:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 208,
+      "line": 210,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:210:resolve-intensity.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:212:resolve-intensity.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 210,
+      "line": 212,
       "column": 25,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:215:dispatch_prompt.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:217:dispatch_prompt.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 215,
+      "line": 217,
       "column": 8,
       "script": "dispatch_prompt.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:222:dispatch-check.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:224:dispatch-check.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 222,
+      "line": 224,
       "column": 8,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/doc-review/SKILL.md:241:doc-review-select.py",
+      "id": "dist/claude-code/skills/doc-review/SKILL.md:243:doc-review-select.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/doc-review/SKILL.md",
-      "line": 241,
+      "line": 243,
       "column": 31,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
@@ -17866,73 +17866,73 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:105:doc-review-select.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:107:doc-review-select.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 105,
+      "line": 107,
       "column": 64,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:149:doc-review-select.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:151:doc-review-select.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 149,
+      "line": 151,
       "column": 8,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:206:sw_bootstrap.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:208:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 206,
+      "line": 208,
       "column": 19,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:208:wave.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:210:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 208,
+      "line": 210,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:210:resolve-intensity.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:212:resolve-intensity.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 210,
+      "line": 212,
       "column": 25,
       "script": "resolve-intensity.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:215:dispatch_prompt.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:217:dispatch_prompt.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 215,
+      "line": 217,
       "column": 8,
       "script": "dispatch_prompt.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:222:dispatch-check.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:224:dispatch-check.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 222,
+      "line": 224,
       "column": 8,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/doc-review/SKILL.md:241:doc-review-select.py",
+      "id": "dist/cursor/skills/doc-review/SKILL.md:243:doc-review-select.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/doc-review/SKILL.md",
-      "line": 241,
+      "line": 243,
       "column": 31,
       "script": "doc-review-select.py",
       "classification": "self-repo-only"
