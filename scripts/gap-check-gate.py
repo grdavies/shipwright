@@ -19,10 +19,17 @@ from phase_status_discovery import (
     preferred_phase_artifact_path,
     resolve_phase_worktree,
 )
-from status_integrity import remediation_for_status_cause, resolve_write_head, write_status_atomic
+from status_integrity import (
+    check_status_sha,
+    remediation_for_status_cause,
+    resolve_write_head,
+    write_status_atomic,
+)
 
 STATUS_NAME = "gap-check.status.json"
 FAST_SKIP_ERROR = "deliver-gap-check-no-fast-skip"
+ORCHESTRATOR_ROOT_CAUSE = "gap-check-orchestrator-root-artifact"
+STALE_HEAD_CAUSE = "gap-check-stale-head"
 
 
 def utc_now() -> str:
@@ -38,6 +45,15 @@ def _load_deliver_state(root: Path) -> dict[str, Any]:
         return {}
 
 
+def resolve_phase_write_head(root: Path, phase_slug: str) -> str | None:
+    """Authoritative phase worktree HEAD for gap-check binding (PRD 337 R21)."""
+    state = _load_deliver_state(root)
+    worktree = resolve_phase_worktree(root, phase_slug, state)
+    if worktree is None:
+        return None
+    return resolve_write_head(worktree) or None
+
+
 def _expected_head(root: Path, worktree: Path | None = None) -> str | None:
     """Prefer phase worktree HEAD so orch/integration tips do not filter phase stamps."""
     if worktree is not None:
@@ -48,27 +64,53 @@ def _expected_head(root: Path, worktree: Path | None = None) -> str | None:
     return head or None
 
 
+def is_orchestrator_root_artifact(path: Path, root: Path, worktree: Path | None) -> bool:
+    """Reject orchestrator-root copies when a registered phase worktree exists (R21)."""
+    if worktree is None:
+        return False
+    try:
+        resolved = path.resolve()
+        root_resolved = root.resolve()
+        wt_resolved = worktree.resolve()
+    except OSError:
+        return False
+    if not resolved.is_relative_to(root_resolved):
+        return False
+    return not resolved.is_relative_to(wt_resolved)
+
+
 def discover_gap_check_status(
     root: Path, phase_slug: str
 ) -> tuple[Path | None, dict[str, Any] | None]:
     state = _load_deliver_state(root)
     worktree = resolve_phase_worktree(root, phase_slug, state)
-    return discover_phase_status(
+    path, data = discover_phase_status(
         root,
         phase_slug,
         STATUS_NAME,
         worktree=worktree,
         expected_head=_expected_head(root, worktree),
         tiebreak=halt_dominant_tiebreak,
+        state=state,
     )
+    if path is not None and is_orchestrator_root_artifact(path, root, worktree):
+        return None, None
+    return path, data
 
 
 def status_path(root: Path, phase_slug: str) -> Path:
     path, _ = discover_gap_check_status(root, phase_slug)
     if path is not None:
         return path
+    return preferred_write_path(root, phase_slug)
+
+
+def preferred_write_path(root: Path, phase_slug: str) -> Path:
+    """Write path prefers registered phase worktree mirror (PRD 337 R21)."""
     state = _load_deliver_state(root)
     worktree = resolve_phase_worktree(root, phase_slug, state)
+    if worktree is not None:
+        return worktree / ".cursor" / "sw-deliver-runs" / phase_slug / STATUS_NAME
     return preferred_phase_artifact_path(
         root, phase_slug, STATUS_NAME, worktree=worktree, state=state
     )
@@ -139,6 +181,13 @@ def deliver_gap_check_ok(
 
     if is_forged_gap_check_status(data):
         return False, "gap-check-forged-pass"
+    phase_head = resolve_phase_write_head(root, phase_slug)
+    if phase_head:
+        ok, cause = check_status_sha(data, phase_head)
+        if not ok:
+            return False, STALE_HEAD_CAUSE if cause == "phase-status:stale" else "gap-check-missing-head"
+        if path is not None and is_orchestrator_root_artifact(path, root, resolve_phase_worktree(root, phase_slug, _load_deliver_state(root))):
+            return False, ORCHESTRATOR_ROOT_CAUSE
     return True, None
 
 
@@ -168,18 +217,40 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(args.root).resolve()
     path, discovered = discover_gap_check_status(root, args.phase_slug)
     if path is None:
-        state = _load_deliver_state(root)
-        worktree = resolve_phase_worktree(root, args.phase_slug, state)
-        path = preferred_phase_artifact_path(
-            root, args.phase_slug, STATUS_NAME, worktree=worktree, state=state
-        )
+        path = preferred_write_path(root, args.phase_slug)
 
     if args.command == "write":
         if not args.verdict:
             print(json.dumps({"verdict": "fail", "error": "--verdict pass|halt required"}))
             return 2
-        head = args.head.strip() or None
-        doc = write_status(path, args.verdict, cause=args.cause or None, head=head)
+        phase_head = resolve_phase_write_head(root, args.phase_slug)
+        head = phase_head or args.head.strip() or None
+        evaluation: dict[str, Any] | None = None
+        if args.verdict == "pass":
+            from phase_ship_hygiene import discover_authoritative_gap_evaluation
+
+            if not head:
+                print(json.dumps({"verdict": "fail", "error": "missing phase HEAD for binding write"}))
+                return 2
+            evaluation = discover_authoritative_gap_evaluation(root, args.phase_slug, head)
+            if evaluation is None:
+                evaluation = {
+                    "source": "gap-check-write",
+                    "evaluationHead": head,
+                    "evaluatedAt": utc_now(),
+                }
+        try:
+            doc = write_status(
+                path,
+                args.verdict,
+                cause=args.cause or None,
+                head=head,
+                evaluation_provenance=evaluation,
+                require_evaluation=args.verdict == "pass",
+            )
+        except ValueError as exc:
+            print(json.dumps({"verdict": "fail", "error": str(exc)}))
+            return 2
         print(json.dumps({"verdict": "pass", "action": "gap-check-write", "path": str(path), **doc}))
         return 0
 

@@ -88,6 +88,18 @@ def _resolve_phase_run_dir(root: Path, phase_slug: str) -> Path:
             return env_path
         if env_path.name == phase_slug:
             return env_path
+    try:
+        from wave_state import load_deliver_state
+        from phase_status_discovery import resolve_phase_worktree
+
+        state = load_deliver_state(root)
+        worktree = resolve_phase_worktree(root, phase_slug, state)
+        if worktree is not None:
+            wt_run = worktree / ".cursor" / "sw-deliver-runs" / phase_slug
+            if (wt_run / "ship-steps.json").is_file():
+                return wt_run
+    except Exception:
+        pass
     return canonical
 
 
@@ -147,8 +159,9 @@ def try_auto_repair_gap_check_missing(root: Path, phase_slug: str) -> dict[str, 
     discover_gap_check_status = gap_gate.discover_gap_check_status
     status_path = gap_gate.status_path
     write_status = gap_gate.write_status
+    resolve_phase_write_head = gap_gate.resolve_phase_write_head
 
-    head = resolve_write_head(root)
+    head = resolve_phase_write_head(root, phase_slug) or resolve_write_head(root)
     if not head:
         return blocked_payload(
             "gap-check-missing",

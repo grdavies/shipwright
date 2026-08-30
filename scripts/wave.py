@@ -94,6 +94,8 @@ def dispatch(argv: list[str]) -> int:
     if cmd == "report":
         if rest and rest[0] == "blockers":
             return _python("wave_failure.py", root, ["report", "blockers", *rest[1:]])
+        if rest and rest[0] == "contention-blockers":
+            return _python("wave_merge.py", root, ["report", "contention-blockers", *rest[1:]])
         return _python("wave_merge.py", root, ["report", *rest])
     if cmd == "merge":
         return _python("wave_merge.py", root, ["merge", *rest])
@@ -151,6 +153,8 @@ def dispatch(argv: list[str]) -> int:
             return _python("wave_plan_validate.py", root, ["validate", *rest[1:]])
         if rest and rest[0] == "benefit-report":
             return _python("wave_plan_benefit.py", root, ["benefit-report", *rest[1:]])
+        if rest and rest[0] == "shared-docs":
+            return _python("wave_deliver.py", root, ["plan", "shared-docs", *rest[1:]])
         return _python("wave_deliver.py", root, ["plan", *rest])
     if cmd == "sw-ship":
         if not os.environ.get("SW_RUN_DIR"):
