@@ -10,7 +10,7 @@ import subprocess
 
 from _sw import interpreter
 import sys
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -54,6 +54,19 @@ class TerminalExit(Exception):
 _terminal_library_mode: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "_terminal_library_mode", default=False
 )
+_terminal_root: contextvars.ContextVar[Path | None] = contextvars.ContextVar(
+    "_terminal_root", default=None
+)
+
+ACCEPTANCE_RECORD_FIELDS = (
+    "schemaVersion",
+    "runId",
+    "phases",
+    "terminalPr",
+    "terminalGate",
+    "gatesRunRollup",
+    "interactionCount",
+)
 
 
 @contextmanager
@@ -66,7 +79,113 @@ def terminal_library_mode():
         _terminal_library_mode.reset(token)
 
 
+@contextmanager
+def terminal_root_context(root: Path):
+    """Bind repo root for halt-resume + acceptance enrichment on emit/fail."""
+    token = _terminal_root.set(root)
+    try:
+        yield
+    finally:
+        _terminal_root.reset(token)
+
+
+def resolve_terminal_halt_cause(payload: dict[str, Any]) -> str | None:
+    for key in ("cause", "halt"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    if payload.get("verdict") in ("halt", "fail"):
+        err = payload.get("error")
+        if isinstance(err, str) and err.strip():
+            return err.strip()
+    return None
+
+
+def is_legitimate_terminal_interrupt(payload: dict[str, Any]) -> bool:
+    return payload.get("verdict") in ("halt", "fail") and resolve_terminal_halt_cause(
+        payload
+    ) is not None
+
+
+def enrich_terminal_halt_payload(
+    root: Path,
+    payload: dict[str, Any],
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Attach standardized haltResume to legitimate terminal interrupts (PRD 337 R8)."""
+    if not is_legitimate_terminal_interrupt(payload):
+        return payload
+    cause = resolve_terminal_halt_cause(payload)
+    if state is None:
+        state = load_state(root)
+    from halt_resume import enrich_legitimate_halt
+
+    enrich_legitimate_halt(
+        payload,
+        root,
+        state,
+        halt_cause=str(cause),
+        persist_halt_count=payload.get("verdict") == "halt",
+    )
+    if payload.get("verdict") == "halt" and state is not None:
+        save_state(root, state)
+    return payload
+
+
+def attach_terminal_acceptance_record(
+    root: Path,
+    payload: dict[str, Any],
+    state: dict[str, Any],
+    *,
+    terminal_gate: dict[str, Any] | None = None,
+    gate_exit_code: int | None = None,
+) -> dict[str, Any]:
+    """Persist machine-checkable terminal acceptance on green gate paths (PRD 337 R8)."""
+    from wave_acceptance import embed_validated_acceptance
+
+    embed_validated_acceptance(
+        root,
+        state,
+        payload,
+        terminal_gate=terminal_gate,
+        gate_exit_code=gate_exit_code,
+    )
+    return payload
+
+
+def validate_acceptance_schema(record: dict[str, Any]) -> tuple[bool, list[str]]:
+    """Reject acceptance records missing required ledger fields (PRD 337 R8)."""
+    errors: list[str] = []
+    for field in ACCEPTANCE_RECORD_FIELDS:
+        if field not in record:
+            errors.append(f"acceptance:missing-{field}")
+    phases = record.get("phases")
+    if not isinstance(phases, list):
+        errors.append("acceptance:phases-not-list")
+    rollup = record.get("gatesRunRollup")
+    if not isinstance(rollup, dict):
+        errors.append("acceptance:gatesRunRollup-not-object")
+    elif not isinstance(rollup.get("phases"), dict):
+        errors.append("acceptance:gatesRunRollup-phases-missing")
+    return len(errors) == 0, errors
+
+
+def _finalize_terminal_payload(obj: dict[str, Any]) -> dict[str, Any]:
+    root = _terminal_root.get()
+    if root is None:
+        return obj
+    if obj.get("verdict") == "halt":
+        return enrich_terminal_halt_payload(root, obj)
+    if obj.get("verdict") == "fail":
+        from halt_resume import enrich_fail_extra
+
+        state = load_state(root)
+        return enrich_fail_extra(root, obj, state=state)
+    return obj
+
+
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
+    obj = _finalize_terminal_payload(obj)
     if _terminal_library_mode.get():
         raise TerminalExit(TerminalOutcome(obj, exit_code))
     print(json.dumps(obj, ensure_ascii=False, indent=2))
@@ -1288,7 +1407,9 @@ def run_terminal_gate_watch(root: Path, pr: str | None) -> tuple[int, dict[str, 
 
 
 def _terminal_library_call(fn, *args, **kwargs) -> TerminalOutcome:
-    with terminal_library_mode():
+    root = args[0] if args and isinstance(args[0], Path) else None
+    root_cm = terminal_root_context(root) if root is not None else nullcontext()
+    with root_cm, terminal_library_mode():
         try:
             fn(*args, **kwargs)
         except TerminalExit as exc:
@@ -1784,6 +1905,15 @@ def cmd_terminal_pr_gate(root: Path, args: list[str]) -> None:
         gate_ec, gate = run_check_gate(root, None)
         payload = terminal_local_gate_payload(root, gate_ec, gate, action="terminal-local-gate")
         ready = payload["verdict"] == "pass"
+        if ready:
+            state = load_state(root)
+            attach_terminal_acceptance_record(
+                root,
+                payload,
+                state,
+                terminal_gate=gate,
+                gate_exit_code=gate_ec,
+            )
         emit(payload, 0 if ready else 10)
     terminal = state.get("terminalPr") or {}
     pr = parse_kv(args, "--pr") or (str(terminal.get("number")) if terminal.get("number") else None)
@@ -1804,6 +1934,15 @@ def cmd_terminal_pr_gate(root: Path, args: list[str]) -> None:
     }
     if not ready:
         payload["reason"] = gate.get("reason") or "gate not green"
+    if ready:
+        state = load_state(root)
+        attach_terminal_acceptance_record(
+            root,
+            payload,
+            state,
+            terminal_gate=gate,
+            gate_exit_code=gate_ec,
+        )
     emit(payload, 0 if ready else 10)
 
 
@@ -2246,6 +2385,11 @@ def main() -> None:
     domain = sys.argv[2]
     args = sys.argv[3:]
 
+    with terminal_root_context(root):
+        _main_dispatch(root, domain, args)
+
+
+def _main_dispatch(root: Path, domain: str, args: list[str]) -> None:
     if domain == "resume":
         sub = args[0] if args else ""
         rest = args[1:]
