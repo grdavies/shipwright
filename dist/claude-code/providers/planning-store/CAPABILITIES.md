@@ -136,7 +136,7 @@ revision fallback, manifest lifecycle, drift detection, and idempotency remain p
 
 Request budget: listing and revalidation charge `planning.store.requestBudget` under class
 `document-review`. Pagination-depth or call-ceiling exhaustion is typed (`doc-review-budget-exhausted`).
-Local `.cursor/doc-review-runs/` cache is non-authoritative — it cannot authorize open or complete.
+New rounds use **post-then-open** then `complete_review_round`; stripped-hash excludes live witnesses from freeze inputs. Local `.cursor/doc-review-runs/` cache is non-authoritative — it cannot authorize open or complete. R30 suite: `run_doc_review_conformance_suite` in `provider_conformance.py`.
 
 ## Logging contract (R18)
 

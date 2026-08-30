@@ -274,7 +274,7 @@
       "sourcePath": "core/commands/sw-doc.md"
     },
     {
-      "bodyDigest": "56ab3db7af500dfafdbf892fdd4d22395d746dcca67639d24f033df839cbc16d",
+      "bodyDigest": "605547fd84579097d912629735f1df6c2924834c62f9563dac1241942907c155",
       "capabilities": [],
       "description": "Review a PRD or decision-record draft with parallel persona sub-agents and apply safe fixes via synthesizer. Does not freeze artifacts or generate tasks.",
       "id": "sw-doc-review",
@@ -629,7 +629,7 @@
       "sourcePath": "core/skills/deliver/SKILL.md"
     },
     {
-      "bodyDigest": "39fac980167bda8db80a1e2b12aa3840e6afa17e0264edda3605be5e8a1325f7",
+      "bodyDigest": "19c164a2df8a85fad811550c2a64281f2383f8d12c4c941444289a1142692542",
       "capabilities": [
         "skill.doc-review"
       ],

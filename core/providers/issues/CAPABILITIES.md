@@ -291,3 +291,9 @@ verb — config validation only).
 Notion database scope is probed at init via `planning_notion_client.py probe-database` (not a migrate
 verb — config validation only).
 
+## Document-review conformance (PRD 341 R30)
+
+Shared doc-review cases (post-then-open, drift, body-drift, OCC, completion receipt, hash isolation) live in
+`scripts/planning/provider_conformance.py` (`run_doc_review_conformance_suite`). Non-GitHub providers stay
+disabled for doc-review.
+

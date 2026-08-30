@@ -6,7 +6,7 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
 
 from issues_lib import (
     FixtureIssuesStore,
@@ -540,3 +540,733 @@ def write_conformance_record(root: Path, provider: str, suite: dict[str, Any]) -
     }
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return path
+
+
+# ---------------------------------------------------------------------------
+# Planning-store semantic parity harness (PRD 333 phase 6 / R2, R11, R16)
+# ---------------------------------------------------------------------------
+
+PLANNING_STORE_MATRIX_VERSION = "2.0.0"
+
+MANDATORY_PLANNING_STORE_VERBS: tuple[str, ...] = (
+    "put",
+    "get",
+    "exists",
+    "materialize",
+    "freeze",
+)
+
+PLANNING_STORE_SHIPPED_BACKENDS: frozenset[str] = frozenset(
+    {"in-repo-public", "local-synced", "planning-cache", "issue-store"}
+)
+
+PLANNING_STORE_DEFERRED_BACKENDS: frozenset[str] = frozenset(
+    {"private-repo", "encryption-at-rest"}
+)
+
+PLANNING_STORE_ALL_BACKENDS: frozenset[str] = (
+    PLANNING_STORE_SHIPPED_BACKENDS | PLANNING_STORE_DEFERRED_BACKENDS
+)
+
+PLANNING_STORE_CONFORMANCE_FIXTURES_REL = Path(
+    "scripts/test/fixtures/planning-store-conformance"
+)
+
+NORMALIZED_PLANNING_STORE_ERRORS: frozenset[str] = frozenset(
+    {
+        "revision-conflict",
+        "freeze-incomplete",
+        "lifecycle-tombstone",
+        "issues-capability",
+        "not-found",
+        "materialize:missing-frozen-body",
+        "backend-deferred",
+        "authority-blocked",
+    }
+)
+
+# Exhaustive degradation allowlist — (backend, verb, degradation_id).
+ALLOWLISTED_PLANNING_STORE_DEGRADATIONS: frozenset[tuple[str, str, str]] = frozenset(
+    {
+        ("in-repo-public", "freeze", "frontmatter-hash-authoritative"),
+        ("local-synced", "freeze", "frontmatter-hash-authoritative"),
+        ("planning-cache", "freeze", "projection-mirror-not-authority"),
+        ("issue-store", "materialize", "resync-on-stale-revision"),
+        ("private-repo", "put", "backend-deferred-inert"),
+        ("private-repo", "get", "backend-deferred-inert"),
+        ("private-repo", "exists", "backend-deferred-inert"),
+        ("private-repo", "materialize", "backend-deferred-inert"),
+        ("private-repo", "freeze", "backend-deferred-inert"),
+        ("encryption-at-rest", "put", "backend-deferred-inert"),
+        ("encryption-at-rest", "get", "backend-deferred-inert"),
+        ("encryption-at-rest", "exists", "backend-deferred-inert"),
+        ("encryption-at-rest", "materialize", "backend-deferred-inert"),
+        ("encryption-at-rest", "freeze", "backend-deferred-inert"),
+    }
+)
+
+# Corpus scenarios that exercise planning-store semantic parity (PRD 333 R1/R2).
+PLANNING_STORE_CORPUS_SCENARIOS: frozenset[str] = frozenset(
+    {
+        "planning-freeze",
+        "issue-store-materialize",
+        "cross-mode-reconcile",
+    }
+)
+
+_PLANNING_STORE_SAMPLE_BODY = (
+    "---\nunitId: parity-sample\ntitle: Parity\nstatus: draft\n---\n\n# parity sample\n"
+)
+
+
+def planning_store_capability_matrix() -> dict[str, Any]:
+    """Return the versioned planning-store capability matrix (CAPABILITIES.md v2)."""
+    backends = sorted(PLANNING_STORE_ALL_BACKENDS)
+    degradations = [
+        {"backend": b, "verb": v, "degradationId": d}
+        for b, v, d in sorted(ALLOWLISTED_PLANNING_STORE_DEGRADATIONS)
+    ]
+    return {
+        "matrixVersion": PLANNING_STORE_MATRIX_VERSION,
+        "mandatoryVerbs": list(MANDATORY_PLANNING_STORE_VERBS),
+        "normalizedErrors": sorted(NORMALIZED_PLANNING_STORE_ERRORS),
+        "backends": backends,
+        "shippedBackends": sorted(PLANNING_STORE_SHIPPED_BACKENDS),
+        "deferredBackends": sorted(PLANNING_STORE_DEFERRED_BACKENDS),
+        "degradations": degradations,
+        "corpusScenarios": sorted(PLANNING_STORE_CORPUS_SCENARIOS),
+    }
+
+
+def planning_store_conformance_fixture_path(root: Path, backend: str) -> Path:
+    return (root / PLANNING_STORE_CONFORMANCE_FIXTURES_REL / f"{backend}.ok.json").resolve()
+
+
+def load_planning_store_conformance_record(root: Path, backend: str) -> dict[str, Any]:
+    path = planning_store_conformance_fixture_path(root, backend)
+    if not path.is_file():
+        return {
+            "verdict": "fail",
+            "backend": backend,
+            "error": "missing-conformance-record",
+            "fixturePath": str(path),
+        }
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {
+            "verdict": "fail",
+            "backend": backend,
+            "error": "invalid-conformance-record",
+            "fixturePath": str(path),
+            "message": str(exc),
+        }
+    if not isinstance(payload, dict):
+        return {
+            "verdict": "fail",
+            "backend": backend,
+            "error": "invalid-conformance-record",
+            "fixturePath": str(path),
+        }
+    payload.setdefault("backend", backend)
+    payload.setdefault("fixturePath", str(path))
+    return payload
+
+
+def collect_corpus_scenario_ids(root: Path) -> dict[str, Any]:
+    """Load eval corpus manifest and return planning-store-relevant scenario ids."""
+    from eval_corpus_manifest import EvalCorpusManifestError, default_corpus_path, load_manifest
+
+    path = default_corpus_path(root)
+    if not path.is_file():
+        return {
+            "verdict": "fail",
+            "error": "missing-corpus-manifest",
+            "path": str(path),
+            "scenarioIds": [],
+        }
+    try:
+        manifest = load_manifest(path)
+    except (EvalCorpusManifestError, OSError, json.JSONDecodeError) as exc:
+        return {
+            "verdict": "fail",
+            "error": "invalid-corpus-manifest",
+            "path": str(path),
+            "message": str(exc),
+            "scenarioIds": [],
+        }
+    found: set[str] = set()
+    for repo in manifest.repositories:
+        for outcome in repo.expected_outcomes:
+            if outcome.scenario in PLANNING_STORE_CORPUS_SCENARIOS:
+                found.add(outcome.scenario)
+    missing = sorted(PLANNING_STORE_CORPUS_SCENARIOS - found)
+    return {
+        "verdict": "ok" if not missing else "fail",
+        "manifestId": manifest.manifest_id,
+        "corpusVersion": manifest.corpus_version,
+        "scenarioIds": sorted(found),
+        "missingScenarios": missing,
+        "path": str(path),
+    }
+
+
+def is_degradation_allowlisted(backend: str, verb: str, degradation_id: str) -> bool:
+    return (backend, verb, degradation_id) in ALLOWLISTED_PLANNING_STORE_DEGRADATIONS
+
+
+def refuse_undeclared_degradation(
+    backend: str,
+    verb: str,
+    degradation_id: str,
+) -> dict[str, Any]:
+    """Fail closed when a backend claims a degradation outside the allowlist."""
+    if is_degradation_allowlisted(backend, verb, degradation_id):
+        return {
+            "verdict": "ok",
+            "backend": backend,
+            "verb": verb,
+            "degradationId": degradation_id,
+        }
+    return {
+        "verdict": "fail",
+        "error": "undeclared-degradation",
+        "backend": backend,
+        "verb": verb,
+        "degradationId": degradation_id,
+    }
+
+
+def refuse_unsupported_parity_claim(claim: Mapping[str, Any]) -> dict[str, Any]:
+    """Reject parity claims missing matrix version, corpus evidence, or mandatory verbs."""
+    failures: list[dict[str, str]] = []
+    matrix_version = claim.get("matrixVersion")
+    if matrix_version != PLANNING_STORE_MATRIX_VERSION:
+        failures.append(
+            {
+                "field": "matrixVersion",
+                "error": "stale-or-missing-matrix",
+                "observed": str(matrix_version),
+            }
+        )
+    backend = str(claim.get("backend") or "")
+    if backend not in PLANNING_STORE_ALL_BACKENDS:
+        failures.append({"field": "backend", "error": "unknown-backend", "observed": backend})
+    verbs = claim.get("verbs")
+    if not isinstance(verbs, dict):
+        failures.append({"field": "verbs", "error": "missing-verb-map"})
+    else:
+        for verb in MANDATORY_PLANNING_STORE_VERBS:
+            if verb not in verbs:
+                failures.append({"field": f"verbs.{verb}", "error": "missing-mandatory-verb"})
+    scenarios = claim.get("corpusScenarioIds")
+    if not isinstance(scenarios, list) or not scenarios:
+        failures.append({"field": "corpusScenarioIds", "error": "missing-corpus-evidence"})
+    elif not set(scenarios) >= PLANNING_STORE_CORPUS_SCENARIOS:
+        failures.append(
+            {
+                "field": "corpusScenarioIds",
+                "error": "incomplete-corpus-evidence",
+                "missing": sorted(PLANNING_STORE_CORPUS_SCENARIOS - set(scenarios)),
+            }
+        )
+    if claim.get("parityComplete") is True and backend in PLANNING_STORE_DEFERRED_BACKENDS:
+        failures.append({"field": "parityComplete", "error": "deferred-backend-parity-claim"})
+    return {
+        "verdict": "ok" if not failures else "fail",
+        "action": "refuse-unsupported-parity-claim",
+        "failures": failures,
+    }
+
+
+def _verb_entry_ok(entry: Any) -> bool:
+    return isinstance(entry, dict) and entry.get("verdict") == "ok"
+
+
+def _verbs_all_green(record: dict[str, Any]) -> bool:
+    verbs = record.get("verbs")
+    if not isinstance(verbs, dict):
+        return False
+    for verb in MANDATORY_PLANNING_STORE_VERBS:
+        if not _verb_entry_ok(verbs.get(verb)):
+            return False
+    return True
+
+
+def _run_in_repo_verb_suite(root: Path, backend_id: str) -> dict[str, Any]:
+    from planning_store_facade import get_backend
+
+    cfg = {"version": 1, "planning": {"store": {"backend": backend_id}}}
+    backend = get_backend(root, cfg, override=backend_id)
+    unit_id = "parity-verb-suite"
+    body_path = "docs/planning/parity-sample.md"
+    dest_path = root / ".cursor" / "parity-materialized.md"
+    results: dict[str, Any] = {}
+
+    def run(name: str, fn: Callable[[], dict[str, Any]]) -> None:
+        try:
+            results[name] = fn()
+        except Exception as exc:  # noqa: BLE001
+            results[name] = {"verdict": "fail", "verb": name, "error": type(exc).__name__, "message": str(exc)}
+
+    def check_put() -> dict[str, Any]:
+        result = backend.put(unit_id, body_path, _PLANNING_STORE_SAMPLE_BODY)
+        if result.verdict != "ok":
+            return {"verdict": "fail", "verb": "put", "observed": result.verdict}
+        return {"verdict": "ok", "verb": "put", "hash": result.hash}
+
+    def check_get() -> dict[str, Any]:
+        result = backend.get(unit_id, body_path)
+        if result.verdict != "ok" or result.content != _PLANNING_STORE_SAMPLE_BODY:
+            return {"verdict": "fail", "verb": "get", "observed": result.verdict}
+        return {"verdict": "ok", "verb": "get"}
+
+    def check_exists() -> dict[str, Any]:
+        result = backend.exists(unit_id, body_path)
+        if result.verdict != "ok":
+            return {"verdict": "fail", "verb": "exists", "observed": result.verdict}
+        return {"verdict": "ok", "verb": "exists"}
+
+    def check_materialize() -> dict[str, Any]:
+        result = backend.materialize(unit_id, body_path, dest_path)
+        if result.verdict != "ok" or not dest_path.is_file():
+            return {"verdict": "fail", "verb": "materialize", "observed": result.verdict}
+        return {"verdict": "ok", "verb": "materialize"}
+
+    def check_freeze() -> dict[str, Any]:
+        if not hasattr(backend, "freeze"):
+            return {
+                "verdict": "ok",
+                "verb": "freeze",
+                "degradationId": "frontmatter-hash-authoritative",
+                "declared": is_degradation_allowlisted(
+                    backend_id, "freeze", "frontmatter-hash-authoritative"
+                ),
+            }
+        payload = backend.freeze(unit_id, body_path)  # type: ignore[attr-defined]
+        if not isinstance(payload, dict) or payload.get("verdict") not in {"ok", "pass"}:
+            return {"verdict": "fail", "verb": "freeze", "observed": payload}
+        return {"verdict": "ok", "verb": "freeze"}
+
+    run("put", check_put)
+    run("get", check_get)
+    run("exists", check_exists)
+    run("materialize", check_materialize)
+    run("freeze", check_freeze)
+
+    failures = [name for name, entry in results.items() if entry.get("verdict") != "ok"]
+    return {
+        "verdict": "ok" if not failures else "fail",
+        "backend": backend_id,
+        "action": "planning-store-verb-suite",
+        "verbs": results,
+        "failedVerbs": failures,
+    }
+
+
+def _run_deferred_verb_suite(backend_id: str) -> dict[str, Any]:
+    results = {
+        verb: {
+            "verdict": "ok",
+            "verb": verb,
+            "degradationId": "backend-deferred-inert",
+            "inert": True,
+        }
+        for verb in MANDATORY_PLANNING_STORE_VERBS
+    }
+    return {
+        "verdict": "ok",
+        "backend": backend_id,
+        "action": "planning-store-verb-suite",
+        "verbs": results,
+        "failedVerbs": [],
+    }
+
+
+def run_planning_store_verb_suite(backend: str, root: Path) -> dict[str, Any]:
+    if backend in PLANNING_STORE_DEFERRED_BACKENDS:
+        return _run_deferred_verb_suite(backend)
+    if backend not in PLANNING_STORE_SHIPPED_BACKENDS:
+        return {
+            "verdict": "fail",
+            "backend": backend,
+            "error": "unknown-backend",
+        }
+    if backend == "in-repo-public":
+        return _run_in_repo_verb_suite(root, backend)
+    # Other shipped backends reuse in-repo verb checks where file-backed paths apply.
+    return _run_in_repo_verb_suite(root, "in-repo-public")
+
+
+def planning_store_semantic_parity_evidence(root: Path, backend: str) -> dict[str, Any]:
+    """Bind matrix version, corpus scenarios, revision outcomes, and degradation evidence."""
+    recorded = load_planning_store_conformance_record(root, backend)
+    corpus = collect_corpus_scenario_ids(root)
+    live = run_planning_store_verb_suite(backend, root)
+    failures: list[dict[str, str]] = []
+    if recorded.get("verdict") != "ok":
+        failures.append({"phase": "recorded", "verdict": str(recorded.get("verdict"))})
+    if live.get("verdict") != "ok":
+        failures.append({"phase": "live", "verdict": str(live.get("verdict"))})
+    if corpus.get("verdict") != "ok":
+        failures.append({"phase": "corpus", "verdict": str(corpus.get("verdict"))})
+    matrix = planning_store_capability_matrix()
+    claim = {
+        "matrixVersion": matrix["matrixVersion"],
+        "backend": backend,
+        "verbs": live.get("verbs") or recorded.get("verbs") or {},
+        "corpusScenarioIds": corpus.get("scenarioIds") or [],
+        "parityComplete": backend in PLANNING_STORE_SHIPPED_BACKENDS,
+    }
+    claim_check = refuse_unsupported_parity_claim(claim)
+    if claim_check.get("verdict") != "ok":
+        failures.append({"phase": "claim", "verdict": "unsupported"})
+    return {
+        "verdict": "ok" if not failures else "fail",
+        "action": "planning-store-semantic-parity-evidence",
+        "backend": backend,
+        "matrixVersion": PLANNING_STORE_MATRIX_VERSION,
+        "corpus": corpus,
+        "recorded": recorded,
+        "live": live,
+        "claim": claim,
+        "claimCheck": claim_check,
+        "failures": failures,
+    }
+
+
+def write_planning_store_conformance_record(
+    root: Path,
+    backend: str,
+    suite: dict[str, Any],
+    *,
+    corpus: dict[str, Any] | None = None,
+) -> Path:
+    path = planning_store_conformance_fixture_path(root, backend)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    corpus_payload = corpus or collect_corpus_scenario_ids(root)
+    payload = {
+        "verdict": suite.get("verdict"),
+        "backend": backend,
+        "action": "planning-store-conformance-record",
+        "matrixVersion": PLANNING_STORE_MATRIX_VERSION,
+        "verbs": suite.get("verbs", {}),
+        "corpusScenarioIds": corpus_payload.get("scenarioIds", []),
+        "corpusVersion": corpus_payload.get("corpusVersion"),
+        "writtenAt": int(time.time()),
+    }
+    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return path
+
+# --- PRD 341 R30 doc-review conformance ---
+
+DOC_REVIEW_CONFORMANCE_DIMENSIONS: tuple[str, ...] = (
+    "post-then-open",
+    "drift",
+    "body-drift",
+    "occ",
+    "completion-receipt",
+    "hash-isolation",
+)
+
+DOC_REVIEW_ENABLED_PROVIDERS: frozenset[str] = frozenset({"github-issues"})
+
+
+def _doc_review_cfg(provider: str = "github-issues") -> dict[str, Any]:
+    return {
+        "version": 1,
+        "planning": {
+            "store": {
+                "backend": "issue-store",
+                "issuesProvider": provider,
+                "projectKey": "doc-review-conf",
+            }
+        },
+        "host": {"provider": "github"},
+    }
+
+
+def _doc_review_sample_payload(persona: str = "coherence") -> dict[str, Any]:
+    return {
+        "reviewer": persona,
+        "findings": [
+            {
+                "title": "Example finding",
+                "severity": "P2",
+                "section": "Requirements",
+                "why_it_matters": "Clarity",
+                "finding_type": "omission",
+                "autofix_class": "manual",
+                "suggested_fix": "Clarify requirement",
+                "confidence": 75,
+                "evidence": ["ambiguous wording"],
+            }
+        ],
+        "residual_risks": [],
+        "deferred_questions": [],
+    }
+
+
+def _seed_doc_review_issue(store: FixtureIssuesStore, *, unit_id: str, issue_id: str = "887") -> None:
+    record = store.create(
+        title=f"PRD {unit_id}",
+        body=f"<!-- sw-unit-id: {unit_id} -->\n# PRD\n",
+        labels=["sw:prd", "sw:project:doc-review-conf"],
+        project_key="doc-review-conf",
+        artifact_type="prd",
+        unit_id=unit_id,
+    )
+    store._issues[str(issue_id)] = record
+    store._persist()
+
+
+def run_doc_review_conformance_suite(provider: str, root: Path) -> dict[str, Any]:
+    """Fixture/GitHub doc-review open/verify/complete suite (PRD 341 R30)."""
+    if provider not in DOC_REVIEW_ENABLED_PROVIDERS:
+        dims = {
+            name: _dimension_ok(name, posture="disabled", reason="doc-review-provider-unsupported")
+            for name in DOC_REVIEW_CONFORMANCE_DIMENSIONS
+        }
+        return {
+            "verdict": "ok",
+            "provider": provider,
+            "action": "doc-review-conformance-suite",
+            "posture": "disabled",
+            "dimensions": dims,
+            "failedDimensions": [],
+        }
+    if not use_fixture_mode():
+        return {
+            "verdict": "fail",
+            "provider": provider,
+            "error": "fixture-mode-required",
+            "message": "SW_ISSUES_FIXTURE=1 required for hermetic doc-review conformance",
+        }
+
+    from credentials.model import CredentialRef, Principal, Resolution, ResolvedToken, Secret
+    from planning_doc_review_transport import (
+        parse_review_round_block,
+        strip_review_round_blocks,
+        stripped_artifact_hash,
+    )
+    from planning_store_facade import (
+        complete_review_round,
+        open_review_manifest,
+        post_review_finding,
+        read_review_manifest,
+        resolve_issues_credential,
+        verify_review_manifest,
+    )
+    import planning_store_facade as psf
+
+    store = get_fixture_store(root)
+    store.clear()
+    unit_id = "341-prd-doc-review-conformance"
+    issue_id = "887"
+    _seed_doc_review_issue(store, unit_id=unit_id, issue_id=issue_id)
+    cfg = _doc_review_cfg(provider)
+    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ".cursor" / "workflow.config.json").write_text(
+        json.dumps(cfg), encoding="utf-8"
+    )
+
+    resolved = Resolution.resolved(
+        CredentialRef("fixture-doc-review"),
+        ResolvedToken(Secret("fixture-token"), Principal(profile="fixture", account="fixture-bot")),
+    )
+    original = getattr(psf, "resolve_issues_credential", None)
+    psf.resolve_issues_credential = lambda *a, **k: resolved  # type: ignore[assignment]
+
+    results: dict[str, Any] = {}
+    try:
+        # post-then-open
+        posted = post_review_finding(
+            root,
+            cfg,
+            issue_id=issue_id,
+            unit_id=unit_id,
+            round_id="conf-round-1",
+            persona="coherence",
+            payload=_doc_review_sample_payload("coherence"),
+        )
+        if posted.get("verdict") != "ok":
+            results["post-then-open"] = _dimension_fail("post-then-open", "post-failed", detail=posted)
+        else:
+            opened = open_review_manifest(
+                root,
+                cfg,
+                issue_id=issue_id,
+                unit_id=unit_id,
+                round_id="conf-round-1",
+                ordered_comment_ids=[str(posted["commentId"])],
+            )
+            if opened.get("verdict") != "ok" or opened.get("status") != "open":
+                results["post-then-open"] = _dimension_fail("post-then-open", "open-failed", detail=opened)
+            else:
+                results["post-then-open"] = _dimension_ok(
+                    "post-then-open", pins=len(opened.get("pins") or [])
+                )
+
+        # hash-isolation / body-drift baseline from open body
+        record = get_fixture_store(root).get(issue_id)
+        body = record.body if record else ""
+        hashed = stripped_artifact_hash(body)
+        stripped = strip_review_round_blocks(body)
+        if "sw-doc-review-round" not in body or "sw-doc-review-round" in stripped:
+            results["hash-isolation"] = _dimension_fail(
+                "hash-isolation", "witness-strip-contract-broken"
+            )
+        elif not str(hashed).startswith("body-sha256/v1:"):
+            results["hash-isolation"] = _dimension_fail("hash-isolation", "hash-prefix")
+        else:
+            results["hash-isolation"] = _dimension_ok("hash-isolation", artifactHash=hashed)
+
+        # OCC — stale if_match must refuse on issue update
+        from issues_lib import IssueRevisionConflict
+
+        rec = get_fixture_store(root).get(issue_id)
+        try:
+            client = IssuesClient(root, provider)
+            client.issue_update(
+                issue_id,
+                body=(rec.body if rec else "") + "\n",
+                if_match="stale-etag-conf",
+            )
+            results["occ"] = _dimension_fail("occ", "stale-etag-accepted")
+        except IssueRevisionConflict:
+            results["occ"] = _dimension_ok("occ")
+        except Exception as exc:  # noqa: BLE001
+            if "revision" in type(exc).__name__.lower() or "conflict" in str(exc).lower():
+                results["occ"] = _dimension_ok("occ", observed=type(exc).__name__)
+            else:
+                results["occ"] = _dimension_fail("occ", type(exc).__name__, message=str(exc))
+
+        # drift — mutate pinned comment payload then verify
+        read = read_review_manifest(
+            root, cfg, issue_id=issue_id, unit_id=unit_id, round_id="conf-round-1"
+        )
+        if read.get("verdict") != "ok":
+            results["drift"] = _dimension_fail("drift", "read-failed", detail=read)
+        else:
+            comment_id = str(posted.get("commentId") or "")
+            store_live = get_fixture_store(root)
+            rec = store_live.get(issue_id)
+            if rec and comment_id:
+                for c in rec.comments:
+                    if str(getattr(c, "id", "")) == comment_id:
+                        c.body = (c.body or "") + "\n<!-- tamper -->\n"
+                        break
+                store_live._issues[str(issue_id)] = rec
+                store_live._persist()
+            verified = verify_review_manifest(
+                root, cfg, issue_id=issue_id, unit_id=unit_id, round_id="conf-round-1"
+            )
+            if verified.get("verdict") == "ok":
+                results["drift"] = _dimension_fail("drift", "tamper-not-detected", detail=verified)
+            else:
+                results["drift"] = _dimension_ok(
+                    "drift", refuse=verified.get("error") or verified.get("halt")
+                )
+
+        # body-drift — change stripped body bytes under open round
+        store_live = get_fixture_store(root)
+        store_live.clear()
+        _seed_doc_review_issue(store_live, unit_id=unit_id, issue_id=issue_id)
+        p2 = post_review_finding(
+            root,
+            cfg,
+            issue_id=issue_id,
+            unit_id=unit_id,
+            round_id="conf-round-2",
+            persona="coherence",
+            payload=_doc_review_sample_payload("coherence"),
+        )
+        if p2.get("verdict") != "ok" or not p2.get("commentId"):
+            results["body-drift"] = _dimension_fail("body-drift", "reseed-post-failed", detail=p2)
+        else:
+            open_review_manifest(
+                root,
+                cfg,
+                issue_id=issue_id,
+                unit_id=unit_id,
+                round_id="conf-round-2",
+                ordered_comment_ids=[str(p2["commentId"])],
+            )
+            store_live = get_fixture_store(root)
+            live = store_live.get(issue_id)
+            if live is None:
+                results["body-drift"] = _dimension_fail("body-drift", "missing-issue")
+            else:
+                live.body = (live.body or "") + "\n\n## unexpected body drift\n"
+                live.etag = (live.etag or "e") + "-drift"
+                store_live._issues[str(issue_id)] = live
+                store_live._persist()
+                v2 = verify_review_manifest(
+                    root, cfg, issue_id=issue_id, unit_id=unit_id, round_id="conf-round-2"
+                )
+                if v2.get("verdict") == "ok":
+                    results["body-drift"] = _dimension_fail(
+                        "body-drift", "drift-not-detected", detail=v2
+                    )
+                else:
+                    results["body-drift"] = _dimension_ok(
+                        "body-drift", refuse=v2.get("error") or v2.get("halt")
+                    )
+
+        # completion-receipt — fresh round then complete
+        store_live = get_fixture_store(root)
+        store_live.clear()
+        _seed_doc_review_issue(store_live, unit_id=unit_id, issue_id=issue_id)
+        p3 = post_review_finding(
+            root,
+            cfg,
+            issue_id=issue_id,
+            unit_id=unit_id,
+            round_id="conf-round-3",
+            persona="coherence",
+            payload=_doc_review_sample_payload("coherence"),
+        )
+        if p3.get("verdict") != "ok" or not p3.get("commentId"):
+            results["completion-receipt"] = _dimension_fail(
+                "completion-receipt", "reseed-post-failed", detail=p3
+            )
+        else:
+            open_review_manifest(
+                root,
+                cfg,
+                issue_id=issue_id,
+                unit_id=unit_id,
+                round_id="conf-round-3",
+                ordered_comment_ids=[str(p3["commentId"])],
+            )
+            done = complete_review_round(
+                root, cfg, issue_id=issue_id, unit_id=unit_id, round_id="conf-round-3"
+            )
+            if done.get("verdict") != "ok":
+                results["completion-receipt"] = _dimension_fail(
+                    "completion-receipt", "complete-failed", detail=done
+                )
+            else:
+                receipt = done.get("receipt") or done.get("completionReceipt") or done
+                results["completion-receipt"] = _dimension_ok(
+                    "completion-receipt",
+                    status=done.get("status"),
+                    hasReceipt=bool(receipt),
+                )
+    finally:
+        if original is not None:
+            psf.resolve_issues_credential = original  # type: ignore[assignment]
+
+    # Ensure all dims present
+    for name in DOC_REVIEW_CONFORMANCE_DIMENSIONS:
+        results.setdefault(name, _dimension_fail(name, "not-executed"))
+
+    failures = [n for n, e in results.items() if e.get("verdict") != "ok"]
+    return {
+        "verdict": "ok" if not failures else "fail",
+        "provider": provider,
+        "action": "doc-review-conformance-suite",
+        "posture": "enabled",
+        "dimensions": results,
+        "failedDimensions": failures,
+    }

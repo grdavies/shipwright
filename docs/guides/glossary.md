@@ -29,3 +29,14 @@ Shipwright coined terms. For command routing, see the [decision tree](decision-t
 | **Spec/stub status** | P2/P3 providers documented and conformance-tested but **not shipped** — stubs return `not-enabled` and cannot enter shipped registries without green corpus evidence. |
 
 See also: [getting started](getting-started.md), [workflows](workflows.md), [configuration](configuration.md).
+
+## Document-review terms (PRD 341)
+
+| Term | Meaning |
+| --- | --- |
+| Review round | One `roundId` of persona findings under a body witness + pins |
+| Post-then-open | New-round sequence: persona posts → open manifest → verify → complete |
+| Five facade ops | `post_review_finding`, `open_review_manifest`, `read_review_manifest`, `verify_review_manifest`, `complete_review_round` |
+| Stripped-hash | Canonical/`body-sha256/v1` hash over body with live `sw-doc-review-round` witness excluded |
+| Completion receipt | Evidence written by `complete_review_round` after successful verify |
+| Cache-only doc-review runs | `.cursor/doc-review-runs/` scratch — non-authoritative |

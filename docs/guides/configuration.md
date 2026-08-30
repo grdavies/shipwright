@@ -2444,3 +2444,13 @@ Shipwright `2.8.2` · schema `config.schema.json`
 | `worktree.scaffold.portRangeStart` | `9100` | `9100` | `9100` | `9100` | `—` | `—` |
 <!-- effective-config:end generated -->
 <!-- currency: refreshed 2026-08-27T15:30:00Z for workflow.extensions / handoff_bundle bindings -->
+
+## Document-review budget and transport (PRD 341)
+
+| Knob | Notes |
+| --- | --- |
+| `planning.store.backend: issue-store` + `issuesProvider: github-issues` | Enables facade review transport after capability preflight |
+| Other issues providers / backends | Doc-review transport refused (`doc-review-provider-unsupported`) or file-store IDE path (R33) |
+| `planning.store.requestBudget` class `document-review` | Charges listing/revalidation for review rounds |
+| `.cursor/doc-review-runs/` | Cache-only; not config authority |
+

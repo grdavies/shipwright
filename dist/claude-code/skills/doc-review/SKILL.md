@@ -52,60 +52,31 @@ Prose label: “doc-review marker”; **implementation marker string:** `sw-doc-
 `<!-- sw-doc-review -->` … `<!-- /sw-doc-review -->`).
 PRD 045's legacy transport spelling `sw:doc-review` refers to this same marker family.
 
+**Five facade ops only** (no public `issue-comment` for review): `post_review_finding`,
+`open_review_manifest`, `read_review_manifest`, `verify_review_manifest`, `complete_review_round`
+(CLI verbs `doc-review-round-{post,open,read,verify,close}`).
+
+**New rounds — post-then-open / complete (PRD 341):**
+
 1. Resolve the PRD artifact issue ref from the planning store (`planning_store` + PRD 043 identification).
-2. **Open round** — before any persona post, write the review-round manifest on the issue body:
-
-```bash
-python3 scripts/planning_store.py doc-review-txn \
-  --verb doc-review-round-open \
-  --issue-id <issue-number> \
-  --unit-id <unit-id> \
-  --round-id <round-id>
-```
-
-3. For each selected persona, dispatch the review Task (binding unchanged), then **post** findings:
-
-```bash
-python3 scripts/planning_store.py doc-review-txn \
-  --verb doc-review-round-post \
-  --issue-id <issue-number> \
-  --unit-id <unit-id> \
-  --round-id <round-id> \
-  --persona <persona-id> \
-  --payload-json '<findings-json>'
-```
-
-   - **Author:** brokered GitHub principal immutable numeric id (never login string).
-   - **Marker:** `sw-doc-review` delimits persona payload — **excluded** from PRD 043 R35 canonicalization.
-   - **Payload:** JSON findings per `references/findings-schema.json` inside marker fences.
-   - **Pins:** each successful post appends a manifest pin (comment id + revision + digest).
-
-4. **Human channel:** operator notes post as plain comments without the `sw-doc-review` marker.
-5. **Read / verify before synthesis** — after all persona posts, read pins and verify integrity (fail closed on
-   drift or manifest binding mismatch). **Revision conflict is fail-closed:** each verb performs one etag-guarded
-   manifest update; on `revision-conflict` the operator re-runs the whole verb after refreshing state — there is
-   no automatic in-verb retry.
-
-```bash
-python3 scripts/planning_store.py doc-review-txn \
-  --verb doc-review-round-read \
-  --issue-id <issue-number> --unit-id <unit-id> --round-id <round-id>
-
-python3 scripts/planning_store.py doc-review-txn \
-  --verb doc-review-round-verify \
-  --issue-id <issue-number> --unit-id <unit-id> --round-id <round-id>
-```
-
-6. Run synthesis (`references/synthesis.md`) only when verify returns `verdict: ok`.
-7. **Close round** after synthesis completes:
-
-```bash
-python3 scripts/planning_store.py doc-review-txn \
-  --verb doc-review-round-close \
-  --issue-id <issue-number> --unit-id <unit-id> --round-id <round-id>
-```
-
+2. For each selected persona, dispatch the review Task (binding unchanged), then **post** findings
+   (`doc-review-round-post` / `post_review_finding`) — brokered principal id; `sw-doc-review` marker;
+   JSON per `references/findings-schema.json`. Posts do not yet pin the body witness.
+3. **Open round** after posts — `doc-review-round-open` / `open_review_manifest` writes the etag-guarded
+   body witness with exhaustive pins. **Stripped-hash:** live `sw-doc-review-round` witness stays on the
+   body but is excluded from `body-sha256/v1` / frozen canonical hash (never strip the live witness from body).
+4. **Human channel:** operator notes as plain comments without the `sw-doc-review` marker.
+5. **Read / verify** before synthesis (`doc-review-round-read` / `doc-review-round-verify`). Fail closed on
+   drift, body-drift, or OCC `revision-conflict` (re-run the whole verb after refresh — no in-verb retry).
+6. Synthesize (`references/synthesis.md`) only when verify returns `verdict: ok`.
+7. **Complete** — `doc-review-round-close` / `complete_review_round` (completion receipt).
 8. Apply `safe_auto` / gate `gated_auto` / `manual` identically to file-store synthesis.
+
+**Bootstrap in-flight (#1070):** open-then-post / `close` remains for rounds opened before facade mapping
+— see `references/synthesis.md`. Do not mix bootstrap envelopes into a new-round open.
+
+**Cache-only:** `.cursor/doc-review-runs/` (and related prompt/scratch paths) are gitignored,
+non-authoritative cache — never treat them as store truth.
 
 ## Doc types
 
