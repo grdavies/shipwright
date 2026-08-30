@@ -507,6 +507,170 @@ def feature_slug(frontmatter: dict[str, str], task_path: Path) -> str:
     return slugify(task_path.stem)
 
 
+def orchestrator_worktree_name_for_target(target: str) -> str:
+    slug = target.split("/", 1)[1] if "/" in target else target
+    return f"{slug}-orchestrator"
+
+
+def orchestrator_worktree_path_for_target(root: Path, target: str) -> Path:
+    from wave_lifecycle import git_toplevel
+
+    top = git_toplevel(root)
+    return top / ".sw-worktrees" / orchestrator_worktree_name_for_target(target)
+
+
+def is_bare_main_entry(root: Path) -> bool:
+    """True when cwd would be blocked by sw-assert-worktree (bare default branch)."""
+    script = SCRIPT_DIR / "sw-assert-worktree.py"
+    if not script.is_file():
+        return False
+    proc = subprocess.run(
+        [sys.executable, str(script)],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 1
+
+
+def resolve_run_entry_target(
+    root: Path, task_list: str, args: list[str] | None = None
+) -> dict[str, str]:
+    """Derive integration target branch for deliver run entry (PRD 337 R7)."""
+    loop_args = args or []
+    task_path = _task_list_path_for_light_derive(root, task_list)
+    fm: dict[str, str] = {}
+    if task_path.is_file():
+        fm = parse_frontmatter(task_path.read_text(encoding="utf-8"))
+    else:
+        stem = Path(task_list).name
+        match = re.search(r"^tasks-\d+-(.+)\.md$", stem)
+        if not match:
+            fail(f"task list not found for run entry target: {task_list}", exit_code=2)
+        slug = match.group(1)
+        branch_type = resolve_type(
+            loop_args, fm, plan_target_type=plan_target_type(root, loop_args)
+        )
+        return {"type": branch_type, "slug": slug, "branch": f"{branch_type}/{slug}"}
+    branch_type = resolve_type(
+        loop_args, fm, plan_target_type=plan_target_type(root, loop_args)
+    )
+    slug = feature_slug(fm, task_path)
+    return {"type": branch_type, "slug": slug, "branch": f"{branch_type}/{slug}"}
+
+
+def _orchestrator_shipwright_state_path(path: Path) -> Path | None:
+    git_file = path / ".git"
+    if not git_file.is_file():
+        return None
+    m = re.match(r"gitdir:\s*(.+)", git_file.read_text(encoding="utf-8").splitlines()[0])
+    if not m:
+        return None
+    return Path(m.group(1).strip()) / "shipwright.json"
+
+
+def _orchestrator_already_adopted(path: Path, target: str) -> bool:
+    state_path = _orchestrator_shipwright_state_path(path)
+    if state_path is None or not state_path.is_file():
+        return False
+    try:
+        data = json.loads(state_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return False
+    return (
+        data.get("worktreeRole") == "orchestrator"
+        and data.get("targetBranch") == target
+    )
+
+
+def _invoke_orchestrator_provision(root: Path, provision_args: list[str]) -> dict[str, Any]:
+    """Run orchestrator provision and return JSON payload (PRD 337 R7)."""
+    import io
+    from contextlib import redirect_stdout
+
+    from wave_lifecycle import cmd_orchestrator_provision
+
+    buf = io.StringIO()
+    exit_code = 0
+    try:
+        with redirect_stdout(buf):
+            cmd_orchestrator_provision(root, provision_args)
+    except SystemExit as exc:
+        exit_code = int(exc.code) if isinstance(exc.code, int) else 1
+        if exit_code != 0:
+            raw = buf.getvalue().strip()
+            payload: dict[str, Any] = {}
+            if raw:
+                try:
+                    payload = json.loads(raw)
+                except json.JSONDecodeError:
+                    payload = {"raw": raw}
+            fail(
+                payload.get("error") or "orchestrator provision failed",
+                exit_code=exit_code,
+                halt=payload.get("halt") or "orchestrator-provision",
+                **{k: v for k, v in payload.items() if k not in ("verdict", "error", "halt")},
+            )
+    raw = buf.getvalue().strip()
+    if not raw:
+        fail("orchestrator provision returned no payload", exit_code=2)
+    payload = json.loads(raw)
+    if payload.get("verdict") != "pass":
+        fail_payload(payload, "orchestrator provision failed", exit_code)
+    return payload
+
+
+def ensure_run_entry_orchestrator(
+    root: Path, task_list: str, args: list[str] | None = None
+) -> dict[str, Any]:
+    """Bare-main auto-provision and idempotent orchestrator adopt (PRD 337 R7)."""
+    loop_args = args or []
+    target_info = resolve_run_entry_target(root, task_list, loop_args)
+    target = target_info["branch"]
+    path = orchestrator_worktree_path_for_target(root, target)
+    result: dict[str, Any] = {
+        "target": target_info,
+        "orchestratorPath": str(path),
+    }
+
+    if path.exists():
+        if not path.is_dir() or not (path / ".git").exists():
+            fail(
+                f"orchestrator worktree path exists but is not a worktree: {path}",
+                exit_code=20,
+                halt="orchestrator-path-conflict",
+                remediation=f"remove or relocate {path} before run entry",
+                **result,
+            )
+        if _orchestrator_already_adopted(path, target):
+            result.update({"adopted": True, "autoProvisioned": False, "idempotent": True})
+            return result
+        provision = _invoke_orchestrator_provision(root, ["--target", target])
+        result.update(
+            {
+                "orchestratorProvision": provision,
+                "adopted": bool(provision.get("adopted")),
+                "autoProvisioned": False,
+            }
+        )
+        return result
+
+    if is_bare_main_entry(root):
+        provision = _invoke_orchestrator_provision(root, ["--target", target])
+        result.update(
+            {
+                "orchestratorProvision": provision,
+                "adopted": bool(provision.get("adopted")),
+                "autoProvisioned": True,
+            }
+        )
+        return result
+
+    result.update({"skipped": True, "reason": "orchestrator-not-required"})
+    return result
+
+
 RESUME_TERMINAL_VERDICTS = frozenset({"complete", "blocked", "rejected"})
 NONTERMINAL_VERDICTS = frozenset({"running"})
 
@@ -1451,12 +1615,14 @@ def cmd_run(root: Path, args: list[str]) -> None:
             }
         )
     result = pm.ensure_run_entry_materialized(root, task_list)
+    orch = ensure_run_entry_orchestrator(root, task_list, args)
     emit(
         {
             "verdict": "pass",
             "action": "deliver-run-entry",
             "taskList": task_list,
             **result,
+            "runEntry": orch,
         }
     )
 
