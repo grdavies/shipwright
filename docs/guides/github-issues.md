@@ -1,9 +1,9 @@
 # GitHub Issues (planning / doc-review)
 
 Shipwright's GitHub issues provider backs `planning.store.backend: issue-store` for planning units and
-(PRD 341) document-review transport.
+document-review transport.
 
-## Document review (PRD 341)
+## Document review
 
 | Topic | Rule |
 | --- | --- |

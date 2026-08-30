@@ -282,13 +282,6 @@ one-question-at-a-time brainstorm dialogue, and the retro → compound → memor
 foundations let us focus on the durable delivery loop and gating mechanics rather than rebuilding
 from scratch. Thank you.
 
-
-## Issue-store document review (PRD 341)
-
-On `planning.store.backend: issue-store` (GitHub), `/sw-doc-review` uses facade-only **post-then-open** /
-**complete** ops (`post_review_finding` → `open_review_manifest` → verify → `complete_review_round`).
-Live review witnesses are stripped from frozen hash inputs; `.cursor/doc-review-runs/` is cache-only.
-
 ## License
 
 MIT

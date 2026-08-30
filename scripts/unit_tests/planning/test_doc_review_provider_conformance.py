@@ -13,7 +13,7 @@ if str(scripts) not in sys.path:
 
 from _planning_pkg_loader import load_submodule
 
-_pc = load_submodule("provider_conformance")
+_pc = load_submodule("doc_review_conformance")
 DOC_REVIEW_CONFORMANCE_DIMENSIONS = _pc.DOC_REVIEW_CONFORMANCE_DIMENSIONS
 run_doc_review_conformance_suite = _pc.run_doc_review_conformance_suite
 

@@ -1515,8 +1515,3 @@ Deliver driver resilience clusters finalize, orch cwd adopt, and exclusive run l
   (`.cursor/sw-deliver-run-locks/`). Uncertain ownership and cross-clone reclaim fail closed — they are
   not remote `wave_remote_lease` CAS locks.
 
-## `/sw-doc-review` on issue-store (PRD 341)
-
-Issue-store reviews use **post-then-open** then verify/synthesize/`complete_review_round` (five facade ops).
-File-store remains the in-IDE panel path (byte-identical, R33). Deliver must not drive review round open/complete.
-
