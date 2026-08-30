@@ -115,6 +115,92 @@ def is_pending_merge_completion(state: dict[str, Any]) -> bool:
     return completion.get("status") == "completed-pending-merge"
 
 
+def _docs_currency_state_block(state: dict[str, Any]) -> dict[str, Any]:
+    block = state.get("docsCurrency")
+    return block if isinstance(block, dict) else {}
+
+
+def docs_currency_phase_in_progress(state: dict[str, Any], *, root: Path | None = None) -> bool:
+    """True when living-doc/docs-currency work is still in flight at terminal prepare (R13)."""
+    docs = _docs_currency_state_block(state)
+    status = str(docs.get("status") or docs.get("indexStatus") or "")
+    if status in ("in-progress", "pending"):
+        return True
+    if docs.get("complete") is False:
+        return True
+    gate = state.get("docsCurrencyGate") if isinstance(state.get("docsCurrencyGate"), dict) else {}
+    verdict = str(gate.get("verdict") or "")
+    if gate and verdict not in ("pass", "green", ""):
+        return True
+    if root is not None and is_pending_merge_completion(state):
+        prd = str(state.get("prd_number") or "").zfill(3)
+        if prd and prd != "000":
+            from wave_living_docs import read_index_status_evidence
+
+            slug = str((state.get("target") or {}).get("slug") or "") or None
+            ev = read_index_status_evidence(root, prd, slug=slug)
+            if ev and str(ev.get("status") or "") == "in-progress":
+                return True
+    return False
+
+
+def derive_closeout_index_status(
+    state: dict[str, Any],
+    *,
+    merged_to_main: bool = False,
+    root: Path | None = None,
+) -> str:
+    """INDEX expectation for terminal closeout; pending-merge cannot mask in-progress docs currency (R13)."""
+    from wave_living_docs import derive_index_status
+
+    base = derive_index_status(state, merged_to_main)
+    if merged_to_main:
+        return base
+    if base != "complete":
+        return base
+    if is_pending_merge_completion(state) and docs_currency_phase_in_progress(state, root=root):
+        return "in-progress"
+    return base
+
+
+def docs_currency_terminal_ready(
+    state: dict[str, Any],
+    *,
+    merged_to_main: bool = False,
+    root: Path | None = None,
+) -> bool:
+    """Whether terminal prepare may treat docs-currency as complete (R13)."""
+    return derive_closeout_index_status(state, merged_to_main=merged_to_main, root=root) == "complete"
+
+
+def assess_docs_currency_terminal_state(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    merged_to_main: bool = False,
+) -> dict[str, Any]:
+    """Machine-checkable docs-currency terminal assessment for closeout/prepare paths (R13)."""
+    from wave_living_docs import derive_index_status
+
+    raw_index = derive_index_status(state, merged_to_main)
+    index_status = derive_closeout_index_status(state, merged_to_main=merged_to_main, root=root)
+    masked = (
+        raw_index == "complete"
+        and index_status == "in-progress"
+        and is_pending_merge_completion(state)
+    )
+    ready = docs_currency_terminal_ready(state, merged_to_main=merged_to_main, root=root)
+    return {
+        "verdict": "pass" if ready else "in-progress",
+        "docsCurrencyComplete": ready,
+        "indexStatus": index_status,
+        "rawIndexStatus": raw_index,
+        "maskedByPendingMerge": masked,
+        "pendingMerge": is_pending_merge_completion(state),
+        "docsCurrencyInProgress": docs_currency_phase_in_progress(state, root=root),
+    }
+
+
 def _tag_state_source(state: dict[str, Any], source: str) -> dict[str, Any]:
     tagged = dict(state)
     tagged["stateSource"] = source
