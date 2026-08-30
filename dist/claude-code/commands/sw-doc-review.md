@@ -24,18 +24,20 @@ Persona panel + synthesis for PRD drafts, decision-record drafts, and amendment 
 
 Decision-record routing is **floor-only** — it never subtracts a persona the capability selector would add on PRDs.
 
-## Transport routing (PRD 045 R24)
+## Transport routing (PRD 045 R24; PRD 341)
 
 Resolve `planning.store.backend` from `.cursor/workflow.config.json`:
 
 | Backend | Transport |
 | --- | --- |
-| `issue-store` | Persona + human doc-review via **integrity-checked issue comments** on the PRD artifact issue (R69). Findings post as marker-delimited `sw:doc-review` comments; synthesis reads back under a review-round manifest. |
-| **else** (default file-store) | In-IDE parallel sub-agent panel + JSON synthesis — **unchanged** (no regression). |
+| `issue-store` | **Facade-only** review-round ops on the PRD artifact issue (GitHub): `post_review_finding` → `open_review_manifest` → `read_review_manifest` / `verify_review_manifest` → `complete_review_round`. Marker-delimited `sw-doc-review` comments; live body witness excluded from stripped canonical hash. |
+| **else** (default file-store) | In-IDE parallel sub-agent panel + JSON synthesis — **byte-identical** to pre-341 (R33). |
 
 Under issue-store, dispatch binding and persona selection are unchanged; only the **findings transport**
-differs. Human review notes use a separate comment channel (not persona markers). See
-`skills/doc-review/SKILL.md` **Issue-store transport** and `references/synthesis.md` **Review-round manifest**.
+differs. Do **not** post review findings via public `issue-comment` — that verb stays adapter-internal.
+Human review notes use a separate comment channel (no `sw-doc-review` marker). Run dirs under
+`.cursor/doc-review-runs/` are **cache-only** (non-authoritative). See `skills/doc-review/SKILL.md`
+and `references/synthesis.md`.
 
 ## Procedure
 
@@ -60,10 +62,11 @@ differs. Human review notes use a separate comment channel (not persona markers)
    `python3 scripts/doc-review-select.py --context-json '<signal_context>'`; announce activation record from selector output.
 8. **Decision-record drafts:** dispatch all eight `agents/sw-*-reviewer.md` personas (equivalent to `--all`).
 9. **Amendments:** dispatch per amendment floor rules in the skill; honor `--personas` / `--all` overrides when set.
-10. Dispatch selected personas — **issue-store:** post findings as `sw:doc-review` comments via `issue-comment` verb;
-    **file-store:** parallel sub-agents in-IDE (full document each).
+10. Dispatch selected personas — **issue-store (new rounds):** `post_review_finding` per persona, then
+    `open_review_manifest` (post-then-open); **file-store:** parallel sub-agents in-IDE (full document each).
 11. On partial failure, log and continue with remaining personas.
-12. Synthesize per `skills/doc-review/references/synthesis.md` (max 2 rounds; issue-store uses review-round manifest).
+12. **Issue-store:** `read_review_manifest` + `verify_review_manifest` before synthesis; then synthesize per
+    `skills/doc-review/references/synthesis.md` (max 2 rounds); finish with `complete_review_round`.
 13. Apply safe_auto; present gated_auto/manual for user decision.
 14. Report result; next step `/sw-freeze` when clear.
 

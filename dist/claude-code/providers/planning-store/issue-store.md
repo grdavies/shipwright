@@ -297,3 +297,9 @@ authority are unchanged (R9).
 ```bash
 python3 scripts/planning_index_issue.py project-index-status --prd <n> --status <not-started|in-progress|complete>
 ```
+
+## Document-review (PRD 341)
+
+GitHub-only enablement. New rounds: **post-then-open** → verify → **complete** via five facade ops.
+Stripped-hash excludes live witnesses from freeze inputs; `.cursor/doc-review-runs/` is cache-only.
+

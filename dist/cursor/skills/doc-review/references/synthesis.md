@@ -48,6 +48,12 @@ Unsupported providers halt with `doc-review-provider-unsupported` / transport re
 synthesize from issue comments.
 
 Manifest pins are excluded from PRD 043 R35 canonicalization (`sw-doc-review` marker comments).
+**Stripped-hash / body-drift:** the live `sw-doc-review-round` witness remains on the issue body but is
+excluded from `body-sha256/v1` and frozen hash inputs — never delete the live witness from the body to
+“fix” a hash. Drift that changes stripped body bytes fails verify as body-drift.
+
+**Cache-only run artifacts:** `.cursor/doc-review-runs/` (and related prompt scratch) are gitignored and
+non-authoritative — synthesis authority is the issue-store facade + draft under review, not cache files.
 
 ## Steps
 

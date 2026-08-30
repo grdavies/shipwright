@@ -99,3 +99,10 @@ python3 scripts/planning_tracking_issue.py prepare --payload-json '{"unitId":"<i
   (`probe_remote_visibility` → `public`) — fail-closed per PRD 043 R28.
 - **Committed projection:** run-state → INDEX `inFlight` region remains the cross-clone SoT (R80); tracking
   issue is an optional downstream projection only.
+
+## Document-review isolation (PRD 341)
+
+`/sw-deliver` must **not** open, verify, or complete document-review rounds and must not treat
+`.cursor/doc-review-runs/` as planning authority. Review transport is owned by `/sw-doc-review` + the
+planning-store facade (post-then-open / five ops / stripped-hash).
+

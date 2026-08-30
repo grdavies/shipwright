@@ -91,3 +91,10 @@ Planning artifacts (PRD/gap/tasks/brainstorm) are created via `issue-create` wit
 
 Mutations use `issue-update` with `If-Match` / etag preconditions (R36). Hermetic CI uses
 `SW_ISSUES_FIXTURE=1` — no live API calls.
+
+## Document-review facade (PRD 341)
+
+Public review path is the planning-store facade (`post_review_finding`, `open_review_manifest`,
+`read_review_manifest`, `verify_review_manifest`, `complete_review_round`) — **post-then-open** for new rounds.
+`issue-comment` remains adapter-internal. Live witnesses use stripped-hash exclusion; run cache is non-authoritative.
+
