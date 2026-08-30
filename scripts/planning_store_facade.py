@@ -2693,10 +2693,14 @@ def _closure_labels_for(record: Any, artifact_type: str) -> list[str]:
     return sorted(set(out))
 
 
-_DOCTOR_ISSUE_CATALOG: ContextVar[dict[str, Any] | None] = ContextVar(
+_DOCTOR_ISSUE_CATALOG: ContextVar[dict[str, list[Any]] | None] = ContextVar(
     "doctor_issue_catalog",
     default=None,
 )
+
+
+def _doctor_catalog_records(catalog: dict[str, list[Any]]) -> list[Any]:
+    return [record for records in catalog.values() for record in records]
 
 
 def _search_issue_records(
@@ -2720,7 +2724,7 @@ def _search_issue_records(
                 labels=labels,
             )
         )
-    records = list(catalog.values())
+    records = _doctor_catalog_records(catalog)
     if artifact_type:
         records = [record for record in records if _record_artifact_type(record) == artifact_type]
     if unit_id:
@@ -2739,12 +2743,24 @@ def _search_issue_records(
     return records
 
 
-def _lookup_issue_record(backend: "IssueStoreBackend", unit_id: str, body_path: str) -> Any:
+def _lookup_issue_record(
+    backend: "IssueStoreBackend",
+    unit_id: str,
+    body_path: str,
+    *,
+    expected_types: set[str] | None = None,
+) -> Any:
     catalog = _DOCTOR_ISSUE_CATALOG.get()
     if catalog is not None:
+        if expected_types is None:
+            try:
+                expected_types = {require_artifact_type(body_path)}
+            except ArtifactTypeUnresolved:
+                expected_types = set()
         for candidate in unit_id_lookup_candidates(backend.root, unit_id):
-            record = catalog.get(candidate)
-            if record is not None:
+            for record in catalog.get(candidate, []):
+                if expected_types and _record_artifact_type(record) not in expected_types:
+                    continue
                 return record
         return None
     try:
@@ -2763,7 +2779,7 @@ def _find_linked_brainstorm_record(
     catalog = _DOCTOR_ISSUE_CATALOG.get()
     if catalog is None:
         return backend._find_linked_brainstorm(prd_unit_id)
-    for record in catalog.values():
+    for record in _doctor_catalog_records(catalog):
         if _record_artifact_type(record) != "brainstorm":
             continue
         full_body = reassemble_body(record.body, record.comments)
@@ -3469,12 +3485,12 @@ def _doctor_absorb_pollution_scoped_record(
     return matches[0] if matches else None
 
 
-def _doctor_issue_catalog(records: list[Any]) -> dict[str, Any]:
-    catalog: dict[str, Any] = {}
+def _doctor_issue_catalog(records: list[Any]) -> dict[str, list[Any]]:
+    catalog: dict[str, list[Any]] = {}
     for record in records:
         unit_id = str(getattr(record, "unit_id", "") or "").strip()
         if unit_id:
-            catalog[unit_id] = record
+            catalog.setdefault(unit_id, []).append(record)
     return catalog
 
 
@@ -3515,7 +3531,7 @@ def doctor_absorb_pollution(
     else:
         existing_catalog = _DOCTOR_ISSUE_CATALOG.get()
         records = (
-            list(existing_catalog.values())
+            _doctor_catalog_records(existing_catalog)
             if existing_catalog is not None
             else list(search(project_key=project_key))
         )
@@ -3626,8 +3642,13 @@ def _doctor_absorb_asymmetry_check_gap(
         prd_unit = ""
         for candidate in _prd_unit_id_alias_candidates(prd_unit_id):
             body_path = _default_body_path(candidate, "prd")
-            prd_record = _lookup_issue_record(backend, candidate, body_path)
-            if prd_record is not None and _record_artifact_type(prd_record) == "prd":
+            prd_record = _lookup_issue_record(
+                backend,
+                candidate,
+                body_path,
+                expected_types={"prd", "amendment"},
+            )
+            if prd_record is not None and _record_artifact_type(prd_record) in {"prd", "amendment"}:
                 prd_unit = candidate
                 break
         if prd_record is None:

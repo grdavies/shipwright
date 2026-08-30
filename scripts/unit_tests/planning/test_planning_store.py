@@ -7,8 +7,11 @@ import subprocess
 import importlib.util
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+
+import planning_store_facade as planning_store_facade
 
 _PKG = "scripts/unit_tests/planning"
 _HARNESS = "harness_planning_store.py"
@@ -530,3 +533,43 @@ def test_aggregate_doctor_surfaces_absorb_asymmetry(
     assert result["verdict"] == "fail", result
     assert result["action"] == "doctor-absorb-asymmetry"
     assert result["error"] == "absorb-asymmetry"
+
+
+def test_doctor_catalog_keeps_prd_when_tasks_reuse_unit_id(tmp_path: Path) -> None:
+    """Historical duplicate unit ids must not hide the PRD during doctor lookup."""
+    unit_id = "092-prd-graph-engineering-runtime-first-program"
+    prd = SimpleNamespace(unit_id=unit_id, artifact_type="prd", labels=[])
+    tasks = SimpleNamespace(unit_id=unit_id, artifact_type="tasks", labels=[])
+    catalog = planning_store_facade._doctor_issue_catalog([prd, tasks])
+    token = planning_store_facade._DOCTOR_ISSUE_CATALOG.set(catalog)
+    backend = SimpleNamespace(root=tmp_path)
+    try:
+        body_path = planning_store_facade._default_body_path(unit_id, "prd")
+        resolved = planning_store_facade._lookup_issue_record(backend, unit_id, body_path)
+        assert resolved is prd
+        assert planning_store_facade._search_issue_records(
+            SimpleNamespace(),
+            project_key="planning",
+            artifact_type="prd",
+        ) == [prd]
+    finally:
+        planning_store_facade._DOCTOR_ISSUE_CATALOG.reset(token)
+
+
+def test_doctor_catalog_allows_amendment_absorber(tmp_path: Path) -> None:
+    unit_id = "056-prd-issue-store-deliver-progress-native-links-A3"
+    amendment = SimpleNamespace(unit_id=unit_id, artifact_type="amendment", labels=[])
+    catalog = planning_store_facade._doctor_issue_catalog([amendment])
+    token = planning_store_facade._DOCTOR_ISSUE_CATALOG.set(catalog)
+    backend = SimpleNamespace(root=tmp_path)
+    try:
+        body_path = planning_store_facade._default_body_path(unit_id, "prd")
+        resolved = planning_store_facade._lookup_issue_record(
+            backend,
+            unit_id,
+            body_path,
+            expected_types={"prd", "amendment"},
+        )
+        assert resolved is amendment
+    finally:
+        planning_store_facade._DOCTOR_ISSUE_CATALOG.reset(token)

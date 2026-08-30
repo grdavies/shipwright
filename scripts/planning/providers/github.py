@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
 
+import issues_broker
 import issues_http
 from host_lib import github_api_base, host_section
 
@@ -222,16 +222,14 @@ def scope_probe(token: str, cfg: dict[str, Any], root: Path) -> dict[str, Any]:
 def store_repo_private(root: Path, cfg: dict[str, Any], owner: str, repo: str) -> bool | None:
     from issues_lib import IssueRateLimited
 
-    token_env = _ps().resolve_issues_token_env(cfg, PROVIDER_ID)
-    api_token = os.environ.get(token_env, "") if token_env else ""
+    resolution = _ps().resolve_issues_credential(root, issues_provider=PROVIDER_ID, cfg=cfg)
+    try:
+        api_token = issues_broker.require_token(resolution)
+    except issues_broker.IssuesBrokerError:
+        return None
     host = host_section(cfg)
     url = f"{github_api_base(host)}/repos/{owner}/{repo}"
-    headers = {
-        "Accept": "application/vnd.github+json",
-        "User-Agent": "shipwright-planning-store",
-    }
-    if api_token:
-        headers["Authorization"] = f"Bearer {api_token}"
+    headers = probe_headers(api_token)
     try:
         status, _, body = issues_http.http_request(
             "GET",
