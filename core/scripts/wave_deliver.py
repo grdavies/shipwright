@@ -183,7 +183,54 @@ def paths_contend(
                 return True, token
     if planning_paths.path_matches_generator_output(left) and planning_paths.path_matches_generator_output(right):
         return True, "generator-output"
+    if planning_paths.is_human_authored_doc_path(left, root) and planning_paths.is_human_authored_doc_path(
+        right, root
+    ):
+        return True, left
     return False, ""
+
+
+def inject_shared_authored_doc_edges(
+    phase_ids: list[str],
+    phase_files: dict[str, list[str]],
+    all_edges: list[dict[str, str]],
+    existing: set[tuple[str, str]],
+    root: Path,
+) -> tuple[list[dict[str, str]], list[dict[str, str]], list[str]]:
+    """Serialize phases that share human-authored docs across waves (PRD 337 R22)."""
+    injected: list[dict[str, str]] = []
+    notices: list[str] = []
+
+    def sort_key(item: str) -> tuple[int, str | int]:
+        return (0, int(item)) if str(item).isdigit() else (1, str(item))
+
+    ordered = sorted(phase_ids, key=sort_key)
+    for i, left in enumerate(ordered):
+        for right in ordered[i + 1 :]:
+            shared = planning_paths.shared_human_authored_paths(
+                phase_files.get(left, []), phase_files.get(right, []), root
+            )
+            if not shared:
+                continue
+            overlap = shared[0]
+            if has_path(all_edges, right, left):
+                fail(
+                    "contention-cycle: shared-authored-doc overlap opposes declared ordering",
+                    exit_code=20,
+                    halt="contention-cycle",
+                    phases=[left, right],
+                    overlap=overlap,
+                )
+            if (left, right) in existing or has_path(all_edges, left, right):
+                continue
+            edge = {"from": left, "to": right, "kind": "shared-authored-doc"}
+            injected.append(edge)
+            all_edges.append(edge)
+            existing.add((left, right))
+            notices.append(
+                f"shared-authored-doc: phases {left} and {right} serialized ({overlap})"
+            )
+    return all_edges, injected, notices
 
 
 def has_path(edges: list[dict[str, str]], src: str, dst: str) -> bool:
@@ -296,6 +343,12 @@ def inject_contention_edges(
                 notices.append(
                     f"contention: phases {left} and {right} serialized ({overlap})"
                 )
+
+    all_edges, shared_injected, shared_notices = inject_shared_authored_doc_edges(
+        phase_ids, phase_files, all_edges, existing, root
+    )
+    injected.extend(shared_injected)
+    notices.extend(shared_notices)
 
     if graph_has_cycle(sorted(graph_nodes, key=sort_key), all_edges):
         fail(
@@ -1785,6 +1838,64 @@ def cmd_dependency_gate(root: Path, args: list[str]) -> None:
 
     pdg.cmd_dependency_gate(root, args)
 
+
+def cmd_plan_shared_docs(root: Path, args: list[str]) -> None:
+    """Detect shared human-authored docs and emit serialization plan (PRD 337 R22)."""
+    task_list = resolve_task_list_arg(root, args)
+    assert task_list
+    task_path = resolve_task_list_path(root, task_list)
+    content = task_path.read_text(encoding="utf-8")
+    phases = parse_phases(content)
+    if not phases:
+        fail("no phases found in task list")
+    phase_ids = [p["id"] for p in phases]
+    dep_rows = parse_phase_dependencies(content)
+    phase_files = parse_phase_files(content)
+    declared_edges, _ = deps_to_edges(phases, dep_rows, phase_files, root)
+    contention = planning_paths.contention_default(root)
+    waves, edges, injected, notices, expanded_files = apply_contention(
+        content, phases, declared_edges, contention, root
+    )
+    collisions: list[dict[str, Any]] = []
+    for left in phase_ids:
+        for right in phase_ids:
+            if left >= right:
+                continue
+            shared = planning_paths.shared_human_authored_paths(
+                expanded_files.get(left, []), expanded_files.get(right, []), root
+            )
+            if not shared:
+                continue
+            collisions.append(
+                {
+                    "phaseA": left,
+                    "phaseB": right,
+                    "sharedPaths": shared,
+                    "serialized": any(
+                        e.get("from") == left and e.get("to") == right for e in injected
+                    ),
+                }
+            )
+    task_list_arg = task_list
+    emit(
+        {
+            "verdict": "pass",
+            "action": "plan-shared-docs",
+            "collisions": collisions,
+            "injectedEdges": injected,
+            "notices": notices,
+            "waves": waves,
+            "preUnionRecommended": bool(collisions),
+            "remediationCommand": (
+                f"python3 scripts/wave.py plan --task-list {task_list_arg}"
+                if collisions
+                else None
+            ),
+        },
+        0,
+    )
+
+
 def cmd_plan(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     from_phase = parse_kv(args, "--from")
@@ -2197,6 +2308,9 @@ def main() -> None:
             return
         cmd_run(root, args)
     elif cmd == "plan":
+        if args and args[0] == "shared-docs":
+            cmd_plan_shared_docs(root, args[1:])
+            return
         if has_flag(args, "--explain-plan"):
             filtered = [item for item in args if item != "--explain-plan"]
             cmd_explain_plan(root, filtered)
