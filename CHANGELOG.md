@@ -1170,6 +1170,7 @@
 * merge phase bootstrap-compatibility-and-round-identity into feat/issue-store-doc-review-transport (e6ef2b3) <!-- sw-deliver:bootstrap-compatibility-and-round-identity -->
 * merge phase file-store-byte-identical-path into feat/issue-store-doc-review-transport (bdfd1a5) <!-- sw-deliver:file-store-byte-identical-path -->
 * merge phase docs-currency-and-end-to-end-conformance into feat/issue-store-doc-review-transport (bd3d6bc) <!-- sw-deliver:docs-currency-and-end-to-end-conformance -->
+* merge phase harden-deliver-run-entry-small into feat/workflow-runtime-autonomy-lifecycle (1965640) <!-- sw-deliver:harden-deliver-run-entry-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
