@@ -1176,6 +1176,7 @@
 * merge phase publish-terminal-acceptance-and-halt-contracts-medium into feat/workflow-runtime-autonomy-lifecycle (0f940a3) <!-- sw-deliver:publish-terminal-acceptance-and-halt-contracts-medium -->
 * merge phase bound-living-doc-gap-closeout-small into feat/workflow-runtime-autonomy-lifecycle (8d323b2) <!-- sw-deliver:bound-living-doc-gap-closeout-small -->
 * merge phase ship-the-complete-explore-workstream-medium into feat/workflow-runtime-autonomy-lifecycle (f468193) <!-- sw-deliver:ship-the-complete-explore-workstream-medium -->
+* merge phase align-docs-currency-terminal-state-small into feat/workflow-runtime-autonomy-lifecycle (55016d1) <!-- sw-deliver:align-docs-currency-terminal-state-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
