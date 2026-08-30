@@ -6,6 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import issues_http
+import issues_broker
 import planning_store as ps
 
 
@@ -58,6 +59,33 @@ def test_probe_github_private_store(monkeypatch, tmp_path: Path) -> None:
     assert out["storeHostPrivacy"] == "private"
     assert out["source"] == "host-api"
     assert ps.issue_store_private_enough(cfg, tmp_path) is True
+
+
+def test_probe_github_private_store_uses_brokered_credential(monkeypatch, tmp_path: Path) -> None:
+    resolution = object()
+
+    def fake_request(method, url, headers, root=None, issues_provider=None, timeout=15):
+        assert headers["Authorization"] == "Bearer broker-token"
+        return 200, {}, json.dumps({"private": True})
+
+    monkeypatch.setattr(issues_http, "http_request", fake_request)
+    monkeypatch.setattr(ps, "resolve_issues_credential", lambda *args, **kwargs: resolution)
+    monkeypatch.setattr(issues_broker, "require_token", lambda candidate: "broker-token" if candidate is resolution else "")
+    cfg = {
+        "planning": {
+            "store": {
+                "issuesProvider": "github-issues",
+                "storeLocation": {"mode": "separate-project", "owner": "plan-org", "repo": "planning"},
+                "issues": {"credentialRef": "planning-work"},
+            }
+        },
+        "host": {"provider": "github"},
+    }
+
+    out = ps.probe_store_host_privacy(tmp_path, cfg)
+
+    assert out["storeHostPrivacy"] == "private"
+    assert out["source"] == "host-api"
 
 
 def test_probe_jira_private_project() -> None:
