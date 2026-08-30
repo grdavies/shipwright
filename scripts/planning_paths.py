@@ -301,6 +301,31 @@ def phase_touches_doc_numbering(paths: list[str], root: Path) -> bool:
     return False
 
 
+def is_human_authored_doc_path(path: str, root: Path) -> bool:
+    """Human-authored doc eligible for shared-doc contention (PRD 337 R22)."""
+    norm = path.replace("\\", "/")
+    if path_matches_generator_output(norm):
+        return False
+    dirs = load_planning_dirs(root)
+    prefixes = (
+        dirs.planning.rstrip("/") + "/",
+        dirs.prds.rstrip("/") + "/",
+        dirs.decisions.rstrip("/") + "/",
+        "docs/guides/",
+    )
+    if not any(norm.startswith(prefix) or norm == prefix.rstrip("/") for prefix in prefixes):
+        return False
+    if norm.endswith("INDEX.md") or norm in ("CHANGELOG.md", "version.txt"):
+        return False
+    return True
+
+
+def shared_human_authored_paths(paths_a: list[str], paths_b: list[str], root: Path) -> list[str]:
+    authored_a = {p for p in paths_a if is_human_authored_doc_path(p, root)}
+    authored_b = {p for p in paths_b if is_human_authored_doc_path(p, root)}
+    return sorted(authored_a & authored_b)
+
+
 def brainstorms_rel() -> str:
     return "docs/brainstorms"
 
