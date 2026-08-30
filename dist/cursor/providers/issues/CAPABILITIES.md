@@ -241,6 +241,29 @@ complexity for Linear).
 | `notion` | `provider.providers.issues.notion` | `core/providers/issues/notion.md` |
 <!-- capability-docs:end registry-derived -->
 
+## Document-review capability floor (PRD 341 R3 / R27 / D6)
+
+Issue-store document review obtains credentials **only** through `credentials.resolver` /
+`credentials.send_path` (broker). Ambient env vars, selector bodies, and config-embedded tokens
+are refused on the doc-review facade path.
+
+Providers advertise a structured `docReviewComments` record. Mandatory fields: `post`,
+`stableIds`, `verifiableAuthorPrincipal`, `completeFullBody`, `completePagination`.
+`nativeRevision` is optional when complete bodies support fallback hashing; `stableApplicationId`
+is optional when the provider lacks a stable app identity.
+
+Document-review listing/revalidation charges class `document-review` under
+`planning.store.requestBudget` (R40).
+
+| Provider | `docReviewComments` | Notes |
+| --- | --- | --- |
+| `github-issues` | advertised after conformance suite | `stableApplicationId: false`, `nativeRevision: false`; body-hash revision tokens |
+| fixture (`SW_ISSUES_FIXTURE`) | same floor as github-issues | Shared provider-conformance cases (R30) |
+| `gitlab-issues`, `jira`, `linear`, `notion` | unsupported | Preflight → `doc-review-provider-unsupported` before any persona write (R28) |
+
+Missing any mandatory capability fails closed with `doc-review-provider-unsupported` and the
+missing capability names — no partial write.
+
 ### Doctor refuses stubs (R20)
 
 `planning_store.doctor` runs `doctor-issues-provider-stub` before separate-project checks:
@@ -267,4 +290,10 @@ verb — config validation only).
 
 Notion database scope is probed at init via `planning_notion_client.py probe-database` (not a migrate
 verb — config validation only).
+
+## Document-review conformance (PRD 341 R30)
+
+Shared doc-review cases (post-then-open, drift, body-drift, OCC, completion receipt, hash isolation) live in
+`scripts/planning/provider_conformance.py` (`run_doc_review_conformance_suite`). Non-GitHub providers stay
+disabled for doc-review.
 

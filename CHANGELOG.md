@@ -1149,6 +1149,15 @@
 * merge phase p2-upstream-provenance-specification-and-stub into feat/eval-corpus-handoff-and-platform-providers (6617f9d) <!-- sw-deliver:p2-upstream-provenance-specification-and-stub -->
 * merge phase p3-workflowpackage-marketplace-specification-and-stub into feat/eval-corpus-handoff-and-platform-providers (5c05ba2) <!-- sw-deliver:p3-workflowpackage-marketplace-specification-and-stub -->
 * merge phase adopter-documentation-and-absorbed-gap-closeout into feat/eval-corpus-handoff-and-platform-providers (420a31c) <!-- sw-deliver:adopter-documentation-and-absorbed-gap-closeout -->
+* merge phase facade-only-review-surface into feat/issue-store-doc-review-transport (0e35125) <!-- sw-deliver:facade-only-review-surface -->
+* merge phase post-then-open-and-occ-versus-hash into feat/issue-store-doc-review-transport (97d99f3) <!-- sw-deliver:post-then-open-and-occ-versus-hash -->
+* merge phase verify-and-drift into feat/issue-store-doc-review-transport (7438ee3) <!-- sw-deliver:verify-and-drift -->
+* merge phase complete-and-receipt into feat/issue-store-doc-review-transport (475d9df) <!-- sw-deliver:complete-and-receipt -->
+* merge phase freeze-hash-exclusion-and-channel-isolation into feat/issue-store-doc-review-transport (c2bcf84) <!-- sw-deliver:freeze-hash-exclusion-and-channel-isolation -->
+* merge phase capabilities-credentials-and-budget into feat/issue-store-doc-review-transport (98fc779) <!-- sw-deliver:capabilities-credentials-and-budget -->
+* merge phase bootstrap-compatibility-and-round-identity into feat/issue-store-doc-review-transport (e6ef2b3) <!-- sw-deliver:bootstrap-compatibility-and-round-identity -->
+* merge phase file-store-byte-identical-path into feat/issue-store-doc-review-transport (bdfd1a5) <!-- sw-deliver:file-store-byte-identical-path -->
+* merge phase docs-currency-and-end-to-end-conformance into feat/issue-store-doc-review-transport (bd3d6bc) <!-- sw-deliver:docs-currency-and-end-to-end-conformance -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

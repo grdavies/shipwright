@@ -15,6 +15,7 @@ import subprocess
 import sys
 import urllib.parse
 from abc import ABC, abstractmethod
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from collections.abc import Callable
@@ -144,6 +145,8 @@ PlanningStoreBackend = _planning_pkg.PlanningStoreBackend
 DEFAULT_BACKEND = "in-repo-public"
 SHIPPED_BACKENDS = frozenset({"in-repo-public", "local-synced", "planning-cache", "issue-store"})
 DEFERRED_BACKENDS = frozenset({"private-repo", "encryption-at-rest"})
+# PRD 333 phase 7 — P2 planning-store spec stubs (metadata only; not in ALL_BACKENDS).
+P2_PLANNING_STORE_STUBS = frozenset({"gitlab-planning-store"})
 ALL_BACKENDS = SHIPPED_BACKENDS | DEFERRED_BACKENDS
 BACKEND_CONFIG_ALIASES = {"memory": "planning-cache"}
 
@@ -326,8 +329,6 @@ from planning_doc_review_transport import (  # noqa: E402
     require_github_issue_store,
 )
 
-
-
 BANNED_MEMORY_CLASSES = frozenset({"discussion", "progress"})
 RAW_TRANSCRIPT_MARKERS = (
     re.compile(r"(?i)\buser:\s"),
@@ -503,6 +504,22 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
             }
             for provider in sorted(_BASE_ISSUES_PROVIDERS | live_recognized)
         },
+    }
+
+
+def planning_store_p2_stub_registration_footprint() -> dict[str, Any]:
+    """PRD 333 phase 7 — P2 planning-store spec stubs (metadata only, not shipped)."""
+    from _planning_pkg_loader import load_backends_package
+
+    backends = load_backends_package()
+    registration = backends.register_gitlab_planning_store_stub()
+    return {
+        "verdict": "ok",
+        "action": "planning-store-p2-stub-registration",
+        "stubs": {backends.GITLAB_PLANNING_STORE_BACKEND_ID: registration},
+        "p2Stubs": sorted(P2_PLANNING_STORE_STUBS),
+        "shippedBackends": sorted(SHIPPED_BACKENDS),
+        "allBackends": sorted(ALL_BACKENDS),
     }
 
 
@@ -1844,13 +1861,14 @@ def _collect_eligible_open_gaps_for_numeric_ref(
     if record is not None:
         _consider(record)
 
-    search = getattr(client, "issue_search", None)
-    if not callable(search):
-        return matches
     records = gap_catalog
     if records is None:
         try:
-            records = list(search(project_key=project_key, artifact_type="gap"))
+            records = _search_issue_records(
+                client,
+                project_key=project_key,
+                artifact_type="gap",
+            )
         except (
             IssueCapabilityError,
             IssueBudgetExhausted,
@@ -1930,21 +1948,23 @@ def _resolve_numeric_absorb_refs_to_gaps(
     gap_catalog: list[Any] | None = None
     if len(refs) > 1:
         client = shared._client
-        search = getattr(client, "issue_search", None)
-        if callable(search):
-            pmis = _migrate_issue_store()
-            key_result = pmis.validate_project_key(root, cfg)
-            if key_result.get("verdict") == "ok":
-                project_key = str(key_result["projectKey"])
-                try:
-                    gap_catalog = list(search(project_key=project_key, artifact_type="gap"))
-                except (
-                    IssueCapabilityError,
-                    IssueBudgetExhausted,
-                    IssueTombstone,
-                    IssueTransferred,
-                ) as exc:
-                    raise _planning_issue_ref_provider_error(refs[0], exc) from exc
+        pmis = _migrate_issue_store()
+        key_result = pmis.validate_project_key(root, cfg)
+        if key_result.get("verdict") == "ok":
+            project_key = str(key_result["projectKey"])
+            try:
+                gap_catalog = _search_issue_records(
+                    client,
+                    project_key=project_key,
+                    artifact_type="gap",
+                )
+            except (
+                IssueCapabilityError,
+                IssueBudgetExhausted,
+                IssueTombstone,
+                IssueTransferred,
+            ) as exc:
+                raise _planning_issue_ref_provider_error(refs[0], exc) from exc
 
     for ref in refs:
         try:
@@ -2048,13 +2068,14 @@ def _collect_gap_units_matching_absorb_target(
             message=str(key_result.get("message") or "invalid project key"),
         )
     project_key = str(key_result["projectKey"])
-    search = getattr(backend._client, "issue_search", None)
-    if not callable(search):
-        return matches
     records = gap_catalog
     if records is None:
         try:
-            records = list(search(project_key=project_key, artifact_type="gap"))
+            records = _search_issue_records(
+                backend._client,
+                project_key=project_key,
+                artifact_type="gap",
+            )
         except (
             IssueCapabilityError,
             IssueBudgetExhausted,
@@ -2438,19 +2459,17 @@ def _lookup_planning_issue_record_for_ref(
                 IssueTransferred,
             ) as exc:
                 raise _planning_issue_ref_provider_error(ref, exc) from exc
-        search = getattr(client, "issue_search", None)
-        if callable(search):
-            try:
-                for record in search(project_key=project_key):
-                    if int(getattr(record, "number", 0) or 0) == issue_num:
-                        return record
-            except (
-                IssueCapabilityError,
-                IssueBudgetExhausted,
-                IssueTombstone,
-                IssueTransferred,
-            ) as exc:
-                raise _planning_issue_ref_provider_error(ref, exc) from exc
+        try:
+            for record in _search_issue_records(client, project_key=project_key):
+                if int(getattr(record, "number", 0) or 0) == issue_num:
+                    return record
+        except (
+            IssueCapabilityError,
+            IssueBudgetExhausted,
+            IssueTombstone,
+            IssueTransferred,
+        ) as exc:
+            raise _planning_issue_ref_provider_error(ref, exc) from exc
     return None
 
 
@@ -2508,15 +2527,14 @@ def resolve_planning_issue_ref_to_gap(
                 record, ref=ref, skip_meta=skip_meta
             )
 
-    search = getattr(client, "issue_search", None)
-    if not callable(search):
-        if skip_meta is not None:
-            skip_meta["reason"] = "planning-issue-unresolved"
-        return None
     records = gap_catalog
     if records is None:
         try:
-            records = list(search(project_key=project_key, artifact_type="gap"))
+            records = _search_issue_records(
+                client,
+                project_key=project_key,
+                artifact_type="gap",
+            )
         except (
             IssueCapabilityError,
             IssueBudgetExhausted,
@@ -2588,9 +2606,12 @@ def gap_has_absorb_provenance(
             return True
     if shared is not None:
         gap_path = _default_body_path(gap_unit_id, "gap")
-        gap_fetch = shared.get(gap_unit_id, gap_path)
-        if gap_fetch.verdict == "ok" and gap_fetch.content:
-            gap_fm = _migrate_issue_store().parse_frontmatter_fields(gap_fetch.content)
+        gap_record = _lookup_issue_record(shared, gap_unit_id, gap_path)
+        if gap_record is not None:
+            gap_content = strip_markers_and_edges(
+                reassemble_body(gap_record.body, gap_record.comments)
+            )
+            gap_fm = _migrate_issue_store().parse_frontmatter_fields(gap_content)
             absorbed_by = str(gap_fm.get("absorbed-by") or gap_fm.get("absorbed_by") or "").strip()
             if absorbed_by == prd_unit_id:
                 return True
@@ -2672,7 +2693,60 @@ def _closure_labels_for(record: Any, artifact_type: str) -> list[str]:
     return sorted(set(out))
 
 
+_DOCTOR_ISSUE_CATALOG: ContextVar[dict[str, Any] | None] = ContextVar(
+    "doctor_issue_catalog",
+    default=None,
+)
+
+
+def _search_issue_records(
+    client: Any,
+    *,
+    project_key: str,
+    artifact_type: str | None = None,
+    unit_id: str | None = None,
+    labels: list[str] | None = None,
+) -> list[Any]:
+    catalog = _DOCTOR_ISSUE_CATALOG.get()
+    if catalog is None:
+        search = getattr(client, "issue_search", None)
+        if not callable(search):
+            return []
+        return list(
+            search(
+                project_key=project_key,
+                artifact_type=artifact_type,
+                unit_id=unit_id,
+                labels=labels,
+            )
+        )
+    records = list(catalog.values())
+    if artifact_type:
+        records = [record for record in records if _record_artifact_type(record) == artifact_type]
+    if unit_id:
+        records = [
+            record
+            for record in records
+            if str(getattr(record, "unit_id", "") or "") == unit_id
+        ]
+    if labels:
+        required = set(labels)
+        records = [
+            record
+            for record in records
+            if required.issubset(set(getattr(record, "labels", []) or []))
+        ]
+    return records
+
+
 def _lookup_issue_record(backend: "IssueStoreBackend", unit_id: str, body_path: str) -> Any:
+    catalog = _DOCTOR_ISSUE_CATALOG.get()
+    if catalog is not None:
+        for candidate in unit_id_lookup_candidates(backend.root, unit_id):
+            record = catalog.get(candidate)
+            if record is not None:
+                return record
+        return None
     try:
         return backend._lookup_record(unit_id, body_path)
     except IssueNotFound:
@@ -2680,6 +2754,26 @@ def _lookup_issue_record(backend: "IssueStoreBackend", unit_id: str, body_path: 
     except (IssueTombstone, IssueTransferred, IssueBudgetExhausted) as exc:
         handle_issue_client_error(exc)
         return None
+
+
+def _find_linked_brainstorm_record(
+    backend: "IssueStoreBackend",
+    prd_unit_id: str,
+) -> Any | None:
+    catalog = _DOCTOR_ISSUE_CATALOG.get()
+    if catalog is None:
+        return backend._find_linked_brainstorm(prd_unit_id)
+    for record in catalog.values():
+        if _record_artifact_type(record) != "brainstorm":
+            continue
+        full_body = reassemble_body(record.body, record.comments)
+        edges = parse_edges_block(full_body) or {}
+        if any(
+            isinstance(edge, dict) and edge.get("target") == prd_unit_id
+            for edge in edges.get("edges") or []
+        ):
+            return record
+    return None
 
 
 def _default_body_path(unit_id: str, artifact_type: str) -> str:
@@ -2796,7 +2890,7 @@ def resolve_delivery_linked_units(
         brainstorm_unit = Path(brainstorm_ref).stem
         if not brainstorm_unit.startswith("brainstorm"):
             brainstorm_unit = f"brainstorm-{brainstorm_unit}"
-    linked = backend._find_linked_brainstorm(prd_unit)
+    linked = _find_linked_brainstorm_record(backend, prd_unit)
     if linked is not None:
         brainstorm_unit = str(getattr(linked, "unit_id", "") or brainstorm_unit)
     if brainstorm_unit and brainstorm_unit not in units:
@@ -3315,6 +3409,27 @@ def audit_closure_completeness(
     }
 
 
+def _doctor_prd_has_absorption_evidence(record: Any, unit_id: str) -> bool:
+    """Return whether a PRD can contribute absorbed units without provider lookups."""
+    full_body = reassemble_body(
+        str(getattr(record, "body", "") or ""),
+        list(getattr(record, "comments", []) or []),
+    )
+    fm, edges = _resolve_prd_absorption_context(record, unit_id, full_body)
+    if _parse_absorbs_targets(fm.get("absorbs", "")):
+        return True
+    if parse_planning_issues_refs(fm.get("planningIssues", "")):
+        return True
+    for edge in (edges or {}).get("edges") or []:
+        if not isinstance(edge, dict):
+            continue
+        target = str(edge.get("target", "")).strip()
+        rel = str(edge.get("rel") or edge.get("relationship") or "depends").strip().lower()
+        if target and rel == "absorbs":
+            return True
+    return False
+
+
 def _doctor_absorb_pollution_check_prd(
     root: Path,
     cfg: dict[str, Any],
@@ -3324,6 +3439,8 @@ def _doctor_absorb_pollution_check_prd(
 ) -> None:
     labels = list(getattr(record, "labels", []) or [])
     if status_from_labels(labels) != "complete" and str(getattr(record, "state", "")) != "closed":
+        return
+    if not _doctor_prd_has_absorption_evidence(record, unit_id):
         return
     audit = audit_closure_completeness(root, cfg, unit_id)
     if audit.get("openRemaining"):
@@ -3350,6 +3467,15 @@ def _doctor_absorb_pollution_scoped_record(
         artifact_type="prd",
     )
     return matches[0] if matches else None
+
+
+def _doctor_issue_catalog(records: list[Any]) -> dict[str, Any]:
+    catalog: dict[str, Any] = {}
+    for record in records:
+        unit_id = str(getattr(record, "unit_id", "") or "").strip()
+        if unit_id:
+            catalog[unit_id] = record
+    return catalog
 
 
 def doctor_absorb_pollution(
@@ -3387,11 +3513,28 @@ def doctor_absorb_pollution(
         unit_id = str(getattr(record, "unit_id", "") or prd_unit_id)
         _doctor_absorb_pollution_check_prd(root, cfg, record, unit_id, pollution)
     else:
-        for record in search(project_key=project_key, artifact_type="prd"):
-            unit_id = str(getattr(record, "unit_id", "") or "")
-            if not unit_id:
-                continue
-            _doctor_absorb_pollution_check_prd(root, cfg, record, unit_id, pollution)
+        existing_catalog = _DOCTOR_ISSUE_CATALOG.get()
+        records = (
+            list(existing_catalog.values())
+            if existing_catalog is not None
+            else list(search(project_key=project_key))
+        )
+        token = (
+            None
+            if existing_catalog is not None
+            else _DOCTOR_ISSUE_CATALOG.set(_doctor_issue_catalog(records))
+        )
+        try:
+            for record in records:
+                if _record_artifact_type(record) != "prd":
+                    continue
+                unit_id = str(getattr(record, "unit_id", "") or "")
+                if not unit_id:
+                    continue
+                _doctor_absorb_pollution_check_prd(root, cfg, record, unit_id, pollution)
+        finally:
+            if token is not None:
+                _DOCTOR_ISSUE_CATALOG.reset(token)
 
     if pollution:
         resume = (
@@ -3528,9 +3671,20 @@ def doctor_absorb_asymmetry(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     if key_result.get("verdict") != "ok":
         return {"verdict": "fail", "action": "doctor-absorb-asymmetry", "error": key_result.get("error")}
 
+    project_key = str(key_result["projectKey"])
     asymmetries: list[dict[str, str]] = []
     prd_cache: dict[str, tuple[dict[str, str], dict[str, Any]] | None] = {}
-    for record in pmis.list_gap_issue_records(root, cfg):
+    catalog = _DOCTOR_ISSUE_CATALOG.get()
+    gap_records = (
+        _search_issue_records(
+            backend._client,
+            project_key=project_key,
+            artifact_type="gap",
+        )
+        if catalog is not None
+        else pmis.list_gap_issue_records(root, cfg)
+    )
+    for record in gap_records:
         unit_id = str(getattr(record, "unit_id", "") or "")
         if not unit_id:
             continue
@@ -4187,17 +4341,33 @@ def doctor(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         if projection.get("state") == "projection-unavailable":
             checks.append("projection-unavailable")
 
-    pollution = doctor_absorb_pollution(root, cfg)
-    if pollution.get("verdict") == "fail":
-        return pollution
-    if pollution.get("checks"):
-        checks.extend(pollution.get("checks", []))
+    catalog_token = None
+    pmis = _migrate_issue_store()
+    if pmis.issue_store_effective(root, cfg):
+        backend = get_backend(root, cfg, override="issue-store")
+        key_result = pmis.validate_project_key(root, cfg)
+        if isinstance(backend, IssueStoreBackend) and key_result.get("verdict") == "ok":
+            records = list(
+                backend._client.issue_search(
+                    project_key=str(key_result["projectKey"]),
+                )
+            )
+            catalog_token = _DOCTOR_ISSUE_CATALOG.set(_doctor_issue_catalog(records))
+    try:
+        pollution = doctor_absorb_pollution(root, cfg)
+        if pollution.get("verdict") == "fail":
+            return pollution
+        if pollution.get("checks"):
+            checks.extend(pollution.get("checks", []))
 
-    asymmetry = doctor_absorb_asymmetry(root, cfg)
-    if asymmetry.get("verdict") == "fail":
-        return asymmetry
-    if asymmetry.get("checks"):
-        checks.extend(asymmetry.get("checks", []))
+        asymmetry = doctor_absorb_asymmetry(root, cfg)
+        if asymmetry.get("verdict") == "fail":
+            return asymmetry
+        if asymmetry.get("checks"):
+            checks.extend(asymmetry.get("checks", []))
+    finally:
+        if catalog_token is not None:
+            _DOCTOR_ISSUE_CATALOG.reset(catalog_token)
 
     if not checks and skipped_reasons:
         return {
@@ -4547,6 +4717,31 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
         "status": "shipped",
         "description": "Facade thread parentage, resolved metadata, typed relation edges (PRD 066 R17/R24)",
     },
+    {
+        "name": "post_review_finding",
+        "status": "shipped",
+        "description": "Post one persona finding comment for an open doc-review round (PRD 341 R1)",
+    },
+    {
+        "name": "open_review_manifest",
+        "status": "shipped",
+        "description": "Open the doc-review round manifest on the artifact issue body (PRD 341 R1)",
+    },
+    {
+        "name": "read_review_manifest",
+        "status": "shipped",
+        "description": "Read pins and manifest for an open doc-review round (PRD 341 R1)",
+    },
+    {
+        "name": "verify_review_manifest",
+        "status": "shipped",
+        "description": "Verify doc-review round integrity before synthesis (PRD 341 R1)",
+    },
+    {
+        "name": "complete_review_round",
+        "status": "shipped",
+        "description": "Close a verified doc-review round (PRD 341 R1)",
+    },
 )
 
 ISSUES_CLIENT_ALLOWLIST = frozenset({
@@ -4707,6 +4902,15 @@ FACADE_BYPASS_BASELINE = frozenset({
     "scripts/planning_discover.py",
     "scripts/planning_scheduler.py",
 })
+
+DOC_REVIEW_FACADE_ACTION_TO_VERB: dict[str, str] = {
+    "open_review_manifest": "doc-review-round-open",
+    "post_review_finding": "doc-review-round-post",
+    "read_review_manifest": "doc-review-round-read",
+    "verify_review_manifest": "doc-review-round-verify",
+    "complete_review_round": "doc-review-round-close",
+}
+DOC_REVIEW_FACADE_OPERATIONS = frozenset(DOC_REVIEW_FACADE_ACTION_TO_VERB)
 
 _ISSUES_CLIENT_IMPORT_ROOTS = frozenset({"issues_lib"})
 
@@ -5691,6 +5895,163 @@ def external_intake_run_pipeline(
     }
 
 
+def _doc_review_facade_invoke(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    action: str,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    persona: str | None = None,
+    payload: dict[str, Any] | None = None,
+    dry_run: bool = False,
+    ordered_comment_ids: list[str] | None = None,
+    idempotency_key: str | None = None,
+    body_path: str | None = None,
+) -> dict[str, Any]:
+    verb = DOC_REVIEW_FACADE_ACTION_TO_VERB.get(action)
+    if verb is None:
+        return {
+            "verdict": "fail",
+            "action": action,
+            "error": "unknown-doc-review-facade-operation",
+            "operation": action,
+        }
+    result = _doc_review_transport_txn(
+        root,
+        cfg,
+        verb=verb,
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        persona=persona,
+        payload=payload,
+        dry_run=dry_run,
+        ordered_comment_ids=ordered_comment_ids,
+        manifest_idempotency_key=idempotency_key,
+        body_path=body_path,
+    )
+    if isinstance(result, dict):
+        result["facadeOperation"] = action
+    return result
+
+
+def open_review_manifest(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    idempotency_key: str | None = None,
+    ordered_comment_ids: list[str] | None = None,
+    body_path: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Facade entry — open doc-review round manifest after exhaustive pins (PRD 341 R9/R36)."""
+    return _doc_review_facade_invoke(
+        root,
+        cfg,
+        action="open_review_manifest",
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        dry_run=dry_run,
+        ordered_comment_ids=ordered_comment_ids,
+        idempotency_key=idempotency_key,
+        body_path=body_path,
+    )
+
+
+def post_review_finding(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    persona: str | None = None,
+    payload: dict[str, Any] | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Facade entry — post one persona finding comment (PRD 341 phase 1 / R1)."""
+    return _doc_review_facade_invoke(
+        root,
+        cfg,
+        action="post_review_finding",
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        persona=persona,
+        payload=payload,
+        dry_run=dry_run,
+    )
+
+
+def read_review_manifest(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Facade entry — read doc-review manifest and pins (PRD 341 phase 1 / R1)."""
+    return _doc_review_facade_invoke(
+        root,
+        cfg,
+        action="read_review_manifest",
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        dry_run=dry_run,
+    )
+
+
+def verify_review_manifest(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Facade entry — verify doc-review round integrity (PRD 341 phase 1 / R1)."""
+    return _doc_review_facade_invoke(
+        root,
+        cfg,
+        action="verify_review_manifest",
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        dry_run=dry_run,
+    )
+
+
+def complete_review_round(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Facade entry — re-verify, OCC-close, append completion receipt (PRD 341 R22/R23/D21)."""
+    return _doc_review_facade_invoke(
+        root,
+        cfg,
+        action="complete_review_round",
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        dry_run=dry_run,
+    )
+
+
 def doc_review_txn(
     root: Path,
     cfg: dict[str, Any],
@@ -5703,9 +6064,90 @@ def doc_review_txn(
     payload: dict[str, Any] | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Planning-store txn verbs for issue-store doc-review comment transport (PRD 341 bootstrap)."""
+    """Deprecated bootstrap entry — use facade operations (PRD 341 phase 1 / R1)."""
+    if verb in DOC_REVIEW_FACADE_ACTION_TO_VERB.values() or verb in TXN_VERBS:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": "doc-review-use-facade-operation",
+            "facadeOperations": sorted(DOC_REVIEW_FACADE_OPERATIONS),
+        }
+    return {"verdict": "fail", "action": verb, "error": "unknown-doc-review-verb", "verb": verb}
+
+
+class _DocReviewBudgetClient:
+    """Charge ``document-review`` on each listing/revalidation ``issue_get`` (R40/D8)."""
+
+    def __init__(self, client: Any, ledger: Any) -> None:
+        self._client = client
+        self._ledger = ledger
+        self._list_pages = 0
+        self.last_budget_failure: dict[str, Any] | None = None
+
+    def issue_get(self, issue_id: str) -> Any:
+        from planning_doc_review_transport import (
+            DOC_REVIEW_BUDGET_OPERATION,
+            budget_exhausted_failure,
+        )
+        from planning_request_budget import BudgetExhausted
+
+        self._list_pages += 1
+        depth = int(getattr(self._ledger, "max_pagination_depth", 0) or 0)
+        if depth and self._list_pages > depth:
+            self.last_budget_failure = budget_exhausted_failure(
+                detail="pagination-depth",
+                pages=self._list_pages,
+                maxPaginationDepth=depth,
+            )
+            raise BudgetExhausted("doc-review pagination depth exhausted")
+        try:
+            # Listing/revalidation always charge the dedicated class (critical = within facade txn).
+            self._ledger.charge(DOC_REVIEW_BUDGET_OPERATION, critical=True)
+        except BudgetExhausted as exc:
+            self.last_budget_failure = budget_exhausted_failure(
+                detail=str(exc),
+                pages=self._list_pages,
+                maxCalls=getattr(self._ledger, "max_calls", None),
+            )
+            raise
+        return self._client.issue_get(issue_id)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._client, name)
+
+
+def _doc_review_transport_txn(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    verb: str,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    persona: str | None = None,
+    payload: dict[str, Any] | None = None,
+    dry_run: bool = False,
+    ordered_comment_ids: list[str] | None = None,
+    manifest_idempotency_key: str | None = None,
+    body_path: str | None = None,
+    authorize_from_cache: bool = False,
+) -> dict[str, Any]:
+    """Issue-store doc-review transport verbs (facade-internal)."""
     if verb not in TXN_VERBS:
         return {"verdict": "fail", "action": verb, "error": "unknown-doc-review-verb", "verb": verb}
+
+    # Cache cannot authorize open or complete (R40/D8).
+    if authorize_from_cache and verb in {
+        "doc-review-round-open",
+        "doc-review-round-close",
+        "doc-review-round-verify",
+    }:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": "doc-review-cache-not-authoritative",
+            "verb": verb,
+        }
 
     effective = resolve_effective_backend(root, cfg)
     provider = str(resolve_issues_provider(cfg).get("provider") or "none")
@@ -5721,23 +6163,87 @@ def doc_review_txn(
     if pk.get("verdict") != "ok":
         return {"verdict": "fail", "action": verb, "error": pk.get("message") or "invalid project key"}
 
-    client = IssuesClient(root, provider)
-    try:
-        author_id = client.authenticated_principal_id()
-    except Exception as exc:  # noqa: BLE001
-        return {"verdict": "fail", "action": verb, "error": "doc-review-author-unresolved", "detail": str(exc)}
+    # R3 — credentials only through resolver/broker (never ambient env / selector body).
+    fixture_mode = (os.environ.get("SW_ISSUES_FIXTURE") or "").strip() == "1"
+    if not fixture_mode:
+        from credentials.model import ResolutionState
 
-    return execute_doc_review_txn(
-        client,
-        verb=verb,
-        issue_id=str(issue_id),
-        unit_id=unit_id,
-        round_id=round_id,
-        persona=persona,
-        payload=payload,
-        dry_run=dry_run,
-        author_id=author_id,
+        resolution = resolve_issues_credential(root, issues_provider=provider, cfg=cfg)
+        if resolution.state is ResolutionState.UNRESOLVED:
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": "doc-review-credentials-unresolved",
+                "reason": resolution.reason or "unresolved",
+            }
+        if str(resolution.ref).startswith("tokenEnv:"):
+            # tokenEnv alias is resolver-mediated but still ambient — refuse for doc-review (R3).
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": "doc-review-credentials-ambient-refused",
+                "reason": "credentialRef-required",
+            }
+
+    client = IssuesClient(root, provider)
+    from planning.backends.issues import (
+        assert_doc_review_authorship,
+        resolve_doc_review_author_principal,
     )
+    from planning_request_budget import BudgetExhausted, RequestBudgetLedger
+
+    ledger = RequestBudgetLedger.from_config(root, provider)
+    budget_client = _DocReviewBudgetClient(client, ledger)
+
+    whoami = resolve_doc_review_author_principal(budget_client)
+    if whoami.get("verdict") != "ok":
+        whoami = dict(whoami)
+        whoami["action"] = verb
+        return whoami
+    author_id = str(whoami["authorPrincipal"])
+
+    claimed = None
+    if isinstance(payload, dict):
+        for key in ("authorId", "author", "authorPrincipal", "claimedAuthor"):
+            raw = payload.get(key)
+            if raw is not None and str(raw).strip():
+                claimed = str(raw).strip()
+                break
+    # Payload claims never prove authorship — refuse when they disagree with whoami.
+    if claimed is not None:
+        rejected = assert_doc_review_authorship(
+            expected_principal=author_id,
+            comment_author_id=author_id,
+            payload_claimed_author=claimed,
+        )
+        if rejected is not None:
+            rejected["action"] = verb
+            return rejected
+
+    try:
+        return execute_doc_review_txn(
+            budget_client,
+            verb=verb,
+            issue_id=str(issue_id),
+            unit_id=unit_id,
+            round_id=round_id,
+            persona=persona,
+            payload=payload,
+            dry_run=dry_run,
+            author_id=author_id,
+            ordered_comment_ids=ordered_comment_ids,
+            manifest_idempotency_key=manifest_idempotency_key,
+            body_path=body_path,
+        )
+    except BudgetExhausted:
+        failure = budget_client.last_budget_failure or {
+            "verdict": "fail",
+            "error": "doc-review-budget-exhausted",
+            "budgetClass": "document-review",
+        }
+        failure = dict(failure)
+        failure["action"] = verb
+        return failure
 
 
 def resolve_absorbed_gaps_061(

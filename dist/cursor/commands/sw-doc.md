@@ -470,4 +470,4 @@ dispatch through **GraphScheduler** (`scripts/graph/legacy_adapters.py` →
 `/sw-feedback` — no graph-prefixed slash commands and no parallel operator UX. Graph `runId` is the
 generic run identity already used by deliver status/explain.
 
-<!-- currency: refreshed 2026-08-24T07:47:00Z for terminal prepare (PRD 327) -->
+<!-- currency: refreshed 2026-08-30T01:56:00Z for terminal prepare (PRD 341) -->

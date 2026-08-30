@@ -170,6 +170,9 @@ def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
         "sw-chunk-overflow",
         "sw-memory-pointer",
         DOC_REVIEW_MARKER,
+        "sw:doc-review",
+        "sw:doc-review-completion",
+        "sw-doc-review-completion",
         "lifecycle:source-removed",
     ):
         if f"<!-- {marker} -->" in body or f"<!--{marker}-->" in body:

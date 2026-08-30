@@ -152,3 +152,10 @@ Readers verify by recomputing from stored fields; mismatch fails closed (`eviden
 `spec.linkBack.decisionNodeId` MUST equal `metadata.parentDecisionId`. When `hashLinked` is `true`, graph
 writers attach the evidence `contentHash` (and optional head metadata) onto the parent decision node's
 `resolution` — same contract as prototype evidence link-back in `scripts/decision_graph/evidence.py`.
+
+## Live document-review witness exclusion (PRD 341)
+
+Frozen/canonical hashing **excludes** live `sw-doc-review-round` body witnesses and related review markers from
+the hashed byte sequence (stripped-hash / `body-sha256/v1`). The witness must remain on the live issue body —
+never strip it from the body to manufacture a hash match. Completion receipts are not freeze authority.
+

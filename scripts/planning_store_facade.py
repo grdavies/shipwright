@@ -4718,9 +4718,29 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
         "description": "Facade thread parentage, resolved metadata, typed relation edges (PRD 066 R17/R24)",
     },
     {
-        "name": "doc_review_txn",
+        "name": "post_review_finding",
         "status": "shipped",
-        "description": "Issue-store doc-review round lifecycle via brokered comments (PRD 341 bootstrap)",
+        "description": "Post one persona finding comment for an open doc-review round (PRD 341 R1)",
+    },
+    {
+        "name": "open_review_manifest",
+        "status": "shipped",
+        "description": "Open the doc-review round manifest on the artifact issue body (PRD 341 R1)",
+    },
+    {
+        "name": "read_review_manifest",
+        "status": "shipped",
+        "description": "Read pins and manifest for an open doc-review round (PRD 341 R1)",
+    },
+    {
+        "name": "verify_review_manifest",
+        "status": "shipped",
+        "description": "Verify doc-review round integrity before synthesis (PRD 341 R1)",
+    },
+    {
+        "name": "complete_review_round",
+        "status": "shipped",
+        "description": "Close a verified doc-review round (PRD 341 R1)",
     },
 )
 
@@ -4882,6 +4902,15 @@ FACADE_BYPASS_BASELINE = frozenset({
     "scripts/planning_discover.py",
     "scripts/planning_scheduler.py",
 })
+
+DOC_REVIEW_FACADE_ACTION_TO_VERB: dict[str, str] = {
+    "open_review_manifest": "doc-review-round-open",
+    "post_review_finding": "doc-review-round-post",
+    "read_review_manifest": "doc-review-round-read",
+    "verify_review_manifest": "doc-review-round-verify",
+    "complete_review_round": "doc-review-round-close",
+}
+DOC_REVIEW_FACADE_OPERATIONS = frozenset(DOC_REVIEW_FACADE_ACTION_TO_VERB)
 
 _ISSUES_CLIENT_IMPORT_ROOTS = frozenset({"issues_lib"})
 
@@ -5866,6 +5895,163 @@ def external_intake_run_pipeline(
     }
 
 
+def _doc_review_facade_invoke(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    action: str,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    persona: str | None = None,
+    payload: dict[str, Any] | None = None,
+    dry_run: bool = False,
+    ordered_comment_ids: list[str] | None = None,
+    idempotency_key: str | None = None,
+    body_path: str | None = None,
+) -> dict[str, Any]:
+    verb = DOC_REVIEW_FACADE_ACTION_TO_VERB.get(action)
+    if verb is None:
+        return {
+            "verdict": "fail",
+            "action": action,
+            "error": "unknown-doc-review-facade-operation",
+            "operation": action,
+        }
+    result = _doc_review_transport_txn(
+        root,
+        cfg,
+        verb=verb,
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        persona=persona,
+        payload=payload,
+        dry_run=dry_run,
+        ordered_comment_ids=ordered_comment_ids,
+        manifest_idempotency_key=idempotency_key,
+        body_path=body_path,
+    )
+    if isinstance(result, dict):
+        result["facadeOperation"] = action
+    return result
+
+
+def open_review_manifest(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    idempotency_key: str | None = None,
+    ordered_comment_ids: list[str] | None = None,
+    body_path: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Facade entry — open doc-review round manifest after exhaustive pins (PRD 341 R9/R36)."""
+    return _doc_review_facade_invoke(
+        root,
+        cfg,
+        action="open_review_manifest",
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        dry_run=dry_run,
+        ordered_comment_ids=ordered_comment_ids,
+        idempotency_key=idempotency_key,
+        body_path=body_path,
+    )
+
+
+def post_review_finding(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    persona: str | None = None,
+    payload: dict[str, Any] | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Facade entry — post one persona finding comment (PRD 341 phase 1 / R1)."""
+    return _doc_review_facade_invoke(
+        root,
+        cfg,
+        action="post_review_finding",
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        persona=persona,
+        payload=payload,
+        dry_run=dry_run,
+    )
+
+
+def read_review_manifest(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Facade entry — read doc-review manifest and pins (PRD 341 phase 1 / R1)."""
+    return _doc_review_facade_invoke(
+        root,
+        cfg,
+        action="read_review_manifest",
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        dry_run=dry_run,
+    )
+
+
+def verify_review_manifest(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Facade entry — verify doc-review round integrity (PRD 341 phase 1 / R1)."""
+    return _doc_review_facade_invoke(
+        root,
+        cfg,
+        action="verify_review_manifest",
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        dry_run=dry_run,
+    )
+
+
+def complete_review_round(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Facade entry — re-verify, OCC-close, append completion receipt (PRD 341 R22/R23/D21)."""
+    return _doc_review_facade_invoke(
+        root,
+        cfg,
+        action="complete_review_round",
+        issue_id=issue_id,
+        unit_id=unit_id,
+        round_id=round_id,
+        dry_run=dry_run,
+    )
+
+
 def doc_review_txn(
     root: Path,
     cfg: dict[str, Any],
@@ -5878,9 +6064,90 @@ def doc_review_txn(
     payload: dict[str, Any] | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
-    """Planning-store txn verbs for issue-store doc-review comment transport (PRD 341 bootstrap)."""
+    """Deprecated bootstrap entry — use facade operations (PRD 341 phase 1 / R1)."""
+    if verb in DOC_REVIEW_FACADE_ACTION_TO_VERB.values() or verb in TXN_VERBS:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": "doc-review-use-facade-operation",
+            "facadeOperations": sorted(DOC_REVIEW_FACADE_OPERATIONS),
+        }
+    return {"verdict": "fail", "action": verb, "error": "unknown-doc-review-verb", "verb": verb}
+
+
+class _DocReviewBudgetClient:
+    """Charge ``document-review`` on each listing/revalidation ``issue_get`` (R40/D8)."""
+
+    def __init__(self, client: Any, ledger: Any) -> None:
+        self._client = client
+        self._ledger = ledger
+        self._list_pages = 0
+        self.last_budget_failure: dict[str, Any] | None = None
+
+    def issue_get(self, issue_id: str) -> Any:
+        from planning_doc_review_transport import (
+            DOC_REVIEW_BUDGET_OPERATION,
+            budget_exhausted_failure,
+        )
+        from planning_request_budget import BudgetExhausted
+
+        self._list_pages += 1
+        depth = int(getattr(self._ledger, "max_pagination_depth", 0) or 0)
+        if depth and self._list_pages > depth:
+            self.last_budget_failure = budget_exhausted_failure(
+                detail="pagination-depth",
+                pages=self._list_pages,
+                maxPaginationDepth=depth,
+            )
+            raise BudgetExhausted("doc-review pagination depth exhausted")
+        try:
+            # Listing/revalidation always charge the dedicated class (critical = within facade txn).
+            self._ledger.charge(DOC_REVIEW_BUDGET_OPERATION, critical=True)
+        except BudgetExhausted as exc:
+            self.last_budget_failure = budget_exhausted_failure(
+                detail=str(exc),
+                pages=self._list_pages,
+                maxCalls=getattr(self._ledger, "max_calls", None),
+            )
+            raise
+        return self._client.issue_get(issue_id)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._client, name)
+
+
+def _doc_review_transport_txn(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    verb: str,
+    issue_id: str | None = None,
+    unit_id: str | None = None,
+    round_id: str | None = None,
+    persona: str | None = None,
+    payload: dict[str, Any] | None = None,
+    dry_run: bool = False,
+    ordered_comment_ids: list[str] | None = None,
+    manifest_idempotency_key: str | None = None,
+    body_path: str | None = None,
+    authorize_from_cache: bool = False,
+) -> dict[str, Any]:
+    """Issue-store doc-review transport verbs (facade-internal)."""
     if verb not in TXN_VERBS:
         return {"verdict": "fail", "action": verb, "error": "unknown-doc-review-verb", "verb": verb}
+
+    # Cache cannot authorize open or complete (R40/D8).
+    if authorize_from_cache and verb in {
+        "doc-review-round-open",
+        "doc-review-round-close",
+        "doc-review-round-verify",
+    }:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": "doc-review-cache-not-authoritative",
+            "verb": verb,
+        }
 
     effective = resolve_effective_backend(root, cfg)
     provider = str(resolve_issues_provider(cfg).get("provider") or "none")
@@ -5896,23 +6163,87 @@ def doc_review_txn(
     if pk.get("verdict") != "ok":
         return {"verdict": "fail", "action": verb, "error": pk.get("message") or "invalid project key"}
 
-    client = IssuesClient(root, provider)
-    try:
-        author_id = client.authenticated_principal_id()
-    except Exception as exc:  # noqa: BLE001
-        return {"verdict": "fail", "action": verb, "error": "doc-review-author-unresolved", "detail": str(exc)}
+    # R3 — credentials only through resolver/broker (never ambient env / selector body).
+    fixture_mode = (os.environ.get("SW_ISSUES_FIXTURE") or "").strip() == "1"
+    if not fixture_mode:
+        from credentials.model import ResolutionState
 
-    return execute_doc_review_txn(
-        client,
-        verb=verb,
-        issue_id=str(issue_id),
-        unit_id=unit_id,
-        round_id=round_id,
-        persona=persona,
-        payload=payload,
-        dry_run=dry_run,
-        author_id=author_id,
+        resolution = resolve_issues_credential(root, issues_provider=provider, cfg=cfg)
+        if resolution.state is ResolutionState.UNRESOLVED:
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": "doc-review-credentials-unresolved",
+                "reason": resolution.reason or "unresolved",
+            }
+        if str(resolution.ref).startswith("tokenEnv:"):
+            # tokenEnv alias is resolver-mediated but still ambient — refuse for doc-review (R3).
+            return {
+                "verdict": "fail",
+                "action": verb,
+                "error": "doc-review-credentials-ambient-refused",
+                "reason": "credentialRef-required",
+            }
+
+    client = IssuesClient(root, provider)
+    from planning.backends.issues import (
+        assert_doc_review_authorship,
+        resolve_doc_review_author_principal,
     )
+    from planning_request_budget import BudgetExhausted, RequestBudgetLedger
+
+    ledger = RequestBudgetLedger.from_config(root, provider)
+    budget_client = _DocReviewBudgetClient(client, ledger)
+
+    whoami = resolve_doc_review_author_principal(budget_client)
+    if whoami.get("verdict") != "ok":
+        whoami = dict(whoami)
+        whoami["action"] = verb
+        return whoami
+    author_id = str(whoami["authorPrincipal"])
+
+    claimed = None
+    if isinstance(payload, dict):
+        for key in ("authorId", "author", "authorPrincipal", "claimedAuthor"):
+            raw = payload.get(key)
+            if raw is not None and str(raw).strip():
+                claimed = str(raw).strip()
+                break
+    # Payload claims never prove authorship — refuse when they disagree with whoami.
+    if claimed is not None:
+        rejected = assert_doc_review_authorship(
+            expected_principal=author_id,
+            comment_author_id=author_id,
+            payload_claimed_author=claimed,
+        )
+        if rejected is not None:
+            rejected["action"] = verb
+            return rejected
+
+    try:
+        return execute_doc_review_txn(
+            budget_client,
+            verb=verb,
+            issue_id=str(issue_id),
+            unit_id=unit_id,
+            round_id=round_id,
+            persona=persona,
+            payload=payload,
+            dry_run=dry_run,
+            author_id=author_id,
+            ordered_comment_ids=ordered_comment_ids,
+            manifest_idempotency_key=manifest_idempotency_key,
+            body_path=body_path,
+        )
+    except BudgetExhausted:
+        failure = budget_client.last_budget_failure or {
+            "verdict": "fail",
+            "error": "doc-review-budget-exhausted",
+            "budgetClass": "document-review",
+        }
+        failure = dict(failure)
+        failure["action"] = verb
+        return failure
 
 
 def resolve_absorbed_gaps_061(

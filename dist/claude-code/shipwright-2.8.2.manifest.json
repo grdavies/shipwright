@@ -571,6 +571,7 @@
     "planning/backends/local_synced.py",
     "planning/backends/memory_cache.py",
     "planning/cli.py",
+    "planning/doc_review_conformance.py",
     "planning/identity.py",
     "planning/migrations.py",
     "planning/model.py",
@@ -800,5 +801,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 797
+  "moduleCount": 798
 }

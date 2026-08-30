@@ -714,4 +714,4 @@ primary checkout). Repo-root cwd with an orchestrator path under `.sw-worktrees/
 orchestrator worktree; terminal closeout reuses the same order. Primary cwd stays when pruning orch;
 husk/parked trees do not fail the release path.
 
-<!-- currency: refreshed 2026-08-24T22:00:00Z for terminal prepare (PRD 328) -->
+<!-- currency: refreshed 2026-08-30T01:56:00Z for terminal prepare (PRD 341) -->

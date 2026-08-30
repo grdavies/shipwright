@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -179,3 +180,40 @@ def test_second_lock_refused_before_run_directory(repo: Path) -> None:
     assert second["verdict"] == "fail"
     assert second["error"] == "doc-run-lock-held"
     assert not doc_run_directory(repo, "doc-run-b").exists()
+
+
+# PRD 341 R33 — file-store review goldens must stay byte-identical after the
+# issue-store facade lands. Locked relative to the plugin checkout root.
+_FILE_STORE_REVIEW_GOLDENS: dict[str, str] = {
+    "scripts/test/fixtures/persona-selection/minimal-standard.md": (
+        "691a4c5889c0f6f846dff6b10c2e804d4a154ad5c8903718604cb262b12dae57"
+    ),
+    "scripts/test/fixtures/persona-selection/quick-tier.md": (
+        "6b5f90012d9ea6e8238a30e55218c794b14f1f6523cf5556a9cd4861a252ab10"
+    ),
+    "scripts/test/fixtures/persona-selection/override-all.md": (
+        "e0ce9ad30675bd864bbb1d00cfb2f01a388f4f04b4f1b2e42acbeb7bdbd89dfc"
+    ),
+    "scripts/test/fixtures/persona-selection/override-personas.md": (
+        "c94bcc8055bb75044005de730d31f6728b24a59b528be1470f9e99604fcaff93"
+    ),
+    "scripts/test/fixtures/persona-selection/auth-signal.md": (
+        "99aa3b442b2011b7c10b377e3f867bd8a47a984b7e7cdcbf2cbf72149bd3fad5"
+    ),
+    "scripts/test/fixtures/persona-selection/design-unambiguous.md": (
+        "9c098b4224d811a582d05f07ce937f5a38dc83d7bdd39190f612ebade4c16fec"
+    ),
+    "core/skills/doc-review/references/findings-schema.json": (
+        "3d62dd6d1efb37e9f6293b55e77c52030e8d4c36c738a53a0775888683cf0b4a"
+    ),
+}
+
+
+def test_file_store_review_goldens_byte_identical() -> None:
+    """R33: persona-selection fixtures + findings schema remain frozen."""
+    root = Path(__file__).resolve().parents[3]
+    for rel, expected in _FILE_STORE_REVIEW_GOLDENS.items():
+        path = root / rel
+        assert path.is_file(), f"missing file-store golden: {rel}"
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        assert digest == expected, f"file-store golden drift: {rel}"

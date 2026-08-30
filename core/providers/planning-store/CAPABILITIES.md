@@ -120,6 +120,24 @@ Authority mutations drain the durable projection **outbox** (`planning_projectio
 pending destination events carry derived dirty state and retry across outages without silent fallback to
 another backend.
 
+## Document-review transport (PRD 341 R28 / R29)
+
+Issue-store document review is a **facade** on `scripts/planning_store_facade.py` (`post_review_finding`,
+`open_review_manifest`, `read_review_manifest`, `verify_review_manifest`, `complete_review_round`).
+Provider-specific parsing and HTTP transport stay inside issue-provider adapters
+(`core/providers/issues/*`, `scripts/planning/providers/*`). Marker validation, identity policy,
+revision fallback, manifest lifecycle, drift detection, and idempotency remain provider-neutral.
+
+| Backend / issues provider | Document-review posture |
+| --- | --- |
+| `issue-store` + `github-issues` (conformance-green) | Enabled after `docReviewComments` preflight |
+| `issue-store` + any other issues provider | `doc-review-provider-unsupported` at preflight |
+| Non-`issue-store` backends | In-IDE file-store transport unchanged (R33) — no issue comment facade |
+
+Request budget: listing and revalidation charge `planning.store.requestBudget` under class
+`document-review`. Pagination-depth or call-ceiling exhaustion is typed (`doc-review-budget-exhausted`).
+New rounds use **post-then-open** then `complete_review_round`; stripped-hash excludes live witnesses from freeze inputs. Local `.cursor/doc-review-runs/` cache is non-authoritative — it cannot authorize open or complete. R30 suite: `run_doc_review_conformance_suite` in `provider_conformance.py`.
+
 ## Logging contract (R18)
 
 Store operations log `unitId`, content hash, and backend id only — never body bytes.

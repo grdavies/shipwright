@@ -181,4 +181,4 @@ Freeze durability continues through `planning_store.py` → `planning_store_faca
 `sw-freeze-record` after frozen state/label mutations so `get` / `verify-frozen-hash` stay
 tamper-clean (PRD 275) — freeze stamp itself unchanged.
 
-<!-- currency: refreshed 2026-08-24T07:47:00Z for terminal prepare (PRD 327) -->
+<!-- currency: refreshed 2026-08-30T01:56:00Z for terminal prepare (PRD 341) -->
