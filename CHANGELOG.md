@@ -1172,6 +1172,7 @@
 * merge phase docs-currency-and-end-to-end-conformance into feat/issue-store-doc-review-transport (bd3d6bc) <!-- sw-deliver:docs-currency-and-end-to-end-conformance -->
 * merge phase harden-deliver-run-entry-small into feat/workflow-runtime-autonomy-lifecycle (1965640) <!-- sw-deliver:harden-deliver-run-entry-small -->
 * merge phase make-inline-ship-turn-independent-small into feat/workflow-runtime-autonomy-lifecycle (01e2019) <!-- sw-deliver:make-inline-ship-turn-independent-small -->
+* merge phase protect-authored-distribution-files-small into feat/workflow-runtime-autonomy-lifecycle (c5d7f84) <!-- sw-deliver:protect-authored-distribution-files-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
