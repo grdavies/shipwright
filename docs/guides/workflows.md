@@ -742,6 +742,21 @@ When all phases reach `green-merged` and the terminal gate is live green, delive
 Interactive `/sw-ship` phase-mode runs emit per-phase `status.json` only; the terminal acceptance record
 is a **deliver-run** artifact after all phases merge — distinct from phase `merge-ready-green`.
 
+### PR delivery map retention (terminal closeout)
+
+Terminal PR preparation records an **immutable PR-to-delivery mapping** at create time so post-merge
+closeout can resolve the merged PR to its delivery identity without slug or branch heuristics (PRD 337 R14).
+
+| Concern | Contract |
+| --- | --- |
+| **Storage path** | `.sw/deliver-closeout/pr-delivery-map/pr-<n>.json` at the **primary repo root** (git common-dir), not inside orchestrator worktrees |
+| **Index** | `.sw/deliver-closeout/index.json` — `byPr` / `byPrdUnit` lookup into mapping files |
+| **Writer** | `deliver_closeout.record_pr_delivery_mapping` from `wave_terminal.py` terminal-PR prepare |
+| **Atomicity** | `wave_json_io.write_json` temp-file + fsync + rename |
+| **Retention** | Operator-local, gitignored; survives orchestrator worktree teardown until operator cleanup |
+| **Cleanup boundary** | `/sw-cleanup` may remove stale orchestrator worktrees and run-state copies; **does not** delete `.sw/deliver-closeout/` — maps are consumed by `closeout_ci.py` / post-merge retrospective |
+| **Verification** | `python3 scripts/deliver_closeout.py . resolve-delivery --pr-number <n>` |
+
 ### gap-check write before merge-ready-green
 
 Before publishing `merge-ready-green` status, run gap-check and **write** durable status through

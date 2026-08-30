@@ -20,7 +20,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from host_lib import load_workflow_config
 from inflight_signal import prd_unit_id_from_state
 from wave_json_io import StateCorruptError, read_json, write_json
-from wave_state import load_deliver_state
+from wave_state import load_deliver_state, path_normalize_anchor
 
 CLOSEOUT_ROOT_REL = ".sw/deliver-closeout"
 PR_MAP_DIR = "pr-delivery-map"
@@ -59,8 +59,17 @@ def fail(error, exit_code=2, **extra):
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
+def closeout_storage_root(root: Path) -> Path:
+    """Primary repo root for durable closeout artifacts (PRD 337 R14, gap-410).
+
+    PR delivery maps and the closeout index survive orchestrator worktree teardown;
+    callers may pass a linked worktree path — storage always anchors to git common-dir.
+    """
+    return path_normalize_anchor(root)
+
+
 def closeout_root(root: Path) -> Path:
-    return root / CLOSEOUT_ROOT_REL
+    return closeout_storage_root(root) / CLOSEOUT_ROOT_REL
 
 
 def pr_map_path(root: Path, pr_number) -> Path:
@@ -451,7 +460,7 @@ def emit_self_wake_sentinel(run_id: str, payload: dict[str, Any] | None = None) 
 
 
 def index_path(root: Path) -> Path:
-    return root / INDEX_REL
+    return closeout_root(root) / "index.json"
 
 
 def validate_metadata_field(field: str, value):
@@ -536,15 +545,32 @@ def record_pr_delivery_mapping(root: Path, payload, *, dry_run=False):
             if str(existing.get(key) or "") != str(mapping.get(key) or ""):
                 return {"verdict": "fail", "action": "record-pr-delivery-mapping", "error": "mapping-immutable-conflict", "prNumber": pr_number}
         return {"verdict": "pass", "action": "record-pr-delivery-mapping", "immutable": True, "reused": True, "prNumber": pr_number, "path": str(path), "mapping": existing}
+    storage_root = closeout_storage_root(root)
     if dry_run:
-        return {"verdict": "pass", "action": "record-pr-delivery-mapping", "dryRun": True, "prNumber": pr_number, "wouldWrite": str(path), "mapping": mapping}
+        return {
+            "verdict": "pass",
+            "action": "record-pr-delivery-mapping",
+            "dryRun": True,
+            "prNumber": pr_number,
+            "wouldWrite": str(path),
+            "storageRoot": str(storage_root),
+            "mapping": mapping,
+        }
     write_json(path, mapping)
     index = _load_index(root)
-    rel = str(path.relative_to(root))
+    rel = str(path.relative_to(storage_root))
     index["byPr"][str(pr_number)] = rel
     index["byPrdUnit"][mapping["prdUnitId"]] = {"prNumber": pr_number, "path": rel}
     _save_index(root, index)
-    return {"verdict": "pass", "action": "record-pr-delivery-mapping", "immutable": True, "prNumber": pr_number, "path": str(path), "mapping": mapping}
+    return {
+        "verdict": "pass",
+        "action": "record-pr-delivery-mapping",
+        "immutable": True,
+        "prNumber": pr_number,
+        "path": str(path),
+        "storageRoot": str(storage_root),
+        "mapping": mapping,
+    }
 
 
 def load_pr_delivery_mapping(root: Path, pr_number):
