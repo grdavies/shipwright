@@ -292,7 +292,7 @@
       "sourcePath": "core/commands/sw-execute.md"
     },
     {
-      "bodyDigest": "3b4e93c3d4e1bd3fab5da9bdf4a1427e49501fca64b182023d8ff47ea7954905",
+      "bodyDigest": "73a79908b3763fbd9c58422a2f3b6283203ff6f4ffe3dd3e50ed4ddbda6ec9b5",
       "capabilities": [],
       "description": "Destination-first structured exploration before planning \u2014 idea, notebook, resume, promote, and explicit doc handoff. Does not create PRDs/tasks, dispatch implementation, or resolve Quick/Standard/Full tier at entry.",
       "id": "sw-explore",
@@ -649,7 +649,7 @@
       "sourcePath": "core/skills/execute-discipline/SKILL.md"
     },
     {
-      "bodyDigest": "f8dc23fed53379a673c1503f57a028883a8088305ec4a1d3b5bbaf796115b92c",
+      "bodyDigest": "92ae5acf988df28c741b232356077035f58640b313e41aa79a9a8f54095df15c",
       "capabilities": [],
       "description": "Destination-first structured exploration through ask \u2192 decide \u2192 confirm \u2014 humans own intent, blocking policy, promote, and doc handoff. Use when scope is unclear before /sw-doc. Does not dispatch implementation or create PRDs/tasks.",
       "id": "explore",

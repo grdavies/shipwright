@@ -307,6 +307,38 @@ already holds the destination branch.
 
 ---
 
+## Lifecycle routing — Capture → Explore → Specify → Build → Learn
+
+Shipwright’s default lifecycle places **Explore** between **Capture** and **Specify**. Every stage has
+explicit entry paths and bidirectional provenance where handoffs cross workstreams.
+
+| Stage | Primary surface | Role |
+| --- | --- | --- |
+| **Capture** | `/sw-note` | Lightweight idea/note capture; graduate to explore with `--to explore` |
+| **Explore** (optional) | `/sw-explore` | Destination-first structured exploration before planning |
+| **Specify** | `/sw-doc` | PRD → review → freeze → tasks; backward route to explore when not ready |
+| **Build** | `/sw-deliver run` | Phase-mode ship loops per frozen task list to integration merge gate |
+| **Learn** | `/sw-retrospective` | Pre/post-merge compounding; optional gap capture and memory sync |
+
+```mermaid
+flowchart LR
+  CAP["Capture<br/>/sw-note"] --> EXP["Explore (optional)<br/>/sw-explore"]
+  EXP --> SPEC["Specify<br/>/sw-doc"]
+  SPEC -->|not ready| EXP
+  SPEC --> BLD["Build<br/>/sw-deliver"]
+  BLD --> LRN["Learn<br/>/sw-retrospective"]
+```
+
+**Entry and provenance**
+
+| Transition | Command / contract | Provenance |
+| --- | --- | --- |
+| Capture → Explore | `/sw-note graduate <id> --to explore` → `/sw-explore --from-notebook <id>` | Bidirectional `notebookId` on `ExplorationMap@v1`; reversible round trip |
+| Idea → Explore | `/sw-explore idea <text>` or `/sw-explore <text>` | Fresh map with destination-first capture |
+| Resume Explore | `/sw-explore resume <map-id>` | Optimistic revision on persisted map |
+| Explore → Specify | `/sw-explore handoff <map-id> --to doc` → `/sw-doc` | Human confirm; loop guard in `workflow_extensions.py` |
+| Specify → Explore | `/sw-doc` backward route when readiness insufficient | Cancelable `/sw-explore resume` proposal |
+
 ## Explore workstream — optional pre-planning
 
 Use `/sw-explore` when product scope, destination, or acceptance boundaries are still open **before**
@@ -694,6 +726,21 @@ single-shot `check-gate` is dry-run/test only.
 
 Phase-mode `/sw-ship` uses the same durable `ship_loop.py` driver: mechanical steps advance in-process;
 `sw-watch-ci` polls check-gate with backoff.
+
+### Terminal acceptance record (deliver closeout)
+
+When all phases reach `green-merged` and the terminal gate is live green, deliver persists a validated
+**terminal acceptance record** before the human merge gate on `<type>/<slug> → main`.
+
+| Concern | Contract |
+| --- | --- |
+| **Status location** | `.cursor/sw-deliver-runs/<runId>/terminal-acceptance.json` (run-scoped; see `.sw/layout.md`) |
+| **Schema fields** | `schemaVersion`, `runId`, `targetBranch`, `sourceTaskList`, `phases`, `terminalPr`, `terminalGate`, `terminalGateExitCode`, `gatesRunRollup`, `interactionCount`, `recordedAt` |
+| **Verification** | `python3 scripts/wave_terminal.py terminal pr gate` on green paths; `wave_acceptance.validate_acceptance_record` and `wave_terminal.validate_acceptance_schema` refuse incomplete ledgers |
+| **Resumable halts** | Legitimate terminal interrupts attach `haltResume` (`haltCause`, `resumeCommand`, `runId`, `autonomyDirective`) via `halt_resume.enrich_legitimate_halt` — resume with `/sw-deliver run` (never bare `deliver-loop`) |
+
+Interactive `/sw-ship` phase-mode runs emit per-phase `status.json` only; the terminal acceptance record
+is a **deliver-run** artifact after all phases merge — distinct from phase `merge-ready-green`.
 
 ### gap-check write before merge-ready-green
 
