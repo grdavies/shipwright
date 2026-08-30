@@ -63,8 +63,10 @@ PRD 045's legacy transport spelling `sw:doc-review` refers to this same marker f
    (`doc-review-round-post` / `post_review_finding`) — brokered principal id; `sw-doc-review` marker;
    JSON per `references/findings-schema.json`. Posts do not yet pin the body witness.
 3. **Open round** after posts — `doc-review-round-open` / `open_review_manifest` writes the etag-guarded
-   body witness with exhaustive pins. **Stripped-hash:** live `sw-doc-review-round` witness stays on the
-   body but is excluded from `body-sha256/v1` / frozen canonical hash (never strip the live witness from body).
+   review-round manifest (body witness) with exhaustive pins. **Marker:** `sw-doc-review` delimits persona
+   payload — **excluded** from PRD 043 R35 canonicalization. **Stripped-hash:** live `sw-doc-review-round`
+   witness stays on the body but is excluded from `body-sha256/v1` / frozen canonical hash (never strip the
+   live witness from body).
 4. **Human channel:** operator notes as plain comments without the `sw-doc-review` marker.
 5. **Read / verify** before synthesis (`doc-review-round-read` / `doc-review-round-verify`). Fail closed on
    drift, body-drift, or OCC `revision-conflict` (re-run the whole verb after refresh — no in-verb retry).
