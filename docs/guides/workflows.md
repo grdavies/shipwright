@@ -755,7 +755,7 @@ closeout can resolve the merged PR to its delivery identity without slug or bran
 | **Atomicity** | `wave_json_io.write_json` temp-file + fsync + rename |
 | **Retention** | Operator-local, gitignored; survives orchestrator worktree teardown until operator cleanup |
 | **Cleanup boundary** | `/sw-cleanup` may remove stale orchestrator worktrees and run-state copies; **does not** delete `.sw/deliver-closeout/` — maps are consumed by `closeout_ci.py` / post-merge retrospective |
-| **Verification** | `python3 scripts/deliver_closeout.py . resolve-delivery --pr-number <n>` |
+| **Verification** | `resolve_delivery_for_pr` on the closeout driver — see `.sw/layout.md` |
 
 ### gap-check write before merge-ready-green
 
