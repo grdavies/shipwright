@@ -1302,9 +1302,9 @@ def ensure_terminal_index_projection(root: Path) -> None:
     import contextlib
     import io
 
+    from deliver_closeout import derive_closeout_index_status
     from wave_living_docs import (
         append_completion_store_event,
-        derive_index_status,
         living_doc_write_banned,
         read_completion_evidence,
     )
@@ -1318,7 +1318,7 @@ def ensure_terminal_index_projection(root: Path) -> None:
     prd = str(state.get("prd_number") or "").zfill(3)
     if not prd or prd == "000":
         return
-    if derive_index_status(state, False) != "complete":
+    if derive_closeout_index_status(state, merged_to_main=False, root=root) != "complete":
         return
     slug = str((state.get("target") or {}).get("slug") or "") or None
     with contextlib.redirect_stdout(io.StringIO()):
