@@ -106,4 +106,4 @@ When the parent doc-loop `tasks` stage carries an orchestrated receipt (`orchest
 `relatedWorkResolved`, `parentRunId`), pass `--orchestrated --parent-run-id` to
 `planning-related.py scan` so related-work is not rescanned. Standalone `/sw-tasks` omits those flags.
 
-<!-- currency: refreshed 2026-08-24T07:47:00Z for terminal prepare (PRD 327) -->
+<!-- currency: refreshed 2026-08-30T01:56:00Z for terminal prepare (PRD 341) -->
