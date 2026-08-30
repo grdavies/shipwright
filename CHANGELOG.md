@@ -1156,6 +1156,7 @@
 * merge phase freeze-hash-exclusion-and-channel-isolation into feat/issue-store-doc-review-transport (c2bcf84) <!-- sw-deliver:freeze-hash-exclusion-and-channel-isolation -->
 * merge phase capabilities-credentials-and-budget into feat/issue-store-doc-review-transport (98fc779) <!-- sw-deliver:capabilities-credentials-and-budget -->
 * merge phase bootstrap-compatibility-and-round-identity into feat/issue-store-doc-review-transport (e6ef2b3) <!-- sw-deliver:bootstrap-compatibility-and-round-identity -->
+* merge phase file-store-byte-identical-path into feat/issue-store-doc-review-transport (bdfd1a5) <!-- sw-deliver:file-store-byte-identical-path -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
