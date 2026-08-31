@@ -1180,6 +1180,7 @@
 * merge phase retain-terminal-pr-delivery-maps-small into feat/workflow-runtime-autonomy-lifecycle (160eb21) <!-- sw-deliver:retain-terminal-pr-delivery-maps-small -->
 * merge phase make-resume-remediation-actionable-small into feat/workflow-runtime-autonomy-lifecycle (13791ac) <!-- sw-deliver:make-resume-remediation-actionable-small -->
 * merge phase automate-post-merge-retrospective-small into feat/workflow-runtime-autonomy-lifecycle (4432822) <!-- sw-deliver:automate-post-merge-retrospective-small -->
+* merge phase route-redacted-retro-gap-capture-medium into feat/workflow-runtime-autonomy-lifecycle (c99dd6a) <!-- sw-deliver:route-redacted-retro-gap-capture-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
