@@ -680,6 +680,8 @@
     "resolve-intensity.py",
     "resolve-model-tier.py",
     "resolve_base_branch.py",
+    "retro_candidates.py",
+    "retro_gap_capture.py",
     "review-local-resolve.py",
     "review_synthesize.py",
     "reviewer-dispatch-check.py",
@@ -801,5 +803,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 798
+  "moduleCount": 800
 }
