@@ -2066,6 +2066,53 @@ def close_run_projections(root: Path, run_id: str, state: dict[str, Any]) -> dic
 from wave_deliver_loop import release_run_resources  # PRD 328 R3–R5 — phase-before-orch teardown
 
 
+def _merge_info_for_post_merge_retrospective(
+    state: dict[str, Any],
+    merge_info: dict[str, Any] | None = None,
+    *,
+    checkpoint: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if merge_info and merge_info.get("merged"):
+        return merge_info
+    terminal_merge = state.get("terminalMerge") if isinstance(state.get("terminalMerge"), dict) else {}
+    merge_commit = str(
+        terminal_merge.get("mergeCommit")
+        or (checkpoint or {}).get("mergeCommit")
+        or ""
+    ).lower()
+    if not merge_commit:
+        return {"merged": False}
+    return {
+        "merged": True,
+        "mergeCommit": merge_commit,
+        "prNumber": terminal_merge.get("prNumber"),
+        "mergedAt": terminal_merge.get("mergedAt"),
+    }
+
+
+def _attach_post_merge_retrospective_dispatch(
+    root: Path,
+    run_id: str,
+    merge_info: dict[str, Any],
+    payload: dict[str, Any],
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    from deliver_closeout import dispatch_post_merge_retrospective
+
+    retro = dispatch_post_merge_retrospective(
+        root, run_id=run_id, merge_info=merge_info, dry_run=dry_run
+    )
+    out = dict(payload)
+    out["postMergeRetrospective"] = retro
+    if retro.get("awaitAgent") and retro.get("invoke") and not retro.get("noop"):
+        out["awaitAgent"] = True
+        out["invoke"] = retro["invoke"]
+    if retro.get("resumeCommand"):
+        out.setdefault("resumeCommand", retro["resumeCommand"])
+    return out
+
+
 def finalize_run(
     root: Path,
     run_id: str,
@@ -2131,22 +2178,34 @@ def finalize_run(
             if repair_err:
                 return repair_err
             ckpt = repaired
-            return {
+            return _attach_post_merge_retrospective_dispatch(
+                root,
+                run_id,
+                _merge_info_for_post_merge_retrospective(work_state, checkpoint=ckpt),
+                {
+                    "verdict": "pass",
+                    "action": "run-finalize",
+                    "immutable": True,
+                    "terminalReceipt": existing,
+                    "checkpoint": ckpt,
+                    "note": "checkpoint repaired from immutable state",
+                },
+                dry_run=dry_run,
+            )
+        return _attach_post_merge_retrospective_dispatch(
+            root,
+            run_id,
+            _merge_info_for_post_merge_retrospective(work_state, checkpoint=ckpt),
+            {
                 "verdict": "pass",
                 "action": "run-finalize",
                 "immutable": True,
                 "terminalReceipt": existing,
                 "checkpoint": ckpt,
-                "note": "checkpoint repaired from immutable state",
-            }
-        return {
-            "verdict": "pass",
-            "action": "run-finalize",
-            "immutable": True,
-            "terminalReceipt": existing,
-            "checkpoint": ckpt,
-            "note": "already finalized",
-        }
+                "note": "already finalized",
+            },
+            dry_run=dry_run,
+        )
 
     merge_info = verify_terminal_merge_via_host(root, work_state)
     if merge_info.get("verdict") != "pass":
@@ -2332,15 +2391,21 @@ def finalize_run(
     if receipt is None:
         receipt = read_terminal_receipt(root, run_id)
 
-    return {
-        "verdict": "pass",
-        "action": "run-finalize",
-        "immutable": True,
-        "terminalReceipt": receipt,
-        "releasedResources": released,
-        "projections": projections,
-        "checkpoint": load_finalize_checkpoint(root, run_id),
-    }
+    return _attach_post_merge_retrospective_dispatch(
+        root,
+        run_id,
+        merge_info,
+        {
+            "verdict": "pass",
+            "action": "run-finalize",
+            "immutable": True,
+            "terminalReceipt": receipt,
+            "releasedResources": released,
+            "projections": projections,
+            "checkpoint": load_finalize_checkpoint(root, run_id),
+        },
+        dry_run=dry_run,
+    )
 
 
 def cmd_finalize_run(root: Path, args: list[str]) -> None:

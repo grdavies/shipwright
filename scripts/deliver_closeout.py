@@ -26,6 +26,8 @@ CLOSEOUT_ROOT_REL = ".sw/deliver-closeout"
 PR_MAP_DIR = "pr-delivery-map"
 MANIFEST_DIR = "closure-manifests"
 CLOSE_MARKER_DIR = "close-markers"
+POST_MERGE_RETRO_DISPATCH_DIR = "post-merge-retrospective-dispatch"
+POST_MERGE_RETRO_INVOKE = "/sw-retrospective --post-merge"
 INDEX_REL = f"{CLOSEOUT_ROOT_REL}/index.json"
 DEFAULT_POLL_SECONDS = 45
 DEFAULT_MAX_WAIT_MINUTES = 20
@@ -84,6 +86,156 @@ def manifest_path(root: Path, prd_unit_id: str) -> Path:
 def close_marker_path(root: Path, prd_unit_id: str) -> Path:
     safe = re.sub(r"[^a-zA-Z0-9._-]", "-", prd_unit_id)
     return closeout_root(root) / CLOSE_MARKER_DIR / f"{safe}.json"
+
+
+def post_merge_retrospective_dispatch_path(root: Path, run_id: str) -> Path:
+    safe = re.sub(r"[^a-zA-Z0-9._-]", "-", run_id)
+    return closeout_root(root) / POST_MERGE_RETRO_DISPATCH_DIR / f"{safe}.json"
+
+
+def resume_post_merge_retrospective_command(run_id: str) -> str:
+    return f"python3 scripts/wave.py terminal finalize run --run-id {run_id}"
+
+
+def load_post_merge_retrospective_dispatch(root: Path, run_id: str) -> dict[str, Any] | None:
+    data = read_json(post_merge_retrospective_dispatch_path(root, run_id))
+    return data if data else None
+
+
+def save_post_merge_retrospective_dispatch(root: Path, run_id: str, record: dict[str, Any]) -> Path:
+    path = post_merge_retrospective_dispatch_path(root, run_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = dict(record)
+    payload["runId"] = run_id
+    payload["updatedAt"] = utc_now()
+    write_json(path, payload)
+    return path
+
+
+def mark_post_merge_retrospective_complete(
+    root: Path,
+    run_id: str,
+    *,
+    merge_commit: str | None = None,
+) -> dict[str, Any]:
+    """Mark durable post-merge retrospective dispatch complete (agent callback / resume)."""
+    existing = load_post_merge_retrospective_dispatch(root, run_id)
+    if not existing:
+        return {
+            "verdict": "noop",
+            "action": "post-merge-retrospective-complete",
+            "reason": "no-dispatch-record",
+        }
+    if existing.get("status") == "complete":
+        return {
+            "verdict": "pass",
+            "action": "post-merge-retrospective-complete",
+            "idempotent": True,
+            "record": existing,
+        }
+    updated = dict(existing)
+    updated["status"] = "complete"
+    updated["completedAt"] = utc_now()
+    if merge_commit:
+        updated["mergeCommit"] = str(merge_commit).lower()
+    save_post_merge_retrospective_dispatch(root, run_id, updated)
+    return {
+        "verdict": "pass",
+        "action": "post-merge-retrospective-complete",
+        "record": updated,
+    }
+
+
+def dispatch_post_merge_retrospective(
+    root: Path,
+    *,
+    run_id: str,
+    merge_info: dict[str, Any],
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Dispatch post-merge retrospective once after confirmed terminal merge (PRD 337 R16)."""
+    if not merge_info.get("merged"):
+        return {
+            "verdict": "fail",
+            "action": "post-merge-retrospective-dispatch",
+            "error": "merge-not-confirmed",
+            "resumeCommand": resume_post_merge_retrospective_command(run_id),
+        }
+    merge_commit = str(merge_info.get("mergeCommit") or "").lower()
+    if not merge_commit:
+        return {
+            "verdict": "fail",
+            "action": "post-merge-retrospective-dispatch",
+            "error": "merge-commit-missing",
+            "resumeCommand": resume_post_merge_retrospective_command(run_id),
+        }
+    pr_number = merge_info.get("prNumber")
+    existing = load_post_merge_retrospective_dispatch(root, run_id)
+    if existing:
+        prior_sha = str(existing.get("mergeCommit") or "").lower()
+        if prior_sha and prior_sha != merge_commit:
+            return {
+                "verdict": "fail",
+                "action": "post-merge-retrospective-dispatch",
+                "error": "merge-commit-mismatch",
+                "expected": prior_sha,
+                "actual": merge_commit,
+            }
+        if existing.get("status") == "complete":
+            return {
+                "verdict": "pass",
+                "action": "post-merge-retrospective-dispatch",
+                "idempotent": True,
+                "noop": True,
+                "invoke": POST_MERGE_RETRO_INVOKE,
+                "dispatch": existing,
+                "note": "post-merge retrospective already complete",
+            }
+        if existing.get("status") == "dispatched":
+            return {
+                "verdict": "pass",
+                "action": "post-merge-retrospective-dispatch",
+                "idempotent": True,
+                "resume": True,
+                "awaitAgent": True,
+                "invoke": POST_MERGE_RETRO_INVOKE,
+                "dispatch": existing,
+                "resumeCommand": existing.get("resumeCommand")
+                or resume_post_merge_retrospective_command(run_id),
+                "note": "resume interrupted post-merge retrospective dispatch",
+            }
+    record: dict[str, Any] = {
+        "version": 1,
+        "runId": run_id,
+        "status": "dispatched",
+        "invoke": POST_MERGE_RETRO_INVOKE,
+        "mergeCommit": merge_commit,
+        "dispatchedAt": utc_now(),
+        "dispatchCount": 1,
+        "resumeCommand": resume_post_merge_retrospective_command(run_id),
+    }
+    if pr_number is not None:
+        record["prNumber"] = int(pr_number)
+    if dry_run:
+        return {
+            "verdict": "pass",
+            "action": "post-merge-retrospective-dispatch",
+            "dryRun": True,
+            "awaitAgent": True,
+            "invoke": POST_MERGE_RETRO_INVOKE,
+            "wouldWrite": str(post_merge_retrospective_dispatch_path(root, run_id)),
+            "dispatch": record,
+        }
+    path = save_post_merge_retrospective_dispatch(root, run_id, record)
+    return {
+        "verdict": "pass",
+        "action": "post-merge-retrospective-dispatch",
+        "awaitAgent": True,
+        "invoke": POST_MERGE_RETRO_INVOKE,
+        "dispatch": record,
+        "dispatchPath": str(path),
+        "resumeCommand": record["resumeCommand"],
+    }
 
 
 def slug_from_target_branch(branch: str) -> str:

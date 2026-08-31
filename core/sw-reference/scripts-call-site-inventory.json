@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-30T23:12:26Z",
+  "generatedAt": "2026-08-31T00:19:13Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
