@@ -1179,6 +1179,7 @@
 * merge phase align-docs-currency-terminal-state-small into feat/workflow-runtime-autonomy-lifecycle (55016d1) <!-- sw-deliver:align-docs-currency-terminal-state-small -->
 * merge phase retain-terminal-pr-delivery-maps-small into feat/workflow-runtime-autonomy-lifecycle (160eb21) <!-- sw-deliver:retain-terminal-pr-delivery-maps-small -->
 * merge phase make-resume-remediation-actionable-small into feat/workflow-runtime-autonomy-lifecycle (13791ac) <!-- sw-deliver:make-resume-remediation-actionable-small -->
+* merge phase automate-post-merge-retrospective-small into feat/workflow-runtime-autonomy-lifecycle (4432822) <!-- sw-deliver:automate-post-merge-retrospective-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
