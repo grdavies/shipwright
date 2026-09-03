@@ -2,8 +2,10 @@
 """PRD 337 consumer gate — blocks absorb closeout until PRD 339 R37/R39 are merged and green."""
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -32,20 +34,55 @@ def _acceptance_test_ready(root: Path, rel_test: str) -> dict[str, Any]:
             "test": rel_test,
             "reason": "acceptance-test-missing",
         }
-    proc = subprocess.run(
-        [sys.executable, "-m", "pytest", str(test_path), "-q"],
-        cwd=str(root),
-        capture_output=True,
-        text=True,
+    # Hermetic nested pytest: clear ambient ADDOPTS / parent-session leakage so a
+    # deliver-loop CI shard cannot recurse into sibling planning tests, while still
+    # providing scripts/ on pythonpath for real acceptance modules.
+    env = os.environ.copy()
+    env.pop("PYTEST_ADDOPTS", None)
+    env.pop("PYTEST_CURRENT_TEST", None)
+    scripts_dir = str(root / "scripts")
+    prev_pp = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = (
+        scripts_dir if not prev_pp else scripts_dir + os.pathsep + prev_pp
     )
+    with tempfile.TemporaryDirectory(prefix="prd339-gate-pytest-") as td:
+        empty_ini = Path(td) / "pytest.ini"
+        empty_ini.write_text(
+            "[pytest]\npythonpath = scripts\n",
+            encoding="utf-8",
+        )
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                str(test_path),
+                "-q",
+                "--rootdir",
+                str(root),
+                "-c",
+                str(empty_ini),
+                "-p",
+                "no:cacheprovider",
+            ],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            env=env,
+        )
     if proc.returncode == 0:
         return {"verdict": "ready", "test": rel_test}
+    detail = "\n".join(
+        part
+        for part in ((proc.stdout or "").strip(), (proc.stderr or "").strip())
+        if part
+    )
     return {
         "verdict": "blocked",
         "test": rel_test,
         "reason": "acceptance-test-failed",
         "exitCode": proc.returncode,
-        "stderr": (proc.stderr or "").strip() or None,
+        "stderr": detail[:4000] or None,
     }
 
 
