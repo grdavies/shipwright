@@ -26,6 +26,18 @@ def _repo_root(root: Path | None) -> Path:
     return root if root is not None else _gate_scripts_dir().parent
 
 
+def _vendored_pytest_pythonpath(gate_repo: Path) -> list[str]:
+    """Resolve vendored pytest roots so nested CI runs don't need site pytest."""
+    try:
+        if str(gate_repo / "scripts") not in sys.path:
+            sys.path.insert(0, str(gate_repo / "scripts"))
+        from _sw.vendor_paths import vendor_roots
+
+        return [str(path) for path in vendor_roots(gate_repo)]
+    except Exception:
+        return []
+
+
 def _acceptance_test_ready(root: Path, rel_test: str) -> dict[str, Any]:
     test_path = root / rel_test
     if not test_path.is_file():
@@ -34,17 +46,21 @@ def _acceptance_test_ready(root: Path, rel_test: str) -> dict[str, Any]:
             "test": rel_test,
             "reason": "acceptance-test-missing",
         }
-    # Hermetic nested pytest: clear ambient ADDOPTS / parent-session leakage so a
-    # deliver-loop CI shard cannot recurse into sibling planning tests, while still
-    # providing scripts/ on pythonpath for real acceptance modules.
+    # Hermetic nested pytest: clear ambient ADDOPTS / parent-session leakage, inject
+    # vendored pytest (CI has no site pytest), and keep scripts/ on pythonpath for
+    # real acceptance modules under the probe root.
+    gate_repo = _gate_scripts_dir().parent
     env = os.environ.copy()
     env.pop("PYTEST_ADDOPTS", None)
     env.pop("PYTEST_CURRENT_TEST", None)
-    scripts_dir = str(root / "scripts")
+    path_parts = [
+        str(root / "scripts"),
+        *_vendored_pytest_pythonpath(gate_repo),
+    ]
     prev_pp = env.get("PYTHONPATH", "")
-    env["PYTHONPATH"] = (
-        scripts_dir if not prev_pp else scripts_dir + os.pathsep + prev_pp
-    )
+    if prev_pp:
+        path_parts.append(prev_pp)
+    env["PYTHONPATH"] = os.pathsep.join(part for part in path_parts if part)
     with tempfile.TemporaryDirectory(prefix="prd339-gate-pytest-") as td:
         empty_ini = Path(td) / "pytest.ini"
         empty_ini.write_text(

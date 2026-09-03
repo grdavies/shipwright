@@ -149,7 +149,10 @@ def test_close_delivery_units_unblocked_when_prd339_gate_ready(
         encoding="utf-8",
     )
     gate = prd339_absorb_acceptance_milestone(root)
-    assert gate["verdict"] == "ready", gate
+    if gate.get("verdict") != "ready":
+        blocked = gate.get("blocked") or []
+        detail = json.dumps(blocked, ensure_ascii=False, indent=2)
+        raise AssertionError(f"prd339 gate not ready: {gate.get('cause')} blocked={detail}")
     out = close_delivery_units(root, cfg, pgc.PRD_337_UNIT_ID, dry_run=True)
     assert out["verdict"] == "dry-run", out
     gap_units = [
