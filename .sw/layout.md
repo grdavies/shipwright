@@ -1413,4 +1413,4 @@ records are enumerated by `planning_backend_control.py list` and surfaced in `pl
 | Hook ephemeral state (`.cursor/hooks/state/*`) | R20-resolved active root (worktree when aligned) |
 **PRD 333 absorb closeout:** numeric absorb / ten-gap linkage remains on the facade boundary (planning_store_facade / planning_gap_capture); terminal finalize still fails closed on incomplete absorb audit.
 
-<!-- currency: refreshed 2026-09-03T19:40:15Z — terminal prepare (PRD 337 phase 13 closeout) -->
+<!-- currency: refreshed 2026-09-03T19:55:07Z for terminal prepare (synced dual-home) -->
