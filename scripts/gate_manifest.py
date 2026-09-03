@@ -81,10 +81,9 @@ def gates_by_id(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def _workflow_config_path(root: Path) -> Path | None:
-    for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
-        if candidate.is_file():
-            return candidate
-    return None
+    from shipwright_paths import workflow_config_path
+
+    return workflow_config_path(root)
 
 
 def load_gate_class_overrides(root: Path | None = None) -> dict[str, str]:

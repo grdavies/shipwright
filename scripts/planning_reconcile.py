@@ -57,14 +57,9 @@ def current_branch(worktree: Path) -> str:
 
 
 def default_base_branch(root: Path) -> str:
-    for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
-        if candidate.is_file():
-            try:
-                cfg = json.loads(candidate.read_text(encoding="utf-8"))
-                return str(cfg.get("defaultBaseBranch") or "main")
-            except json.JSONDecodeError:
-                pass
-    return "main"
+    from host_lib import default_base_branch as _default_base_branch
+
+    return _default_base_branch(root)
 
 
 def is_ancestor(worktree: Path, ancestor: str, descendant: str) -> bool:

@@ -703,6 +703,7 @@
     "ship_phase_steps.py",
     "ship_pre_pr_smoke.py",
     "shipwright-state.py",
+    "shipwright_paths.py",
     "shipwright_state_lib.py",
     "simplify-gate.py",
     "skills-spec-guard.py",
@@ -804,5 +805,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 801
+  "moduleCount": 802
 }

@@ -115,7 +115,7 @@ class HermeticHarness:
 
 def _configured_token_env_keys(root: Path) -> set[str]:
     keys = set(PROVIDER_TOKEN_ENV_KEYS)
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
+    for rel in (".cursor/workflow.config.json", "workflow.config.json"):  # shipwright-paths-exclusion: memory-eval harness seeds legacy config fixture tree
         path = root / rel
         if not path.is_file():
             continue

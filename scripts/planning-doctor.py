@@ -580,10 +580,9 @@ def doctor(root: Path, *, sweep: bool) -> dict:
             verdict = "fail"
     elif store_backend == "local-synced":
         cfg_path = None
-        for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
-            if candidate.is_file():
-                cfg_path = candidate
-                break
+        from shipwright_paths import workflow_config_path
+
+        cfg_path = workflow_config_path(root)
         sync_path = ""
         if cfg_path:
             cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
@@ -689,8 +688,10 @@ def doctor(root: Path, *, sweep: bool) -> dict:
     except ImportError:
         pass
 
-    cfg_path = root / ".cursor/workflow.config.json"
-    if cfg_path.is_file():
+    from shipwright_paths import workflow_config_path
+
+    cfg_path = workflow_config_path(root)
+    if cfg_path is not None and cfg_path.is_file():
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         memory = cfg.get("memory") if isinstance(cfg.get("memory"), dict) else {}
         host = cfg.get("host") if isinstance(cfg.get("host"), dict) else {}
@@ -790,8 +791,10 @@ def doctor(root: Path, *, sweep: bool) -> dict:
             verdict = "degraded"
 
     cfg_for_sections = None
-    cfg_path = root / ".cursor/workflow.config.json"
-    if cfg_path.is_file():
+    from shipwright_paths import workflow_config_path
+
+    cfg_path = workflow_config_path(root)
+    if cfg_path is not None and cfg_path.is_file():
         try:
             cfg_for_sections = json.loads(cfg_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:

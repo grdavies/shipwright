@@ -205,17 +205,9 @@ def has_flag(args: list[str], flag: str) -> bool:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                return data if isinstance(data, dict) else {}
-            except json.JSONDecodeError:
-                return {}
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def remediation_max(root: Path) -> int:
     deliver = load_workflow_config(root).get("deliver") or {}
     remediation = deliver.get("remediation") or {}

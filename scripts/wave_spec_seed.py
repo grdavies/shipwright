@@ -98,17 +98,9 @@ def load_trunk_base(root: Path) -> str:
 
 
 def load_default_branch(root: Path) -> str:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                cfg = json.loads(path.read_text(encoding="utf-8"))
-                base = cfg.get("defaultBaseBranch")
-                if isinstance(base, str) and base:
-                    return base
-            except json.JSONDecodeError:
-                pass
-    return "main"
+    from host_lib import default_base_branch
+
+    return default_base_branch(root)
 
 
 def resolve_type_from_frontmatter(frontmatter: dict[str, str]) -> str:

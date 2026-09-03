@@ -377,20 +377,9 @@ def apply_contention(
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (
-        ".cursor/workflow.config.json",
-        "workflow.config.json",
-        ".sw/workflow.config.example.json",
-    ):
-        path = root / rel
-        if path.is_file():
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def load_parallel_ceiling(root: Path, args: list[str]) -> int:
     explicit = parse_kv(args, "--ceiling")
     if explicit is not None:

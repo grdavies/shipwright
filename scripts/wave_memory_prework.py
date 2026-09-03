@@ -58,16 +58,9 @@ def parse_kv(args: list[str], flag: str, default: str | None = None) -> str | No
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def provider_from_config(root: Path, config: dict[str, Any]) -> str:
     memory = config.get("memory") or {}
     provider = str(memory.get("provider") or "").strip().lower()

@@ -92,7 +92,9 @@ def schema_version(root: Path) -> str:
 
 
 def cmd_drift_check(root: Path, config: str) -> int:
-    config_path = config or str(root / ".cursor/workflow.config.json")
+    from shipwright_paths import workflow_config_write_path
+
+    config_path = config or str(workflow_config_write_path(root))
     sw_ver = shipwright_version(root)
     sch_ver = schema_version(root)
     stale = False
@@ -821,7 +823,9 @@ cmd_project_doctrine = cmd_doctrine
 
 
 def cmd_portability_check(root: Path, config: str) -> int:
-    config_path = config or str(root / ".cursor/workflow.config.json")
+    from shipwright_paths import workflow_config_write_path
+
+    config_path = config or str(workflow_config_write_path(root))
     subprocess.run(
         [sys.executable, str(SCRIPT_DIR / "verify-unconfigured.py"), "--config", config_path or "/nonexistent", "--json"],
         cwd=str(root),

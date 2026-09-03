@@ -49,14 +49,9 @@ def load_json(path: Path) -> dict[str, Any]:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
-        if candidate.is_file():
-            data = load_json(candidate)
-            if data:
-                return data
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def load_sizing_config(root: Path) -> dict[str, Any]:
     cfg = load_workflow_config(root)
     sizing = (cfg.get("tasks") or {}).get("sizing")

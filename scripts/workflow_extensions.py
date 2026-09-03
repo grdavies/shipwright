@@ -36,19 +36,9 @@ FLAG_ALIASES = {
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if not path.is_file():
-            continue
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
-            continue
-        if isinstance(data, dict):
-            return data
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def normalize_flag_name(name: str) -> str:
     key = str(name or "").strip()
     if key in EXTENSION_FLAGS:
@@ -104,7 +94,7 @@ def require_extension(
         "flag": f"workflow.extensions.{normalized}",
         "message": (
             f"Extension '{normalized}' is disabled. Set workflow.extensions.{normalized}=true "
-            "in .cursor/workflow.config.json after cutover evidence (PRD 280)."
+            "in .cursor/workflow.config.json after cutover evidence (PRD 280)."  # shipwright-paths-exclusion: operator error cites legacy path during redirect window
         ),
     }
 

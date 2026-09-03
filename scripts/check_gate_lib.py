@@ -159,18 +159,9 @@ def git_root(start: Path | None = None) -> Path:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-            if isinstance(data, dict):
-                return data
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def cfg_bool(cfg: dict[str, Any], key: str, default: bool) -> bool:
     checks = cfg.get("checks")
     if not isinstance(checks, dict):

@@ -101,16 +101,11 @@ def git_out(root: Path, *args: str) -> str:
 
 
 def load_default_branch(root: Path) -> str:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                cfg = json.loads(path.read_text(encoding="utf-8"))
-                base = cfg.get("defaultBaseBranch")
-                if isinstance(base, str) and base:
-                    return base
-            except json.JSONDecodeError:
-                pass
+    from host_lib import default_base_branch
+
+    base = default_base_branch(root)
+    if base != "main" or git_ok(root, "rev-parse", "--verify", base):
+        return base
     for candidate in ("main", "master"):
         if git_ok(root, "rev-parse", "--verify", candidate):
             return candidate
@@ -209,16 +204,9 @@ def load_deliver_state(root: Path) -> dict[str, Any]:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def cleanup_autonomy_mode(root: Path) -> str:
     cfg = load_workflow_config(root)
     cleanup = cfg.get("cleanup") or {}

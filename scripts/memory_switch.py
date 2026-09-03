@@ -20,7 +20,6 @@ from memory_provider_catalog import (
 )
 
 STATE_REL = Path(".cursor/shipwright/provider-switch-state.json")
-CONFIG_PATHS = (Path(".cursor/workflow.config.json"), Path("workflow.config.json"))
 # PRD 077 R19 — first-class only on in-repo; other providers cannot represent these fields.
 IN_REPO_FIRST_CLASS_FIELDS = ("compiledTruth", "timeline")
 
@@ -210,15 +209,9 @@ def hash_interchange(path: Path, fmt: str) -> dict[str, Any]:
 
 
 def load_config(root: Path) -> dict[str, Any]:
-    for rel in CONFIG_PATHS:
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                return data if isinstance(data, dict) else {}
-            except (OSError, json.JSONDecodeError):
-                return {}
-    return {}
+    from shipwright_paths import load_workflow_config
+
+    return load_workflow_config(root)
 
 
 def _in_repo_store_dir(root: Path, config: dict[str, Any]) -> Path:
@@ -326,22 +319,23 @@ def _load_obsidian_interchange():
 
 
 def write_config_provider(root: Path, provider_id: str, *, dry_run: bool) -> dict[str, Any]:
-    for rel in CONFIG_PATHS:
-        path = root / rel
-        if not path.is_file():
-            continue
-        config = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(config, dict):
-            raise SwitchError(f"config must be object: {rel}", cause="malformed")
-        memory = config.setdefault("memory", {})
-        if not isinstance(memory, dict):
-            raise SwitchError("memory config must be object", cause="malformed")
-        previous = memory.get("provider")
-        if not dry_run:
-            memory["provider"] = provider_id
-            path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
-        return {"configPath": str(rel), "previous": previous, "next": provider_id, "dryRun": dry_run}
-    raise SwitchError("workflow config not found", cause="missing")
+    from shipwright_paths import workflow_config_path
+
+    path = workflow_config_path(root)
+    if path is None or not path.is_file():
+        raise SwitchError("workflow config not found", cause="missing")
+    config = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(config, dict):
+        raise SwitchError(f"config must be object: {path}", cause="malformed")
+    memory = config.setdefault("memory", {})
+    if not isinstance(memory, dict):
+        raise SwitchError("memory config must be object", cause="malformed")
+    previous = memory.get("provider")
+    if not dry_run:
+        memory["provider"] = provider_id
+        path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    rel = path.relative_to(root.resolve())
+    return {"configPath": str(rel), "previous": previous, "next": provider_id, "dryRun": dry_run}
 
 
 def export_in_repo_store(store: Path, fmt: str, out: Path) -> dict[str, Any]:
