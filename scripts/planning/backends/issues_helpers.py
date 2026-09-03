@@ -173,3 +173,66 @@ def self_heal_issue_unit_index(
         "removed": removed,
         "removedCount": len(removed),
     }
+
+
+def record_artifact_type(record: Any, *, ps_mod: Any) -> str:
+    content = ps_mod.strip_markers_and_edges(ps_mod.reassemble_body(record.body, record.comments))
+    return (
+        str(getattr(record, "artifact_type", "") or "").strip()
+        or ps_mod.artifact_type_from_labels(list(getattr(record, "labels", []) or []))
+        or ps_mod.artifact_type_from_content(content)
+        or ""
+    )
+
+
+def record_unit_id(record: Any, *, ps_mod: Any, unit_marker: Any) -> str:
+    labels = list(getattr(record, "labels", []) or [])
+    from_labels = ps_mod.unit_id_from_labels(labels)
+    if from_labels:
+        return from_labels
+    raw = str(getattr(record, "unit_id", "") or "").strip()
+    if raw:
+        return raw
+    body = getattr(record, "body", "") or ""
+    match = unit_marker.search(body)
+    return match.group(1).strip() if match else ""
+
+
+def guard_unit_id_marker_reuse(
+    *,
+    unit_id: str,
+    artifact_type: str,
+    existing: Any | None,
+    project_key: str,
+    client: Any,
+    fail_fn: Callable[..., None],
+    ps_mod: Any,
+    unit_marker: Any,
+) -> None:
+    """PRD 339 R39 — refuse sw-unit-id marker reuse across artifact types."""
+
+    def _refuse(match: Any, match_type: str) -> None:
+        fail_fn(
+            "unit-id-marker-reuse",
+            code="unit-id-marker-reuse",
+            unitId=unit_id,
+            existingArtifactType=match_type,
+            requestedArtifactType=artifact_type,
+            issueId=str(getattr(match, "id", "") or ""),
+        )
+
+    if existing is not None:
+        existing_type = record_artifact_type(existing, ps_mod=ps_mod)
+        if existing_type and existing_type != artifact_type:
+            _refuse(existing, existing_type)
+
+    search = getattr(client, "issue_search", None)
+    if not callable(search):
+        return
+    matches = client.issue_search(project_key=project_key, unit_id=unit_id)
+    for match in matches or []:
+        if existing is not None and str(getattr(match, "id", "")) == str(getattr(existing, "id", "")):
+            continue
+        match_type = record_artifact_type(match, ps_mod=ps_mod)
+        if match_type and match_type != artifact_type:
+            _refuse(match, match_type)
