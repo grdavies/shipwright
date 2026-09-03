@@ -19,9 +19,11 @@ if str(SCRIPT_DIR) not in sys.path:
 
 
 def read_config(root: Path) -> dict[str, Any]:
-    for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
-        if candidate.is_file():
-            return json.loads(candidate.read_text(encoding="utf-8"))
+    from shipwright_paths import load_workflow_config
+
+    cfg = load_workflow_config(root)
+    if cfg:
+        return cfg
     return {"prdsDir": "docs/prds", "tasksDir": "docs/prds", "defaultBaseBranch": "main"}
 
 

@@ -207,16 +207,9 @@ def load_manifest(root: Path) -> list[dict]:
 
 
 def load_workflow_config(root: Path) -> dict:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        cfg_path = root / rel
-        if cfg_path.is_file():
-            try:
-                return json.loads(cfg_path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def verify_watchdog_budget_seconds(root: Path) -> float | None:
     """Wall-clock budget for full verify manifest loop (PRD 055 R31)."""
     env_raw = os.environ.get("SW_VERIFY_WATCHDOG_MINUTES", "").strip()

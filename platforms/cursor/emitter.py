@@ -101,7 +101,7 @@ class CursorEmitter(EmitterBase):
     def plugin_root_env_name(self) -> str:
         return "CURSOR_PLUGIN_ROOT"
 
-    def emit(self, core_root: Path, repo_root: Path, dest: Path) -> None:
+    def _emit_impl(self, core_root: Path, repo_root: Path, dest: Path) -> None:
         self.validate_descriptor()
         ensure_clean_dir(dest)
         self.copy_emittable_content(core_root, dest)

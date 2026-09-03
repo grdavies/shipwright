@@ -57,6 +57,8 @@ def _repository_layout_signals(root: Path) -> dict[str, Any]:
         "package.json",
         "go.mod",
         "Cargo.toml",
+        ".shipwright/workflow.config.json",
+        # shipwright-paths-exclusion: legacy manifest probe retained for brownfield detection
         ".cursor/workflow.config.json",
     ):
         if (git_root / rel).is_file():

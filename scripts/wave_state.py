@@ -1463,15 +1463,9 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
         "driverHeartbeatAt": utc_now(),
         "updatedAt": utc_now(),
     }
-    cfg: dict = {}
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        p = root / rel
-        if p.is_file():
-            try:
-                cfg = json.loads(p.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                cfg = {}
-            break
+    from shipwright_paths import load_workflow_config
+
+    cfg = load_workflow_config(root)
     state[PIN_STATE_KEY] = pin_from_config(cfg)
     if read_config_plan_policy(root) == "proposed":
         if not proposed_pilot_enabled(root):

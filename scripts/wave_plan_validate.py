@@ -39,21 +39,9 @@ DEFAULT_PLAN_POLICY = "canonical"
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (
-        ".cursor/workflow.config.json",
-        "workflow.config.json",
-        ".sw/workflow.config.example.json",
-    ):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                return data if isinstance(data, dict) else {}
-            except json.JSONDecodeError:
-                continue
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def read_config_plan_policy(root: Path) -> str:
     """Read orchestration.planPolicy from live workflow config (default canonical)."""
     orch = load_workflow_config(root).get("orchestration") or {}

@@ -44,6 +44,7 @@ ADVISORY_CONTENT_CLASSES = frozenset({"brainstorm", "decision", "learnings", "ga
 SPEC_CONTENT_CLASSES = frozenset({"prd", "tasks", "amendment", "vocabulary"})
 
 STATE_REL = Path(".cursor/hooks/state/planning-visibility.json")
+# shipwright-paths-exclusion: legacy label retained for operator-facing error text only
 CONFIG_REL = Path(".cursor/workflow.config.json")
 
 REDACTED_BODY_MARKER = "[redacted:private-body]"
@@ -178,11 +179,9 @@ def planning_section(cfg: dict[str, Any]) -> dict[str, Any]:
 
 
 def config_path(root: Path) -> Path | None:
-    for rel in (CONFIG_REL, Path("workflow.config.json")):
-        path = root / rel
-        if path.is_file():
-            return path
-    return None
+    from shipwright_paths import workflow_config_path
+
+    return workflow_config_path(root)
 
 
 def state_path(root: Path) -> Path:
@@ -270,7 +269,7 @@ def deprecated_visibility_key_warning(cfg: dict[str, Any]) -> dict[str, Any] | N
         "replacementKey": VISIBILITY_TIER_KEY,
         "remediation": (
             f"rename planning.{DEPRECATED_VISIBILITY_PROFILE_KEY} to "
-            f"planning.{VISIBILITY_TIER_KEY} in .cursor/workflow.config.json "
+            f"planning.{VISIBILITY_TIER_KEY} in .cursor/workflow.config.json "  # shipwright-paths-exclusion: operator-facing message names legacy config path
             "(one-release back-compat alias; new key takes precedence when both are set)"
         ),
     }

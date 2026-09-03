@@ -36,10 +36,9 @@ def cfg_value(config: Path | None, key: str, default: str) -> str:
 def resolve_config(root: Path, explicit: Path | None) -> Path | None:
     if explicit and explicit.is_file():
         return explicit
-    for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
-        if candidate.is_file():
-            return candidate
-    return None
+    from shipwright_paths import workflow_config_path
+
+    return workflow_config_path(root)
 
 
 def main(argv: list[str] | None = None) -> int:

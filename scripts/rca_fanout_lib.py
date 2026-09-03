@@ -23,19 +23,9 @@ def utc_now() -> str:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    root = root.resolve()
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-            if isinstance(data, dict):
-                return data
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def resolve_fanout_config(cfg: dict[str, Any] | None) -> dict[str, Any]:
     merged = dict(DEFAULT_FANOUT)
     rca = (cfg or {}).get("rca") if isinstance(cfg, dict) else None

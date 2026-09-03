@@ -217,6 +217,7 @@ def check_top_level_inherit_without_agent_unaffected(sandbox_root: Path) -> dict
 
 def check_literal_prd_example_against_shipped_config() -> dict[str, Any]:
     """The literal R18 example (`--agent explore --command sw-doc`) against this repo's own
+    # shipwright-paths-exclusion: fixture prose documents legacy shipped config location
     shipped `.cursor/workflow.config.json` resolves a concrete model or an actionable
     remediation — never `binding:no-model` — proving the concrete production fix end-to-end."""
     ec, data = _run_dispatch_preflight(

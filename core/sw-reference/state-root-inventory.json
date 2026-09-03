@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "description": "Relocated Shipwright state-root families: legacy .cursor/ and .sw/ paths to .shipwright/ destinations (PRD 342 R9).",
+  "entries": [
+    {
+      "family": "configuration",
+      "legacyPath": ".cursor/workflow.config.json",
+      "newPath": ".shipwright/workflow.config.json",
+      "accessor": "workflow_config_path",
+      "notes": "Primary workflow configuration; repo-root workflow.config.json remains a legacy fallback via workflow_config_candidates."
+    },
+    {
+      "family": "run-state",
+      "legacyPath": ".cursor/sw-deliver-runs",
+      "newPath": ".shipwright/deliver-runs",
+      "accessor": "deliver_runs_dir",
+      "notes": "Per-run deliver namespace (plan, state, events, phases)."
+    },
+    {
+      "family": "closeout",
+      "legacyPath": ".sw/deliver-closeout",
+      "newPath": ".shipwright/deliver-closeout",
+      "accessor": "deliver_closeout_dir",
+      "notes": "Merge-boundary close-out manifests and PR-to-delivery maps."
+    },
+    {
+      "family": "locks",
+      "legacyPath": ".cursor/sw-deliver-locks",
+      "newPath": ".shipwright/locks/deliver",
+      "accessor": "deliver_locks_dir",
+      "notes": "Per-phase-head ship lease files."
+    },
+    {
+      "family": "locks",
+      "legacyPath": ".cursor/sw-target-locks",
+      "newPath": ".shipwright/locks/target",
+      "accessor": "target_locks_dir",
+      "notes": "Target-branch exclusion locks (git-common-dir anchored)."
+    },
+    {
+      "family": "locks",
+      "legacyPath": ".cursor/sw-doc-run-locks",
+      "newPath": ".shipwright/locks/doc-run",
+      "accessor": "doc_run_locks_dir",
+      "notes": "Doc-run exclusion locks."
+    },
+    {
+      "family": "locks",
+      "legacyPath": ".cursor/sw-doc-to-feature-handoff-locks",
+      "newPath": ".shipwright/locks/doc-to-feature-handoff",
+      "accessor": "doc_to_feature_handoff_locks_dir",
+      "notes": "Doc-to-feature handoff locks."
+    },
+    {
+      "family": "locks",
+      "legacyPath": ".cursor/sw-deliver-run-locks",
+      "newPath": ".shipwright/locks/deliver-run",
+      "accessor": "deliver_run_locks_dir",
+      "notes": "Exclusive deliver runId lease."
+    },
+    {
+      "family": "locks",
+      "legacyPath": ".cursor/sw-living-docs.lock",
+      "newPath": ".shipwright/locks/living-docs.lock",
+      "accessor": "living_docs_lock_path",
+      "notes": "Repo-wide living-doc write serialization."
+    },
+    {
+      "family": "caches",
+      "legacyPath": ".cursor/sw-graph-cache",
+      "newPath": ".shipwright/cache/graph",
+      "accessor": "graph_cache_dir",
+      "notes": "Authenticated canonical graph execution cache."
+    },
+    {
+      "family": "caches",
+      "legacyPath": ".cursor/sw-graph-runs",
+      "newPath": ".shipwright/cache/graph-runs",
+      "accessor": "graph_runs_dir",
+      "notes": "WorkflowGraph receipt journal store."
+    },
+    {
+      "family": "caches",
+      "legacyPath": ".cursor/hooks/state",
+      "newPath": ".shipwright/cache/hooks-state",
+      "accessor": "hooks_state_dir",
+      "notes": "Hook ephemeral state (preflight, planning caches, compression)."
+    },
+    {
+      "family": "caches",
+      "legacyPath": ".cursor/sw-gate-cache",
+      "newPath": ".shipwright/cache/gate",
+      "accessor": "gate_cache_dir",
+      "notes": "Slim gate manifest snapshots (pr-test-plan)."
+    },
+    {
+      "family": "memory",
+      "legacyPath": ".cursor/sw-memory/rules",
+      "newPath": ".shipwright/memory/rules",
+      "accessor": "memory_rules_dir",
+      "notes": "In-repo memory rule bodies."
+    },
+    {
+      "family": "memory",
+      "legacyPath": ".cursor/sw-memory",
+      "newPath": ".shipwright/memory",
+      "accessor": "memory_bodies_dir",
+      "notes": "In-repo memory bodies and provider-local store."
+    },
+    {
+      "family": "memory",
+      "legacyPath": ".cursor/sw-memory-rule-allowlist.json",
+      "newPath": ".shipwright/memory/rule-allowlist.json",
+      "accessor": "memory_rule_allowlist_path",
+      "notes": "Rule-class memory injection allowlist."
+    },
+    {
+      "family": "memory",
+      "legacyPath": ".cursor/sw-memory.provider",
+      "newPath": ".shipwright/memory/provider.marker",
+      "accessor": "memory_provider_marker_path",
+      "notes": "Validated memory provider marker file."
+    },
+    {
+      "family": "templates",
+      "legacyPath": ".sw/templates",
+      "newPath": ".shipwright/templates",
+      "accessor": "template_overrides_dir",
+      "notes": "Operator template overrides layered above core defaults."
+    },
+    {
+      "family": "configuration",
+      "legacyPath": ".sw",
+      "newPath": ".shipwright/sw-reference",
+      "accessor": "sw_reference_operator_dir",
+      "notes": "Operator-edited sw-reference inputs mirrored to core/sw-reference via copy-to-core."
+    },
+    {
+      "family": "run-state",
+      "legacyPath": ".cursor/sw-worktree-state.json",
+      "newPath": ".shipwright/worktree-state.json",
+      "accessor": "worktree_state_path",
+      "notes": "Linked worktree orchestration state breadcrumb."
+    }
+  ]
+}

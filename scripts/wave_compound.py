@@ -455,16 +455,9 @@ def changed_files(root: Path, base: str = "HEAD") -> list[str]:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, OSError):
-                return {}
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def compound_autonomy_mode(root: Path) -> str:
     cfg = load_workflow_config(root)
     compound = cfg.get("compound") or {}

@@ -97,6 +97,7 @@ def install(dest: Path, *, src: Path | None = None, install_hooks: bool = True) 
     if git_config.exists():
         if workflow.is_file():
             logging_setup.info(
+                # shipwright-paths-exclusion: operator-facing message names legacy path during redirect window
                 f"This git repo ({root}) already has .cursor/workflow.config.json."
             )
             logging_setup.info("Run /sw-init there to validate or refresh repo-local configuration.")

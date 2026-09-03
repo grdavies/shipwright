@@ -15,14 +15,9 @@ from _sw.cli import run_module_main
 
 
 def read_default_branch(root: Path) -> str:
-    for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
-        if candidate.is_file():
-            try:
-                cfg = json.loads(candidate.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                break
-            return str(cfg.get("defaultBaseBranch", "main"))
-    return "main"
+    from host_lib import default_base_branch
+
+    return default_base_branch(root)
 
 
 def main(argv: list[str] | None = None) -> int:

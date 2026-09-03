@@ -37,16 +37,9 @@ def utc_now() -> str:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                return read_json(path)
-            except (json.JSONDecodeError, OSError):
-                continue
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def intra_phase_settings(config: dict[str, Any]) -> dict[str, int]:
     worktree = config.get("worktree") or {}
     intra = config.get("intraPhase") or {}

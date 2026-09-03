@@ -22,11 +22,9 @@ def repo_root() -> Path:
 
 
 def resolve_workflow_config_path(target: Path) -> Path | None:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = target / rel
-        if path.is_file():
-            return path
-    return None
+    from shipwright_paths import workflow_config_path
+
+    return workflow_config_path(target)
 
 
 def _append_tokenenv_deprecations(

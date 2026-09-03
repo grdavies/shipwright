@@ -75,7 +75,7 @@ r = evaluate_pre_tool_use(payload, root)
 print(json.dumps({"verdict": r.verdict, "model_id": r.model_id, "hook": r.to_hook_output()}))
 PY
 )
-EXPECTED_MODEL=$(bash "$ROOT/scripts/resolve-model-tier.sh" --agent sw-coherence-reviewer --config "$ROOT/.cursor/workflow.config.json" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['modelId'])")
+EXPECTED_MODEL=$(bash "$ROOT/scripts/resolve-model-tier.sh" --agent sw-coherence-reviewer --config "$ROOT/.cursor/workflow.config.json" 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin)['modelId'])")  # shipwright-paths-exclusion: shell fixture invokes legacy config path on disk
 if echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)

@@ -11,6 +11,7 @@ from pathlib import Path
 from memory_provider_catalog import CatalogError, get_provider, load_catalog
 from memory_provider_register import validate_registration
 
+# shipwright-paths-exclusion: deprecated constant retained for marker-path parity docs only
 _CONFIG_PATHS = (".cursor/workflow.config.json", "workflow.config.json")
 _MARKER_PATHS = (".cursor/sw-memory.provider", "sw-memory.provider")
 _SOT_KNOB_VALUES = frozenset({"repo", "memory", "auto"})
@@ -36,15 +37,9 @@ def fail(error: str, exit_code: int = 2) -> None:
 
 
 def load_config(root: Path) -> dict:
-    for rel in _CONFIG_PATHS:
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                return data if isinstance(data, dict) else {}
-            except (OSError, ValueError):
-                return {}
-    return {}
+    from shipwright_paths import load_workflow_config
+
+    return load_workflow_config(root)
 
 
 def _validated_provider(root: Path, provider_id: str) -> str | None:

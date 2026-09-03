@@ -57,18 +57,9 @@ def utc_now() -> datetime:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                continue
-            if isinstance(data, dict):
-                return data
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def intelligence_config(root: Path) -> dict[str, Any]:
     cfg = load_workflow_config(root)
     planning = cfg.get("planning") if isinstance(cfg.get("planning"), dict) else {}

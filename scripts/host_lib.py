@@ -22,6 +22,7 @@ from credentials.model import (
     Secret,
 )
 from credentials.resolver import RepositoryContext, resolve
+from shipwright_paths import load_workflow_config as _load_workflow_config_paths
 
 VALID_PROVIDERS = frozenset({"github", "gitlab", "bitbucket", "none"})
 
@@ -56,16 +57,7 @@ PUBLIC_HOST_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-            if isinstance(data, dict):
-                return data
-    return {}
+    return _load_workflow_config_paths(root)
 
 
 def host_section(cfg: dict[str, Any]) -> dict[str, Any]:

@@ -267,16 +267,9 @@ def load_plan(root: Path, state: dict[str, Any] | None = None) -> dict[str, Any]
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def plan_edges(root: Path, state: dict[str, Any] | None = None) -> list[dict[str, str]]:
     plan = load_plan(root, state)
     return [dict(e) for e in plan.get("edges") or []]

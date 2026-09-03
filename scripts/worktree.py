@@ -85,9 +85,9 @@ def strip_jsonc(text: str) -> str:
 
 def repo_root(start: Path | None = None) -> Path:
     script_root = SCRIPT_DIR.parent
-    if (script_root / ".cursor/workflow.config.json").is_file() or (
-        script_root / "workflow.config.json"
-    ).is_file():
+    from shipwright_paths import workflow_config_path
+
+    if workflow_config_path(script_root) is not None:
         return script_root
     start = start or Path.cwd()
     proc = subprocess.run(
@@ -102,20 +102,20 @@ def repo_root(start: Path | None = None) -> Path:
 
 
 def read_config(start: Path | None = None) -> None:
+    from shipwright_paths import workflow_config_path
+
     root = repo_root(start)
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        candidate = root / rel
-        if not candidate.is_file():
-            continue
-        raw = candidate.read_text(encoding="utf-8")
-        try:
-            data = json.loads(strip_jsonc(raw))
-        except json.JSONDecodeError:
-            print(raw)
-            return
-        print(json.dumps(data))
+    candidate = workflow_config_path(root)
+    if candidate is None:
+        print("{}")
         return
-    print("{}")
+    raw = candidate.read_text(encoding="utf-8")
+    try:
+        data = json.loads(strip_jsonc(raw))
+    except json.JSONDecodeError:
+        print(raw)
+        return
+    print(json.dumps(data))
 
 
 def _resolve_state_path(worktree: str, gitdir: str) -> Path | None:
@@ -246,17 +246,10 @@ def _validate_branch_name(branch: str) -> bool:
 
 
 def ceiling_check(start: Path | None = None) -> int:
+    from shipwright_paths import load_workflow_config
+
     root = repo_root(start)
-    cfg: dict = {}
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        candidate = root / rel
-        if candidate.is_file():
-            raw = candidate.read_text(encoding="utf-8")
-            try:
-                cfg = json.loads(strip_jsonc(raw))
-            except json.JSONDecodeError:
-                cfg = {}
-            break
+    cfg = load_workflow_config(root)
     count = active_worktree_count()
     ceiling = int(cfg.get("worktree", {}).get("parallelCeiling", 4))
     verdict = "ok" if count < ceiling else "at-ceiling"
@@ -285,17 +278,10 @@ def cmd_list(args: argparse.Namespace) -> int:
 
 
 def load_workflow_config_dict(start: Path | None = None) -> dict:
+    from shipwright_paths import load_workflow_config
+
     root = repo_root(start)
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        candidate = root / rel
-        if not candidate.is_file():
-            continue
-        raw = candidate.read_text(encoding="utf-8")
-        try:
-            return json.loads(strip_jsonc(raw))
-        except json.JSONDecodeError:
-            return {}
-    return {}
+    return load_workflow_config(root)
 
 
 def allocate_port(cfg: dict) -> int:

@@ -32,8 +32,9 @@ def main(argv=None):
         elif args[i] in ("-h","--help"): print("usage: quality-provider.py [--config PATH]"); return 0
         else: print(json.dumps({"verdict":"none","reason":"unknown argument"}), file=sys.stderr); return 2
     if config is None:
-        for c in (root/".cursor/workflow.config.json", root/"workflow.config.json"):
-            if c.is_file(): config = c; break
+        from shipwright_paths import workflow_config_path
+
+        config = workflow_config_path(root)
     provider = cfg(config, "quality.provider", "none").strip().lower()
     if provider in ("", "none", "off", "unconfigured", "null"):
         adapter = plugin_root/"core/providers/quality/none.py"
