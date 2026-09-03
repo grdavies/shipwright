@@ -164,17 +164,39 @@ def parse_scalar(raw: str) -> Any:
 
 
 def parse_frontmatter(text: str) -> dict[str, Any] | None:
+    """Parse YAML-ish frontmatter including block list values (PRD 339 R37)."""
     if not text.startswith("---"):
         return None
     parts = text.split("---", 2)
     if len(parts) < 3:
         return None
     fm: dict[str, Any] = {}
+    current_list_key: str | None = None
     for line in parts[1].splitlines():
-        if not line.strip() or ":" not in line:
+        stripped = line.strip()
+        if not stripped:
             continue
-        key, _, value = line.partition(":")
-        fm[key.strip()] = parse_scalar(value)
+        if current_list_key is not None and stripped.startswith("- "):
+            item = parse_scalar(stripped[2:])
+            existing = fm.get(current_list_key)
+            if not isinstance(existing, list):
+                existing = [] if existing in ("", None) else [existing]
+            existing.append(item)
+            fm[current_list_key] = existing
+            continue
+        if ":" not in stripped:
+            current_list_key = None
+            continue
+        key, _, value = stripped.partition(":")
+        key = key.strip()
+        value_parsed = parse_scalar(value)
+        # Bare `key:` with no scalar starts a YAML block list (R37).
+        if value_parsed == "" and not value.strip():
+            current_list_key = key
+            fm[key] = []
+        else:
+            current_list_key = None
+            fm[key] = value_parsed
     return fm
 
 
