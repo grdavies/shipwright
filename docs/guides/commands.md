@@ -145,7 +145,7 @@ Composition, convergence, and domain terms:
 [`graph-domain-terminology.md`](graph-domain-terminology.md).
 
 ### Deliver operator surface
-<!-- currency: refreshed 2026-08-24T22:08:00Z — terminal prepare vs wave_terminal (phase-before-orch teardown) -->
+<!-- currency: refreshed 2026-09-03T19:55:07Z — terminal prepare vs wave_terminal (phase-before-orch teardown) -->
 
 Mechanical list / resume / finalize commands report run identity, target branch, stage, lock holder,
 and `requiresAdoption` **before** any mutation. Operators invoke them via `wave_deliver.py` (or

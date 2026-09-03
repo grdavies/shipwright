@@ -1,4 +1,8 @@
-"""PRD 331 D3, R1, R2, R3, R31, R48 — explore command and entry path contract."""
+"""PRD 331 D3, R1, R2, R3, R31, R48 — explore command and entry path contract.
+
+Phase 12 (PRD 337 R9/R10): complete explore command surface — idea, notebook, resume, and
+`/sw-note graduate --to explore` handoff with notebook provenance round trips.
+"""
 
 from __future__ import annotations
 

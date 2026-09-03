@@ -66,9 +66,18 @@ def _refresh_planning_store_shims(root: Path) -> int:
 
 def _run_generate_pipeline(root: Path, *, capture: bool = False) -> int:
     kwargs = {"cwd": str(root), "capture_output": capture}
-    if subprocess.run([sys.executable, "-m", "sw", "generate", "--all"], **kwargs).returncode != 0:
+    copy_to_core = root / "scripts" / "copy-to-core.py"
+    if copy_to_core.is_file():
+        gen_cmd = [sys.executable, str(copy_to_core), "generate"]
+    else:
+        gen_cmd = [sys.executable, "-m", "sw", "generate", "--all"]
+    if subprocess.run(gen_cmd, **kwargs).returncode != 0:
         return 1
-    if subprocess.run([sys.executable, str(root / "scripts/core_content_sync.py")], **kwargs).returncode != 0:
+    sync_script = copy_to_core if copy_to_core.is_file() else root / "scripts/core_content_sync.py"
+    sync_argv = [sys.executable, str(sync_script)]
+    if sync_script == copy_to_core:
+        sync_argv.append("sync")
+    if subprocess.run(sync_argv, **kwargs).returncode != 0:
         return 1
     if _refresh_planning_store_shims(root) != 0:
         return 1

@@ -2465,6 +2465,84 @@ def run_ship_loop_drive(
     return proc.returncode, data
 
 
+def run_ship_loop_consume_outcome(
+    worktree: Path,
+    phase_slug: str,
+    env: dict[str, str],
+) -> tuple[int, dict[str, Any]]:
+    try:
+        ship_loop_script = resolve_script(worktree, "ship_loop.py")
+    except ScriptsResolveError as exc:
+        return 20, _ship_loop_resolve_blocked(exc)
+    cmd = [
+        sys.executable,
+        str(ship_loop_script),
+        str(worktree),
+        "consume-outcome",
+        "--phase",
+        phase_slug,
+    ]
+    child_env = build_ship_dispatch_child_env(env)
+    proc = subprocess.run(
+        cmd,
+        cwd=str(worktree),
+        env=child_env,
+        capture_output=True,
+        text=True,
+    )
+    raw = (proc.stdout or "").strip()
+    if not raw:
+        return proc.returncode or 2, {
+            "verdict": "fail",
+            "error": "ship-loop-consume:empty-output",
+            "stderr": (proc.stderr or "")[-500:],
+        }
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return 2, {
+            "verdict": "fail",
+            "error": "ship-loop-consume:invalid-json",
+            "stdout": raw[-500:],
+            "stderr": (proc.stderr or "")[-500:],
+        }
+    if proc.returncode != 0 and data.get("verdict") not in ("pass",):
+        data.setdefault("verdict", "fail")
+    return proc.returncode, data
+
+
+def ship_loop_await_for_phase(
+    state: dict[str, Any], phase_id: str
+) -> dict[str, Any] | None:
+    pending = state.get("shipLoopAwait")
+    if not isinstance(pending, dict):
+        return None
+    if str(pending.get("phaseId") or "") != str(phase_id):
+        return None
+    return pending
+
+
+def clear_ship_loop_await(state: dict[str, Any], phase_id: str) -> None:
+    pending = state.get("shipLoopAwait")
+    if isinstance(pending, dict) and str(pending.get("phaseId") or "") == str(phase_id):
+        state.pop("shipLoopAwait", None)
+
+
+def persist_ship_loop_await(
+    state: dict[str, Any],
+    phase_id: str,
+    slug: str,
+    drive: dict[str, Any],
+) -> None:
+    state["shipLoopAwait"] = {
+        "phaseId": phase_id,
+        "phaseSlug": slug,
+        "step": drive.get("step"),
+        "contract": drive.get("contract"),
+        "updatedAt": utc_now(),
+    }
+
+
 def _apply_phase_provision_to_state(
     root: Path,
     state: dict[str, Any],
@@ -2548,36 +2626,72 @@ def execute_dispatch_ship(
     except ScriptsResolveError as exc:
         fail_payload(_ship_loop_resolve_blocked(exc), "ship-loop blocked", 20, phaseId=pid)
     env = ship_loop_env_for_phase(state, pid, slug, scripts_root=scripts_root)
-    ec, drive = run_ship_loop_drive(wt, slug, env)
-    out: dict[str, Any] = {
-        "executed": "dispatch-ship",
-        "phaseId": pid,
-        "phaseSlug": slug,
-        "shipLoop": drive,
-    }
-    if drive.get("awaitAgent") or (
-        isinstance(drive.get("note"), str)
-        and "deferred to agent ship chain" in drive["note"]
-    ):
-        out["awaitAgent"] = True
-        out["shipStep"] = drive.get("step")
-        out["shipContract"] = drive.get("contract")
-        state["shipLoopAwait"] = {
-            "phaseId": pid,
-            "phaseSlug": slug,
-            "step": drive.get("step"),
-            "contract": drive.get("contract"),
-        }
-        save_state(root, state)
-        return out
-    if drive.get("complete"):
-        out["shipComplete"] = True
-        return out
-    if drive.get("verdict") == "blocked":
-        fail_payload(drive, "ship-loop blocked", 20)
-    if ec != 0 or drive.get("verdict") == "fail":
-        fail_payload(drive, "ship-loop drive failed", ec or 20)
-    return out
+    max_rounds = int(os.environ.get("SW_INLINE_SHIP_MAX_ROUNDS", "32"))
+    drive_history: list[dict[str, Any]] = []
+    last_drive: dict[str, Any] = {}
+    ec = 0
+    for _round in range(max(1, max_rounds)):
+        if ship_loop_await_for_phase(state, pid) is not None:
+            _consume_ec, consumed = run_ship_loop_consume_outcome(wt, slug, env)
+            drive_history.append({"action": "consume-outcome", **consumed})
+            if consumed.get("verdict") == "fail":
+                pending = ship_loop_await_for_phase(state, pid) or {}
+                save_state(root, state)
+                return {
+                    "executed": "dispatch-ship",
+                    "phaseId": pid,
+                    "phaseSlug": slug,
+                    "awaitAgent": True,
+                    "shipStep": pending.get("step"),
+                    "shipContract": pending.get("contract"),
+                    "shipLoop": consumed,
+                    "shipLoopHistory": drive_history,
+                    "note": "inline ship awaiting agent outcome",
+                }
+            clear_ship_loop_await(state, pid)
+        ec, last_drive = run_ship_loop_drive(wt, slug, env)
+        drive_history.append(last_drive)
+        if last_drive.get("awaitAgent") or (
+            isinstance(last_drive.get("note"), str)
+            and "deferred to agent ship chain" in last_drive["note"]
+        ):
+            persist_ship_loop_await(state, pid, slug, last_drive)
+            save_state(root, state)
+            return {
+                "executed": "dispatch-ship",
+                "phaseId": pid,
+                "phaseSlug": slug,
+                "awaitAgent": True,
+                "shipStep": last_drive.get("step"),
+                "shipContract": last_drive.get("contract"),
+                "shipLoop": last_drive,
+                "shipLoopHistory": drive_history,
+            }
+        if last_drive.get("complete"):
+            clear_ship_loop_await(state, pid)
+            save_state(root, state)
+            return {
+                "executed": "dispatch-ship",
+                "phaseId": pid,
+                "phaseSlug": slug,
+                "shipComplete": True,
+                "shipLoop": last_drive,
+                "shipLoopHistory": drive_history,
+            }
+        if last_drive.get("verdict") == "blocked":
+            fail_payload(last_drive, "ship-loop blocked", 20)
+        if ec != 0 or last_drive.get("verdict") == "fail":
+            fail_payload(last_drive, "ship-loop drive failed", ec or 20)
+        if last_drive.get("verdict") != "pass":
+            break
+    fail(
+        "inline ship continuation budget exhausted",
+        exit_code=20,
+        phaseId=pid,
+        phaseSlug=slug,
+        rounds=max_rounds,
+        shipLoopHistory=drive_history,
+    )
 
 
 def execute_dispatch_batch(
@@ -2807,6 +2921,8 @@ def check_deliver_hang_desync(root: Path, state: dict[str, Any]) -> str | None:
             continue
         dispatched = meta.get("inlineDispatchedAt")
         if not dispatched:
+            continue
+        if ship_loop_await_for_phase(state, str(pid)) is not None:
             continue
         slug = str(meta.get("slug") or pid)
         _, status = read_phase_status_optional(root, slug, state)
@@ -3322,6 +3438,13 @@ def compute_next_action(
         if meta.get("inlineDispatchedAt") and inline_dispatch_lease_held_live(
             root, state, meta
         ):
+            if ship_loop_await_for_phase(state, pid) is not None:
+                return dispatch_or_phase_plan_entry(
+                    state,
+                    plan,
+                    pid,
+                    note="resume inline ship continuation (shipLoopAwait)",
+                )
             awaiting.append(pid)
             continue
         return dispatch_or_phase_plan_entry(

@@ -256,7 +256,7 @@
       "sourcePath": "core/commands/sw-debug.md"
     },
     {
-      "bodyDigest": "49407e66bd9cc3288aece16878bc1b8f66f275f797a82753d891b991805a67ec",
+      "bodyDigest": "99c867a011f549f4a8a7175c8580ff5d2a2df134d97dd1bf5c785b562a0ce1db",
       "capabilities": [],
       "description": "Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.",
       "id": "sw-deliver",
@@ -292,7 +292,7 @@
       "sourcePath": "core/commands/sw-execute.md"
     },
     {
-      "bodyDigest": "3b4e93c3d4e1bd3fab5da9bdf4a1427e49501fca64b182023d8ff47ea7954905",
+      "bodyDigest": "73a79908b3763fbd9c58422a2f3b6283203ff6f4ffe3dd3e50ed4ddbda6ec9b5",
       "capabilities": [],
       "description": "Destination-first structured exploration before planning \u2014 idea, notebook, resume, promote, and explicit doc handoff. Does not create PRDs/tasks, dispatch implementation, or resolve Quick/Standard/Full tier at entry.",
       "id": "sw-explore",
@@ -649,7 +649,7 @@
       "sourcePath": "core/skills/execute-discipline/SKILL.md"
     },
     {
-      "bodyDigest": "f8dc23fed53379a673c1503f57a028883a8088305ec4a1d3b5bbaf796115b92c",
+      "bodyDigest": "92ae5acf988df28c741b232356077035f58640b313e41aa79a9a8f54095df15c",
       "capabilities": [],
       "description": "Destination-first structured exploration through ask \u2192 decide \u2192 confirm \u2014 humans own intent, blocking policy, promote, and doc handoff. Use when scope is unclear before /sw-doc. Does not dispatch implementation or create PRDs/tasks.",
       "id": "explore",

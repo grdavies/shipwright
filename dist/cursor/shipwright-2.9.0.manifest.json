@@ -660,6 +660,7 @@
     "planning_visibility.py",
     "port_w1_behavioral.py",
     "port_wave_behavioral.py",
+    "prd339_cross_prd_gate.py",
     "primary_checkout_guard.py",
     "project_baseline.py",
     "project_doctrine.py",
@@ -680,6 +681,8 @@
     "resolve-intensity.py",
     "resolve-model-tier.py",
     "resolve_base_branch.py",
+    "retro_candidates.py",
+    "retro_gap_capture.py",
     "review-local-resolve.py",
     "review_synthesize.py",
     "reviewer-dispatch-check.py",
@@ -801,5 +804,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 798
+  "moduleCount": 801
 }

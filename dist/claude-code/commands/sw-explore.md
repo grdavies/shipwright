@@ -46,6 +46,9 @@ Explore is **optional** (not mandatory) for every workflow.
 7. **Handoff (explicit)** — forward to `/sw-doc` only after readiness/brief checks and human confirmation;
    never nested orchestrator dispatch.
 
+See `docs/guides/workflows.md` (**Lifecycle routing**) for Capture → Explore → Specify → Build → Learn
+entry paths and bidirectional notebook provenance.
+
 **Communication intensity:** lite
 
 **Model tier:** mid — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-explore`.

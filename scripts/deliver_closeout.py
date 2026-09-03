@@ -20,12 +20,14 @@ if str(SCRIPT_DIR) not in sys.path:
 from host_lib import load_workflow_config
 from inflight_signal import prd_unit_id_from_state
 from wave_json_io import StateCorruptError, read_json, write_json
-from wave_state import load_deliver_state
+from wave_state import load_deliver_state, path_normalize_anchor
 
 CLOSEOUT_ROOT_REL = ".sw/deliver-closeout"
 PR_MAP_DIR = "pr-delivery-map"
 MANIFEST_DIR = "closure-manifests"
 CLOSE_MARKER_DIR = "close-markers"
+POST_MERGE_RETRO_DISPATCH_DIR = "post-merge-retrospective-dispatch"
+POST_MERGE_RETRO_INVOKE = "/sw-retrospective --post-merge"
 INDEX_REL = f"{CLOSEOUT_ROOT_REL}/index.json"
 DEFAULT_POLL_SECONDS = 45
 DEFAULT_MAX_WAIT_MINUTES = 20
@@ -59,8 +61,17 @@ def fail(error, exit_code=2, **extra):
     emit({"verdict": "fail", "error": error, **extra}, exit_code)
 
 
+def closeout_storage_root(root: Path) -> Path:
+    """Primary repo root for durable closeout artifacts (PRD 337 R14, gap-410).
+
+    PR delivery maps and the closeout index survive orchestrator worktree teardown;
+    callers may pass a linked worktree path — storage always anchors to git common-dir.
+    """
+    return path_normalize_anchor(root)
+
+
 def closeout_root(root: Path) -> Path:
-    return root / CLOSEOUT_ROOT_REL
+    return closeout_storage_root(root) / CLOSEOUT_ROOT_REL
 
 
 def pr_map_path(root: Path, pr_number) -> Path:
@@ -75,6 +86,156 @@ def manifest_path(root: Path, prd_unit_id: str) -> Path:
 def close_marker_path(root: Path, prd_unit_id: str) -> Path:
     safe = re.sub(r"[^a-zA-Z0-9._-]", "-", prd_unit_id)
     return closeout_root(root) / CLOSE_MARKER_DIR / f"{safe}.json"
+
+
+def post_merge_retrospective_dispatch_path(root: Path, run_id: str) -> Path:
+    safe = re.sub(r"[^a-zA-Z0-9._-]", "-", run_id)
+    return closeout_root(root) / POST_MERGE_RETRO_DISPATCH_DIR / f"{safe}.json"
+
+
+def resume_post_merge_retrospective_command(run_id: str) -> str:
+    return f"python3 scripts/wave.py terminal finalize run --run-id {run_id}"
+
+
+def load_post_merge_retrospective_dispatch(root: Path, run_id: str) -> dict[str, Any] | None:
+    data = read_json(post_merge_retrospective_dispatch_path(root, run_id))
+    return data if data else None
+
+
+def save_post_merge_retrospective_dispatch(root: Path, run_id: str, record: dict[str, Any]) -> Path:
+    path = post_merge_retrospective_dispatch_path(root, run_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = dict(record)
+    payload["runId"] = run_id
+    payload["updatedAt"] = utc_now()
+    write_json(path, payload)
+    return path
+
+
+def mark_post_merge_retrospective_complete(
+    root: Path,
+    run_id: str,
+    *,
+    merge_commit: str | None = None,
+) -> dict[str, Any]:
+    """Mark durable post-merge retrospective dispatch complete (agent callback / resume)."""
+    existing = load_post_merge_retrospective_dispatch(root, run_id)
+    if not existing:
+        return {
+            "verdict": "noop",
+            "action": "post-merge-retrospective-complete",
+            "reason": "no-dispatch-record",
+        }
+    if existing.get("status") == "complete":
+        return {
+            "verdict": "pass",
+            "action": "post-merge-retrospective-complete",
+            "idempotent": True,
+            "record": existing,
+        }
+    updated = dict(existing)
+    updated["status"] = "complete"
+    updated["completedAt"] = utc_now()
+    if merge_commit:
+        updated["mergeCommit"] = str(merge_commit).lower()
+    save_post_merge_retrospective_dispatch(root, run_id, updated)
+    return {
+        "verdict": "pass",
+        "action": "post-merge-retrospective-complete",
+        "record": updated,
+    }
+
+
+def dispatch_post_merge_retrospective(
+    root: Path,
+    *,
+    run_id: str,
+    merge_info: dict[str, Any],
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Dispatch post-merge retrospective once after confirmed terminal merge (PRD 337 R16)."""
+    if not merge_info.get("merged"):
+        return {
+            "verdict": "fail",
+            "action": "post-merge-retrospective-dispatch",
+            "error": "merge-not-confirmed",
+            "resumeCommand": resume_post_merge_retrospective_command(run_id),
+        }
+    merge_commit = str(merge_info.get("mergeCommit") or "").lower()
+    if not merge_commit:
+        return {
+            "verdict": "fail",
+            "action": "post-merge-retrospective-dispatch",
+            "error": "merge-commit-missing",
+            "resumeCommand": resume_post_merge_retrospective_command(run_id),
+        }
+    pr_number = merge_info.get("prNumber")
+    existing = load_post_merge_retrospective_dispatch(root, run_id)
+    if existing:
+        prior_sha = str(existing.get("mergeCommit") or "").lower()
+        if prior_sha and prior_sha != merge_commit:
+            return {
+                "verdict": "fail",
+                "action": "post-merge-retrospective-dispatch",
+                "error": "merge-commit-mismatch",
+                "expected": prior_sha,
+                "actual": merge_commit,
+            }
+        if existing.get("status") == "complete":
+            return {
+                "verdict": "pass",
+                "action": "post-merge-retrospective-dispatch",
+                "idempotent": True,
+                "noop": True,
+                "invoke": POST_MERGE_RETRO_INVOKE,
+                "dispatch": existing,
+                "note": "post-merge retrospective already complete",
+            }
+        if existing.get("status") == "dispatched":
+            return {
+                "verdict": "pass",
+                "action": "post-merge-retrospective-dispatch",
+                "idempotent": True,
+                "resume": True,
+                "awaitAgent": True,
+                "invoke": POST_MERGE_RETRO_INVOKE,
+                "dispatch": existing,
+                "resumeCommand": existing.get("resumeCommand")
+                or resume_post_merge_retrospective_command(run_id),
+                "note": "resume interrupted post-merge retrospective dispatch",
+            }
+    record: dict[str, Any] = {
+        "version": 1,
+        "runId": run_id,
+        "status": "dispatched",
+        "invoke": POST_MERGE_RETRO_INVOKE,
+        "mergeCommit": merge_commit,
+        "dispatchedAt": utc_now(),
+        "dispatchCount": 1,
+        "resumeCommand": resume_post_merge_retrospective_command(run_id),
+    }
+    if pr_number is not None:
+        record["prNumber"] = int(pr_number)
+    if dry_run:
+        return {
+            "verdict": "pass",
+            "action": "post-merge-retrospective-dispatch",
+            "dryRun": True,
+            "awaitAgent": True,
+            "invoke": POST_MERGE_RETRO_INVOKE,
+            "wouldWrite": str(post_merge_retrospective_dispatch_path(root, run_id)),
+            "dispatch": record,
+        }
+    path = save_post_merge_retrospective_dispatch(root, run_id, record)
+    return {
+        "verdict": "pass",
+        "action": "post-merge-retrospective-dispatch",
+        "awaitAgent": True,
+        "invoke": POST_MERGE_RETRO_INVOKE,
+        "dispatch": record,
+        "dispatchPath": str(path),
+        "resumeCommand": record["resumeCommand"],
+    }
 
 
 def slug_from_target_branch(branch: str) -> str:
@@ -113,6 +274,92 @@ def watch_config(cfg: dict[str, Any]) -> dict[str, int]:
 def is_pending_merge_completion(state: dict[str, Any]) -> bool:
     completion = state.get("completion") or {}
     return completion.get("status") == "completed-pending-merge"
+
+
+def _docs_currency_state_block(state: dict[str, Any]) -> dict[str, Any]:
+    block = state.get("docsCurrency")
+    return block if isinstance(block, dict) else {}
+
+
+def docs_currency_phase_in_progress(state: dict[str, Any], *, root: Path | None = None) -> bool:
+    """True when living-doc/docs-currency work is still in flight at terminal prepare (R13)."""
+    docs = _docs_currency_state_block(state)
+    status = str(docs.get("status") or docs.get("indexStatus") or "")
+    if status in ("in-progress", "pending"):
+        return True
+    if docs.get("complete") is False:
+        return True
+    gate = state.get("docsCurrencyGate") if isinstance(state.get("docsCurrencyGate"), dict) else {}
+    verdict = str(gate.get("verdict") or "")
+    if gate and verdict not in ("pass", "green", ""):
+        return True
+    if root is not None and is_pending_merge_completion(state):
+        prd = str(state.get("prd_number") or "").zfill(3)
+        if prd and prd != "000":
+            from wave_living_docs import read_index_status_evidence
+
+            slug = str((state.get("target") or {}).get("slug") or "") or None
+            ev = read_index_status_evidence(root, prd, slug=slug)
+            if ev and str(ev.get("status") or "") == "in-progress":
+                return True
+    return False
+
+
+def derive_closeout_index_status(
+    state: dict[str, Any],
+    *,
+    merged_to_main: bool = False,
+    root: Path | None = None,
+) -> str:
+    """INDEX expectation for terminal closeout; pending-merge cannot mask in-progress docs currency (R13)."""
+    from wave_living_docs import derive_index_status
+
+    base = derive_index_status(state, merged_to_main)
+    if merged_to_main:
+        return base
+    if base != "complete":
+        return base
+    if is_pending_merge_completion(state) and docs_currency_phase_in_progress(state, root=root):
+        return "in-progress"
+    return base
+
+
+def docs_currency_terminal_ready(
+    state: dict[str, Any],
+    *,
+    merged_to_main: bool = False,
+    root: Path | None = None,
+) -> bool:
+    """Whether terminal prepare may treat docs-currency as complete (R13)."""
+    return derive_closeout_index_status(state, merged_to_main=merged_to_main, root=root) == "complete"
+
+
+def assess_docs_currency_terminal_state(
+    root: Path,
+    state: dict[str, Any],
+    *,
+    merged_to_main: bool = False,
+) -> dict[str, Any]:
+    """Machine-checkable docs-currency terminal assessment for closeout/prepare paths (R13)."""
+    from wave_living_docs import derive_index_status
+
+    raw_index = derive_index_status(state, merged_to_main)
+    index_status = derive_closeout_index_status(state, merged_to_main=merged_to_main, root=root)
+    masked = (
+        raw_index == "complete"
+        and index_status == "in-progress"
+        and is_pending_merge_completion(state)
+    )
+    ready = docs_currency_terminal_ready(state, merged_to_main=merged_to_main, root=root)
+    return {
+        "verdict": "pass" if ready else "in-progress",
+        "docsCurrencyComplete": ready,
+        "indexStatus": index_status,
+        "rawIndexStatus": raw_index,
+        "maskedByPendingMerge": masked,
+        "pendingMerge": is_pending_merge_completion(state),
+        "docsCurrencyInProgress": docs_currency_phase_in_progress(state, root=root),
+    }
 
 
 def _tag_state_source(state: dict[str, Any], source: str) -> dict[str, Any]:
@@ -365,7 +612,7 @@ def emit_self_wake_sentinel(run_id: str, payload: dict[str, Any] | None = None) 
 
 
 def index_path(root: Path) -> Path:
-    return root / INDEX_REL
+    return closeout_root(root) / "index.json"
 
 
 def validate_metadata_field(field: str, value):
@@ -450,15 +697,32 @@ def record_pr_delivery_mapping(root: Path, payload, *, dry_run=False):
             if str(existing.get(key) or "") != str(mapping.get(key) or ""):
                 return {"verdict": "fail", "action": "record-pr-delivery-mapping", "error": "mapping-immutable-conflict", "prNumber": pr_number}
         return {"verdict": "pass", "action": "record-pr-delivery-mapping", "immutable": True, "reused": True, "prNumber": pr_number, "path": str(path), "mapping": existing}
+    storage_root = closeout_storage_root(root)
     if dry_run:
-        return {"verdict": "pass", "action": "record-pr-delivery-mapping", "dryRun": True, "prNumber": pr_number, "wouldWrite": str(path), "mapping": mapping}
+        return {
+            "verdict": "pass",
+            "action": "record-pr-delivery-mapping",
+            "dryRun": True,
+            "prNumber": pr_number,
+            "wouldWrite": str(path),
+            "storageRoot": str(storage_root),
+            "mapping": mapping,
+        }
     write_json(path, mapping)
     index = _load_index(root)
-    rel = str(path.relative_to(root))
+    rel = str(path.relative_to(storage_root))
     index["byPr"][str(pr_number)] = rel
     index["byPrdUnit"][mapping["prdUnitId"]] = {"prNumber": pr_number, "path": rel}
     _save_index(root, index)
-    return {"verdict": "pass", "action": "record-pr-delivery-mapping", "immutable": True, "prNumber": pr_number, "path": str(path), "mapping": mapping}
+    return {
+        "verdict": "pass",
+        "action": "record-pr-delivery-mapping",
+        "immutable": True,
+        "prNumber": pr_number,
+        "path": str(path),
+        "storageRoot": str(storage_root),
+        "mapping": mapping,
+    }
 
 
 def load_pr_delivery_mapping(root: Path, pr_number):

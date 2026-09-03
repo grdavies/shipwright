@@ -47,6 +47,9 @@ ask ──► decide ──► confirm ──► (promote | handoff | persist | 
 - **Notebook entry** — when `--from-notebook <id>` is present, verify `notebookId` provenance round trip
   from `/sw-note graduate --to explore`.
 
+Lifecycle placement and Capture → Explore → Specify → Build → Learn routing:
+`docs/guides/workflows.md` (**Lifecycle routing**).
+
 ## Procedure
 
 ### Phase 1: Entry and destination

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-08-30T02:07:59Z",
+  "generatedAt": "2026-08-31T01:11:36Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -352,73 +352,82 @@
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:131:check_scripts_inventory.py",
+      "id": ".github/workflows/pr-test-plan-ci.yml:131:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
       "line": 131,
-      "column": 21,
-      "script": "check_scripts_inventory.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:142:docs-link-check.py",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 142,
-      "column": 21,
-      "script": "docs-link-check.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:153:test/bash-py-invocation-guard.test",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 153,
-      "column": 21,
-      "script": "test/bash-py-invocation-guard.test",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:164:test/claims-audit-unit.test",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 164,
-      "column": 21,
-      "script": "test/claims-audit-unit.test",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:175:test/git-push-secret-scan-chokepoint.test",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 175,
-      "column": 21,
-      "script": "test/git-push-secret-scan-chokepoint.test",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:186:test/rca-fanout-unit.test",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 186,
-      "column": 21,
-      "script": "test/rca-fanout-unit.test",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:198:test/run_pytest.py",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 198,
       "column": 21,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:209:test/skills-spec-guard.test",
+      "id": ".github/workflows/pr-test-plan-ci.yml:142:check_scripts_inventory.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 142,
+      "column": 21,
+      "script": "check_scripts_inventory.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:153:docs-link-check.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 153,
+      "column": 21,
+      "script": "docs-link-check.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:164:test/bash-py-invocation-guard.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 164,
+      "column": 21,
+      "script": "test/bash-py-invocation-guard.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:175:test/claims-audit-unit.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 175,
+      "column": 21,
+      "script": "test/claims-audit-unit.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:186:test/git-push-secret-scan-chokepoint.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 186,
+      "column": 21,
+      "script": "test/git-push-secret-scan-chokepoint.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:197:test/rca-fanout-unit.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 197,
+      "column": 21,
+      "script": "test/rca-fanout-unit.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:209:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
       "line": 209,
+      "column": 21,
+      "script": "test/run_pytest.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:220:test/skills-spec-guard.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 220,
       "column": 21,
       "script": "test/skills-spec-guard.test",
       "classification": "self-repo-only"
@@ -1522,10 +1531,10 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-explore.md:51:sw_bootstrap.py",
+      "id": "core/commands/sw-explore.md:54:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-explore.md",
-      "line": 51,
+      "line": 54,
       "column": 43,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -8731,10 +8740,10 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-explore.md:51:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-explore.md:54:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-explore.md",
-      "line": 51,
+      "line": 54,
       "column": 43,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -14734,10 +14743,10 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-explore.md:51:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-explore.md:54:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-explore.md",
-      "line": 51,
+      "line": 54,
       "column": 43,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -20971,307 +20980,316 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:621:wave.py",
+      "id": "docs/guides/workflows.md:653:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 621,
+      "line": 653,
       "column": 9,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:691:wave_terminal.py",
+      "id": "docs/guides/workflows.md:723:wave_terminal.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 691,
+      "line": 723,
       "column": 9,
       "script": "wave_terminal.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:701:gap-check-gate.py",
+      "id": "docs/guides/workflows.md:739:wave_terminal.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 701,
+      "line": 739,
+      "column": 30,
+      "script": "wave_terminal.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/workflows.md:748:gap-check-gate.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/workflows.md",
+      "line": 748,
       "column": 9,
       "script": "gap-check-gate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:820:planning_migrate.py",
+      "id": "docs/guides/workflows.md:867:planning_migrate.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 820,
+      "line": 867,
       "column": 43,
       "script": "planning_migrate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:859:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:906:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 859,
+      "line": 906,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:860:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:907:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 860,
+      "line": 907,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:861:planning_hierarchy.py",
+      "id": "docs/guides/workflows.md:908:planning_hierarchy.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 861,
+      "line": 908,
       "column": 8,
       "script": "planning_hierarchy.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:873:planning_cross_project_recall.py",
+      "id": "docs/guides/workflows.md:920:planning_cross_project_recall.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 873,
+      "line": 920,
       "column": 8,
       "script": "planning_cross_project_recall.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:905:planning_store.py",
+      "id": "docs/guides/workflows.md:952:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 905,
+      "line": 952,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1061:planning-graph.py",
+      "id": "docs/guides/workflows.md:1108:planning-graph.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1061,
+      "line": 1108,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1062:planning-graph.py",
+      "id": "docs/guides/workflows.md:1109:planning-graph.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1062,
+      "line": 1109,
       "column": 8,
       "script": "planning-graph.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1083:planning_linear_client.py",
+      "id": "docs/guides/workflows.md:1130:planning_linear_client.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1083,
+      "line": 1130,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1116:planning_store.py",
+      "id": "docs/guides/workflows.md:1163:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1116,
+      "line": 1163,
       "column": 9,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1117:planning_store.py",
+      "id": "docs/guides/workflows.md:1164:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1117,
+      "line": 1164,
       "column": 53,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1128:build-chain-sync.py",
+      "id": "docs/guides/workflows.md:1175:build-chain-sync.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1128,
+      "line": 1175,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1145:effective_config_gen.py",
+      "id": "docs/guides/workflows.md:1192:effective_config_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1145,
+      "line": 1192,
       "column": 9,
       "script": "effective_config_gen.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1153:effective_config_gen.py",
+      "id": "docs/guides/workflows.md:1200:effective_config_gen.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1153,
+      "line": 1200,
       "column": 8,
       "script": "effective_config_gen.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1165:wave.py",
+      "id": "docs/guides/workflows.md:1212:wave.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1165,
+      "line": 1212,
       "column": 25,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1244:planning_store.py",
+      "id": "docs/guides/workflows.md:1291:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1244,
+      "line": 1291,
       "column": 12,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1245:planning_store.py",
+      "id": "docs/guides/workflows.md:1292:planning_store.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1245,
+      "line": 1292,
       "column": 32,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1247:planning_cutover.py",
+      "id": "docs/guides/workflows.md:1294:planning_cutover.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1247,
+      "line": 1294,
       "column": 12,
       "script": "planning_cutover.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1262:reviewer-metrics.py",
+      "id": "docs/guides/workflows.md:1309:reviewer-metrics.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1262,
+      "line": 1309,
       "column": 8,
       "script": "reviewer-metrics.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1278:reviewer-metrics.py",
+      "id": "docs/guides/workflows.md:1325:reviewer-metrics.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1278,
+      "line": 1325,
       "column": 20,
       "script": "reviewer-metrics.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1323:status_collect.py",
+      "id": "docs/guides/workflows.md:1370:status_collect.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1323,
+      "line": 1370,
       "column": 28,
       "script": "status_collect.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1334:architecture_radar.py",
+      "id": "docs/guides/workflows.md:1381:architecture_radar.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1334,
+      "line": 1381,
       "column": 8,
       "script": "architecture_radar.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1335:architecture_radar.py",
+      "id": "docs/guides/workflows.md:1382:architecture_radar.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1335,
+      "line": 1382,
       "column": 8,
       "script": "architecture_radar.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1336:architecture_radar.py",
+      "id": "docs/guides/workflows.md:1383:architecture_radar.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1336,
+      "line": 1383,
       "column": 8,
       "script": "architecture_radar.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1344:status_collect.py",
+      "id": "docs/guides/workflows.md:1391:status_collect.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1344,
+      "line": 1391,
       "column": 20,
       "script": "status_collect.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1353:domain_vocabulary.py",
+      "id": "docs/guides/workflows.md:1400:domain_vocabulary.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1353,
+      "line": 1400,
       "column": 8,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1354:domain_vocabulary.py",
+      "id": "docs/guides/workflows.md:1401:domain_vocabulary.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1354,
+      "line": 1401,
       "column": 8,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1355:domain_vocabulary.py",
+      "id": "docs/guides/workflows.md:1402:domain_vocabulary.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1355,
+      "line": 1402,
       "column": 8,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1356:domain_vocabulary.py",
+      "id": "docs/guides/workflows.md:1403:domain_vocabulary.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1356,
+      "line": 1403,
       "column": 8,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1364:status_collect.py",
+      "id": "docs/guides/workflows.md:1411:status_collect.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1364,
+      "line": 1411,
       "column": 20,
       "script": "status_collect.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/workflows.md:1436:planning_gap_capture.py",
+      "id": "docs/guides/workflows.md:1483:planning_gap_capture.py",
       "tree": "docs/guides",
       "file": "docs/guides/workflows.md",
-      "line": 1436,
+      "line": 1483,
       "column": 173,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"

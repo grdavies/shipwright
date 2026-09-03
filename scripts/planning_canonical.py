@@ -609,9 +609,9 @@ def structural_labels_from_content(content: str) -> list[str]:
         labels.append(visibility_label(str(fm["visibility"])))
     labels.extend(tag_labels_from_frontmatter(fm))
     for rel in EDGE_LABEL_PREFIXES:
-        value = fm.get(rel)
-        targets = value if isinstance(value, list) else ([value] if value else [])
-        labels.extend(edge_labels_for(rel, [str(t) for t in targets]))
+        # R37 — normalize list-form and comma-string edge targets identically.
+        targets = parse_absorbs_targets(fm.get(rel))
+        labels.extend(edge_labels_for(rel, targets))
     return labels
 
 

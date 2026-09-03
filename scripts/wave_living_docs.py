@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import random
 import subprocess
 import sys
+import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
@@ -18,6 +20,9 @@ import planning_paths
 from planning_artifact_handle import issue_store_is_effective
 VALID_INDEX_STATUSES = frozenset({"not-started", "in-progress", "complete"})
 TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
+GAP_CLOSEOUT_RETRY_MAX_ATTEMPTS = 3
+GAP_CLOSEOUT_RETRY_BASE_SECONDS = 0.2
+GAP_CLOSEOUT_RETRY_CAP_SECONDS = 30.0
 
 def living_paths(root: Path) -> tuple[str, ...]:
     return planning_paths.living_paths_rel(planning_paths.load_planning_dirs(root))
@@ -374,13 +379,168 @@ def facade_set_index_status(
     return pii.project_index_status(root, prd, status, slug=slug, dry_run=dry_run)
 
 
-def facade_gap_resolve(root: Path, prd: str) -> dict[str, object]:
+def facade_gap_resolve(root: Path, prd: str, *, pr: str = "") -> dict[str, object]:
     """Route gap resolve through issue-store facade under issue-store."""
     if living_doc_write_banned(root):
         import gap_backlog
 
         return gap_backlog._resolve_for_prd_issue_store(root, prd)
-    return run_reconcile_script(root, "gap-resolve", "--absorbing-prd", prd)
+    args: list[str] = ["gap-resolve", "--absorbing-prd", prd]
+    if pr:
+        args.extend(["--pr", pr])
+    return run_reconcile_script(root, *args)
+
+
+def gap_closeout_retry_config(root: Path) -> dict[str, float | int]:
+    """Bounded retry budget for issue-search gap closeout (PRD 337 R11)."""
+    from host_lib import load_workflow_config
+
+    cfg = load_workflow_config(root)
+    deliver = cfg.get("deliver") if isinstance(cfg.get("deliver"), dict) else {}
+    living = deliver.get("livingDocs") if isinstance(deliver.get("livingDocs"), dict) else {}
+    retry = living.get("gapCloseoutRetry") if isinstance(living.get("gapCloseoutRetry"), dict) else {}
+    return {
+        "maxAttempts": int(retry.get("maxAttempts", GAP_CLOSEOUT_RETRY_MAX_ATTEMPTS)),
+        "baseBackoffSeconds": float(retry.get("baseBackoffSeconds", GAP_CLOSEOUT_RETRY_BASE_SECONDS)),
+        "capBackoffSeconds": float(retry.get("capBackoffSeconds", GAP_CLOSEOUT_RETRY_CAP_SECONDS)),
+    }
+
+
+def _gap_resolve_resume_command(root: Path, worktree: Path) -> str:
+    wt = worktree.resolve()
+    repo = root.resolve()
+    if wt != repo:
+        return f"python3 scripts/wave.py living-docs reconcile --commit --orchestrator-worktree {wt}"
+    return "python3 scripts/wave.py living-docs reconcile --commit"
+
+
+def _gap_resolve_rate_limited_result(result: dict[str, Any]) -> bool:
+    error = str(result.get("error") or "").lower()
+    if error in {"rate-limited", "rate limit exceeded"}:
+        return True
+    if "rate" in error and "limit" in error:
+        return True
+    reason = str(result.get("reason") or "").lower()
+    if reason in {"rate-limited", "cumulative-wait-exhausted"}:
+        return True
+    if result.get("retryable") is True and "rate" in error:
+        return True
+    return False
+
+
+def _gap_resolve_rate_limited_exception(exc: BaseException) -> bool:
+    from issues_lib import IssueRateLimited
+
+    return isinstance(exc, IssueRateLimited)
+
+
+def _gap_resolve_backoff_seconds(attempt: int, config: dict[str, float | int]) -> float:
+    base = float(config["baseBackoffSeconds"])
+    cap = float(config["capBackoffSeconds"])
+    exp = min(cap, base * (2 ** max(0, attempt - 1)))
+    return random.uniform(0.0, exp)
+
+
+def _enforce_closeout_worktree(root: Path, worktree: Path) -> None:
+    """Gap closeout must run from a non-default closeout worktree (PRD 337 R11)."""
+    from default_branch_commit_guard import check
+
+    result = check(root, worktree=worktree)
+    if result.get("verdict") == "fail":
+        fail(
+            str(result.get("error") or "closeout worktree refused"),
+            exit_code=20,
+            halt="default-branch-closeout-refused",
+            **{k: v for k, v in result.items() if k not in {"verdict", "error"}},
+        )
+
+
+def facade_gap_resolve_with_retry(
+    root: Path,
+    prd: str,
+    *,
+    worktree: Path,
+    state: dict[str, Any] | None = None,
+    pr: str = "",
+    sleep_fn: Callable[[float], None] = time.sleep,
+) -> dict[str, object]:
+    """Bounded issue-search retry/backoff for gap closeout (PRD 337 R11)."""
+    _enforce_closeout_worktree(root, worktree)
+    config = gap_closeout_retry_config(root)
+    max_attempts = int(config["maxAttempts"])
+    resume_command = _gap_resolve_resume_command(root, worktree)
+    attempts = 0
+    cumulative_wait_ms = 0
+    last_result: dict[str, Any] | None = None
+    last_error = ""
+
+    for attempt in range(1, max_attempts + 1):
+        attempts = attempt
+        try:
+            result = facade_gap_resolve(worktree, prd, pr=pr)
+            last_result = dict(result) if isinstance(result, dict) else {"verdict": "fail", "error": str(result)}
+        except Exception as exc:  # noqa: BLE001 — classify retryable transport failures
+            if not _gap_resolve_rate_limited_exception(exc):
+                raise
+            last_error = str(exc)
+            last_result = {
+                "verdict": "resolution-partial",
+                "error": "rate-limited",
+                "reason": getattr(exc, "reason", "rate-limited"),
+                "retryable": bool(getattr(exc, "retryable", True)),
+                "cumulativeWaitMs": getattr(exc, "cumulative_wait_ms", 0),
+            }
+        else:
+            verdict = str(last_result.get("verdict") or "")
+            if verdict == "pass":
+                last_result["gapCloseoutRetry"] = {
+                    "attempts": attempts,
+                    "cumulativeWaitMs": cumulative_wait_ms,
+                    "exhausted": False,
+                }
+                return last_result
+            if not _gap_resolve_rate_limited_result(last_result):
+                last_result["gapCloseoutRetry"] = {
+                    "attempts": attempts,
+                    "cumulativeWaitMs": cumulative_wait_ms,
+                    "exhausted": False,
+                }
+                return last_result
+            last_error = str(last_result.get("error") or "rate-limited")
+
+        if attempt >= max_attempts:
+            break
+        wait_s = _gap_resolve_backoff_seconds(attempt, config)
+        cumulative_wait_ms += int(wait_s * 1000)
+        sleep_fn(wait_s)
+
+    exhaustion: dict[str, Any] = {
+        "verdict": "gap-closeout-retry-exhausted",
+        "halt": "gap-closeout-retry-exhausted",
+        "error": last_error or "gap closeout retry budget exhausted",
+        "retryable": True,
+        "attempts": attempts,
+        "maxAttempts": max_attempts,
+        "cumulativeWaitMs": cumulative_wait_ms,
+        "resumeCommand": resume_command,
+        "gapCloseoutRetry": {
+            "attempts": attempts,
+            "maxAttempts": max_attempts,
+            "cumulativeWaitMs": cumulative_wait_ms,
+            "exhausted": True,
+        },
+    }
+    if last_result is not None:
+        exhaustion["lastGapResolve"] = last_result
+    from halt_resume import build_halt_resume
+
+    exhaustion["haltResume"] = build_halt_resume(
+        root,
+        state,
+        halt_cause="gap-closeout-retry-exhausted",
+        resume_command=resume_command,
+    )
+    return exhaustion
 
 
 def facade_append_completion(
@@ -514,20 +674,31 @@ def _cmd_reconcile_locked(
 
     gap_out: dict[str, Any] | None = None
     if index_status == "complete":
-        if living_doc_write_banned(worktree):
-            gap_out = facade_gap_resolve(worktree, prd)
-        else:
-            pr_ref = ""
-            terminal = state.get("terminalPr") or {}
-            if terminal.get("number"):
-                pr_ref = str(terminal["number"])
-            gap_out = run_reconcile_script(
-                worktree,
-                "gap-resolve",
-                "--absorbing-prd",
-                prd,
-                *(["--pr", pr_ref] if pr_ref else []),
-            )
+        pr_ref = ""
+        terminal = state.get("terminalPr") or {}
+        if terminal.get("number"):
+            pr_ref = str(terminal["number"])
+        gap_out = facade_gap_resolve_with_retry(
+            root,
+            prd,
+            worktree=worktree,
+            state=state,
+            pr=pr_ref if not living_doc_write_banned(worktree) else "",
+        )
+
+    if gap_out and gap_out.get("verdict") == "gap-closeout-retry-exhausted":
+        fail(
+            str(gap_out.get("error") or "gap closeout retry budget exhausted"),
+            exit_code=30,
+            halt="gap-closeout-retry-exhausted",
+            action="living-docs-reconcile",
+            prd=prd,
+            indexStatus=index_status,
+            mergedCompleteRefused=True,
+            gapResolve=gap_out,
+            haltResume=gap_out.get("haltResume"),
+            resumeCommand=gap_out.get("resumeCommand"),
+        )
 
     commit_sha = None
     if do_commit and not dry_run:

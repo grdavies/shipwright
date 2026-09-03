@@ -1170,6 +1170,18 @@
 * merge phase bootstrap-compatibility-and-round-identity into feat/issue-store-doc-review-transport (e6ef2b3) <!-- sw-deliver:bootstrap-compatibility-and-round-identity -->
 * merge phase file-store-byte-identical-path into feat/issue-store-doc-review-transport (bdfd1a5) <!-- sw-deliver:file-store-byte-identical-path -->
 * merge phase docs-currency-and-end-to-end-conformance into feat/issue-store-doc-review-transport (bd3d6bc) <!-- sw-deliver:docs-currency-and-end-to-end-conformance -->
+* merge phase harden-deliver-run-entry-small into feat/workflow-runtime-autonomy-lifecycle (1965640) <!-- sw-deliver:harden-deliver-run-entry-small -->
+* merge phase make-inline-ship-turn-independent-small into feat/workflow-runtime-autonomy-lifecycle (01e2019) <!-- sw-deliver:make-inline-ship-turn-independent-small -->
+* merge phase protect-authored-distribution-files-small into feat/workflow-runtime-autonomy-lifecycle (c5d7f84) <!-- sw-deliver:protect-authored-distribution-files-small -->
+* merge phase publish-terminal-acceptance-and-halt-contracts-medium into feat/workflow-runtime-autonomy-lifecycle (0f940a3) <!-- sw-deliver:publish-terminal-acceptance-and-halt-contracts-medium -->
+* merge phase bound-living-doc-gap-closeout-small into feat/workflow-runtime-autonomy-lifecycle (8d323b2) <!-- sw-deliver:bound-living-doc-gap-closeout-small -->
+* merge phase ship-the-complete-explore-workstream-medium into feat/workflow-runtime-autonomy-lifecycle (f468193) <!-- sw-deliver:ship-the-complete-explore-workstream-medium -->
+* merge phase align-docs-currency-terminal-state-small into feat/workflow-runtime-autonomy-lifecycle (55016d1) <!-- sw-deliver:align-docs-currency-terminal-state-small -->
+* merge phase retain-terminal-pr-delivery-maps-small into feat/workflow-runtime-autonomy-lifecycle (160eb21) <!-- sw-deliver:retain-terminal-pr-delivery-maps-small -->
+* merge phase make-resume-remediation-actionable-small into feat/workflow-runtime-autonomy-lifecycle (13791ac) <!-- sw-deliver:make-resume-remediation-actionable-small -->
+* merge phase automate-post-merge-retrospective-small into feat/workflow-runtime-autonomy-lifecycle (4432822) <!-- sw-deliver:automate-post-merge-retrospective-small -->
+* merge phase route-redacted-retro-gap-capture-medium into feat/workflow-runtime-autonomy-lifecycle (c99dd6a) <!-- sw-deliver:route-redacted-retro-gap-capture-medium -->
+* merge phase gate-bundle-closeout-and-absorb-audit-small into feat/workflow-runtime-autonomy-lifecycle (7c0d167) <!-- sw-deliver:gate-bundle-closeout-and-absorb-audit-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

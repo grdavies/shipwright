@@ -431,6 +431,76 @@ def shares_generator_contention(
     return False
 
 
+def shared_contention_paths(
+    slug_a: str,
+    slug_b: str,
+    plan: dict[str, Any],
+    root: Path,
+) -> list[str]:
+    files_a = set(item_files_for_slug(plan, slug_a))
+    files_b = set(item_files_for_slug(plan, slug_b))
+    shared = sorted(files_a & files_b)
+    hits: list[str] = []
+    for path in shared:
+        if planning_paths.is_human_authored_doc_path(path, root):
+            hits.append(path)
+        elif planning_paths.path_matches_generator_output(path):
+            hits.append(path)
+    return hits
+
+
+def merge_contention_remediation_command(root: Path, state: dict[str, Any], blocker_slug: str) -> str:
+    task_list = str(state.get("source_task_list") or "").strip()
+    if task_list:
+        return f"python3 scripts/wave.py merge exec --task-list {task_list}  # wait for {blocker_slug}"
+    return f"python3 scripts/wave.py merge exec  # wait for {blocker_slug}"
+
+
+def merge_queue_contention_blockers(
+    state: dict[str, Any], root: Path
+) -> list[dict[str, Any]]:
+    """Actionable merge-queue contention blockers (PRD 337 R22)."""
+    queue = list(state.get("mergeQueue") or [])
+    if len(queue) < 2:
+        return []
+    plan = load_deliver_plan(root, state)
+    merged = merged_phase_slugs(state)
+    blockers: list[dict[str, Any]] = []
+    for entry in queue:
+        slug = str(entry.get("phaseSlug", ""))
+        if not slug:
+            continue
+        for other in queue:
+            other_slug = str(other.get("phaseSlug", ""))
+            if not other_slug or other_slug == slug:
+                continue
+            if other_slug in merged:
+                continue
+            if queue.index(other) >= queue.index(entry):
+                continue
+            paths = shared_contention_paths(slug, other_slug, plan, root)
+            generator = shares_generator_contention(slug, other_slug, plan)
+            if not paths and not generator:
+                continue
+            cause = (
+                "merge-queue:shared-authored-doc-contention"
+                if paths
+                else "merge-queue:generator-output-contention"
+            )
+            blockers.append(
+                {
+                    "cause": cause,
+                    "phaseSlug": slug,
+                    "blockedByPhaseSlug": other_slug,
+                    "conflictingPaths": paths or ["generator-output"],
+                    "remediationCommand": merge_contention_remediation_command(
+                        root, state, other_slug
+                    ),
+                }
+            )
+    return blockers
+
+
 def conflict_single_preimage(
     root: Path,
     state: dict[str, Any],
@@ -1911,6 +1981,21 @@ def cmd_report_terminal(root: Path, args: list[str]) -> None:
     emit({"verdict": "pass", "action": "report-terminal", "report": report})
 
 
+def cmd_report_contention_blockers(root: Path, _args: list[str]) -> None:
+    state = load_state(root)
+    blockers = merge_queue_contention_blockers(state, root)
+    emit(
+        {
+            "verdict": "halt" if blockers else "pass",
+            "action": "report-contention-blockers",
+            "blockers": blockers,
+            "resumeCommand": (
+                blockers[0]["remediationCommand"] if blockers else None
+            ),
+        }
+    )
+
+
 def main() -> None:
     if len(sys.argv) < 3:
         fail("usage: wave_merge.py <root> <domain> <subcommand> [args...]")
@@ -1954,8 +2039,10 @@ def main() -> None:
         rest = args[1:]
         if sub == "terminal":
             cmd_report_terminal(root, rest)
+        elif sub == "contention-blockers":
+            cmd_report_contention_blockers(root, rest)
         else:
-            fail("report subcommand required: terminal")
+            fail("report subcommand required: terminal|contention-blockers")
     else:
         fail(f"unknown domain: {domain}")
 
