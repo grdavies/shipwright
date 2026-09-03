@@ -75,15 +75,9 @@ def has_flag(args: list[str], flag: str) -> bool:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
-        if candidate.is_file():
-            try:
-                return read_json(candidate)
-            except Exception:
-                return {}
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def staleness_ttl_hours(root: Path) -> float:
     cfg = load_workflow_config(root)
     planning = cfg.get("planning") if isinstance(cfg.get("planning"), dict) else {}
