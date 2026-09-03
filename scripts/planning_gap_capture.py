@@ -2626,6 +2626,163 @@ def record_absorb_linkage_333(
     return {**out, "action": "record-absorb-linkage-333"}
 
 
+# PRD 337 R6/R11 — bundle closeout for seventeen workflow-runtime gaps
+PRD_337_UNIT_ID = "337-prd-workflow-runtime-autonomy-lifecycle"
+PRD_337_NUMBER = "337"
+PRD_337_ANOMALOUS_SHORT_GAP_TARGETS: tuple[str, ...] = (
+    "gap-135",
+    "gap-136",
+    "gap-137",
+)
+PRD_337_ABSORB_GAP_UNITS: tuple[str, ...] = (
+    "gap-135-deliver-autonomy-dispatch-ship-depends-on-chat-t",
+    "gap-136-deliver-run-entry-hardening-bare-main-entry-pre-",
+    "gap-137-autonomy-acceptance-gate-define-zero-interaction",
+    "gap-355-add-sw-explore-as-first-class-pre-planning-works",
+    "gap-357-sw-explore-first-release-must-include-full-entry",
+    "gap-407-finalize-completion-living-docs-gap-resolve-exha",
+    "gap-408-blind-python3-m-sw-generate-all-in-phase-trees-c",
+    "gap-409-terminal-pr-prepare-blocked-completed-pending-me",
+    "gap-410-pr-delivery-map-for-terminal-pr-lived-only-under",
+    "gap-411-resume-friction-stacked-ambiguous-nonterminal-ru",
+    "gap-412-auto-run-sw-retrospective-post-merge-during-deli",
+    "gap-413-when-retrospective-gapcapture-enabled-true-auto-",
+    "gap-414-retro-compound-must-scope-learning-candidates-by",
+    "gap-415-terminal-gapcapture-must-not-mint-plugin-frictio",
+    "gap-416-retro-gapcapture-must-fork-plugin-self-to-meta-s",
+    "gap-430-phase-gap-check-provenance-and-status-integrity-",
+    "gap-431-contended-shared-docs-need-plan-time-serialize-p",
+)
+
+
+def reconcile_absorbed_gap_lifecycle_states(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    gap_unit_ids: list[str] | set[str] | None = None,
+) -> dict[str, Any]:
+    """Normalize anomalous short gap-135/136/137 targets before absorb linkage (PRD 337 R6/R11).
+
+    Uses existing short-gap canonicalization only — does not alter PRD 339-owned list-form
+    ``absorbs`` projection logic.
+    """
+    from planning_store_facade import _canonicalize_short_gap_absorb_targets
+
+    seeds = set(gap_unit_ids or PRD_337_ABSORB_GAP_UNITS)
+    seeds.update(set(PRD_337_ANOMALOUS_SHORT_GAP_TARGETS) & seeds)
+    normalized, skipped = _canonicalize_short_gap_absorb_targets(
+        root, cfg, seeds, fail_closed=True
+    )
+    reconciled_shorts = [
+        short
+        for short in PRD_337_ANOMALOUS_SHORT_GAP_TARGETS
+        if short in seeds
+        and not any(gap_absorb_target_match(short, item) for item in normalized)
+        and any(
+            gap_absorb_target_match(item, expected)
+            for item in normalized
+            for expected in PRD_337_ABSORB_GAP_UNITS
+            if gap_absorb_target_match(short, expected) or short in expected
+        )
+    ]
+    missing = [
+        gap_id
+        for gap_id in PRD_337_ABSORB_GAP_UNITS
+        if not any(gap_absorb_target_match(item, gap_id) for item in normalized)
+    ]
+    return {
+        "verdict": "ok" if not missing else "fail",
+        "action": "reconcile-absorbed-gap-lifecycle",
+        "prdUnitId": PRD_337_UNIT_ID,
+        "normalized": sorted(normalized),
+        "reconciledShorts": reconciled_shorts,
+        "missing": missing,
+        "skipped": skipped,
+        "expectedCount": len(PRD_337_ABSORB_GAP_UNITS),
+    }
+
+
+def verify_absorb_closeout_337(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Verify PRD 337 close-out discovers all seventeen anchored gaps (R6/R11)."""
+    resolved_cfg = cfg if cfg is not None else ps.load_workflow_config(root)
+    reconcile = reconcile_absorbed_gap_lifecycle_states(root, resolved_cfg)
+    if reconcile.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-337",
+            "error": "lifecycle-reconcile-failed",
+            "prdUnitId": PRD_337_UNIT_ID,
+            "reconcile": reconcile,
+        }
+    snap = ps.resolve_delivery_linked_units(root, resolved_cfg, PRD_337_UNIT_ID)
+    if snap.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-337",
+            "error": snap.get("error"),
+            "prdUnitId": PRD_337_UNIT_ID,
+        }
+
+    gap_ids = [
+        item["unitId"]
+        for item in snap.get("snapshot", [])
+        if item.get("artifactType") == "gap"
+    ]
+    discovered = set(gap_ids)
+    missing = [
+        gap_id
+        for gap_id in PRD_337_ABSORB_GAP_UNITS
+        if not _match_expected_absorb_gap(discovered, gap_id)
+    ]
+    duplicate_targets = [
+        gap_id
+        for gap_id in PRD_337_ABSORB_GAP_UNITS
+        if sum(1 for item in discovered if gap_absorb_target_match(item, gap_id)) > 1
+    ]
+    return {
+        "verdict": "ok" if not missing and not duplicate_targets else "fail",
+        "action": "verify-absorb-closeout-337",
+        "prdUnitId": PRD_337_UNIT_ID,
+        "discoveredCount": len(discovered),
+        "discovered": sorted(discovered),
+        "missing": missing,
+        "duplicateTargets": duplicate_targets,
+        "skipped": list(snap.get("skipped") or []),
+        "reconcile": reconcile,
+    }
+
+
+def record_absorb_linkage_337(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 337 absorb linkage for all seventeen delivery gaps (R6/R11)."""
+    resolved_cfg = ps.load_workflow_config(root)
+    reconcile = reconcile_absorbed_gap_lifecycle_states(root, resolved_cfg)
+    if reconcile.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "action": "record-absorb-linkage-337",
+            "error": "lifecycle-reconcile-failed",
+            "prdUnitId": PRD_337_UNIT_ID,
+            "reconcile": reconcile,
+        }
+    out = record_absorb_linkage(
+        root,
+        prd_unit_id=PRD_337_UNIT_ID,
+        prd_number=PRD_337_NUMBER,
+        gap_unit_ids=list(PRD_337_ABSORB_GAP_UNITS),
+        prd_path=prd_path,
+        dry_run=dry_run,
+    )
+    return {**out, "action": "record-absorb-linkage-337", "reconcile": reconcile}
+
+
 def parse_flags(rest: list[str]) -> dict[str, Any]:
     out: dict[str, Any] = {"dry_run": False}
     i = 0
@@ -3032,6 +3189,16 @@ def main(argv: list[str] | None = None) -> None:
     if command == "verify-absorb-closeout-333":
         out = verify_absorb_closeout_333(root)
         emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "verify-absorb-closeout-337":
+        out = verify_absorb_closeout_337(root)
+        emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "prd339-cross-prd-gate":
+        from prd339_cross_prd_gate import prd339_absorb_acceptance_milestone
+
+        out = prd339_absorb_acceptance_milestone(root)
+        emit(out, 0 if out.get("verdict") == "ready" else 20)
 
     fail(f"unknown command: {command}")
 
