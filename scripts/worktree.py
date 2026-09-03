@@ -83,11 +83,32 @@ def strip_jsonc(text: str) -> str:
     return "".join(out)
 
 
+def _workflow_config_candidates(root: Path) -> list[Path]:
+    """Prefer shipwright_paths when available; keep harness-friendly fallbacks."""
+    try:
+        from shipwright_paths import workflow_config_candidates
+
+        return list(workflow_config_candidates(root))
+    except ImportError:
+        return [root / ".cursor/workflow.config.json", root / "workflow.config.json"]
+
+
+def _load_workflow_config_jsonc(root: Path) -> dict:
+    for candidate in _workflow_config_candidates(root):
+        if not candidate.is_file():
+            continue
+        raw = candidate.read_text(encoding="utf-8")
+        try:
+            data = json.loads(strip_jsonc(raw))
+        except json.JSONDecodeError:
+            return {}
+        return data if isinstance(data, dict) else {}
+    return {}
+
+
 def repo_root(start: Path | None = None) -> Path:
     script_root = SCRIPT_DIR.parent
-    from shipwright_paths import workflow_config_path
-
-    if workflow_config_path(script_root) is not None:
+    if any(p.is_file() for p in _workflow_config_candidates(script_root)):
         return script_root
     start = start or Path.cwd()
     proc = subprocess.run(
@@ -102,20 +123,19 @@ def repo_root(start: Path | None = None) -> Path:
 
 
 def read_config(start: Path | None = None) -> None:
-    from shipwright_paths import workflow_config_path
-
     root = repo_root(start)
-    candidate = workflow_config_path(root)
-    if candidate is None:
-        print("{}")
+    for candidate in _workflow_config_candidates(root):
+        if not candidate.is_file():
+            continue
+        raw = candidate.read_text(encoding="utf-8")
+        try:
+            data = json.loads(strip_jsonc(raw))
+        except json.JSONDecodeError:
+            print(raw)
+            return
+        print(json.dumps(data))
         return
-    raw = candidate.read_text(encoding="utf-8")
-    try:
-        data = json.loads(strip_jsonc(raw))
-    except json.JSONDecodeError:
-        print(raw)
-        return
-    print(json.dumps(data))
+    print("{}")
 
 
 def _resolve_state_path(worktree: str, gitdir: str) -> Path | None:
@@ -246,10 +266,8 @@ def _validate_branch_name(branch: str) -> bool:
 
 
 def ceiling_check(start: Path | None = None) -> int:
-    from shipwright_paths import load_workflow_config
-
     root = repo_root(start)
-    cfg = load_workflow_config(root)
+    cfg = _load_workflow_config_jsonc(root)
     count = active_worktree_count()
     ceiling = int(cfg.get("worktree", {}).get("parallelCeiling", 4))
     verdict = "ok" if count < ceiling else "at-ceiling"
@@ -278,10 +296,8 @@ def cmd_list(args: argparse.Namespace) -> int:
 
 
 def load_workflow_config_dict(start: Path | None = None) -> dict:
-    from shipwright_paths import load_workflow_config
-
     root = repo_root(start)
-    return load_workflow_config(root)
+    return _load_workflow_config_jsonc(root)
 
 
 def allocate_port(cfg: dict) -> int:
