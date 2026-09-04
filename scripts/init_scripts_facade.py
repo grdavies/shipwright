@@ -33,6 +33,102 @@ from sw_scripts_resolve import (
 
 MANIFEST_REL = ".cursor/sw-scripts-facade.json"
 
+# Priority-zero interview surfaces (PRD 342 R24/R25) — recorded via this façade.
+PRIORITY_ZERO_SURFACES: tuple[str, ...] = (
+    "verify",
+    "ci-stub",
+    "credentials",
+    "models.tiers",
+    "defaultBaseBranch",
+)
+SurfaceState = Literal["detected", "confirmed", "declined"]
+SURFACE_STATES: frozenset[str] = frozenset({"detected", "confirmed", "declined"})
+
+DECLINE_CONSEQUENCES: dict[str, str] = {
+    "verify": (
+        "verify.* remains unset — check-gate and deliver cannot run project verification commands"
+    ),
+    "ci-stub": (
+        "no PR CI workflow recorded — deliver refuses until CI presence is satisfied or a stub is applied"
+    ),
+    "credentials": (
+        "host.credentialRef and/or projectId remain unset — credential broker pairing stays blocked"
+    ),
+    "models.tiers": (
+        "models.tiers remains unset — model-tier dispatch has no configured cheap/build/mid/deep mapping"
+    ),
+    "defaultBaseBranch": (
+        "defaultBaseBranch remains unset — base-branch resolution may fail closed for PR and deliver flows"
+    ),
+}
+
+
+def record_priority_zero_surface(
+    surface: str,
+    state: SurfaceState,
+    *,
+    value: Any = None,
+    consequence: str | None = None,
+    source: str | None = None,
+) -> dict[str, Any]:
+    """Record one priority-zero surface as detected | confirmed | declined-with-consequence (R25)."""
+    if surface not in PRIORITY_ZERO_SURFACES:
+        raise ValueError(f"unknown priority-zero surface: {surface}")
+    if state not in SURFACE_STATES:
+        raise ValueError(f"invalid surface state: {state}")
+    record: dict[str, Any] = {
+        "surface": surface,
+        "state": state,
+    }
+    if value is not None:
+        record["value"] = value
+    if source:
+        record["source"] = source
+    if state == "declined":
+        text = (consequence or DECLINE_CONSEQUENCES.get(surface) or "").strip()
+        if not text:
+            raise ValueError(f"declined surface {surface} requires a non-empty consequence")
+        record["consequence"] = text
+    elif consequence:
+        record["consequence"] = consequence
+    return record
+
+
+def validate_priority_zero_coverage(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Assert five-of-five coverage and non-empty decline consequences (R24/R25)."""
+    by_surface: dict[str, dict[str, Any]] = {}
+    errors: list[str] = []
+    for record in records:
+        if not isinstance(record, dict):
+            errors.append("non-object surface record")
+            continue
+        surface = str(record.get("surface") or "")
+        state = str(record.get("state") or "")
+        if surface not in PRIORITY_ZERO_SURFACES:
+            errors.append(f"unknown surface: {surface}")
+            continue
+        if state not in SURFACE_STATES:
+            errors.append(f"{surface}: invalid state {state}")
+            continue
+        if surface in by_surface:
+            errors.append(f"{surface}: duplicate record")
+            continue
+        if state == "declined" and not str(record.get("consequence") or "").strip():
+            errors.append(f"{surface}: declined without consequence")
+            continue
+        by_surface[surface] = record
+    missing = [name for name in PRIORITY_ZERO_SURFACES if name not in by_surface]
+    if missing:
+        errors.append(f"missing surfaces: {', '.join(missing)}")
+    return {
+        "verdict": "pass" if not errors else "fail",
+        "recorded": len(by_surface),
+        "expected": len(PRIORITY_ZERO_SURFACES),
+        "surfaces": [by_surface[name] for name in PRIORITY_ZERO_SURFACES if name in by_surface],
+        "errors": errors,
+    }
+
+
 # Documented deliver entrypoint forwarders — extend only via /sw-init re-emit.
 DELIVER_ENTRYPOINTS: tuple[str, ...] = (
     "wave.py",

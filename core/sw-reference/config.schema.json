@@ -81,7 +81,7 @@
             "auto"
           ],
           "default": "confirm",
-          "description": "Doc\u2192implementation boundary after /sw-tasks freeze: stop halts; confirm prompts before dispatch; auto dispatches the implementation loop."
+          "description": "Doc→implementation boundary after /sw-tasks freeze: stop halts; confirm prompts before dispatch; auto dispatches the implementation loop."
         },
         "loop": {
           "type": "object",
@@ -201,7 +201,7 @@
         "profiles": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Workflow optimization profiles (PRD 272 R23). Kernel immutables (cache, loop bounds, resourceLimits) are rejected \u2014 use graphExecution.cache and compiled spec.resourceLimits instead.",
+          "description": "Workflow optimization profiles (PRD 272 R23). Kernel immutables (cache, loop bounds, resourceLimits) are rejected — use graphExecution.cache and compiled spec.resourceLimits instead.",
           "properties": {
             "optimization": {
               "type": "string",
@@ -211,7 +211,7 @@
                 "thorough"
               ],
               "default": "balanced",
-              "description": "Optional reviewer depth only \u2014 absolute floor enforced separately after profile+inject."
+              "description": "Optional reviewer depth only — absolute floor enforced separately after profile+inject."
             }
           }
         },
@@ -336,7 +336,7 @@
               "type": "integer",
               "minimum": 1,
               "default": 240,
-              "description": "In-flight phase exceeds this duration \u2192 consolidated blocker."
+              "description": "In-flight phase exceeds this duration → consolidated blocker."
             },
             "stalenessClassifier": {
               "type": "object",
@@ -385,7 +385,7 @@
               "type": "integer",
               "minimum": 1,
               "default": 1440,
-              "description": "Run-level wall-clock ceiling; exceeded \u2192 clean consolidated halt (R42)."
+              "description": "Run-level wall-clock ceiling; exceeded → clean consolidated halt (R42)."
             },
             "maxIterations": {
               "type": "integer",
@@ -407,7 +407,7 @@
                 "auto"
               ],
               "default": "supervised",
-              "description": "auto runs retrospective \u2192 PR \u2192 watch/stabilize hands-off; supervised preserves halts."
+              "description": "auto runs retrospective → PR → watch/stabilize hands-off; supervised preserves halts."
             }
           }
         },
@@ -447,7 +447,7 @@
     "cleanup": {
       "type": "object",
       "additionalProperties": false,
-      "description": "/sw-cleanup apply autonomy (PRD 013 A1 R25\u2013R26).",
+      "description": "/sw-cleanup apply autonomy (PRD 013 A1 R25–R26).",
       "properties": {
         "autonomy": {
           "type": "string",
@@ -463,7 +463,7 @@
     "compound": {
       "type": "object",
       "additionalProperties": false,
-      "description": "/sw-retrospective compounding autonomy (R10). Gates approval prompts only \u2014 never memory or rule-class safety.",
+      "description": "/sw-retrospective compounding autonomy (R10). Gates approval prompts only — never memory or rule-class safety.",
       "properties": {
         "autonomy": {
           "type": "string",
@@ -574,7 +574,7 @@
     "review": {
       "type": "object",
       "additionalProperties": false,
-      "description": "AI code-review provider selection. Credentials are never stored here \u2014 use env/secret store at runtime.",
+      "description": "AI code-review provider selection. Credentials are never stored here — use env/secret store at runtime.",
       "properties": {
         "provider": {
           "type": "string",
@@ -584,7 +584,7 @@
         "enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Deprecated \u2014 use review.provider:\"none\" instead. When false, review gating is disabled (gate state off, non-blocking). Equivalent to provider:\"none\"."
+          "description": "Deprecated — use review.provider:\"none\" instead. When false, review gating is disabled (gate state off, non-blocking). Equivalent to provider:\"none\"."
         },
         "local": {
           "type": "object",
@@ -708,7 +708,10 @@
               "description": "Floor — bounded selection never dispatches fewer than this count."
             },
             "costCeiling": {
-              "type": ["number", "null"],
+              "type": [
+                "number",
+                "null"
+              ],
               "minimum": 0,
               "default": null,
               "description": "Optional dispatch cost ceiling (USD); null disables cost-based truncation."
@@ -718,7 +721,8 @@
       },
       "required": [
         "provider"
-      ]
+      ],
+      "x-sw-interviewPriority": 1
     },
     "coderabbit": {
       "type": "object",
@@ -828,7 +832,8 @@
             }
           }
         }
-      }
+      },
+      "x-sw-interviewPriority": 1
     },
     "intraPhase": {
       "type": "object",
@@ -867,7 +872,7 @@
         "provider": {
           "type": "string",
           "default": "in-repo",
-          "description": "Active memory adapter id. For mutating paths, pair with non-empty memory.project (or use an in-repo marker). Membership and adapter integrity are validated against memory-provider-catalog.json and providers/<id>.md + providers/<id>-rules.py (registration validator at config write, startup, and guardrail preflight) \u2014 not schema-closed. Unbound writes refuse; there is no ambient Recallium default."
+          "description": "Active memory adapter id. For mutating paths, pair with non-empty memory.project (or use an in-repo marker). Membership and adapter integrity are validated against memory-provider-catalog.json and providers/<id>.md + providers/<id>-rules.py (registration validator at config write, startup, and guardrail preflight) — not schema-closed. Unbound writes refuse; there is no ambient Recallium default."
         },
         "sourceOfTruth": {
           "type": "string",
@@ -877,7 +882,7 @@
             "auto"
           ],
           "default": "auto",
-          "description": "Authoritative store for decision-class records only. When the key is present, auto derives from provider (external\u2192memory, in-repo/none\u2192repo). When the key is omitted, repo-authoritative providers resolve to repo; memory-authoritative providers fail closed until decision bodies are exported and the knob is set explicitly (see memory_sot.py migration gate). Explicit auto preserves today\u2019s behavior and does not trigger migration."
+          "description": "Authoritative store for decision-class records only. When the key is present, auto derives from provider (external→memory, in-repo/none→repo). When the key is omitted, repo-authoritative providers resolve to repo; memory-authoritative providers fail closed until decision bodies are exported and the knob is set explicitly (see memory_sot.py migration gate). Explicit auto preserves today’s behavior and does not trigger migration."
         },
         "inRepo": {
           "type": "object",
@@ -954,7 +959,7 @@
         "basicMemory": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Basic Memory provider settings (when memory.provider is basic-memory). Dual-mode local|cloud \u2014 mode is required for non-default use; no silent cross-mode fallback.",
+          "description": "Basic Memory provider settings (when memory.provider is basic-memory). Dual-mode local|cloud — mode is required for non-default use; no silent cross-mode fallback.",
           "properties": {
             "mode": {
               "type": "string",
@@ -981,7 +986,7 @@
             "tokenEnv": {
               "type": "string",
               "default": "BASIC_MEMORY_API_KEY",
-              "description": "Cloud mode: environment variable name for the bearer token (bmc_\u2026). Never embed tokens in config bodies."
+              "description": "Cloud mode: environment variable name for the bearer token (bmc_…). Never embed tokens in config bodies."
             },
             "workspace": {
               "type": "string",
@@ -1035,7 +1040,7 @@
         "obsidian": {
           "type": "object",
           "additionalProperties": false,
-          "description": "Obsidian provider settings (when memory.provider is obsidian). Local REST API MCP on loopback only. vaultPath is realpath-confined: resolved absolute paths must stay under the configured vault root; traversal and symlink escapes are rejected. Install recipes document Obsidian + Local REST API plugin enablement \u2014 adapters never auto-install either.",
+          "description": "Obsidian provider settings (when memory.provider is obsidian). Local REST API MCP on loopback only. vaultPath is realpath-confined: resolved absolute paths must stay under the configured vault root; traversal and symlink escapes are rejected. Install recipes document Obsidian + Local REST API plugin enablement — adapters never auto-install either.",
           "properties": {
             "vaultPath": {
               "type": "string",
@@ -1138,12 +1143,12 @@
             "requireRuleClass": {
               "type": "boolean",
               "default": false,
-              "description": "When true, block until at least one allowlisted rule-class memory exists. Default false \u2014 empty memory is normal for new repos."
+              "description": "When true, block until at least one allowlisted rule-class memory exists. Default false — empty memory is normal for new repos."
             },
             "allowEmptyRules": {
               "type": "boolean",
               "default": true,
-              "description": "Deprecated \u2014 use requireRuleClass (inverted). When false, equivalent to requireRuleClass:true."
+              "description": "Deprecated — use requireRuleClass (inverted). When false, equivalent to requireRuleClass:true."
             }
           }
         },
@@ -1202,7 +1207,8 @@
       "required": [
         "provider",
         "project"
-      ]
+      ],
+      "x-sw-interviewPriority": 1
     },
     "models": {
       "type": "object",
@@ -1214,14 +1220,14 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Tier name \u2192 concrete model id (e.g. deep, build, mid, cheap)."
+          "description": "Tier name → concrete model id (e.g. deep, build, mid, cheap)."
         },
         "aliases": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Frontmatter alias \u2192 tier name (e.g. fast \u2192 cheap)."
+          "description": "Frontmatter alias → tier name (e.g. fast → cheap)."
         },
         "roles": {
           "type": "object",
@@ -1279,7 +1285,7 @@
                   "deep"
                 ]
               },
-              "description": "Agent or native-panel specialist id \u2192 semantic tier (no inherit)."
+              "description": "Agent or native-panel specialist id → semantic tier (no inherit)."
             }
           }
         }
@@ -1342,7 +1348,7 @@
                   "inherit"
                 ]
               },
-              "description": "Agent id \u2192 caveman intensity. Used after command/skill routing during delegated Task binding."
+              "description": "Agent id → caveman intensity. Used after command/skill routing during delegated Task binding."
             }
           }
         }
@@ -1436,7 +1442,8 @@
             }
           }
         }
-      }
+      },
+      "x-sw-interviewPriority": 1
     },
     "planningDir": {
       "type": "string",
@@ -1738,7 +1745,7 @@
                     "envVar": {
                       "type": "string",
                       "const": "SW_PLANNING_ISSUES_TOKEN",
-                      "description": "Fixed env var for planning-project issue write in grdavies/planning (or configured owner/repo). Used by .github/workflows/deliver-closeout.yml mutate step and scripts/closeout_ci.py \u2014 never substitute GITHUB_TOKEN."
+                      "description": "Fixed env var for planning-project issue write in grdavies/planning (or configured owner/repo). Used by .github/workflows/deliver-closeout.yml mutate step and scripts/closeout_ci.py — never substitute GITHUB_TOKEN."
                     },
                     "scope": {
                       "type": "string",
@@ -2089,7 +2096,8 @@
             }
           }
         }
-      }
+      },
+      "x-sw-interviewPriority": 1
     },
     "verifyMutation": {
       "type": "object",
@@ -2192,7 +2200,7 @@
     "rca": {
       "type": "object",
       "additionalProperties": false,
-      "description": "RCA fan-out settings (PRD 064 R1/R2). Default off \u2014 single-context loop unchanged.",
+      "description": "RCA fan-out settings (PRD 064 R1/R2). Default off — single-context loop unchanged.",
       "properties": {
         "fanout": {
           "type": "object",
@@ -2411,7 +2419,7 @@
     "loopHealth": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Downstream-cost diagnostic metrics (PRD 041 R29). Read-only \u2014 never gates merge.",
+      "description": "Downstream-cost diagnostic metrics (PRD 041 R29). Read-only — never gates merge.",
       "properties": {
         "enabled": {
           "type": "boolean",
@@ -2515,7 +2523,7 @@
     "dispatch": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Dispatch binding extensions (PRD 064 R10\u2013R12).",
+      "description": "Dispatch binding extensions (PRD 064 R10–R12).",
       "properties": {
         "unregisteredParentModelTier": {
           "type": "string",
@@ -2771,5 +2779,13 @@
         }
       }
     }
+  ],
+  "x-sw-interviewPriorityDefault": 2,
+  "x-sw-interviewPriorityOneKeys": [
+    "host",
+    "planning",
+    "memory",
+    "worktree",
+    "review"
   ]
 }
