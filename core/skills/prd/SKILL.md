@@ -34,7 +34,7 @@ Port of v1 `spec-prd` under `sw-`. Freeze and task generation are separate steps
 New PRDs authored after PRD 342 unit 4 must set frontmatter `prdBodyContract: v2` and include
 **Acceptance Scenarios** and **Success Criteria** on the PRD body (not in a sibling asset).
 Existing PRDs without that contract key are grandfathered and must not be retroactively failed
-by `scripts/spec-rigor-check.py`.
+by the spec-rigor authoring gate.
 
 ## Decision-record sections (required, `--type decision`)
 
