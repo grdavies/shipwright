@@ -800,6 +800,20 @@ def acquire_run_lease(
     source_task_list: str | None = None,
 ) -> dict[str, Any]:
     """Acquire exclusive deliver runId lease before mutating run state (R9/R10)."""
+    try:
+        import state_root_migrate as srm
+
+        srm.assert_no_quiesce_fence(root)
+    except Exception as exc:  # noqa: BLE001 - map fence refusal into lease fail payload
+        if exc.__class__.__name__ == "StateRootMigrateError":
+            return {
+                "verdict": "fail",
+                "error": getattr(exc, "code", "quiesce-fence-blocks-acquire"),
+                "halt": getattr(exc, "code", "quiesce-fence-blocks-acquire"),
+                "message": getattr(exc, "message", str(exc)),
+                **getattr(exc, "extra", {}),
+            }
+        raise
     if not isinstance(run_id, str) or not run_id.strip():
         return {
             "verdict": "fail",
