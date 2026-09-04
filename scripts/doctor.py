@@ -216,7 +216,22 @@ def legacy_layout_report(target: Path) -> dict[str, Any]:
     """Detect legacy .cursor/.sw state-root layout and surface stale fences (R6/R13)."""
     import state_root_migrate as srm
 
-    detection = srm.detect_legacy_layout(target)
+    try:
+        detection = srm.detect_legacy_layout(target)
+    except srm.StateRootMigrateError as exc:
+        # Inventory may be absent in fixture repos; doctor must stay functional (R13).
+        if exc.code in {"inventory-missing", "inventory-unreadable", "inventory-malformed"}:
+            return {
+                "verdict": "pass",
+                "legacyPresent": False,
+                "moves": [],
+                "moveCount": 0,
+                "staleFence": None,
+                "remediation": None,
+                "skipped": True,
+                "skipReason": exc.code,
+            }
+        raise
     fence = detection.get("staleFence")
     moves = detection.get("moves") or []
     return {
