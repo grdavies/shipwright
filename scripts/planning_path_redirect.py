@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -54,20 +55,72 @@ def load_redirect_map(root: Path) -> dict[str, str]:
     return {str(k): str(v) for k, v in mapping.items()}
 
 
-def resolve_path(root: Path, rel_path: str) -> str:
-    """Resolve a repo-relative path through the redirect map when present."""
-    norm = rel_path.replace("\\", "/")
-    if norm.startswith("./"):
-        norm = norm[2:]
-    mapping = load_redirect_map(root)
+def load_state_root_redirect_map(root: Path) -> dict[str, str]:
+    """Load legacy→new map for every inventoried .cursor/ and .sw/ family (PRD 342 R12)."""
+    try:
+        import state_root_migrate
+    except ImportError:
+        return {}
+    try:
+        return state_root_migrate.redirect_map_from_inventory(planning_paths.git_root(root))
+    except state_root_migrate.StateRootMigrateError:
+        return {}
+
+
+def load_combined_redirect_map(root: Path) -> dict[str, str]:
+    """Planning redirect map overlaid with state-root inventory redirects."""
+    combined = dict(load_state_root_redirect_map(root))
+    combined.update(load_redirect_map(root))
+    return combined
+
+
+def emit_redirect_deprecation(legacy: str, replacement: str) -> str:
+    """Emit exactly one deprecation signal naming legacy path and replacement (R12)."""
+    message = (
+        f"deprecated path {legacy!r} redirected to {replacement!r} "
+        "(state-root redirect; valid for one release)"
+    )
+    warnings.warn(message, DeprecationWarning, stacklevel=3)
+    return message
+
+
+def _apply_map(norm: str, mapping: dict[str, str]) -> tuple[str, str, str] | None:
+    """Return (resolved, legacy_base, migrated_base) when *norm* hits *mapping*."""
     if norm in mapping:
-        return mapping[norm]
-    for legacy, migrated in mapping.items():
+        return mapping[norm], norm, mapping[norm]
+    # Prefer longest legacy prefix so nested families resolve specifically.
+    for legacy in sorted(mapping.keys(), key=len, reverse=True):
         legacy_base = legacy.rstrip("/")
         if norm == legacy_base or norm.startswith(legacy_base + "/"):
             suffix = norm[len(legacy_base) :].lstrip("/")
-            base = migrated.rstrip("/")
-            return f"{base}/{suffix}" if suffix else base
+            base = mapping[legacy].rstrip("/")
+            resolved = f"{base}/{suffix}" if suffix else base
+            return resolved, legacy_base, base
+    return None
+
+
+def resolve_path(root: Path, rel_path: str, *, emit_deprecation: bool = True) -> str:
+    """Resolve a repo-relative path through planning + state-root redirect maps."""
+    norm = rel_path.replace("\\", "/")
+    if norm.startswith("./"):
+        norm = norm[2:]
+
+    # Planning map first (existing consumers), then state-root inventory families.
+    planning = load_redirect_map(root)
+    hit = _apply_map(norm, planning)
+    if hit is not None:
+        resolved, legacy, replacement = hit
+        if emit_deprecation and resolved != norm:
+            emit_redirect_deprecation(legacy, replacement)
+        return resolved
+
+    state_map = load_state_root_redirect_map(root)
+    hit = _apply_map(norm, state_map)
+    if hit is not None:
+        resolved, legacy, replacement = hit
+        if emit_deprecation and resolved != norm:
+            emit_redirect_deprecation(legacy, replacement)
+        return resolved
     return norm
 
 
@@ -122,8 +175,18 @@ def cmd_consumers(_root: Path) -> None:
 
 
 def cmd_map(root: Path) -> None:
-    mapping = load_redirect_map(root)
-    emit({"verdict": "pass", "map": mapping, "path": REDIRECT_MAP_REL})
+    planning = load_redirect_map(root)
+    state_root = load_state_root_redirect_map(root)
+    emit(
+        {
+            "verdict": "pass",
+            "map": load_combined_redirect_map(root),
+            "planningMap": planning,
+            "stateRootMap": state_root,
+            "path": REDIRECT_MAP_REL,
+            "stateRootInventory": "core/sw-reference/state-root-inventory.json",
+        }
+    )
 
 
 def main(argv: list[str] | None = None) -> None:
