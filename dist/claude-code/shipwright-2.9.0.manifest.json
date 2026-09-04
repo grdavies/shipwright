@@ -598,6 +598,7 @@
     "planning_backend_control.py",
     "planning_backend_write_lint.py",
     "planning_boundary_lint.py",
+    "planning_bundle.py",
     "planning_canonical.py",
     "planning_cross_project_recall.py",
     "planning_cross_project_trust.py",
@@ -807,5 +808,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 804
+  "moduleCount": 805
 }
