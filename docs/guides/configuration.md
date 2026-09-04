@@ -1448,6 +1448,35 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 # edit memory.project, verify.*, providers
 ```
 
+## Template resolution stack and converge phase
+
+Shipwright resolves templates through a three-layer stack. Configure the consumer-visible
+roots with:
+
+| Key | Default | Role |
+|-----|---------|------|
+| `templates.overridesDir` | `.shipwright/templates` | First layer — repository overrides win when present |
+| `templates.packsDir` | `.shipwright/template-packs` | Second layer — installed local packs (dir or zip only) |
+
+The third layer is the packaged core templates shipped with Shipwright. First match wins
+(overrides → packs → core). With no overrides and no packs installed, every resolved
+template is byte-identical to its core default.
+
+### Converge phase (opt-in, default off)
+
+| Key | Default | Role |
+|-----|---------|------|
+| `converge.enabled` | `false` | When `true`, deliver may append an opt-in converge phase that composes claims audit, gap check, verify gates, and one bundle-anchored assessor |
+
+`converge.enabled` defaults to **off**. With the flag disabled, deliver phase sequence and
+outputs match the pre-change baseline.
+
+**Naming distinction:** the deliver **converge phase** (`converge.enabled`) is not the
+pre-existing WorkflowGraph **`convergence-loop`** node kind. `convergence-loop` is an
+execution-retry construct used elsewhere in the graph runtime. Converge compiles onto the
+closed kinds `gate` (assessor) and `command` (phase body) only — it never uses
+`convergence-loop`. Readers and operators should not conflate the two.
+
 ## All config keys
 
 | Key | Purpose |

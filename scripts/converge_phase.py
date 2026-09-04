@@ -358,9 +358,13 @@ def run_converge_phase(
     return {
         "verdict": "pass",
         "enabled": True,
+        "blocksRun": False,
         "requiredInputs": deliver_required_inputs(task_list),
         "unitDir": str(unit_dir),
         "assessment": assessment,
+        "findingRouting": assessment.get("findingRouting"),
+        "autoFixApplied": False,
+        "autoAmendApplied": False,
         "nodes": explain_plan_nodes({"spec": {"nodes": nodes}}),
         "nodeKinds": sorted(converge_node_kinds_used()),
     }

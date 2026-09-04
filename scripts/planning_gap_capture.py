@@ -2871,6 +2871,117 @@ def parse_flags(rest: list[str]) -> dict[str, Any]:
     return out
 
 
+def route_converge_findings(
+    root: Path,
+    findings: list[dict[str, Any]],
+    *,
+    unit_id: str | None = None,
+    unit_dir: str | None = None,
+    dry_run: bool = False,
+    auto_fix: bool = False,
+    auto_amend: bool = False,
+) -> dict[str, Any]:
+    """Route converge findings through gap-capture + amendment (PRD 342 R46).
+
+    Findings reach human disposition via the existing gap-capture draft inbox and
+    amendment proposals. This path never silently auto-fixes code and never
+    auto-amends a frozen artifact — ``auto_fix`` / ``auto_amend`` are refused.
+    """
+    if auto_fix or auto_amend:
+        return {
+            "verdict": "refused",
+            "reason": "converge-findings-must-not-auto-fix-or-auto-amend",
+            "autoFixApplied": False,
+            "autoAmendApplied": False,
+            "routed": [],
+            "awaitingHumanDisposition": True,
+            "unitId": unit_id,
+            "unitDir": unit_dir,
+        }
+
+    routed: list[dict[str, Any]] = []
+    for index, raw in enumerate(findings or []):
+        if not isinstance(raw, dict):
+            continue
+        reason = str(raw.get("reason") or "converge-finding")
+        role = str(raw.get("role") or "")
+        path = str(raw.get("path") or raw.get("ref") or "")
+        title_bits = [part for part in ("Converge finding", role, reason) if part]
+        title = " — ".join(title_bits)[:180]
+        signal_id = str(
+            raw.get("signalId")
+            or raw.get("signal_id")
+            or f"converge:{unit_id or 'unit'}:{reason}:{index}"
+        )
+        touches_frozen = bool(raw.get("frozenArtifact")) or reason in {
+            "declared-bundle-asset-missing",
+            "frozen-artifact-drift",
+        }
+        # Always stage a gap-capture draft for human disposition (never authoritative mint).
+        if dry_run:
+            gap_result = {
+                "signalId": signal_id,
+                "action": "draft-inbox",
+                "title": title,
+                "deduped": False,
+                "dryRun": True,
+            }
+        else:
+            gap_result = put_gap_draft(
+                root,
+                signal_id=signal_id,
+                title=title,
+                payload={
+                    "source": "converge",
+                    "unitId": unit_id,
+                    "unitDir": unit_dir,
+                    "finding": raw,
+                    "stub": True,
+                    "awaitingHumanDisposition": True,
+                },
+            )
+            gap_result = {
+                "signalId": signal_id,
+                "action": "draft-inbox",
+                "deduped": False,
+                **gap_result,
+            }
+
+        amendment: dict[str, Any] | None = None
+        if touches_frozen:
+            amendment = {
+                "route": "amendment",
+                "status": "awaiting-human-disposition",
+                "autoAmendApplied": False,
+                "reason": "frozen-artifact-requires-human-amendment",
+                "finding": raw,
+                "unitId": unit_id,
+            }
+
+        routed.append(
+            {
+                "signalId": signal_id,
+                "title": title,
+                "gapCapture": gap_result,
+                "amendment": amendment,
+                "autoFixApplied": False,
+                "autoAmendApplied": False,
+            }
+        )
+
+    return {
+        "verdict": "pass",
+        "routed": routed,
+        "autoFixApplied": False,
+        "autoAmendApplied": False,
+        "awaitingHumanDisposition": True,
+        "unitId": unit_id,
+        "unitDir": unit_dir,
+        "findingCount": len(routed),
+    }
+
+
+
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
