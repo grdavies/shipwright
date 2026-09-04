@@ -346,7 +346,7 @@ omit the flag (default). Ambient process environment alone must not activate pha
   `SW_PHASE_ID`, `SW_TASK_LIST`) set by the dispatcher for that child only — never inherited from a
   sibling worktree or ambient orchestrator shell
 - Orchestrator SHOULD also set `SW_PHASE_SLUG=<phase-slug>` and optionally `SW_RUN_DIR` pointing at
-  `.cursor/sw-deliver-runs/<phase>/` (see `.sw/layout.md`) on the dispatched process
+  `.cursor/sw-deliver-runs/<phase>/` (see `.shipwright/layout.md`) on the dispatched process
 
 ### Durable planning-backend disable + CI companion step
 

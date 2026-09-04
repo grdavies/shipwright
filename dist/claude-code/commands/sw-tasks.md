@@ -40,7 +40,7 @@ Environment: `SW_DOC_DRIVER=1` / `SW_DOC_ORCHESTRATOR=1` sets `driverInvoked` on
 (`scripts/check_frozen_lib.py`).
 
 Doc-loop concurrency for the parent run index and cross-clone handoff locks is documented under
-`/sw-doc` **Durable doc-run driver** and `.sw/layout.md` (PRD 090 R1/R2) — `/sw-tasks` inherits those
+`/sw-doc` **Durable doc-run driver** and `.shipwright/layout.md` (PRD 090 R1/R2) — `/sw-tasks` inherits those
 guards when invoked as the doc-loop `tasks` stage with `noFreeze: true`.
 
 ## Procedure

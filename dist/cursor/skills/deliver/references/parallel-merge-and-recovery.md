@@ -61,7 +61,7 @@ scripts/wave.py blast-radius apply --phase-slug <upstream-slug>
 
 ## Branch topology (R35/R53)
 
-Operator worktree contract (PRD 049 R1/R2 — full table in `.sw/layout.md`):
+Operator worktree contract (PRD 049 R1/R2 — full table in `.shipwright/layout.md`):
 
 | Role | Branch | Worktree path | Agent cwd |
 |------|--------|---------------|-----------|

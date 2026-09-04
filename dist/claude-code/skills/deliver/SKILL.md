@@ -17,7 +17,7 @@ legitimate halts, parallel dispatch, resumption). `/sw-deliver` is the pilot con
 
 ## Deliver plan representation
 
-Path: `.cursor/sw-deliver-plan.json` (machine-readable; see `.sw/layout.md`).
+Path: `.cursor/sw-deliver-plan.json` (machine-readable; see `.shipwright/layout.md`).
 
 ```json
 {
@@ -108,7 +108,7 @@ without kernel changes. Default `canonical` is byte-identical to pre-023 behavio
 **Benefit metric + reporting (R31):** per-phase and run-level `benefitMetric` objects (numeric/enumerated only)
 are captured at terminal phase status and rolled up on shared run-state. Operator soak comparisons use
 `python3 scripts/wave.py plan benefit-report --pairs <path>` → `scripts/wave_plan_benefit.py`. Schema and
-decision rule: `.sw/layout.md` **Deliver pilot run records**.
+decision rule: `.shipwright/layout.md` **Deliver pilot run records**.
 
 **Intra-phase fan-out snapshot:** `intraPhaseFanOut` on phase status / `phases.<id>` records the latest
 validated partition, active worker count, and cap state; append-only audit lives in per-phase
