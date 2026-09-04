@@ -35,9 +35,17 @@ from host_lib import default_base_branch
 from init_ci_stub import STUB_WORKFLOW_REL, apply_ci_stub, plan_ci_stub
 from init_profile_report import (
     classify_profile,
+    derive_interview_priorities,
     greenfield_curated_patch,
+    interview_reuse_bundle,
+    load_config_schema,
     load_workflow_config,
     render_classification_markdown,
+)
+from init_scripts_facade import (
+    PRIORITY_ZERO_SURFACES,
+    record_priority_zero_surface,
+    validate_priority_zero_coverage,
 )
 import project_baseline as _project_baseline
 import project_doctrine as _project_doctrine
@@ -1039,6 +1047,185 @@ def cmd_dry_run(
     return 0
 
 
+def _detect_priority_zero_surfaces(root: Path) -> dict[str, dict[str, Any]]:
+    """Probe the five priority-zero surfaces without writing (R24)."""
+    config = load_workflow_config(root)
+    detected: dict[str, dict[str, Any]] = {}
+
+    verify = config.get("verify")
+    if isinstance(verify, dict) and any(str(v).strip() for v in verify.values() if isinstance(v, str)):
+        detected["verify"] = {"value": verify, "source": "config"}
+    else:
+        try:
+            probe = _detect_project_type(root)
+        except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
+            probe = {}
+        proposals = {
+            key: meta.get("command")
+            for key, meta in (probe.get("proposals") or {}).items()
+            if isinstance(meta, dict) and meta.get("safe") and meta.get("command")
+        }
+        if proposals:
+            detected["verify"] = {"value": proposals, "source": "project-type-detection"}
+
+    default_branch = default_base_branch(root)
+    ci_scan = scan_ci_workflows(root, default_branch)
+    if ci_scan.get("presence") == CI_PRESENCE_SATISFIED:
+        detected["ci-stub"] = {"value": ci_scan, "source": "ci-presence"}
+    elif (root / STUB_WORKFLOW_REL).is_file():
+        detected["ci-stub"] = {"value": {"path": STUB_WORKFLOW_REL.as_posix()}, "source": "ci-stub-file"}
+
+    host = config.get("host") if isinstance(config.get("host"), dict) else {}
+    credential_ref = str(host.get("credentialRef") or "").strip()
+    project_id = str(config.get("projectId") or "").strip()
+    if credential_ref and project_id:
+        detected["credentials"] = {
+            "value": {"credentialRef": credential_ref, "projectId": project_id},
+            "source": "config",
+        }
+
+    models = config.get("models") if isinstance(config.get("models"), dict) else {}
+    tiers = models.get("tiers") if isinstance(models.get("tiers"), dict) else {}
+    if tiers:
+        detected["models.tiers"] = {"value": tiers, "source": "config"}
+
+    configured_branch = str(config.get("defaultBaseBranch") or "").strip()
+    if configured_branch:
+        detected["defaultBaseBranch"] = {"value": configured_branch, "source": "config"}
+    elif default_branch:
+        detected["defaultBaseBranch"] = {"value": default_branch, "source": "host-default"}
+
+    return detected
+
+
+def run_priority_zero_interview(
+    root: Path,
+    *,
+    accept_defaults: bool = False,
+    decline_surfaces: frozenset[str] | None = None,
+    plan_confirmed: bool = False,
+    apply_confirmed: bool = False,
+    progressive_disclosure: bool = False,
+) -> dict[str, Any]:
+    """Resolve all five priority-zero surfaces in one run (R24–R27).
+
+    Every surface ends as detected, confirmed, or declined-with-consequence —
+    never silently unset.
+    """
+    decline_surfaces = decline_surfaces or frozenset()
+    unknown = sorted(decline_surfaces - set(PRIORITY_ZERO_SURFACES))
+    if unknown:
+        return {
+            "verdict": "fail",
+            "error": "unknown-decline-surface",
+            "unknownSurfaces": unknown,
+        }
+
+    detected_map = _detect_priority_zero_surfaces(root)
+    records: list[dict[str, Any]] = []
+    for surface in PRIORITY_ZERO_SURFACES:
+        if surface in decline_surfaces:
+            records.append(record_priority_zero_surface(surface, "declined", source="operator-decline"))
+            continue
+        hit = detected_map.get(surface)
+        if hit is not None:
+            records.append(
+                record_priority_zero_surface(
+                    surface,
+                    "detected",
+                    value=hit.get("value"),
+                    source=str(hit.get("source") or "detected"),
+                )
+            )
+            continue
+        if accept_defaults:
+            records.append(
+                record_priority_zero_surface(
+                    surface,
+                    "confirmed",
+                    value={"acceptedDefault": True},
+                    source="accept-defaults",
+                )
+            )
+            continue
+        # Non-interactive completeness: record an explicit decline rather than leave unset.
+        records.append(
+            record_priority_zero_surface(
+                surface,
+                "declined",
+                source="unset-without-confirmation",
+            )
+        )
+
+    coverage = validate_priority_zero_coverage(records)
+    reuse = interview_reuse_bundle(
+        root,
+        plan_confirmed=plan_confirmed,
+        apply_confirmed=apply_confirmed,
+    )
+    schema = load_config_schema(root)
+    priorities = derive_interview_priorities(schema)
+    findings = build_findings_report(root)
+
+    payload: dict[str, Any] = {
+        "verdict": "pass" if coverage.get("verdict") == "pass" else "fail",
+        "action": "interview",
+        "priorityZero": coverage.get("surfaces") or records,
+        "coverage": {
+            "recorded": coverage.get("recorded"),
+            "expected": coverage.get("expected"),
+            "verdict": coverage.get("verdict"),
+            "errors": coverage.get("errors") or [],
+        },
+        "priorityOne": {
+            "keys": priorities.get("priorityOne") or [],
+            "inline": True,
+        },
+        "priorityTwo": {
+            "keys": priorities.get("priorityTwo") or [],
+            "progressiveDisclosure": True,
+            "included": bool(progressive_disclosure),
+        },
+        "defaultPriorityForNewKeys": priorities.get("defaultPriority"),
+        "findings": findings,
+        "infrastructure": reuse,
+        "secondInterviewEngine": False,
+    }
+    if coverage.get("verdict") != "pass":
+        payload["error"] = "priority-zero-coverage-incomplete"
+    return payload
+
+
+def cmd_interview(root: Path, rest: list[str]) -> int:
+    """CLI: resolve priority-zero interview surfaces in one invocation."""
+    accept_defaults = "--accept-defaults" in rest
+    plan_confirmed = "--plan-confirm" in rest or "--confirm-plan" in rest
+    apply_confirmed = "--apply-confirm" in rest or "--confirm-apply" in rest or "--confirm" in rest
+    progressive = "--include-priority-two" in rest or "--progressive-disclosure" in rest
+    decline: set[str] = set()
+    i = 0
+    while i < len(rest):
+        token = rest[i]
+        if token == "--decline" and i + 1 < len(rest):
+            decline.add(rest[i + 1])
+            i += 2
+            continue
+        if token.startswith("--decline="):
+            decline.add(token.split("=", 1)[1])
+            i += 1
+            continue
+        i += 1
+    payload = run_priority_zero_interview(
+        root,
+        accept_defaults=accept_defaults,
+        decline_surfaces=frozenset(decline),
+        plan_confirmed=plan_confirmed,
+        apply_confirmed=apply_confirmed,
+        progressive_disclosure=progressive,
+    )
+    print(json.dumps(payload, indent=2))
+    return 0 if payload.get("verdict") == "pass" else 1
+
 
 def main(argv: list[str] | None = None) -> int:
     args = list(argv if argv is not None else sys.argv[1:])
@@ -1046,7 +1233,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "usage: sw-configure.py detect|schema-version|shipwright-version|"
             "drift-check|portability-check|findings|write-draft|dry-run|"
-            "credential|ci-stub|doctrine",
+            "interview|credential|ci-stub|doctrine",
             file=sys.stderr,
         )
         return 2 if args else 0
@@ -1139,6 +1326,8 @@ def main(argv: list[str] | None = None) -> int:
             accept_ci_stub=accept_ci_stub,
             source_root=Path(source_root) if source_root else None,
         )
+    if cmd == "interview":
+        return cmd_interview(root, rest)
     if cmd == "ci-stub":
         subcmd, sub_rest = _credential_argv(rest)
         return cmd_ci_stub(root, subcmd, sub_rest)
