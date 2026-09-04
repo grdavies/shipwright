@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -18,15 +19,13 @@ PROFILE_REFRESH_REMEDIATION = "python3 scripts/doctor.py profile-refresh --confi
 
 
 def repo_root() -> Path:
-    return Path(__file__).resolve().parent.parent.parent
+    return Path(__file__).resolve().parent.parent
 
 
 def resolve_workflow_config_path(target: Path) -> Path | None:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = target / rel
-        if path.is_file():
-            return path
-    return None
+    from shipwright_paths import workflow_config_path
+
+    return workflow_config_path(target)
 
 
 def _append_tokenenv_deprecations(
@@ -208,6 +207,106 @@ def _append_profile_completeness(
         remediation.append(PROFILE_REFRESH_REMEDIATION)
 
 
+STATE_ROOT_MIGRATE_REMEDIATION = (
+    "python3 scripts/doctor.py state-root-migrate --confirm"
+)
+
+
+def legacy_layout_report(target: Path) -> dict[str, Any]:
+    """Detect legacy .cursor/.sw state-root layout and surface stale fences (R6/R13)."""
+    import state_root_migrate as srm
+
+    try:
+        detection = srm.detect_legacy_layout(target)
+    except srm.StateRootMigrateError as exc:
+        # Inventory may be absent in fixture repos; doctor must stay functional (R13).
+        if exc.code in {"inventory-missing", "inventory-unreadable", "inventory-malformed"}:
+            return {
+                "verdict": "pass",
+                "legacyPresent": False,
+                "moves": [],
+                "moveCount": 0,
+                "staleFence": None,
+                "remediation": None,
+                "skipped": True,
+                "skipReason": exc.code,
+            }
+        raise
+    fence = detection.get("staleFence")
+    moves = detection.get("moves") or []
+    return {
+        "verdict": "warn" if moves or fence else "pass",
+        "legacyPresent": bool(detection.get("legacyPresent")),
+        "moves": moves,
+        "moveCount": detection.get("moveCount", len(moves)),
+        "staleFence": fence,
+        "remediation": STATE_ROOT_MIGRATE_REMEDIATION if moves or fence else None,
+    }
+
+
+def state_root_migrate_consent(
+    target: Path,
+    *,
+    confirm: bool,
+    plugin_root: Path | None = None,
+) -> dict[str, Any]:
+    """Consent gate enumerating every move; decline leaves legacy paths functional (R13)."""
+    import state_root_migrate as srm
+
+    try:
+        # Skew refusal must precede the consent gate (R54).
+        result = srm.relocate(
+            target,
+            confirm=confirm,
+            plugin_root=plugin_root,
+            holder=f"doctor-state-root-migrate:{os.getpid()}",
+        )
+    except srm.StateRootMigrateError as exc:
+        payload = exc.as_dict()
+        payload["consentOffered"] = False
+        return payload
+
+    if result.get("verdict") == "confirm-required":
+        return {
+            **result,
+            "consentOffered": True,
+            "hint": (
+                "Review the enumerated moves. Declining (omit --confirm) leaves the "
+                "repository fully functional on legacy paths. Pass --confirm to relocate."
+            ),
+            "remediation": STATE_ROOT_MIGRATE_REMEDIATION,
+        }
+    return {**result, "consentOffered": True}
+
+
+
+TEMPLATE_OVERRIDE_DRIFT_REMEDIATION = (
+    "Review .shipwright/templates overrides against updated core defaults; "
+    "refresh baselines with python3 -c "
+    "\"from template_resolve import record_core_baselines; "
+    "record_core_baselines(__import__('pathlib').Path('.'))\" "
+    "after intentionally accepting the new core, or update the override."
+)
+
+
+def _append_template_override_drift(
+    root: Path,
+    issues: list[str],
+    remediation: list[str],
+) -> None:
+    """Surface overrides that shadow a core template whose default changed (R41)."""
+    try:
+        from template_resolve import diagnose_override_drift
+    except ImportError:  # pragma: no cover
+        return
+    findings = diagnose_override_drift(root)
+    for finding in findings:
+        rel = finding.get("path") or "unknown"
+        issues.append(f"template-override-drift:{rel}")
+    if findings and TEMPLATE_OVERRIDE_DRIFT_REMEDIATION not in remediation:
+        remediation.append(TEMPLATE_OVERRIDE_DRIFT_REMEDIATION)
+
+
 def diagnose(root: Path | None = None) -> dict[str, Any]:
     """Run repo-wide doctor checks against ``root`` (defaults to plugin root)."""
     target = root if root is not None else repo_root()
@@ -243,6 +342,17 @@ def diagnose(root: Path | None = None) -> dict[str, Any]:
     _append_tokenenv_deprecations(target, issues, remediation)
     _append_profile_completeness(target, issues, remediation)
 
+    layout = legacy_layout_report(target)
+    if layout.get("legacyPresent"):
+        issues.append(f"legacy-state-root:{layout.get('moveCount', 0)}-moves")
+        if layout.get("remediation"):
+            remediation.append(layout["remediation"])
+    if layout.get("staleFence"):
+        issues.append("stale-state-root-migrate-fence")
+        remediation.append(
+            "python3 scripts/state_root_migrate.py fence-release --root <repo>"
+        )
+
     try:
         from effective_config_gen import check_drift
 
@@ -253,6 +363,8 @@ def diagnose(root: Path | None = None) -> dict[str, Any]:
                 remediation.append("python3 scripts/effective_config_gen.py all --write")
     except ImportError:
         pass
+
+    _append_template_override_drift(target, issues, remediation)
 
     verdict = "pass" if not issues else "warn"
     return {
@@ -282,6 +394,21 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Apply refresh for unset curated keys only",
     )
+    sub.add_parser("legacy-layout", help="Report legacy state-root layout and proposed moves")
+    migrate_p = sub.add_parser(
+        "state-root-migrate",
+        help="Consent-gated state-root relocation (enumerates moves; requires --confirm)",
+    )
+    migrate_p.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Consent to relocate after reviewing the enumerated move set",
+    )
+    migrate_p.add_argument(
+        "--plugin-root",
+        default=None,
+        help="Installed plugin root for redirect-map skew comparison",
+    )
     args = parser.parse_args(argv)
     root = Path(args.root).resolve() if args.root else repo_root()
     command = args.command or "diagnose"
@@ -297,6 +424,23 @@ def main(argv: list[str] | None = None) -> int:
         if out.get("verdict") == "confirm-required":
             return 1
         return 0 if out.get("verdict") == "pass" else 1
+
+    if command == "legacy-layout":
+        out = legacy_layout_report(root)
+        print(json.dumps(out, indent=2))
+        return 0 if out.get("verdict") == "pass" else 1
+
+    if command == "state-root-migrate":
+        plugin_root = Path(args.plugin_root).resolve() if getattr(args, "plugin_root", None) else None
+        out = state_root_migrate_consent(
+            root,
+            confirm=bool(args.confirm),
+            plugin_root=plugin_root,
+        )
+        print(json.dumps(out, indent=2))
+        if out.get("verdict") in ("pass",):
+            return 0
+        return 1
 
     out = diagnose(root)
     print(json.dumps(out, indent=2))

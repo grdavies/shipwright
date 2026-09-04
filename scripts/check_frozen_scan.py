@@ -105,9 +105,9 @@ def is_amendment_companion_tasklist(path: str, amended: list[str]) -> bool:
     return subprocess.run([sys.executable, str(SCRIPT_DIR / "doc_format.py"), "check", path], cwd=str(git_root()), capture_output=True, check=False).returncode == 0
 
 def load_frozen_paths() -> list[str]:
-    cfg = None
-    for c in (git_root()/".cursor/workflow.config.json", git_root()/"workflow.config.json"):
-        if c.is_file(): cfg = json.loads(c.read_text()); break
+    from shipwright_paths import load_workflow_config
+
+    cfg = load_workflow_config(git_root()) or None
     paths = []
     if cfg:
         for item in cfg.get("doc", {}).get("frozenArtifacts", []) or []:

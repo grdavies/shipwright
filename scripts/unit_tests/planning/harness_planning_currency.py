@@ -46,7 +46,7 @@ FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
-LAYOUT_SW="$ROOT/.sw/layout.md"
+LAYOUT_SW="$ROOT/.shipwright/layout.md"
 LAYOUT_CORE="$ROOT/core/sw-reference/layout.md"
 SCHEMA="$ROOT/core/sw-reference/config.schema.json"
 WF_SW="$ROOT/.sw/workflow.config.example.json"

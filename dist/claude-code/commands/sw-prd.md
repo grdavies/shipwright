@@ -37,7 +37,7 @@ Typed frozen-deliverable author. Default `--type prd` writes a PRD; `--type deci
    - Resolve tier:
      - **Full:** require brainstorm doc; refuse if missing (ordering guard).
      - **Standard:** accept triaged request directly.
-   - Assign PRD number per collision policy in `.sw/layout.md` (scan `docs/prds/`).
+   - Assign PRD number per collision policy in `.shipwright/layout.md` (scan `docs/prds/`).
    - Draft all required PRD sections; carry forward brainstorm R-IDs where present.
    - **Frontmatter linkage (Full tier, R52):** write the back-reference via
      `python3 scripts/doc_link.py write-backref --brainstorm <path> --prd <path>` (sets canonical

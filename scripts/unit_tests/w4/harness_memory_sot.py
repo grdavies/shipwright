@@ -44,7 +44,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/fixture-lib.sh"
 
 MEMORY_SKILL="$(content_path skills/memory/SKILL.md)"
 GUARDRAILS="$(content_path rules/memory-guardrails.mdc)"
-LAYOUT="$ROOT/.sw/layout.md"
+LAYOUT="$ROOT/.shipwright/layout.md"
 SCHEMA="$ROOT/.sw/config.schema.json"
 WF="$ROOT/.cursor/workflow.config.json"
 FAIL=0

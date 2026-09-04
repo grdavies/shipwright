@@ -31,6 +31,7 @@ from memory_write_binding import (
     resolve_write_binding,
 )
 from sw_resolve_plugin_root import resolve_plugin_root
+import shipwright_paths
 
 RulesLoader = Callable[[Path, str], dict[str, Any]]
 MutatingWriter = Callable[[MemoryWriteBinding], dict[str, Any]]
@@ -41,9 +42,10 @@ UNBOUND_DISPLAY_GUIDANCE = IN_REPO_PROVIDER
 
 
 class PreflightError(Exception):
-    def __init__(self, message: str, *, cause: str) -> None:
+    def __init__(self, message: str, *, cause: str, path: str | None = None) -> None:
         super().__init__(message)
         self.cause = cause
+        self.path = path
 
 
 class RulesLoadRequiredError(PreflightError):
@@ -58,15 +60,37 @@ class RulesLoadRequiredError(PreflightError):
 
 
 def load_allowlist(root: Path) -> set[str]:
-    path = root / ".cursor" / "sw-memory-rule-allowlist.json"
+    """Fail closed when the allowlist is absent, unreadable, or unparseable (PRD 342 R53)."""
+    path = shipwright_paths.memory_rule_allowlist_path(root)
     if not path.is_file():
-        return set()
+        # Resolver returns preferred path when neither layout exists.
+        raise PreflightError(
+            f"rule allowlist absent at {path}",
+            cause="allowlist-missing",
+            path=str(path),
+        )
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        raise PreflightError("rule allowlist unreadable", cause="allowlist-corrupt")
+        raw = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise PreflightError(
+            f"rule allowlist unreadable at {path}: {exc}",
+            cause="allowlist-unreadable",
+            path=str(path),
+        ) from exc
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise PreflightError(
+            f"rule allowlist unparseable at {path}: {exc}",
+            cause="allowlist-unparseable",
+            path=str(path),
+        ) from exc
     if not isinstance(data, list):
-        raise PreflightError("rule allowlist must be a JSON array", cause="allowlist-corrupt")
+        raise PreflightError(
+            f"rule allowlist must be a JSON array at {path}",
+            cause="allowlist-unparseable",
+            path=str(path),
+        )
     return {str(item) for item in data}
 
 

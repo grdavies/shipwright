@@ -14,8 +14,9 @@ import os
 import stat
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -32,6 +33,327 @@ from sw_scripts_resolve import (
 )
 
 MANIFEST_REL = ".cursor/sw-scripts-facade.json"
+
+# Priority-zero interview surfaces (PRD 342 R24/R25) — recorded via this façade.
+PRIORITY_ZERO_SURFACES: tuple[str, ...] = (
+    "verify",
+    "ci-stub",
+    "credentials",
+    "models.tiers",
+    "defaultBaseBranch",
+)
+SurfaceState = Literal["detected", "confirmed", "declined"]
+SURFACE_STATES: frozenset[str] = frozenset({"detected", "confirmed", "declined"})
+
+DECLINE_CONSEQUENCES: dict[str, str] = {
+    "verify": (
+        "verify.* remains unset — check-gate and deliver cannot run project verification commands"
+    ),
+    "ci-stub": (
+        "no PR CI workflow recorded — deliver refuses until CI presence is satisfied or a stub is applied"
+    ),
+    "credentials": (
+        "host.credentialRef and/or projectId remain unset — credential broker pairing stays blocked"
+    ),
+    "models.tiers": (
+        "models.tiers remains unset — model-tier dispatch has no configured cheap/build/mid/deep mapping"
+    ),
+    "defaultBaseBranch": (
+        "defaultBaseBranch remains unset — base-branch resolution may fail closed for PR and deliver flows"
+    ),
+}
+
+
+def record_priority_zero_surface(
+    surface: str,
+    state: SurfaceState,
+    *,
+    value: Any = None,
+    consequence: str | None = None,
+    source: str | None = None,
+) -> dict[str, Any]:
+    """Record one priority-zero surface as detected | confirmed | declined-with-consequence (R25)."""
+    if surface not in PRIORITY_ZERO_SURFACES:
+        raise ValueError(f"unknown priority-zero surface: {surface}")
+    if state not in SURFACE_STATES:
+        raise ValueError(f"invalid surface state: {state}")
+    record: dict[str, Any] = {
+        "surface": surface,
+        "state": state,
+    }
+    if value is not None:
+        record["value"] = value
+    if source:
+        record["source"] = source
+    if state == "declined":
+        text = (consequence or DECLINE_CONSEQUENCES.get(surface) or "").strip()
+        if not text:
+            raise ValueError(f"declined surface {surface} requires a non-empty consequence")
+        record["consequence"] = text
+    elif consequence:
+        record["consequence"] = consequence
+    return record
+
+
+def validate_priority_zero_coverage(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Assert five-of-five coverage and non-empty decline consequences (R24/R25)."""
+    by_surface: dict[str, dict[str, Any]] = {}
+    errors: list[str] = []
+    for record in records:
+        if not isinstance(record, dict):
+            errors.append("non-object surface record")
+            continue
+        surface = str(record.get("surface") or "")
+        state = str(record.get("state") or "")
+        if surface not in PRIORITY_ZERO_SURFACES:
+            errors.append(f"unknown surface: {surface}")
+            continue
+        if state not in SURFACE_STATES:
+            errors.append(f"{surface}: invalid state {state}")
+            continue
+        if surface in by_surface:
+            errors.append(f"{surface}: duplicate record")
+            continue
+        if state == "declined" and not str(record.get("consequence") or "").strip():
+            errors.append(f"{surface}: declined without consequence")
+            continue
+        by_surface[surface] = record
+    missing = [name for name in PRIORITY_ZERO_SURFACES if name not in by_surface]
+    if missing:
+        errors.append(f"missing surfaces: {', '.join(missing)}")
+    return {
+        "verdict": "pass" if not errors else "fail",
+        "recorded": len(by_surface),
+        "expected": len(PRIORITY_ZERO_SURFACES),
+        "surfaces": [by_surface[name] for name in PRIORITY_ZERO_SURFACES if name in by_surface],
+        "errors": errors,
+    }
+
+
+# Broker-reference capture (PRD 342 R4 / R29) — config bodies hold refs only.
+CREDENTIAL_MATERIAL_KEYS: frozenset[str] = frozenset(
+    {
+        "token",
+        "secret",
+        "password",
+        "accessToken",
+        "apiKey",
+        "api_key",
+        "privateKey",
+        "private_key",
+        "clientSecret",
+        "client_secret",
+        "refreshToken",
+        "refresh_token",
+        "bearer",
+        "authorization",
+        "pat",
+        "personalAccessToken",
+    }
+)
+SCOPE_ALLOWLIST_FIELDS: tuple[str, ...] = (
+    "allowedRepos",
+    "allowedProjectIds",
+    "allowedEndpoints",
+)
+
+
+def _looks_like_secret_value(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    text = value.strip()
+    if len(text) < 12:
+        return False
+    lowered = text.lower()
+    if lowered.startswith(("ghp_", "gho_", "ghu_", "ghs_", "ghr_", "glpat-", "sk-")):
+        return True
+    # Long opaque strings without a ref-like separator are refused as material.
+    if "://" not in text and "/" not in text and text.count("-") < 2 and " " not in text:
+        if len(text) >= 24 and any(ch.isdigit() for ch in text):
+            return True
+    return False
+
+
+def _find_credential_material(payload: Any, *, path: str = "") -> list[str]:
+    hits: list[str] = []
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            key_text = str(key)
+            child = f"{path}.{key_text}" if path else key_text
+            if key_text in CREDENTIAL_MATERIAL_KEYS:
+                hits.append(child)
+                continue
+            hits.extend(_find_credential_material(value, path=child))
+        return hits
+    if isinstance(payload, list):
+        for index, item in enumerate(payload):
+            hits.extend(_find_credential_material(item, path=f"{path}[{index}]"))
+        return hits
+    if _looks_like_secret_value(payload):
+        hits.append(path or "<value>")
+    return hits
+
+
+def store_broker_reference(
+    *,
+    credential_ref: str,
+    project_id: str,
+    extra: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Capture a broker reference only — never credential material (R4, R29).
+
+    Returns a config-body fragment with ``host.credentialRef`` + ``projectId``.
+    Any credential-shaped keys or values cause a fail verdict before success.
+    """
+    ref = str(credential_ref or "").strip()
+    project = str(project_id or "").strip()
+    fragment: dict[str, Any] = {
+        "projectId": project,
+        "host": {"credentialRef": ref},
+    }
+    if extra:
+        if not isinstance(extra, Mapping):
+            return {
+                "verdict": "fail",
+                "error": "invalid-extra-payload",
+                "wrote": False,
+            }
+        # Shallow-merge extras under host only when they are non-material metadata.
+        host_extra = extra.get("host") if isinstance(extra.get("host"), Mapping) else None
+        if host_extra:
+            merged_host = dict(fragment["host"])
+            merged_host.update(dict(host_extra))
+            fragment["host"] = merged_host
+        for key, value in extra.items():
+            if key == "host":
+                continue
+            fragment[key] = value
+
+    material_paths = _find_credential_material(fragment)
+    if not ref:
+        return {
+            "verdict": "fail",
+            "error": "missing-credential-ref",
+            "wrote": False,
+            "fragment": None,
+        }
+    if not project:
+        return {
+            "verdict": "fail",
+            "error": "missing-project-id",
+            "wrote": False,
+            "fragment": None,
+        }
+    if material_paths:
+        return {
+            "verdict": "fail",
+            "error": "credential-material-refused",
+            "materialPaths": material_paths,
+            "wrote": False,
+            "fragment": None,
+        }
+    return {
+        "verdict": "pass",
+        "fragment": fragment,
+        "credentialRef": ref,
+        "projectId": project,
+        "wrote": False,
+        "material": False,
+    }
+
+
+def validate_broker_reference_scope(
+    *,
+    credential_ref: str,
+    repo: str,
+    project_id: str,
+    endpoint: str,
+    selector_entry: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Validate a broker reference against selector scope allowlists before success (R29).
+
+    Fail-closed: missing entry, missing allowlists, or out-of-scope repo / project /
+    endpoint refuse success.
+    """
+    ref = str(credential_ref or "").strip()
+    repo_slug = str(repo or "").strip()
+    project = str(project_id or "").strip()
+    dest = str(endpoint or "").strip()
+    errors: list[str] = []
+
+    if not ref:
+        errors.append("missing-credential-ref")
+    if not isinstance(selector_entry, Mapping) or not selector_entry:
+        errors.append("missing-selector-entry")
+        return {
+            "verdict": "fail",
+            "error": "out-of-scope-reference",
+            "errors": errors,
+            "inScope": False,
+        }
+
+    for field in SCOPE_ALLOWLIST_FIELDS:
+        values = selector_entry.get(field)
+        if not isinstance(values, list) or not values:
+            errors.append(f"missing-{field}")
+
+    allowed_repos = [
+        str(item).strip().lower()
+        for item in (selector_entry.get("allowedRepos") or [])
+        if isinstance(item, str) and item.strip()
+    ]
+    allowed_projects = [
+        str(item).strip()
+        for item in (selector_entry.get("allowedProjectIds") or [])
+        if isinstance(item, str) and item.strip()
+    ]
+    allowed_endpoints = [
+        str(item).strip()
+        for item in (selector_entry.get("allowedEndpoints") or [])
+        if isinstance(item, str) and item.strip()
+    ]
+
+    if repo_slug and allowed_repos and repo_slug.lower() not in allowed_repos:
+        errors.append("repo-out-of-scope")
+    if project and allowed_projects and project not in allowed_projects:
+        errors.append("project-out-of-scope")
+    if dest and allowed_endpoints:
+        dest_norm = dest.rstrip("/")
+        endpoint_ok = False
+        for allowed in allowed_endpoints:
+            allowed_norm = allowed.rstrip("/")
+            if dest_norm == allowed_norm or dest_norm.startswith(allowed_norm + "/"):
+                endpoint_ok = True
+                break
+            # Host-only allowlist entries.
+            if "://" not in allowed and "://" in dest:
+                if (urllib.parse.urlparse(dest).hostname or "").lower() == allowed.lower():
+                    endpoint_ok = True
+                    break
+        if not endpoint_ok:
+            errors.append("endpoint-out-of-scope")
+
+    if errors:
+        return {
+            "verdict": "fail",
+            "error": "out-of-scope-reference",
+            "errors": errors,
+            "credentialRef": ref,
+            "inScope": False,
+            "allowedRepos": allowed_repos,
+            "allowedProjectIds": allowed_projects,
+            "allowedEndpoints": allowed_endpoints,
+        }
+    return {
+        "verdict": "pass",
+        "credentialRef": ref,
+        "inScope": True,
+        "allowedRepos": allowed_repos,
+        "allowedProjectIds": allowed_projects,
+        "allowedEndpoints": allowed_endpoints,
+        "errors": [],
+    }
+
 
 # Documented deliver entrypoint forwarders — extend only via /sw-init re-emit.
 DELIVER_ENTRYPOINTS: tuple[str, ...] = (

@@ -304,7 +304,7 @@ control changes fail closed — finish or abort the run first.
 3. Re-run `python3 scripts/credentials-doctor.py --root .` and confirm `lastSuccessfulResolution` updates
    for the rotated ref.
 4. Optional audit: append a `rotation` event to the machine-local provenance journal (string metadata only —
-   no secrets). See `.sw/layout.md` **Credential machine-local records**.
+   no secrets). See `.shipwright/layout.md` **Credential machine-local records**.
 
 Never widen selector scope (`allowedRepos`, `allowedProjectIds`, `allowedEndpoints`) without pairing
 approval.

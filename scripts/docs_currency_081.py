@@ -10,7 +10,7 @@ from typing import Any
 RELEASE_GUIDE_ARTIFACTS: tuple[dict[str, Any], ...] = (
     {
         "id": "layout",
-        "doc": ".sw/layout.md",
+        "doc": ".shipwright/layout.md",
         "sources": (
             "scripts/wave_run_paths.py",
             "scripts/doc_loop.py",

@@ -11,7 +11,9 @@ from typing import Any, Iterator
 
 from planning_canonical import DOC_REVIEW_MARKER, MARKER_UNIT_ID
 
+
 from ._common import content_hash, finalize_materialize_from_get, log_operation
+from .issues_bundle_assets import IssueStoreBundleAssetsMixin
 from .issues_helpers import (
     guard_unit_id_marker_reuse,
     issue_index_key,
@@ -19,9 +21,6 @@ from .issues_helpers import (
     mutate_put_journal,
     read_issue_unit_index_locked,
     read_put_journal_locked,
-    record_artifact_type,
-    record_unit_id,
-    self_heal_issue_unit_index,
 )
 from .memory_cache import ReplicatedPlanningCacheBackend
 from ..model import StoreResult
@@ -161,7 +160,7 @@ def assert_doc_review_authorship(
 
 
 
-class IssueStoreBackend(PlanningStoreBackend):
+class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
     backend_id = "issue-store"
 
     def __init__(self, root: Path, cfg: dict[str, Any]) -> None:
@@ -552,23 +551,12 @@ class IssueStoreBackend(PlanningStoreBackend):
             existing_native_links=list(existing.native_links or []) if existing is not None else None,
         )
 
-    def self_heal_unit_index(self) -> dict[str, Any]:
-        def _resolve(issue_id: str) -> Any | None:
-            try:
-                return self._client.issue_get(issue_id)
-            except Exception:
-                return None
-
-        return self_heal_issue_unit_index(
-            self.root,
-            project_key=self.project_key,
-            resolve_record=_resolve,
-            record_unit_id=lambda rec: record_unit_id(rec, ps_mod=_ps(), unit_marker=MARKER_UNIT_ID),
-            record_artifact_type=lambda rec: record_artifact_type(rec, ps_mod=_ps()),
-        )
 
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
         _ps().reject_bare_integer_unit_id(unit_id)
+        role = self._bundle_asset_role(body_path)
+        if role is not None:
+            return self._put_bundle_asset(unit_id, body_path, content, role)
         self._guard_write_visibility(unit_id, body_path, content)
         self._guard_write_secrets(content, path_hint=body_path)
         self.self_heal_unit_index()  # R39
@@ -728,6 +716,9 @@ class IssueStoreBackend(PlanningStoreBackend):
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=digest)
 
     def get(self, unit_id: str, body_path: str) -> StoreResult:
+        role = self._bundle_asset_role(body_path)
+        if role is not None:
+            return self._get_bundle_asset(unit_id, body_path, role)
         try:
             record = self._lookup_record(unit_id, body_path)
         except _ps().IssueNotFound:

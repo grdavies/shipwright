@@ -37,7 +37,7 @@ When task generation covers PRDs with an attached `DecisionGraph`:
 
 ## Path
 
-`docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` per `.sw/layout.md`.
+`docs/prds/<n>-<slug>/tasks-<n>-<slug>.md` per `.shipwright/layout.md`.
 
 ## Procedure
 

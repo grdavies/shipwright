@@ -377,20 +377,9 @@ def apply_contention(
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (
-        ".cursor/workflow.config.json",
-        "workflow.config.json",
-        ".sw/workflow.config.example.json",
-    ):
-        path = root / rel
-        if path.is_file():
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def load_parallel_ceiling(root: Path, args: list[str]) -> int:
     explicit = parse_kv(args, "--ceiling")
     if explicit is not None:
@@ -1979,6 +1968,14 @@ def cmd_plan(root: Path, args: list[str]) -> None:
                 }
             )
 
+        # Opt-in converge phase (PRD 342 R42/R43): disabled by default; when enabled,
+        # appends a converge item without requiring a second deliver input.
+        from converge_phase import maybe_extend_deliver_items
+
+        items_out = maybe_extend_deliver_items(
+            root, items_out, task_list=task_list
+        )
+
         out: dict[str, Any] = {
             "verdict": "pass",
             "mode": "phase",
@@ -2247,15 +2244,19 @@ def cmd_explain_plan(root: Path, args: list[str]) -> None:
             task_path = resolve_task_list_path(root, task_list)
             content = task_path.read_text(encoding="utf-8")
             phases = parse_phases(content)
+            items = [
+                {
+                    "id": phase["id"],
+                    "slug": phase["slug"],
+                    "title": phase.get("title") or phase["slug"],
+                }
+                for phase in phases
+            ]
+            from converge_phase import maybe_extend_deliver_items
+
+            items = maybe_extend_deliver_items(root, items, task_list=task_list)
             plan = {
-                "items": [
-                    {
-                        "id": phase["id"],
-                        "slug": phase["slug"],
-                        "title": phase.get("title") or phase["slug"],
-                    }
-                    for phase in phases
-                ],
+                "items": items,
                 "maxConcurrency": 1,
                 "safety": {
                     "humanMergeGate": True,
@@ -2273,13 +2274,32 @@ def cmd_explain_plan(root: Path, args: list[str]) -> None:
                     "or an existing deliver plan"
                 )
             plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            task_list_for_converge = str(plan.get("source_task_list") or "")
+            if task_list_for_converge and isinstance(plan.get("items"), list):
+                from converge_phase import maybe_extend_deliver_items
+
+                plan = dict(plan)
+                plan["items"] = maybe_extend_deliver_items(
+                    root, list(plan["items"]), task_list=task_list_for_converge
+                )
         graph = _graph_from_plan_document(plan)
+        from converge_phase import is_converge_enabled, maybe_attach_converge_nodes
+
+        if is_converge_enabled(root):
+            graph = maybe_attach_converge_nodes(root, graph)
 
     node_ids = [str(node["id"]) for node in graph.get("spec", {}).get("nodes", [])]
     estimates = _load_estimates_from_corpus(root, node_ids)
     # Merge declared duration hints already handled inside GraphObservability.
     obs = GraphObservability(graph, receipts=[], estimated_durations=estimates)
     payload = obs.explain_plan()
+    # When converge is enabled, surface nodes with the same field shape as existing
+    # plan nodes; per-node progress continues to come from status explain (R55).
+    from converge_phase import explain_plan_nodes, is_converge_enabled
+
+    if is_converge_enabled(root):
+        payload = dict(payload)
+        payload["nodes"] = explain_plan_nodes(graph)
     if text_only:
         print(render_graph_text(payload, compact=compact, mode="plan"))
         sys.exit(0)

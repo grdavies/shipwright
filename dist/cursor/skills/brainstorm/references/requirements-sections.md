@@ -34,7 +34,7 @@ Add `frozen: true` and `frozen_at: YYYY-MM-DD` only via `/sw-freeze` — not dur
 
 ## Path
 
-`docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md` per `.sw/layout.md`.
+`docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md` per `.shipwright/layout.md`.
 
 ## Exemplar
 

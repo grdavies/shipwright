@@ -54,6 +54,7 @@ CANCELLED_PRD_SUPERSESSION: dict[str, tuple[str, str]] = {
 
 ALLOWED_TOUCH_PREFIXES = (
     "docs/",
+    # shipwright-paths-exclusion: migration manifest enumerates legacy paths for cutover
     ".cursor/workflow.config.json",
     "workflow.config.json",
     ".gitignore",
@@ -629,7 +630,7 @@ def _git_head(worktree: Path) -> str:
 
 def flip_config(root: Path, planning_dir: str) -> None:
     worktree = git_root(root)
-    rel_cfg = ".cursor/workflow.config.json"
+    rel_cfg = ".cursor/workflow.config.json"  # shipwright-paths-exclusion: migration write path names legacy location until redirect lands
     cfg_path = worktree / rel_cfg
     data = load_json(cfg_path) if cfg_path.is_file() else {}
     data["planningDir"] = planning_dir

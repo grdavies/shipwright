@@ -232,6 +232,22 @@ Run `/sw-init` in your **target project repo**. It walks through setup and write
 config, validates project-type detection, surfaces **version drift** when `configuredWith` differs from
 the installed plugin, and offers consent-gated refresh without overwriting user-set verify or base branch.
 
+### Interview priority tiering
+
+`/sw-init` interviews configuration in three tiers so a default run is predictable:
+
+| Tier | What it covers | When it appears |
+|------|----------------|-----------------|
+| **Priority zero** | `verify`, `ci-stub`, `credentials`, `models.tiers`, `defaultBaseBranch` | Always in the first interview — every surface ends detected, confirmed, or declined-with-consequence |
+| **Priority one** | Schema keys marked priority one (host, planning, memory, worktree, review) | Inline in the same run after priority zero |
+| **Priority two** | Every remaining top-level schema key (and any key added later) | Behind progressive disclosure only — never forced on a default run |
+
+New schema keys default to **priority two**. Re-running `/sw-init` on an already-configured repo
+proposes **deltas only** against the recorded `configuredWith` stamp and applies nothing without
+consent. Credential answers store a **broker reference** (`host.credentialRef` + `projectId`) —
+never token material — and the reference is validated against selector `allowedRepos` /
+`allowedProjectIds` / `allowedEndpoints` before the run reports success.
+
 ### Step 1 — Memory provider
 
 `memory.provider` is an **open string** — not a closed enum. Operators select a **catalog-registered**
@@ -929,7 +945,7 @@ qualifying runs without adding commands.
 #### Terminology parity
 
 Use the same vocabulary across this guide, `docs/guides/workflows.md`, `core/commands/sw-status.md`, and
-`.sw/layout.md`:
+`.shipwright/layout.md`:
 
 | Term | Meaning |
 | --- | --- |
@@ -1432,6 +1448,35 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 # edit memory.project, verify.*, providers
 ```
 
+## Template resolution stack and converge phase
+
+Shipwright resolves templates through a three-layer stack. Configure the consumer-visible
+roots with:
+
+| Key | Default | Role |
+|-----|---------|------|
+| `templates.overridesDir` | `.shipwright/templates` | First layer — repository overrides win when present |
+| `templates.packsDir` | `.shipwright/template-packs` | Second layer — installed local packs (dir or zip only) |
+
+The third layer is the packaged core templates shipped with Shipwright. First match wins
+(overrides → packs → core). With no overrides and no packs installed, every resolved
+template is byte-identical to its core default.
+
+### Converge phase (opt-in, default off)
+
+| Key | Default | Role |
+|-----|---------|------|
+| `converge.enabled` | `false` | When `true`, deliver may append an opt-in converge phase that composes claims audit, gap check, verify gates, and one bundle-anchored assessor |
+
+`converge.enabled` defaults to **off**. With the flag disabled, deliver phase sequence and
+outputs match the pre-change baseline.
+
+**Naming distinction:** the deliver **converge phase** (`converge.enabled`) is not the
+pre-existing WorkflowGraph **`convergence-loop`** node kind. `convergence-loop` is an
+execution-retry construct used elsewhere in the graph runtime. Converge compiles onto the
+closed kinds `gate` (assessor) and `command` (phase body) only — it never uses
+`convergence-loop`. Readers and operators should not conflate the two.
+
 ## All config keys
 
 | Key | Purpose |
@@ -1449,6 +1494,8 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `tasksDir` | Frozen task-list alias (defaults to `prdsDir` until cutover) |
 | `decisionsDir` | Decision-record root |
 | `doc.afterTasks` | After frozen tasks: `stop` \| `confirm` (default) \| `auto` |
+| `templates.overridesDir` | Repository template overrides (default `.shipwright/templates`; first layer of the resolution stack) |
+| `templates.packsDir` | Installed template packs (default `.shipwright/template-packs`; second layer; local dir/zip only) |
 | `communication.defaultIntensity` | Caveman chat intensity when no active command (`full` default) |
 | `communication.routing.commands` | Per `sw-*` command intensity: `normal` \| `lite` \| `full` \| `ultra` \| `inherit` |
 | `models.tiers` | Semantic tier → platform model ID (`cheap`, `build`, `mid`, `deep`) |
@@ -1565,7 +1612,7 @@ it) and remain non-authoritative.
 
 Operator surface: `/sw-init` §5f and `python3 scripts/sw-configure.py doctrine …`. Route choices in
 the [decision tree](decision-tree.md#projectdoctrine-and-architecture-routing). Layout pointers:
-`.sw/layout.md`. Self vs consumer reference: `core/sw-reference/README.md`.
+`.shipwright/layout.md`. Self vs consumer reference: `core/sw-reference/README.md`.
 
 ## Communication routing (caveman intensity)
 
@@ -1602,7 +1649,7 @@ delegated child command. Full policy: `.sw/models-tiering.md`.
 ## Graph execution cache policy
 
 WorkflowGraph content-addressed caching is configured under `graphExecution.cache` and stored separately
-from run journals at `.cursor/sw-graph-cache/` (see `.sw/layout.md`).
+from run journals at `.cursor/sw-graph-cache/` (see `.shipwright/layout.md`).
 
 `GraphScheduler` owns the single owning loop; node work crosses `ExecutionBackend` with host-authoritative terminal envelopes (`scripts/graph/execution_backend.py`). Orchestrator conductor fan-out is orthogonal — not a substitute for graph concurrency.
 
@@ -1689,7 +1736,7 @@ per-item human acknowledgement bound to the redacted draft digest.
 **Route-record layout:** durable audit/resume JSON per captured item lives under
 `.cursor/hooks/state/retro-gap-routes/<signalId>.json` (relative to repo root). Each record tracks
 `signalId`, `dedupKey`, lifecycle `action` (`draft` | `confirmed` | `materialized`), and digest fields.
-See also `.sw/layout.md` (session hook state) and `scripts/planning_gap_capture.py`
+See also `.shipwright/layout.md` (session hook state) and `scripts/planning_gap_capture.py`
 (`RETRO_GAP_ROUTE_REL`).
 
 Schema source: `core/sw-reference/config.schema.json` → `retrospective.gapCapture`.
@@ -2096,7 +2143,7 @@ Offline calibration constants — advisory only; no workflow config keys gate li
 | `RANKING_GATING_ENABLED` (`false`) | `graph.reviewer_metrics.ranking` | Rankings never bind reviewer selection |
 
 Operator CLI: `python3 scripts/reviewer-metrics.py`. Storage authority: `.cursor/sw-learning-store/` via
-`ReviewerMetricsStoreAdapter` — see `.sw/layout.md` and `docs/guides/workflows.md`.
+`ReviewerMetricsStoreAdapter` — see `.shipwright/layout.md` and `docs/guides/workflows.md`.
 
 ### Bounded selection (`review.selection`)
 
@@ -2245,6 +2292,7 @@ Shipwright `2.9.0` · schema `config.schema.json`
 | `contextCompression.strategies.log` | `compress` | `compress` | `compress` | `compress` | `—` | `—` |
 | `contextCompression.strategies.prose` | `compress` | `compress` | `compress` | `compress` | `—` | `—` |
 | `contextCompression.thresholdTokens` | `8000` | `8000` | `8000` | `8000` | `—` | `—` |
+| `converge.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
 | `decisionsDir` | `docs/decisions` | `docs/decisions` | `docs/decisions` | `docs/decisions` | `—` | `—` |
 | `defaultBaseBranch` | `main` | `main` | `main` | `main` | `—` | `—` |
 | `delegation.mode` | `heuristic` | `heuristic` | `heuristic` | `heuristic` | `—` | `—` |

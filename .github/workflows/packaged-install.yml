@@ -1,0 +1,62 @@
+# Packaged-install GA bar (PRD 342 R19).
+# Installs through the packaged console entry point in a clean environment for
+# Cursor and Claude Code, runs the first-feature smoke path, exercises emitter
+# parity over packaged + cloned paths, and proves a fixture descriptor+emitter
+# pair reaches a working state with zero installer-core changes.
+name: packaged-install
+
+on:
+  pull_request:
+  push:
+    branches: [main, "feat/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  packaged-install-ga:
+    name: packaged-install-${{ matrix.integration }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        integration: [cursor, claude-code]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install packaged console entry point
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+
+      - name: Packaged first-feature smoke (${{ matrix.integration }})
+        env:
+          SW_INTEGRATION: ${{ matrix.integration }}
+        run: python scripts/packaged_install_ga_smoke.py --integration "${SW_INTEGRATION}"
+
+      - name: Emitter parity — packaged path
+        run: python scripts/packaged_install_ga_smoke.py --emitter-parity packaged
+
+      - name: Emitter parity — cloned path
+        run: python scripts/packaged_install_ga_smoke.py --emitter-parity cloned
+
+      - name: Fixture descriptor+emitter pair (zero installer-core changes)
+        run: python scripts/packaged_install_ga_smoke.py --fixture-pair
+
+  # Local/CI wiring surface for check-gate (R19): ensures the GA workflow file
+  # and smoke entrypoint remain discoverable even when GH check polling is offline.
+  packaged-install-gate-wiring:
+    name: packaged-install-gate-wiring
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Assert packaged-install is wired into check-gate
+        run: python scripts/packaged_install_ga_smoke.py --assert-check-gate-wiring

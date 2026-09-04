@@ -26,16 +26,9 @@ def fail(error: str, code: int = 20, **extra: Any) -> None:
 
 
 def load_cfg(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-            if isinstance(data, dict):
-                return data
-    return {}
+    from shipwright_paths import load_workflow_config
+
+    return load_workflow_config(root)
 
 
 def main(argv: list[str] | None = None) -> int:

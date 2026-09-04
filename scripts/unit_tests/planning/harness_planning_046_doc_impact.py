@@ -36,7 +36,7 @@ ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 check() { local n="$1" f="$2" p="$3"; if grep -qE "$p" "$f" 2>/dev/null; then ok "$n"; else bad "$n"; fi; }
 
-LAYOUT="$ROOT/.sw/layout.md"
+LAYOUT="$ROOT/.shipwright/layout.md"
 SHIP_STATE="$(content_path skills/shipwright-state/SKILL.md)"
 ISSUE_STORE="$(content_path providers/planning-store/issue-store.md)"
 DELIVER="$(content_path skills/deliver/SKILL.md)"

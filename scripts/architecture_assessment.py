@@ -66,18 +66,9 @@ def parse_iso_date(value: str) -> date | None:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-            if isinstance(data, dict):
-                return data
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def cfg_value(cfg: dict[str, Any], *path: str, default: Any = None) -> Any:
     value: Any = cfg
     for part in path:

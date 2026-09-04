@@ -273,7 +273,8 @@ def check_standard_write_path_produces_native_labels() -> dict:
     body_path = "docs/prds/057-native-labels-demo/057-native-labels-demo.md"
     with tempfile.TemporaryDirectory() as tmp:
         root = _fixture_root(tmp)
-        cfg = json.loads((root / ".cursor/workflow.config.json").read_text())
+        cfg = json.loads(# shipwright-paths-exclusion: fixture reads legacy config seeded by harness setup
+        (root / ".cursor/workflow.config.json").read_text())
         backend = ps.get_backend(root, cfg)
         put_result = backend.put("057-native-labels-demo", body_path, content)
         got = backend.get("057-native-labels-demo", body_path)
@@ -323,7 +324,9 @@ def check_backfill_promotes_legacy_issue_labels() -> dict:
             artifact_type="prd",
             unit_id="999-legacy",
         )
-        cfg = json.loads((root / ".cursor/workflow.config.json").read_text())
+        cfg = json.loads(  # shipwright-paths-exclusion: fixture reads legacy config seeded by harness setup
+            (root / ".cursor/workflow.config.json").read_text()
+        )
         backend = ps.get_backend(root, cfg)
         got = backend.get("999-legacy", body_path)
         reloaded = FixtureIssuesStore(fixture_store_path(root))

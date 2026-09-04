@@ -41,7 +41,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CHECK="$ROOT/scripts/doc-link-check.py"
 DOC_LINK="$ROOT/scripts/doc_link.py"
-LAYOUT="$ROOT/.sw/layout.md"
+LAYOUT="$ROOT/.shipwright/layout.md"
 SW_PRD="$(find "$ROOT/core" -path '*/commands/sw-prd.md' | head -1)"
 SW_FREEZE="$(find "$ROOT/core" -path '*/commands/sw-freeze.md' | head -1)"
 FAIL=0

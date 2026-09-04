@@ -98,5 +98,5 @@ routing where command choice is non-obvious. Fail closed on mechanical lint from
 Reviewer-effectiveness metadata persistence uses **`.cursor/sw-learning-store/` as the sole v1 authority**
 via `ReviewerMetricsStoreAdapter` (Decision D7). `/sw-doc-review` does not write parallel reviewer-metrics
 stores or promote learnings to standing rules — capture flows through the thin adapter only. See
-`.sw/layout.md` (NP-1) and `scripts/unit_tests/graph/test_reviewer_metrics_no_promotion.py`.
+`.shipwright/layout.md` (NP-1) and `scripts/unit_tests/graph/test_reviewer_metrics_no_promotion.py`.
 

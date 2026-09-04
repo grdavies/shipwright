@@ -114,9 +114,12 @@ else
 fi
 
 # --- install-offers-init-in-repo ---
+# Contributor path still offers /sw-init; packaged path (PRD 342 R18/R21) chains
+# machine mirror then repository configure via sw-configure — no parallel install.
 if grep -q '/sw-init' "$ROOT/scripts/install.py" && \
    grep -q 'workflow.config.json' "$ROOT/scripts/install.py" && \
-   ! grep -q 'sw-configure.py' "$ROOT/scripts/install.py"; then
+   grep -q 'sw-configure.py' "$ROOT/scripts/install.py" && \
+   grep -q 'init_packaged' "$ROOT/scripts/install.py"; then
   ok "install-offers-init-in-repo"
 else
   bad "install-offers-init-in-repo"

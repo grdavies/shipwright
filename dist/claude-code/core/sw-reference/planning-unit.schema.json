@@ -47,6 +47,10 @@
       ],
       "description": "Per-unit visibility token (PRD 034). Resolved through scripts/planning_visibility.py when unset."
     },
+    "bundle": {
+      "type": "boolean",
+      "description": "Optional planning-unit bundle declaration signal (PRD 342 R30). True declares a five-asset bundle; absence means no bundle and is never reported incomplete."
+    },
     "depends": {
       "type": "array",
       "items": {

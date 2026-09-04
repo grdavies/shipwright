@@ -10,7 +10,9 @@ def main(argv=None):
     args = list(sys.argv[1:] if argv is None else argv)
     quiet = "--quiet" in args
     root = SCRIPT_DIR.parent
-    config = next((p for p in (root/".cursor/workflow.config.json", root/"workflow.config.json") if p.is_file()), None)
+    from shipwright_paths import workflow_config_path
+
+    config = workflow_config_path(root)
     sw_cfg = SCRIPT_DIR/"sw-configure.py"
     if not sw_cfg.is_file(): return 0
     proc = subprocess.run([sys.executable, str(sw_cfg), "drift-check", "--config", str(config or "/nonexistent")], capture_output=True, text=True)

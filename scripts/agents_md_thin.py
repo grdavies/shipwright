@@ -10,13 +10,12 @@ from pathlib import Path
 
 from host_lib import load_workflow_config
 from memory_lib import memory_section
+import shipwright_paths
 from memory_rules_promote import (
     RuleWriteRefused,
     configured_provider,
 )
 
-RULE_STORE_REL = Path(".cursor/sw-memory/rules")
-ALLOWLIST_REL = Path(".cursor/sw-memory-rule-allowlist.json")
 DEFAULT_AGENTS_REL = Path("AGENTS.md")
 
 _POLICY_BULLET = re.compile(
@@ -28,7 +27,7 @@ _RULE_TABLE_ROW = re.compile(r"^\|\s*[^|]+\|\s*`([a-z][a-z0-9-]*)`\s*\|", re.MUL
 
 
 def load_allowlist(root: Path) -> tuple[str, set[str] | None]:
-    path = root / ALLOWLIST_REL
+    path = shipwright_paths.memory_rule_allowlist_path(root)
     if not path.is_file():
         return "absent", None
     try:
@@ -62,7 +61,7 @@ def referenced_rule_ids(text: str) -> set[str]:
 
 
 def rule_path(root: Path, rule_id: str) -> Path:
-    return root / RULE_STORE_REL / f"{rule_id}.md"
+    return shipwright_paths.memory_rules_dir(root) / f"{rule_id}.md"
 
 
 def active_memory_provider(root: Path) -> str:

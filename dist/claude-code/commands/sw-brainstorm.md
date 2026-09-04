@@ -22,7 +22,7 @@ Full-tier brainstorm stage. Produces `docs/brainstorms/...-requirements.md` with
    `design` via `providers/<memory.provider>.md` — no direct provider call). Surface hits and reconcile
    applicable rules/contradicting decisions before authoring.
 3. One question per turn; synthesis checkpoint before any file write.
-4. **Phase 2 write** — write requirements doc to path in `.sw/layout.md` per
+4. **Phase 2 write** — write requirements doc to path in `.shipwright/layout.md` per
    `skills/brainstorm/references/requirements-sections.md`.
 5. **Spec-rigor gate (hard-blocking, D5):** immediately after the write, run
    `python3 scripts/spec-rigor-check.py --artifact brainstorm --path <requirements-doc>`. Exit `20` halts the

@@ -249,18 +249,9 @@ def validate_profile_schema_paths(root: Path) -> list[str]:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-            if isinstance(data, dict):
-                return data
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def classify_entry(
     entry: ProfileEntry,
     config: dict[str, Any],
@@ -330,6 +321,134 @@ def classify_profile(root: Path, config: dict[str, Any] | None = None) -> dict[s
         "exampleConfigExists": example_path.is_file(),
         "rows": rows,
         "missingSchemaPaths": missing_paths,
+    }
+
+
+# --- Interview priority tiers + consent reuse (PRD 342 R26/R27) -----------------
+
+PRIORITY_ONE_SCHEMA_KEYS: tuple[str, ...] = (
+    "host",
+    "planning",
+    "memory",
+    "worktree",
+    "review",
+)
+INTERVIEW_PRIORITY_DEFAULT = 2
+_SCHEMA_PRIORITY_FIELD = "x-sw-interviewPriority"
+_SCHEMA_PRIORITY_DEFAULT_FIELD = "x-sw-interviewPriorityDefault"
+_SCHEMA_PRIORITY_ONE_FIELD = "x-sw-interviewPriorityOneKeys"
+
+
+def load_config_schema(root: Path) -> dict[str, Any]:
+    return load_json(root / SCHEMA_REL)
+
+
+def interview_priority_default(schema: dict[str, Any] | None = None) -> int:
+    """New schema keys default to priority two (R26)."""
+    if isinstance(schema, dict):
+        raw = schema.get(_SCHEMA_PRIORITY_DEFAULT_FIELD)
+        if isinstance(raw, int):
+            return raw
+    return INTERVIEW_PRIORITY_DEFAULT
+
+
+def priority_one_keys_from_schema(schema: dict[str, Any]) -> tuple[str, ...]:
+    declared = schema.get(_SCHEMA_PRIORITY_ONE_FIELD)
+    if isinstance(declared, list) and all(isinstance(item, str) for item in declared):
+        return tuple(declared)
+    return PRIORITY_ONE_SCHEMA_KEYS
+
+
+def interview_priority_for_key(schema: dict[str, Any], key: str) -> int:
+    """Derive a top-level key's interview priority from the schema key set (R26)."""
+    props = schema.get("properties")
+    if not isinstance(props, dict):
+        return interview_priority_default(schema)
+    node = props.get(key)
+    if isinstance(node, dict):
+        raw = node.get(_SCHEMA_PRIORITY_FIELD)
+        if isinstance(raw, int):
+            return raw
+    if key in priority_one_keys_from_schema(schema):
+        return 1
+    return interview_priority_default(schema)
+
+
+def derive_interview_priorities(schema: dict[str, Any]) -> dict[str, Any]:
+    """Partition schema top-level keys into priority-one (inline) and priority-two (disclosure)."""
+    props = schema.get("properties")
+    if not isinstance(props, dict):
+        return {
+            "priorityOne": [],
+            "priorityTwo": [],
+            "defaultPriority": interview_priority_default(schema),
+            "progressiveDisclosure": True,
+        }
+    priority_one: list[str] = []
+    priority_two: list[str] = []
+    for key in props:
+        if key.startswith("$"):
+            continue
+        tier = interview_priority_for_key(schema, key)
+        if tier <= 1:
+            priority_one.append(key)
+        else:
+            priority_two.append(key)
+    return {
+        "priorityOne": priority_one,
+        "priorityTwo": priority_two,
+        "defaultPriority": interview_priority_default(schema),
+        "progressiveDisclosure": True,
+        "inlinePriorityOne": True,
+    }
+
+
+def interview_plan_consent(*, confirmed: bool) -> dict[str, Any]:
+    """Plan consent gate — reused by the priority-zero interview (R27)."""
+    if not confirmed:
+        return {
+            "gate": "plan",
+            "verdict": "confirm-required",
+            "consented": False,
+            "message": "Interview plan requires explicit consent before apply.",
+        }
+    return {"gate": "plan", "verdict": "pass", "consented": True}
+
+
+def interview_apply_consent(*, confirmed: bool) -> dict[str, Any]:
+    """Apply consent gate — reused by the priority-zero interview (R27)."""
+    if not confirmed:
+        return {
+            "gate": "apply",
+            "verdict": "confirm-required",
+            "consented": False,
+            "message": "Interview apply requires --confirm; nothing written.",
+        }
+    return {"gate": "apply", "verdict": "pass", "consented": True}
+
+
+def interview_reuse_bundle(
+    root: Path,
+    *,
+    config: dict[str, Any] | None = None,
+    plan_confirmed: bool = False,
+    apply_confirmed: bool = False,
+) -> dict[str, Any]:
+    """Reuse findings-report inputs, curated-profile classification, and consent gates (R27)."""
+    cfg = config if config is not None else load_workflow_config(root)
+    profile = classify_profile(root, config=cfg)
+    schema = load_config_schema(root)
+    return {
+        "engine": "existing-init-infrastructure",
+        "profileClassification": profile,
+        "curatedProfileChoice": {
+            "source": "init_profile_report.classify_profile",
+            "verdict": profile.get("verdict"),
+            "rowCount": len(profile.get("rows") or []),
+        },
+        "priorities": derive_interview_priorities(schema),
+        "planConsent": interview_plan_consent(confirmed=plan_confirmed),
+        "applyConsent": interview_apply_consent(confirmed=apply_confirmed),
     }
 
 

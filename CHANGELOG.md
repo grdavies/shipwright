@@ -1182,6 +1182,9 @@
 * merge phase automate-post-merge-retrospective-small into feat/workflow-runtime-autonomy-lifecycle (4432822) <!-- sw-deliver:automate-post-merge-retrospective-small -->
 * merge phase route-redacted-retro-gap-capture-medium into feat/workflow-runtime-autonomy-lifecycle (c99dd6a) <!-- sw-deliver:route-redacted-retro-gap-capture-medium -->
 * merge phase gate-bundle-closeout-and-absorb-audit-small into feat/workflow-runtime-autonomy-lifecycle (7c0d167) <!-- sw-deliver:gate-bundle-closeout-and-absorb-audit-small -->
+* merge phase path-resolution-authority-and-state-root-inventory-unit-1-medium into feat/spec-kit-learnings (212c32f) <!-- sw-deliver:path-resolution-authority-and-state-root-inventory-unit-1-medium -->
+* merge phase path-drift-regression-guard-unit-1-medium into feat/spec-kit-learnings (1c147ac) <!-- sw-deliver:path-drift-regression-guard-unit-1-medium -->
+* merge phase redirect-map-and-gated-state-root-migration-unit-1-medium into feat/spec-kit-learnings (396cc8b) <!-- sw-deliver:redirect-map-and-gated-state-root-migration-unit-1-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

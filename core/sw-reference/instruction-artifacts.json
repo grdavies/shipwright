@@ -193,7 +193,7 @@
       "sourcePath": "core/commands/sw-become.md"
     },
     {
-      "bodyDigest": "f3120866ace05c606a59e4c449bd2990721a13250b47694ae76ccd7dcb57a03f",
+      "bodyDigest": "9502435dfaab7c4b44dc054637e418cad9646824836e4b4df439fa6ae6fd8689",
       "capabilities": [],
       "description": "Explore requirements through collaborative dialogue and write a brainstorm requirements doc. Does not draft a PRD or run the persona panel.",
       "id": "sw-brainstorm",
@@ -256,7 +256,7 @@
       "sourcePath": "core/commands/sw-debug.md"
     },
     {
-      "bodyDigest": "99c867a011f549f4a8a7175c8580ff5d2a2df134d97dd1bf5c785b562a0ce1db",
+      "bodyDigest": "222643a3fb5f1cf96924cd3ac7073080e07eaaaebb814703a7a635df08020052",
       "capabilities": [],
       "description": "Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.",
       "id": "sw-deliver",
@@ -265,7 +265,7 @@
       "sourcePath": "core/commands/sw-deliver.md"
     },
     {
-      "bodyDigest": "d2ea31ee0d7ca6b31376ac1967bd0116f0e852f095057c9c8acba922d66736e7",
+      "bodyDigest": "58097030a6e8f1ce113896f8e79c711a0fd00991ed8b92a296e4b3117e8b1755",
       "capabilities": [],
       "description": "Orchestrate the doc pipeline through task freeze, then branch on doc.afterTasks before dispatching implementation. Does not inline implementation.",
       "id": "sw-doc",
@@ -274,7 +274,7 @@
       "sourcePath": "core/commands/sw-doc.md"
     },
     {
-      "bodyDigest": "605547fd84579097d912629735f1df6c2924834c62f9563dac1241942907c155",
+      "bodyDigest": "33e49aa75fff0b3149a7aa4a23994c03b7cf13a9e581ebad51fb6da421a5e58c",
       "capabilities": [],
       "description": "Review a PRD or decision-record draft with parallel persona sub-agents and apply safe fixes via synthesizer. Does not freeze artifacts or generate tasks.",
       "id": "sw-doc-review",
@@ -418,7 +418,7 @@
       "sourcePath": "core/commands/sw-pr.md"
     },
     {
-      "bodyDigest": "5bf5fe3471cf34b96d56d1574542d88b05535dc4ba727f1aacfae9624ddfbed6",
+      "bodyDigest": "5d7026c94a930bf85730c5a26cf954c12ca87fe8db1353ed173cb516c7b10a79",
       "capabilities": [],
       "description": "Generate a PRD or decision-record draft (Full/Standard). Does not freeze, run persona review, or generate tasks.",
       "id": "sw-prd",
@@ -445,7 +445,7 @@
       "sourcePath": "core/commands/sw-retro.md"
     },
     {
-      "bodyDigest": "c152cbd76992fd67fecf715d24055fb10f7da0a4bd8a8788fca905df139ddced",
+      "bodyDigest": "bd9fbb595349f640e933b85c6e3baf8f7b53c67e47f7fa3830be9c77bb2cbcb9",
       "capabilities": [],
       "description": "Consolidated post-delivery retrospective (retro \u2192 compound write \u2192 memory-sync \u2192 status). Supports --pre-merge/--post-merge phase dispatch; does not merge or auto-promote rules.",
       "id": "sw-retrospective",
@@ -472,7 +472,7 @@
       "sourcePath": "core/commands/sw-setup.md"
     },
     {
-      "bodyDigest": "adf27046fbb84705e7d4b148c0c145f045d71c9805ee655a0aedcee31ee833ab",
+      "bodyDigest": "81f22c96436f03d7242d9e3aa33ef58709ba9bb49c9e705c928345c38a938ae1",
       "capabilities": [],
       "description": "Gated orchestrator over the phase loop \u2014 advances on green, halts at human merge gate. Never merges.",
       "id": "sw-ship",
@@ -508,7 +508,7 @@
       "sourcePath": "core/commands/sw-start.md"
     },
     {
-      "bodyDigest": "031766c15c4f8d7ef9342fe6c961c81a1161637baa3cd628edb8c290d4346ca7",
+      "bodyDigest": "d7edd2334ddee756d2acf06c964b46ad9c1685b4c2acca661e4483be1c0ee8de",
       "capabilities": [],
       "description": "Derive and reconcile PRD living status from git facts. Does not modify frozen PRDs or merge PRs.",
       "id": "sw-status",
@@ -517,7 +517,7 @@
       "sourcePath": "core/commands/sw-status.md"
     },
     {
-      "bodyDigest": "219a483056a80a14411cebc489c10e1b9c8e3cbeb21db505f38675c0863ce25c",
+      "bodyDigest": "abda36f578de6ec29ceac6c66e5e36db4b529c4979668ce966c99a9559ce75e3",
       "capabilities": [],
       "description": "Generate a frozen task list from a frozen PRD in a single pass. Does not start implementation.",
       "id": "sw-tasks",
@@ -562,7 +562,7 @@
       "sourcePath": "core/commands/sw-worktree.md"
     },
     {
-      "bodyDigest": "270b1e7bcc8ca9e988df2b33a5c0309a12d8ae5708c5008990fd1db66efe6b4d",
+      "bodyDigest": "47cf2880127245de83d7876482ec19ae404afc9c36dfc8873bc1eecc19bdfa96",
       "capabilities": [],
       "description": "Explore requirements through one-question-at-a-time dialogue, then write a requirements document with stable R-IDs. Use when scope is open or Full-tier work precedes PRD drafting. Does not freeze artifacts or generate tasks.",
       "id": "brainstorm",
@@ -600,7 +600,7 @@
       "sourcePath": "core/skills/compound/SKILL.md"
     },
     {
-      "bodyDigest": "4da53cdd1d1bf0afd293a8ef15581da3ad78effabd31206b44fd119628eb1c63",
+      "bodyDigest": "9582e1d9297c2b81fe12928f3e0883a6c0ce59ec4c5c3afe64716573145ecfe0",
       "capabilities": [
         "skill.conductor"
       ],
@@ -620,7 +620,7 @@
       "sourcePath": "core/skills/debug/SKILL.md"
     },
     {
-      "bodyDigest": "823275e5378d171e8c2c896a67d558cad79678616c339120f72ffb07ce40c2c7",
+      "bodyDigest": "0ae33ade85830ee67c1f07ea3fe9039e6020e7c392749c929744811a16bf0338",
       "capabilities": [],
       "description": "Dependency-ordered deliver waves with dependent-branch stacking and integration branch lifecycle. Use when shipping frozen task-list phases or multi-feature integration waves. Does not merge to main or bypass the merge gate.",
       "id": "deliver",
@@ -725,7 +725,7 @@
       "sourcePath": "core/skills/parallelism/SKILL.md"
     },
     {
-      "bodyDigest": "ca28045bee2173515469354111d9469148528aa219f58f5327703f12c03c1f43",
+      "bodyDigest": "a50ef55c68b2ea844a46342744b03fff47dac788e779ecdbfcbf38f42af31d1e",
       "capabilities": [],
       "description": "Generate a PRD or decision-record draft for Full or Standard tier. Use when requirements are brainstormed and a written spec is needed before persona review. Does not freeze, run doc-review, or generate tasks.",
       "id": "prd",
@@ -779,7 +779,7 @@
       "sourcePath": "core/skills/simplify/SKILL.md"
     },
     {
-      "bodyDigest": "cba0161c2d5818b249120bd11d4d107a93c7b32686bc2217be5de4ff1b69bdda",
+      "bodyDigest": "cf5657047af705f5be6b15775fb035c547218f4ed0865356a09643bfa07f423a",
       "capabilities": [],
       "description": "Pre-freeze spec quality gates (clarify, checklist, analyze) and R-ID to task to test traceability. Use when validating PRD quality before /sw-freeze on Standard or Full tier. Blocks freeze on hard failures.",
       "id": "spec-rigor",
@@ -806,7 +806,7 @@
       "sourcePath": "core/skills/stabilize-loop/SKILL.md"
     },
     {
-      "bodyDigest": "b3e782f0216a153a3eb3845c9a217826bd5f1e151ade4ba5a3fba13a302323de",
+      "bodyDigest": "83d805867b97bd09471fbeed4ef58460812c3024be7f8b3b8348e4d0f1ce1db5",
       "capabilities": [],
       "description": "Generate a frozen task list from a frozen PRD using the spec union in one pass. Use when PRD is frozen and implementation tasks are needed before /sw-freeze. No mid-pass user gates; does not implement.",
       "id": "tasks",

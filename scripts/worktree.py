@@ -83,11 +83,32 @@ def strip_jsonc(text: str) -> str:
     return "".join(out)
 
 
+def _workflow_config_candidates(root: Path) -> list[Path]:
+    """Prefer shipwright_paths when available; keep harness-friendly fallbacks."""
+    try:
+        from shipwright_paths import workflow_config_candidates
+
+        return list(workflow_config_candidates(root))
+    except ImportError:
+        return [root / ".cursor/workflow.config.json", root / "workflow.config.json"]
+
+
+def _load_workflow_config_jsonc(root: Path) -> dict:
+    for candidate in _workflow_config_candidates(root):
+        if not candidate.is_file():
+            continue
+        raw = candidate.read_text(encoding="utf-8")
+        try:
+            data = json.loads(strip_jsonc(raw))
+        except json.JSONDecodeError:
+            return {}
+        return data if isinstance(data, dict) else {}
+    return {}
+
+
 def repo_root(start: Path | None = None) -> Path:
     script_root = SCRIPT_DIR.parent
-    if (script_root / ".cursor/workflow.config.json").is_file() or (
-        script_root / "workflow.config.json"
-    ).is_file():
+    if any(p.is_file() for p in _workflow_config_candidates(script_root)):
         return script_root
     start = start or Path.cwd()
     proc = subprocess.run(
@@ -103,8 +124,7 @@ def repo_root(start: Path | None = None) -> Path:
 
 def read_config(start: Path | None = None) -> None:
     root = repo_root(start)
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        candidate = root / rel
+    for candidate in _workflow_config_candidates(root):
         if not candidate.is_file():
             continue
         raw = candidate.read_text(encoding="utf-8")
@@ -247,16 +267,7 @@ def _validate_branch_name(branch: str) -> bool:
 
 def ceiling_check(start: Path | None = None) -> int:
     root = repo_root(start)
-    cfg: dict = {}
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        candidate = root / rel
-        if candidate.is_file():
-            raw = candidate.read_text(encoding="utf-8")
-            try:
-                cfg = json.loads(strip_jsonc(raw))
-            except json.JSONDecodeError:
-                cfg = {}
-            break
+    cfg = _load_workflow_config_jsonc(root)
     count = active_worktree_count()
     ceiling = int(cfg.get("worktree", {}).get("parallelCeiling", 4))
     verdict = "ok" if count < ceiling else "at-ceiling"
@@ -286,16 +297,7 @@ def cmd_list(args: argparse.Namespace) -> int:
 
 def load_workflow_config_dict(start: Path | None = None) -> dict:
     root = repo_root(start)
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        candidate = root / rel
-        if not candidate.is_file():
-            continue
-        raw = candidate.read_text(encoding="utf-8")
-        try:
-            return json.loads(strip_jsonc(raw))
-        except json.JSONDecodeError:
-            return {}
-    return {}
+    return _load_workflow_config_jsonc(root)
 
 
 def allocate_port(cfg: dict) -> int:

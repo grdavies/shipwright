@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shipwright"
+version = "2.9.0"
+description = "Shipwright — packaged installer console over the existing emit/install/configure/zipapp spine"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Shipwright" }]
+# No third-party runtime deps — stdlib-first (R3 / R31).
+
+[project.scripts]
+shipwright = "sw.console:main"
+
+[tool.setuptools.packages.find]
+include = ["sw*"]
+exclude = ["scripts*", "core*", "dist*", "platforms*"]

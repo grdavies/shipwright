@@ -23,6 +23,13 @@ from _sw.cli import run_module_main
 
 AMBIGUITY = re.compile(r"\b(TBD|TODO|FIXME|\?\?\?|to be determined)\b", re.I)
 
+# PRD 342 R34 — Acceptance Scenarios + Success Criteria required for new PRD bodies only.
+PRD_BODY_CONTRACT_KEY = "prdBodyContract"
+PRD_BODY_CONTRACT_V2 = "v2"
+PRD_V2_REQUIRED_SECTIONS = ("Acceptance Scenarios", "Success Criteria")
+PRD_BASE_REQUIRED_SECTIONS = ("Overview", "Goals", "Non-Goals", "Requirements", "Testing Strategy")
+
+
 
 def _run(
     root: Path,
@@ -88,9 +95,29 @@ def _run(
             add("checklist", "error", "no R-IDs found in Requirements bullets")
         for d in sorted({r for r in rids if rids.count(r) > 1}):
             add("checklist", "error", f"duplicate R-ID {d}", d)
-        for sec in ("Overview", "Goals", "Non-Goals", "Requirements", "Testing Strategy"):
+        for sec in PRD_BASE_REQUIRED_SECTIONS:
             if not re.search(rf"^##\s+{re.escape(sec)}\s*$", text, re.M | re.I):
                 add("checklist", "error", f"missing section: {sec}")
+        # R34 — forward-only: require Acceptance Scenarios + Success Criteria when
+        # frontmatter declares prdBodyContract: v2 (new PRDs). Existing bodies without
+        # the contract key remain grandfathered and never retroactively fail.
+        try:
+            import planning_bundle as _pb
+
+            fm = _pb.parse_frontmatter(text) or {}
+        except Exception:
+            fm = {}
+        if not isinstance(fm, dict):
+            fm = {}
+        contract = str(fm.get(PRD_BODY_CONTRACT_KEY, "") or "").strip().lower()
+        if contract in {PRD_BODY_CONTRACT_V2, "2", "true", "yes"}:
+            for sec in PRD_V2_REQUIRED_SECTIONS:
+                if not re.search(rf"^##\s+{re.escape(sec)}\s*$", text, re.M | re.I):
+                    add(
+                        "checklist",
+                        "error",
+                        f"missing section: {sec} (required for prdBodyContract: v2)",
+                    )
         if tier == "full":
             oq = section_body("Open Questions")
             if oq.strip():

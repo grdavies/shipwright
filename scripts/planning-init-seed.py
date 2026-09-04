@@ -22,7 +22,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", type=Path, default=None)
     args = parser.parse_args(argv)
     root = args.root.resolve()
-    config_path = (args.config or root / ".cursor/workflow.config.json").resolve()
+    from shipwright_paths import workflow_config_write_path
+
+    config_path = Path(args.config).resolve() if args.config else workflow_config_write_path(root).resolve()
     if not config_path.is_file():
         print(
             json.dumps({

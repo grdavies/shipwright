@@ -33,7 +33,7 @@ def _read_repo_file(rel: str) -> str:
 
 
 def test_docs_restate_np1_np3_boundaries() -> None:
-    layout = _read_repo_file(".sw/layout.md")
+    layout = _read_repo_file(".shipwright/layout.md")
     for phrase in (
         "NP-1",
         "no promotion inflation",
@@ -49,7 +49,7 @@ def test_docs_restate_np1_np3_boundaries() -> None:
 
 def test_decision_stance_1_4_5_encoded() -> None:
     """Stance 1 (offline/advisory), 4 (learning-store authority), 5 (non-gating)."""
-    layout = _read_repo_file(".sw/layout.md")
+    layout = _read_repo_file(".shipwright/layout.md")
     workflows = _read_repo_file("docs/guides/workflows.md")
     assert "advisory-only" in layout.lower() or "advisory only" in layout.lower()
     assert "non-gating" in layout.lower() or "non-gating" in workflows.lower()
@@ -59,7 +59,7 @@ def test_decision_stance_1_4_5_encoded() -> None:
 
 
 def test_decision_reject_closed_loop_np1() -> None:
-    layout = _read_repo_file(".sw/layout.md")
+    layout = _read_repo_file(".shipwright/layout.md")
     assert "closed-loop" in layout.lower()
     assert "no promotion" in layout.lower() or "NP-1" in layout
     promotion_test = _REPO / "scripts/unit_tests/graph/test_reviewer_metrics_no_promotion.py"

@@ -76,7 +76,7 @@ Load `skills/living-status/SKILL.md`.
 
    Advisory recommendations remain non-authoritative: deterministic gates, safety-floor vetoes, and required
    workflow gates are unchanged. Configuration and storage layout: `docs/guides/configuration.md`,
-   `.sw/layout.md`, `docs/guides/workflows.md` (**Evidence-backed triage and planning entry**).
+   `.shipwright/layout.md`, `docs/guides/workflows.md` (**Evidence-backed triage and planning entry**).
 1. **Exploration summary and explain-decision (PRD 331 R23, R45)** — read-only exploration status
    projections (never mutate canonical maps or persistence stores):
 

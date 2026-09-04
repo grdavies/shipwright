@@ -33,8 +33,9 @@ def main(argv=None):
         else:
             print(json.dumps({"status":"failed","reason":"unknown argument"}), file=sys.stderr); return 2
     if config is None:
-        for c in (root/".cursor/workflow.config.json", root/"workflow.config.json"):
-            if c.is_file(): config = c; break
+        from shipwright_paths import workflow_config_path
+
+        config = workflow_config_path(root)
     provider = cfg(config, "verifyE2e.provider", "none")
     enabled = str(cfg(config, "verifyE2e.enabled", "false")).lower() == "true"
     if provider == "none" or not enabled:

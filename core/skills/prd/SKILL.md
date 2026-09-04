@@ -25,9 +25,16 @@ Port of v1 `spec-prd` under `sw-`. Freeze and task generation are separate steps
 5. Technical Requirements
 6. Security & Compliance
 7. Testing Strategy
-8. Rollout Plan
-9. Decision Log
-10. Open Questions
+8. Acceptance Scenarios (required for new PRDs — `prdBodyContract: v2`)
+9. Success Criteria (required for new PRDs — `prdBodyContract: v2`)
+10. Rollout Plan
+11. Decision Log
+12. Open Questions
+
+New PRDs authored after PRD 342 unit 4 must set frontmatter `prdBodyContract: v2` and include
+**Acceptance Scenarios** and **Success Criteria** on the PRD body (not in a sibling asset).
+Existing PRDs without that contract key are grandfathered and must not be retroactively failed
+by the spec-rigor authoring gate.
 
 ## Decision-record sections (required, `--type decision`)
 
@@ -59,8 +66,8 @@ File-store repos: unchanged — paths and file writes below apply.
 
 ## Path
 
-- PRD: `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` per `.sw/layout.md`.
-- Decision: `docs/decisions/<n>-<slug>.md` per `.sw/layout.md`.
+- PRD: `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` per `.shipwright/layout.md`.
+- Decision: `docs/decisions/<n>-<slug>.md` per `.shipwright/layout.md`.
 
 ## Tier routing (PRD only)
 
@@ -77,7 +84,7 @@ At save time on the Full path:
    `python3 scripts/doc_link.py write-forwardref --brainstorm <brainstorm> --prd <prd>`.
 
 `/sw-freeze` re-verifies linkage (`doc-link-check.py`, R55) and may write the forward ref if still writable (R53).
-Fields are documented in `.sw/layout.md`.
+Fields are documented in `.shipwright/layout.md`.
 
 ## DecisionGraph scope (PRD 280 R15)
 

@@ -6,7 +6,9 @@ import json
 import os
 import re
 import shutil
+import threading
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from pathlib import Path
 
 EMITTABLE_DIRS = ("commands", "skills", "rules", "agents", "providers", "communication")
@@ -62,6 +64,78 @@ class EmitterError(Exception):
     """Raised when generation cannot satisfy the platform descriptor."""
 
 
+class HostConventionWriteForbidden(EmitterError):
+    """Raised when workflow logic attempts a direct write to a host-convention path."""
+
+
+# Host-required integration surfaces only — not Shipwright runtime state under legacy
+# `.cursor/sw-*` (relocated to `.shipwright/` via shipwright_paths).
+HOST_CONVENTION_PREFIXES: tuple[str, ...] = (
+    ".cursor/rules/",
+    ".cursor/hooks/hooks.json",
+    ".cursor-plugin/",
+    ".claude/",
+)
+
+_emitter_write_guard = threading.local()
+
+
+def _emitter_writes_allowed() -> bool:
+    return bool(getattr(_emitter_write_guard, "allowed", False))
+
+
+@contextmanager
+def emitter_write_context():
+    """Allow host-convention writes only while platform emitters are emitting."""
+    previous = getattr(_emitter_write_guard, "allowed", False)
+    _emitter_write_guard.allowed = True
+    try:
+        yield
+    finally:
+        _emitter_write_guard.allowed = previous
+
+
+def refuse_workflow_write_to_host_convention(target: Path, repo_root: Path) -> None:
+    """Refuse direct workflow writes to host-convention directories (PRD 342 R10)."""
+    if _emitter_writes_allowed():
+        return
+    root = repo_root.resolve()
+    try:
+        rel = target.resolve().relative_to(root).as_posix()
+    except ValueError as exc:
+        raise HostConventionWriteForbidden(
+            f"host-convention write refused: {target} is outside repo root {root}"
+        ) from exc
+    for prefix in HOST_CONVENTION_PREFIXES:
+        normalized = prefix.rstrip("/")
+        if rel == normalized or rel.startswith(prefix):
+            raise HostConventionWriteForbidden(
+                "host-convention paths receive host-required files only through platform "
+                f"emitters and descriptors; refused workflow write to {rel!r} "
+                f"(allowed prefixes: {list(HOST_CONVENTION_PREFIXES)})"
+            )
+
+
+def write_host_convention_file(
+    repo_root: Path, rel_path: str, content: str | bytes, *, mode: int | None = None
+) -> Path:
+    """Write a host-required file from an emitter context only."""
+    if not _emitter_writes_allowed():
+        raise HostConventionWriteForbidden(
+            "write_host_convention_file requires emitter_write_context()"
+        )
+    dest = (repo_root / rel_path).resolve()
+    refuse_workflow_write_to_host_convention(dest, repo_root)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if isinstance(content, str):
+        dest.write_text(content, encoding="utf-8")
+    else:
+        dest.write_bytes(content)
+    if mode is not None:
+        dest.chmod(mode)
+    return dest
+
+
 def read_version(repo_root: Path) -> str:
     """Read the bare semver string from repo-root version.txt."""
     path = repo_root / "version.txt"
@@ -86,9 +160,14 @@ class EmitterBase(ABC):
         """Subclasses enforce supported capability flags (R4)."""
         return
 
-    @abstractmethod
     def emit(self, core_root: Path, repo_root: Path, dest: Path) -> None:
         """Write the full platform tree to dest."""
+        with emitter_write_context():
+            self._emit_impl(core_root, repo_root, dest)
+
+    @abstractmethod
+    def _emit_impl(self, core_root: Path, repo_root: Path, dest: Path) -> None:
+        """Platform-specific emit implementation."""
 
     def emit_zipapp_runtime(self, repo_root: Path, dest: Path) -> None:
         """Build shipwright.pyz and install the per-host thin shim (PRD 091 R3)."""

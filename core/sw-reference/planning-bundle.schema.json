@@ -1,0 +1,143 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/grdavies/shipwright/core/sw-reference/planning-bundle.schema.json",
+  "title": "Shipwright planning-unit bundle contract",
+  "description": "Five-asset planning-unit bundle and declaration signal (PRD 342 R30–R32). Bundle presence is declared on the canonical body frontmatter; it is never inferred from asset files alone.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "declaration",
+    "requiredRoles",
+    "assets"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "PlanningBundle@v1"
+    },
+    "declaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frontmatterKey", "truthyValues"],
+      "description": "Canonical-body frontmatter signal. Units without this signal have no bundle and are never reported incomplete.",
+      "properties": {
+        "frontmatterKey": {
+          "type": "string",
+          "const": "bundle"
+        },
+        "truthyValues": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": ["boolean", "string"]
+          },
+          "description": "Values that declare a bundle (boolean true or string forms true/yes/1)."
+        }
+      }
+    },
+    "requiredRoles": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "plan",
+          "data-model",
+          "contracts",
+          "quickstart",
+          "checklist"
+        ]
+      },
+      "description": "All five roles are required when a bundle is declared (R30)."
+    },
+    "assets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "plan",
+        "data-model",
+        "contracts",
+        "quickstart",
+        "checklist"
+      ],
+      "properties": {
+        "plan": { "$ref": "#/$defs/assetSpec" },
+        "data-model": { "$ref": "#/$defs/assetSpec" },
+        "contracts": { "$ref": "#/$defs/assetSpec" },
+        "quickstart": { "$ref": "#/$defs/assetSpec" },
+        "checklist": { "$ref": "#/$defs/assetSpec" }
+      }
+    },
+    "assetConstraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Hard constraints on co-located asset files (R32).",
+      "properties": {
+        "forbidPlanningUnitFrontmatter": {
+          "type": "boolean",
+          "const": true
+        },
+        "forbidIdKey": {
+          "type": "boolean",
+          "const": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "assetSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "filename"],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": [
+            "plan",
+            "data-model",
+            "contracts",
+            "quickstart",
+            "checklist"
+          ]
+        },
+        "filename": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.-]*\\.md$"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schemaVersion": "PlanningBundle@v1",
+      "declaration": {
+        "frontmatterKey": "bundle",
+        "truthyValues": [true, "true", "yes", "1"]
+      },
+      "requiredRoles": [
+        "plan",
+        "data-model",
+        "contracts",
+        "quickstart",
+        "checklist"
+      ],
+      "assets": {
+        "plan": { "role": "plan", "filename": "plan.md" },
+        "data-model": { "role": "data-model", "filename": "data-model.md" },
+        "contracts": { "role": "contracts", "filename": "contracts.md" },
+        "quickstart": { "role": "quickstart", "filename": "quickstart.md" },
+        "checklist": { "role": "checklist", "filename": "checklist.md" }
+      },
+      "assetConstraints": {
+        "forbidPlanningUnitFrontmatter": true,
+        "forbidIdKey": true
+      }
+    }
+  ]
+}

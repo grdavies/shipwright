@@ -26,16 +26,9 @@ def git_root() -> Path:
 
 
 def load_default_branch(root: Path) -> str:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        p = root / rel
-        if p.is_file():
-            try:
-                b = json.loads(p.read_text(encoding="utf-8")).get("defaultBaseBranch")
-                if b:
-                    return str(b)
-            except (json.JSONDecodeError, OSError):
-                pass
-    return "main"
+    from host_lib import default_base_branch
+
+    return default_base_branch(root)
 
 
 def _git_ref_exists(root: Path, ref: str) -> bool:

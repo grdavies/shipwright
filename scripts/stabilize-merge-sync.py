@@ -43,17 +43,9 @@ def _host_remote(root: Path) -> str:
 
 
 def _default_base(root: Path) -> str:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        cfg_path = root / rel
-        if cfg_path.is_file():
-            try:
-                cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-                base = cfg.get("defaultBaseBranch")
-                if isinstance(base, str) and base.strip():
-                    return base.strip()
-            except (OSError, ValueError, TypeError):
-                pass
-    return "main"
+    from host_lib import default_base_branch
+
+    return default_base_branch(root)
 
 
 def _resolve_base_ref(root: Path, base_ref: str | None) -> str:

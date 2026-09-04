@@ -1,5 +1,23 @@
 # Shipwright artifact layout
 
+> **State-root redirect window (PRD 342 / Unit 1):** The authoritative layout contract
+> now lives at `.shipwright/layout.md`. During the redirect window both trees are
+> valid:
+>
+> | Role | Path |
+> | --- | --- |
+> | Preferred state root | `.shipwright/` |
+> | Legacy Cursor-scoped state | `.cursor/` (sw-* families) |
+> | Legacy `.sw/` operator inputs | `.sw/` → `.shipwright/sw-reference/` |
+> | Packaged reference mirror | `core/sw-reference/layout.md` |
+>
+> Runtime path resolution goes through `scripts/shipwright_paths.py` (R8). Do not
+> hard-code either tree in skills, commands, or rules — point here instead.
+>
+> Legacy stub: `.sw/layout.md` redirects to this file.
+
+---
+
 Single-source path contract for the documentation pipeline and downstream implementation workstream.
 All `sw-` doc commands resolve paths from this document — do not re-decide locations in commands.
 
@@ -1378,6 +1396,20 @@ writes map onto outbox destinations so projection catch-up survives outages/retr
 
 Authoritative templates consumed by host adapters and init helpers. Edit under
 `core/sw-reference/templates/`; build-chain SoT lists `templates/` in `coreAuthoredAllowlist`.
+
+### Resolution stack (PRD 342 R37–R41)
+
+Templates resolve through a fixed three-layer stack (first match wins per path):
+
+1. Repository overrides — `.shipwright/templates`
+2. Installed packs — `.shipwright/template-packs/<id>/` (local directory or zip only; see `scripts/template_pack.py`)
+3. Core defaults — `core/sw-reference/templates`
+
+With no overrides and no packs, every resolved template is byte-identical to its core
+default (`scripts/template_resolve.py`). Provenance names the supplying layer per
+template. Legacy `.sw/templates` is retired (disposition recorded in
+`.shipwright/template-stack-disposition.json`). Doctor reports overrides that shadow a
+core template whose default has since changed.
 
 | Template | Path | Writer | Purpose |
 | --- | --- | --- | --- |

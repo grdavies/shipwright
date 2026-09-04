@@ -172,6 +172,7 @@ def scenario_gap_capture_planning_store_routing(root: Path) -> bool:
         fix = Path(tmp)
         init_git_repo(fix)
         (fix / ".cursor").mkdir(parents=True, exist_ok=True)
+        # shipwright-paths-exclusion: fixture writes legacy config location for gap lifecycle harness
         (fix / ".cursor/workflow.config.json").write_text('{"planning":{"store":{"backend":"in-repo-public"}}}', encoding="utf-8")
         (fix / "docs/prds").mkdir(parents=True, exist_ok=True)
         calls: list[tuple[str, str, str]] = []

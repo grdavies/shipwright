@@ -13,7 +13,7 @@ def test_docs_closeout_and_ship_gate_updated(repo_root: Path) -> None:
     assert ".sw/deliver-closeout" in contributing
     assert "dist_freshness_ship" in contributing
 
-    layout = (repo_root / ".sw/layout.md").read_text(encoding="utf-8")
+    layout = (repo_root / ".shipwright/layout.md").read_text(encoding="utf-8")
     assert "deliver-closeout" in layout
     assert "gitignored" in layout.lower()
 

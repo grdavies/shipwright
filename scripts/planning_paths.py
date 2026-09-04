@@ -89,17 +89,9 @@ def git_root(start: Path | None = None) -> Path:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                return data if isinstance(data, dict) else {}
-            except json.JSONDecodeError:
-                continue
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def schema_dir_default(root: Path, key: str) -> str:
     for candidate in (
         root / ".sw/config.schema.json",
@@ -328,6 +320,80 @@ def shared_human_authored_paths(paths_a: list[str], paths_b: list[str], root: Pa
 
 def brainstorms_rel() -> str:
     return "docs/brainstorms"
+
+
+# --- Planning-unit bundle asset naming (PRD 342 R31) -------------------------------------------
+
+BUNDLE_ASSET_ROLES: tuple[str, ...] = (
+    "plan",
+    "data-model",
+    "contracts",
+    "quickstart",
+    "checklist",
+)
+
+BUNDLE_ASSET_FILENAMES: dict[str, str] = {
+    "plan": "plan.md",
+    "data-model": "data-model.md",
+    "contracts": "contracts.md",
+    "quickstart": "quickstart.md",
+    "checklist": "checklist.md",
+}
+
+
+def bundle_asset_filename(role: str) -> str:
+    """Return the fixed filename for a bundle asset role (R31)."""
+    key = (role or "").strip().lower()
+    try:
+        return BUNDLE_ASSET_FILENAMES[key]
+    except KeyError as exc:
+        raise ValueError(f"unknown bundle asset role: {role}") from exc
+
+
+def bundle_asset_rel(unit_dir_rel: str, role: str) -> str:
+    """Relative path for a bundle asset co-located with the canonical body (R31).
+
+    ``unit_dir_rel`` is the planning-unit folder (filesystem or virtual body prefix
+    under separate-project store location), e.g. ``docs/prds/342-spec-kit-learnings``.
+    """
+    folder = (unit_dir_rel or "").replace("\\", "/").strip("/")
+    if not folder:
+        raise ValueError("unit_dir_rel required")
+    return join_rel(folder, bundle_asset_filename(role))
+
+
+def bundle_asset_paths_rel(unit_dir_rel: str) -> dict[str, str]:
+    """Map every required bundle role to its fixed relative path (R31)."""
+    return {role: bundle_asset_rel(unit_dir_rel, role) for role in BUNDLE_ASSET_ROLES}
+
+
+BUNDLE_ASSET_MARKER_PREFIX = "sw-bundle-asset:"
+
+
+def bundle_role_for_body_path(body_path: str) -> str | None:
+    """Return bundle asset role when ``body_path`` ends with a fixed asset filename (R31/R35)."""
+    name = Path(str(body_path).replace("\\", "/")).name.lower()
+    for role, filename in BUNDLE_ASSET_FILENAMES.items():
+        if name == filename.lower():
+            return role
+    return None
+
+
+def bundle_asset_marker(role: str) -> str:
+    """Issue-store comment marker for a co-located bundle asset (R35)."""
+    key = (role or "").strip().lower()
+    if key not in BUNDLE_ASSET_FILENAMES:
+        raise ValueError(f"unknown bundle asset role: {role}")
+    return f"{BUNDLE_ASSET_MARKER_PREFIX}{key}"
+
+
+def bundle_asset_virtual_body_path(unit_folder_rel: str, role: str) -> str:
+    """Virtual body path for a bundle asset under separate-project store location (R31).
+
+    Same fixed naming as filesystem co-location; callers pass the unit folder's
+    virtual prefix (the path used with ``planning_store.put``).
+    """
+    return bundle_asset_rel(unit_folder_rel, role)
 
 
 def prd_unit_dir_for_artifact(root: Path, artifact: Path) -> Path:

@@ -55,6 +55,7 @@ def scenario_sw_tasks_execute_granularity(root: Path) -> bool:
         tasks_rel = "docs/prds/099-granularity/tasks-099-granularity.md"
         (fix / "docs/prds/099-granularity").mkdir(parents=True)
         (fix / ".cursor").mkdir(exist_ok=True)
+        # shipwright-paths-exclusion: fixture seeds legacy layout path for harness isolation
         (fix / ".cursor/workflow.config.json").write_text(
             json.dumps(
                 {
