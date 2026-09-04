@@ -87,6 +87,28 @@ RESILIENCE_VERIFY_SCOPE = "resilience"
 RESILIENCE_RUNNER_REL = Path("scripts/test/_runner.py")
 
 
+def validate_path_literal_guard(root: Path) -> str | None:
+    """Fail-closed on new relocated-path string literals (PRD 342 R11)."""
+    guard = root / "scripts" / "path_literal_guard.py"
+    if not guard.is_file():
+        return None
+    try:
+        from path_literal_guard import evaluate
+    except ImportError:
+        return None
+    try:
+        payload = evaluate(root)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return f"path-literal-guard-error:{exc}"
+    if payload.get("verdict") == "pass":
+        return None
+    reason = str(payload.get("reason") or "fail")
+    count = payload.get("newRefCount")
+    if count is not None:
+        return f"path-literal-guard:{reason}:new={count}"
+    return f"path-literal-guard:{reason}"
+
+
 def validate_effective_config_drift(root: Path) -> str | None:
     """Fail-closed when generated effective-config/doc projection drifts (PRD 279 R15)."""
     gen = root / "scripts" / "effective_config_gen.py"
@@ -1231,6 +1253,16 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
         jsonio.emit(payload)
         return 30, payload
 
+    path_literal_err = validate_path_literal_guard(root)
+    if path_literal_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": f"pathLiteral:{path_literal_err}",
+            "source": "local-evidence",
+        }
+        jsonio.emit(payload)
+        return 30, payload
+
     effective_config_err = validate_effective_config_drift(root)
     if effective_config_err:
         payload = {
@@ -1381,6 +1413,12 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     manifest_err = validate_pr_test_plan_gate(root, slim_ref)
     if manifest_err:
         payload = {"verdict": "blocked", "reason": f"prTestPlan:{manifest_err}"}
+        jsonio.emit(payload)
+        return 30, payload
+
+    path_literal_err = validate_path_literal_guard(root)
+    if path_literal_err:
+        payload = {"verdict": "blocked", "reason": f"pathLiteral:{path_literal_err}"}
         jsonio.emit(payload)
         return 30, payload
 
