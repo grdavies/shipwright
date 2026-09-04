@@ -10,17 +10,22 @@ conventions live in the [style guide](style-guide.md). Coined terms are in the
 
 ## Default: packaged install + single init
 
-1. Install the packaged console entry point (from a release or local build of this package):
+Initialization steps (canonical — must match `packaged_init_steps()` in
+`scripts/sw-configure.py`):
+
+1. Install the packaged console entry point (`pip install shipwright`).
+2. In the project repository, run `shipwright init --integration <host>`.
+3. Reload the editor; run `/sw-init` only if priority-zero surfaces still need confirm.
+4. Start a small loop (`/sw-doc` or `/sw-deliver run <frozen-task-list>`).
+
+Concrete example:
 
 ```bash
 pip install shipwright
 # or, from a checked-out release tag / wheel:
 # pip install .
-```
 
-2. In the **project** repository you want to configure, run one init for your host:
-
-```bash
+cd /path/to/your-project
 shipwright init --integration cursor
 # or
 shipwright init --integration claude-code
@@ -28,13 +33,8 @@ shipwright init --integration claude-code
 
 That single invocation mirrors the host plugin onto the machine and configures the repository
 (`.shipwright/` state root, host files, optional CI stub). Prefer `--dry-run` first to enumerate
-every path the real run would touch.
-
-3. Reload the editor, then run `/sw-init` (or your host's equivalent) only if the interview still
-has priority-zero surfaces to confirm. For many repos the packaged init already leaves a workable
-baseline.
-
-4. Start a small loop: `/sw-doc` on a tiny idea, or `/sw-deliver run <frozen-task-list>`.
+every path the real run would touch. For many repos the packaged init already leaves a workable
+baseline; `/sw-init` is only needed when priority-zero surfaces still require confirm.
 
 ### Self-check and self-upgrade
 
