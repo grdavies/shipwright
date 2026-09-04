@@ -99,6 +99,7 @@
     "planning-import-inventory.json",
     "planning-privacy-notice.md",
     "planning-readiness.schema.json",
+    "planning-bundle.schema.json",
     "planning-unit.schema.json",
     "pr-test-plan.manifest.json",
     "project-baseline.schema.json",
