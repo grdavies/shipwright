@@ -713,6 +713,7 @@
     "spec_union_056.py",
     "stabilize-merge-sync.py",
     "stabilize_same_stage_lib.py",
+    "state_root_migrate.py",
     "status_collect.py",
     "status_integrity.py",
     "suite_registry.py",
@@ -805,5 +806,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 802
+  "moduleCount": 803
 }
