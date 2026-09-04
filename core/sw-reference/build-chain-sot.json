@@ -117,6 +117,7 @@
     "scripts-call-site-inventory.json",
     "signal-context.schema.json",
     "state-root-inventory.json",
+    "path-literal-ratchet.json",
     "suite-registry.json",
     "suite-registry.schema.json",
     "task-model-allowlist.json",
