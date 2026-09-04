@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Single per-repo configurator for /sw-init (PRD 018 R29/R30/R32)."""
+"""Single per-repo configurator for /sw-init (PRD 018 R29/R30/R32).
+
+PRD 342 R22: dry-run enumerates repository-scope and machine-scope writes before
+any write occurs.
+"""
 from __future__ import annotations
 
 import hashlib
@@ -8,6 +12,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -27,7 +32,7 @@ from init_credential_migration import (
     selector_add,
 )
 from host_lib import default_base_branch
-from init_ci_stub import apply_ci_stub, plan_ci_stub
+from init_ci_stub import STUB_WORKFLOW_REL, apply_ci_stub, plan_ci_stub
 from init_profile_report import (
     classify_profile,
     greenfield_curated_patch,
@@ -864,13 +869,184 @@ def cmd_portability_check(root: Path, config: str) -> int:
     return 0
 
 
+
+def enumerate_write_scope(
+    root: Path,
+    *,
+    integration: str,
+    machine_dest: Path,
+    dist_source: Path,
+    accept_ci_stub: bool = True,
+) -> dict[str, Any]:
+    """Enumerate repo-scope and machine-scope writes before any write (R22).
+
+    Repository scope covers ``.shipwright/`` content, emitter-produced host files
+    (none for zero-footprint consumer configure), and the operator-accepted CI stub.
+    Machine scope covers the declared install root (every path the mirror would write).
+    """
+    from shipwright_paths import STATE_ROOT_PRIMARY, workflow_config_write_path
+
+    import install as install_mod
+
+    root = root.resolve()
+    machine_dest = machine_dest.resolve()
+    config_rel = workflow_config_write_path(root).relative_to(root).as_posix()
+
+    repo_shipwright = [config_rel]
+    # Consumer configure stays zero-footprint for host-convention trees; emitters
+    # write host-required files into the machine plugin tree, not the consumer repo.
+    repo_host_files: list[str] = []
+    repo_ci: list[str] = []
+    if accept_ci_stub:
+        plan = plan_ci_stub(root, wire_verify="off")
+        if plan.get("needed"):
+            repo_ci = [STUB_WORKFLOW_REL.as_posix()]
+
+    machine_paths = install_mod.plan_machine_write_paths(dist_source, machine_dest)
+
+    return {
+        "repoScope": {
+            "stateRoot": STATE_ROOT_PRIMARY,
+            "shipwright": repo_shipwright,
+            "hostFiles": repo_host_files,
+            "ciStub": repo_ci,
+        },
+        "machineScope": {
+            "integration": integration,
+            "installRoot": str(machine_dest),
+            "paths": machine_paths,
+        },
+        "allPaths": sorted(
+            {
+                *{str((root / p).resolve()) for p in repo_shipwright},
+                *{str((root / p).resolve()) for p in repo_host_files},
+                *{str((root / p).resolve()) for p in repo_ci},
+                *machine_paths,
+            }
+        ),
+    }
+
+
+def _build_packaged_draft(root: Path) -> dict[str, Any]:
+    """Build an accept-defaults draft matching write-draft --accept-defaults --write-verify."""
+    detect = _detect_project_type(root)
+    draft: dict[str, Any] = {
+        "doc": {"afterTasks": "confirm"},
+        "compound": {"autonomy": "supervised"},
+        "guardrails": {"enforceBeforeSubmit": True, "requireRuleClass": False},
+        "review": {"provider": "none"},
+        "memory": {"provider": "in-repo", "sourceOfTruth": "auto"},
+        "configuredWith": {
+            "shipwrightVersion": shipwright_version(root),
+            "schemaVersion": schema_version(root),
+        },
+    }
+    draft.update(greenfield_curated_patch())
+    draft = _deep_merge(draft, credential_patch_for_draft(root))
+    comm_defaults_path = root / "core/sw-reference/communication-routing.defaults.json"
+    if comm_defaults_path.is_file():
+        try:
+            comm_defaults = json.loads(comm_defaults_path.read_text(encoding="utf-8"))
+            if isinstance(comm_defaults, dict):
+                draft["communication"] = comm_defaults
+        except json.JSONDecodeError:
+            pass
+    verify: dict[str, str] = {}
+    for key, meta in (detect.get("proposals") or {}).items():
+        if meta.get("safe") and meta.get("command"):
+            verify[key] = meta["command"]
+    if verify:
+        draft["verify"] = verify
+    return _strip_draft_side_channel(draft)
+
+
+def apply_packaged_configure(
+    root: Path,
+    *,
+    accept_ci_stub: bool = True,
+) -> dict[str, Any]:
+    """Write repo-scope configuration for packaged init (existing spine only)."""
+    from shipwright_paths import workflow_config_write_path
+
+    root = root.resolve()
+    draft = _build_packaged_draft(root)
+    validation_errors = _validate_config_document(root, draft)
+    if validation_errors:
+        return {
+            "verdict": "fail",
+            "error": "draft-fails-schema-validation",
+            "validationErrors": validation_errors[:8],
+        }
+
+    config_path = workflow_config_write_path(root)
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    config_path.write_text(json.dumps(draft, indent=2) + "\n", encoding="utf-8")
+    written = [config_path.relative_to(root).as_posix()]
+
+    ci_payload: dict[str, Any] | None = None
+    if accept_ci_stub:
+        ci_payload = apply_ci_stub(root, confirm=True, wire_verify="off")
+        if ci_payload.get("written"):
+            written.append(STUB_WORKFLOW_REL.as_posix())
+
+    return {
+        "verdict": "pass",
+        "configPath": str(config_path),
+        "written": written,
+        "ciStub": ci_payload,
+    }
+
+
+def cmd_dry_run(
+    root: Path,
+    *,
+    integration: str,
+    machine_dest: Path | None,
+    dist_source: Path | None,
+    accept_ci_stub: bool,
+    source_root: Path | None,
+) -> int:
+    """Print the write-scope enumeration without writing (R22)."""
+    import install as install_mod
+
+    try:
+        norm = install_mod.normalize_integration(integration)
+    except ValueError as exc:
+        print(json.dumps({"verdict": "fail", "error": str(exc)}), file=sys.stderr)
+        return 2
+    source_root = source_root or REPO_ROOT
+    dest = (machine_dest or install_mod.default_dest_for(norm)).expanduser().resolve()
+    dist = (dist_source or install_mod.dist_source_for(norm, root=source_root)).resolve()
+    scope = enumerate_write_scope(
+        root,
+        integration=norm,
+        machine_dest=dest,
+        dist_source=dist,
+        accept_ci_stub=accept_ci_stub,
+    )
+    print(
+        json.dumps(
+            {
+                "verdict": "pass",
+                "action": "dry-run",
+                "integration": norm,
+                "scope": scope,
+                "wrote": False,
+            },
+            indent=2,
+        )
+    )
+    return 0
+
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(argv if argv is not None else sys.argv[1:])
     if not args or args[0] in ("-h", "--help"):
         print(
             "usage: sw-configure.py detect|schema-version|shipwright-version|"
-            "drift-check|portability-check|findings|write-draft|credential|ci-stub|"
-            "doctrine",
+            "drift-check|portability-check|findings|write-draft|dry-run|"
+            "credential|ci-stub|doctrine",
             file=sys.stderr,
         )
         return 2 if args else 0
@@ -881,6 +1057,11 @@ def main(argv: list[str] | None = None) -> int:
     accept = False
     write_verify = False
     markdown = False
+    integration = "cursor"
+    machine_dest = ""
+    dist_source = ""
+    source_root = ""
+    accept_ci_stub = True
     i = 0
     while i < len(rest):
         token = rest[i]
@@ -901,6 +1082,30 @@ def main(argv: list[str] | None = None) -> int:
             i += 1
             continue
         if token == "--propose":
+            i += 1
+            continue
+        if token == "--integration" and i + 1 < len(rest):
+            integration = rest[i + 1]
+            i += 2
+            continue
+        if token == "--dest" and i + 1 < len(rest):
+            machine_dest = rest[i + 1]
+            i += 2
+            continue
+        if token == "--dist-source" and i + 1 < len(rest):
+            dist_source = rest[i + 1]
+            i += 2
+            continue
+        if token == "--source-root" and i + 1 < len(rest):
+            source_root = rest[i + 1]
+            i += 2
+            continue
+        if token == "--root" and i + 1 < len(rest):
+            root = Path(rest[i + 1]).expanduser().resolve()
+            i += 2
+            continue
+        if token == "--no-ci-stub":
+            accept_ci_stub = False
             i += 1
             continue
         i += 1
@@ -925,6 +1130,15 @@ def main(argv: list[str] | None = None) -> int:
     if cmd == "write-draft":
         out = config or "/tmp/sw-init-draft.json"
         return cmd_write_draft(root, accept=accept, write_verify=write_verify, config=out)
+    if cmd == "dry-run":
+        return cmd_dry_run(
+            root,
+            integration=integration,
+            machine_dest=Path(machine_dest) if machine_dest else None,
+            dist_source=Path(dist_source) if dist_source else None,
+            accept_ci_stub=accept_ci_stub,
+            source_root=Path(source_root) if source_root else None,
+        )
     if cmd == "ci-stub":
         subcmd, sub_rest = _credential_argv(rest)
         return cmd_ci_stub(root, subcmd, sub_rest)
