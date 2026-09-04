@@ -1714,6 +1714,24 @@
         "skills-spec-fail-name-mismatch",
         "skills-spec-fail-description-shape"
       ]
+    },
+    {
+      "id": "template-resolution-stack-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/docs/test_template_resolution_stack.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1,
+      "scenarios": [
+        "unused-stack-byte-identical",
+        "manifest-less-pack-rejected",
+        "uninstall-restores-prior",
+        "legacy-sw-templates-retired",
+        "override-drift-reported"
+      ]
     }
   ]
 }

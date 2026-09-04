@@ -1449,6 +1449,8 @@ cp core/sw-reference/workflow.config.example.json .cursor/workflow.config.json
 | `tasksDir` | Frozen task-list alias (defaults to `prdsDir` until cutover) |
 | `decisionsDir` | Decision-record root |
 | `doc.afterTasks` | After frozen tasks: `stop` \| `confirm` (default) \| `auto` |
+| `templates.overridesDir` | Repository template overrides (default `.shipwright/templates`; first layer of the resolution stack) |
+| `templates.packsDir` | Installed template packs (default `.shipwright/template-packs`; second layer; local dir/zip only) |
 | `communication.defaultIntensity` | Caveman chat intensity when no active command (`full` default) |
 | `communication.routing.commands` | Per `sw-*` command intensity: `normal` \| `lite` \| `full` \| `ultra` \| `inherit` |
 | `models.tiers` | Semantic tier → platform model ID (`cheap`, `build`, `mid`, `deep`) |

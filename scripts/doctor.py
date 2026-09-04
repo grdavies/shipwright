@@ -280,6 +280,33 @@ def state_root_migrate_consent(
 
 
 
+TEMPLATE_OVERRIDE_DRIFT_REMEDIATION = (
+    "Review .shipwright/templates overrides against updated core defaults; "
+    "refresh baselines with python3 -c "
+    "\"from template_resolve import record_core_baselines; "
+    "record_core_baselines(__import__('pathlib').Path('.'))\" "
+    "after intentionally accepting the new core, or update the override."
+)
+
+
+def _append_template_override_drift(
+    root: Path,
+    issues: list[str],
+    remediation: list[str],
+) -> None:
+    """Surface overrides that shadow a core template whose default changed (R41)."""
+    try:
+        from template_resolve import diagnose_override_drift
+    except ImportError:  # pragma: no cover
+        return
+    findings = diagnose_override_drift(root)
+    for finding in findings:
+        rel = finding.get("path") or "unknown"
+        issues.append(f"template-override-drift:{rel}")
+    if findings and TEMPLATE_OVERRIDE_DRIFT_REMEDIATION not in remediation:
+        remediation.append(TEMPLATE_OVERRIDE_DRIFT_REMEDIATION)
+
+
 def diagnose(root: Path | None = None) -> dict[str, Any]:
     """Run repo-wide doctor checks against ``root`` (defaults to plugin root)."""
     target = root if root is not None else repo_root()
@@ -336,6 +363,8 @@ def diagnose(root: Path | None = None) -> dict[str, Any]:
                 remediation.append("python3 scripts/effective_config_gen.py all --write")
     except ImportError:
         pass
+
+    _append_template_override_drift(target, issues, remediation)
 
     verdict = "pass" if not issues else "warn"
     return {

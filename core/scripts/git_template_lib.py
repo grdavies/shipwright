@@ -14,16 +14,24 @@ TEMPLATE_DIR = ROOT / "core" / "sw-reference" / "templates"
 REQUIRED_MARKER = re.compile(r"<!--\s*required:(\w+)\s*-->")
 
 
-def template_path(name: str) -> Path:
+def template_path(name: str, *, root: Path | None = None) -> Path:
     mapping = {
         "pr-body": "pr-body.md",
         "merge-commit": "merge-commit.md",
     }
     fname = mapping.get(name, f"{name}.md")
-    path = TEMPLATE_DIR / fname
-    if not path.is_file():
-        raise FileNotFoundError(f"template not found: {name}")
-    return path
+    base = root if root is not None else ROOT
+    try:
+        from template_resolve import resolve_template
+
+        return Path(resolve_template(base, fname).source)
+    except FileNotFoundError:
+        raise
+    except Exception:
+        path = base / "core" / "sw-reference" / "templates" / fname
+        if not path.is_file():
+            raise FileNotFoundError(f"template not found: {name}") from None
+        return path
 
 
 def required_fields(template_text: str) -> list[str]:
