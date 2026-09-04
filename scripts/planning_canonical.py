@@ -58,9 +58,16 @@ INBOUND_COMMENT_EXCLUDED_MARKERS = frozenset(
         "sw-doc-review-completion",
         "sw-doc-review-round",
         "sw:doc-review-round",
+        # Prefix form also matched in inbound filters via startswith(BUNDLE_ASSET_MARKER_PREFIX).
+        "sw-bundle-asset:plan",
+        "sw-bundle-asset:data-model",
+        "sw-bundle-asset:contracts",
+        "sw-bundle-asset:quickstart",
+        "sw-bundle-asset:checklist",
     }
 )
 FREEZE_RECORD_MARKER = "sw-freeze-record"
+BUNDLE_ASSET_MARKER_PREFIX = "sw-bundle-asset:"
 DOC_REVIEW_MARKER = "sw-doc-review"
 DOC_REVIEW_COMPLETION_MARKER = "sw:doc-review-completion"
 # Body-block witness excluded from freeze hash but never deleted from the live issue (R31/D22).
@@ -140,10 +147,15 @@ class CommentRecord:
     def excluded_from_canonical(self) -> bool:
         if any(m in EXCLUDED_COMMENT_MARKERS for m in self.markers):
             return True
+        # Bundle assets ride as marked comments on the unit issue (PRD 342 R35).
+        if any(str(m).startswith(BUNDLE_ASSET_MARKER_PREFIX) for m in self.markers):
+            return True
         body = self.body or ""
         for m in EXCLUDED_COMMENT_MARKERS:
             if f"<!-- {m} -->" in body or f"<!--{m}-->" in body:
                 return True
+        if BUNDLE_ASSET_MARKER_PREFIX in body:
+            return True
         # Colon/hyphen family open markers (PRD 341 R4/R24).
         if re.search(r"<!--\s*sw[:-]doc-review(?:-completion|-round)?\s*-->", body, re.IGNORECASE):
             return True

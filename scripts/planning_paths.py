@@ -367,6 +367,26 @@ def bundle_asset_paths_rel(unit_dir_rel: str) -> dict[str, str]:
     return {role: bundle_asset_rel(unit_dir_rel, role) for role in BUNDLE_ASSET_ROLES}
 
 
+BUNDLE_ASSET_MARKER_PREFIX = "sw-bundle-asset:"
+
+
+def bundle_role_for_body_path(body_path: str) -> str | None:
+    """Return bundle asset role when ``body_path`` ends with a fixed asset filename (R31/R35)."""
+    name = Path(str(body_path).replace("\\", "/")).name.lower()
+    for role, filename in BUNDLE_ASSET_FILENAMES.items():
+        if name == filename.lower():
+            return role
+    return None
+
+
+def bundle_asset_marker(role: str) -> str:
+    """Issue-store comment marker for a co-located bundle asset (R35)."""
+    key = (role or "").strip().lower()
+    if key not in BUNDLE_ASSET_FILENAMES:
+        raise ValueError(f"unknown bundle asset role: {role}")
+    return f"{BUNDLE_ASSET_MARKER_PREFIX}{key}"
+
+
 def bundle_asset_virtual_body_path(unit_folder_rel: str, role: str) -> str:
     """Virtual body path for a bundle asset under separate-project store location (R31).
 
