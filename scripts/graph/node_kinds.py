@@ -6,6 +6,13 @@ from typing import Any, Mapping
 
 HUMAN_ACTION_KIND = "human-action"
 
+# Converge phase (PRD 342 R55) compiles onto existing closed kinds only.
+# Assessor → read-only gate; phase body → command. Never map converge onto the
+# pre-existing execution-retry kind (convergence-loop).
+CONVERGE_ASSESSOR_KIND = "gate"
+CONVERGE_PHASE_BODY_KIND = "command"
+CONVERGE_FORBIDDEN_RETRY_KIND = "convergence-loop"
+
 BASE_WORKFLOW_NODE_KINDS = frozenset(
     {
         "barrier",
@@ -80,3 +87,12 @@ def kernel_node_kinds_payload() -> list[dict[str, str]]:
         {"id": spec.id, "shadowPolicy": spec.shadow_policy}
         for spec in sorted(NODE_KIND_REGISTRY.values(), key=lambda item: item.id)
     ]
+
+
+def converge_compile_kinds() -> dict[str, str]:
+    """Kinds used when compiling the opt-in converge phase (PRD 342 R55)."""
+    return {
+        "assessor": CONVERGE_ASSESSOR_KIND,
+        "phaseBody": CONVERGE_PHASE_BODY_KIND,
+        "forbiddenRetryKind": CONVERGE_FORBIDDEN_RETRY_KIND,
+    }
