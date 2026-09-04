@@ -955,6 +955,13 @@ def finalize_gate_payload(
             fse.maybe_escalate_threshold(root, cfg, failure_text=reason)
         except Exception:
             pass
+    try:
+        import packaged_install_check_gate as packaged_ga
+
+        payload = packaged_ga.annotate_check_gate_payload(payload, root=root)
+    except Exception:
+        payload = dict(payload)
+        payload["packagedInstallGa"] = {"present": False, "error": "wiring-helper-unavailable"}
     jsonio.emit(payload)
     return VERDICT_EXIT.get(verdict, 1), payload
 
