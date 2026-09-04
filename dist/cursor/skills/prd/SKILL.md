@@ -25,9 +25,16 @@ Port of v1 `spec-prd` under `sw-`. Freeze and task generation are separate steps
 5. Technical Requirements
 6. Security & Compliance
 7. Testing Strategy
-8. Rollout Plan
-9. Decision Log
-10. Open Questions
+8. Acceptance Scenarios (required for new PRDs — `prdBodyContract: v2`)
+9. Success Criteria (required for new PRDs — `prdBodyContract: v2`)
+10. Rollout Plan
+11. Decision Log
+12. Open Questions
+
+New PRDs authored after PRD 342 unit 4 must set frontmatter `prdBodyContract: v2` and include
+**Acceptance Scenarios** and **Success Criteria** on the PRD body (not in a sibling asset).
+Existing PRDs without that contract key are grandfathered and must not be retroactively failed
+by the spec-rigor authoring gate.
 
 ## Decision-record sections (required, `--type decision`)
 

@@ -55,6 +55,7 @@ Deterministic PRD checks via `scripts/spec-rigor-check.py --artifact prd`:
 - No duplicate R-IDs.
 - No ambiguity markers in requirement text.
 - Required PRD sections present (Overview, Goals, Non-Goals, Requirements, Testing Strategy).
+- New PRDs (`prdBodyContract: v2`) also require Acceptance Scenarios and Success Criteria; existing bodies without the contract key are grandfathered.
 
 ### Analyze (spec↔task consistency — pre-task-freeze)
 

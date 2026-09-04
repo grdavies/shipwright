@@ -570,6 +570,7 @@
     "planning/backends/gitlab.py",
     "planning/backends/in_repo.py",
     "planning/backends/issues.py",
+    "planning/backends/issues_bundle_assets.py",
     "planning/backends/issues_helpers.py",
     "planning/backends/local_synced.py",
     "planning/backends/memory_cache.py",
@@ -812,6 +813,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 809,
+  "moduleCount": 810,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

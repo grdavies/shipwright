@@ -725,7 +725,7 @@
       "sourcePath": "core/skills/parallelism/SKILL.md"
     },
     {
-      "bodyDigest": "a22db1c5b9b896a386de9c12e68b05714ae1f92221c06156c06ec002526b3c83",
+      "bodyDigest": "a50ef55c68b2ea844a46342744b03fff47dac788e779ecdbfcbf38f42af31d1e",
       "capabilities": [],
       "description": "Generate a PRD or decision-record draft for Full or Standard tier. Use when requirements are brainstormed and a written spec is needed before persona review. Does not freeze, run doc-review, or generate tasks.",
       "id": "prd",
@@ -779,7 +779,7 @@
       "sourcePath": "core/skills/simplify/SKILL.md"
     },
     {
-      "bodyDigest": "cba0161c2d5818b249120bd11d4d107a93c7b32686bc2217be5de4ff1b69bdda",
+      "bodyDigest": "cf5657047af705f5be6b15775fb035c547218f4ed0865356a09643bfa07f423a",
       "capabilities": [],
       "description": "Pre-freeze spec quality gates (clarify, checklist, analyze) and R-ID to task to test traceability. Use when validating PRD quality before /sw-freeze on Standard or Full tier. Blocks freeze on hard failures.",
       "id": "spec-rigor",
