@@ -21,7 +21,7 @@ Full-tier requirements exploration. Produces a brainstorm doc for `/sw-prd`. Doe
 
 ### Phase 1: Assess and explore
 
-1. Read `.sw/layout.md` for output path.
+1. Read `.shipwright/layout.md` for output path.
 2. When `.cursor/sw-context/project-intent.md` exists (optional `/sw-init` capture), read it opportunistically
    for project intent and working-style context — never required, never blocking when absent.
 3. If input is vague, ask one clarifying question (blocking tool preferred).

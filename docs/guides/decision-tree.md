@@ -98,7 +98,7 @@ flowchart TD
 | **Bundled Shipwright-self doctrine** | `core/sw-reference/architecture-doctrine.md` (`AD-<n>`) | Inherit plugin self-description as project law |
 
 Greenfield empty scaffold is opt-in only. Details: [configuration](configuration.md#consumer-projectdoctrine),
-`.sw/layout.md`, `core/sw-reference/README.md`.
+`.shipwright/layout.md`, `core/sw-reference/README.md`.
 
 ## Adoption and provider readiness
 

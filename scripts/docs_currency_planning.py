@@ -9,7 +9,7 @@ from typing import Any
 PLANNING_DOC_BINDINGS: tuple[dict[str, Any], ...] = (
     {
         "id": "layout-planning-authority",
-        "doc": ".sw/layout.md",
+        "doc": ".shipwright/layout.md",
         "sources": (
             "scripts/planning_store_facade.py",
             "scripts/planning_authority.py",
@@ -26,7 +26,7 @@ PLANNING_DOC_BINDINGS: tuple[dict[str, Any], ...] = (
     {
         "id": "layout-reference-mirror",
         "doc": "core/sw-reference/layout.md",
-        "sources": (".sw/layout.md",),
+        "sources": (".shipwright/layout.md",),
         "markers": (
             "Planning backend and authority",
             "planning_store_facade",

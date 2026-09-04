@@ -929,7 +929,7 @@ qualifying runs without adding commands.
 #### Terminology parity
 
 Use the same vocabulary across this guide, `docs/guides/workflows.md`, `core/commands/sw-status.md`, and
-`.sw/layout.md`:
+`.shipwright/layout.md`:
 
 | Term | Meaning |
 | --- | --- |
@@ -1565,7 +1565,7 @@ it) and remain non-authoritative.
 
 Operator surface: `/sw-init` §5f and `python3 scripts/sw-configure.py doctrine …`. Route choices in
 the [decision tree](decision-tree.md#projectdoctrine-and-architecture-routing). Layout pointers:
-`.sw/layout.md`. Self vs consumer reference: `core/sw-reference/README.md`.
+`.shipwright/layout.md`. Self vs consumer reference: `core/sw-reference/README.md`.
 
 ## Communication routing (caveman intensity)
 
@@ -1602,7 +1602,7 @@ delegated child command. Full policy: `.sw/models-tiering.md`.
 ## Graph execution cache policy
 
 WorkflowGraph content-addressed caching is configured under `graphExecution.cache` and stored separately
-from run journals at `.cursor/sw-graph-cache/` (see `.sw/layout.md`).
+from run journals at `.cursor/sw-graph-cache/` (see `.shipwright/layout.md`).
 
 `GraphScheduler` owns the single owning loop; node work crosses `ExecutionBackend` with host-authoritative terminal envelopes (`scripts/graph/execution_backend.py`). Orchestrator conductor fan-out is orthogonal — not a substitute for graph concurrency.
 
@@ -1689,7 +1689,7 @@ per-item human acknowledgement bound to the redacted draft digest.
 **Route-record layout:** durable audit/resume JSON per captured item lives under
 `.cursor/hooks/state/retro-gap-routes/<signalId>.json` (relative to repo root). Each record tracks
 `signalId`, `dedupKey`, lifecycle `action` (`draft` | `confirmed` | `materialized`), and digest fields.
-See also `.sw/layout.md` (session hook state) and `scripts/planning_gap_capture.py`
+See also `.shipwright/layout.md` (session hook state) and `scripts/planning_gap_capture.py`
 (`RETRO_GAP_ROUTE_REL`).
 
 Schema source: `core/sw-reference/config.schema.json` → `retrospective.gapCapture`.
@@ -2096,7 +2096,7 @@ Offline calibration constants — advisory only; no workflow config keys gate li
 | `RANKING_GATING_ENABLED` (`false`) | `graph.reviewer_metrics.ranking` | Rankings never bind reviewer selection |
 
 Operator CLI: `python3 scripts/reviewer-metrics.py`. Storage authority: `.cursor/sw-learning-store/` via
-`ReviewerMetricsStoreAdapter` — see `.sw/layout.md` and `docs/guides/workflows.md`.
+`ReviewerMetricsStoreAdapter` — see `.shipwright/layout.md` and `docs/guides/workflows.md`.
 
 ### Bounded selection (`review.selection`)
 

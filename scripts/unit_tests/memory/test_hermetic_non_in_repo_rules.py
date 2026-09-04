@@ -64,6 +64,10 @@ def test_hermetic_fixture_promote_load_without_local_dual_home(
         json.dumps({"memory": {"provider": "recallium", "project": "hermetic"}}),
         encoding="utf-8",
     )
+    (tmp_path / ".cursor" / "sw-memory-rule-allowlist.json").write_text(
+        json.dumps([RULE_ID]),
+        encoding="utf-8",
+    )
 
     promoted = promote_rule(
         tmp_path, rule_id=RULE_ID, body=BODY, approval=_approval(), writer=writer
