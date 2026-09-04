@@ -44,24 +44,9 @@ def _dispatch_init(argv: list[str]) -> int:
 
 
 def _dispatch_self(argv: list[str]) -> int:
-    """Route ``self`` onto the existing upgrade-gate spine (R17).
-
-    Phase 6 replaces this with ``scripts/sw_self.py`` for check/upgrade verbs;
-    until then the console resolves ``self`` to the in-flight deliver upgrade gate.
-    """
-    if argv and argv[0] in ("-h", "--help"):
-        print(
-            "usage: shipwright self [check|upgrade] ...\n"
-            "  Phase 5 routes onto scripts/upgrade-gate.py; "
-            "full check/upgrade land in phase 6.",
-            file=sys.stderr,
-        )
-        return 0
-    rest = list(argv)
-    if rest and rest[0] in ("check", "upgrade", "gate"):
-        rest = rest[1:]
-    gate = _load_scripts_module("sw_upgrade_gate_console", "upgrade-gate.py")
-    return int(gate.main(rest))
+    """Route ``self check|upgrade`` onto ``scripts/sw_self.py`` (R20)."""
+    self_mod = _load_scripts_module("sw_self_console", "sw_self.py")
+    return int(self_mod.main(argv))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -71,7 +56,8 @@ def main(argv: list[str] | None = None) -> int:
             "usage: shipwright <init|self> ...\n"
             "  init  — machine mirror then repository configure "
             "(shipwright init --integration <tool>)\n"
-            "  self  — resolve onto the existing upgrade spine",
+            "  self  — check / upgrade against the distribution origin "
+            "(shipwright self check|upgrade)",
             file=sys.stderr,
         )
         return 0

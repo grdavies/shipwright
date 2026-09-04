@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-04T03:03:35Z",
+  "generatedAt": "2026-09-04T03:07:35Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -6553,55 +6553,55 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/skills/prd/SKILL.md:60:doc_link.py",
+      "id": "core/skills/prd/SKILL.md:53:doc_link.py",
       "tree": "core/skills",
       "file": "core/skills/prd/SKILL.md",
-      "line": 60,
+      "line": 53,
       "column": 11,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/prd/SKILL.md:82:doc_link.py",
+      "id": "core/skills/prd/SKILL.md:75:doc_link.py",
       "tree": "core/skills",
       "file": "core/skills/prd/SKILL.md",
-      "line": 82,
+      "line": 75,
       "column": 12,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/prd/SKILL.md:84:doc_link.py",
+      "id": "core/skills/prd/SKILL.md:77:doc_link.py",
       "tree": "core/skills",
       "file": "core/skills/prd/SKILL.md",
-      "line": 84,
+      "line": 77,
       "column": 12,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/prd/SKILL.md:97:doc_link.py",
+      "id": "core/skills/prd/SKILL.md:90:doc_link.py",
       "tree": "core/skills",
       "file": "core/skills/prd/SKILL.md",
-      "line": 97,
+      "line": 90,
       "column": 11,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/prd/SKILL.md:122:domain_vocabulary.py",
+      "id": "core/skills/prd/SKILL.md:115:domain_vocabulary.py",
       "tree": "core/skills",
       "file": "core/skills/prd/SKILL.md",
-      "line": 122,
+      "line": 115,
       "column": 11,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/prd/SKILL.md:125:domain_vocabulary.py",
+      "id": "core/skills/prd/SKILL.md:118:domain_vocabulary.py",
       "tree": "core/skills",
       "file": "core/skills/prd/SKILL.md",
-      "line": 125,
+      "line": 118,
       "column": 11,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
@@ -6985,46 +6985,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:67:phase_sizing.py",
+      "id": "core/skills/spec-rigor/SKILL.md:66:phase_sizing.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 67,
+      "line": 66,
       "column": 92,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:82:spec-rigor-check.py",
+      "id": "core/skills/spec-rigor/SKILL.md:81:spec-rigor-check.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 82,
+      "line": 81,
       "column": 8,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:85:spec-rigor-check.py",
+      "id": "core/skills/spec-rigor/SKILL.md:84:spec-rigor-check.py",
+      "tree": "core/skills",
+      "file": "core/skills/spec-rigor/SKILL.md",
+      "line": 84,
+      "column": 8,
+      "script": "spec-rigor-check.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/spec-rigor/SKILL.md:85:traceability-check.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
       "line": 85,
-      "column": 8,
-      "script": "spec-rigor-check.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "core/skills/spec-rigor/SKILL.md:86:traceability-check.py",
-      "tree": "core/skills",
-      "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 86,
       "column": 8,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:126:sw_bootstrap.py",
+      "id": "core/skills/spec-rigor/SKILL.md:125:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 126,
+      "line": 125,
       "column": 53,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -12880,55 +12880,55 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/skills/prd/SKILL.md:60:doc_link.py",
+      "id": "dist/claude-code/skills/prd/SKILL.md:53:doc_link.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 60,
+      "line": 53,
       "column": 11,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/prd/SKILL.md:82:doc_link.py",
+      "id": "dist/claude-code/skills/prd/SKILL.md:75:doc_link.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 82,
+      "line": 75,
       "column": 12,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/prd/SKILL.md:84:doc_link.py",
+      "id": "dist/claude-code/skills/prd/SKILL.md:77:doc_link.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 84,
+      "line": 77,
       "column": 12,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/prd/SKILL.md:97:doc_link.py",
+      "id": "dist/claude-code/skills/prd/SKILL.md:90:doc_link.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 97,
+      "line": 90,
       "column": 11,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/prd/SKILL.md:122:domain_vocabulary.py",
+      "id": "dist/claude-code/skills/prd/SKILL.md:115:domain_vocabulary.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 122,
+      "line": 115,
       "column": 11,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/prd/SKILL.md:125:domain_vocabulary.py",
+      "id": "dist/claude-code/skills/prd/SKILL.md:118:domain_vocabulary.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/prd/SKILL.md",
-      "line": 125,
+      "line": 118,
       "column": 11,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
@@ -13312,46 +13312,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:67:phase_sizing.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:66:phase_sizing.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 67,
+      "line": 66,
       "column": 92,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:82:spec-rigor-check.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:81:spec-rigor-check.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 82,
+      "line": 81,
       "column": 8,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:85:spec-rigor-check.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:84:spec-rigor-check.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
+      "line": 84,
+      "column": 8,
+      "script": "spec-rigor-check.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:85:traceability-check.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
       "line": 85,
-      "column": 8,
-      "script": "spec-rigor-check.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:86:traceability-check.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 86,
       "column": 8,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:126:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:125:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 126,
+      "line": 125,
       "column": 53,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -18883,55 +18883,55 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/skills/prd/SKILL.md:60:doc_link.py",
+      "id": "dist/cursor/skills/prd/SKILL.md:53:doc_link.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/prd/SKILL.md",
-      "line": 60,
+      "line": 53,
       "column": 11,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/prd/SKILL.md:82:doc_link.py",
+      "id": "dist/cursor/skills/prd/SKILL.md:75:doc_link.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/prd/SKILL.md",
-      "line": 82,
+      "line": 75,
       "column": 12,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/prd/SKILL.md:84:doc_link.py",
+      "id": "dist/cursor/skills/prd/SKILL.md:77:doc_link.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/prd/SKILL.md",
-      "line": 84,
+      "line": 77,
       "column": 12,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/prd/SKILL.md:97:doc_link.py",
+      "id": "dist/cursor/skills/prd/SKILL.md:90:doc_link.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/prd/SKILL.md",
-      "line": 97,
+      "line": 90,
       "column": 11,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/prd/SKILL.md:122:domain_vocabulary.py",
+      "id": "dist/cursor/skills/prd/SKILL.md:115:domain_vocabulary.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/prd/SKILL.md",
-      "line": 122,
+      "line": 115,
       "column": 11,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/prd/SKILL.md:125:domain_vocabulary.py",
+      "id": "dist/cursor/skills/prd/SKILL.md:118:domain_vocabulary.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/prd/SKILL.md",
-      "line": 125,
+      "line": 118,
       "column": 11,
       "script": "domain_vocabulary.py",
       "classification": "self-repo-only"
@@ -19315,46 +19315,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:67:phase_sizing.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:66:phase_sizing.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 67,
+      "line": 66,
       "column": 92,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:82:spec-rigor-check.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:81:spec-rigor-check.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 82,
+      "line": 81,
       "column": 8,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:85:spec-rigor-check.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:84:spec-rigor-check.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/spec-rigor/SKILL.md",
+      "line": 84,
+      "column": 8,
+      "script": "spec-rigor-check.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:85:traceability-check.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
       "line": 85,
-      "column": 8,
-      "script": "spec-rigor-check.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:86:traceability-check.py",
-      "tree": "dist/cursor/skills",
-      "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 86,
       "column": 8,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:126:sw_bootstrap.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:125:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 126,
+      "line": 125,
       "column": 53,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -20737,37 +20737,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/getting-started.md:25:install.py",
+      "id": "docs/guides/getting-started.md:69:install.py",
       "tree": "docs/guides",
       "file": "docs/guides/getting-started.md",
-      "line": 25,
-      "column": 32,
+      "line": 69,
+      "column": 8,
       "script": "install.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/getting-started.md:50:install.py",
+      "id": "docs/guides/getting-started.md:120:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/getting-started.md",
-      "line": 50,
-      "column": 59,
-      "script": "install.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/getting-started.md:63:sw_bootstrap.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/getting-started.md",
-      "line": 63,
+      "line": 120,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/getting-started.md:64:sw_bootstrap.py",
+      "id": "docs/guides/getting-started.md:121:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/getting-started.md",
-      "line": 64,
+      "line": 121,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
