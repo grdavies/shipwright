@@ -21,7 +21,7 @@ def test_configuration_greenfield_onramp_section(repo_root: Path) -> None:
 
 
 def test_layout_prd324_absorb_acceptance_map(repo_root: Path) -> None:
-    for rel in ("core/sw-reference/layout.md", ".sw/layout.md"):
+    for rel in ("core/sw-reference/layout.md", ".shipwright/layout.md"):
         text = (repo_root / rel).read_text(encoding="utf-8")
         assert "### PRD 324 greenfield init surfaces" in text
         assert "gap-339-redesign-greenfield-credential-setup-ux-investig" in text

@@ -365,10 +365,10 @@ else
   FAIL=1
 fi
 
-if grep -q 'docs/decisions/' "$ROOT/.sw/layout.md" && grep -q 'Decision record numbering' "$ROOT/.sw/layout.md"; then
-  echo "OK  .sw/layout.md documents docs/decisions/ tree"
+if grep -q 'docs/decisions/' "$ROOT/.shipwright/layout.md" && grep -q 'Decision record numbering' "$ROOT/.shipwright/layout.md"; then
+  echo "OK  .shipwright/layout.md documents docs/decisions/ tree"
 else
-  echo "FAIL .sw/layout.md missing docs/decisions/ contract"
+  echo "FAIL .shipwright/layout.md missing docs/decisions/ contract"
   FAIL=1
 fi
 
