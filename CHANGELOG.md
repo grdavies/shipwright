@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.10.0](https://github.com/grdavies/shipwright/compare/v2.9.0...v2.10.0) (2026-09-04)
+
+
+### Features
+
+* **prd-337:** workflow runtime autonomy lifecycle ([#1100](https://github.com/grdavies/shipwright/issues/1100)) ([a98156c](https://github.com/grdavies/shipwright/commit/a98156c5024aeeeb73914eacd4435ca9ea88fd36))
+* spec-kit learnings (PRD 342) ([#1114](https://github.com/grdavies/shipwright/issues/1114)) ([dc166a2](https://github.com/grdavies/shipwright/commit/dc166a2b203c6c4b18df52b9b04a7c438f29d010))
+
+
+### Bug Fixes
+
+* **planning:** disambiguate doctor catalog and broker store privacy ([#1085](https://github.com/grdavies/shipwright/issues/1085)) ([26800c4](https://github.com/grdavies/shipwright/commit/26800c42bec82f80b3237ce5ef50fd161dff3818))
+
 ## [2.9.0](https://github.com/grdavies/shipwright/compare/v2.8.2...v2.9.0) (2026-08-30)
 
 
