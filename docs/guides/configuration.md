@@ -2247,6 +2247,7 @@ Shipwright `2.9.0` · schema `config.schema.json`
 | `contextCompression.strategies.log` | `compress` | `compress` | `compress` | `compress` | `—` | `—` |
 | `contextCompression.strategies.prose` | `compress` | `compress` | `compress` | `compress` | `—` | `—` |
 | `contextCompression.thresholdTokens` | `8000` | `8000` | `8000` | `8000` | `—` | `—` |
+| `converge.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
 | `decisionsDir` | `docs/decisions` | `docs/decisions` | `docs/decisions` | `docs/decisions` | `—` | `—` |
 | `defaultBaseBranch` | `main` | `main` | `main` | `main` | `—` | `—` |
 | `delegation.mode` | `heuristic` | `heuristic` | `heuristic` | `heuristic` | `—` | `—` |
