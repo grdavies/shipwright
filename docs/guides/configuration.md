@@ -2270,7 +2270,7 @@ python3 scripts/effective_config_gen.py generate --write
 python3 scripts/effective_config_gen.py project-docs --write
 ```
 
-Shipwright `2.9.0` · schema `config.schema.json`
+Shipwright `2.10.0` · schema `config.schema.json`
 
 | Setting | Schema default | Greenfield | Migration | Runtime fallback | Deprecated | Removed |
 | --- | --- | --- | --- | --- | --- | --- |
