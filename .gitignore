@@ -38,6 +38,9 @@ scripts/test/fixtures/deliver-phase/
 # Python
 __pycache__/
 *.pyc
+*.egg-info/
+# Local uv editable install lock — no third-party runtime deps to pin (stdlib-first).
+uv.lock
 
 # Per-work-item worktrees (local only)
 .sw-worktrees/
