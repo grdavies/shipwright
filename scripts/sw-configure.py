@@ -968,12 +968,115 @@ def _build_packaged_draft(root: Path) -> dict[str, Any]:
     return _strip_draft_side_channel(draft)
 
 
+# Documented packaged-init steps — single source for getting-started + R48 tests.
+PACKAGED_INIT_STEPS: tuple[str, ...] = (
+    "Install the packaged console entry point (`pip install shipwright`).",
+    "In the project repository, run `shipwright init --integration <host>`.",
+    "Reload the editor; run `/sw-init` only if priority-zero surfaces still need confirm.",
+    "Start a small loop (`/sw-doc` or `/sw-deliver run <frozen-task-list>`).",
+)
+
+
+def packaged_init_steps() -> list[str]:
+    """Return the initialization steps the packaged path seeds and documents (R48)."""
+    return list(PACKAGED_INIT_STEPS)
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(v) for v in value]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def _collect_deltas(
+    existing: dict[str, Any],
+    desired: dict[str, Any],
+    *,
+    prefix: str = "",
+) -> list[dict[str, Any]]:
+    """Return leaf-level deltas of ``desired`` relative to ``existing``."""
+    deltas: list[dict[str, Any]] = []
+    keys = sorted(set(existing) | set(desired), key=str)
+    for key in keys:
+        path = f"{prefix}.{key}" if prefix else str(key)
+        left = existing.get(key) if isinstance(existing, dict) else None
+        right = desired.get(key) if isinstance(desired, dict) else None
+        if isinstance(left, dict) and isinstance(right, dict):
+            deltas.extend(_collect_deltas(left, right, prefix=path))
+            continue
+        if left == right:
+            continue
+        if key not in desired:
+            continue
+        deltas.append(
+            {
+                "path": path,
+                "from": _json_safe(left),
+                "to": _json_safe(right),
+            }
+        )
+    return deltas
+
+
+def propose_configure_deltas(
+    root: Path,
+    *,
+    existing: dict[str, Any] | None = None,
+    desired: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Propose drift-only deltas against the recorded ``configuredWith`` stamp (R28).
+
+    Never writes. A second run on an already-configured repository reports only the
+    paths that differ from the desired packaged draft / current stamp.
+    """
+    root = root.resolve()
+    current = existing if existing is not None else load_workflow_config(root)
+    if not isinstance(current, dict):
+        current = {}
+    target = desired if desired is not None else _build_packaged_draft(root)
+    stamp = current.get("configuredWith") if isinstance(current.get("configuredWith"), dict) else {}
+    proposed_stamp = (
+        target.get("configuredWith") if isinstance(target.get("configuredWith"), dict) else {}
+    )
+    already_configured = bool(
+        str(stamp.get("shipwrightVersion") or "").strip()
+        or str(stamp.get("schemaVersion") or "").strip()
+    )
+    deltas = _collect_deltas(current, target) if already_configured else []
+    stamp_drift = (
+        str(stamp.get("shipwrightVersion") or "") != str(proposed_stamp.get("shipwrightVersion") or "")
+        or str(stamp.get("schemaVersion") or "") != str(proposed_stamp.get("schemaVersion") or "")
+    )
+    return {
+        "verdict": "pass",
+        "action": "propose-deltas",
+        "alreadyConfigured": already_configured,
+        "configuredWith": stamp,
+        "proposedConfiguredWith": proposed_stamp,
+        "stampDrift": bool(already_configured and stamp_drift),
+        "deltas": deltas,
+        "deltaCount": len(deltas),
+        "wrote": False,
+        "written": [],
+        "initSteps": packaged_init_steps(),
+    }
+
+
 def apply_packaged_configure(
     root: Path,
     *,
     accept_ci_stub: bool = True,
+    confirm: bool = False,
 ) -> dict[str, Any]:
-    """Write repo-scope configuration for packaged init (existing spine only)."""
+    """Write repo-scope configuration for packaged init (existing spine only).
+
+    R28: when ``configuredWith`` is already present, propose deltas only and apply
+    nothing unless ``confirm`` is true. Greenfield (no stamp) still writes on first run.
+    """
     from shipwright_paths import workflow_config_write_path
 
     root = root.resolve()
@@ -984,14 +1087,59 @@ def apply_packaged_configure(
             "verdict": "fail",
             "error": "draft-fails-schema-validation",
             "validationErrors": validation_errors[:8],
+            "wrote": False,
+            "written": [],
         }
 
+    existing = load_workflow_config(root)
+    proposal = propose_configure_deltas(root, existing=existing, desired=draft)
     config_path = workflow_config_write_path(root)
+
+    if proposal.get("alreadyConfigured"):
+        if not confirm:
+            return {
+                "verdict": "confirm-required",
+                "action": "propose-deltas",
+                "error": "consent-required-before-apply",
+                "configPath": str(config_path),
+                "configuredWith": proposal.get("configuredWith"),
+                "proposedConfiguredWith": proposal.get("proposedConfiguredWith"),
+                "stampDrift": proposal.get("stampDrift"),
+                "deltas": proposal.get("deltas") or [],
+                "deltaCount": proposal.get("deltaCount") or 0,
+                "wrote": False,
+                "written": [],
+                "initSteps": packaged_init_steps(),
+            }
+        # Consent granted: apply only the drifted keys (deep-merge desired onto existing).
+        merged = _deep_merge(dict(existing), draft)
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
+        written = [config_path.relative_to(root).as_posix()]
+        ci_payload: dict[str, Any] | None = None
+        if accept_ci_stub:
+            ci_payload = apply_ci_stub(root, confirm=True, wire_verify="off")
+            if ci_payload.get("written"):
+                written.append(STUB_WORKFLOW_REL.as_posix())
+        return {
+            "verdict": "pass",
+            "action": "apply-deltas",
+            "configPath": str(config_path),
+            "deltas": proposal.get("deltas") or [],
+            "deltaCount": proposal.get("deltaCount") or 0,
+            "stampDrift": proposal.get("stampDrift"),
+            "wrote": True,
+            "written": written,
+            "ciStub": ci_payload,
+            "initSteps": packaged_init_steps(),
+        }
+
+    # Greenfield — first configure writes the packaged draft.
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(json.dumps(draft, indent=2) + "\n", encoding="utf-8")
     written = [config_path.relative_to(root).as_posix()]
 
-    ci_payload: dict[str, Any] | None = None
+    ci_payload = None
     if accept_ci_stub:
         ci_payload = apply_ci_stub(root, confirm=True, wire_verify="off")
         if ci_payload.get("written"):
@@ -999,9 +1147,12 @@ def apply_packaged_configure(
 
     return {
         "verdict": "pass",
+        "action": "initial-configure",
         "configPath": str(config_path),
+        "wrote": True,
         "written": written,
         "ciStub": ci_payload,
+        "initSteps": packaged_init_steps(),
     }
 
 

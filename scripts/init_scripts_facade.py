@@ -14,8 +14,9 @@ import os
 import stat
 import subprocess
 import sys
+import urllib.parse
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -126,6 +127,231 @@ def validate_priority_zero_coverage(records: list[dict[str, Any]]) -> dict[str, 
         "expected": len(PRIORITY_ZERO_SURFACES),
         "surfaces": [by_surface[name] for name in PRIORITY_ZERO_SURFACES if name in by_surface],
         "errors": errors,
+    }
+
+
+# Broker-reference capture (PRD 342 R4 / R29) — config bodies hold refs only.
+CREDENTIAL_MATERIAL_KEYS: frozenset[str] = frozenset(
+    {
+        "token",
+        "secret",
+        "password",
+        "accessToken",
+        "apiKey",
+        "api_key",
+        "privateKey",
+        "private_key",
+        "clientSecret",
+        "client_secret",
+        "refreshToken",
+        "refresh_token",
+        "bearer",
+        "authorization",
+        "pat",
+        "personalAccessToken",
+    }
+)
+SCOPE_ALLOWLIST_FIELDS: tuple[str, ...] = (
+    "allowedRepos",
+    "allowedProjectIds",
+    "allowedEndpoints",
+)
+
+
+def _looks_like_secret_value(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    text = value.strip()
+    if len(text) < 12:
+        return False
+    lowered = text.lower()
+    if lowered.startswith(("ghp_", "gho_", "ghu_", "ghs_", "ghr_", "glpat-", "sk-")):
+        return True
+    # Long opaque strings without a ref-like separator are refused as material.
+    if "://" not in text and "/" not in text and text.count("-") < 2 and " " not in text:
+        if len(text) >= 24 and any(ch.isdigit() for ch in text):
+            return True
+    return False
+
+
+def _find_credential_material(payload: Any, *, path: str = "") -> list[str]:
+    hits: list[str] = []
+    if isinstance(payload, dict):
+        for key, value in payload.items():
+            key_text = str(key)
+            child = f"{path}.{key_text}" if path else key_text
+            if key_text in CREDENTIAL_MATERIAL_KEYS:
+                hits.append(child)
+                continue
+            hits.extend(_find_credential_material(value, path=child))
+        return hits
+    if isinstance(payload, list):
+        for index, item in enumerate(payload):
+            hits.extend(_find_credential_material(item, path=f"{path}[{index}]"))
+        return hits
+    if _looks_like_secret_value(payload):
+        hits.append(path or "<value>")
+    return hits
+
+
+def store_broker_reference(
+    *,
+    credential_ref: str,
+    project_id: str,
+    extra: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Capture a broker reference only — never credential material (R4, R29).
+
+    Returns a config-body fragment with ``host.credentialRef`` + ``projectId``.
+    Any credential-shaped keys or values cause a fail verdict before success.
+    """
+    ref = str(credential_ref or "").strip()
+    project = str(project_id or "").strip()
+    fragment: dict[str, Any] = {
+        "projectId": project,
+        "host": {"credentialRef": ref},
+    }
+    if extra:
+        if not isinstance(extra, Mapping):
+            return {
+                "verdict": "fail",
+                "error": "invalid-extra-payload",
+                "wrote": False,
+            }
+        # Shallow-merge extras under host only when they are non-material metadata.
+        host_extra = extra.get("host") if isinstance(extra.get("host"), Mapping) else None
+        if host_extra:
+            merged_host = dict(fragment["host"])
+            merged_host.update(dict(host_extra))
+            fragment["host"] = merged_host
+        for key, value in extra.items():
+            if key == "host":
+                continue
+            fragment[key] = value
+
+    material_paths = _find_credential_material(fragment)
+    if not ref:
+        return {
+            "verdict": "fail",
+            "error": "missing-credential-ref",
+            "wrote": False,
+            "fragment": None,
+        }
+    if not project:
+        return {
+            "verdict": "fail",
+            "error": "missing-project-id",
+            "wrote": False,
+            "fragment": None,
+        }
+    if material_paths:
+        return {
+            "verdict": "fail",
+            "error": "credential-material-refused",
+            "materialPaths": material_paths,
+            "wrote": False,
+            "fragment": None,
+        }
+    return {
+        "verdict": "pass",
+        "fragment": fragment,
+        "credentialRef": ref,
+        "projectId": project,
+        "wrote": False,
+        "material": False,
+    }
+
+
+def validate_broker_reference_scope(
+    *,
+    credential_ref: str,
+    repo: str,
+    project_id: str,
+    endpoint: str,
+    selector_entry: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Validate a broker reference against selector scope allowlists before success (R29).
+
+    Fail-closed: missing entry, missing allowlists, or out-of-scope repo / project /
+    endpoint refuse success.
+    """
+    ref = str(credential_ref or "").strip()
+    repo_slug = str(repo or "").strip()
+    project = str(project_id or "").strip()
+    dest = str(endpoint or "").strip()
+    errors: list[str] = []
+
+    if not ref:
+        errors.append("missing-credential-ref")
+    if not isinstance(selector_entry, Mapping) or not selector_entry:
+        errors.append("missing-selector-entry")
+        return {
+            "verdict": "fail",
+            "error": "out-of-scope-reference",
+            "errors": errors,
+            "inScope": False,
+        }
+
+    for field in SCOPE_ALLOWLIST_FIELDS:
+        values = selector_entry.get(field)
+        if not isinstance(values, list) or not values:
+            errors.append(f"missing-{field}")
+
+    allowed_repos = [
+        str(item).strip().lower()
+        for item in (selector_entry.get("allowedRepos") or [])
+        if isinstance(item, str) and item.strip()
+    ]
+    allowed_projects = [
+        str(item).strip()
+        for item in (selector_entry.get("allowedProjectIds") or [])
+        if isinstance(item, str) and item.strip()
+    ]
+    allowed_endpoints = [
+        str(item).strip()
+        for item in (selector_entry.get("allowedEndpoints") or [])
+        if isinstance(item, str) and item.strip()
+    ]
+
+    if repo_slug and allowed_repos and repo_slug.lower() not in allowed_repos:
+        errors.append("repo-out-of-scope")
+    if project and allowed_projects and project not in allowed_projects:
+        errors.append("project-out-of-scope")
+    if dest and allowed_endpoints:
+        dest_norm = dest.rstrip("/")
+        endpoint_ok = False
+        for allowed in allowed_endpoints:
+            allowed_norm = allowed.rstrip("/")
+            if dest_norm == allowed_norm or dest_norm.startswith(allowed_norm + "/"):
+                endpoint_ok = True
+                break
+            # Host-only allowlist entries.
+            if "://" not in allowed and "://" in dest:
+                if (urllib.parse.urlparse(dest).hostname or "").lower() == allowed.lower():
+                    endpoint_ok = True
+                    break
+        if not endpoint_ok:
+            errors.append("endpoint-out-of-scope")
+
+    if errors:
+        return {
+            "verdict": "fail",
+            "error": "out-of-scope-reference",
+            "errors": errors,
+            "credentialRef": ref,
+            "inScope": False,
+            "allowedRepos": allowed_repos,
+            "allowedProjectIds": allowed_projects,
+            "allowedEndpoints": allowed_endpoints,
+        }
+    return {
+        "verdict": "pass",
+        "credentialRef": ref,
+        "inScope": True,
+        "allowedRepos": allowed_repos,
+        "allowedProjectIds": allowed_projects,
+        "allowedEndpoints": allowed_endpoints,
+        "errors": [],
     }
 
 

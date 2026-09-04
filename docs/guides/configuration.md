@@ -232,6 +232,22 @@ Run `/sw-init` in your **target project repo**. It walks through setup and write
 config, validates project-type detection, surfaces **version drift** when `configuredWith` differs from
 the installed plugin, and offers consent-gated refresh without overwriting user-set verify or base branch.
 
+### Interview priority tiering
+
+`/sw-init` interviews configuration in three tiers so a default run is predictable:
+
+| Tier | What it covers | When it appears |
+|------|----------------|-----------------|
+| **Priority zero** | `verify`, `ci-stub`, `credentials`, `models.tiers`, `defaultBaseBranch` | Always in the first interview — every surface ends detected, confirmed, or declined-with-consequence |
+| **Priority one** | Schema keys marked priority one (host, planning, memory, worktree, review) | Inline in the same run after priority zero |
+| **Priority two** | Every remaining top-level schema key (and any key added later) | Behind progressive disclosure only — never forced on a default run |
+
+New schema keys default to **priority two**. Re-running `/sw-init` on an already-configured repo
+proposes **deltas only** against the recorded `configuredWith` stamp and applies nothing without
+consent. Credential answers store a **broker reference** (`host.credentialRef` + `projectId`) —
+never token material — and the reference is validated against selector `allowedRepos` /
+`allowedProjectIds` / `allowedEndpoints` before the run reports success.
+
 ### Step 1 — Memory provider
 
 `memory.provider` is an **open string** — not a closed enum. Operators select a **catalog-registered**
