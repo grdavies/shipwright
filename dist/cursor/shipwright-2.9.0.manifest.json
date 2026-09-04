@@ -545,6 +545,7 @@
     "orchestrator_signal_context.py",
     "orchestrator_step_plan.py",
     "over_mock_scan.py",
+    "path_literal_guard.py",
     "phase_acceptance_gate.py",
     "phase_ship_hygiene.py",
     "phase_sizing.py",
@@ -805,5 +806,5 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 802
+  "moduleCount": 803
 }
