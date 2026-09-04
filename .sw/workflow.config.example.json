@@ -300,6 +300,9 @@
       }
     }
   },
+  "converge": {
+    "enabled": false
+  },
   "tournament": {
     "enabled": false,
     "n": 3,

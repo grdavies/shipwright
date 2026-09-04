@@ -2469,6 +2469,18 @@
         }
       }
     },
+    "converge": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Opt-in deliver converge phase (PRD 342 R42). Disabled by default; when enabled, composes claims audit, gap check, verify gates, and one bundle-anchored assessor without a second deliver input (R43/R44). Distinct from the pre-existing convergence-loop execution-retry node kind (R55).",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, deliver may append the converge phase for the unit already bound by the frozen task list. Default false leaves deliver sequence and outputs unchanged."
+        }
+      }
+    },
     "tournament": {
       "type": "object",
       "additionalProperties": false,
