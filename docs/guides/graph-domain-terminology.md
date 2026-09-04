@@ -72,7 +72,7 @@ graph run is active.
 
 **Generic `runId`:** graph `metadata.runId` matches the deliver (or orchestrator) `runId`. Receipt
 journal, in-flight intents, pool snapshots, and status/explain queries all index under
-`.cursor/sw-graph-runs/<runId>/` — see `.sw/layout.md` **Graph execution store**.
+`.cursor/sw-graph-runs/<runId>/` — see `.shipwright/layout.md` **Graph execution store**.
 
 **Cutover:** `dogfood` → `limited-scope` (requires live status/explain) → `full-ownership` (named
 authorizer). The human merge gate is never removed.

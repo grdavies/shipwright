@@ -48,7 +48,7 @@ def test_release_guide_currency_fails_when_doc_stale(repo: Path) -> None:
 
 
 def test_release_guide_currency_fails_when_marker_missing(repo: Path) -> None:
-    doc = repo / ".sw/layout.md"
+    doc = repo / ".shipwright/layout.md"
     doc.write_text("# incomplete\n", encoding="utf-8")
     drift = check_release_guide_artifacts(repo)
     assert any(row.get("kind") == "guide-marker-missing" for row in drift)

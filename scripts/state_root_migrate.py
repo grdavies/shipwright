@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gated state-root migration: skew check, quiesce fence, consent-ready moves (PRD 342 R13/R14/R54)."""
+"""Gated state-root migration: skew check, quiesce fence, journaled moves (PRD 342 R13/R14/R15/R54)."""
 
 from __future__ import annotations
 
@@ -21,6 +21,13 @@ import shipwright_paths  # noqa: E402
 
 INVENTORY_REL = Path("core/sw-reference/state-root-inventory.json")
 FENCE_FILENAME = "state-root-migrate.fence"
+JOURNAL_FILENAME = "state-root-migrate.journal.json"
+JOURNAL_STATUS_IN_PROGRESS = "in-progress"
+JOURNAL_STATUS_COMPLETED = "completed"
+JOURNAL_STATUS_ABORTED = "aborted"
+ENTRY_PENDING = "pending"
+ENTRY_MOVED = "moved"
+ENTRY_ROLLED_BACK = "rolled-back"
 VERSION_CANDIDATES = ("version.txt", "VERSION")
 IN_FLIGHT_RUN_STATUSES = frozenset(
     {
@@ -479,12 +486,123 @@ def detect_legacy_layout(root: Path) -> dict[str, Any]:
     }
 
 
+
+def journal_path(root: Path) -> Path:
+    return root / JOURNAL_FILENAME
+
+
+def tree_digest(path: Path) -> str:
+    """Content digest for a file or directory tree (semantic identity for R15)."""
+    hasher = hashlib.sha256()
+    if path.is_file():
+        hasher.update(b"file\0")
+        hasher.update(path.read_bytes())
+        return hasher.hexdigest()
+    if not path.exists():
+        return hasher.hexdigest()
+    entries: list[tuple[str, bytes]] = []
+    for child in sorted(path.rglob("*"), key=lambda p: p.as_posix()):
+        if child.is_file():
+            rel = child.relative_to(path).as_posix()
+            entries.append((rel, child.read_bytes()))
+    hasher.update(b"dir\0")
+    for rel, payload in entries:
+        hasher.update(rel.encode("utf-8"))
+        hasher.update(b"\0")
+        hasher.update(payload)
+        hasher.update(b"\0")
+    return hasher.hexdigest()
+
+
+def semantic_snapshot(root: Path, rel_paths: list[str]) -> dict[str, str]:
+    """Map relative paths to digests for identity assertions."""
+    out: dict[str, str] = {}
+    for rel in rel_paths:
+        candidate = root / rel
+        if candidate.exists():
+            out[rel] = tree_digest(candidate)
+    return out
+
+
+def _write_journal(root: Path, journal: dict[str, Any]) -> None:
+    journal_path(root).write_text(json.dumps(journal, indent=2) + "\n", encoding="utf-8")
+
+
+def _read_journal(root: Path) -> dict[str, Any] | None:
+    path = journal_path(root)
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise StateRootMigrateError(
+            "journal-unreadable",
+            f"migration journal unreadable: {exc}",
+            path=str(path),
+        ) from exc
+    if not isinstance(data, dict):
+        raise StateRootMigrateError(
+            "journal-malformed",
+            "migration journal must be a JSON object",
+            path=str(path),
+        )
+    return data
+
+
+def _clear_journal(root: Path) -> None:
+    path = journal_path(root)
+    if path.is_file():
+        path.unlink()
+
+
+def _new_journal(moves: list[dict[str, Any]]) -> dict[str, Any]:
+    entries = []
+    for move in moves:
+        entries.append(
+            {
+                "from": str(move["from"]),
+                "to": str(move["to"]),
+                "status": ENTRY_PENDING,
+                "digestBefore": None,
+            }
+        )
+    return {
+        "version": 1,
+        "status": JOURNAL_STATUS_IN_PROGRESS,
+        "createdAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "entries": entries,
+    }
+
+
 def _relocate_one(root: Path, legacy: str, new: str) -> dict[str, Any]:
     src = root / legacy
     dest = root / new
     if not src.exists():
         return {"from": legacy, "to": new, "action": "skip-missing"}
     if dest.exists():
+        # Parent/child inventory pairs: children move first and may already
+        # have created the parent destination directory. Merge leftovers.
+        if src.is_dir() and dest.is_dir():
+            for child in list(src.iterdir()):
+                target = dest / child.name
+                if target.exists():
+                    raise StateRootMigrateError(
+                        "destination-exists",
+                        f"refusing to overwrite existing destination {new}/{child.name}",
+                        fromPath=f"{legacy}/{child.name}",
+                        toPath=f"{new}/{child.name}",
+                    )
+                shutil.move(str(child), str(target))
+            try:
+                src.rmdir()
+            except OSError as exc:
+                raise StateRootMigrateError(
+                    "source-not-empty",
+                    f"legacy path {legacy} not empty after merge into {new}: {exc}",
+                    fromPath=legacy,
+                    toPath=new,
+                ) from exc
+            return {"from": legacy, "to": new, "action": "merged"}
         raise StateRootMigrateError(
             "destination-exists",
             f"refusing to overwrite existing destination {new}",
@@ -496,14 +614,153 @@ def _relocate_one(root: Path, legacy: str, new: str) -> dict[str, Any]:
     return {"from": legacy, "to": new, "action": "moved"}
 
 
+def _rollback_one(root: Path, legacy: str, new: str) -> dict[str, Any]:
+    src = root / legacy
+    dest = root / new
+    if dest.exists() and not src.exists():
+        src.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(dest), str(src))
+        return {"from": new, "to": legacy, "action": "rolled-back"}
+    if src.exists() and not dest.exists():
+        return {"from": new, "to": legacy, "action": "already-restored"}
+    if not dest.exists() and not src.exists():
+        return {"from": new, "to": legacy, "action": "missing-both"}
+    raise StateRootMigrateError(
+        "rollback-conflict",
+        f"cannot rollback {new} → {legacy}: conflicting paths exist",
+        fromPath=new,
+        toPath=legacy,
+    )
+
+
+def _apply_journal_entries(root: Path, journal: dict[str, Any]) -> list[dict[str, Any]]:
+    applied: list[dict[str, Any]] = []
+    entries = journal.get("entries")
+    if not isinstance(entries, list):
+        raise StateRootMigrateError("journal-malformed", "journal entries must be a list")
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        status = str(entry.get("status") or ENTRY_PENDING)
+        legacy = str(entry.get("from") or "")
+        new = str(entry.get("to") or "")
+        if status == ENTRY_MOVED:
+            applied.append({"from": legacy, "to": new, "action": "already-moved"})
+            continue
+        if status == ENTRY_ROLLED_BACK:
+            continue
+        src = root / legacy
+        if src.exists() and entry.get("digestBefore") is None:
+            entry["digestBefore"] = tree_digest(src)
+        result = _relocate_one(root, legacy, new)
+        if result["action"] in ("moved", "merged"):
+            entry["status"] = ENTRY_MOVED
+            entry["digestAfter"] = tree_digest(root / new)
+            # Parent/child merges change the parent tree shape by design (children
+            # already landed). Enforce byte-identity only for direct moves.
+            if result["action"] == "moved":
+                before = entry.get("digestBefore")
+                if before and entry["digestAfter"] != before:
+                    raise StateRootMigrateError(
+                        "semantic-identity-mismatch",
+                        f"content digest changed while moving {legacy} → {new}",
+                        fromPath=legacy,
+                        toPath=new,
+                    )
+        elif result["action"] == "skip-missing" and (root / new).exists():
+            entry["status"] = ENTRY_MOVED
+            entry["digestAfter"] = tree_digest(root / new)
+            result = {"from": legacy, "to": new, "action": "already-moved"}
+        _write_journal(root, journal)
+        applied.append(result)
+    journal["status"] = JOURNAL_STATUS_COMPLETED
+    journal["completedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    _write_journal(root, journal)
+    return applied
+
+
+def abort_migration(root: Path, *, holder: str | None = None) -> dict[str, Any]:
+    """Roll back an interrupted migration from the journal and release the fence (R15)."""
+    del holder  # holder retained for CLI symmetry; fence release is path-based
+    journal = _read_journal(root)
+    if journal is None:
+        release_info = release_quiesce_fence(root, missing_ok=True)
+        return {
+            "verdict": "pass",
+            "aborted": False,
+            "message": "no migration journal present",
+            "fenceReleased": release_info,
+        }
+    rolled: list[dict[str, Any]] = []
+    entries = list(reversed(journal.get("entries") or []))
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("status")) != ENTRY_MOVED:
+            continue
+        legacy = str(entry.get("from") or "")
+        new = str(entry.get("to") or "")
+        result = _rollback_one(root, legacy, new)
+        entry["status"] = ENTRY_ROLLED_BACK
+        rolled.append(result)
+        _write_journal(root, journal)
+    journal["status"] = JOURNAL_STATUS_ABORTED
+    journal["abortedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    _write_journal(root, journal)
+    _clear_journal(root)
+    release_info = release_quiesce_fence(root, missing_ok=True)
+    return {
+        "verdict": "pass",
+        "aborted": True,
+        "rolledBack": rolled,
+        "fenceReleased": release_info,
+    }
+
+
 def relocate(
     root: Path,
     *,
     confirm: bool,
     plugin_root: Path | None = None,
     holder: str | None = None,
+    resume: bool = False,
+    abort: bool = False,
 ) -> dict[str, Any]:
-    """Skew → quiesce → fence → consent/relocate → always release fence (R13/R14/R54)."""
+    """Skew → quiesce → fence → journaled consent/relocate/resume/abort (R13/R14/R15/R54)."""
+    if abort:
+        return abort_migration(root, holder=holder)
+
+    existing = _read_journal(root)
+    if existing is not None and existing.get("status") == JOURNAL_STATUS_IN_PROGRESS:
+        if not resume and not confirm:
+            return {
+                "verdict": "journal-in-progress",
+                "error": "journal-in-progress",
+                "message": (
+                    "interrupted migration journal present; "
+                    "re-run with --resume to complete or --abort to roll back"
+                ),
+                "journal": existing,
+                "fenceHeld": fence_held(root),
+            }
+        if not fence_held(root):
+            fence_meta = acquire_quiesce_fence(
+                root, holder=holder or "state-root-migrate-resume"
+            )
+        else:
+            fence_meta = read_fence(root) or {"verdict": "pass", "held": True}
+        applied = _apply_journal_entries(root, existing)
+        _clear_journal(root)
+        release_info = release_quiesce_fence(root, missing_ok=True)
+        return {
+            "verdict": "pass",
+            "resumed": True,
+            "moved": applied,
+            "fence": fence_meta,
+            "fenceReleased": release_info,
+            "semanticIdentity": True,
+        }
+
     skew = compare_plugin_redirect_map(root, plugin_root)
     assert_quiesced(root)
     moves = proposed_moves(root)
@@ -521,7 +778,7 @@ def relocate(
         return out
 
     try:
-        if not confirm:
+        if not confirm and not resume:
             release_info = _release()
             return {
                 "verdict": "confirm-required",
@@ -537,9 +794,18 @@ def relocate(
                 "fenceReleased": release_info,
             }
 
-        applied: list[dict[str, Any]] = []
-        for move in actionable:
-            applied.append(_relocate_one(root, str(move["from"]), str(move["to"])))
+        journal = _new_journal(actionable)
+        for entry, move in zip(journal["entries"], actionable):
+            src = root / str(move["from"])
+            if src.exists():
+                entry["digestBefore"] = tree_digest(src)
+        _write_journal(root, journal)
+        try:
+            applied = _apply_journal_entries(root, journal)
+        except Exception:
+            # Keep journal + fence so resume/abort can finish without manual surgery.
+            raise
+        _clear_journal(root)
         release_info = _release()
         return {
             "verdict": "pass",
@@ -548,9 +814,11 @@ def relocate(
             "skew": skew,
             "fence": fence_meta,
             "fenceReleased": release_info,
+            "semanticIdentity": True,
         }
     except Exception:
-        _release()
+        if not journal_path(root).is_file():
+            _release()
         raise
 
 
@@ -577,6 +845,16 @@ def main(argv: list[str] | None = None) -> int:
         "--confirm",
         action="store_true",
         help="Consent to relocate; without this flag no files are moved",
+    )
+    migrate_p.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume an interrupted journaled migration (R15)",
+    )
+    migrate_p.add_argument(
+        "--abort",
+        action="store_true",
+        help="Abort and roll back an interrupted journaled migration (R15)",
     )
     migrate_p.add_argument("--holder", default=None)
     args = parser.parse_args(argv)
@@ -611,6 +889,8 @@ def main(argv: list[str] | None = None) -> int:
                 confirm=bool(args.confirm),
                 plugin_root=plugin_root,
                 holder=args.holder,
+                resume=bool(getattr(args, "resume", False)),
+                abort=bool(getattr(args, "abort", False)),
             )
         else:
             out = {"verdict": "fail", "error": f"unknown command: {command}"}
@@ -623,7 +903,7 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(out, indent=2))
     if out.get("verdict") in ("pass", "clear", "legacy-layout"):
         return 0
-    if out.get("verdict") == "confirm-required":
+    if out.get("verdict") in ("confirm-required", "journal-in-progress"):
         return 1
     return 1
 

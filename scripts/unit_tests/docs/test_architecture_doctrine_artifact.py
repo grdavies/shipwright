@@ -107,7 +107,7 @@ def test_missing_sequential_id_fails() -> None:
 
 
 def test_layout_registration_present(repo_root: Path) -> None:
-    for rel in ("core/sw-reference/layout.md", ".sw/layout.md"):
+    for rel in ("core/sw-reference/layout.md", ".shipwright/layout.md"):
         text = (repo_root / rel).read_text(encoding="utf-8")
         assert "architecture-doctrine.md" in text
         assert "architecture-assessment.schema.json" in text

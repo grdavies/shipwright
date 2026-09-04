@@ -59,8 +59,8 @@ File-store repos: unchanged — paths and file writes below apply.
 
 ## Path
 
-- PRD: `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` per `.sw/layout.md`.
-- Decision: `docs/decisions/<n>-<slug>.md` per `.sw/layout.md`.
+- PRD: `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` per `.shipwright/layout.md`.
+- Decision: `docs/decisions/<n>-<slug>.md` per `.shipwright/layout.md`.
 
 ## Tier routing (PRD only)
 
@@ -77,7 +77,7 @@ At save time on the Full path:
    `python3 scripts/doc_link.py write-forwardref --brainstorm <brainstorm> --prd <prd>`.
 
 `/sw-freeze` re-verifies linkage (`doc-link-check.py`, R55) and may write the forward ref if still writable (R53).
-Fields are documented in `.sw/layout.md`.
+Fields are documented in `.shipwright/layout.md`.
 
 ## DecisionGraph scope (PRD 280 R15)
 

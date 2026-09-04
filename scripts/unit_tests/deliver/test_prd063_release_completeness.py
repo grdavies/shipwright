@@ -12,8 +12,8 @@ DOC_SURFACES: tuple[tuple[str, str], ...] = (
     ("core/commands/sw-deliver.md", "shipChain"),
     ("docs/guides/workflows.md", "Deliver autonomy"),
     ("docs/guides/commands.md", "Deliver autonomy"),
-    (".sw/layout.md", "harness-roots-manifest.json"),
-    (".sw/layout.md", "dispatch lease"),
+    (".shipwright/layout.md", "harness-roots-manifest.json"),
+    (".shipwright/layout.md", "dispatch lease"),
     ("core/skills/conductor/SKILL.md", "DELIVER_WAKE_"),
 )
 

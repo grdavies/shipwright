@@ -1333,7 +1333,7 @@ assert len(d.get('explicitDependencyRows',[]))==1
 rm -rf "$CONT_FIX"
 
 # --- layout reference includes deliver artifacts (R33) ---
-if grep -q 'sw-deliver-plan.json' "$ROOT/.sw/layout.md" && \
+if grep -q 'sw-deliver-plan.json' "$ROOT/.shipwright/layout.md" && \
    grep -q 'sw-deliver-plan.json' "$ROOT/core/sw-reference/layout.md"; then
   echo "OK  deliver-phase-layout-reference"
 else

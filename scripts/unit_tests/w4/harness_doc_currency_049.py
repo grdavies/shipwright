@@ -44,7 +44,7 @@ FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
-LAYOUT="$ROOT/.sw/layout.md"
+LAYOUT="$ROOT/.shipwright/layout.md"
 CONDUCTOR="$(content_path skills/conductor/SKILL.md)"
 DELIVER="$(content_path skills/deliver/SKILL.md)"
 
@@ -53,7 +53,7 @@ check() {
   if grep -qE "$pattern" "$file" 2>/dev/null; then ok "$name"; else bad "$name"; fi
 }
 
-# doc-currency-049-contract-sections — .sw/layout.md (R1)
+# doc-currency-049-contract-sections — .shipwright/layout.md (R1)
 check "layout-operator-contract-heading" "$LAYOUT" '## Operator worktree contract'
 check "layout-primary-checkout" "$LAYOUT" 'defaultBaseBranch'
 check "layout-orchestrator-worktree" "$LAYOUT" '<slug>-orchestrator'

@@ -31,7 +31,7 @@ promotion cannot demote the kernel floor (verification-gate, check-gate, gap-che
 | **Issue-store projection** | `.cursor/sw-planning-projections/project-doctrine.json` | Optional mirror — never SoT |
 | **Codebase-design / assessment** | Assessment YAML + consumer vocabulary | Reference/evaluation input — not a second SoT or `/sw-codebase-design` command |
 
-Ownership and layout pointers: `.sw/layout.md` (Consumer ProjectDoctrine section). Operator adoption:
+Ownership and layout pointers: `.shipwright/layout.md` (Consumer ProjectDoctrine section). Operator adoption:
 `/sw-init` + `docs/guides/configuration.md`. Routing among baseline discovery, doctrine ownership,
 assessment, and self-reference: `docs/guides/decision-tree.md`. Leakage: `scripts/project_doctrine_leakage.py`.
 Lifecycle: `scripts/project_doctrine.py`, synthesis interface `scripts/project_baseline.py`.

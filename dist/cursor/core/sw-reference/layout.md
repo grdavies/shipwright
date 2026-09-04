@@ -1,5 +1,23 @@
 # Shipwright artifact layout
 
+> **State-root redirect window (PRD 342 / Unit 1):** The authoritative layout contract
+> now lives at `.shipwright/layout.md`. During the redirect window both trees are
+> valid:
+>
+> | Role | Path |
+> | --- | --- |
+> | Preferred state root | `.shipwright/` |
+> | Legacy Cursor-scoped state | `.cursor/` (sw-* families) |
+> | Legacy `.sw/` operator inputs | `.sw/` → `.shipwright/sw-reference/` |
+> | Packaged reference mirror | `core/sw-reference/layout.md` |
+>
+> Runtime path resolution goes through `scripts/shipwright_paths.py` (R8). Do not
+> hard-code either tree in skills, commands, or rules — point here instead.
+>
+> Legacy stub: `.sw/layout.md` redirects to this file.
+
+---
+
 Single-source path contract for the documentation pipeline and downstream implementation workstream.
 All `sw-` doc commands resolve paths from this document — do not re-decide locations in commands.
 

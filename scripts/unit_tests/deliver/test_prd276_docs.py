@@ -24,7 +24,7 @@ def test_docs_deliver_lease_adopt_finalize_updated(repo_root: Path) -> None:
     assert "finalize" in deliver.lower()
     assert "squash" in deliver.lower()
 
-    layout = (repo_root / ".sw/layout.md").read_text(encoding="utf-8")
+    layout = (repo_root / ".shipwright/layout.md").read_text(encoding="utf-8")
     assert "sw-deliver-run-locks" in layout
     assert "Exclusive runId lease taxonomy" in layout or "runId lease" in layout
 

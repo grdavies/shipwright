@@ -16,6 +16,17 @@
 !.cursor/sw-memory/rules/**
 !.cursor/sw-memory-rule-allowlist.json
 
+# .shipwright state root — ignore by default; keep config, memory rules, allowlist tracked (PRD 342 R53)
+.shipwright/**
+!.shipwright/
+!.shipwright/workflow.config.json
+!.shipwright/memory/
+!.shipwright/memory/rules/
+!.shipwright/memory/rules/**
+!.shipwright/memory/rule-allowlist.json
+!.shipwright/layout.md
+!.shipwright/unit-1-exit.md
+
 # Runtime state — never publish (PRD 069 R4)
 .cursor/sw-base-state.json
 .cursor/tmp-*.sh

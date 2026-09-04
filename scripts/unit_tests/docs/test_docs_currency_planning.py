@@ -53,7 +53,7 @@ def test_planning_doc_currency_fails_when_doc_stale(repo: Path) -> None:
 
 
 def test_planning_doc_currency_fails_when_marker_missing(repo: Path) -> None:
-    doc = repo / ".sw/layout.md"
+    doc = repo / ".shipwright/layout.md"
     doc.write_text("# incomplete\n", encoding="utf-8")
     drift = check_planning_doc_currency(repo)
     assert any(row.get("kind") == "planning-doc-marker-missing" for row in drift)

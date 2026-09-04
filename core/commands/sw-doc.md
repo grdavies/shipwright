@@ -76,7 +76,7 @@ Resume reads `state.json` + receipts alone — incomplete pending receipts block
 
 **Concurrency (PRD 090):** the shared `.cursor/sw-doc-runs/index.json` is updated under
 `planning_txn.store_lock` with monotonic revision (R1). Target and doc-to-feature handoff locks take a
-cross-clone `wave_remote_lease` git-ref CAS (R2) in addition to local exclusion — see `.sw/layout.md`.
+cross-clone `wave_remote_lease` git-ref CAS (R2) in addition to local exclusion — see `.shipwright/layout.md`.
 
 ### Stage state machine
 

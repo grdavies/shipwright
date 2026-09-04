@@ -44,7 +44,7 @@ FAIL=0
 ok()  { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
 
-LAYOUT="$ROOT/.sw/layout.md"
+LAYOUT="$ROOT/.shipwright/layout.md"
 CONDUCTOR="$ROOT/core/skills/conductor/SKILL.md"
 DELIVER_CMD="$ROOT/core/commands/sw-deliver.md"
 LOOP_PY="$ROOT/scripts/wave_deliver_loop.py"

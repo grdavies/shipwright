@@ -237,7 +237,7 @@ A non-delivery merge to `main` cleanly no-ops (`skipped: no-delivery-mapping`).
 - Preview without mutation: `python3 scripts/planning_store.py close-delivery-units --prd-unit <id> --dry-run`
 - On `verdict: not-ready`, retry **only** via the printed `resumeCommand` (same rule as **Closure-audit resume**
   above).
-- Closure manifests and optional post-audit markers persist under `.sw/deliver-closeout/` (see `.sw/layout.md`).
+- Closure manifests and optional post-audit markers persist under `.sw/deliver-closeout/` (see `.shipwright/layout.md`).
 
 CI observe-only rollout: the workflow runs `closeout_ci.py --mode observe` until the repository variable
 `DELIVER_CLOSEOUT_CI_GATE` flips to `mutate`. Mutating steps require `SW_PLANNING_ISSUES_TOKEN` (see config
@@ -301,4 +301,4 @@ python3 scripts/planning_gap_capture.py retro-materialize --signal-id <id> --dig
 
 Route records for audit/resume: `.cursor/hooks/state/retro-gap-routes/<signalId>.json` (see
 [`docs/guides/configuration.md`](../../docs/guides/configuration.md#retrospective-gap-capture) and
-`.sw/layout.md`). Config knobs: `core/sw-reference/config.schema.json` → `retrospective.gapCapture`.
+`.shipwright/layout.md`). Config knobs: `core/sw-reference/config.schema.json` → `retrospective.gapCapture`.

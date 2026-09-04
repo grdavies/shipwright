@@ -7,8 +7,9 @@ allowlisted rules at session start; promote or edit rules only through `/sw-memo
 
 ## Retrieval
 
-- **In-repo provider:** local bodies under `.cursor/sw-memory/rules/` plus allowlist `.cursor/sw-memory-rule-allowlist.json`
+- **In-repo provider:** local bodies under `.shipwright/memory/rules/` (legacy `.cursor/sw-memory/rules/` during redirect) plus allowlist `.shipwright/memory/rule-allowlist.json` (legacy `.cursor/sw-memory-rule-allowlist.json`)
 - **Recallium / other providers:** `memory-preflight` `rules-load` via the adapter — thin pointers only
+- **Layout contract:** `.shipwright/layout.md` (legacy stub `.sw/layout.md`)
 - Dual-home standing guidance (policy copied here and in the provider) is rejected except for `in-repo` local bodies
 
 ## Rule pointers

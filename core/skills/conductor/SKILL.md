@@ -216,7 +216,7 @@ applies safe post-merge cleanup when deterministic.
 **Orchestrator worktree:** run `deliver-loop` from `.sw-worktrees/<slug>-orchestrator` (mandatory
 orchestrator provisioning — repo root is not an alternate conductor-loop cwd). Repo-root `.cursor/`
 updates during deliver are expected conductor runtime, not feature implementation; tracked
-`defaultBaseBranch` must not accumulate implementation commits during a run. See `.sw/layout.md`
+`defaultBaseBranch` must not accumulate implementation commits during a run. See `.shipwright/layout.md`
 **Operator worktree contract**. Never hand off with "run deliver-loop next" as the only instruction —
 run it in-turn.
 

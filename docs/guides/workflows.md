@@ -119,7 +119,7 @@ Returns `recommendation` (applied/deterministic/advisory/veto/floor tiers), weig
 `core/commands/sw-status.md`.
 
 Storage layout for producer artifacts, the capability registry, and compression evidence logs lives in
-`.sw/layout.md` (**Project intelligence evidence and promotion stores**). Configuration keys:
+`.shipwright/layout.md` (**Project intelligence evidence and promotion stores**). Configuration keys:
 `planning.intelligence.triageEvidence.*`, `planning.intelligence.capabilityPromotion.*`, and
 `contextCompression.phase` — see `docs/guides/configuration.md`.
 
@@ -475,7 +475,7 @@ threads serialize through an allocator lock in addition to `flock(2)`.
 
 **Doc-loop concurrency:** concurrent doc runs share `.cursor/sw-doc-runs/index.json` under a
 `planning_txn.store_lock`. Cross-clone exclusion for target and doc-to-feature handoff locks uses
-`wave_remote_lease` git-ref CAS. See `.sw/layout.md` Doc-run layout and target-lock sections.
+`wave_remote_lease` git-ref CAS. See `.shipwright/layout.md` Doc-run layout and target-lock sections.
 
 ---
 
@@ -734,7 +734,7 @@ When all phases reach `green-merged` and the terminal gate is live green, delive
 
 | Concern | Contract |
 | --- | --- |
-| **Status location** | `.cursor/sw-deliver-runs/<runId>/terminal-acceptance.json` (run-scoped; see `.sw/layout.md`) |
+| **Status location** | `.cursor/sw-deliver-runs/<runId>/terminal-acceptance.json` (run-scoped; see `.shipwright/layout.md`) |
 | **Schema fields** | `schemaVersion`, `runId`, `targetBranch`, `sourceTaskList`, `phases`, `terminalPr`, `terminalGate`, `terminalGateExitCode`, `gatesRunRollup`, `interactionCount`, `recordedAt` |
 | **Verification** | `python3 scripts/wave_terminal.py terminal pr gate` on green paths; `wave_acceptance.validate_acceptance_record` and `wave_terminal.validate_acceptance_schema` refuse incomplete ledgers |
 | **Resumable halts** | Legitimate terminal interrupts attach `haltResume` (`haltCause`, `resumeCommand`, `runId`, `autonomyDirective`) via `halt_resume.enrich_legitimate_halt` — resume with `/sw-deliver run` (never bare `deliver-loop`) |
@@ -1181,7 +1181,7 @@ This runs, in order:
 2. `python3 -m sw generate --all` — refresh `dist/cursor/` and `dist/claude-code/`
 3. `scripts/snapshot-tree.py` — update `cursor-golden.manifest` when `dist/` changed
 
-The SoT map lives in `.sw/layout.md` and `core/sw-reference/build-chain-sot.json`. CI enforces
+The SoT map lives in `.shipwright/layout.md` and `core/sw-reference/build-chain-sot.json`. CI enforces
 `scripts/`↔`core/scripts/` parity (`run_core_scripts_parity_fixtures.py`) and dist↔golden parity.
 
 ## Release dist and effective-config auto-regen
@@ -1333,7 +1333,7 @@ confirmation alone is insufficient; peer agreement without exogenous coupling is
 - **Independence warnings are report-only** — they cannot change quorum, verdicts, escalation, or kernel bindings.
 - **Advisory picker deferred** — metrics do not auto-select review panel members in v1.
 
-Authority: `.cursor/sw-learning-store/` via `ReviewerMetricsStoreAdapter` only (see `.sw/layout.md`).
+Authority: `.cursor/sw-learning-store/` via `ReviewerMetricsStoreAdapter` only (see `.shipwright/layout.md`).
 
 ## Codebase Intelligence
 
@@ -1413,7 +1413,7 @@ python3 scripts/domain_vocabulary.py check-divergence --body-file <prd-draft.md>
 
 ### Layout and absorb close-out
 
-Harness roots and absorb acceptance criteria live in `.sw/layout.md` (**Codebase Intelligence surfaces**).
+Harness roots and absorb acceptance criteria live in `.shipwright/layout.md` (**Codebase Intelligence surfaces**).
 
 ## Turn-independent deliver ship loop
 

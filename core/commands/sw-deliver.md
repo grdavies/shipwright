@@ -396,7 +396,7 @@ Before gap closure or terminal deliver on PRD 063 workstreams, verify operator-f
 | `core/skills/conductor/SKILL.md` | Phase-unique self-wake (`DELIVER_WAKE_*`), hang/desync halts (R5) |
 | `core/rules/sw-conductor.mdc` | Legitimate halts override silent window (R12) |
 | `docs/guides/workflows.md` | `shipChain` consumability, pre-PR smoke, finalize closure |
-| `.sw/layout.md` | Harness roots manifest, dispatch lease, `shipChain` on status |
+| `.shipwright/layout.md` | Harness roots manifest, dispatch lease, `shipChain` on status |
 
 Run `python3 scripts/wave.py docs-currency` and
 `python3 scripts/unit_tests/deliver/test_prd063_release_completeness.py` before closing absorbed gaps.
@@ -606,7 +606,7 @@ desync-preserving refusal.
 ### Exclusive runId lease — held halt + stale reclaim (R9–R12, R20–R21)
 
 Before mutating run-scoped state, `deliver-loop` acquires an exclusive lease keyed by `runId` under
-`.cursor/sw-deliver-run-locks/` (git-common-dir anchored; see `.sw/layout.md` lease taxonomy).
+`.cursor/sw-deliver-run-locks/` (git-common-dir anchored; see `.shipwright/layout.md` lease taxonomy).
 
 | Condition | Behavior |
 | --- | --- |
