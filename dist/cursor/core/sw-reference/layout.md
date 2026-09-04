@@ -1397,6 +1397,20 @@ writes map onto outbox destinations so projection catch-up survives outages/retr
 Authoritative templates consumed by host adapters and init helpers. Edit under
 `core/sw-reference/templates/`; build-chain SoT lists `templates/` in `coreAuthoredAllowlist`.
 
+### Resolution stack (PRD 342 R37–R41)
+
+Templates resolve through a fixed three-layer stack (first match wins per path):
+
+1. Repository overrides — `.shipwright/templates`
+2. Installed packs — `.shipwright/template-packs/<id>/` (local directory or zip only; see `scripts/template_pack.py`)
+3. Core defaults — `core/sw-reference/templates`
+
+With no overrides and no packs, every resolved template is byte-identical to its core
+default (`scripts/template_resolve.py`). Provenance names the supplying layer per
+template. Legacy `.sw/templates` is retired (disposition recorded in
+`.shipwright/template-stack-disposition.json`). Doctor reports overrides that shadow a
+core template whose default has since changed.
+
 | Template | Path | Writer | Purpose |
 | --- | --- | --- | --- |
 | PR body | `core/sw-reference/templates/pr-body.md` | host `pr-create` | Required Summary/Test plan fields for PR descriptions |
