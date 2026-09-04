@@ -545,6 +545,8 @@
     "orchestrator_signal_context.py",
     "orchestrator_step_plan.py",
     "over_mock_scan.py",
+    "packaged_install_check_gate.py",
+    "packaged_install_ga_smoke.py",
     "path_literal_guard.py",
     "phase_acceptance_gate.py",
     "phase_ship_hygiene.py",
@@ -704,6 +706,7 @@
     "ship_loop.py",
     "ship_phase_steps.py",
     "ship_pre_pr_smoke.py",
+    "shipwright-distribution-stamp.json",
     "shipwright-state.py",
     "shipwright_paths.py",
     "shipwright_state_lib.py",
@@ -734,6 +737,7 @@
     "sw_scripts_inventory.py",
     "sw_scripts_resolve.py",
     "sw_scripts_rewrite.py",
+    "sw_self.py",
     "sw_state_write.py",
     "sw_state_write_lib.py",
     "task_model_allowlist_lib.py",
@@ -808,5 +812,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 805
+  "moduleCount": 809,
+  "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

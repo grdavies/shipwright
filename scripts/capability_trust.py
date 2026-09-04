@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from pathlib import Path
 from typing import Any, Callable
@@ -329,4 +331,133 @@ def authorize_executable(
         "authorized": True,
         "gateRef": gate_ref,
         "refusalReason": None,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Distribution integrity (PRD 342 R23 / R51)
+#
+# Exactly one verification mechanism for distributed zipapp artifacts:
+# SHA-256 digest comparison against the sidecar distribution stamp.
+# Threat model is corruption in transit or on disk — never tampering,
+# authenticity, or provenance.
+# ---------------------------------------------------------------------------
+
+DISTRIBUTION_INTEGRITY_MECHANISM = "sha256-digest"
+CORRUPTION_REFUSAL = (
+    "corruption in transit or on disk — upgrade refused "
+    "(integrity marker does not assert authenticity or provenance)"
+)
+
+
+def distribution_integrity_mechanisms() -> list[str]:
+    """Return the single documented verification mechanism (R51)."""
+    return [DISTRIBUTION_INTEGRITY_MECHANISM]
+
+
+def compute_artifact_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def expected_sha256_from_stamp(stamp: dict[str, Any]) -> str | None:
+    integrity = stamp.get("integrity")
+    if not isinstance(integrity, dict):
+        return None
+    if integrity.get("algorithm") != "sha256":
+        return None
+    value = integrity.get("sha256")
+    return str(value) if value else None
+
+
+def verify_distribution_integrity(
+    artifact: Path,
+    *,
+    expected_sha256: str | None = None,
+    stamp: dict[str, Any] | None = None,
+    stamp_path: Path | None = None,
+) -> dict[str, Any]:
+    """Verify a distributed artifact against the SHA-256 integrity marker (R23/R51).
+
+    On failure the refusal names corruption in transit or on disk — never
+    tampering or provenance.
+    """
+    mechanisms = distribution_integrity_mechanisms()
+    if len(mechanisms) != 1:
+        return {
+            "verdict": "fail",
+            "ok": False,
+            "mechanism": None,
+            "refusalReason": "integrity-mechanism-misconfigured",
+            "message": "exactly one distribution integrity mechanism must be configured",
+            "upgradeAllowed": False,
+        }
+
+    expected = expected_sha256
+    loaded_stamp = stamp
+    if expected is None and loaded_stamp is None and stamp_path is not None:
+        if not stamp_path.is_file():
+            return {
+                "verdict": "fail",
+                "ok": False,
+                "mechanism": DISTRIBUTION_INTEGRITY_MECHANISM,
+                "refusalReason": "stamp-missing",
+                "message": CORRUPTION_REFUSAL,
+                "upgradeAllowed": False,
+                "stampPath": str(stamp_path),
+            }
+        loaded_stamp = json.loads(stamp_path.read_text(encoding="utf-8"))
+    if expected is None and isinstance(loaded_stamp, dict):
+        expected = expected_sha256_from_stamp(loaded_stamp)
+
+    if not expected:
+        return {
+            "verdict": "fail",
+            "ok": False,
+            "mechanism": DISTRIBUTION_INTEGRITY_MECHANISM,
+            "refusalReason": "digest-missing",
+            "message": CORRUPTION_REFUSAL,
+            "upgradeAllowed": False,
+        }
+
+    if not artifact.is_file():
+        return {
+            "verdict": "fail",
+            "ok": False,
+            "mechanism": DISTRIBUTION_INTEGRITY_MECHANISM,
+            "refusalReason": "artifact-missing",
+            "message": CORRUPTION_REFUSAL,
+            "upgradeAllowed": False,
+            "artifact": str(artifact),
+        }
+
+    actual = compute_artifact_sha256(artifact)
+    if actual.lower() != str(expected).lower():
+        return {
+            "verdict": "fail",
+            "ok": False,
+            "mechanism": DISTRIBUTION_INTEGRITY_MECHANISM,
+            "refusalReason": "corruption-in-transit-or-on-disk",
+            "message": CORRUPTION_REFUSAL,
+            "upgradeAllowed": False,
+            "expectedSha256": str(expected).lower(),
+            "actualSha256": actual.lower(),
+            "artifact": str(artifact),
+        }
+
+    return {
+        "verdict": "pass",
+        "ok": True,
+        "mechanism": DISTRIBUTION_INTEGRITY_MECHANISM,
+        "refusalReason": None,
+        "message": None,
+        "upgradeAllowed": True,
+        "sha256": actual.lower(),
+        "artifact": str(artifact),
     }

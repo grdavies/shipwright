@@ -87,6 +87,28 @@ RESILIENCE_VERIFY_SCOPE = "resilience"
 RESILIENCE_RUNNER_REL = Path("scripts/test/_runner.py")
 
 
+def validate_path_literal_guard(root: Path) -> str | None:
+    """Fail-closed on new relocated-path string literals (PRD 342 R11)."""
+    guard = root / "scripts" / "path_literal_guard.py"
+    if not guard.is_file():
+        return None
+    try:
+        from path_literal_guard import evaluate
+    except ImportError:
+        return None
+    try:
+        payload = evaluate(root)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return f"path-literal-guard-error:{exc}"
+    if payload.get("verdict") == "pass":
+        return None
+    reason = str(payload.get("reason") or "fail")
+    count = payload.get("newRefCount")
+    if count is not None:
+        return f"path-literal-guard:{reason}:new={count}"
+    return f"path-literal-guard:{reason}"
+
+
 def validate_effective_config_drift(root: Path) -> str | None:
     """Fail-closed when generated effective-config/doc projection drifts (PRD 279 R15)."""
     gen = root / "scripts" / "effective_config_gen.py"
@@ -101,6 +123,18 @@ def validate_effective_config_drift(root: Path) -> str | None:
     if not errors:
         return None
     return errors[0]
+
+
+def validate_documented_defaults_drift(root: Path) -> str | None:
+    """Fail-closed when documented operator defaults drift from effective config (PRD 330 R2)."""
+    checker = root / "scripts" / "documented_defaults_check.py"
+    if not checker.is_file():
+        return None
+    try:
+        from documented_defaults_check import validate_documented_defaults
+    except ImportError:
+        return None
+    return validate_documented_defaults(root)
 
 
 def validate_resilience_verify_scope(root: Path, cfg: dict[str, Any]) -> str | None:
@@ -147,18 +181,9 @@ def git_root(start: Path | None = None) -> Path:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-            if isinstance(data, dict):
-                return data
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def cfg_bool(cfg: dict[str, Any], key: str, default: bool) -> bool:
     checks = cfg.get("checks")
     if not isinstance(checks, dict):
@@ -856,6 +881,35 @@ def run_deferred_placeholder_lint_gate(root: Path, payload: dict[str, Any]) -> t
     return 0, payload
 
 
+def run_architecture_assessment_gate(root: Path, cfg: dict[str, Any], payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    """Evaluate opt-in architecture doctrine assessment (PRD 326 R15)."""
+    mode = str(cfg_value(cfg, "architecture", "assessment", "mode", default="off") or "off").strip().lower()
+    if mode == "off":
+        return 0, payload
+    completed = proc.run(
+        [sys.executable, str(SCRIPT_DIR / "architecture_assessment.py"), "--root", str(root), "evaluate"],
+        cwd=str(root),
+    )
+    result: dict[str, Any] = {}
+    try:
+        result = json.loads(completed.stdout.strip() or "{}")
+    except json.JSONDecodeError:
+        result = {"verdict": "fail", "error": "architecture-assessment-invalid-output"}
+    payload = dict(payload)
+    payload["architectureAssessment"] = result
+    if mode == "advisory":
+        return 0, payload
+    if completed.returncode == 20 or result.get("verdict") == "fail":
+        blocked: dict[str, Any] = {
+            "verdict": "blocked",
+            "reason": "architecture-assessment:blocking-fail",
+            "architectureAssessment": result,
+        }
+        jsonio.emit(blocked)
+        return 30, blocked
+    return 0, payload
+
+
 def finalize_gate_payload(
     root: Path,
     cfg: dict[str, Any],
@@ -872,6 +926,9 @@ def finalize_gate_payload(
     if ec != 0:
         return ec, payload
     ec, payload = run_deferred_placeholder_lint_gate(root, payload)
+    if ec != 0:
+        return ec, payload
+    ec, payload = run_architecture_assessment_gate(root, cfg, payload)
     if ec != 0:
         return ec, payload
     verdict, required_failing, reason, payload = apply_quality_blocking_promotion(
@@ -898,6 +955,13 @@ def finalize_gate_payload(
             fse.maybe_escalate_threshold(root, cfg, failure_text=reason)
         except Exception:
             pass
+    try:
+        import packaged_install_check_gate as packaged_ga
+
+        payload = packaged_ga.annotate_check_gate_payload(payload, root=root)
+    except Exception:
+        payload = dict(payload)
+        payload["packagedInstallGa"] = {"present": False, "error": "wiring-helper-unavailable"}
     jsonio.emit(payload)
     return VERDICT_EXIT.get(verdict, 1), payload
 
@@ -1196,11 +1260,31 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
         jsonio.emit(payload)
         return 30, payload
 
+    path_literal_err = validate_path_literal_guard(root)
+    if path_literal_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": f"pathLiteral:{path_literal_err}",
+            "source": "local-evidence",
+        }
+        jsonio.emit(payload)
+        return 30, payload
+
     effective_config_err = validate_effective_config_drift(root)
     if effective_config_err:
         payload = {
             "verdict": "blocked",
             "reason": f"effectiveConfig:{effective_config_err}",
+            "source": "local-evidence",
+        }
+        jsonio.emit(payload)
+        return 30, payload
+
+    documented_defaults_err = validate_documented_defaults_drift(root)
+    if documented_defaults_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": f"documentedDefaults:{documented_defaults_err}",
             "source": "local-evidence",
         }
         jsonio.emit(payload)
@@ -1339,9 +1423,21 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
         jsonio.emit(payload)
         return 30, payload
 
+    path_literal_err = validate_path_literal_guard(root)
+    if path_literal_err:
+        payload = {"verdict": "blocked", "reason": f"pathLiteral:{path_literal_err}"}
+        jsonio.emit(payload)
+        return 30, payload
+
     effective_config_err = validate_effective_config_drift(root)
     if effective_config_err:
         payload = {"verdict": "blocked", "reason": f"effectiveConfig:{effective_config_err}"}
+        jsonio.emit(payload)
+        return 30, payload
+
+    documented_defaults_err = validate_documented_defaults_drift(root)
+    if documented_defaults_err:
+        payload = {"verdict": "blocked", "reason": f"documentedDefaults:{documented_defaults_err}"}
         jsonio.emit(payload)
         return 30, payload
 

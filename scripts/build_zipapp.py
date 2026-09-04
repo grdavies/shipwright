@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Build the versioned Shipwright scripts zipapp (PRD 091 R3/R4)."""
+"""Build the versioned Shipwright scripts zipapp (PRD 091 R3/R4; PRD 342 R49)."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 import sys
@@ -18,6 +19,10 @@ if str(SCRIPT_DIR) not in sys.path:
 from _sw.cli import build_parser, run_module_main
 
 MANIFEST_VERSION = 1
+# Per-artifact distribution stamp (R49). Forks pass --distribution-origin.
+DEFAULT_DISTRIBUTION_ORIGIN = "https://github.com/grdavies/shipwright/releases"
+DISTRIBUTION_STAMP_NAME = "shipwright-distribution-stamp.json"
+INTEGRITY_ALG = "sha256"
 
 EXCLUDE_DIR_NAMES = {"__pycache__", "test", "tests", "unit_tests", ".git", "node_modules"}
 DEV_TEST_SCRIPT_DIRS = frozenset({"test", "tests", "unit_tests"})
@@ -217,20 +222,71 @@ def verify_zipapp_completeness(pyz: Path, expected_modules: list[str]) -> list[s
     return sorted(set(expected_modules) - actual)
 
 
-def build_manifest_payload(version: str, modules: list[str]) -> dict[str, object]:
+def build_manifest_payload(
+    version: str,
+    modules: list[str],
+    *,
+    distribution_origin: str = DEFAULT_DISTRIBUTION_ORIGIN,
+) -> dict[str, object]:
     return {
         "version": MANIFEST_VERSION,
         "zipappVersion": version,
         "modules": modules,
         "moduleCount": len(modules),
+        "distributionOrigin": distribution_origin,
     }
 
 
-def write_manifest(dest_dir: Path, version: str, modules: list[str]) -> Path:
+def build_distribution_stamp(
+    version: str,
+    *,
+    distribution_origin: str,
+    artifact_sha256: str | None = None,
+) -> dict[str, object]:
+    """Single-source per-artifact version + origin stamp (R49)."""
+    stamp: dict[str, object] = {
+        "schemaVersion": 1,
+        "releaseVersion": version,
+        "distributionOrigin": distribution_origin,
+        "integrity": {"algorithm": INTEGRITY_ALG, "mechanism": "sha256-digest"},
+    }
+    if artifact_sha256:
+        stamp["integrity"] = {
+            "algorithm": INTEGRITY_ALG,
+            "mechanism": "sha256-digest",
+            "sha256": artifact_sha256,
+        }
+    return stamp
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        while True:
+            chunk = handle.read(1024 * 1024)
+            if not chunk:
+                break
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def write_manifest(
+    dest_dir: Path,
+    version: str,
+    modules: list[str],
+    *,
+    distribution_origin: str = DEFAULT_DISTRIBUTION_ORIGIN,
+) -> Path:
     manifest_name = f"shipwright-{version}.manifest.json"
     manifest_path = dest_dir / manifest_name
     manifest_path.write_text(
-        json.dumps(build_manifest_payload(version, modules), indent=2) + "\n",
+        json.dumps(
+            build_manifest_payload(
+                version, modules, distribution_origin=distribution_origin
+            ),
+            indent=2,
+        )
+        + "\n",
         encoding="utf-8",
     )
     stable_manifest = dest_dir / "shipwright.manifest.json"
@@ -240,28 +296,58 @@ def write_manifest(dest_dir: Path, version: str, modules: list[str]) -> Path:
     return manifest_path
 
 
+def write_distribution_stamp(dest_dir: Path, stamp: dict[str, object]) -> Path:
+    stamp_path = dest_dir / DISTRIBUTION_STAMP_NAME
+    stamp_path.write_text(json.dumps(stamp, indent=2) + "\n", encoding="utf-8")
+    return stamp_path
+
+
+def embed_distribution_stamp(staging: Path, stamp: dict[str, object]) -> None:
+    (staging / DISTRIBUTION_STAMP_NAME).write_text(
+        json.dumps(stamp, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+def read_distribution_stamp_from_pyz(pyz: Path) -> dict[str, object] | None:
+    """Read the embedded distribution stamp from a built zipapp (R49/R20)."""
+    with zipfile.ZipFile(pyz, "r") as zf:
+        try:
+            raw = zf.read(DISTRIBUTION_STAMP_NAME)
+        except KeyError:
+            return None
+    data = json.loads(raw.decode("utf-8"))
+    return data if isinstance(data, dict) else None
+
+
 def build_archive(
     root: Path,
     dest_dir: Path,
     *,
     version: str | None = None,
     skip_modules: set[str] | None = None,
+    distribution_origin: str | None = None,
 ) -> dict[str, str | int | list[str]]:
     scripts_src = root / "scripts"
     if not scripts_src.is_dir():
         raise FileNotFoundError(f"missing scripts tree: {scripts_src}")
     ver = version or read_version(root)
+    origin = (distribution_origin or DEFAULT_DISTRIBUTION_ORIGIN).rstrip("/")
     dest_dir.mkdir(parents=True, exist_ok=True)
     versioned_name = f"shipwright-{ver}.pyz"
     versioned_path = dest_dir / versioned_name
     stable_path = dest_dir / "shipwright.pyz"
     skip = skip_modules or set()
 
+    # Embedded stamp carries release + origin only. Digest lives in the sidecar
+    # so the integrity check has a single stable mechanism (R49/R51) without a
+    # self-referential hash of the stamp bytes.
+    embedded_stamp = build_distribution_stamp(ver, distribution_origin=origin)
     with tempfile.TemporaryDirectory(prefix="sw-zipapp-stage-") as tmp:
         staging = Path(tmp)
         stage_scripts_tree(scripts_src, staging)
         patch_planning_store_shim(staging, root)
         write_zipapp_launcher(staging)
+        embed_distribution_stamp(staging, embedded_stamp)
         expected_modules = list_staged_modules(staging)
         if skip:
             for rel in sorted(skip):
@@ -276,7 +362,14 @@ def build_archive(
             "zipapp completeness check failed; missing modules: " + ", ".join(missing)
         )
 
-    manifest_path = write_manifest(dest_dir, ver, expected_modules)
+    artifact_sha = sha256_file(versioned_path)
+    stamp = build_distribution_stamp(
+        ver, distribution_origin=origin, artifact_sha256=artifact_sha
+    )
+    stamp_path = write_distribution_stamp(dest_dir, stamp)
+    manifest_path = write_manifest(
+        dest_dir, ver, expected_modules, distribution_origin=origin
+    )
 
     if stable_path.exists() or stable_path.is_symlink():
         stable_path.unlink()
@@ -289,6 +382,9 @@ def build_archive(
         "versionedPath": str(versioned_path),
         "stablePath": str(stable_path),
         "manifestPath": str(manifest_path),
+        "distributionStampPath": str(stamp_path),
+        "distributionOrigin": origin,
+        "sha256": artifact_sha,
         "modules": expected_modules,
     }
 
@@ -297,7 +393,12 @@ def cmd_build(args: argparse.Namespace) -> int:
     root = repo_root(Path(args.root))
     dest = Path(args.dest).resolve() if args.dest else root / "dist"
     try:
-        payload = build_archive(root, dest, version=args.version or None)
+        payload = build_archive(
+            root,
+            dest,
+            version=args.version or None,
+            distribution_origin=args.distribution_origin or None,
+        )
     except ZipappCompletenessError as exc:
         print(str(exc), file=sys.stderr)
         return 20
@@ -345,6 +446,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Output directory (default: <repo>/dist)",
     )
     build.add_argument("--version", default="", help="Override version.txt")
+    build.add_argument(
+        "--distribution-origin",
+        default="",
+        help="Per-artifact distribution origin URL recorded in the version stamp (R49)",
+    )
     verify = sub.add_parser("verify", help="Verify zipapp contains manifest-listed modules")
     verify.add_argument("--pyz", required=True, help="Path to shipwright.pyz")
     verify.add_argument("--manifest", required=True, help="Path to shipwright manifest JSON")

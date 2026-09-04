@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-04T01:01:03Z",
+  "generatedAt": "2026-09-04T03:07:35Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -20737,37 +20737,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/getting-started.md:25:install.py",
+      "id": "docs/guides/getting-started.md:69:install.py",
       "tree": "docs/guides",
       "file": "docs/guides/getting-started.md",
-      "line": 25,
-      "column": 32,
+      "line": 69,
+      "column": 8,
       "script": "install.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "docs/guides/getting-started.md:50:install.py",
+      "id": "docs/guides/getting-started.md:120:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/getting-started.md",
-      "line": 50,
-      "column": 59,
-      "script": "install.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "docs/guides/getting-started.md:63:sw_bootstrap.py",
-      "tree": "docs/guides",
-      "file": "docs/guides/getting-started.md",
-      "line": 63,
+      "line": 120,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "docs/guides/getting-started.md:64:sw_bootstrap.py",
+      "id": "docs/guides/getting-started.md:121:sw_bootstrap.py",
       "tree": "docs/guides",
       "file": "docs/guides/getting-started.md",
-      "line": 64,
+      "line": 121,
       "column": 8,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
