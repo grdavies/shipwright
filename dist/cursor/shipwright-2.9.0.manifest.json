@@ -236,6 +236,8 @@
     "config-at-entry.py",
     "context_compress.py",
     "context_compress_parity_check.py",
+    "converge_assess.py",
+    "converge_phase.py",
     "coverage_report.py",
     "credentials-doctor.py",
     "credentials/__init__.py",
@@ -813,6 +815,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 810,
+  "moduleCount": 812,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
