@@ -249,6 +249,11 @@ def template_overrides_dir(root: Path) -> Path:
     )
 
 
+def template_packs_dir(root: Path) -> Path:
+    """Installed template-pack root (``.shipwright/template-packs``; PRD 342 R40)."""
+    return root / STATE_ROOT_PRIMARY / "template-packs"
+
+
 def sw_reference_operator_dir(root: Path) -> Path:
     """Operator-edited sw-reference inputs (schema, layout contract, etc.)."""
     return _resolve_family(
@@ -285,6 +290,7 @@ INVENTORY_ACCESSORS: dict[str, Callable[[Path], Path]] = {
     "memory_rule_allowlist_path": memory_rule_allowlist_path,
     "memory_provider_marker_path": memory_provider_marker_path,
     "template_overrides_dir": template_overrides_dir,
+    "template_packs_dir": template_packs_dir,
     "sw_reference_operator_dir": sw_reference_operator_dir,
     "worktree_state_path": worktree_state_path,
 }

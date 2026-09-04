@@ -748,6 +748,8 @@
     "tasks-progress.py",
     "tasks_generate.py",
     "tdd-gate.py",
+    "template_pack.py",
+    "template_resolve.py",
     "test_scope.py",
     "test_tamper_check.py",
     "tournament.py",
@@ -815,6 +817,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 812,
+  "moduleCount": 814,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

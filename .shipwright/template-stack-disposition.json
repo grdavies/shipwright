@@ -1,0 +1,16 @@
+{
+  "schema": "template-stack-disposition/v1",
+  "legacyPath": ".sw/templates",
+  "disposition": "deleted",
+  "recordedFor": "PRD 342 R37 unit 5",
+  "rationale": "Unread orphaned duplicates of core/sw-reference/templates that would shadow newer core defaults (pr-body.md lacked the decision-log section). Not promoted into .shipwright/templates.",
+  "deletedPaths": [
+    "pr-body.md",
+    "merge-commit.md"
+  ],
+  "resolutionOrder": [
+    ".shipwright/templates",
+    ".shipwright/template-packs",
+    "core/sw-reference/templates"
+  ]
+}
