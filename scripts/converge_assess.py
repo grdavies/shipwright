@@ -203,13 +203,27 @@ def run_bundle_anchored_assessor(
     bundle = planning_bundle.validate_unit_bundle(root, unit_path)
     disposition = str(bundle.get("disposition") or "")
     if disposition == planning_bundle.DISPOSITION_UNDECLARED:
+        report = {
+            "disposition": disposition,
+            "degradedToCurrentDeliver": True,
+            "blocksRun": False,
+            "message": (
+                "unit declares no bundle (R30/R47); converge degrades to current "
+                "deliver behavior with this explanatory report"
+            ),
+        }
         return _step(
             BUNDLE_ANCHORED_ASSESSOR_ID,
             verdict="pass",
-            detail="unit declares no bundle; assessor records undeclared disposition",
+            detail=(
+                "unit declares no bundle; degrade to current deliver with explanatory report"
+            ),
             disposition=disposition,
             present=list(bundle.get("present") or []),
             missing=[],
+            degradedToCurrentDeliver=True,
+            blocksRun=False,
+            explanatoryReport=report,
         )
 
     present_roles = list(bundle.get("present") or [])
@@ -265,23 +279,45 @@ def run_bundle_anchored_assessor(
             findings.append(
                 {
                     "role": role,
+                    "missingAsset": role,
                     "reason": "declared-bundle-asset-missing",
+                    "frozenArtifact": True,
                 }
             )
 
     verdict = "findings" if findings else "pass"
+    missing_roles = list(bundle.get("missing") or [])
+    explanatory = None
+    if disposition == planning_bundle.DISPOSITION_INCOMPLETE:
+        explanatory = {
+            "disposition": disposition,
+            "blocksRun": False,
+            "missingAssets": missing_roles,
+            "presentAssets": present_roles,
+            "message": (
+                "declared bundle is incomplete; findings name missing assets and "
+                "assessment continues against present assets (R47)"
+            ),
+        }
     return _step(
         BUNDLE_ANCHORED_ASSESSOR_ID,
         verdict=verdict,
         detail=(
             "bundle-anchored assessor checked implementation refs against present assets"
+            if disposition != planning_bundle.DISPOSITION_INCOMPLETE
+            else (
+                "declared-but-incomplete bundle: findings name missing assets; "
+                "present assets assessed; run not blocked"
+            )
         ),
         disposition=disposition,
         present=present_roles,
-        missing=list(bundle.get("missing") or []),
+        missing=missing_roles,
         checkedRefs=checked_refs,
         missingRefs=missing_refs,
         findings=findings,
+        blocksRun=False,
+        explanatoryReport=explanatory,
     )
 
 
@@ -293,8 +329,14 @@ def compose_converge_assessment(
     phase_id: str | None = None,
     phase_slug: str | None = None,
     skip_verify_execute: bool = False,
+    route_findings: bool = True,
+    dry_run_routing: bool = False,
 ) -> dict[str, Any]:
-    """Run the R44 composition: three existing gates + one bundle-anchored assessor."""
+    """Run the R44 composition: three existing gates + one bundle-anchored assessor.
+
+    Bundle absence and incompleteness are dispositioned separately (R47) and never
+    fail or block the run. Findings route through gap-capture + amendment (R46).
+    """
     steps = [
         run_claims_audit_step(root, task_list=task_list, phase_id=phase_id),
         run_gap_check_step(root, phase_slug=phase_slug),
@@ -303,8 +345,34 @@ def compose_converge_assessment(
     ]
     ids = [str(step.get("id")) for step in steps]
     new_assessors = [step_id for step_id in ids if step_id not in COMPOSED_GATE_IDS]
+    bundle_step = next(
+        (step for step in steps if step.get("id") == BUNDLE_ANCHORED_ASSESSOR_ID),
+        {},
+    )
+    findings: list[dict[str, Any]] = []
+    for step in steps:
+        for item in step.get("findings") or []:
+            if isinstance(item, dict):
+                findings.append(dict(item))
+
+    finding_routing: dict[str, Any] | None = None
+    if route_findings and findings:
+        import planning_gap_capture as pgc
+
+        finding_routing = pgc.route_converge_findings(
+            root,
+            findings,
+            unit_dir=str(unit_dir),
+            dry_run=dry_run_routing,
+            auto_fix=False,
+            auto_amend=False,
+        )
+
+    # R47 — neither undeclared nor incomplete fails/blocks the converge run.
+    blocks_run = False
     return {
         "verdict": "pass",
+        "blocksRun": blocks_run,
         "assessorIds": ids,
         "composedGateIds": list(COMPOSED_GATE_IDS),
         "bundleAnchoredAssessorId": BUNDLE_ANCHORED_ASSESSOR_ID,
@@ -312,6 +380,13 @@ def compose_converge_assessment(
         "steps": steps,
         "taskList": task_list,
         "unitDir": str(unit_dir),
+        "bundleDisposition": bundle_step.get("disposition"),
+        "degradedToCurrentDeliver": bool(bundle_step.get("degradedToCurrentDeliver")),
+        "explanatoryReport": bundle_step.get("explanatoryReport"),
+        "findings": findings,
+        "findingRouting": finding_routing,
+        "autoFixApplied": False,
+        "autoAmendApplied": False,
     }
 
 
