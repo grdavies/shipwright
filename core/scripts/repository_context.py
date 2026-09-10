@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from collections.abc import Mapping, Sequence
@@ -19,6 +21,8 @@ from host_lib import git_remote_url, load_workflow_config, remote_name
 
 CONTEXT_ENVELOPE_ENV = "SW_CONTEXT_ENVELOPE"
 ENVELOPE_VERSION = 1
+POSTURE_PLUGIN_SELF = "plugin-self"
+POSTURE_CONSUMER = "consumer"
 
 _SECRET_KEY_RE = re.compile(
     r"(token|secret|password|credential|authorization|api[_-]?key)",
@@ -62,6 +66,45 @@ class RepositoryContextError(ValueError):
 
 class RootInvariantError(RepositoryContextError):
     """Root path no longer matches the bound repository context."""
+
+
+_DEV_REPO_DETECTOR: Any | None = None
+
+
+def _load_dev_repo_detector() -> Any:
+    global _DEV_REPO_DETECTOR
+    if _DEV_REPO_DETECTOR is not None:
+        return _DEV_REPO_DETECTOR
+    script_dir = Path(__file__).resolve().parent
+    candidate = script_dir / "is-shipwright-dev-repo.py"
+    spec = importlib.util.spec_from_file_location("_shipwright_dev_repo", candidate)
+    if spec is None or spec.loader is None:
+        raise RepositoryContextError("self-repository detector is unavailable")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules.setdefault(spec.name, module)
+    spec.loader.exec_module(module)
+    _DEV_REPO_DETECTOR = module
+    return module
+
+
+def detect_repository_posture(root: Path | str):
+    """Return unified plugin-self vs consumer posture (PRD 338 R24)."""
+    detector = _load_dev_repo_detector()
+    return detector.detect_self_repo(root)
+
+
+def resolve_repository_posture(root: Path | str) -> str:
+    """Resolve repository posture via the authoritative detector; fail closed on ambiguity."""
+    detector = _load_dev_repo_detector()
+    try:
+        return str(detector.detect_self_repo(root).posture)
+    except detector.SelfRepoDetectionError as exc:
+        raise RepositoryContextError(str(exc)) from exc
+
+
+def is_plugin_self_repository(root: Path | str) -> bool:
+    """True when the repository root is the Shipwright plugin source tree."""
+    return resolve_repository_posture(root) == POSTURE_PLUGIN_SELF
 
 
 @dataclass(frozen=True, slots=True)

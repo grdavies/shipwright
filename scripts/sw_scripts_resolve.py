@@ -50,12 +50,12 @@ class ScriptsResolveResult:
 
 
 def is_shipwright_self_repo(workspace: Path) -> bool:
-    root = workspace.resolve()
-    return (
-        (root / "version.txt").is_file()
-        and (root / "core" / "sw-reference").is_dir()
-        and (root / "scripts" / "check-gate.py").is_file()
-    )
+    from repository_context import is_plugin_self_repository
+
+    try:
+        return is_plugin_self_repository(workspace)
+    except Exception:
+        return False
 
 
 def scripts_dir_is_trusted(path: Path) -> bool:
