@@ -51,6 +51,7 @@ class ClaudeCodeEmitter(EmitterBase):
         self._copy_runtime_support(core_root, repo_root, dest)
         self._emit_plugin_manifest(repo_root, dest)
         self._emit_install_version(repo_root, dest)
+        self.copy_install_root_documentation(core_root, dest)
         self._emit_installer_entrypoint(dest)
         self._emit_hooks(repo_root, dest)
         self._emit_claude_md(core_root, dest)
