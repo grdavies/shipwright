@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version-parity:
+    name: version-parity-gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Assert release tag matches canonical version
+        if: github.event_name == 'release'
+        env:
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/v}"
+          CANONICAL="$(python3 -c "import importlib.util; from pathlib import Path; p=Path('scripts/version.py'); s=importlib.util.spec_from_file_location('v', p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); print(m.__version__)")"
+          if [ "$TAG" != "$CANONICAL" ]; then
+            echo "release tag v${TAG} does not match scripts/version.py ${CANONICAL}"
+            exit 1
+          fi
+
+      - name: Version metadata parity
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/test_version_parity.py
+
+      - name: Packaged metadata matches canonical version
+        run: |
+          CANONICAL="$(python3 -c "import sw; print(sw.__version__)")"
+          python -m pip install --upgrade pip
+          python -m pip install .
+          INSTALLED="$(python -c "import sw; print(sw.__version__)")"
+          if [ "$INSTALLED" != "$CANONICAL" ]; then
+            echo "installed package version ${INSTALLED} != canonical ${CANONICAL}"
+            exit 1
+          fi

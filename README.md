@@ -64,7 +64,7 @@ Check you have the essentials:
 git --version && python3 --version
 ```
 
-- [x] **Python ≥ 3.9** and **git** — the only runtime dependencies for install, hooks, gates, and tests
+- [x] **Python ≥ 3.10** and **git** — the only runtime dependencies for install, hooks, gates, and tests
 - [x] **Host credential** — set `host.credentialRef` in `.cursor/workflow.config.json` and add a
   machine-local selector entry (`~/.config/shipwright/credential-selector.json`). During the one-release
   `tokenEnv` alias window, `GITHUB_TOKEN` (or `host.tokenEnv`) names the presence env var for an

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "shipwright"
-version = "2.9.0"
+dynamic = ["version"]
 description = "Shipwright — packaged installer console over the existing emit/install/configure/zipapp spine"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -18,3 +18,6 @@ shipwright = "sw.console:main"
 [tool.setuptools.packages.find]
 include = ["sw*"]
 exclude = ["scripts*", "core*", "dist*", "platforms*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "sw.__version__"}
