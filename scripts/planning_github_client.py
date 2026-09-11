@@ -11,6 +11,7 @@ from typing import Any
 from urllib.parse import quote
 
 import issues_broker
+import issues_github
 import issues_http
 from issues_broker import IssueCommentAuthorshipMismatch
 from credentials.model import Resolution, ResolvedToken
@@ -680,7 +681,14 @@ class GitHubIssuesClient:
                 f"{self.api_base}/search/issues?q={quote(query)}"
                 f"&per_page={per_page}&page={page}"
             )
-            payload = self._http_json("GET", url, self.headers)
+            # PRD 344 R1/R2: search uses bounded timeout + 429 exponential backoff.
+            bound = self._bound_headers(self.headers, url=url, method="GET")
+            payload = issues_github.search_http_json(
+                "GET",
+                url,
+                bound,
+                root=self.root,
+            )
             if not isinstance(payload, dict):
                 break
             batch = payload.get("items")
