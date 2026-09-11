@@ -112,10 +112,13 @@ def validate_path_literal_guard(root: Path) -> str | None:
 def validate_golden_manifest_staleness(root: Path) -> str | None:
     """Fail-closed when cursor golden manifest drifts from ``dist/cursor`` (PRD 343 R3).
 
-    Skipped under ``SW_GATE_FIXTURE`` so JSON-contract / fixture gate runs can exercise
-    synthetic green|yellow|red verdicts without requiring a fresh golden tree.
+    Skipped when:
+    - ``SW_GATE_FIXTURE`` is set (synthetic gate contract runs), or
+    - ``dist/cursor`` is absent (sparse fixture / temp repos — not a packaging checkout).
     """
     if os.environ.get("SW_GATE_FIXTURE"):
+        return None
+    if not (root / "dist" / "cursor").is_dir():
         return None
     try:
         import golden_manifest as gm

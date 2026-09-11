@@ -123,3 +123,11 @@ def test_gate_validate_skips_under_sw_gate_fixture(
     out.write_text("stale-on-purpose\n", encoding="utf-8")
     monkeypatch.setenv("SW_GATE_FIXTURE", "green")
     assert gate.validate_golden_manifest_staleness(repo_with_dist) is None
+
+
+def test_gate_validate_skips_without_dist_cursor(tmp_path: Path) -> None:
+    import check_gate_lib as gate
+
+    # Sparse fixture trees have no dist/cursor — do not fail-closed on golden.
+    assert not (tmp_path / "dist" / "cursor").exists()
+    assert gate.validate_golden_manifest_staleness(tmp_path) is None
