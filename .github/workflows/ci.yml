@@ -97,6 +97,12 @@ jobs:
       - name: minimum-python docs-link-check
         run: python3 scripts/docs-link-check.py
 
+      - name: minimum-python docs-link-check-install-root
+        run: |
+          python3 scripts/build_dist.py --skip-generate
+          python3 scripts/docs-link-check.py --context install-root --install-root dist/cursor --strict
+          python3 scripts/docs-link-check.py --context install-root --install-root dist/claude-code --strict
+
       - name: minimum-python git-push-secret-scan-chokepoint
         run: python3 scripts/test/git-push-secret-scan-chokepoint.test
 
