@@ -111,3 +111,15 @@ def test_gate_validate_golden_manifest_staleness(repo_with_dist: Path) -> None:
 
     out.unlink()
     assert gate.validate_golden_manifest_staleness(repo_with_dist) == "golden-manifest:missing"
+
+
+def test_gate_validate_skips_under_sw_gate_fixture(
+    repo_with_dist: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import check_gate_lib as gate
+
+    out = gm.default_manifest_path(repo_with_dist)
+    gm.write_manifest(repo_with_dist, out_path=out)
+    out.write_text("stale-on-purpose\n", encoding="utf-8")
+    monkeypatch.setenv("SW_GATE_FIXTURE", "green")
+    assert gate.validate_golden_manifest_staleness(repo_with_dist) is None
