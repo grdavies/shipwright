@@ -19,7 +19,7 @@ from init_posture_defaults import greenfield_posture_patch
 
 EFFECTIVE_CONFIG_REL = Path("core/sw-reference/generated/effective-config.json")
 GENERATED_DIR_REL = Path("core/sw-reference/generated")
-CONFIG_GUIDE_REL = Path("docs/guides/configuration.md")
+CONFIG_GUIDE_REL = Path("core/documentation/configuration.md")
 SCHEMA_REL = Path("core/sw-reference/config.schema.json")
 VERSION_REL = Path("version.txt")
 MARKER_BEGIN = "<!-- effective-config:begin generated (scripts/effective_config_gen.py) -->"
