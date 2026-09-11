@@ -587,7 +587,7 @@ def overflow_chunk_policy() -> dict[str, Any]:
 
 
 LINEAR_PROVIDER_DOC_REL = Path("core/providers/issues/linear.md")
-WORKFLOWS_DOC_REL = Path("docs/guides/workflows.md")
+WORKFLOWS_DOC_REL = Path("core/documentation/workflows.md")
 
 STAGE1_DOGFOOD_DOC_MARKERS: tuple[str, ...] = (
     "## Stage-1 dogfood acceptance (R25)",
@@ -617,9 +617,9 @@ DOCS_CURRENCY_INVENTORY: tuple[tuple[str, str], ...] = (
     ("core/sw-reference/config.schema.json", "config-schema"),
     ("core/sw-reference/workflow.config.example.json", "workflow-config-example-core"),
     (".sw/workflow.config.example.json", "workflow-config-example-sw"),
-    ("docs/guides/workflows.md", "workflows-guide"),
-    ("docs/guides/configuration.md", "configuration-guide"),
-    ("docs/guides/commands.md", "commands-guide"),
+    ("core/documentation/workflows.md", "workflows-guide"),
+    ("core/documentation/configuration.md", "configuration-guide"),
+    ("core/documentation/commands.md", "commands-guide"),
     ("core/providers/planning-store/issue-store.md", "issue-store-invariants"),
     ("scripts/planning_github_projects_v2.py", "projects-projection-notes"),
 )

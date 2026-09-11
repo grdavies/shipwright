@@ -49,7 +49,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dist/
-          git add docs/guides/configuration.md
+          git add core/documentation/configuration.md
           git add core/sw-reference/generated/effective-config.json
           git add core/sw-reference/generated/upgrade-manifest-*.json
           if git diff --cached --quiet; then
