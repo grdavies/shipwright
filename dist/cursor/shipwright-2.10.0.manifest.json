@@ -195,6 +195,7 @@
     "branch_name_guard.py",
     "build-chain-sot-lint.py",
     "build-chain-sync.py",
+    "build_dist.py",
     "build_zipapp.py",
     "capability-gateref-guard.py",
     "capability-manifest-lint.py",
@@ -316,6 +317,7 @@
     "docs_edit_route.py",
     "docs_guide_token_strip.py",
     "docs_link_check.py",
+    "docs_link_transform.py",
     "docs_pr.py",
     "docs_worktree.py",
     "doctor.py",
@@ -820,6 +822,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 817,
+  "moduleCount": 819,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
