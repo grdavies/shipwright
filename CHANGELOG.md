@@ -1201,6 +1201,7 @@
 * merge phase unify-self-repository-detection-small into feat/distribution-adopter-portability-docs-surface (10e9f77) <!-- sw-deliver:unify-self-repository-detection-small -->
 * merge phase emit-pure-install-version-metadata-small into feat/distribution-adopter-portability-docs-surface (4117b33) <!-- sw-deliver:emit-pure-install-version-metadata-small -->
 * merge phase emit-pure-install-version-metadata-small into feat/distribution-adopter-portability-docs-surface (1ded316) <!-- sw-deliver:emit-pure-install-version-metadata-small -->
+* merge phase establish-fail-closed-dist-trust-anchors-medium into feat/distribution-adopter-portability-docs-surface (de3bc5a) <!-- sw-deliver:establish-fail-closed-dist-trust-anchors-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
