@@ -2045,7 +2045,8 @@ After editing `core/sw-reference/kernel-classification.*`, `guidelines.*`, or or
 
 ```bash
 python3 -m sw generate --all
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" test/run_emitter_fixtures.py```
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" test/run_emitter_fixtures.py
+```
 
 | Suite | Scope |
 | --- | --- |
@@ -2105,7 +2106,7 @@ Defaults are **calibrated from the frozen task-list corpus** (SC6) — not autho
 Re-run calibration (read-only):
 
 ```bash
-PYTHONPATH=scripts python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" phase_sizing_corpus.py--root . audit
+PYTHONPATH=scripts python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" phase_sizing_corpus.py --root . audit
 ```
 
 Artifacts land under `scripts/test/fixtures/phase-sizing/` (`baseline-distribution.json`,

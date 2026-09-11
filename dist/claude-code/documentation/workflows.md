@@ -253,8 +253,8 @@ run receives a distinct number or a fail-closed `reservation-held` halt — neve
 Stale reservations are reclaimable when heartbeat + PID predicates match the ship-lease staleness model.
 
 ```bash
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_reserve.py. reserve --unit-id <unit-id> --slug <slug>
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_reserve.py. release --number <nnn> --unit-id <unit-id>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_reserve.py reserve --unit-id <unit-id> --slug <slug>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_reserve.py release --number <nnn> --unit-id <unit-id>
 ```
 
 ### Pre-freeze rescore
@@ -903,9 +903,9 @@ Frozen task lists project to provider epic/sub-issue hierarchy where supported; 
 hierarchy verbs degrade to checkbox/body-encoded phase lists with operator notice — deliver continues.
 
 ```bash
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_hierarchy.py<repo> resolve-mode
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_hierarchy.py<repo> project docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_hierarchy.py<repo> aggregate-status --payload-json '<parent+children>'
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_hierarchy.py resolve-mode
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_hierarchy.py project docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_hierarchy.py aggregate-status --payload-json '<parent+children>'
 ```
 
 Parent epic status aggregates from children on read; contradictions fail closed. Body `sw-edges` blocks are
@@ -1127,7 +1127,7 @@ Adapter-complete for and close requires the documentation inventory below to be
 current. Verify before terminal merge:
 
 ```bash
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_linear_client.py. docs-currency-gate
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_linear_client.py docs-currency-gate
 ```
 
 | Surface | Path | Covers |
@@ -1172,7 +1172,8 @@ When a change touches repo-root `scripts/` or other harness/emittable paths, pro
 build chain before opening a PR:
 
 ```bash
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" build-chain-sync.py```
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" build-chain-sync.py
+```
 
 This runs, in order:
 
