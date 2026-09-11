@@ -93,9 +93,9 @@ Mechanical entrypoints (same surfaces `/sw-status` delegates to):
 
 ```bash
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py<repo> explain-plan [--task-list <path>|--plan <path>|--graph-json <path>] [--compact] [--text]
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.pygraph-progress --run-id <runId> [--format json|text] [--compact]
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.pyexplain <nodeId> --run-id <runId> [--format json|text] [--compact]
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning-graph.pystatus --unit-id <unit-id>   # planning graph — not execution
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.py graph-progress --run-id <runId> [--format json|text] [--compact]
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.py explain <nodeId> --run-id <runId> [--format json|text] [--compact]
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning-graph.py status --unit-id <unit-id>   # planning graph — not execution
 ```
 
 Receipts, in-flight intents, and status/explain index by the generic graph `runId` (mapped from the
@@ -136,8 +136,8 @@ only on existing **`/sw-deliver`** and **`/sw-status`** commands (no `/sw-graph-
 Mechanical shadow and observability entrypoints (same surfaces `/sw-status` delegates to):
 
 ```bash
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.pygraph-progress --run-id <runId>
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.pyexplain <nodeId> --run-id <runId>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.py graph-progress --run-id <runId>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.py explain <nodeId> --run-id <runId>
 ```
 
 Configuration for promotion evidence, demotion, kill switch, and registry-sourced capability docs:
@@ -168,7 +168,7 @@ python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py. resume-locate
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py. resume-locate --run-id deliver-<uuid>
 
 # Finalize after human merge to main (distinct from cleanup / planning-unit closure)
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.pyfinalize --run-id <runId>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py finalize --run-id <runId>
 ```
 
 **Resume cardinality:** with no `--run-id`, exactly one nonterminal run must exist. Legacy
@@ -192,7 +192,7 @@ mirrored into `.cursor/sw-deliver-runs/<runId>/` when run-scoped state is missin
 Finalize is write-ahead resumable via `finalize-checkpoint.json` (`release` → `projection` → `receipt` →
 `immutable`). After squash-merge deletes the feature branch, host PR merge evidence still verifies; partial
 finalize returns typed `finalize:partial` / `finalize:checkpoint-incomplete` with
-`resumeCommand` (`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.pyfinalize --run-id <runId>`) — never silent success.
+`resumeCommand` (`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py finalize --run-id <runId>`) — never silent success.
 
 **Orch cwd adopt + exclusive run lease:** managed orchestrator worktrees auto-adopt a validated recorded
 path (execution-time identity rebind); invalid/missing paths fail closed with typed cause + `resumeCommand`.
@@ -205,12 +205,12 @@ chat. Default `orchestration.planPolicy: canonical` preserves today's behavior; 
 the `/sw-deliver` pilot (TR0 gate, per-run acknowledgement, non-`main` target).
 
 ```bash
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.pyplan benefit-report --pairs scripts/test/fixtures/benefit-metric/positive-pairs.json
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py plan benefit-report --pairs scripts/test/fixtures/benefit-metric/positive-pairs.json
 ```
 
 ```bash
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.pyplan validate --tier phase --phase-type ship --proposal <path|json>
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.pyplan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py plan validate --tier phase --phase-type ship --proposal <path|json>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
 ```
 
 Call-site map: [`call-site-map.md`](../../scripts/test/fixtures/planning-post-migration/022-kernel-classification-and-plan-validation/call-site-map.md).
@@ -226,7 +226,7 @@ Extends `/sw-doc` — no `/sw-plan` command.
 | --- | --- |
 | Pull-in at PRD creation | `/sw-prd` → `planning-related.py scan --mode creation` + confirm-list |
 | Backlog re-scan at tasks | `/sw-tasks` → `planning-related.py scan --mode tasks-rescan` |
-| Mechanical reconciler | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning-graph.pyreconcile` |
+| Mechanical reconciler | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning-graph.py reconcile` |
 | Scheduler | `/sw-deliver next` |
 | Autonomy posture | `planning.autonomy` (`maintenance-only` default \| `full-conductor`) |
 | Two-track doc edits | `scripts/docs-edit-route.py` → mechanical `docs-merge.py` or substantive docs worktree + PR |
@@ -254,10 +254,10 @@ projection — use `planning_gap_capture.py` for new gaps (see [`feedback` skill
 
 | Probe | Command |
 | --- | --- |
-| Effective backend + Bitbucket guidance | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.pyresolve-backend` |
-| Bitbucket routing when `issuesProvider` unset | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.pybitbucket-issue-store-guidance` |
-| Jira init (auth, privacy, createmeta, labels) | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.pyprobe-jira-init` |
-| Issues token scope | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.pyprobe-issues-token` |
+| Effective backend + Bitbucket guidance | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.py resolve-backend` |
+| Bitbucket routing when `issuesProvider` unset | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.py bitbucket-issue-store-guidance` |
+| Jira init (auth, privacy, createmeta, labels) | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.py probe-jira-init` |
+| Issues token scope | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.py probe-issues-token` |
 
 Jira Cloud is the default Jira flavor; DC/Server expands on validated demand. Bitbucket code repos default
 to a **separate** GitHub/GitLab planning project — Jira is opt-in. See
@@ -272,11 +272,11 @@ config bodies. Operator commands:
 | Operation | Command |
 | --- | --- |
 | Full repository diagnosis (surfaces + reference listing) | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" credentials-doctor.py--root .` |
-| Remediation for a failure code | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" credentials-doctor.pyremediate --scope local\|ci --code <code> --root .` |
-| Guided credential migration | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.pycredential plan` / `apply --confirm` |
-| Legacy `tokenEnv` → `credentialRef` migration | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.pycredential migrate --confirm` |
-| CI env-backend declaration | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.pycredential declare-ci --confirm` |
-| Add selector entry | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.pycredential selector-add …` (see [configuration](configuration.md#machine-local-selector-file)) |
+| Remediation for a failure code | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" credentials-doctor.py remediate --scope local\|ci --code <code> --root .` |
+| Guided credential migration | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py credential plan` / `apply --confirm` |
+| Legacy `tokenEnv` → `credentialRef` migration | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py credential migrate --confirm` |
+| CI env-backend declaration | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py credential declare-ci --confirm` |
+| Add selector entry | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py credential selector-add …` (see [configuration](configuration.md#machine-local-selector-file)) |
 
 **Doctor reference listing:** the top-level JSON report includes a `references` array — one object per
 selector entry with `ref`, `backend`, `scopes` (`allowedRepos`, `allowedProjectIds`, `allowedEndpoints`),
@@ -285,9 +285,9 @@ selector entry with `ref`, `backend`, `scopes` (`allowedRepos`, `allowedProjectI
 **Planning backend disable** (durable per-repo override — forces effective backend to `in-repo-public`):
 
 ```bash
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_backend_control.pydisable --set-by <who> --reason "<why>" [--expires-at <ISO8601>]
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_backend_control.pyenable
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_backend_control.pylist
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_backend_control.py disable --set-by <who> --reason "<why>" [--expires-at <ISO8601>]
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_backend_control.py enable
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_backend_control.py list
 ```
 
 Record path: `$GIT_COMMON_DIR/shipwright/planning-backend-disable.json` (mode `0600`, user-owned, no
@@ -412,7 +412,7 @@ debugging one phase, or when you deliberately skip the orchestrator.
 **Unavailable Checks capability (`host-auth-required`):** when `check-gate.py` reports `blocked` with `reasonCode: host-auth-required`, the host token cannot read CI check status. This is a **remediation halt** — emit guidance from `core/providers/host/remediation-checks.md` and stop. Do not poll CI, attempt stabilization, or treat the state as retryable yellow/pending.
 
 **Gap-check write (required):** before `merge-ready-green`, the ship chain must persist a binding
-`gap-check.status.json` via `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" gap-check-gate.pywrite pass --phase-slug <slug>`.
+`gap-check.status.json` via `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" gap-check-gate.py write pass --phase-slug <slug>`.
 `/sw-ship` phase-mode and `ship-phase-status.py` refuse `merge-ready-green` when gap-check is
 missing or `halt`. Phase-mode may **auto-repair** `gap-check-missing` when authoritative
 evaluation exists for the exact phase HEAD — forged passes without `evaluationProvenance` are refused.
