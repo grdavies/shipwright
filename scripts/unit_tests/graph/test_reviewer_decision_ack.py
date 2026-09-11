@@ -50,7 +50,7 @@ def test_docs_restate_np1_np3_boundaries() -> None:
 def test_decision_stance_1_4_5_encoded() -> None:
     """Stance 1 (offline/advisory), 4 (learning-store authority), 5 (non-gating)."""
     layout = _read_repo_file(".shipwright/layout.md")
-    workflows = _read_repo_file("docs/guides/workflows.md")
+    workflows = _read_repo_file("core/documentation/workflows.md")
     assert "advisory-only" in layout.lower() or "advisory only" in layout.lower()
     assert "non-gating" in layout.lower() or "non-gating" in workflows.lower()
     assert elo_module.ELO_GATING_ENABLED is False
@@ -92,14 +92,14 @@ def test_decision_elo_pairwise_draws_noop() -> None:
 
 
 def test_decision_n_ge_10_documented() -> None:
-    config = _read_repo_file("docs/guides/configuration.md")
+    config = _read_repo_file("core/documentation/configuration.md")
     assert "MIN_RANKING_N" in config
     assert str(MIN_RANKING_N) in config
     assert "unknown" in config.lower()
 
 
 def test_decision_unlabeled_censored_documented() -> None:
-    config = _read_repo_file("docs/guides/configuration.md")
+    config = _read_repo_file("core/documentation/configuration.md")
     assert "censored" in config.lower()
     assert "Elo losses" in config or "elo losses" in config.lower()
     assert classify_surviving(()) == SurvivingVerdict.CENSORED
