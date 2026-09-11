@@ -35,10 +35,13 @@ from init_credential_migration import (
 from host_lib import default_base_branch
 from init_ci_stub import STUB_WORKFLOW_REL, apply_ci_stub, plan_ci_stub
 from init_profile_report import (
+    SCHEMA_REL,
     classify_profile,
     greenfield_curated_patch,
+    load_json,
     load_workflow_config,
     render_classification_markdown,
+    strip_invalid_top_level_keys,
 )
 import project_baseline as _project_baseline
 import project_doctrine as _project_doctrine
@@ -298,6 +301,27 @@ def _strip_draft_side_channel(draft: dict) -> dict:
     return {key: value for key, value in draft.items() if key not in DRAFT_SIDE_CHANNEL_KEYS}
 
 
+def _load_config_schema(root: Path) -> dict[str, Any]:
+    return load_json(root / SCHEMA_REL)
+
+
+def _build_curated_seed_draft(root: Path) -> dict[str, Any]:
+    """Schema-valid curated seeds — sole write-draft seed source (PRD 338 R30)."""
+    draft: dict[str, Any] = greenfield_curated_patch()
+    draft["configuredWith"] = {
+        "shipwrightVersion": shipwright_version(root),
+        "schemaVersion": schema_version(root),
+    }
+    return draft
+
+
+def _finalize_persistable_draft(root: Path, draft: dict) -> dict[str, Any]:
+    persistable = _strip_draft_side_channel(draft)
+    schema = _load_config_schema(root)
+    cleaned, _rejected = strip_invalid_top_level_keys(persistable, schema)
+    return cleaned
+
+
 def _validate_config_document(root: Path, document: dict) -> list[str]:
     """Validate against config.schema.json when jsonschema is available."""
     path = schema_path(root)
@@ -390,18 +414,7 @@ def cmd_findings_report(root: Path, *, markdown: bool) -> int:
 def cmd_write_draft(root: Path, *, accept: bool, write_verify: bool, config: str) -> int:
     out_path = config or "/tmp/sw-init-draft.json"
     detect = _detect_project_type(root)
-    draft: dict = {
-        "doc": {"afterTasks": "confirm"},
-        "compound": {"autonomy": "supervised"},
-        "guardrails": {"enforceBeforeSubmit": True, "requireRuleClass": False},
-        "review": {"provider": "none"},
-        "memory": {"provider": "in-repo", "sourceOfTruth": "auto"},
-        "configuredWith": {
-            "shipwrightVersion": shipwright_version(root),
-            "schemaVersion": schema_version(root),
-        },
-    }
-    draft.update(greenfield_curated_patch())
+    draft = _build_curated_seed_draft(root)
     draft = _deep_merge(draft, credential_patch_for_draft(root))
     comm_defaults_path = root / "core/sw-reference/communication-routing.defaults.json"
     if comm_defaults_path.is_file():
@@ -430,7 +443,7 @@ def cmd_write_draft(root: Path, *, accept: bool, write_verify: bool, config: str
                 verify[key] = meta["command"]
         if verify:
             draft["verify"] = verify
-    persistable = _strip_draft_side_channel(draft)
+    persistable = _finalize_persistable_draft(root, draft)
     validation_errors = _validate_config_document(root, persistable)
     if validation_errors:
         print(
@@ -1025,18 +1038,7 @@ def enumerate_write_scope(
 def _build_packaged_draft(root: Path) -> dict[str, Any]:
     """Build an accept-defaults draft matching write-draft --accept-defaults --write-verify."""
     detect = _detect_project_type(root)
-    draft: dict[str, Any] = {
-        "doc": {"afterTasks": "confirm"},
-        "compound": {"autonomy": "supervised"},
-        "guardrails": {"enforceBeforeSubmit": True, "requireRuleClass": False},
-        "review": {"provider": "none"},
-        "memory": {"provider": "in-repo", "sourceOfTruth": "auto"},
-        "configuredWith": {
-            "shipwrightVersion": shipwright_version(root),
-            "schemaVersion": schema_version(root),
-        },
-    }
-    draft.update(greenfield_curated_patch())
+    draft = _build_curated_seed_draft(root)
     draft = _deep_merge(draft, credential_patch_for_draft(root))
     comm_defaults_path = root / "core/sw-reference/communication-routing.defaults.json"
     if comm_defaults_path.is_file():
@@ -1052,7 +1054,7 @@ def _build_packaged_draft(root: Path) -> dict[str, Any]:
             verify[key] = meta["command"]
     if verify:
         draft["verify"] = verify
-    return _strip_draft_side_channel(draft)
+    return _finalize_persistable_draft(root, draft)
 
 
 def apply_packaged_configure(
