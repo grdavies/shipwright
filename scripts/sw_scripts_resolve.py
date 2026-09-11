@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Iterable, Mapping
 
 TRUST_MARKERS = ("check-gate.py", "resolve-model-tier.py")
+DIST_SHIM_MARKER = "sw-run.py"
 ENV_VAR = "SHIPWRIGHT_SCRIPTS"
 PLUGIN_LOCAL_SCRIPTS = Path.home() / ".cursor" / "plugins" / "local" / "shipwright" / "scripts"
 PLUGIN_SCRIPTS = PLUGIN_LOCAL_SCRIPTS
@@ -58,11 +59,61 @@ def is_shipwright_self_repo(workspace: Path) -> bool:
         return False
 
 
-def scripts_dir_is_trusted(path: Path) -> bool:
+def is_dist_only_plugin_scripts(path: Path) -> bool:
+    """True when ``scripts/`` contains only the zipapp shim (pure install)."""
+    if not path.is_dir():
+        return False
+    files = [item for item in path.rglob("*") if item.is_file()]
+    return files == [path / DIST_SHIM_MARKER]
+
+
+def _operator_trust_store_path(workspace: Path) -> Path:
+    from graph.packages.trust import DEFAULT_TRUST_ANCHOR_PATH
+
+    candidate = workspace / ".cursor" / "sw-package-trust-anchors.json"
+    if candidate.is_file():
+        return candidate
+    return workspace / DEFAULT_TRUST_ANCHOR_PATH
+
+
+def dist_trust_verdict_for_install(
+    install_root: Path,
+    *,
+    workspace: Path,
+) -> dict[str, str]:
+    from graph.packages.trust import (
+        TrustAnchorError,
+        load_trust_anchors,
+        resolve_dist_trust_verdict,
+    )
+
+    trust_path = _operator_trust_store_path(workspace)
+    if not trust_path.is_file():
+        raise TrustAnchorError(f"operator trust store missing: {trust_path}")
+    trust_store = load_trust_anchors(trust_path)
+    verdict = resolve_dist_trust_verdict(install_root, trust_store=trust_store)
+    return {
+        "verdict": str(verdict.get("verdict") or ""),
+        "trustDigest": str(verdict.get("trustDigest") or ""),
+        "anchorId": str(verdict.get("anchorId") or ""),
+        "signerKeyId": str(verdict.get("signerKeyId") or ""),
+    }
+
+
+def scripts_dir_is_trusted(path: Path, *, workspace: Path | None = None) -> bool:
     if not path.is_dir():
         return False
     resolved = path.resolve()
-    return all((resolved / marker).is_file() for marker in TRUST_MARKERS)
+    if all((resolved / marker).is_file() for marker in TRUST_MARKERS):
+        return True
+    if not is_dist_only_plugin_scripts(resolved):
+        return False
+    root = workspace.resolve() if workspace is not None else Path.cwd()
+    try:
+        verdict = dist_trust_verdict_for_install(resolved.parent, workspace=root)
+    except Exception:
+        return False
+    return verdict.get("verdict") == "ok"
 
 
 def _lexical_parent(path: Path) -> Path:
@@ -106,17 +157,26 @@ def plugin_scripts_contained(candidate: Path) -> bool:
     return "shipwright" in resolved.parts
 
 
-def compute_scripts_root_hash(scripts_root: Path) -> str:
-    """Stable SHA256 digest over the resolved scripts root trust-marker set."""
+def compute_scripts_root_hash(scripts_root: Path, *, workspace: Path | None = None) -> str:
+    """Stable SHA256 digest over the resolved scripts root trust binding."""
     resolved = scripts_root.resolve()
-    lines: list[str] = []
-    for marker in sorted(TRUST_MARKERS):
-        marker_path = resolved / marker
-        if not marker_path.is_file():
-            raise ScriptsResolveError(f"trust marker missing: {marker}")
-        digest = hashlib.sha256(marker_path.read_bytes()).hexdigest()
-        lines.append(f"{marker}:{digest}")
-    return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
+    if all((resolved / marker).is_file() for marker in TRUST_MARKERS):
+        lines: list[str] = []
+        for marker in sorted(TRUST_MARKERS):
+            marker_path = resolved / marker
+            digest = hashlib.sha256(marker_path.read_bytes()).hexdigest()
+            lines.append(f"{marker}:{digest}")
+        return hashlib.sha256("\n".join(lines).encode("utf-8")).hexdigest()
+    if is_dist_only_plugin_scripts(resolved):
+        root = workspace.resolve() if workspace is not None else Path.cwd()
+        verdict = dist_trust_verdict_for_install(resolved.parent, workspace=root)
+        if verdict.get("verdict") != "ok":
+            raise ScriptsResolveError("dist trust anchor invalid")
+        digest = verdict.get("trustDigest")
+        if not digest:
+            raise ScriptsResolveError("dist trust digest missing")
+        return str(digest)
+    raise ScriptsResolveError("trust marker missing: check-gate.py")
 
 
 def scripts_root_binding(
@@ -134,7 +194,7 @@ def scripts_root_binding(
     return {
         "root": str(result.path.resolve()),
         "source": str(result.source or ""),
-        "hash": compute_scripts_root_hash(result.path),
+        "hash": compute_scripts_root_hash(result.path, workspace=workspace),
     }
 
 
@@ -165,11 +225,12 @@ def iter_plugin_script_candidates() -> Iterable[Path]:
             yield scripts
 
 
-def plugin_install_scripts() -> Path | None:
+def plugin_install_scripts(*, workspace: Path | None = None) -> Path | None:
+    root = workspace.resolve() if workspace is not None else Path.cwd()
     for candidate in iter_plugin_script_candidates():
         if not plugin_scripts_contained(candidate):
             continue
-        if scripts_dir_is_trusted(candidate):
+        if scripts_dir_is_trusted(candidate, workspace=root):
             return candidate.resolve()
     return None
 
@@ -213,9 +274,11 @@ def resolve_scripts_dir(
         if env_path is not None:
             return ScriptsResolveResult(env_path, "env")
 
-    plugin = plugin_install_scripts()
+    plugin = plugin_install_scripts(workspace=root)
     if plugin is not None:
         source = "plugin-local" if plugin == PLUGIN_LOCAL_SCRIPTS.resolve() else "plugin-cache"
+        if is_dist_only_plugin_scripts(plugin):
+            source = f"{source}-dist"
         return ScriptsResolveResult(plugin, source)
 
     if not is_shipwright_self_repo(root):
