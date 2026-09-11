@@ -200,7 +200,7 @@ fi
 
 # --- retrospective-docs-presence (R12) ---
 GUIDES=0
-for f in "$ROOT/docs/guides/workflows.md" "$ROOT/docs/guides/configuration.md"; do
+for f in "$ROOT/core/documentation/workflows.md" "$ROOT/core/documentation/configuration.md"; do
   if [[ -f "$f" ]] && grep -q 'sw-retrospective' "$f" && grep -q 'compound.autonomy' "$f"; then
     GUIDES=$((GUIDES + 1))
   fi

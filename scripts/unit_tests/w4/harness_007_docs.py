@@ -62,13 +62,13 @@ check_doc() {
   ok "007-docs-$label"
 }
 
-check_doc "$ROOT/docs/guides/workflows.md" workflows \
+check_doc "$ROOT/core/documentation/workflows.md" workflows \
   'deliver-loop' 'sw-cleanup' 'compound-ship' 'phase-worktree' 'merge gate'
 
-check_doc "$ROOT/docs/guides/commands.md" commands \
+check_doc "$ROOT/core/documentation/commands.md" commands \
   '/sw-cleanup' 'pre-merge' 'deliver-loop' 'secret-scan'
 
-check_doc "$ROOT/docs/guides/getting-started.md" getting-started \
+check_doc "$ROOT/core/documentation/getting-started.md" getting-started \
   '/sw-deliver' 'sw-cleanup'
 
 check_doc "$ROOT/core/rules/sw-naming.mdc" naming \

@@ -75,7 +75,7 @@ def test_check_drift_passes_after_generate(repo_root: Path, tmp_path: Path) -> N
     mini.mkdir()
     for rel in (
         "core/sw-reference/config.schema.json",
-        "docs/guides/configuration.md",
+        "core/documentation/configuration.md",
         "version.txt",
     ):
         src = repo_root / rel
@@ -159,7 +159,7 @@ def test_all_write_twice_is_idempotent(repo_root: Path, tmp_path: Path) -> None:
     mini.mkdir()
     for rel in (
         "core/sw-reference/config.schema.json",
-        "docs/guides/configuration.md",
+        "core/documentation/configuration.md",
         "version.txt",
     ):
         src = repo_root / rel

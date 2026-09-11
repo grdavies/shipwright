@@ -26,7 +26,7 @@ RELEASE_GUIDE_ARTIFACTS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "commands-guide",
-        "doc": "docs/guides/commands.md",
+        "doc": "core/documentation/commands.md",
         "sources": (
             "scripts/wave_deliver.py",
             "scripts/wave_terminal.py",
@@ -41,7 +41,7 @@ RELEASE_GUIDE_ARTIFACTS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "workflows-guide",
-        "doc": "docs/guides/workflows.md",
+        "doc": "core/documentation/workflows.md",
         "sources": (
             "scripts/planning_reserve.py",
             "scripts/doc_rescore.py",

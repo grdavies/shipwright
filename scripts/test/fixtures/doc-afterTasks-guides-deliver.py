@@ -43,8 +43,8 @@ check_guide() {
   fi
 }
 
-check_guide configuration "$ROOT/docs/guides/configuration.md"
-check_guide getting-started "$ROOT/docs/guides/getting-started.md"
+check_guide configuration "$ROOT/core/documentation/configuration.md"
+check_guide getting-started "$ROOT/core/documentation/getting-started.md"
 
 exit "$FAIL"
 

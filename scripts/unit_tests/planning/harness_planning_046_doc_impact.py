@@ -49,7 +49,7 @@ check "doc-currency-046:ship-state-phase-runs" "$SHIP_STATE" "sw-deliver-runs"
 check "doc-currency-046:issue-store-discover" "$ISSUE_STORE" "discover_units"
 check "doc-currency-046:deliver-inflight-projection" "$DELIVER" "inFlight"
 check "doc-currency-046:conductor-cutover" "$ROOT/scripts/planning_cutover.py" "doctor"
-CONFIG_GUIDE="$ROOT/docs/guides/configuration.md"
+CONFIG_GUIDE="$ROOT/core/documentation/configuration.md"
 check "doc-currency-046:configuration-request-budget" "$CONFIG_GUIDE" "requestBudget"
 check "doc-currency-046:issue-store-cache-ttl" "$ISSUE_STORE" "cacheTtlSeconds"
 check "doc-currency-046:sw-deliver-scheduler" "$(content_path commands/sw-deliver.md)" "schedule-next"
@@ -62,7 +62,7 @@ check "doc-currency-046:emission-issue-derived-ingest" "$ROOT/core/skills/visibi
 [[ -f "$ROOT/scripts/planning_region_disposition.py" ]] && ok "doc-currency-046:region-disposition-present" || bad "doc-currency-046:region-disposition-present"
 
 
-WORKFLOWS="$ROOT/docs/guides/workflows.md"
+WORKFLOWS="$ROOT/core/documentation/workflows.md"
 README="$ROOT/README.md"
 MEMORY_SKILL="$(content_path skills/memory/SKILL.md)"
 RECALLIUM="$(content_path providers/recallium.md)"

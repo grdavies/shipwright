@@ -43,7 +43,7 @@ def test_publish_surface_audit_critical_leak_not_ready() -> None:
     tracked = [
         "README.md",
         "docs/learnings/sample-retro.md",
-        "docs/guides/commands.md",
+        "core/documentation/commands.md",
     ]
     result = psa.run_publish_surface_audit(Path("."), tracked_override=tracked)
     assert result["verdict"] == "not-ready"

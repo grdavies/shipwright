@@ -52,7 +52,7 @@ GATE_LIB="$ROOT/scripts/check_gate_lib.py"
 GATE_SKILL="$ROOT/core/skills/checks-gate/SKILL.md"
 GATE_RULE="$ROOT/core/rules/checks-gate.mdc"
 STABILIZE_SKILL="$ROOT/core/skills/stabilize-loop/SKILL.md"
-CONFIG_GUIDE="$ROOT/docs/guides/configuration.md"
+CONFIG_GUIDE="$ROOT/core/documentation/configuration.md"
 GENERATOR="$ROOT/scripts/ci_plan_gen.py"
 
 # --- pr-test-plan-set-single-source (R1, R3) ---

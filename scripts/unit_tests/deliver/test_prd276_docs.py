@@ -56,7 +56,7 @@ def test_decision_durable_lease(repo_root: Path) -> None:
 
 def test_decision_generation_fencing(repo_root: Path) -> None:
     """D4 — workflows guide documents generation fencing."""
-    workflows = (repo_root / "docs/guides/workflows.md").read_text(encoding="utf-8")
+    workflows = (repo_root / "core/documentation/workflows.md").read_text(encoding="utf-8")
     assert "D4" in workflows
     assert "generation" in workflows.lower()
     assert "fencing" in workflows.lower()
@@ -64,6 +64,6 @@ def test_decision_generation_fencing(repo_root: Path) -> None:
 
 def test_decision_local_common_dir_scope(repo_root: Path) -> None:
     """D5 — workflows guide documents local common-dir lease scope."""
-    workflows = (repo_root / "docs/guides/workflows.md").read_text(encoding="utf-8")
+    workflows = (repo_root / "core/documentation/workflows.md").read_text(encoding="utf-8")
     assert "D5" in workflows
     assert "common-dir" in workflows.lower() or "common dir" in workflows.lower()

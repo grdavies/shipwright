@@ -40,7 +40,7 @@ def test_docs_prds_absent_detects_fixture_leak() -> None:
     tracked = [
         "README.md",
         "docs/prds/069-test/tasks-069-test.md",
-        "docs/guides/commands.md",
+        "core/documentation/commands.md",
     ]
     leaks = docs_prds_tracked(tracked)
     assert leaks == ["docs/prds/069-test/tasks-069-test.md"]

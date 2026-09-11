@@ -12,8 +12,8 @@ def main(argv: list[str] | None = None) -> int:
     import json, re
     root = SCRIPT_DIR.parent
     fail = 0
-    docs = [root/"README.md", root/"docs/guides/getting-started.md", root/"docs/guides/workflows.md",
-            root/"docs/guides/configuration.md", root/"docs/guides/commands.md"]
+    docs = [root/"README.md", root/"core/documentation/getting-started.md", root/"core/documentation/workflows.md",
+            root/"core/documentation/configuration.md", root/"core/documentation/commands.md"]
     patterns = [
         ("deliver.autonomy", r"deliver\.autonomy"),
         ("legitimate.halt", r"(legitimate\.halt|Legitimate\.halt|legitimate halt)"),

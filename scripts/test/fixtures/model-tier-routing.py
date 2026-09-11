@@ -112,7 +112,7 @@ else
 fi
 
 # --- configuration guide Models section ---
-if grep -q 'models.tiers' "$ROOT/docs/guides/configuration.md" && grep -q 'Model tier routing' "$ROOT/docs/guides/configuration.md"; then
+if grep -q 'models.tiers' "$ROOT/core/documentation/configuration.md" && grep -q 'Model tier routing' "$ROOT/core/documentation/configuration.md"; then
   echo "OK  configuration guide models section"
 else
   echo "FAIL configuration guide models section"

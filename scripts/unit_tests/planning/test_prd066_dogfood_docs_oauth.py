@@ -47,7 +47,7 @@ def test_r30_docs_currency_gate_passes() -> None:
     assert result["verdict"] == "ok"
     assert result["gate"] == "docs-currency-gate"
     assert "core/providers/issues/linear.md" in result["inventory"]
-    assert "docs/guides/workflows.md" in result["inventory"]
+    assert "core/documentation/workflows.md" in result["inventory"]
 
 
 def test_r25_linear_md_volume_and_coexistence_sections() -> None:
