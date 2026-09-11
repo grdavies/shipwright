@@ -14,11 +14,18 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 
-def _scripts_tree_is_shim_only(scripts_dir: Path) -> bool:
+def _allowed_scripts_tree_files(scripts_dir: Path, platform: str) -> set[Path]:
+    allowed = {scripts_dir / "sw-run.py"}
+    if platform == "claude-code":
+        allowed.add(scripts_dir / "install.py")
+    return allowed
+
+
+def _scripts_tree_is_shim_only(scripts_dir: Path, platform: str) -> bool:
     if not scripts_dir.is_dir():
         return True
-    files = [p for p in scripts_dir.rglob("*") if p.is_file()]
-    return files == [scripts_dir / "sw-run.py"]
+    files = {p for p in scripts_dir.rglob("*") if p.is_file()}
+    return files == _allowed_scripts_tree_files(scripts_dir, platform)
 
 
 def _generate_platform_dist(repo_root: Path, out_root: Path, platform: str) -> Path:
@@ -46,8 +53,8 @@ def test_zipapp_fresh_install_smoke(repo_root: Path, tmp_path: Path, platform: s
     plugin_root = _generate_platform_dist(repo_root, dist_root, platform)
 
     scripts_dir = plugin_root / "scripts"
-    assert _scripts_tree_is_shim_only(scripts_dir), (
-        f"expected only scripts/sw-run.py under {scripts_dir}, found: "
+    assert _scripts_tree_is_shim_only(scripts_dir, platform), (
+        f"expected shim-only scripts tree under {scripts_dir}, found: "
         f"{list(scripts_dir.rglob('*')) if scripts_dir.is_dir() else 'missing'}"
     )
 

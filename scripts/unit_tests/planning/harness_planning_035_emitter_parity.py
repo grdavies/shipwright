@@ -139,9 +139,26 @@ for dist in "$ROOT/dist/cursor" "$ROOT/dist/claude-code"; do
   if [[ ! -f "$dist/scripts/sw-run.py" ]]; then
     bad "emitter-freshness-035: missing $dist/scripts/sw-run.py"
   fi
-  if find "$dist/scripts" -type f ! -name sw-run.py 2>/dev/null | grep -q .; then
-    bad "emitter-freshness-035: unexpected scripts tree under $dist/scripts (zipapp-only)"
+  allowed_scripts=(sw-run.py)
+  if [[ "$dist" == */dist/claude-code ]]; then
+    allowed_scripts+=(install.py)
+    if [[ ! -f "$dist/scripts/install.py" ]]; then
+      bad "emitter-freshness-035: missing $dist/scripts/install.py (PRD 338 R29 installer entry)"
+    fi
   fi
+  while IFS= read -r script_file; do
+    base=$(basename "$script_file")
+    skip=0
+    for allowed in "${allowed_scripts[@]}"; do
+      if [[ "$base" == "$allowed" ]]; then
+        skip=1
+        break
+      fi
+    done
+    if [[ "$skip" -eq 0 ]]; then
+      bad "emitter-freshness-035: unexpected scripts tree under $dist/scripts (zipapp-only + installer shim)"
+    fi
+  done < <(find "$dist/scripts" -type f 2>/dev/null)
   python3 - "$dist/shipwright.pyz" "${SCRIPTS_035[@]}" <<'PY' || bad "emitter-freshness-035: zipapp module check"
 import sys, zipfile
 pyz, *modules = sys.argv[1:]
