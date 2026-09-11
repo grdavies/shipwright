@@ -1427,7 +1427,13 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
     plan_path = parse_kv(args, "--plan")
     if not plan_path:
         fail("--plan required")
-    plan_file = (root / plan_path).resolve()
+    # R28: run-scoped plans live under primary `.cursor/` — resolve against
+    # path_normalize_anchor so orchestrator-cwd deliver-loop finds them.
+    candidate = Path(plan_path)
+    if candidate.is_absolute():
+        plan_file = candidate.resolve()
+    else:
+        plan_file = (path_normalize_anchor(root) / plan_path).resolve()
     if not plan_file.is_file():
         fail(f"plan not found: {plan_path}")
     plan = json.loads(plan_file.read_text(encoding="utf-8"))
