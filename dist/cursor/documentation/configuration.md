@@ -2256,7 +2256,7 @@ alongside `python3 -m sw generate --all` and commits refreshed `dist/` plus proj
 Local remediation when automation has not run (or you are off the release-please head) remains:
 
 ```bash
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.pyall --write
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.py all --write
 ```
 
 <!-- effective-config:begin generated (scripts/effective_config_gen.py) -->
@@ -2265,8 +2265,8 @@ python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.pyall --w
 Machine-readable defaults for workflow settings. Regenerate with:
 
 ```bash
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.pygenerate --write
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.pyproject-docs --write
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.py generate --write
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.py project-docs --write
 ```
 
 Shipwright `2.10.0` · schema `config.schema.json`

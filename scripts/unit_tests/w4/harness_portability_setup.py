@@ -135,8 +135,7 @@ else
 fi
 
 # --- portability-self-check ---
-if [[ -x "$ROOT/scripts/sw-configure.py" ]] && \
-   bash "$ROOT/scripts/sw-configure.py" portability-check >/dev/null 2>&1; then
+if PYTHONPATH="$ROOT/core/scripts:$ROOT/scripts" python3 "$ROOT/core/scripts/sw-configure.py" portability-check >/dev/null 2>&1; then
   ok "portability-self-check"
 else
   bad "portability-self-check"
