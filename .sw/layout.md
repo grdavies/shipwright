@@ -1445,4 +1445,4 @@ records are enumerated by `planning_backend_control.py list` and surfaced in `pl
 | Hook ephemeral state (`.cursor/hooks/state/*`) | R20-resolved active root (worktree when aligned) |
 **PRD 333 absorb closeout:** numeric absorb / ten-gap linkage remains on the facade boundary (planning_store_facade / planning_gap_capture); terminal finalize still fails closed on incomplete absorb audit.
 
-<!-- currency: refreshed 2026-09-03T19:55:07Z for terminal prepare (synced dual-home) -->
+<!-- currency: refreshed 2026-09-11T20:22:52Z — R28 path_normalize_anchor for orch-cwd state-init; planning_store_facade / wave_state surfaces -->

@@ -60,6 +60,20 @@ from planning_projection_ledger import (
     resume_projection_from_checkpoint,
     set_projection_dirty,
 )
+from projection_state import (
+    build_projection_resume_command,
+    clear_projection_state,
+    empty_projection_state,
+    is_projection_complete,
+    load_projection_state,
+    mark_step_complete,
+    next_pending_step,
+    prefer_worktree_projection_root,
+    projection_scope,
+    projection_state_path,
+    record_interrupt,
+    save_projection_state,
+)
 from planning_linear_projection import (
     apply_initiative_capability,
     assert_cycle_orthogonal_to_milestone,

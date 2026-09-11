@@ -60,6 +60,20 @@ from planning_projection_ledger import (
     resume_projection_from_checkpoint,
     set_projection_dirty,
 )
+from projection_state import (
+    build_projection_resume_command,
+    clear_projection_state,
+    empty_projection_state,
+    is_projection_complete,
+    load_projection_state,
+    mark_step_complete,
+    next_pending_step,
+    prefer_worktree_projection_root,
+    projection_scope,
+    projection_state_path,
+    record_interrupt,
+    save_projection_state,
+)
 from planning_linear_projection import (
     apply_initiative_capability,
     assert_cycle_orthogonal_to_milestone,
@@ -3866,6 +3880,20 @@ def close_delivery_units(
     """Close linked PRD/tasks/brainstorm/gap units after retrospective merge (PRD 059 R16-R24)."""
     if state is None:
         state = _load_deliver_state_for_prd(root, prd_unit_id)
+    if prd_unit_id == "337-prd-workflow-runtime-autonomy-lifecycle":
+        from prd339_cross_prd_gate import prd339_absorb_acceptance_milestone
+
+        gate = prd339_absorb_acceptance_milestone(root)
+        if gate.get("verdict") != "ready":
+            return {
+                "verdict": "not-ready",
+                "action": "close-delivery-units",
+                "error": "prd339-cross-prd-gate",
+                "cause": gate.get("cause"),
+                "prdUnitId": prd_unit_id,
+                "prd339Gate": gate,
+                "resumeCommand": gate.get("resumeCommand"),
+            }
     snapshot = resolve_delivery_linked_units(root, cfg, prd_unit_id)
     if snapshot.get("verdict") != "ok":
         return snapshot
