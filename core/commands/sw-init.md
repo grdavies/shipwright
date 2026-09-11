@@ -203,38 +203,43 @@ acknowledgement halts). Include run-level budgets:
 
 Seed `compound.autonomy` (default **`supervised`**).
 
-### 3e. Delegation mode (Phase 1 default)
+### 3e. Delegation mode
 
-Seed:
+Seed (curated greenfield default from `init_profile_report`):
 
 ```json
-"delegation": { "mode": "bind-only" }
+"delegation": { "mode": "heuristic" }
 ```
 
-`default` mode remains gated until Phase-2 live acceptance (DL-9).
+`bind-only` and `default` remain available when you need stricter ceremony; `default` mode stays gated
+until Phase-2 live acceptance (DL-9).
 
 ### 3f. Orchestration plan policy (PRD 022 R29)
 
-Seed `orchestration.planPolicy` (default **`canonical`** — byte-identical to today; `proposed` is
-live on `/sw-deliver` pilot when TR0 gate and opt-in guards pass). Orthogonal to `deliver.autonomy.mode` and
+Seed `orchestration.planPolicy` (curated default **`proposed`** — live on `/sw-deliver` within the kernel
+envelope; `canonical` preserves byte-identical legacy behavior). Orthogonal to `deliver.autonomy.mode` and
 `deliver.phaseAckCadence`.
 
 ```json
-"orchestration": { "planPolicy": "canonical" }
+"orchestration": { "planPolicy": "proposed" }
 ```
 
-**Doctor:** surface current `orchestration.planPolicy` vs schema default (`canonical`). On re-run,
-never overwrite an explicit `proposed` without user confirm — same consent gate as `verify.*` and model
+**Doctor:** surface current `orchestration.planPolicy` vs curated default (`proposed`). On re-run,
+never overwrite an explicit operator value without user confirm — same consent gate as `verify.*` and model
 tiers.
+
+Canonical seed set (write-draft + docs): `python3 scripts/init_profile_report.py list`.
 
 ### 4. Guardrail knobs
 
-Defaults (greenfield-friendly):
+Defaults (greenfield-friendly; nested under `memory`):
 
 ```json
-"guardrails": {
-  "enforceBeforeSubmit": true,
-  "requireRuleClass": false
+"memory": {
+  "guardrails": {
+    "enforceBeforeSubmit": true,
+    "requireRuleClass": false
+  }
 }
 ```
 
@@ -289,8 +294,8 @@ Detect and recommend (never hard-fail scaffold):
 - Obsidian vault path + `tokenEnv` presence + loopback reachability when `memory.provider` is `obsidian`
   (install/enable recipe + live-smoke checklist: `docs/guides/configuration.md` **Obsidian memory provider**;
   no auto-install of Obsidian or the Local REST API plugin).
-- **`orchestration.planPolicy`:** surface current value vs default (`canonical`); warn when set to
-  `proposed` (fixture/adoption path — kernel envelope unchanged).
+- **`orchestration.planPolicy`:** surface current value vs curated default (`proposed`); note when set to
+  `canonical` (legacy byte-identical path — kernel envelope unchanged).
 - **`verify-unconfigured`** via `python3 scripts/verify-unconfigured.py` — CTA: run `/sw-init`.
 - Config drift vs schema → `python3 scripts/sw-configure.py drift-check`.
 - Missing in-repo store dir → offer `mkdir -p` repair.
