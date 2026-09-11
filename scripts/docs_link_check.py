@@ -65,14 +65,28 @@ def is_skipped_scheme(target: str) -> bool:
     return any(lowered.startswith(scheme) for scheme in SKIP_SCHEMES)
 
 
-def scan_files(root: Path, *, include_prds: bool) -> list[Path]:
+def scan_files(
+    root: Path,
+    *,
+    include_prds: bool,
+    context: str = "source",
+) -> list[Path]:
     paths: list[Path] = []
+    if context == "install-root":
+        docs = root / "documentation"
+        if docs.is_dir():
+            paths.extend(sorted(docs.rglob("*.md")))
+        return paths
+
     readme = root / "README.md"
     if readme.is_file():
         paths.append(readme)
     guides = root / "docs" / "guides"
     if guides.is_dir():
         paths.extend(sorted(guides.rglob("*.md")))
+    core_docs = root / "core" / "documentation"
+    if core_docs.is_dir():
+        paths.extend(sorted(core_docs.rglob("*.md")))
     if include_prds:
         prds = root / "docs" / "prds"
         if prds.is_dir():
@@ -158,12 +172,22 @@ def check_file(source: Path, root: Path) -> list[dict[str, str]]:
     return findings
 
 
-def run_check(*, root: Path, include_prds: bool) -> dict[str, Any]:
+def run_check(
+    *,
+    root: Path,
+    include_prds: bool,
+    context: str = "source",
+) -> dict[str, Any]:
     findings: list[dict[str, str]] = []
-    for path in scan_files(root, include_prds=include_prds):
+    for path in scan_files(root, include_prds=include_prds, context=context):
         findings.extend(check_file(path, root))
     verdict = "pass" if not findings else "broken-links"
-    return {"verdict": verdict, "findings": findings}
+    return {
+        "verdict": verdict,
+        "context": context,
+        "root": root.as_posix(),
+        "findings": findings,
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -184,14 +208,30 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Exit 20 when broken links are found (default: advisory exit 0)",
     )
+    parser.add_argument(
+        "--context",
+        choices=("source", "install-root"),
+        default="source",
+        help="Validation context: repo source tree or packaged install root (PRD 345 R16)",
+    )
+    parser.add_argument(
+        "--install-root",
+        type=Path,
+        default=None,
+        help="Packaged install root for --context install-root (e.g. dist/cursor)",
+    )
     args = parser.parse_args(argv)
 
-    root = args.root.resolve()
+    if args.context == "install-root":
+        root = (args.install_root or args.root).resolve()
+    else:
+        root = args.root.resolve()
+
     if not root.is_dir():
         print(json.dumps({"verdict": "error", "error": f"root not found: {root}"}), file=sys.stderr)
         return EXIT_ERROR
 
-    result = run_check(root=root, include_prds=args.include_prds)
+    result = run_check(root=root, include_prds=args.include_prds, context=args.context)
     import docs_example_check
 
     example_result = docs_example_check.run_check(root=root)
@@ -203,6 +243,7 @@ def main(argv: list[str] | None = None) -> int:
         verdict = "pass"
     combined: dict[str, Any] = {
         "verdict": verdict,
+        "context": result.get("context", args.context),
         "findings": result.get("findings", []),
         "examples": example_result,
     }

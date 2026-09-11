@@ -1982,7 +1982,7 @@ evidence, not automatic authority. The gate (`scripts/graph/workflow_library.py`
 
 Promotion and demotion events are recorded on engine receipts
 (`scripts/graph/execution_receipts.py`). Operator-facing shadow comparison and digest confirmation
-prose lives in [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) (phase 12).
+prose lives in [`core/commands/sw-deliver.md`](../commands/sw-deliver.md) (phase 12).
 
 ### Demotion and in-run kill switch
 
@@ -2004,9 +2004,9 @@ registry — not hand-edited in markdown.
 
 | Artifact | Source |
 | --- | --- |
-| [`CAPABILITIES.md`](../../CAPABILITIES.md) | Root capability matrix (includes `linear` when shipped) |
-| [`core/providers/issues/CAPABILITIES.md`](../../core/providers/issues/CAPABILITIES.md) | Issues-provider slice — cannot drift from registry |
-| [`core/sw-reference/capability-family-matrices.{json,md}`](../../core/sw-reference/capability-family-matrices.json) | Model-tier, node-kind, schema, command, and template-version matrices |
+| `CAPABILITIES.md` | Root capability matrix (includes `linear` when shipped) |
+| [`core/providers/issues/CAPABILITIES.md`](../providers/issues/CAPABILITIES.md) | Issues-provider slice — cannot drift from registry |
+| `core/sw-reference/capability-family-matrices.{json,md}` | Model-tier, node-kind, schema, command, and template-version matrices |
 
 A provider row may render **shipped** only when a referenced green conformance record exists.
 CI regenerates in place and fails on a dirty tree — there is no update flag in CI.
