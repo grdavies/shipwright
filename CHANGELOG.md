@@ -1209,6 +1209,7 @@
 * merge phase publish-durable-public-redirects-medium into feat/distribution-adopter-portability-docs-surface (ed08d4c) <!-- sw-deliver:publish-durable-public-redirects-medium -->
 * merge phase correct-consumer-entrypoints-and-portability-claims-medium into feat/distribution-adopter-portability-docs-surface (92f779b) <!-- sw-deliver:correct-consumer-entrypoints-and-portability-claims-medium -->
 * merge phase align-sw-init-curated-seeds-medium into feat/distribution-adopter-portability-docs-surface (b98e235) <!-- sw-deliver:align-sw-init-curated-seeds-medium -->
+* merge phase implement-manifest-generation-script-small into feat/golden-manifest-automation (00f3709) <!-- sw-deliver:implement-manifest-generation-script-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
