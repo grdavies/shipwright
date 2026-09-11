@@ -19,6 +19,7 @@ Shipwright source checkout.
 | [Graph domain terminology](graph-domain-terminology.md) | Planning vs execution graph vocabulary |
 | [GitHub issues](github-issues.md) | Issue-store onboarding |
 | [Issue store](issue-store.md) | External planning backends |
+| [Troubleshooting](troubleshooting.md) | Projection timeouts, rate limits, and resume |
 | [Trust anchors](trust-anchors.md) | Dist-only install trust verification |
 
 ## Redaction tier semantics
