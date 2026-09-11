@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-11T08:35:24Z",
+  "generatedAt": "2026-09-11T22:16:26Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -154,37 +154,64 @@
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:101:test/git-push-secret-scan-chokepoint.test",
+      "id": ".github/workflows/ci.yml:102:build_dist.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 101,
+      "line": 102,
+      "column": 18,
+      "script": "build_dist.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/ci.yml:103:docs-link-check.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/ci.yml",
+      "line": 103,
+      "column": 18,
+      "script": "docs-link-check.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/ci.yml:104:docs-link-check.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/ci.yml",
+      "line": 104,
+      "column": 18,
+      "script": "docs-link-check.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/ci.yml:107:test/git-push-secret-scan-chokepoint.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/ci.yml",
+      "line": 107,
       "column": 21,
       "script": "test/git-push-secret-scan-chokepoint.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:104:test/rca-fanout-unit.test",
+      "id": ".github/workflows/ci.yml:110:test/rca-fanout-unit.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 104,
+      "line": 110,
       "column": 21,
       "script": "test/rca-fanout-unit.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:107:check_scripts_inventory.py",
+      "id": ".github/workflows/ci.yml:113:check_scripts_inventory.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 107,
+      "line": 113,
       "column": 21,
       "script": "check_scripts_inventory.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:110:test/skills-spec-guard.test",
+      "id": ".github/workflows/ci.yml:116:test/skills-spec-guard.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 110,
+      "line": 116,
       "column": 21,
       "script": "test/skills-spec-guard.test",
       "classification": "self-repo-only"
