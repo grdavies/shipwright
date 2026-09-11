@@ -92,7 +92,7 @@ intents compile onto the same IR; operator UX stays on existing `sw-` commands �
 Mechanical entrypoints (same surfaces `/sw-status` delegates to):
 
 ```bash
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py<repo> explain-plan [--task-list <path>|--plan <path>|--graph-json <path>] [--compact] [--text]
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py explain-plan [--task-list <path>|--plan <path>|--graph-json <path>] [--compact] [--text]
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.py graph-progress --run-id <runId> [--format json|text] [--compact]
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.py explain <nodeId> --run-id <runId> [--format json|text] [--compact]
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning-graph.py status --unit-id <unit-id>   # planning graph — not execution
@@ -161,11 +161,11 @@ and `requiresAdoption` **before** any mutation. Operators invoke them via `wave_
 
 ```bash
 # Enumerate all deliver runs (run-scoped + legacy slug-scoped awaiting adoption)
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py. list
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py list
 
 # Resolve resume cardinality (0 → halt resume:none; >1 nonterminal → halt resume:ambiguous)
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py. resume-locate
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py. resume-locate --run-id deliver-<uuid>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py resume-locate
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py resume-locate --run-id deliver-<uuid>
 
 # Finalize after human merge to main (distinct from cleanup / planning-unit closure)
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py finalize --run-id <runId>

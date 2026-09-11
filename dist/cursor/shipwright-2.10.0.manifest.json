@@ -307,6 +307,7 @@
     "doc_workflow_schema.py",
     "docs-currency-gate.py",
     "docs-edit-route.py",
+    "docs-example-check.py",
     "docs-link-check.py",
     "docs-merge.py",
     "docs-presence-check.py",
@@ -314,6 +315,7 @@
     "docs_currency_memory.py",
     "docs_currency_planning.py",
     "docs_edit_route.py",
+    "docs_example_check.py",
     "docs_guide_token_strip.py",
     "docs_link_check.py",
     "docs_pr.py",
@@ -821,6 +823,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 818,
+  "moduleCount": 820,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

@@ -192,8 +192,22 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_ERROR
 
     result = run_check(root=root, include_prds=args.include_prds)
-    print(json.dumps(result, separators=(",", ":")))
-    if result["verdict"] == "broken-links" and args.strict:
+    import docs_example_check
+
+    example_result = docs_example_check.run_check(root=root)
+    if result["verdict"] == "broken-links":
+        verdict = "broken-links"
+    elif example_result["verdict"] == "malformed-examples":
+        verdict = "malformed-examples"
+    else:
+        verdict = "pass"
+    combined: dict[str, Any] = {
+        "verdict": verdict,
+        "findings": result.get("findings", []),
+        "examples": example_result,
+    }
+    print(json.dumps(combined, separators=(",", ":")))
+    if args.strict and verdict != "pass":
         return EXIT_FAIL
     return EXIT_PASS
 
