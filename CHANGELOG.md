@@ -1213,6 +1213,7 @@
 * merge phase integrate-staleness-check-into-gate-small into feat/golden-manifest-automation (3735b51) <!-- sw-deliver:integrate-staleness-check-into-gate-small -->
 * merge phase add-timeout-and-retry-wrappers-small into feat/issue-store-projection-performance (89c261a) <!-- sw-deliver:add-timeout-and-retry-wrappers-small -->
 * merge phase add-resumable-state-persistence-medium into feat/issue-store-projection-performance (ceac94d) <!-- sw-deliver:add-resumable-state-persistence-medium -->
+* merge phase validate-and-enable-small into feat/issue-store-projection-performance (a33eb58) <!-- sw-deliver:validate-and-enable-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
