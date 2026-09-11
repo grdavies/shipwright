@@ -195,6 +195,13 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(result, separators=(",", ":")))
     if result["verdict"] == "broken-links" and args.strict:
         return EXIT_FAIL
+
+    import docs_example_check
+
+    example_result = docs_example_check.run_check(root=root)
+    print(json.dumps(example_result, separators=(",", ":")))
+    if example_result["verdict"] == "malformed-examples" and args.strict:
+        return EXIT_FAIL
     return EXIT_PASS
 
 

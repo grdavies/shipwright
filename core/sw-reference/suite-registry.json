@@ -12,22 +12,6 @@
       "ciJobName": "feat-test-plan-docs-link-check"
     },
     {
-      "id": "docs-example-check",
-      "script": "scripts/docs-example-check.py",
-      "lanes": [
-        "pr-ci"
-      ],
-      "classification": "required",
-      "ciJobName": "feat-test-plan-docs-example-check",
-      "pathTriggers": [
-        "scripts/docs_example_check.py",
-        "scripts/docs-example-check.py",
-        "scripts/unit_tests/scripts/test_docs_example_check.py",
-        "README.md",
-        "core/documentation/**/*.md"
-      ]
-    },
-    {
       "id": "capability-docs-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [
@@ -2338,7 +2322,6 @@
       "description": "Always-on PR guard jobs (data-driven; PRD 082 R35).",
       "suiteIds": [
         "docs-link-check",
-        "docs-example-check",
         "scripts-inventory-guard",
         "bash-py-invocation-guard",
         "git-push-secret-scan-chokepoint",
