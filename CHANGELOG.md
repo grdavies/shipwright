@@ -1215,6 +1215,7 @@
 * merge phase add-resumable-state-persistence-medium into feat/issue-store-projection-performance (ceac94d) <!-- sw-deliver:add-resumable-state-persistence-medium -->
 * merge phase validate-and-enable-small into feat/issue-store-projection-performance (a33eb58) <!-- sw-deliver:validate-and-enable-small -->
 * merge phase single-source-version-metadata-small into feat/shipwright-distribution-onboarding (442c193) <!-- sw-deliver:single-source-version-metadata-small -->
+* merge phase fix-helper-examples-small into feat/shipwright-distribution-onboarding (e71b67d) <!-- sw-deliver:fix-helper-examples-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
