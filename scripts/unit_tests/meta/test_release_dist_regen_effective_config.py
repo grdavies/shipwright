@@ -9,7 +9,7 @@ import pytest
 WORKFLOW_REL = Path(".github/workflows/release-dist-regen.yml")
 EFFECTIVE_CONFIG_CMD = "python3 scripts/effective_config_gen.py all --write"
 STAGED_PATHS = (
-    "docs/guides/configuration.md",
+    "core/documentation/configuration.md",
     "core/sw-reference/generated/effective-config.json",
     "core/sw-reference/generated/upgrade-manifest-*.json",
 )

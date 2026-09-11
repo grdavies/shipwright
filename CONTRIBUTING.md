@@ -2,9 +2,13 @@
 
 Thank you for contributing to [Shipwright](https://github.com/grdavies/shipwright).
 
-**Using the plugin?** See [docs/guides/](docs/guides/getting-started.md) for adopters ([getting started](docs/guides/getting-started.md)). This file is for plugin development
-only. Internal planning artifacts (brainstorms, PRDs) live in gitignored `docs/`; they are not user
-documentation.
+**Using the plugin?** Adopter guides live in [`core/documentation/`](core/documentation/getting-started.md)
+— the install-root canonical home copied into packaged installs at `<install-root>/documentation/`.
+Public [`docs/guides/`](docs/guides/getting-started.md) paths are **redirect stubs only**; edit adopter
+prose in `core/documentation/`, not in `docs/guides/`.
+
+**Developing Shipwright itself?** This file covers source-repo workflow only. Internal planning artifacts
+(brainstorms, PRDs) live in gitignored `docs/`; they are not adopter documentation.
 
 ## Development setup
 
@@ -155,6 +159,7 @@ integrated pytest wrapper — path-triggered when doctrine schemas, lifecycle, o
 
 <!-- suite-registry.json and ci_plan_gen.py are authoritative for plan names above. -->
 <!-- PRD 333: provider/parity stub suites may register in suite-registry without enabling remote/marketplace paths. -->
+<!-- PRD 338: absorb-closeout + bundle-acceptance fixtures register under pr-ci / verify; keep pr-test-plan.manifest.json aligned. -->
 
 ## Initialization and doctor checks
 
@@ -179,4 +184,4 @@ Re-run the matching doctor after remediation; codes are designed for CI log grep
 
 Open a [discussion](https://github.com/grdavies/shipwright/discussions) or file an issue if something is
 unclear before starting large changes.
-<!-- currency: refreshed 2026-08-28T01:52:41Z for terminal prepare after PRD 333 suite-registry + marketplace/provenance stubs -->
+<!-- currency: refreshed 2026-09-11T10:15:00Z for terminal prepare after PRD 338 suite-registry closeout suites -->

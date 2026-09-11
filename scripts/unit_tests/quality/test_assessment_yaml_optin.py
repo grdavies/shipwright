@@ -87,7 +87,7 @@ def test_waived_without_waiver_fields_fails() -> None:
 
 
 def test_configuration_guide_documents_defaults_and_waiver(repo_root: Path) -> None:
-    text = (repo_root / "docs/guides/configuration.md").read_text(encoding="utf-8")
+    text = (repo_root / "core/documentation/configuration.md").read_text(encoding="utf-8")
     assert "architecture.assessment.mode" in text
     assert "`off`" in text
     assert "waiver.{actor,reason,expires}" in text

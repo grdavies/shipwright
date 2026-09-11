@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -122,6 +123,75 @@ def greenfield_posture_patch() -> dict[str, Any]:
         if entry.path[0] in posture_roots and entry.recommended not in (OPERATOR_CHOICE, "bundled defaults")
     )
     return patch_from_entries(entries)
+
+
+# --- Curated seed contract for write-draft + documentation (PRD 338 R30) ---------
+
+CURATED_DOCUMENTATION_PATHS: tuple[str, ...] = (
+    "core/commands/sw-init.md",
+    "core/documentation/configuration.md",
+)
+
+INVALID_TOP_LEVEL_DRAFT_KEY_FIXTURES: tuple[str, ...] = ("guardrails",)
+
+
+def curated_writable_leaf_keys() -> tuple[tuple[tuple[str, ...], Any], ...]:
+    """Curated leaf keys merged by write-draft (excludes operator/bundled defaults)."""
+    return curated_posture_leaf_keys()
+
+
+def schema_top_level_keys(schema: dict[str, Any]) -> frozenset[str]:
+    props = schema.get("properties")
+    if not isinstance(props, dict):
+        return frozenset()
+    return frozenset(str(key) for key in props)
+
+
+def invalid_top_level_keys(document: dict[str, Any], schema: dict[str, Any]) -> list[str]:
+    allowed = schema_top_level_keys(schema)
+    return sorted(key for key in document if key not in allowed)
+
+
+def strip_invalid_top_level_keys(document: dict[str, Any], schema: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+    """Remove schema-unknown top-level keys (fail-closed for write-draft)."""
+    rejected = invalid_top_level_keys(document, schema)
+    if not rejected:
+        return document, []
+    cleaned = {key: value for key, value in document.items() if key not in rejected}
+    return cleaned, rejected
+
+
+def curated_seed_documentation_snippets() -> dict[str, str]:
+    """Named JSON fragments for sw-init and configuration parity checks."""
+    patch = greenfield_curated_patch()
+    return {
+        "deliver.autonomy": json.dumps({"deliver": patch["deliver"]}, indent=2),
+        "delegation.mode": json.dumps({"delegation": patch["delegation"]}, indent=2),
+        "orchestration.planPolicy": json.dumps({"orchestration": patch["orchestration"]}, indent=2),
+        "memory.guardrails": json.dumps(
+            {"memory": {"guardrails": patch["memory"]["guardrails"]}},
+            indent=2,
+        ),
+        "compound.autonomy": json.dumps({"compound": patch["compound"]}, indent=2),
+    }
+
+
+def extract_markdown_json_fragments(text: str) -> list[dict[str, Any]]:
+    """Parse JSON object fragments from markdown fenced blocks."""
+    fragments: list[dict[str, Any]] = []
+    for block in re.findall(r"```json\s*\n(.*?)```", text, flags=re.DOTALL):
+        candidate = block.strip()
+        if not candidate:
+            continue
+        if not candidate.startswith("{"):
+            candidate = "{" + candidate + "}"
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            fragments.append(parsed)
+    return fragments
 
 
 def leaf_get(doc: dict[str, Any], path: tuple[str, ...]) -> Any:

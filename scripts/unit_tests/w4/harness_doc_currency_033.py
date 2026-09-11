@@ -47,8 +47,8 @@ bad() { echo "FAIL $1"; FAIL=1; }
 LIVING="$(content_path skills/living-status/SKILL.md)"
 DELIVER="$(content_path commands/sw-deliver.md)"
 STATUS="$(content_path commands/sw-status.md)"
-WF="$ROOT/docs/guides/workflows.md"
-GS="$ROOT/docs/guides/getting-started.md"
+WF="$ROOT/core/documentation/workflows.md"
+GS="$ROOT/core/documentation/getting-started.md"
 
 check() {
   local name="$1" file="$2" pattern="$3"

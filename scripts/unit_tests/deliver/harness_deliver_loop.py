@@ -396,7 +396,7 @@ fi
 
 # --- PRD 009 surface docs (R36) ---
 if grep -qE 'Legitimate.halt|legitimate.halt|legitimate halt' "$ROOT/core/commands/sw-deliver.md" && \
-   grep -qE 'parallel' "$ROOT/docs/guides/workflows.md" && \
+   grep -qE 'parallel' "$ROOT/core/documentation/workflows.md" && \
    grep -qE 'deliver.autonomy' "$ROOT/core/commands/sw-deliver.md"; then
   ok "deliver-surface-docs-autonomy-parallelism"
 else

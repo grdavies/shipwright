@@ -46,8 +46,8 @@ bad() { echo "FAIL $1"; FAIL=1; }
 SCHEMA="$ROOT/.sw/config.schema.json"
 EXAMPLE="$ROOT/core/sw-reference/workflow.config.example.json"
 README="$ROOT/README.md"
-GETTING="$ROOT/docs/guides/getting-started.md"
-CONFIG="$ROOT/docs/guides/configuration.md"
+GETTING="$ROOT/core/documentation/getting-started.md"
+CONFIG="$ROOT/core/documentation/configuration.md"
 NAMING="$ROOT/core/rules/sw-naming.mdc"
 WF="$ROOT/.cursor/workflow.config.json"
 

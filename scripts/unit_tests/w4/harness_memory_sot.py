@@ -177,7 +177,7 @@ fi
 if grep -q 'sourceOfTruth\|Source of truth' "$MEMORY_SKILL" && \
    grep -q 'sourceOfTruth\|source of truth' "$GUARDRAILS" && \
    grep -q 'SUPERSEDED.log' "$LAYOUT" && \
-   grep -q 'sourceOfTruth' "$ROOT/docs/guides/configuration.md" 2>/dev/null; then
+   grep -q 'sourceOfTruth' "$ROOT/core/documentation/configuration.md" 2>/dev/null; then
   ok "memory-sot-docs-presence"
 else
   bad "memory-sot-docs-presence"

@@ -33,6 +33,16 @@ from graph.packages import (  # noqa: E402
     resolve_trusted_packages,
 )
 from graph.packages.trust import sign_package_content  # noqa: E402
+from graph.packages.trust import (  # noqa: E402
+    DIST_TRUST_ANCHOR_FILENAME,
+    DistTrustAnchor,
+    dist_install_digests,
+    dist_trust_digest,
+    load_dist_trust_anchors,
+    resolve_dist_trust_verdict,
+    sign_dist_trust_anchor,
+    write_dist_trust_anchors,
+)
 
 _TEST_SECRET = b"test-trust-secret-shipwright"
 _TEST_KEY_ID = "shipwright-test"
@@ -278,3 +288,147 @@ def test_approval_tuple_additive_inject_no_reapprove() -> None:
             expansion_tuple=expansion_tuple.to_dict(),
             expansion_approval=None,
         )
+
+
+def _seed_dist_install(tmp_path: Path) -> tuple[Path, dict[str, str]]:
+    install_root = tmp_path / "plugin"
+    scripts = install_root / "scripts"
+    scripts.mkdir(parents=True)
+    (scripts / "sw-run.py").write_text("# shim\n", encoding="utf-8")
+    manifest_body = {"schemaVersion": 1, "zipappVersion": "1.0.0-test", "modules": ["check-gate.py"]}
+    manifest_path = install_root / "shipwright.manifest.json"
+    manifest_path.write_text(json.dumps(manifest_body, sort_keys=True) + "\n", encoding="utf-8")
+    zipapp_path = install_root / "shipwright.pyz"
+    zipapp_path.write_bytes(b"zipapp-fixture-bytes")
+    digests = dist_install_digests(install_root)
+    return install_root, digests
+
+
+def _write_signed_dist_anchors(
+    install_root: Path,
+    *,
+    digests: dict[str, str],
+    anchors: list,
+    trust_path: Path,
+) -> None:
+    trust_path.write_text(json.dumps(_trust_anchor_payload(), indent=2) + "\n", encoding="utf-8")
+    store = {
+        anchor.anchor_id: anchor
+        for anchor in anchors
+    }
+    write_dist_trust_anchors(install_root, store)
+
+
+def test_dist_trust_anchor_rotation(tmp_path: Path) -> None:
+    """R28 — current and rotated anchors validate during overlap; tamper fails closed."""
+    install_root, digests = _seed_dist_install(tmp_path)
+    trust_path = tmp_path / "operator-trust.json"
+    current = sign_dist_trust_anchor(
+        anchor_id="current",
+        manifest_sha256=digests["manifestSha256"],
+        zipapp_sha256=digests["zipappSha256"],
+        key_id=_TEST_KEY_ID,
+        secret=_TEST_SECRET,
+    )
+    rotated = sign_dist_trust_anchor(
+        anchor_id="rotated",
+        manifest_sha256=digests["manifestSha256"],
+        zipapp_sha256=digests["zipappSha256"],
+        key_id=_TEST_KEY_ID,
+        secret=_TEST_SECRET,
+        not_before="2020-01-01T00:00:00Z",
+        not_after="2099-12-31T23:59:59Z",
+    )
+    _write_signed_dist_anchors(
+        install_root,
+        digests=digests,
+        anchors=[current, rotated],
+        trust_path=trust_path,
+    )
+    trust_store = load_trust_anchors(trust_path)
+    verdict = resolve_dist_trust_verdict(install_root, trust_store=trust_store)
+    assert verdict["verdict"] == "ok"
+    assert verdict["trustDigest"] == dist_trust_digest(
+        digests["manifestSha256"], digests["zipappSha256"]
+    )
+
+    tampered = install_root / DIST_TRUST_ANCHOR_FILENAME
+    payload = json.loads(tampered.read_text(encoding="utf-8"))
+    for anchor_id in payload["anchors"]:
+        payload["anchors"][anchor_id]["zipappSha256"] = "0" * 64
+    tampered.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    with pytest.raises(TrustAnchorError, match="no active dist trust anchor|none verify"):
+        resolve_dist_trust_verdict(install_root, trust_store=trust_store)
+
+
+def test_dist_trust_anchor_unknown_key_and_tamper(tmp_path: Path) -> None:
+    install_root, digests = _seed_dist_install(tmp_path)
+    trust_path = tmp_path / "operator-trust.json"
+    unknown = sign_dist_trust_anchor(
+        anchor_id="unknown-signer",
+        manifest_sha256=digests["manifestSha256"],
+        zipapp_sha256=digests["zipappSha256"],
+        key_id="missing-key",
+        secret=_TEST_SECRET,
+    )
+    _write_signed_dist_anchors(
+        install_root,
+        digests=digests,
+        anchors=[unknown],
+        trust_path=trust_path,
+    )
+    trust_store = load_trust_anchors(trust_path)
+    with pytest.raises(TrustAnchorError, match="none verify|unknown signer key"):
+        resolve_dist_trust_verdict(install_root, trust_store=trust_store)
+
+    signed = sign_dist_trust_anchor(
+        anchor_id="valid",
+        manifest_sha256=digests["manifestSha256"],
+        zipapp_sha256=digests["zipappSha256"],
+        key_id=_TEST_KEY_ID,
+        secret=_TEST_SECRET,
+    )
+    signed = DistTrustAnchor(
+        anchor_id=signed.anchor_id,
+        status=signed.status,
+        manifest_sha256=signed.manifest_sha256,
+        zipapp_sha256=signed.zipapp_sha256,
+        signer_key_id=signed.signer_key_id,
+        signature="deadbeef",
+        not_before=signed.not_before,
+        not_after=signed.not_after,
+    )
+    _write_signed_dist_anchors(
+        install_root,
+        digests=digests,
+        anchors=[signed],
+        trust_path=trust_path,
+    )
+    with pytest.raises(TrustAnchorError, match="signature mismatch|none verify"):
+        resolve_dist_trust_verdict(install_root, trust_store=trust_store)
+
+
+def test_dist_trust_anchor_rotation_window(tmp_path: Path) -> None:
+    install_root, digests = _seed_dist_install(tmp_path)
+    trust_path = tmp_path / "operator-trust.json"
+    expired = sign_dist_trust_anchor(
+        anchor_id="expired",
+        manifest_sha256=digests["manifestSha256"],
+        zipapp_sha256=digests["zipappSha256"],
+        key_id=_TEST_KEY_ID,
+        secret=_TEST_SECRET,
+        not_before="2020-01-01T00:00:00Z",
+        not_after="2020-01-02T00:00:00Z",
+    )
+    _write_signed_dist_anchors(
+        install_root,
+        digests=digests,
+        anchors=[expired],
+        trust_path=trust_path,
+    )
+    trust_store = load_trust_anchors(trust_path)
+    with pytest.raises(TrustAnchorError, match="no active dist trust anchor"):
+        resolve_dist_trust_verdict(install_root, trust_store=trust_store)
+
+    store = load_dist_trust_anchors(install_root / DIST_TRUST_ANCHOR_FILENAME)
+    assert store.anchors["expired"].status == "active"

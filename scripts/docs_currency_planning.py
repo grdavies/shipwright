@@ -36,7 +36,7 @@ PLANNING_DOC_BINDINGS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "commands-refusal-ledger",
-        "doc": "docs/guides/commands.md",
+        "doc": "core/documentation/commands.md",
         "sources": (
             "scripts/planning_refusal_ledger_cli.py",
             "scripts/planning_refusal_ledger.py",
@@ -82,7 +82,7 @@ PLANNING_DOC_BINDINGS: tuple[dict[str, Any], ...] = (
     },
     {
         "id": "configuration-workflow-extensions",
-        "doc": "docs/guides/configuration.md",
+        "doc": "core/documentation/configuration.md",
         "sources": (
             "scripts/workflow_extensions.py",
             "scripts/handoff_bundle.py",

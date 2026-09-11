@@ -31,6 +31,7 @@ def _seed_self_repo(path: Path) -> None:
     (path / "version.txt").write_text("0.0.0-test\n", encoding="utf-8")
     (path / "core" / "sw-reference").mkdir(parents=True)
     _seed_trusted_scripts(path / "scripts")
+    (path / ".shipwright-dev").write_text("# sentinel\n", encoding="utf-8")
 
 
 def test_self_repo_wins_over_env_and_plugin(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

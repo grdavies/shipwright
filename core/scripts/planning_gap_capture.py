@@ -2376,6 +2376,568 @@ def record_absorb_linkage_327(
     return {**out, "action": "record-absorb-linkage-327"}
 
 
+# PRD 330 R7 — absorb close-out (#849, #846, #866, #884, #850)
+PRD_330_UNIT_ID = "330-prd-truth-hygiene-and-project-doctrine"
+PRD_330_NUMBER = "330"
+PRD_330_ABSORB_GAP_UNITS: tuple[str, ...] = (
+    "gap-369-fix-documentation-default-truth-drift-provenance",
+    "gap-365-separate-shipwright-doctrine-from-consumer-proje",
+    "gap-388-clarify-relationship-between-projectdoctrine-and",
+    "gap-406-complete-architecture-doctrine-beyond-shipwright",
+    "gap-371-brownfield-projectbaseline-v1-synthesis-on-init-",
+)
+PRD_330_PLANNING_ISSUE_NUMBERS: tuple[int, ...] = (
+    849,
+    846,
+    866,
+    884,
+    850,
+)
+
+
+def verify_absorb_closeout_330(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Verify PRD 330 close-out discovers all five anchored gaps (R7)."""
+    resolved_cfg = cfg if cfg is not None else ps.load_workflow_config(root)
+    snap = ps.resolve_delivery_linked_units(root, resolved_cfg, PRD_330_UNIT_ID)
+    if snap.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-330",
+            "error": snap.get("error"),
+            "prdUnitId": PRD_330_UNIT_ID,
+        }
+
+    gap_ids = [
+        item["unitId"]
+        for item in snap.get("snapshot", [])
+        if item.get("artifactType") == "gap"
+    ]
+    discovered = set(gap_ids)
+    missing = [
+        gap_id
+        for gap_id in PRD_330_ABSORB_GAP_UNITS
+        if not _match_expected_absorb_gap(discovered, gap_id)
+    ]
+    duplicate_targets = [
+        gap_id
+        for gap_id in PRD_330_ABSORB_GAP_UNITS
+        if sum(1 for item in discovered if gap_absorb_target_match(item, gap_id)) > 1
+    ]
+    return {
+        "verdict": "ok" if not missing and not duplicate_targets else "fail",
+        "action": "verify-absorb-closeout-330",
+        "prdUnitId": PRD_330_UNIT_ID,
+        "discoveredCount": len(discovered),
+        "discovered": sorted(discovered),
+        "missing": missing,
+        "duplicateTargets": duplicate_targets,
+        "skipped": list(snap.get("skipped") or []),
+        "planningIssues": [str(n) for n in PRD_330_PLANNING_ISSUE_NUMBERS],
+    }
+
+
+def record_absorb_linkage_330(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 330 absorb linkage for all five delivery gaps (R7)."""
+    out = record_absorb_linkage(
+        root,
+        prd_unit_id=PRD_330_UNIT_ID,
+        prd_number=PRD_330_NUMBER,
+        gap_unit_ids=list(PRD_330_ABSORB_GAP_UNITS),
+        planning_issues=[f"planning#{num}" for num in PRD_330_PLANNING_ISSUE_NUMBERS],
+        prd_path=prd_path,
+        dry_run=dry_run,
+    )
+    return {**out, "action": "record-absorb-linkage-330"}
+
+
+# PRD 332 R9 — absorb close-out (gaps #864, #865, #847, #867, #854)
+PRD_332_UNIT_ID = "332-prd-project-intelligence-triage-and-capability-promotion"
+PRD_332_NUMBER = "332"
+PRD_332_ABSORB_GAP_UNITS: tuple[str, ...] = (
+    "gap-386-connect-codebase-history-decision-intelligence-t",
+    "gap-387-define-and-implement-triageevidence-v1",
+    "gap-367-generalize-evidence-backed-capabilitypromotion-b",
+    "gap-389-add-evidence-freshness-and-invalidation-envelope",
+    "gap-376-complete-context-compression-rollout-via-measure",
+)
+PRD_332_PLANNING_ISSUE_NUMBERS: tuple[int, ...] = (864, 865, 847, 867, 854)
+
+
+def verify_absorb_closeout_332(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Verify PRD 332 close-out discovers all five anchored gaps (R9)."""
+    resolved_cfg = cfg if cfg is not None else ps.load_workflow_config(root)
+    snap = ps.resolve_delivery_linked_units(root, resolved_cfg, PRD_332_UNIT_ID)
+    if snap.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-332",
+            "error": snap.get("error"),
+            "prdUnitId": PRD_332_UNIT_ID,
+        }
+
+    gap_ids = [
+        item["unitId"]
+        for item in snap.get("snapshot", [])
+        if item.get("artifactType") == "gap"
+    ]
+    discovered = set(gap_ids)
+    missing = [
+        gap_id
+        for gap_id in PRD_332_ABSORB_GAP_UNITS
+        if not _match_expected_absorb_gap(discovered, gap_id)
+    ]
+    duplicate_targets = [
+        gap_id
+        for gap_id in PRD_332_ABSORB_GAP_UNITS
+        if sum(1 for item in discovered if gap_absorb_target_match(item, gap_id)) > 1
+    ]
+    return {
+        "verdict": "ok" if not missing and not duplicate_targets else "fail",
+        "action": "verify-absorb-closeout-332",
+        "prdUnitId": PRD_332_UNIT_ID,
+        "discoveredCount": len(discovered),
+        "discovered": sorted(discovered),
+        "missing": missing,
+        "duplicateTargets": duplicate_targets,
+        "skipped": list(snap.get("skipped") or []),
+        "planningIssues": [str(n) for n in PRD_332_PLANNING_ISSUE_NUMBERS],
+    }
+
+
+def record_absorb_linkage_332(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 332 absorb linkage for all five delivery gaps (R9)."""
+    out = record_absorb_linkage(
+        root,
+        prd_unit_id=PRD_332_UNIT_ID,
+        prd_number=PRD_332_NUMBER,
+        gap_unit_ids=list(PRD_332_ABSORB_GAP_UNITS),
+        planning_issues=[f"planning#{num}" for num in PRD_332_PLANNING_ISSUE_NUMBERS],
+        prd_path=prd_path,
+        dry_run=dry_run,
+    )
+    return {**out, "action": "record-absorb-linkage-332"}
+
+
+# PRD 333 R12 — absorb close-out (gaps #869, #852, #868, #883, #879, #880, #881, #882, #873, #875)
+PRD_333_UNIT_ID = "333-prd-eval-corpus-handoff-and-platform-providers"
+PRD_333_NUMBER = "333"
+PRD_333_ABSORB_GAP_UNITS: tuple[str, ...] = (
+    "gap-391-establish-external-consumer-repository-evaluatio",
+    "gap-373-strengthen-semantic-parity-conformance-across-pl",
+    "gap-390-finish-general-handoffbundle-runtime-integration",
+    "gap-405-close-handoffbundle-context-switch-stub-remainin",
+    "gap-401-automated-upstream-provenance-analysis",
+    "gap-402-gitlab-planning-store-provider",
+    "gap-403-remote-execution-provider",
+    "gap-404-workflowpackage-marketplace-registry",
+    "gap-395-track-updated-enhancement-ranking-from-v2-5-0-re",
+    "gap-397-follow-suggested-release-sequence-v2-5-1-truth-v",
+)
+PRD_333_PLANNING_ISSUE_NUMBERS: tuple[int, ...] = (
+    869,
+    852,
+    868,
+    883,
+    879,
+    880,
+    881,
+    882,
+    873,
+    875,
+)
+
+
+def verify_absorb_closeout_333(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Verify PRD 333 close-out discovers all ten anchored gaps (R12)."""
+    resolved_cfg = cfg if cfg is not None else ps.load_workflow_config(root)
+    snap = ps.resolve_delivery_linked_units(root, resolved_cfg, PRD_333_UNIT_ID)
+    if snap.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-333",
+            "error": snap.get("error"),
+            "prdUnitId": PRD_333_UNIT_ID,
+        }
+
+    gap_ids = [
+        item["unitId"]
+        for item in snap.get("snapshot", [])
+        if item.get("artifactType") == "gap"
+    ]
+    discovered = set(gap_ids)
+    missing = [
+        gap_id
+        for gap_id in PRD_333_ABSORB_GAP_UNITS
+        if not _match_expected_absorb_gap(discovered, gap_id)
+    ]
+    duplicate_targets = [
+        gap_id
+        for gap_id in PRD_333_ABSORB_GAP_UNITS
+        if sum(1 for item in discovered if gap_absorb_target_match(item, gap_id)) > 1
+    ]
+    return {
+        "verdict": "ok" if not missing and not duplicate_targets else "fail",
+        "action": "verify-absorb-closeout-333",
+        "prdUnitId": PRD_333_UNIT_ID,
+        "discoveredCount": len(discovered),
+        "discovered": sorted(discovered),
+        "missing": missing,
+        "duplicateTargets": duplicate_targets,
+        "skipped": list(snap.get("skipped") or []),
+        "planningIssues": [str(n) for n in PRD_333_PLANNING_ISSUE_NUMBERS],
+    }
+
+
+def record_absorb_linkage_333(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 333 absorb linkage for all ten delivery gaps (R12)."""
+    out = record_absorb_linkage(
+        root,
+        prd_unit_id=PRD_333_UNIT_ID,
+        prd_number=PRD_333_NUMBER,
+        gap_unit_ids=list(PRD_333_ABSORB_GAP_UNITS),
+        planning_issues=[f"planning#{num}" for num in PRD_333_PLANNING_ISSUE_NUMBERS],
+        prd_path=prd_path,
+        dry_run=dry_run,
+    )
+    return {**out, "action": "record-absorb-linkage-333"}
+
+
+# PRD 337 R6/R11 — bundle closeout for seventeen workflow-runtime gaps
+PRD_337_UNIT_ID = "337-prd-workflow-runtime-autonomy-lifecycle"
+PRD_337_NUMBER = "337"
+PRD_337_ANOMALOUS_SHORT_GAP_TARGETS: tuple[str, ...] = (
+    "gap-135",
+    "gap-136",
+    "gap-137",
+)
+PRD_337_ABSORB_GAP_UNITS: tuple[str, ...] = (
+    "gap-135-deliver-autonomy-dispatch-ship-depends-on-chat-t",
+    "gap-136-deliver-run-entry-hardening-bare-main-entry-pre-",
+    "gap-137-autonomy-acceptance-gate-define-zero-interaction",
+    "gap-355-add-sw-explore-as-first-class-pre-planning-works",
+    "gap-357-sw-explore-first-release-must-include-full-entry",
+    "gap-407-finalize-completion-living-docs-gap-resolve-exha",
+    "gap-408-blind-python3-m-sw-generate-all-in-phase-trees-c",
+    "gap-409-terminal-pr-prepare-blocked-completed-pending-me",
+    "gap-410-pr-delivery-map-for-terminal-pr-lived-only-under",
+    "gap-411-resume-friction-stacked-ambiguous-nonterminal-ru",
+    "gap-412-auto-run-sw-retrospective-post-merge-during-deli",
+    "gap-413-when-retrospective-gapcapture-enabled-true-auto-",
+    "gap-414-retro-compound-must-scope-learning-candidates-by",
+    "gap-415-terminal-gapcapture-must-not-mint-plugin-frictio",
+    "gap-416-retro-gapcapture-must-fork-plugin-self-to-meta-s",
+    "gap-430-phase-gap-check-provenance-and-status-integrity-",
+    "gap-431-contended-shared-docs-need-plan-time-serialize-p",
+)
+
+
+def reconcile_absorbed_gap_lifecycle_states(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    gap_unit_ids: list[str] | set[str] | None = None,
+) -> dict[str, Any]:
+    """Normalize anomalous short gap-135/136/137 targets before absorb linkage (PRD 337 R6/R11).
+
+    Uses existing short-gap canonicalization only — does not alter PRD 339-owned list-form
+    ``absorbs`` projection logic.
+    """
+    from planning_store_facade import _canonicalize_short_gap_absorb_targets
+
+    seeds = set(gap_unit_ids or PRD_337_ABSORB_GAP_UNITS)
+    seeds.update(set(PRD_337_ANOMALOUS_SHORT_GAP_TARGETS) & seeds)
+    normalized, skipped = _canonicalize_short_gap_absorb_targets(
+        root, cfg, seeds, fail_closed=True
+    )
+    reconciled_shorts = [
+        short
+        for short in PRD_337_ANOMALOUS_SHORT_GAP_TARGETS
+        if short in seeds
+        and not any(gap_absorb_target_match(short, item) for item in normalized)
+        and any(
+            gap_absorb_target_match(item, expected)
+            for item in normalized
+            for expected in PRD_337_ABSORB_GAP_UNITS
+            if gap_absorb_target_match(short, expected) or short in expected
+        )
+    ]
+    missing = [
+        gap_id
+        for gap_id in PRD_337_ABSORB_GAP_UNITS
+        if not any(gap_absorb_target_match(item, gap_id) for item in normalized)
+    ]
+    return {
+        "verdict": "ok" if not missing else "fail",
+        "action": "reconcile-absorbed-gap-lifecycle",
+        "prdUnitId": PRD_337_UNIT_ID,
+        "normalized": sorted(normalized),
+        "reconciledShorts": reconciled_shorts,
+        "missing": missing,
+        "skipped": skipped,
+        "expectedCount": len(PRD_337_ABSORB_GAP_UNITS),
+    }
+
+
+def verify_absorb_closeout_337(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Verify PRD 337 close-out discovers all seventeen anchored gaps (R6/R11)."""
+    resolved_cfg = cfg if cfg is not None else ps.load_workflow_config(root)
+    reconcile = reconcile_absorbed_gap_lifecycle_states(root, resolved_cfg)
+    if reconcile.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-337",
+            "error": "lifecycle-reconcile-failed",
+            "prdUnitId": PRD_337_UNIT_ID,
+            "reconcile": reconcile,
+        }
+    snap = ps.resolve_delivery_linked_units(root, resolved_cfg, PRD_337_UNIT_ID)
+    if snap.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-337",
+            "error": snap.get("error"),
+            "prdUnitId": PRD_337_UNIT_ID,
+        }
+
+    gap_ids = [
+        item["unitId"]
+        for item in snap.get("snapshot", [])
+        if item.get("artifactType") == "gap"
+    ]
+    discovered = set(gap_ids)
+    missing = [
+        gap_id
+        for gap_id in PRD_337_ABSORB_GAP_UNITS
+        if not _match_expected_absorb_gap(discovered, gap_id)
+    ]
+    duplicate_targets = [
+        gap_id
+        for gap_id in PRD_337_ABSORB_GAP_UNITS
+        if sum(1 for item in discovered if gap_absorb_target_match(item, gap_id)) > 1
+    ]
+    return {
+        "verdict": "ok" if not missing and not duplicate_targets else "fail",
+        "action": "verify-absorb-closeout-337",
+        "prdUnitId": PRD_337_UNIT_ID,
+        "discoveredCount": len(discovered),
+        "discovered": sorted(discovered),
+        "missing": missing,
+        "duplicateTargets": duplicate_targets,
+        "skipped": list(snap.get("skipped") or []),
+        "reconcile": reconcile,
+    }
+
+
+def record_absorb_linkage_337(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 337 absorb linkage for all seventeen delivery gaps (R6/R11)."""
+    resolved_cfg = ps.load_workflow_config(root)
+    reconcile = reconcile_absorbed_gap_lifecycle_states(root, resolved_cfg)
+    if reconcile.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "action": "record-absorb-linkage-337",
+            "error": "lifecycle-reconcile-failed",
+            "prdUnitId": PRD_337_UNIT_ID,
+            "reconcile": reconcile,
+        }
+    out = record_absorb_linkage(
+        root,
+        prd_unit_id=PRD_337_UNIT_ID,
+        prd_number=PRD_337_NUMBER,
+        gap_unit_ids=list(PRD_337_ABSORB_GAP_UNITS),
+        prd_path=prd_path,
+        dry_run=dry_run,
+    )
+    return {**out, "action": "record-absorb-linkage-337", "reconcile": reconcile}
+
+
+# PRD 338 R23 — bundle closeout for nine distribution/adopter-portability gaps
+PRD_338_UNIT_ID = "338-prd-distribution-adopter-portability-docs-surface"
+PRD_338_NUMBER = "338"
+PRD_338_ANOMALOUS_SHORT_GAP_TARGETS: tuple[str, ...] = (
+    "gap-162",
+)
+PRD_338_ABSORB_GAP_UNITS: tuple[str, ...] = (
+    "gap-162-remove-or-relocate-docs-guides-from-the-public-g",
+    "gap-418-unify-shipwright-source-repo-detection-between-s",
+    "gap-419-consumer-entrypoint-docs-must-use-install-rooted",
+    "gap-420-portability-check-must-implement-or-drop-its-no-",
+    "gap-425-emit-version-txt-into-dist-so-drift-check-resolv",
+    "gap-426-scripts-root-trust-markers-incompatible-with-zip",
+    "gap-427-claude-code-target-needs-a-first-class-installer",
+    "gap-428-sw-init-md-documented-seeds-drift-from-curated-p",
+    "gap-432-docs-currency-gate-must-use-consumer-vs-plugin-a",
+)
+PRD_338_PLANNING_ISSUE_NUMBERS: tuple[int, ...] = (
+    910,
+    911,
+    912,
+    917,
+    918,
+    919,
+    920,
+    924,
+)
+
+
+def reconcile_absorbed_gap_lifecycle_states_338(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    gap_unit_ids: list[str] | set[str] | None = None,
+) -> dict[str, Any]:
+    """Normalize anomalous short gap-162 target before absorb linkage (PRD 338 R23)."""
+    from planning_store_facade import _canonicalize_short_gap_absorb_targets
+
+    seeds = set(gap_unit_ids or PRD_338_ABSORB_GAP_UNITS)
+    seeds.update(set(PRD_338_ANOMALOUS_SHORT_GAP_TARGETS) & seeds)
+    normalized, skipped = _canonicalize_short_gap_absorb_targets(
+        root, cfg, seeds, fail_closed=True
+    )
+    reconciled_shorts = [
+        short
+        for short in PRD_338_ANOMALOUS_SHORT_GAP_TARGETS
+        if short in seeds
+        and not any(gap_absorb_target_match(short, item) for item in normalized)
+        and any(
+            gap_absorb_target_match(item, expected)
+            for item in normalized
+            for expected in PRD_338_ABSORB_GAP_UNITS
+            if gap_absorb_target_match(short, expected) or short in expected
+        )
+    ]
+    missing = [
+        gap_id
+        for gap_id in PRD_338_ABSORB_GAP_UNITS
+        if not any(gap_absorb_target_match(item, gap_id) for item in normalized)
+    ]
+    return {
+        "verdict": "ok" if not missing else "fail",
+        "action": "reconcile-absorbed-gap-lifecycle-338",
+        "prdUnitId": PRD_338_UNIT_ID,
+        "normalized": sorted(normalized),
+        "reconciledShorts": reconciled_shorts,
+        "missing": missing,
+        "skipped": skipped,
+        "expectedCount": len(PRD_338_ABSORB_GAP_UNITS),
+    }
+
+
+def verify_absorb_closeout_338(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Verify PRD 338 close-out discovers all nine anchored gaps (R23)."""
+    resolved_cfg = cfg if cfg is not None else ps.load_workflow_config(root)
+    reconcile = reconcile_absorbed_gap_lifecycle_states_338(root, resolved_cfg)
+    if reconcile.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-338",
+            "error": "lifecycle-reconcile-failed",
+            "prdUnitId": PRD_338_UNIT_ID,
+            "reconcile": reconcile,
+        }
+    snap = ps.resolve_delivery_linked_units(root, resolved_cfg, PRD_338_UNIT_ID)
+    if snap.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-338",
+            "error": snap.get("error"),
+            "prdUnitId": PRD_338_UNIT_ID,
+        }
+
+    gap_ids = [
+        item["unitId"]
+        for item in snap.get("snapshot", [])
+        if item.get("artifactType") == "gap"
+    ]
+    discovered = set(gap_ids)
+    missing = [
+        gap_id
+        for gap_id in PRD_338_ABSORB_GAP_UNITS
+        if not _match_expected_absorb_gap(discovered, gap_id)
+    ]
+    duplicate_targets = [
+        gap_id
+        for gap_id in PRD_338_ABSORB_GAP_UNITS
+        if sum(1 for item in discovered if gap_absorb_target_match(item, gap_id)) > 1
+    ]
+    return {
+        "verdict": "ok" if not missing and not duplicate_targets else "fail",
+        "action": "verify-absorb-closeout-338",
+        "prdUnitId": PRD_338_UNIT_ID,
+        "discoveredCount": len(discovered),
+        "discovered": sorted(discovered),
+        "missing": missing,
+        "duplicateTargets": duplicate_targets,
+        "skipped": list(snap.get("skipped") or []),
+        "planningIssues": [str(n) for n in PRD_338_PLANNING_ISSUE_NUMBERS],
+        "reconcile": reconcile,
+    }
+
+
+def record_absorb_linkage_338(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 338 absorb linkage for all nine delivery gaps (R23)."""
+    resolved_cfg = ps.load_workflow_config(root)
+    reconcile = reconcile_absorbed_gap_lifecycle_states_338(root, resolved_cfg)
+    if reconcile.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "action": "record-absorb-linkage-338",
+            "error": "lifecycle-reconcile-failed",
+            "prdUnitId": PRD_338_UNIT_ID,
+            "reconcile": reconcile,
+        }
+    out = record_absorb_linkage(
+        root,
+        prd_unit_id=PRD_338_UNIT_ID,
+        prd_number=PRD_338_NUMBER,
+        gap_unit_ids=list(PRD_338_ABSORB_GAP_UNITS),
+        planning_issues=[f"planning#{num}" for num in PRD_338_PLANNING_ISSUE_NUMBERS],
+        prd_path=prd_path,
+        dry_run=dry_run,
+    )
+    return {**out, "action": "record-absorb-linkage-338", "reconcile": reconcile}
+
+
 def parse_flags(rest: list[str]) -> dict[str, Any]:
     out: dict[str, Any] = {"dry_run": False}
     i = 0
@@ -2464,12 +3026,123 @@ def parse_flags(rest: list[str]) -> dict[str, Any]:
     return out
 
 
+def route_converge_findings(
+    root: Path,
+    findings: list[dict[str, Any]],
+    *,
+    unit_id: str | None = None,
+    unit_dir: str | None = None,
+    dry_run: bool = False,
+    auto_fix: bool = False,
+    auto_amend: bool = False,
+) -> dict[str, Any]:
+    """Route converge findings through gap-capture + amendment (PRD 342 R46).
+
+    Findings reach human disposition via the existing gap-capture draft inbox and
+    amendment proposals. This path never silently auto-fixes code and never
+    auto-amends a frozen artifact — ``auto_fix`` / ``auto_amend`` are refused.
+    """
+    if auto_fix or auto_amend:
+        return {
+            "verdict": "refused",
+            "reason": "converge-findings-must-not-auto-fix-or-auto-amend",
+            "autoFixApplied": False,
+            "autoAmendApplied": False,
+            "routed": [],
+            "awaitingHumanDisposition": True,
+            "unitId": unit_id,
+            "unitDir": unit_dir,
+        }
+
+    routed: list[dict[str, Any]] = []
+    for index, raw in enumerate(findings or []):
+        if not isinstance(raw, dict):
+            continue
+        reason = str(raw.get("reason") or "converge-finding")
+        role = str(raw.get("role") or "")
+        path = str(raw.get("path") or raw.get("ref") or "")
+        title_bits = [part for part in ("Converge finding", role, reason) if part]
+        title = " — ".join(title_bits)[:180]
+        signal_id = str(
+            raw.get("signalId")
+            or raw.get("signal_id")
+            or f"converge:{unit_id or 'unit'}:{reason}:{index}"
+        )
+        touches_frozen = bool(raw.get("frozenArtifact")) or reason in {
+            "declared-bundle-asset-missing",
+            "frozen-artifact-drift",
+        }
+        # Always stage a gap-capture draft for human disposition (never authoritative mint).
+        if dry_run:
+            gap_result = {
+                "signalId": signal_id,
+                "action": "draft-inbox",
+                "title": title,
+                "deduped": False,
+                "dryRun": True,
+            }
+        else:
+            gap_result = put_gap_draft(
+                root,
+                signal_id=signal_id,
+                title=title,
+                payload={
+                    "source": "converge",
+                    "unitId": unit_id,
+                    "unitDir": unit_dir,
+                    "finding": raw,
+                    "stub": True,
+                    "awaitingHumanDisposition": True,
+                },
+            )
+            gap_result = {
+                "signalId": signal_id,
+                "action": "draft-inbox",
+                "deduped": False,
+                **gap_result,
+            }
+
+        amendment: dict[str, Any] | None = None
+        if touches_frozen:
+            amendment = {
+                "route": "amendment",
+                "status": "awaiting-human-disposition",
+                "autoAmendApplied": False,
+                "reason": "frozen-artifact-requires-human-amendment",
+                "finding": raw,
+                "unitId": unit_id,
+            }
+
+        routed.append(
+            {
+                "signalId": signal_id,
+                "title": title,
+                "gapCapture": gap_result,
+                "amendment": amendment,
+                "autoFixApplied": False,
+                "autoAmendApplied": False,
+            }
+        )
+
+    return {
+        "verdict": "pass",
+        "routed": routed,
+        "autoFixApplied": False,
+        "autoAmendApplied": False,
+        "awaitingHumanDisposition": True,
+        "unitId": unit_id,
+        "unitDir": unit_dir,
+        "findingCount": len(routed),
+    }
+
+
+
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
         fail(
             "usage: planning_gap_capture.py <repo-root> "
-"<capture|capture-external-intake|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override|retro-capture|retro-confirm|retro-materialize|record-absorb-linkage|record-absorb-linkage-327|verify-absorb-closeout-072|verify-absorb-closeout-073|verify-absorb-closeout-325|verify-absorb-closeout-326|verify-absorb-closeout-327> [options]"
+"<capture|capture-external-intake|confirm|materialize|materialize-draft|draft-inbox-list|validate-enrichment|capture-verify-override|retro-capture|retro-confirm|retro-materialize|record-absorb-linkage|record-absorb-linkage-327|record-absorb-linkage-330|record-absorb-linkage-332|record-absorb-linkage-333|verify-absorb-closeout-072|verify-absorb-closeout-073|verify-absorb-closeout-325|verify-absorb-closeout-326|verify-absorb-closeout-327|verify-absorb-closeout-330|verify-absorb-closeout-332|verify-absorb-closeout-333> [options]"
         )
     root = Path(args[0]).resolve()
     command = args[1]
@@ -2681,6 +3354,24 @@ def main(argv: list[str] | None = None) -> None:
                 prd_path=prd_path,
                 dry_run=bool(flags.get("dry_run")),
             )
+        elif prd_unit == PRD_332_UNIT_ID:
+            out = record_absorb_linkage_332(
+                root,
+                prd_path=prd_path,
+                dry_run=bool(flags.get("dry_run")),
+            )
+        elif prd_unit == PRD_333_UNIT_ID:
+            out = record_absorb_linkage_333(
+                root,
+                prd_path=prd_path,
+                dry_run=bool(flags.get("dry_run")),
+            )
+        elif prd_unit == PRD_338_UNIT_ID:
+            out = record_absorb_linkage_338(
+                root,
+                prd_path=prd_path,
+                dry_run=bool(flags.get("dry_run")),
+            )
         elif prd_unit == PRD_066_UNIT_ID and not flags.get("prd_unit_id") and not flags.get("unit_id"):
             tasks_path = Path(flags["tasks_path"]).resolve() if flags.get("tasks_path") else None
             out = record_absorb_linkage_066(
@@ -2712,6 +3403,33 @@ def main(argv: list[str] | None = None) -> None:
         )
         emit(out, 0 if out.get("verdict") in {"ok", "skipped"} else 20)
 
+    if command == "record-absorb-linkage-330":
+        prd_path = Path(flags["prd_path"]).resolve() if flags.get("prd_path") else None
+        out = record_absorb_linkage_330(
+            root,
+            prd_path=prd_path,
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") in {"ok", "skipped"} else 20)
+
+    if command == "record-absorb-linkage-332":
+        prd_path = Path(flags["prd_path"]).resolve() if flags.get("prd_path") else None
+        out = record_absorb_linkage_332(
+            root,
+            prd_path=prd_path,
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") in {"ok", "skipped"} else 20)
+
+    if command == "record-absorb-linkage-333":
+        prd_path = Path(flags["prd_path"]).resolve() if flags.get("prd_path") else None
+        out = record_absorb_linkage_333(
+            root,
+            prd_path=prd_path,
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") in {"ok", "skipped"} else 20)
+
     if command == "verify-absorb-closeout-072":
         out = verify_absorb_closeout_072(root)
         emit(out, 0 if out.get("verdict") == "ok" else 20)
@@ -2731,6 +3449,41 @@ def main(argv: list[str] | None = None) -> None:
     if command == "verify-absorb-closeout-327":
         out = verify_absorb_closeout_327(root)
         emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "verify-absorb-closeout-330":
+        out = verify_absorb_closeout_330(root)
+        emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "verify-absorb-closeout-332":
+        out = verify_absorb_closeout_332(root)
+        emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "verify-absorb-closeout-333":
+        out = verify_absorb_closeout_333(root)
+        emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "verify-absorb-closeout-337":
+        out = verify_absorb_closeout_337(root)
+        emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "verify-absorb-closeout-338":
+        out = verify_absorb_closeout_338(root)
+        emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "record-absorb-linkage-338":
+        prd_path = Path(flags["prd_path"]).resolve() if flags.get("prd_path") else None
+        out = record_absorb_linkage_338(
+            root,
+            prd_path=prd_path,
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") in {"ok", "skipped"} else 20)
+
+    if command == "prd339-cross-prd-gate":
+        from prd339_cross_prd_gate import prd339_absorb_acceptance_milestone
+
+        out = prd339_absorb_acceptance_milestone(root)
+        emit(out, 0 if out.get("verdict") == "ready" else 20)
 
     fail(f"unknown command: {command}")
 

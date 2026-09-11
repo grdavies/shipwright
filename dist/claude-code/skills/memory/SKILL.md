@@ -24,9 +24,10 @@ config change, never a command edit.
 
 ## Resolve the provider (first step, always)
 
-1. Read `.cursor/workflow.config.json` → `memory.provider`, `memory.project`, `memory.defaultScope`.
-   When no config exists, check `.cursor/sw-memory.provider` (per-repo marker) — if present **and** the
-   marker text is literally `in-repo`, provider is `in-repo` with project = workspace basename.
+1. Load workflow config via `shipwright_paths.load_workflow_config(root)` (PRD 342 path authority) and read
+   `memory.provider`, `memory.project`, `memory.defaultScope`. When no config exists, check
+   `.cursor/sw-memory.provider` (per-repo marker) — if present **and** the marker text is literally
+   `in-repo`, provider is `in-repo` with project = workspace basename.
 2. **Write binding hard-cut (PRD 279 R9–R12 / R14–R17; shared brainstorm numbering with PRD 278):**
    mutating paths (`/sw-memory-sync` store, ordinary `store`/`import` when `root=` is set) MUST call
    `scripts/memory_preflight.py` write assert (`assert_write_binding` /

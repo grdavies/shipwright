@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Install Shipwright into the local Cursor plugin directory (R5).
+"""Install Shipwright into a host integration plugin directory (R5, PRD 338 R29).
 
 Replaces ``install.sh`` with a stdlib mirror-copy and hook installation via R40.
+Supports Cursor and Claude Code targets with comparable mirror/refresh semantics.
 
 PRD 342 R18: ``shipwright init --integration <tool>`` chains machine-level
 mirroring then repository configuration through this module and ``sw-configure``
@@ -32,9 +33,64 @@ INTEGRATION_DIST: dict[str, str] = {
     "claude-code": "dist/claude-code",
 }
 
+# Paths preserved across refresh — operator-owned state under the machine install root.
+USER_OWNED_INSTALL_PREFIXES: tuple[str, ...] = (".sw/local",)
+
 
 def repo_root() -> Path:
     return Path(__file__).resolve().parent.parent
+
+
+def plugin_root_env_for(integration: str) -> str:
+    norm = normalize_integration(integration)
+    return "CURSOR_PLUGIN_ROOT" if norm == "cursor" else "CLAUDE_PLUGIN_ROOT"
+
+
+def package_root(integration: str = "cursor") -> Path:
+    """Resolve the Shipwright source tree or packaged install root."""
+    norm = normalize_integration(integration)
+    env_val = os.environ.get(plugin_root_env_for(norm), "").strip()
+    if env_val:
+        return Path(env_val).expanduser().resolve()
+    return repo_root()
+
+
+def is_packaged_install_root(root: Path, integration: str) -> bool:
+    """True when ``root`` is already an emitted platform dist tree."""
+    norm = normalize_integration(integration)
+    resolved = root.resolve()
+    if norm == "cursor":
+        return (resolved / ".cursor-plugin" / "plugin.json").is_file()
+    return (resolved / ".claude-plugin" / "plugin.json").is_file()
+
+
+def mirror_excludes() -> list[str]:
+    return [".git", "node_modules", *USER_OWNED_INSTALL_PREFIXES]
+
+
+def _preserve_user_owned(dest: Path) -> dict[str, bytes]:
+    preserved: dict[str, bytes] = {}
+    if not dest.is_dir():
+        return preserved
+    for prefix in USER_OWNED_INSTALL_PREFIXES:
+        base = dest / prefix
+        if not base.exists():
+            continue
+        if base.is_file():
+            preserved[prefix] = base.read_bytes()
+            continue
+        for path in base.rglob("*"):
+            if path.is_file():
+                rel = path.relative_to(dest).as_posix()
+                preserved[rel] = path.read_bytes()
+    return preserved
+
+
+def _restore_user_owned(dest: Path, preserved: dict[str, bytes]) -> None:
+    for rel, content in preserved.items():
+        target = dest / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
 
 
 def default_dest() -> Path:
@@ -59,8 +115,14 @@ def default_dest_for(integration: str) -> Path:
 
 
 def dist_source_for(integration: str, *, root: Path | None = None) -> Path:
-    root = root or repo_root()
-    return root / INTEGRATION_DIST[normalize_integration(integration)]
+    norm = normalize_integration(integration)
+    root = (root or package_root(norm)).resolve()
+    nested = root / INTEGRATION_DIST[norm]
+    if nested.is_dir():
+        return nested
+    if is_packaged_install_root(root, norm):
+        return root
+    return nested
 
 
 def plan_machine_write_paths(source: Path, dest: Path) -> list[str]:
@@ -146,7 +208,12 @@ def init_packaged(
             "scope": scope,
         }
 
-    rc = install(machine_dest, src=dist_src, install_hooks=install_hooks)
+    rc = install(
+        machine_dest,
+        src=dist_src,
+        integration=norm,
+        install_hooks=install_hooks,
+    )
     if rc != 0:
         return {
             "verdict": "fail",
@@ -196,34 +263,51 @@ def seed_memory_provider_catalog(dest: Path) -> bool:
     return True
 
 
-def install(dest: Path, *, src: Path | None = None, install_hooks: bool = True) -> int:
-    root = repo_root()
-    source = src or Path(os.environ.get("SW_INSTALL_SRC", root / "dist" / "cursor"))
+def install(
+    dest: Path,
+    *,
+    src: Path | None = None,
+    integration: str = "cursor",
+    install_hooks: bool = True,
+) -> int:
+    norm = normalize_integration(integration)
+    root = package_root(norm)
+    if src is not None:
+        source = src
+    elif os.environ.get("SW_INSTALL_SRC"):
+        source = Path(os.environ["SW_INSTALL_SRC"])
+    else:
+        source = dist_source_for(norm, root=root)
+
     if not source.is_dir():
-        logging_setup.error(f"dist/cursor/ not found at {source}")
+        logging_setup.error(f"dist/{norm}/ not found at {source}")
         logging_setup.error("Run: python3 -m sw generate --all")
         return 1
 
-    version_file = root / "version.txt"
+    version_file = source / "version.txt"
+    if not version_file.is_file():
+        version_file = root / "version.txt"
     if version_file.is_file():
         version = version_file.read_text(encoding="utf-8").strip()
-        logging_setup.info(f"Installing shipwright v{version} -> {dest}")
+        logging_setup.info(f"Installing shipwright ({norm}) v{version} -> {dest}")
     else:
-        logging_setup.info(f"Installing shipwright -> {dest}")
+        logging_setup.info(f"Installing shipwright ({norm}) -> {dest}")
 
     if dest.is_symlink():
         logging_setup.info(f"Removing stale symlink at {dest}")
         dest.unlink()
 
     dest.mkdir(parents=True, exist_ok=True)
+    preserved = _preserve_user_owned(dest)
     # Mirror unlinks destination-entry symlinks before copy so a leftover
     # scripts/ (or nested) symlink cannot redirect the install into another repo.
     mirror.mirror(
         source,
         dest,
-        excludes=[".git", "node_modules"],
+        excludes=mirror_excludes(),
         delete=True,
     )
+    _restore_user_owned(dest, preserved)
 
     if seed_memory_provider_catalog(dest):
         logging_setup.info("Seeded .sw/memory-provider-catalog.json from core/sw-reference emit.")
@@ -234,16 +318,23 @@ def install(dest: Path, *, src: Path | None = None, install_hooks: bool = True) 
         )
 
     if install_hooks:
-        git_hooks = dest / ".git" / "hooks"
         # Plugin install copies dist; git hooks for dev repos use core/hooks via separate path
         core_hooks = source / "core" / "hooks"
         if core_hooks.is_dir():
             for hook_name in ("pre-commit.py", "pre-push.py", "commit-msg.py"):
                 target = core_hooks / hook_name
                 if target.is_file():
-                    hook_launcher.install_hook(dest / "hooks", hook_name.removesuffix(".py"), target, repo_root=root)
+                    hook_launcher.install_hook(
+                        dest / "hooks",
+                        hook_name.removesuffix(".py"),
+                        target,
+                        repo_root=root,
+                    )
 
-    logging_setup.info("Done. Run 'Developer: Reload Window' in Cursor to pick up changes.")
+    if norm == "cursor":
+        logging_setup.info("Done. Run 'Developer: Reload Window' in Cursor to pick up changes.")
+    else:
+        logging_setup.info("Done. Restart Claude Code to pick up plugin changes.")
 
     git_config = root / ".git"
     workflow = root / ".cursor" / "workflow.config.json"
@@ -265,9 +356,15 @@ def install(dest: Path, *, src: Path | None = None, install_hooks: bool = True) 
 def build_parser_install() -> argparse.ArgumentParser:
     parser = build_parser(
         prog="install",
-        description="Install Shipwright plugin copy to the Cursor plugins directory.",
+        description="Install Shipwright plugin copy to a host integration plugin directory.",
     )
     parser.add_argument("dest", nargs="?", default=None, help="Destination directory")
+    parser.add_argument(
+        "--integration",
+        default="cursor",
+        choices=["cursor", "claude-code"],
+        help="Target host integration (default: cursor)",
+    )
     parser.add_argument("--no-hooks", action="store_true", help="Skip hook installation")
     return parser
 
@@ -320,8 +417,12 @@ def build_parser_init() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser_install()
     args = parser.parse_args(argv)
-    dest = Path(args.dest) if args.dest else default_dest()
-    return install(dest, install_hooks=not args.no_hooks)
+    dest = Path(args.dest) if args.dest else default_dest_for(args.integration)
+    return install(
+        dest,
+        integration=args.integration,
+        install_hooks=not args.no_hooks,
+    )
 
 
 def main_init(argv: list[str] | None = None) -> int:

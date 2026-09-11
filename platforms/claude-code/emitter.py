@@ -50,6 +50,9 @@ class ClaudeCodeEmitter(EmitterBase):
         self._apply_use_when_to_skills(core_root, dest)
         self._copy_runtime_support(core_root, repo_root, dest)
         self._emit_plugin_manifest(repo_root, dest)
+        self._emit_install_version(repo_root, dest)
+        self.copy_install_root_documentation(core_root, dest)
+        self._emit_installer_entrypoint(dest)
         self._emit_hooks(repo_root, dest)
         self._emit_claude_md(core_root, dest)
 
@@ -152,13 +155,69 @@ class ClaudeCodeEmitter(EmitterBase):
             shutil.copy2(adapter_src, plat_dir / "hook_adapter.py")
         self.copy_closed_sw_reference(core_root, dest)
 
+    def _emit_install_version(self, repo_root: Path, dest: Path) -> None:
+        """Emit canonical semver at install root for pure-install drift checks (PRD 338 R27)."""
+        (dest / "version.txt").write_text(read_version(repo_root) + "\n", encoding="utf-8")
+
+    def _emit_installer_entrypoint(self, dest: Path) -> None:
+        """Emit install-root-relative installer shim wired to packaged install.py (PRD 338 R29)."""
+        scripts_dir = dest / "scripts"
+        scripts_dir.mkdir(parents=True, exist_ok=True)
+        env_name = self.plugin_root_env_name()
+        shim = f'''#!/usr/bin/env python3
+"""Claude Code installer entrypoint — delegates to packaged install.py (PRD 338 R29)."""
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+_PLUGIN_ROOT = Path(__file__).resolve().parent.parent
+_PLUGIN_ROOT_ENV = "{env_name}"
+
+
+def _resolve_pyz(plugin_root: Path) -> Path:
+    stable = plugin_root / "shipwright.pyz"
+    if stable.is_file():
+        return stable
+    candidates = sorted(plugin_root.glob("shipwright-*.pyz"))
+    if not candidates:
+        raise FileNotFoundError(f"no shipwright.pyz under {{plugin_root}}")
+    return candidates[-1]
+
+
+def main() -> int:
+    env = os.environ.copy()
+    env.setdefault(_PLUGIN_ROOT_ENV, str(_PLUGIN_ROOT))
+    pyz = _resolve_pyz(_PLUGIN_ROOT)
+    cmd = [
+        sys.executable,
+        str(pyz),
+        "install.py",
+        "--integration",
+        "claude-code",
+        *sys.argv[1:],
+    ]
+    return subprocess.call(cmd, env=env)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+'''
+        path = scripts_dir / "install.py"
+        path.write_text(shim, encoding="utf-8")
+        path.chmod(0o755)
+
     def _emit_plugin_manifest(self, repo_root: Path, dest: Path) -> None:
         manifest_dir = dest / ".claude-plugin"
         manifest_dir.mkdir(parents=True, exist_ok=True)
+        version = read_version(repo_root)
         plugin = {
             "name": "shipwright",
-            "version": read_version(repo_root),
+            "version": version,
             "description": "Shipwright for Claude Code (generated)",
+            "installer": "./scripts/install.py",
         }
         (manifest_dir / "plugin.json").write_text(
             json.dumps(plugin, indent=2) + "\n",

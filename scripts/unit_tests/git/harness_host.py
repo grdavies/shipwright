@@ -433,7 +433,7 @@ fi
 
 # --- install-docs-currency ---
 DOC_FAIL=0
-for needle_file in README.md docs/guides/configuration.md; do
+for needle_file in README.md core/documentation/configuration.md; do
   if ! grep -q 'host.tokenEnv\|GITHUB_TOKEN' "$ROOT/$needle_file" 2>/dev/null; then
     echo "missing host token docs in $needle_file"
     DOC_FAIL=1

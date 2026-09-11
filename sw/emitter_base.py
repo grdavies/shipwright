@@ -277,6 +277,16 @@ if __name__ == "__main__":
             if src.is_file():
                 shutil.copy2(src, ref_dir / name)
 
+    def copy_install_root_documentation(self, core_root: Path, dest: Path) -> None:
+        """Copy canonical adopter docs to install-root documentation/ (PRD 338 R23)."""
+        src = core_root / "documentation"
+        if not src.is_dir():
+            raise EmitterError(f"missing canonical documentation tree: {src}")
+        dest_docs = dest / "documentation"
+        if dest_docs.exists():
+            shutil.rmtree(dest_docs)
+        shutil.copytree(src, dest_docs)
+
     def substitute_plugin_root_env(self, text: str) -> str:
         target = self.plugin_root_env_name()
         if target == "CURSOR_PLUGIN_ROOT":

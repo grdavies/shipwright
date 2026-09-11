@@ -200,7 +200,7 @@ done
 check_doc "$ROOT/core/sw-reference/config.schema.json" config-schema \
   'visibilityProfile' 'store'
 
-check_doc "$ROOT/docs/guides/configuration.md" configuration \
+check_doc "$ROOT/core/documentation/configuration.md" configuration \
   'planning\.store|planning\.visibilityProfile|visibilityProfile'
 
 exit "$FAIL"

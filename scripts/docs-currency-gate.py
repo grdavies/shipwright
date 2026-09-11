@@ -82,6 +82,9 @@ INTERNAL_ARTIFACT_CURRENCY_CHECKS: tuple[str, ...] = (
     "command-documentation-currency",
 )
 
+PROFILE_PLUGIN_SELF = "plugin-self"
+PROFILE_CONSUMER = "consumer"
+
 
 def artifact_currency_skip_reasons(
     *, consumer_repo: bool, skip_artifact_currency: bool
@@ -92,6 +95,99 @@ def artifact_currency_skip_reasons(
     if skip_artifact_currency:
         reasons.append("skip-artifact-currency")
     return tuple(reasons)
+
+
+def resolve_r24_posture_verdict(root: Path) -> dict[str, object]:
+    """Return authoritative R24 posture verdict; fail closed on ambiguity."""
+    from repository_context import detect_repository_posture
+
+    try:
+        verdict = detect_repository_posture(root)
+    except Exception as exc:
+        return {"ready": False, "reason": str(exc)}
+    return {
+        "ready": True,
+        "posture": verdict.posture,
+        "reason": verdict.reason,
+        "sentinelPresent": verdict.sentinel_present,
+        "heuristicMarkersPresent": verdict.heuristic_markers_present,
+    }
+
+
+def resolve_r28_dist_trust_readiness(root: Path, posture: str) -> dict[str, object]:
+    """Return R28 dist-trust readiness for profile rollout (PRD 338 R31)."""
+    from sw_scripts_resolve import (
+        dist_trust_verdict_for_install,
+        is_dist_only_plugin_scripts,
+        resolve_scripts_dir,
+        scripts_dir_is_trusted,
+    )
+
+    if posture == PROFILE_PLUGIN_SELF:
+        scripts = root / "scripts"
+        if scripts_dir_is_trusted(scripts, workspace=root):
+            return {"ready": True, "source": "self-repo-markers"}
+        return {"ready": False, "reason": "r28-self-repo-markers-missing"}
+
+    result = resolve_scripts_dir(root)
+    if result.error:
+        return {"ready": True, "source": "consumer-no-trusted-scripts"}
+    if result.path is None or result.source is None:
+        return {"ready": True, "source": "consumer-no-trusted-scripts"}
+    if not str(result.source).endswith("-dist"):
+        return {"ready": True, "source": "consumer-non-dist-scripts", "scriptsSource": result.source}
+    if not is_dist_only_plugin_scripts(result.path):
+        return {"ready": False, "reason": "r28-dist-source-without-dist-only-scripts"}
+    try:
+        verdict = dist_trust_verdict_for_install(result.path.parent, workspace=root)
+    except Exception as exc:
+        return {"ready": False, "reason": f"r28-dist-trust:{exc}"}
+    if verdict.get("verdict") != "ok":
+        return {
+            "ready": False,
+            "reason": "r28-dist-trust-verdict-not-ok",
+            "verdict": verdict,
+        }
+    return {
+        "ready": True,
+        "source": "consumer-dist-trust",
+        "scriptsSource": result.source,
+        "trustDigest": verdict.get("trustDigest"),
+        "anchorId": verdict.get("anchorId"),
+    }
+
+
+def resolve_docs_currency_profile(root: Path) -> dict[str, object]:
+    """Select consumer vs plugin-self artifact profile from merged R24/R28 trust verdicts."""
+    r24 = resolve_r24_posture_verdict(root)
+    if not r24.get("ready"):
+        return {
+            "profile": None,
+            "rolloutBlocked": True,
+            "blockReason": "r24-not-ready",
+            "r24": r24,
+        }
+
+    posture = str(r24.get("posture") or "")
+    r28 = resolve_r28_dist_trust_readiness(root, posture)
+    if not r28.get("ready"):
+        return {
+            "profile": None,
+            "rolloutBlocked": True,
+            "blockReason": "r28-not-ready",
+            "r24": r24,
+            "r28": r28,
+        }
+
+    profile = PROFILE_PLUGIN_SELF if posture == PROFILE_PLUGIN_SELF else PROFILE_CONSUMER
+    return {
+        "profile": profile,
+        "rolloutBlocked": False,
+        "consumerRepo": profile == PROFILE_CONSUMER,
+        "runArtifactCurrency": profile == PROFILE_PLUGIN_SELF,
+        "r24": r24,
+        "r28": r28,
+    }
 
 
 def build_artifact_currency_skipped(
@@ -255,7 +351,6 @@ def main(argv: list[str] | None = None) -> int:
         sys.exit(2)
 
     phases = state.get("phases") or {}
-    from sw_scripts_resolve import is_shipwright_self_repo
     from wave_living_docs import (
         derive_index_status,
         living_doc_write_banned,
@@ -264,12 +359,29 @@ def main(argv: list[str] | None = None) -> int:
     )
     from wave_state import phase_complete
 
-    consumer_repo = not is_shipwright_self_repo(root)
+    profile_resolution = resolve_docs_currency_profile(root)
+    if profile_resolution.get("rolloutBlocked"):
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "action": "docs-currency-gate",
+                    "prd": prd,
+                    "error": "trust-not-ready",
+                    "blockReason": profile_resolution.get("blockReason"),
+                    "profileResolution": profile_resolution,
+                }
+            )
+        )
+        sys.exit(2)
+
+    consumer_repo = bool(profile_resolution.get("consumerRepo"))
+    profile = str(profile_resolution.get("profile") or "")
     artifact_currency_skipped = build_artifact_currency_skipped(
         consumer_repo=consumer_repo,
         skip_artifact_currency=skip_artifact_currency,
     )
-    run_artifact_currency = not consumer_repo and not skip_artifact_currency
+    run_artifact_currency = bool(profile_resolution.get("runArtifactCurrency")) and not skip_artifact_currency
 
     all_green = bool(phases) and all(phase_complete((m or {}).get("status")) for m in phases.values())
     merged_main = False
@@ -437,6 +549,8 @@ def main(argv: list[str] | None = None) -> int:
         "indexStatus": index_status,
         "expected": expected,
         "planPath": str(plan_file),
+        "profile": profile,
+        "profileResolution": profile_resolution,
         "artifactSet": [str(e.get("id") or e.get("doc")) for e in COMMAND_DOC_CURRENCY_ARTIFACTS],
     }
     if artifact_currency_skipped:

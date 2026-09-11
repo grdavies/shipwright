@@ -58,9 +58,9 @@ CONDUCTOR="$(content_path skills/conductor/SKILL.md)"
 SCHEMA="$ROOT/core/sw-reference/config.schema.json"
 WF_SW="$ROOT/.sw/workflow.config.example.json"
 WF_CORE="$ROOT/core/sw-reference/workflow.config.example.json"
-CONFIG_GUIDE="$ROOT/docs/guides/configuration.md"
-WORKFLOWS="$ROOT/docs/guides/workflows.md"
-COMMANDS="$ROOT/docs/guides/commands.md"
+CONFIG_GUIDE="$ROOT/core/documentation/configuration.md"
+WORKFLOWS="$ROOT/core/documentation/workflows.md"
+COMMANDS="$ROOT/core/documentation/commands.md"
 
 check() {
   local name="$1" file="$2" pattern="$3"

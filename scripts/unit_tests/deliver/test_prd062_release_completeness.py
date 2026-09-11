@@ -31,8 +31,8 @@ DOC_SURFACES: tuple[tuple[str, str], ...] = (
     ("core/skills/conductor/SKILL.md", "Deliver-loop mechanical drain"),
     ("core/commands/sw-cleanup.md", "Scoped in-flight protection"),
     (".shipwright/layout.md", "Slim gate manifest"),
-    ("docs/guides/configuration.md", "deliver.loop.drainMechanical"),
-    ("docs/guides/configuration.md", "maxCalls"),
+    ("core/documentation/configuration.md", "deliver.loop.drainMechanical"),
+    ("core/documentation/configuration.md", "maxCalls"),
 )
 
 
