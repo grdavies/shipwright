@@ -109,7 +109,7 @@ gates run first; there is no config or CLI override for safety-kernel vetoes.
 Inspect the live recommendation without mutating stores:
 
 ```bash
-python3 scripts/status_collect.py triage-recommendation-explain \
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_collect.pytriage-recommendation-explain \
   [--unit-id <unit-id>] [--description "<work description>"] [--file-count N] [--query "<text>"]
 ```
 
@@ -253,8 +253,8 @@ run receives a distinct number or a fail-closed `reservation-held` halt — neve
 Stale reservations are reclaimable when heartbeat + PID predicates match the ship-lease staleness model.
 
 ```bash
-python3 scripts/planning_reserve.py . reserve --unit-id <unit-id> --slug <slug>
-python3 scripts/planning_reserve.py . release --number <nnn> --unit-id <unit-id>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_reserve.py. reserve --unit-id <unit-id> --slug <slug>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_reserve.py. release --number <nnn> --unit-id <unit-id>
 ```
 
 ### Pre-freeze rescore
@@ -650,7 +650,7 @@ blocks past the per-lookup hard timeout — recorded as a legitimate conductor h
 `haltResume.haltCause`, not a silent retry loop).
 **Merge-exec recovery:** when `merge run-next` halts with an open `mergeJournal`, resume via the
 printed `resumeCommand` — journal auto-clear runs when ancestry shows the phase already merged; otherwise use
-`python3 scripts/wave.py merge ancestry-check` then `merge exec` or `/sw-deliver run`. See
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.pymerge ancestry-check` then `merge exec` or `/sw-deliver run`. See
 [`parallel-merge-and-recovery.md`](../../core/skills/deliver/references/parallel-merge-and-recovery.md).
 
 Every halt emits one consolidated report with an exact `resumeCommand` — not “continue?”.
@@ -720,7 +720,7 @@ range-scoped redaction is required (`scripts/redaction-guard.py` refuses bare-br
 ### Terminal ship-run chain (`ship run`)
 
 After all phase PRs merge into the integration branch, the supervised terminal checkpoint runs
-`python3 scripts/wave_terminal.py ship run` (prepare → push → bounded **`watch-ci`** → stabilize) without
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_terminal.pyship run` (prepare → push → bounded **`watch-ci`** → stabilize) without
 exiting inside prepare/retro helpers. Bounded polling honors `checks.watch.maxWaitMinutes`;
 single-shot `check-gate` is dry-run/test only.
 
@@ -736,7 +736,7 @@ When all phases reach `green-merged` and the terminal gate is live green, delive
 | --- | --- |
 | **Status location** | `.cursor/sw-deliver-runs/<runId>/terminal-acceptance.json` (run-scoped; see `.shipwright/layout.md`) |
 | **Schema fields** | `schemaVersion`, `runId`, `targetBranch`, `sourceTaskList`, `phases`, `terminalPr`, `terminalGate`, `terminalGateExitCode`, `gatesRunRollup`, `interactionCount`, `recordedAt` |
-| **Verification** | `python3 scripts/wave_terminal.py terminal pr gate` on green paths; `wave_acceptance.validate_acceptance_record` and `wave_terminal.validate_acceptance_schema` refuse incomplete ledgers |
+| **Verification** | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_terminal.pyterminal pr gate` on green paths; `wave_acceptance.validate_acceptance_record` and `wave_terminal.validate_acceptance_schema` refuse incomplete ledgers |
 | **Resumable halts** | Legitimate terminal interrupts attach `haltResume` (`haltCause`, `resumeCommand`, `runId`, `autonomyDirective`) via `halt_resume.enrich_legitimate_halt` — resume with `/sw-deliver run` (never bare `deliver-loop`) |
 
 Interactive `/sw-ship` phase-mode runs emit per-phase `status.json` only; the terminal acceptance record
@@ -745,7 +745,7 @@ is a **deliver-run** artifact after all phases merge — distinct from phase `me
 ### gap-check write before merge-ready-green
 
 Before publishing `merge-ready-green` status, run gap-check and **write** durable status through
-`python3 scripts/gap-check-gate.py write` (or `status_integrity.py write`). Skipping the write leaves
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" gap-check-gate.pywrite` (or `status_integrity.py write`). Skipping the write leaves
 terminal status fail-closed ( / ).
 
 ### `/sw-ship` — single-phase loop (manual / Quick tier)
@@ -864,7 +864,7 @@ remains untouched, and the rest of the batch continues.
 | Gap status | Status labels on issue | `status` / `schedule` frontmatter |
 | Visibility | Refused before create if private | `visibility` frontmatter from labels |
 
-Operator entry: `/sw-migrate` and `python3 scripts/planning_migrate.py <repo> store-files-to-issues`
+Operator entry: `/sw-migrate` and `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_migrate.py<repo> store-files-to-issues`
 (dry-run default; `--apply` to mutate). Journal:
 `.cursor/hooks/state/issue-store-migration-journal.json`.
 
@@ -903,9 +903,9 @@ Frozen task lists project to provider epic/sub-issue hierarchy where supported; 
 hierarchy verbs degrade to checkbox/body-encoded phase lists with operator notice — deliver continues.
 
 ```bash
-python3 scripts/planning_hierarchy.py <repo> resolve-mode
-python3 scripts/planning_hierarchy.py <repo> project docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
-python3 scripts/planning_hierarchy.py <repo> aggregate-status --payload-json '<parent+children>'
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_hierarchy.py<repo> resolve-mode
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_hierarchy.py<repo> project docs/prds/<n>-<slug>/tasks-<n>-<slug>.md
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_hierarchy.py<repo> aggregate-status --payload-json '<parent+children>'
 ```
 
 Parent epic status aggregates from children on read; contradictions fail closed. Body `sw-edges` blocks are
@@ -917,7 +917,7 @@ Rationale pointers may be recalled across `projectKey` boundaries when authorize
 via `memory-redact` so project B cannot read project A private rationale.
 
 ```bash
-python3 scripts/planning_cross_project_recall.py recall --payload-json '{"sourceProjectKey":"a","callerProjectKey":"b",...}'
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_cross_project_recall.pyrecall --payload-json '{"sourceProjectKey":"a","callerProjectKey":"b",...}'
 ```
 
 See `core/skills/memory/SKILL.md` **Cross-project recall**.
@@ -949,7 +949,7 @@ issue body stays authoritative; native links are projections for provider UI rea
 unit index. Emission paths: migration create, `planning_gap_capture`, `planning_hierarchy` sub-issue create,
 and edge reconciliation.
 
-`python3 scripts/planning_store.py probe-issues-token` includes `nativeLinksCapable: true|false`. When the
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.pyprobe-issues-token` includes `nativeLinksCapable: true|false`. When the
 provider lacks link scope or the API returns 403/404, adapters emit one per-run stderr notice
 `native-links-degraded` and deliver continues — body edges remain authoritative .
 
@@ -1105,8 +1105,8 @@ units (e.g. `003-prd-pr-agent-review-provider`) no longer stall scheduling (, D4
 
 ```bash
 # allowlisted actor + reason required; refused fail-closed otherwise
-python3 scripts/planning-graph.py park <unit-id> --reason "<why>" [--actor <actor>]
-python3 scripts/planning-graph.py unpark <unit-id> [--actor <actor>]
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning-graph.pypark <unit-id> --reason "<why>" [--actor <actor>]
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning-graph.pyunpark <unit-id> [--actor <actor>]
 ```
 
 - The acting operator must be listed in `planning.scheduler.parkAllowlist` (see
@@ -1127,7 +1127,7 @@ Adapter-complete for and close requires the documentation inventory below to be
 current. Verify before terminal merge:
 
 ```bash
-python3 scripts/planning_linear_client.py . docs-currency-gate
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_linear_client.py. docs-currency-gate
 ```
 
 | Surface | Path | Covers |
@@ -1160,8 +1160,8 @@ Bitbucket Cloud repos use this host adapter for PR/CI only — **not** native Bi
 | **Opt-in** — Jira (Cloud first) | `planning.store.issuesProvider: jira` + `planning.store.issues.*` |
 
 When `issuesProvider` is unset on a Bitbucket host with `backend: issue-store`, run
-`python3 scripts/planning_store.py bitbucket-issue-store-guidance` for structured routing guidance before
-enabling issue-store. Init probes for Jira: `python3 scripts/planning_store.py probe-jira-init`.
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.pybitbucket-issue-store-guidance` for structured routing guidance before
+enabling issue-store. Init probes for Jira: `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.pyprobe-jira-init`.
 
 Fixture suites: `scripts/test/run-planning-047-doc-impact-fixtures.sh`,
 `scripts/test/run-planning-047-conformance.sh`, `scripts/test/run-planning-047-phase3-fixtures.sh`.
@@ -1172,8 +1172,7 @@ When a change touches repo-root `scripts/` or other harness/emittable paths, pro
 build chain before opening a PR:
 
 ```bash
-python3 scripts/build-chain-sync.py
-```
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" build-chain-sync.py```
 
 This runs, in order:
 
@@ -1189,7 +1188,7 @@ The SoT map lives in `.shipwright/layout.md` and `core/sw-reference/build-chain-
 The **Release dist regen** workflow (`.github/workflows/release-dist-regen.yml`) runs only on
 `release-please--branches--main` PR heads from this repository (fork heads are excluded). It refreshes
 `dist/` via `python3 -m sw generate --all`, then runs
-`python3 scripts/effective_config_gen.py all --write` so effective-config projections stay aligned with
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.pyall --write` so effective-config projections stay aligned with
 the release-please version line. When either surface changes, a single chore commit stages `dist/` plus
 `docs/guides/configuration.md`, `core/sw-reference/generated/effective-config.json`, and
 `core/sw-reference/generated/upgrade-manifest-*.json`.
@@ -1197,7 +1196,7 @@ the release-please version line. When either surface changes, a single chore com
 Off that automation path, regenerate projections locally before opening a PR:
 
 ```bash
-python3 scripts/effective_config_gen.py all --write
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.pyall --write
 ```
 
 ## Pre-work memory search
@@ -1209,7 +1208,7 @@ Before substantive work, every **work-performing** command runs a scoped `memory
 1. **Search** — scoped file-path + semantic queries across classes `rule`, `decision`, `learning`,
 `code-context`, `design` via `providers/<memory.provider>.md` (see `skills/memory/SKILL.md`).
 2. **Surface + reconcile** — applicable rules and contradicting decisions are reconciled before mutation.
-3. **Record** — `python3 scripts/wave.py memory prework record --surface <cmd> …` writes a redacted breadcrumb
+3. **Record** — `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.pymemory prework record --surface <cmd> …` writes a redacted breadcrumb
 to `.cursor/hooks/state/memory-prework-search.json` and `run.log`.
 4. **Enforce** — the `preToolUse` hook denies the first file mutation without a fresh record; `memory:offline`
 (probe-gated provider outage) satisfies the gate.
@@ -1288,10 +1287,10 @@ Map these semantic keys to Project custom fields (names are defaults; override v
 
 ### Dogfood / fixture walkthrough
 
-1. `python3 scripts/planning_store.py probe-projection` — expect `available` with scoped token or `projection-unavailable` with loud notice (R11a).
-2. `SW_ISSUES_FIXTURE=1 python3 scripts/planning_store.py projection-refresh` — idempotent upsert in fixture mode.
+1. `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.pyprobe-projection` — expect `available` with scoped token or `projection-unavailable` with loud notice (R11a).
+2. `SW_ISSUES_FIXTURE=1 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.pyprojection-refresh` — idempotent upsert in fixture mode.
 3. Open the configured GitHub Project and verify the four questions without opening issue YAML bodies.
-4. `python3 scripts/planning_cutover.py projection-gate` — R29a living-doc cutover stays blocked until projection is `ready`.
+4. `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_cutover.pyprojection-gate` — R29a living-doc cutover stays blocked until projection is `ready`.
 
 Living-doc operator cutover (local INDEX/COMPLETION-LOG authority) MUST NOT proceed until
 `projection-gate` reports `ready: true` (pair with `planning_cutover` committed gate).
@@ -1306,7 +1305,7 @@ panels, kernel gates, and promotion paths are unchanged by metrics output.
 Operators record exogenous true-positive / false-positive labels through the CLI:
 
 ```bash
-python3 scripts/reviewer-metrics.py label \
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" reviewer-metrics.pylabel \
   --finding-id <id> --reviewer-id <persona> --verdict tp|fp \
   --actor <who> --reason <why>
 ```
@@ -1322,7 +1321,7 @@ confirmation alone is insufficient; peer agreement without exogenous coupling is
 | Calibration | `graph.reviewer_metrics.calibration` | Confidence vs exogenous true-positive rates over windows |
 | Cost | `graph.reviewer_metrics.cost` | Cost-per-surviving-finding with proxy/unknown handling |
 | Offline eval | `graph.reviewer_metrics.eval_report` | Coverage, unresolved rate, calibration error, ranking stability |
-| Export | `python3 scripts/reviewer-metrics.py export` | Top/bottom pairs + independence warnings — metadata only |
+| Export | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" reviewer-metrics.pyexport` | Top/bottom pairs + independence warnings — metadata only |
 
 ### Uncertainty and non-gating
 
@@ -1367,7 +1366,7 @@ states follow `shadow → candidate → active → rolled_back`; rollback restor
 | Triage merge | `scripts/triage_lib.py` — veto-first, promotion-gated advisory |
 | Doc entry | `scripts/doc_rescore.py` — shared evidence read, no veto override |
 | Registry | `.cursor/capability-promotion-registry.json` (`CapabilityPromotion@v1`) |
-| Status explain | `python3 scripts/status_collect.py triage-recommendation-explain` |
+| Status explain | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_collect.pytriage-recommendation-explain` |
 | Tests | `scripts/unit_tests/planning/test_triage_evidence.py`, `test_capability_promotion.py`, `test_status_collect_intelligence.py` |
 
 Operator configuration and terminology parity: `docs/guides/configuration.md` (**Project intelligence —
@@ -1378,9 +1377,9 @@ evidence and promotion**).
 Read-only signal collection and scoring — never mutates git or worktrees.
 
 ```bash
-python3 scripts/architecture_radar.py scan
-python3 scripts/architecture_radar.py explain <modulePath> [--scan-id <id>]
-python3 scripts/architecture_radar.py emit-candidates [--scan-id <id>] --confirm
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" architecture_radar.pyscan
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" architecture_radar.pyexplain <modulePath> [--scan-id <id>]
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" architecture_radar.pyemit-candidates [--scan-id <id>] --confirm
 ```
 
 | Concern | Contract |
@@ -1388,7 +1387,7 @@ python3 scripts/architecture_radar.py emit-candidates [--scan-id <id>] --confirm
 | Artifacts | `.cursor/sw-architecture-radar/` (`last.json` + per-`scanId/` candidates) |
 | Shared signals | `scripts/codebase_intelligence_signals.py` — git churn, review findings, gap linkage, reverts, import fan-out, test fragility |
 | Human gate | `emit-candidates` invokes gap capture **only** with `--confirm` |
-| Status | `python3 scripts/status_collect.py architecture-radar-last` |
+| Status | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_collect.pyarchitecture-radar-last` |
 | Post-merge retro | Optional `scan` when `radar.postMerge: true`; compound notes only — never auto-emit or promote |
 
 ### Domain vocabulary
@@ -1397,10 +1396,10 @@ Terms are authoritative in the planning issue-store (`vocab-<slug>` units). The 
 `docs/` in the code repo.
 
 ```bash
-python3 scripts/domain_vocabulary.py put-term --slug <slug> --body-file <path>
-python3 scripts/domain_vocabulary.py get-term --slug <slug>
-python3 scripts/domain_vocabulary.py list-terms
-python3 scripts/domain_vocabulary.py check-divergence --body-file <prd-draft.md>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" domain_vocabulary.pyput-term --slug <slug> --body-file <path>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" domain_vocabulary.pyget-term --slug <slug>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" domain_vocabulary.pylist-terms
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" domain_vocabulary.pycheck-divergence --body-file <prd-draft.md>
 ```
 
 | Concern | Contract |
@@ -1408,7 +1407,7 @@ python3 scripts/domain_vocabulary.py check-divergence --body-file <prd-draft.md>
 | Divergence artifact | `.cursor/sw-vocabulary-divergence/last.json` (read-only) |
 | PRD hook | `/sw-prd` post-draft `check-divergence` — advisory unless `strictMode` |
 | Doc review | Coherence persona receives divergence summary when present; no silent canonical promotion |
-| Status | `python3 scripts/status_collect.py vocabulary-divergence-last` |
+| Status | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_collect.pyvocabulary-divergence-last` |
 | Tests | `scripts/unit_tests/planning/test_domain_vocabulary.py`, `test_architecture_radar.py` |
 
 ### Layout and absorb close-out
@@ -1480,7 +1479,7 @@ Phase-mode `/sw-deliver` reliability contracts (–):
 | Closure unit ids | `close-delivery-units` resolves `tasks-<n>-<slug>`, legacy, and `tasks-debug-*` forms; ambiguity fails closed. |
 | Merge enqueue queue | `merge-enqueue` applies returned `mergeQueue` via `apply_merge_enqueue_result` before `persist_cursor` — stale in-memory state cannot wipe the queue empty. Regression: `scripts/unit_tests/deliver/test_merge_enqueue_persist_reload.py`. |
 | Phase provision stdout | `wave_lifecycle.provision_payload_from_stdout` parses the **last** JSON object from mixed stdout and validates non-empty `path`/`name`; invalid payloads fail closed with captured stdout (no silent `{raw:…}` success). Regression: `scripts/unit_tests/deliver/test_phase_provision_stdout_json.py`. |
-| Absorb close-out | Plugin consumability delivery gaps discoverable via PRD `absorbs` / `sw-edges` or `planningIssues` + gap `absorbed-by` provenance; verify with `python3 scripts/planning_gap_capture.py <root> verify-absorb-closeout-073`. |
+| Absorb close-out | Plugin consumability delivery gaps discoverable via PRD `absorbs` / `sw-edges` or `planningIssues` + gap `absorbed-by` provenance; verify with `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_gap_capture.py<root> verify-absorb-closeout-073`. |
 | Closeout hardening | Phase-ship hygiene auto-repair (`phase_ship_hygiene.py`); prefer-run-scoped adopt (`wave_run_adopt.py`); numeric absorb exactly-one (`planning_store_facade.py` closeout). Absorb map: #730 hygiene, #731 adopt, #739 numeric absorb. See `core/commands/sw-deliver.md` **Closeout hardening**. |
 
 Resume after halt: `/sw-deliver run` from the orchestrator worktree (or `/sw-deliver run --issue <n>` under issue-store).

@@ -125,6 +125,46 @@ else
   bad "install-offers-init-in-repo"
 fi
 
+# --- consumer-docs-use-install-root ---
+DOC_FAIL=0
+DOC_FILES=(
+  "$ROOT/README.md"
+)
+while IFS= read -r -d '' f; do
+  DOC_FILES+=("$f")
+done < <(find "$ROOT/core/documentation" -type f -name '*.md' \
+  ! -path "$ROOT/core/documentation/testing.md" \
+  ! -path "$ROOT/core/documentation/style-guide.md" -print0 2>/dev/null)
+for f in "${DOC_FILES[@]}"; do
+  [[ -f "$f" ]] || continue
+  if grep -q 'scripts/sw_bootstrap\.py' "$f" 2>/dev/null; then
+    bad "consumer-docs-use-install-root: $(echo "$f" | sed "s|$ROOT/||") still references scripts/sw_bootstrap.py"
+    DOC_FAIL=1
+  fi
+  if grep -qE 'python3 scripts/' "$f" 2>/dev/null && \
+     ! grep -qE 'python3 scripts/(install\.py|test/)' "$f" 2>/dev/null; then
+    bad "consumer-docs-use-install-root: $(echo "$f" | sed "s|$ROOT/||") still uses repo-local python3 scripts/ invocation"
+    DOC_FAIL=1
+  fi
+done
+[[ "$DOC_FAIL" -eq 0 ]] && ok "consumer-docs-use-install-root"
+
+# --- portability-check-dev-harness-scan ---
+if OUT=$(PYTHONPATH="$ROOT/core/scripts:$ROOT/scripts" python3 "$ROOT/core/scripts/sw-configure.py" portability-check 2>/dev/null) && \
+   python3 - "$OUT" <<'PY'
+import json, sys
+payload = json.loads(sys.argv[1])
+scan = payload.get("devHarnessScan") or {}
+assert scan.get("verdict") == "pass", scan
+assert not scan.get("findings"), scan.get("findings")
+print("portability scan ok")
+PY
+then
+  ok "portability-check-dev-harness-scan"
+else
+  bad "portability-check-dev-harness-scan"
+fi
+
 if [[ "$FAIL" -ne 0 ]]; then
   echo "run-portability-boundary-fixtures: FAIL"
   exit 1

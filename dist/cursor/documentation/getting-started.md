@@ -114,19 +114,20 @@ Shipwright optimizes for **repeatable delivery**, not for skipping human merge j
 
 Consumer project repos stay **zero-footprint** — init does not write repo-local Shipwright script
 façades (`scripts/sw`, deliver forwarders, or `.cursor/sw-scripts-facade.json`). Helpers resolve through
-the installed plugin / packaged console via the **bootstrap CLI**:
+the installed plugin install root via `scripts/sw-run.py`:
 
 ```bash
-python3 scripts/sw_bootstrap.py --print wave_deliver.py
-python3 scripts/sw_bootstrap.py wave_deliver.py -- --help
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py -- --help
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" check-gate.py
 ```
 
 **Precedence:** self-repo working-tree `scripts/` (Shipwright source only) → validated `SHIPWRIGHT_SCRIPTS` →
 plugin install (`sw_scripts_resolve.py`). Re-run `/sw-init` as doctor to detect and remove legacy forwarders
 (confirm-gated — see [configuration — Scripts resolution](configuration.md#scripts-resolution-consumer-repos)).
 
-Absolute install paths (for example `~/.cursor/plugins/local/shipwright/scripts`) are **troubleshooting-only**
-— prefer bootstrap argv in everyday docs and runbooks.
+Use `CLAUDE_PLUGIN_ROOT` on Claude Code installs. Absolute install paths (for example
+`~/.cursor/plugins/local/shipwright/scripts/sw-run.py`) are **troubleshooting-only** — prefer the env-var
+form in everyday docs and runbooks.
 
 ## Doc → implementation boundary (`doc.afterTasks`)
 
