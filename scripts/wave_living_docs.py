@@ -18,6 +18,7 @@ if str(SCRIPT_DIR) not in sys.path:
 import planning_index_issue as pii
 import planning_paths
 from planning_artifact_handle import issue_store_is_effective
+import projection_state
 VALID_INDEX_STATUSES = frozenset({"not-started", "in-progress", "complete"})
 TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
 GAP_CLOSEOUT_RETRY_MAX_ATTEMPTS = 3
@@ -600,6 +601,126 @@ def doctor_banned_living_path_drift(root: Path) -> dict[str, object]:
     return {"verdict": "pass", "action": "doctor-banned-living-paths", "checks": ["banned-living-paths-clean"]}
 
 
+
+def _projection_interrupt_exceptions() -> tuple[type[BaseException], ...]:
+    """Timeout / rate-limit exceptions that should halt with resumeCommand (R2/R4)."""
+    excs: list[type[BaseException]] = []
+    try:
+        from issues_github import IssueSearchTimeout
+
+        excs.append(IssueSearchTimeout)
+    except ImportError:
+        pass
+    try:
+        from issues_lib import IssueRateLimited
+
+        excs.append(IssueRateLimited)
+    except ImportError:
+        pass
+    return tuple(excs)
+
+
+def _classify_projection_interrupt(exc: BaseException) -> tuple[str, bool]:
+    """Return (halt_cause, retryable) for a projection interrupt exception."""
+    name = type(exc).__name__
+    if name in {"IssueSearchTimeout", "IssueSearchTimeout"} or "Timeout" in name:
+        return "projection-search-timeout", bool(getattr(exc, "retryable", True))
+    if name in {"IssueRateLimited", "IssueRateLimited"} or "RateLimited" in name:
+        return "projection-rate-limited", bool(getattr(exc, "retryable", True))
+    return "projection-interrupted", True
+
+
+def prefer_worktree_for_projection(root: Path, worktree: Path) -> tuple[Path, dict[str, Any]]:
+    """Detect primary checkout and prefer worktree-scoped projection (R3)."""
+    decision = projection_state.prefer_worktree_projection_root(root, worktree)
+    return Path(decision["projectionRoot"]), decision
+
+
+def _run_index_projection_step(
+    worktree: Path,
+    prd: str,
+    index_status: str,
+    *,
+    slug: str | None,
+    dry_run: bool,
+) -> dict[str, Any]:
+    if living_doc_write_banned(worktree):
+        return facade_set_index_status(
+            worktree,
+            prd,
+            index_status,
+            slug=slug,
+            dry_run=dry_run,
+        )
+    issue_projection = pii.project_index_status(
+        worktree,
+        prd,
+        index_status,
+        slug=slug,
+        dry_run=dry_run,
+    )
+    if issue_projection.get("verdict") == "skipped":
+        return run_reconcile_script(
+            worktree,
+            "set-index-status",
+            "--prd",
+            prd,
+            "--status",
+            index_status,
+        )
+    return issue_projection
+
+
+def _halt_projection_interrupt(
+    root: Path,
+    worktree: Path,
+    *,
+    state: dict[str, Any] | None,
+    proj_state: dict[str, Any],
+    scope: str,
+    prd: str,
+    index_status: str,
+    step: str,
+    exc: BaseException,
+    primary_meta: dict[str, Any],
+) -> None:
+    cause, retryable = _classify_projection_interrupt(exc)
+    resume_command = projection_state.build_projection_resume_command(worktree, root=root)
+    projection_state.record_interrupt(
+        proj_state,
+        cause=cause,
+        error=str(exc),
+        resume_command=resume_command,
+        step=step,
+        retryable=retryable,
+        details={"exceptionType": type(exc).__name__},
+    )
+    projection_state.save_projection_state(worktree, proj_state)
+    from halt_resume import build_halt_resume
+
+    halt_resume = build_halt_resume(
+        root,
+        state,
+        halt_cause=cause,
+        resume_command=resume_command,
+    )
+    fail(
+        str(exc) or f"projection interrupted at {step}",
+        exit_code=30,
+        halt=cause,
+        action="living-docs-reconcile",
+        prd=prd,
+        indexStatus=index_status,
+        projectionStep=step,
+        projectionScope=scope,
+        projectionState=str(projection_state.projection_state_path(worktree, scope)),
+        primaryCheckout=primary_meta,
+        retryable=retryable,
+        haltResume=halt_resume,
+        resumeCommand=resume_command,
+    )
+
+
 def cmd_reconcile(root: Path, args: list[str]) -> None:
     if has_flag(args, "--commit") and not has_flag(args, "--dry-run"):
         worktree = resolve_worktree(root, args)
@@ -624,38 +745,57 @@ def _cmd_reconcile_locked(
     merged_main = target_merge_detected(root, state)
     index_status = derive_index_status(state, merged_main)
     worktree = resolve_worktree(root, args)
+    worktree, primary_meta = prefer_worktree_for_projection(root, worktree)
     dry_run = has_flag(args, "--dry-run")
     do_commit = has_flag(args, "--commit")
 
     slug = str((state.get("target") or {}).get("slug") or plan.get("slug") or "")
-    if living_doc_write_banned(worktree):
-        index_out = facade_set_index_status(
-            worktree,
-            prd,
-            index_status,
-            slug=slug or None,
-            dry_run=dry_run,
+    scope = projection_state.projection_scope(prd=prd, slug=slug, action="reconcile")
+    proj_state = projection_state.load_projection_state(worktree, scope)
+    if not proj_state.get("prd"):
+        proj_state = projection_state.empty_projection_state(
+            scope=scope,
+            prd=prd,
+            slug=slug,
+            action="reconcile",
+            worktree=str(worktree),
         )
     else:
-        issue_projection = pii.project_index_status(
-            worktree,
-            prd,
-            index_status,
-            slug=slug or None,
-            dry_run=dry_run,
-        )
-        if issue_projection.get("verdict") == "skipped":
-            index_out = run_reconcile_script(
-                worktree,
-                "set-index-status",
-                "--prd",
-                prd,
-                "--status",
-                index_status,
-            )
-        else:
-            index_out = issue_projection
+        proj_state["prd"] = prd
+        proj_state["slug"] = slug
+        proj_state["worktree"] = str(worktree)
+    completed = set(proj_state.get("completedSteps") or [])
+    interrupt_types = _projection_interrupt_exceptions()
 
+    if "index" in completed:
+        index_out = dict((proj_state.get("results") or {}).get("index") or {})
+        index_out.setdefault("verdict", "pass")
+        index_out["resumed"] = True
+    else:
+        try:
+            index_out = _run_index_projection_step(
+                worktree,
+                prd,
+                index_status,
+                slug=slug or None,
+                dry_run=dry_run,
+            )
+        except interrupt_types as exc:
+            _halt_projection_interrupt(
+                root,
+                worktree,
+                state=state,
+                proj_state=proj_state,
+                scope=scope,
+                prd=prd,
+                index_status=index_status,
+                step="index",
+                exc=exc,
+                primary_meta=primary_meta,
+            )
+        projection_state.mark_step_complete(proj_state, "index", dict(index_out))
+        if not dry_run:
+            projection_state.save_projection_state(worktree, proj_state)
 
     planning_graph_out: dict[str, Any] | None = None
     legacy: dict[str, Any] | None = None
@@ -674,35 +814,86 @@ def _cmd_reconcile_locked(
 
     gap_out: dict[str, Any] | None = None
     if index_status == "complete":
-        pr_ref = ""
-        terminal = state.get("terminalPr") or {}
-        if terminal.get("number"):
-            pr_ref = str(terminal["number"])
-        gap_out = facade_gap_resolve_with_retry(
-            root,
-            prd,
-            worktree=worktree,
-            state=state,
-            pr=pr_ref if not living_doc_write_banned(worktree) else "",
-        )
-
-    if gap_out and gap_out.get("verdict") == "gap-closeout-retry-exhausted":
-        fail(
-            str(gap_out.get("error") or "gap closeout retry budget exhausted"),
-            exit_code=30,
-            halt="gap-closeout-retry-exhausted",
-            action="living-docs-reconcile",
-            prd=prd,
-            indexStatus=index_status,
-            mergedCompleteRefused=True,
-            gapResolve=gap_out,
-            haltResume=gap_out.get("haltResume"),
-            resumeCommand=gap_out.get("resumeCommand"),
-        )
+        if "gap-resolve" in completed:
+            gap_out = dict((proj_state.get("results") or {}).get("gap-resolve") or {})
+            gap_out.setdefault("verdict", "pass")
+            gap_out["resumed"] = True
+        else:
+            pr_ref = ""
+            terminal = state.get("terminalPr") or {}
+            if terminal.get("number"):
+                pr_ref = str(terminal["number"])
+            try:
+                gap_out = facade_gap_resolve_with_retry(
+                    root,
+                    prd,
+                    worktree=worktree,
+                    state=state,
+                    pr=pr_ref if not living_doc_write_banned(worktree) else "",
+                )
+            except interrupt_types as exc:
+                _halt_projection_interrupt(
+                    root,
+                    worktree,
+                    state=state,
+                    proj_state=proj_state,
+                    scope=scope,
+                    prd=prd,
+                    index_status=index_status,
+                    step="gap-resolve",
+                    exc=exc,
+                    primary_meta=primary_meta,
+                )
+            # Exhausted retry budget is a resumable interrupt (R2/R4).
+            if gap_out and gap_out.get("verdict") == "gap-closeout-retry-exhausted":
+                resume_command = str(
+                    gap_out.get("resumeCommand")
+                    or projection_state.build_projection_resume_command(worktree, root=root)
+                )
+                projection_state.record_interrupt(
+                    proj_state,
+                    cause="gap-closeout-retry-exhausted",
+                    error=str(gap_out.get("error") or "gap closeout retry budget exhausted"),
+                    resume_command=resume_command,
+                    step="gap-resolve",
+                    retryable=True,
+                    details={"gapResolve": gap_out},
+                )
+                if not dry_run:
+                    projection_state.save_projection_state(worktree, proj_state)
+                fail(
+                    str(gap_out.get("error") or "gap closeout retry budget exhausted"),
+                    exit_code=30,
+                    halt="gap-closeout-retry-exhausted",
+                    action="living-docs-reconcile",
+                    prd=prd,
+                    indexStatus=index_status,
+                    mergedCompleteRefused=True,
+                    gapResolve=gap_out,
+                    projectionScope=scope,
+                    projectionState=str(projection_state.projection_state_path(worktree, scope)),
+                    primaryCheckout=primary_meta,
+                    haltResume=gap_out.get("haltResume"),
+                    resumeCommand=resume_command,
+                )
+            projection_state.mark_step_complete(proj_state, "gap-resolve", dict(gap_out or {}))
+            if not dry_run:
+                projection_state.save_projection_state(worktree, proj_state)
+    else:
+        # Gap step not applicable — mark complete so resume state stays ordered.
+        if "gap-resolve" not in completed:
+            projection_state.mark_step_complete(
+                proj_state, "gap-resolve", {"verdict": "skipped", "reason": "index-not-complete"}
+            )
+            if not dry_run:
+                projection_state.save_projection_state(worktree, proj_state)
 
     commit_sha = None
     if do_commit and not dry_run:
         commit_sha = git_commit_living_docs(worktree, prd, dry_run=False)
+
+    if not dry_run and projection_state.is_projection_complete(proj_state):
+        projection_state.clear_projection_state(worktree, scope)
 
     emit(
         {
@@ -717,8 +908,11 @@ def _cmd_reconcile_locked(
             "legacyProjection": legacy if dirs.planning == "docs/planning" else None,
             "livingDocsCommit": commit_sha,
             "dryRun": dry_run,
+            "projectionResumed": bool(completed),
+            "primaryCheckout": primary_meta,
         }
     )
+
 
 
 def cmd_append_terminal(root: Path, args: list[str]) -> None:
