@@ -1204,6 +1204,7 @@
 * merge phase establish-fail-closed-dist-trust-anchors-medium into feat/distribution-adopter-portability-docs-surface (de3bc5a) <!-- sw-deliver:establish-fail-closed-dist-trust-anchors-medium -->
 * merge phase add-claude-code-installer-parity-medium into feat/distribution-adopter-portability-docs-surface (2d950ad) <!-- sw-deliver:add-claude-code-installer-parity-medium -->
 * merge phase introduce-repository-aware-docs-currency-profiles-medium into feat/distribution-adopter-portability-docs-surface (4ebe1b0) <!-- sw-deliver:introduce-repository-aware-docs-currency-profiles-medium -->
+* merge phase establish-canonical-install-root-documentation-small into feat/distribution-adopter-portability-docs-surface (f71ab73) <!-- sw-deliver:establish-canonical-install-root-documentation-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
