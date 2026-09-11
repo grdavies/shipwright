@@ -773,6 +773,7 @@
     "verify-unconfigured.py",
     "verify_evidence_lib.py",
     "verify_mutation.py",
+    "version.py",
     "visibility-callsite-lint.py",
     "visibility-resolve.py",
     "watch_ci_lib.py",
@@ -820,6 +821,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 817,
+  "moduleCount": 818,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
