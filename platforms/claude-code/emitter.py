@@ -50,6 +50,7 @@ class ClaudeCodeEmitter(EmitterBase):
         self._apply_use_when_to_skills(core_root, dest)
         self._copy_runtime_support(core_root, repo_root, dest)
         self._emit_plugin_manifest(repo_root, dest)
+        self._emit_install_version(repo_root, dest)
         self._emit_hooks(repo_root, dest)
         self._emit_claude_md(core_root, dest)
 
@@ -152,12 +153,17 @@ class ClaudeCodeEmitter(EmitterBase):
             shutil.copy2(adapter_src, plat_dir / "hook_adapter.py")
         self.copy_closed_sw_reference(core_root, dest)
 
+    def _emit_install_version(self, repo_root: Path, dest: Path) -> None:
+        """Emit canonical semver at install root for pure-install drift checks (PRD 338 R27)."""
+        (dest / "version.txt").write_text(read_version(repo_root) + "\n", encoding="utf-8")
+
     def _emit_plugin_manifest(self, repo_root: Path, dest: Path) -> None:
         manifest_dir = dest / ".claude-plugin"
         manifest_dir.mkdir(parents=True, exist_ok=True)
+        version = read_version(repo_root)
         plugin = {
             "name": "shipwright",
-            "version": read_version(repo_root),
+            "version": version,
             "description": "Shipwright for Claude Code (generated)",
         }
         (manifest_dir / "plugin.json").write_text(
