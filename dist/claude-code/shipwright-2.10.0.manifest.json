@@ -371,6 +371,7 @@
     "gitignore-generate.py",
     "gitignore_generate.py",
     "global_plan_lint.py",
+    "golden_manifest.py",
     "graph/__init__.py",
     "graph/absolute_floor.py",
     "graph/artifact_registry.py",
@@ -817,6 +818,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 814,
+  "moduleCount": 815,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
