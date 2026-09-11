@@ -674,6 +674,7 @@
     "project_baseline.py",
     "project_doctrine.py",
     "project_doctrine_leakage.py",
+    "projection_state.py",
     "publish_surface_audit.py",
     "quality_config_freeze.py",
     "quality_provider.py",
@@ -819,6 +820,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 816,
+  "moduleCount": 817,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

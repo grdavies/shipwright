@@ -1291,11 +1291,15 @@ def resolve_docs_currency_paths(root: Path) -> tuple[Path, Path, Path, Path]:
 
 
 def ensure_terminal_index_projection(root: Path) -> None:
-    """Project INDEX + completion evidence for issue-store before docs-currency (R4/R50)."""
+    """Project INDEX + completion evidence for issue-store before docs-currency (R4/R50).
+
+    Prefers worktree-scoped projection when invoked from the primary checkout (PRD 344 R3).
+    """
     import contextlib
     import io
 
     from deliver_closeout import derive_closeout_index_status
+    from projection_state import prefer_worktree_projection_root
     from wave_living_docs import (
         append_completion_store_event,
         living_doc_write_banned,
@@ -1314,16 +1318,20 @@ def ensure_terminal_index_projection(root: Path) -> None:
     if derive_closeout_index_status(state, merged_to_main=False, root=root) != "complete":
         return
     slug = str((state.get("target") or {}).get("slug") or "") or None
+    worktree = pp.git_root(root)
+    decision = prefer_worktree_projection_root(root, worktree)
+    projection_root = Path(decision["projectionRoot"])
     with contextlib.redirect_stdout(io.StringIO()):
-        pii.project_index_status(root, prd, "complete", slug=slug, force_issue_store=True)
-        worktree = pp.git_root(root)
-        unit_id = pii.resolve_prd_unit_id(root, prd, slug=slug) or pii._unit_id_from_derived_cache(
-            worktree, prd, slug=slug
+        pii.project_index_status(
+            projection_root, prd, "complete", slug=slug, force_issue_store=True
         )
-        if unit_id and read_completion_evidence(root, prd) is None:
+        unit_id = pii.resolve_prd_unit_id(projection_root, prd, slug=slug) or pii._unit_id_from_derived_cache(
+            projection_root, prd, slug=slug
+        )
+        if unit_id and read_completion_evidence(projection_root, prd) is None:
             notes = str((state.get("completion") or {}).get("notes") or "pre-merge compounding complete")
             append_completion_store_event(
-                root,
+                projection_root,
                 prd_id=prd,
                 unit_id=unit_id,
                 status="complete",
