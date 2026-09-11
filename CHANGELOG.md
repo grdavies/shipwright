@@ -1199,6 +1199,7 @@
 * merge phase path-drift-regression-guard-unit-1-medium into feat/spec-kit-learnings (1c147ac) <!-- sw-deliver:path-drift-regression-guard-unit-1-medium -->
 * merge phase redirect-map-and-gated-state-root-migration-unit-1-medium into feat/spec-kit-learnings (396cc8b) <!-- sw-deliver:redirect-map-and-gated-state-root-migration-unit-1-medium -->
 * merge phase unify-self-repository-detection-small into feat/distribution-adopter-portability-docs-surface (10e9f77) <!-- sw-deliver:unify-self-repository-detection-small -->
+* merge phase emit-pure-install-version-metadata-small into feat/distribution-adopter-portability-docs-surface (4117b33) <!-- sw-deliver:emit-pure-install-version-metadata-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
