@@ -109,6 +109,23 @@ def validate_path_literal_guard(root: Path) -> str | None:
     return f"path-literal-guard:{reason}"
 
 
+def validate_golden_manifest_staleness(root: Path) -> str | None:
+    """Fail-closed when cursor golden manifest drifts from ``dist/cursor`` (PRD 343 R3)."""
+    try:
+        import golden_manifest as gm
+    except ImportError:
+        return None
+    try:
+        result = gm.check_staleness(root)
+    except (OSError, ValueError) as exc:
+        return f"golden-manifest-error:{exc}"
+    if result.get("verdict") == "pass" and not result.get("stale"):
+        return None
+    if result.get("error") == "manifest-missing":
+        return "golden-manifest:missing"
+    return "golden-manifest:stale"
+
+
 def validate_effective_config_drift(root: Path) -> str | None:
     """Fail-closed when generated effective-config/doc projection drifts (PRD 279 R15)."""
     gen = root / "scripts" / "effective_config_gen.py"
@@ -881,6 +898,27 @@ def run_deferred_placeholder_lint_gate(root: Path, payload: dict[str, Any]) -> t
     return 0, payload
 
 
+def run_golden_manifest_staleness_gate(
+    root: Path, payload: dict[str, Any]
+) -> tuple[int, dict[str, Any]]:
+    """Annotate + fail-closed when cursor golden manifest is stale (PRD 343 R3)."""
+    err = validate_golden_manifest_staleness(root)
+    payload = dict(payload)
+    payload["goldenManifestStaleness"] = {
+        "verdict": "pass" if err is None else "fail",
+        "error": err,
+    }
+    if err is None:
+        return 0, payload
+    blocked: dict[str, Any] = {
+        "verdict": "blocked",
+        "reason": f"goldenManifest:{err}",
+        "goldenManifestStaleness": payload["goldenManifestStaleness"],
+    }
+    jsonio.emit(blocked)
+    return 30, blocked
+
+
 def run_architecture_assessment_gate(root: Path, cfg: dict[str, Any], payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
     """Evaluate opt-in architecture doctrine assessment (PRD 326 R15)."""
     mode = str(cfg_value(cfg, "architecture", "assessment", "mode", default="off") or "off").strip().lower()
@@ -926,6 +964,9 @@ def finalize_gate_payload(
     if ec != 0:
         return ec, payload
     ec, payload = run_deferred_placeholder_lint_gate(root, payload)
+    if ec != 0:
+        return ec, payload
+    ec, payload = run_golden_manifest_staleness_gate(root, payload)
     if ec != 0:
         return ec, payload
     ec, payload = run_architecture_assessment_gate(root, cfg, payload)
@@ -1270,6 +1311,16 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
         jsonio.emit(payload)
         return 30, payload
 
+    golden_err = validate_golden_manifest_staleness(root)
+    if golden_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": f"goldenManifest:{golden_err}",
+            "source": "local-evidence",
+        }
+        jsonio.emit(payload)
+        return 30, payload
+
     effective_config_err = validate_effective_config_drift(root)
     if effective_config_err:
         payload = {
@@ -1426,6 +1477,12 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     path_literal_err = validate_path_literal_guard(root)
     if path_literal_err:
         payload = {"verdict": "blocked", "reason": f"pathLiteral:{path_literal_err}"}
+        jsonio.emit(payload)
+        return 30, payload
+
+    golden_err = validate_golden_manifest_staleness(root)
+    if golden_err:
+        payload = {"verdict": "blocked", "reason": f"goldenManifest:{golden_err}"}
         jsonio.emit(payload)
         return 30, payload
 

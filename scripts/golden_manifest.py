@@ -139,7 +139,7 @@ def check_staleness(
 ) -> dict[str, object]:
     """Compare on-disk manifest to freshly generated content (PRD 343 R3).
 
-    Available in phase 1 for unit coverage; gate wiring lands in phase 2.
+    Invoked by ``check_gate_lib.validate_golden_manifest_staleness`` on the gate surface.
     """
     target = manifest_path if manifest_path is not None else default_manifest_path(repo_root)
     expected = generate_manifest_text(repo_root)

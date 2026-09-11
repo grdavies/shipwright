@@ -88,3 +88,26 @@ def test_check_staleness_detects_drift(repo_with_dist: Path) -> None:
     stale = gm.check_staleness(repo_with_dist, manifest_path=out)
     assert stale["verdict"] == "fail"
     assert stale["stale"] is True
+
+
+def test_check_staleness_missing_manifest(repo_with_dist: Path) -> None:
+    missing = repo_with_dist / "missing-cursor-golden.manifest"
+    result = gm.check_staleness(repo_with_dist, manifest_path=missing)
+    assert result["verdict"] == "fail"
+    assert result["stale"] is True
+    assert result["error"] == "manifest-missing"
+
+
+def test_gate_validate_golden_manifest_staleness(repo_with_dist: Path) -> None:
+    """Gate validator uses the default manifest path under the given root (PRD 343 R3)."""
+    import check_gate_lib as gate
+
+    out = gm.default_manifest_path(repo_with_dist)
+    gm.write_manifest(repo_with_dist, out_path=out)
+    assert gate.validate_golden_manifest_staleness(repo_with_dist) is None
+
+    out.write_text("stale-on-purpose\n", encoding="utf-8")
+    assert gate.validate_golden_manifest_staleness(repo_with_dist) == "golden-manifest:stale"
+
+    out.unlink()
+    assert gate.validate_golden_manifest_staleness(repo_with_dist) == "golden-manifest:missing"
