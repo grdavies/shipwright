@@ -488,6 +488,7 @@
     "intra_phase_dispatch.py",
     "is-shipwright-dev-repo.py",
     "issues_broker.py",
+    "issues_github.py",
     "issues_http.py",
     "issues_lib.py",
     "kernel-classification-lint.py",
@@ -818,6 +819,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 815,
+  "moduleCount": 816,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
