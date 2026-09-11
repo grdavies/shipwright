@@ -748,8 +748,12 @@ Tighten to `bind-only`, `canonical`, or `maintenance-only` when you need stricte
 
 | Setting | Default | Meaning |
 |---------|---------|---------|
-| `guardrails.enforceBeforeSubmit` | `true` | Memory guardrails run before prompts submit |
-| `guardrails.requireRuleClass` | `false` | Set `true` in mature repos requiring allowlisted rules |
+| `memory.guardrails.enforceBeforeSubmit` | `true` | Memory guardrails run before prompts submit |
+| `memory.guardrails.requireRuleClass` | `false` | Set `true` in mature repos requiring allowlisted rules |
+
+Curated seed examples in this guide and `/sw-init` are checked against
+`init_profile_report.greenfield_curated_patch()` — run
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" init_profile_report.py -- list` for the canonical set.
 
 ### Step 4b — Model tier defaults
 

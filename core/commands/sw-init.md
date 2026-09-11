@@ -228,7 +228,7 @@ envelope; `canonical` preserves byte-identical legacy behavior). Orthogonal to `
 never overwrite an explicit operator value without user confirm — same consent gate as `verify.*` and model
 tiers.
 
-Canonical seed set (write-draft + docs): `python3 scripts/init_profile_report.py list`.
+Canonical seed set (write-draft + docs): `python3 scripts/sw_bootstrap.py init_profile_report.py -- list`.
 
 ### 4. Guardrail knobs
 
