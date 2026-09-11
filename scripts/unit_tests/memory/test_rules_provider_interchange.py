@@ -207,7 +207,7 @@ def test_decision_integrity_id_hash() -> None:
 
 
 def test_decision_revocation_both_sides() -> None:
-    config = (REPO / "docs/guides/configuration.md").read_text(encoding="utf-8")
+    config = (REPO / "core/documentation/configuration.md").read_text(encoding="utf-8")
     assert "D7" in config
     assert "allowlist" in config.lower()
     assert "inactivate" in config.lower() or "revoke" in config.lower()

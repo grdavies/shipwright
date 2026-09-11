@@ -67,7 +67,7 @@ def test_schema_defaults_match_posture(repo_root: Path) -> None:
 
 
 def test_configuration_docs_mention_posture(repo_root: Path) -> None:
-    text = (repo_root / "docs/guides/configuration.md").read_text(encoding="utf-8")
+    text = (repo_root / "core/documentation/configuration.md").read_text(encoding="utf-8")
     for token in (
         "Greenfield init posture",
         "orchestration.planPolicy",
@@ -79,7 +79,7 @@ def test_configuration_docs_mention_posture(repo_root: Path) -> None:
 
 
 def test_workflows_docs_ship_run_and_gap_check(repo_root: Path) -> None:
-    text = (repo_root / "docs/guides/workflows.md").read_text(encoding="utf-8")
+    text = (repo_root / "core/documentation/workflows.md").read_text(encoding="utf-8")
     assert "Terminal ship-run chain" in text
     assert "watch-ci" in text
     assert "gap-check-gate.py write" in text

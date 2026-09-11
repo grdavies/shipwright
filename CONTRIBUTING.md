@@ -2,9 +2,13 @@
 
 Thank you for contributing to [Shipwright](https://github.com/grdavies/shipwright).
 
-**Using the plugin?** See [docs/guides/](docs/guides/getting-started.md) for adopters ([getting started](docs/guides/getting-started.md)). This file is for plugin development
-only. Internal planning artifacts (brainstorms, PRDs) live in gitignored `docs/`; they are not user
-documentation.
+**Using the plugin?** Adopter guides live in [`core/documentation/`](core/documentation/getting-started.md)
+— the install-root canonical home copied into packaged installs at `<install-root>/documentation/`.
+Public [`docs/guides/`](docs/guides/getting-started.md) paths are **redirect stubs only**; edit adopter
+prose in `core/documentation/`, not in `docs/guides/`.
+
+**Developing Shipwright itself?** This file covers source-repo workflow only. Internal planning artifacts
+(brainstorms, PRDs) live in gitignored `docs/`; they are not adopter documentation.
 
 ## Development setup
 

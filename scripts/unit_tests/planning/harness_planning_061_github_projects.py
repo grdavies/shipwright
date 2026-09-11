@@ -88,7 +88,7 @@ done
 if [[ $FAIL -eq 0 ]]; then ok "matrix-docs-present"; fi
 
 # --- po-browse-four-questions (R11b) ---
-WF="$ROOT/docs/guides/workflows.md"
+WF="$ROOT/core/documentation/workflows.md"
 COUNT=0
 for q in "which gaps a PRD absorbs" "which brainstorms feed a PRD" "task/phase completion" "backlog vs in-flight vs done"; do
   grep -qi "$q" "$WF" && COUNT=$((COUNT+1)) || true

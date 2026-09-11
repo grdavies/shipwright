@@ -10,7 +10,7 @@ Orchestrators advance on green and **halt at human gates** (freeze, merge, feedb
 Shipwright **never auto-merges**.
 
 **Plan policy:** `orchestration.planPolicy` defaults to `canonical` (byte-identical to pre-022). Live `proposed`
-on `/sw-deliver` is opt-in only — see [configuration](docs/guides/configuration.md#deliver-plan-policy-pilot).
+on `/sw-deliver` is opt-in only — see [configuration](core/documentation/configuration.md#deliver-plan-policy-pilot).
 
 - **Traceable specs** — frozen PRDs, tasks, and amendments live in your repo (optional `issue-store` backend stores them as provider issues — opt-in, default unchanged)
 - **issue-native dev-tracking** — under `issue-store`: gap issues, commit/PR linkage with safe close-on-merge, doc-review via integrity-checked issue comments, and milestone grouping (; inert for file-store users)
@@ -18,7 +18,7 @@ on `/sw-deliver` is opt-in only — see [configuration](docs/guides/configuratio
 - **Deliver entry** — `/sw-deliver run` accepts a frozen task-list path, `--unit-id`, or `--issue` (issue-store); `/sw-status` and `planning-graph.py status` report unified unit status (`backlog` | `planned` | `in-progress` | `complete`)
 - **WorkflowGraph runtime** — after cutover, orchestrated deliver and doc/debug/feedback paths dispatch through the shared **WorkflowGraph** IR (`scripts/graph/`); live node progress and per-node explain stay on `/sw-status` and `status_integrity.py` — no graph-prefixed slash commands
 - **Workflow invariants** — `INVARIANTS.md` documents four enforcement-backed guarantees (required-capability nonskip, monotone re-detect, authorized reduction only, absolute floor); regenerate `CAPABILITIES.md` via `python3 scripts/capability_docs.py generate`
-- **Graph runtime** — after cutover, **WorkflowGraph** is the production execution runtime for deliver/doc/debug/feedback (status/explain on existing `sw-` commands; see [graph-domain terminology](docs/guides/graph-domain-terminology.md))
+- **Graph runtime** — after cutover, **WorkflowGraph** is the production execution runtime for deliver/doc/debug/feedback (status/explain on existing `sw-` commands; see [graph-domain terminology](core/documentation/graph-domain-terminology.md))
 - **Async graph runtime** — `GraphScheduler` single owning loop with concurrent node admission; orchestrator conductor fan-out is orthogonal (not a second scheduler)
 - **Authenticated cache** — `.cursor/sw-graph-cache/` MAC-trusted store separate from run journals; run-scope dogfood default (`graphExecution.cache.scope: run`)
 - **ExecutionBackend boundary** — host-authoritative terminal envelopes for node work (`scripts/graph/execution_backend.py`); backend values advisory only
@@ -52,8 +52,9 @@ and route directly to `/sw-doc` or `/sw-deliver run`. Routing examples:
 /sw-retrospective --post-merge             # Learn after merge
 ```
 
-> New here? Read **[Getting started](docs/guides/getting-started.md)** for guided persona paths, or
-> jump to the deep-dive **[workflow guide](docs/guides/workflows.md)**.
+> New here? Read **[Getting started](core/documentation/getting-started.md)** for guided persona paths, or
+> jump to the deep-dive **[workflow guide](core/documentation/workflows.md)**. Legacy `docs/guides/` paths
+> remain as durable public redirect stubs.
 
 ## Prerequisites
 
@@ -75,7 +76,7 @@ On **macOS** and **Windows** workstations (not Linux, not containers), selector 
 `keystore` backend to read secrets from the native OS store (Keychain / Credential Manager) via ctypes —
 Shipwright does **not** use the Python `keyring` package. On Linux and in containers, use `environment` or
 `github_cli` instead; selecting `keystore` fails closed. Full matrix:
-[configuration — per-platform backend matrix](docs/guides/configuration.md#per-platform-backend-matrix).
+[configuration — per-platform backend matrix](core/documentation/configuration.md#per-platform-backend-matrix).
 
 ## Install
 
@@ -106,8 +107,8 @@ python3 scripts/sw_bootstrap.py --print wave_deliver.py
 python3 scripts/sw_bootstrap.py wave_deliver.py -- --help
 ```
 
-See [Getting started — Scripts access](docs/guides/getting-started.md#scripts-access-consumer-repos) and
-[configuration — Scripts resolution](docs/guides/configuration.md#scripts-resolution-consumer-repos).
+See [Getting started — Scripts access](core/documentation/getting-started.md#scripts-access-consumer-repos) and
+[configuration — Scripts resolution](core/documentation/configuration.md#scripts-resolution-consumer-repos).
 </details>
 
 <details>
@@ -130,7 +131,7 @@ Install the plugin **once per machine**; configure it **per project repo** with 
 Open your **target project repo** and run **`/sw-init`**. It walks through project setup and writes
 `.cursor/workflow.config.json` — **without** writing repo-local Shipwright script façades. Consumer helpers
 resolve through the installed plugin via bootstrap argv (`python3 scripts/sw_bootstrap.py <helper> [-- ARGS]`).
-See [Scripts resolution](docs/guides/configuration.md#scripts-resolution-consumer-repos).
+See [Scripts resolution](core/documentation/configuration.md#scripts-resolution-consumer-repos).
 
 1. **Memory provider** — `in-repo` (default, committed markdown store) or another **catalog-registered** id
    (seeded: `recallium`). Operators select; authors register new providers in the catalog. Unknown ids fail
@@ -147,14 +148,14 @@ Re-run `/sw-init` at any time — it acts as a **doctor** against an existing co
 **version drift** (`configuredWith` stamp vs installed plugin), and offers consent-gated refresh.
 
 **Base branch:** workflow entry captures your trunk base (name + SHA) before worktrees are created;
-terminal PRs target that persisted base — not a hardcoded `main`. See [configuration](docs/guides/configuration.md#base-branch).
+terminal PRs target that persisted base — not a hardcoded `main`. See [configuration](core/documentation/configuration.md#base-branch).
 
 **Worktree invariant:** implementation never starts on bare trunk — use `/sw-worktree` and a feature branch.
 **Review:** `review.provider` defaults to **`none`**; CodeRabbit is opt-in. The **canonical way to disable**
 external AI review is `review.provider: "none"`.
 
 Configure `verify.lint` / `verify.typecheck` / `verify.test` so `/sw-verify` runs real checks.
-Full walkthrough and schema: **[configuration](docs/guides/configuration.md)**.
+Full walkthrough and schema: **[configuration](core/documentation/configuration.md)**.
 
 ### Deliver autonomy
 
@@ -183,7 +184,7 @@ back-links at draft/freeze time.
 1. **`/sw-doc`** — triage → (brainstorm) → PRD → review → freeze → **single-pass** `/sw-tasks`.
 2. **`/sw-deliver run <frozen-tasks>`** — drives every phase to one merge gate; **you merge**.
 
-Quick fixes skip the doc pipeline — see [Getting started](docs/guides/getting-started.md).
+Quick fixes skip the doc pipeline — see [Getting started](core/documentation/getting-started.md).
 
 ## Workstreams
 
@@ -207,7 +208,7 @@ atomics directly only for Quick-tier hotfixes, debugging, or single-phase reruns
 the feature branch has merged it suggests a cleanup run; you confirm before any deletion. Prunes merged
 local and remote branches, stale worktrees, and completed deliver run-state. Dry-run by default.
 
-→ Full per-tier flows, diagrams, and sample prompts: **[workflow guide](docs/guides/workflows.md)**.
+→ Full per-tier flows, diagrams, and sample prompts: **[workflow guide](core/documentation/workflows.md)**.
 
 ## Tiers
 
@@ -220,13 +221,17 @@ local and remote branches, stale worktrees, and completed deliver run-state. Dry
 | **Entry** | manual `/sw-ship` | `/sw-deliver run` | `/sw-deliver run` |
 
 **Risk floor:** `auth`, `payment`, `migration`, `webhook` force at least Standard. **Ambiguity bump:**
-`maybe`, `explore`, `TBD` push a tier up. Details in the [workflow guide](docs/guides/workflows.md).
+`maybe`, `explore`, `TBD` push a tier up. Details in the [workflow guide](core/documentation/workflows.md).
 
 
 ## Documentation layout
 
-Adopter docs live under [`docs/guides/`](docs/guides/getting-started.md). The legacy `documentation/` tree was removed;
-use the guides below.
+**Canonical adopter guides** live in [`core/documentation/`](core/documentation/README.md). Platform emitters
+copy this tree to `<install-root>/documentation/` in packaged installs — that install-root path is the
+authoritative home for adopters.
+
+**Public redirect stubs** under [`docs/guides/`](docs/guides/getting-started.md) keep legacy GitHub paths
+alive; each stub points to the matching `core/documentation/` page.
 
 **Capability docs** (`CAPABILITIES.md`, `core/providers/issues/CAPABILITIES.md`, and
 `core/sw-reference/capability-family-matrices.*`) are **generated from the machine-readable registry**
@@ -235,35 +240,36 @@ regenerate; do not hand-edit the markdown.
 
 | Guide | Purpose |
 |-------|---------|
-| [Getting started](docs/guides/getting-started.md) | Adoption arc and first paths |
-| [Commands](docs/guides/commands.md) | Orchestrators vs atomics (includes `/sw-note` local notebook capture) |
-| [Workflows](docs/guides/workflows.md) | End-to-end flows |
-| [Graph domain terminology](docs/guides/graph-domain-terminology.md) | Planning vs execution graph vocabulary |
-| [Configuration](docs/guides/configuration.md) | `/sw-init` knobs (issue-store providers include Linear) |
+| [Getting started](core/documentation/getting-started.md) | Adoption arc and first paths |
+| [Commands](core/documentation/commands.md) | Orchestrators vs atomics (includes `/sw-note` local notebook capture) |
+| [Workflows](core/documentation/workflows.md) | End-to-end flows |
+| [Graph domain terminology](core/documentation/graph-domain-terminology.md) | Planning vs execution graph vocabulary |
+| [Configuration](core/documentation/configuration.md) | `/sw-init` knobs (issue-store providers include Linear) |
 | [`CAPABILITIES.md`](CAPABILITIES.md) | **Generated** from `core/sw-reference/capability-registry.json` — do not edit by hand |
-| [Style guide](docs/guides/style-guide.md) | Writing conventions |
-| [Glossary](docs/guides/glossary.md) | Coined terms |
-| [Graph-domain terminology](docs/guides/graph-domain-terminology.md) | WorkflowGraph / planning / provenance domains |
-| [Decision tree](docs/guides/decision-tree.md) | Command routing |
+| [Style guide](core/documentation/style-guide.md) | Writing conventions |
+| [Glossary](core/documentation/glossary.md) | Coined terms |
+| [Decision tree](core/documentation/decision-tree.md) | Command routing |
+| [Testing](core/documentation/testing.md) | Verification and CI expectations |
+| [Trust anchors](core/documentation/trust-anchors.md) | Dist-only install trust verification |
 
-### Closed reference inventory (pre-removal)
+### Public path redirects
 
-| Former reference | Replacement |
-|------------------|-------------|
-| `documentation/getting-started.md` | `docs/guides/getting-started.md` |
-| `documentation/commands.md` | `docs/guides/commands.md` |
-| CONTRIBUTING “see documentation/” | CONTRIBUTING → `docs/guides/` |
-| Onboarding UX fixture paths | `docs/guides/*` |
-| Harness optional `documentation/` mirror checks | Removed; guides under `docs/guides/` are authoritative |
+| Public stub | Canonical install-root page |
+|-------------|----------------------------|
+| `docs/guides/getting-started.md` | `core/documentation/getting-started.md` |
+| `docs/guides/commands.md` | `core/documentation/commands.md` |
+| `docs/guides/workflows.md` | `core/documentation/workflows.md` |
+| `docs/guides/configuration.md` | `core/documentation/configuration.md` |
+| Other `docs/guides/*.md` | Matching `core/documentation/*.md` |
 
 ## Learn more
 
 | Doc | Audience |
 |-----|----------|
-| [Getting started](docs/guides/getting-started.md) | First run + persona quick paths |
-| [Workflow guide](docs/guides/workflows.md) | Tiers, per-workstream flows, diagrams, prompts |
-| [Commands](docs/guides/commands.md) | Full command taxonomy |
-| [Configuration](docs/guides/configuration.md) | `/sw-init` + every config key |
+| [Getting started](core/documentation/getting-started.md) | First run + persona quick paths |
+| [Workflow guide](core/documentation/workflows.md) | Tiers, per-workstream flows, diagrams, prompts |
+| [Commands](core/documentation/commands.md) | Full command taxonomy |
+| [Configuration](core/documentation/configuration.md) | `/sw-init` + every config key |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Developing the plugin |
 | [PROVENANCE.md](PROVENANCE.md) | Upstream sources |
 
