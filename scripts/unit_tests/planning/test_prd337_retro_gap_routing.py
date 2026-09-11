@@ -48,6 +48,7 @@ def _seed_plugin_self_repo(repo: Path) -> None:
     (repo / "scripts" / "check-gate.py").parent.mkdir(parents=True, exist_ok=True)
     (repo / "scripts" / "check-gate.py").write_text("# fixture\n", encoding="utf-8")
     (repo / "core" / "sw-reference").mkdir(parents=True, exist_ok=True)
+    (repo / ".shipwright-dev").write_text("# sentinel\n", encoding="utf-8")
 
 
 def _retro_payload(**items: dict) -> dict:
