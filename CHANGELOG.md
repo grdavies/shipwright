@@ -1207,6 +1207,7 @@
 * merge phase establish-canonical-install-root-documentation-small into feat/distribution-adopter-portability-docs-surface (f71ab73) <!-- sw-deliver:establish-canonical-install-root-documentation-small -->
 * merge phase emit-documentation-in-platform-distributions-small into feat/distribution-adopter-portability-docs-surface (b27fd1d) <!-- sw-deliver:emit-documentation-in-platform-distributions-small -->
 * merge phase publish-durable-public-redirects-medium into feat/distribution-adopter-portability-docs-surface (ed08d4c) <!-- sw-deliver:publish-durable-public-redirects-medium -->
+* merge phase correct-consumer-entrypoints-and-portability-claims-medium into feat/distribution-adopter-portability-docs-surface (92f779b) <!-- sw-deliver:correct-consumer-entrypoints-and-portability-claims-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
