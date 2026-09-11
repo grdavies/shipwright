@@ -54,7 +54,7 @@ WF_CORE="$ROOT/core/sw-reference/workflow.config.example.json"
 SPEC_RIGOR="$(content_path skills/spec-rigor/SKILL.md)"
 SPEC_UNION="$(content_path skills/spec-union/SKILL.md)"
 README="$ROOT/README.md"
-CONFIG_GUIDE="$ROOT/docs/guides/configuration.md"
+CONFIG_GUIDE="$ROOT/core/documentation/configuration.md"
 REDACT="$ROOT/scripts/memory-redact.py"
 GEN="python3 -m sw"
 

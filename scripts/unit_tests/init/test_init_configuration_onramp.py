@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 def test_configuration_greenfield_onramp_section(repo_root: Path) -> None:
-    text = (repo_root / "docs/guides/configuration.md").read_text(encoding="utf-8")
+    text = (repo_root / "core/documentation/configuration.md").read_text(encoding="utf-8")
     for token in (
         "## Greenfield on-ramp",
         "Credential checklist",

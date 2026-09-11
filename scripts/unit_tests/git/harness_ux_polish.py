@@ -261,57 +261,62 @@ check_guide_aligned() {
   fi
 }
 
-check_guide_aligned getting-started "$ROOT/docs/guides/getting-started.md"
-check_guide_aligned configuration "$ROOT/docs/guides/configuration.md"
-check_guide_aligned workflows "$ROOT/docs/guides/workflows.md"
+check_guide_aligned getting-started "$ROOT/core/documentation/getting-started.md"
+check_guide_aligned configuration "$ROOT/core/documentation/configuration.md"
+check_guide_aligned workflows "$ROOT/core/documentation/workflows.md"
 
-# documentation/ must be absent (single adopter docs tree under docs/guides/)
+# Legacy repo-root documentation/ must be absent; canonical install-root tree is core/documentation/
 if [[ -d "$ROOT/documentation" ]]; then
-  bad "ux-polish-docs-tree: documentation/ must be removed; use docs/guides/"
+  bad "ux-polish-docs-tree: documentation/ must be removed; use core/documentation/"
 else
-  ok "ux-polish-docs-tree: documentation/ absent"
+  ok "ux-polish-docs-tree: legacy documentation/ absent"
 fi
 
-# Required Wave C guide artifacts
+# Required Wave C guide artifacts (canonical + public redirect stubs)
 for req in style-guide.md glossary.md decision-tree.md; do
-  if [[ -f "$ROOT/docs/guides/$req" ]]; then
-    ok "ux-polish-docs-tree: docs/guides/$req present"
+  if [[ -f "$ROOT/core/documentation/$req" ]]; then
+    ok "ux-polish-docs-tree: core/documentation/$req present"
   else
-    bad "ux-polish-docs-tree: missing docs/guides/$req"
+    bad "ux-polish-docs-tree: missing core/documentation/$req"
+  fi
+  if [[ -f "$ROOT/docs/guides/$req" ]]; then
+    ok "ux-polish-docs-tree: docs/guides/$req redirect stub present"
+  else
+    bad "ux-polish-docs-tree: missing docs/guides/$req redirect stub"
   fi
 done
 
-# User guides must not cite PRD / R-ID / GAP tokens
+# User guides must not cite PRD / R-ID / GAP tokens (canonical bodies only)
 prd_hits=0
 while IFS= read -r f; do
   if grep -nE '\bPRD[[:space:]]*[0-9]+|\bR[0-9]+\b|\bGAP-[0-9]+' "$f" >/dev/null 2>&1; then
     echo "FAIL user-guide-provenance: $f still cites PRD/R-ID/GAP"
     prd_hits=1
   fi
-done < <(find "$ROOT/docs/guides" -maxdepth 1 -type f -name '*.md' | sort)
+done < <(find "$ROOT/core/documentation" -maxdepth 1 -type f -name '*.md' | sort)
 if grep -nE '\bPRD[[:space:]]*[0-9]+|\bR[0-9]+\b|\bGAP-[0-9]+' "$ROOT/README.md" >/dev/null 2>&1; then
   echo "FAIL user-guide-provenance: README.md still cites PRD/R-ID/GAP"
   prd_hits=1
 fi
 if [[ "$prd_hits" -eq 0 ]]; then
-  ok "user-guide-provenance: README + docs/guides free of PRD/R-ID/GAP tokens"
+  ok "user-guide-provenance: README + core/documentation free of PRD/R-ID/GAP tokens"
 else
   bad "user-guide-provenance: PRD/R-ID/GAP tokens remain in adopter docs"
 fi
 
 # Style guide must state slug-vs-title + Conventional Commits
-if grep -qi 'slug' "$ROOT/docs/guides/style-guide.md" && \
-   grep -qi 'Conventional Commits' "$ROOT/docs/guides/style-guide.md" && \
-   grep -qi 'Diátaxis\|Diataxis' "$ROOT/docs/guides/style-guide.md"; then
+if grep -qi 'slug' "$ROOT/core/documentation/style-guide.md" && \
+   grep -qi 'Conventional Commits' "$ROOT/core/documentation/style-guide.md" && \
+   grep -qi 'Diátaxis\|Diataxis' "$ROOT/core/documentation/style-guide.md"; then
   ok "ux-polish-style-guide: slug/title + Conventional Commits + Diátaxis"
 else
   bad "ux-polish-style-guide: style-guide.md missing required conventions"
 fi
 
 # Configuration documents delegation.mode
-if grep -qF 'delegation.mode' "$ROOT/docs/guides/configuration.md" && \
-   grep -qF 'bind-only' "$ROOT/docs/guides/configuration.md" && \
-   grep -qF 'heuristic' "$ROOT/docs/guides/configuration.md"; then
+if grep -qF 'delegation.mode' "$ROOT/core/documentation/configuration.md" && \
+   grep -qF 'bind-only' "$ROOT/core/documentation/configuration.md" && \
+   grep -qF 'heuristic' "$ROOT/core/documentation/configuration.md"; then
   ok "ux-polish-delegation-mode: configuration.md documents delegation.mode options"
 else
   bad "ux-polish-delegation-mode: configuration.md missing delegation.mode options"

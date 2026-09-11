@@ -197,7 +197,7 @@ fi
 
 # --- memory-prework-docs-presence (R10) ---
 if grep -q 'Pre-work memory search' "$ROOT/.shipwright/layout.md" && \
-   grep -q 'Pre-work memory search' "$ROOT/docs/guides/workflows.md" && \
+   grep -q 'Pre-work memory search' "$ROOT/core/documentation/workflows.md" && \
    grep -q 'Pre-work search (mandatory)' "$ROOT/core/skills/memory/SKILL.md"; then
   ok "memory-prework-docs-presence"
 else

@@ -143,7 +143,7 @@ def test_documented_init_steps_match_code_seed(sw_configure) -> None:
     """R48 — documented initialization steps equal the code seed output."""
     steps = sw_configure.packaged_init_steps()
     assert len(steps) == 4
-    docs = (REPO_ROOT / "docs/guides/getting-started.md").read_text(encoding="utf-8")
+    docs = (REPO_ROOT / "core/documentation/getting-started.md").read_text(encoding="utf-8")
     # Canonical block: first four numbered steps under the default packaged path.
     default_section = docs.split("## Default: packaged install + single init", 1)[1].split(
         "### Self-check", 1
@@ -153,7 +153,7 @@ def test_documented_init_steps_match_code_seed(sw_configure) -> None:
     for step in steps:
         assert step in docs
 
-    config_docs = (REPO_ROOT / "docs/guides/configuration.md").read_text(encoding="utf-8")
+    config_docs = (REPO_ROOT / "core/documentation/configuration.md").read_text(encoding="utf-8")
     assert "### Interview priority tiering" in config_docs
     assert "Priority zero" in config_docs
     assert "Priority one" in config_docs
