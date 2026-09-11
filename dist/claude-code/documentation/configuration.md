@@ -7,34 +7,34 @@ deprecated alias with identical behavior).
 
 Consumer repos receive **no** repo-local Shipwright scripts tree. `/sw-init` configures
 `.cursor/workflow.config.json` only — it does **not** emit façade forwarders under `scripts/`. Runtime
-helpers resolve from the installed plugin through the canonical bootstrap CLI:
+helpers resolve from the installed plugin through the install-root shim:
 
 ```bash
-python3 scripts/sw_bootstrap.py --print check-gate.py
-python3 scripts/sw_bootstrap.py check-gate.py
-python3 scripts/sw_bootstrap.py host.py -- pr-view --number 42
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" check-gate.py
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" host.py -- pr-view --number 42
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py -- --help
 ```
 
 | Precedence | Source | When |
 | --- | --- | --- |
 | 1 | Self-repo `scripts/` | Shipwright plugin source / harness checkout only |
 | 2 | `SHIPWRIGHT_SCRIPTS` | Trusted absolute override (must contain trust markers) |
-| 3 | Plugin install | `~/.cursor/plugins/local/shipwright/scripts` or marketplace/cache roots |
+| 3 | Plugin install | `~/.cursor/plugins/local/shipwright/scripts/sw-run.py` (zipapp dispatch) |
 
-**Operator default:** copy-paste bootstrap argv from guides and command procedures — not absolute plugin
-paths and not repo-root façade emit instructions.
+**Operator default:** copy-paste install-root `sw-run.py` argv from guides and command procedures — not
+repo-local `scripts/` paths and not repo-root façade emit instructions.
 
 **Legacy façades:** repos that previously received forwarders can detect and remove them via `/sw-init` doctor
 (`core/commands/sw-init.md` §6c) or:
 
 ```bash
-python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . detect
-python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . remove --confirm
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" init_scripts_facade.py -- . detect
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" init_scripts_facade.py -- . remove --confirm
 ```
 
-**Troubleshooting-only:** when bootstrap resolution fails, verify the plugin install path exists and contains
-`check-gate.py` (for example `~/.cursor/plugins/local/shipwright/scripts`). Reinstall from the Shipwright
-source repo with `python3 scripts/install.py` when the tree is missing.
+**Troubleshooting-only:** when helper resolution fails, verify the plugin install root exists and contains
+`scripts/sw-run.py` (for example `~/.cursor/plugins/local/shipwright/scripts/sw-run.py`). Reinstall from
+the Shipwright source checkout with `python3 scripts/install.py` when the tree is missing.
 
 ## Credential references and machine-local selector
 
@@ -110,7 +110,7 @@ Secret backends and scope live in a **user-owned** selector document — never c
 Manage entries with `/sw-init` guided migration or:
 
 ```bash
-python3 scripts/sw-configure.py credential selector-add \
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py credential selector-add \
   --ref github-work --backend environment --provider github \
   --hostname github.com --account work \
   --allowed-repo my-org/my-app --allowed-project-id my-app \
@@ -119,7 +119,7 @@ python3 scripts/sw-configure.py credential selector-add \
 
 **CI declaration:** GitHub Actions runners without a machine-local selector require an explicit repository
 selector at `.sw/credential-ci-selector.json` (same entry schema; `skip_integrity` at load). Declare via
-`python3 scripts/sw-configure.py credential declare-ci --confirm`.
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py credential declare-ci --confirm`.
 
 ### Per-platform backend matrix
 
@@ -144,7 +144,7 @@ permission contract as the selector). The append-only provenance journal is
 Diagnose resolution per surface:
 
 ```bash
-python3 scripts/credentials-doctor.py --root .
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" credentials-doctor.py--root .
 ```
 
 The JSON report lists configured `references` (backend + scope + last successful resolution) and per-surface
@@ -158,20 +158,20 @@ ambient tokens without a declared `environment` backend entry.
 
 ### 1 — Credential checklist (broker-only)
 
-`/sw-init` and `python3 scripts/sw_bootstrap.py sw-configure.py -- credential plan` emit the **same four steps** in order:
+`/sw-init` and `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py -- credential plan` emit the **same four steps** in order:
 
 | Step | Meaning |
 | --- | --- |
 | Identity source | `github_cli` when authenticated, else a declared env/keystore backend |
 | `credentialRef` binding | Committed config references (`host`, planning, memory) point at selector entries |
 | Selector allowlists | Machine-local `allowedRepos`, `allowedProjectIds`, `allowedEndpoints` for fail-closed scope |
-| Resolution probe | `python3 scripts/sw_bootstrap.py credentials-doctor.py -- --root .` — terminal green path per checklist step |
+| Resolution probe | `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" credentials-doctor.py -- --root .` — terminal green path per checklist step |
 
 The selector holds **metadata and allowlists only** — never secret material. Apply with:
 
 ```bash
-python3 scripts/sw_bootstrap.py sw-configure.py -- credential plan
-python3 scripts/sw_bootstrap.py sw-configure.py -- credential apply --confirm
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py -- credential plan
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py -- credential apply --confirm
 ```
 
 ### 2 — Named `tokenEnv` (multi-account)
@@ -196,8 +196,8 @@ When the repo has no PR workflow or only a default-branch-restricted `pull_reque
 consent-gated stub so `base-preflight:ci-or-review` can satisfy CI presence:
 
 ```bash
-python3 scripts/sw_bootstrap.py sw-configure.py -- ci-stub plan
-python3 scripts/sw_bootstrap.py sw-configure.py -- ci-stub apply --confirm
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py -- ci-stub plan
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py -- ci-stub apply --confirm
 ```
 
 `plan` is read-only (target path + rendered body). `apply` without `--confirm` refuses. Re-apply when a
@@ -211,8 +211,8 @@ below). Classification (`present` / `defaulted` / `unset` / `deprecated`) and th
 config are single-sourced from `init_profile_report`:
 
 ```bash
-python3 scripts/sw_bootstrap.py init_profile_report.py -- classify --markdown
-python3 scripts/sw_bootstrap.py sw-configure.py -- findings
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" init_profile_report.py -- classify --markdown
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py -- findings
 ```
 
 Annotated reference (neutral, no dev-harness paths): `core/sw-reference/workflow.config.example.json`.
@@ -292,7 +292,7 @@ repo has no explicit binding. Binding is either:
 Remote/external markers (e.g. `recallium`) without `memory.project` refuse. There is **no** ambient
 Recallium write default and **no** auto-migration into a machine-local MCP project. Unbound reads may
 still resolve for display (`displayGuidance=in-repo`) without authorizing writes. Assert locally with
-`python3 scripts/sw_bootstrap.py memory_preflight.py -- assert-sync-store`.
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" memory_preflight.py -- assert-sync-store`.
 
 Reject examples (config write / hook resolve): `unknown-vendor`, `../traversal`, empty string, or a
 catalog row missing adapter integrity or rules script.
@@ -324,7 +324,7 @@ blocks until you materialize provider-side decision bodies and set the knob.
 
 ```bash
 # 1) Export provider decision bodies into docs/decisions/
-python3 scripts/memory-decision-snapshot.py export
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" memory-decision-snapshot.py export
 
 # 2) Set the knob explicitly (example: keep auto semantics on Recallium)
 # Edit .cursor/workflow.config.json:
@@ -728,7 +728,7 @@ Canonical opt-out: `review.provider: "none"`. Do not use `review.enabled: false`
 
 ### Greenfield init posture
 
-`/sw-init` and `python3 scripts/sw-configure.py write-draft` seed **seven** recommended keys for
+`/sw-init` and `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py write-draft` seed **seven** recommended keys for
 hands-off deliver on greenfield repos. Schema defaults and write-draft stay aligned; doctor surfaces
 drift on re-run and **never silently overwrites** explicit operator values without consent.
 
@@ -768,8 +768,8 @@ Scaffold writes the full block from `scripts/seed-model-config.py` and
 unless confirmed. See `.sw/models-tiering.md` for platform catalogs, `models.routing.agents`, and resolver usage.
 
 **Dispatch binding:** before spawning reviewer/persona Tasks, resolve
-`python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --agent <id>` and run
-`python3 scripts/reviewer-dispatch-check.py --agent <id> --parent-model <parent-concrete-id>`;
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" resolve-model-tier.py -- --agent <id>` and run
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" reviewer-dispatch-check.py--agent <id> --parent-model <parent-concrete-id>`;
 stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit` from the parent session).
 
 **Task model allowlist:** concrete Task spawn IDs are single-sourced from
@@ -793,7 +793,7 @@ Declare `models.tiers.mid` explicitly in mature repos; `/sw-init` doctor seeds a
 platform catalog.
 
 ```bash
-python3 scripts/dispatch-check.py --config .cursor/workflow.config.json --command sw-execute
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" dispatch-check.py--config .cursor/workflow.config.json --command sw-execute
 # inspect modelPolicyAdvisory in JSON when mid is omitted
 ```
 
@@ -991,7 +991,7 @@ through `scripts/dispatch_prompt.py`. Compression is **available but default-off
 
 **Path-reference policy :** file-backed blocks that do not need summarization emit a path reference
 instead of inlining content. **Recoverable path :** lossy compression stores orchestrator-only CCR keys;
-`python3 scripts/dispatch_prompt.py recover --key <key>` retrieves full redacted content for re-dispatch.
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" dispatch_prompt.py recover --key <key>` retrieves full redacted content for re-dispatch.
 `retrieveKey` never appears in subagent-visible prompt text .
 
 
@@ -1045,7 +1045,7 @@ local/interactive run, so a stale override can never silently misclassify a shar
 private.
 
 **Privacy acknowledgement (`privacyAck`, ):** `planning.privacyAck.recordedAt` — not `ackedAt` — is the key
-`planning_visibility.py` actually writes; run `python3 scripts/planning_visibility.py --root . record-privacy-ack`
+`planning_visibility.py` actually writes; run `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_visibility.py--root . record-privacy-ack`
 to set it. `planning-doctor.py` flags a live config with `privacyAck.required: true` and `recordedAt: null` as
 an `action-required` finding naming that exact remediation command. See `core/sw-reference/planning-privacy-notice.md`.
 
@@ -1096,7 +1096,7 @@ both are set.
 or `host.provider` is `none`. A documented notice is emitted; work is never blocked.
 
 **Network dependence (/):** issue-store mode requires API connectivity for planning operations once phase 2+
-CRUD is active. Init probes token scope via `python3 scripts/planning_store.py probe-issues-token` (fail-closed on
+CRUD is active. Init probes token scope via `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.py probe-issues-token` (fail-closed on
 missing/insufficient scope).
 
 **Deliver-chain parity matrix:** when `storeLocation.mode` is `separate-project`, pollution/currency
@@ -1144,7 +1144,7 @@ Example (Jira Cloud + separate planning project — typical for Bitbucket code r
 }
 ```
 
-Init probes (fail-closed): `python3 scripts/planning_store.py probe-jira-init` — auth, privacy, createmeta, label-write.
+Init probes (fail-closed): `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_store.py probe-jira-init` — auth, privacy, createmeta, label-write.
 
 See `core/providers/issues/jira.md` for LCD mapping, canonical hash, freeze-decoupling, budget, and lifecycle semantics.
 
@@ -1197,8 +1197,8 @@ Example (Linear + same-repo planning):
 }
 ```
 
-Init probes (fail-closed): `python3 scripts/planning_linear_client.py . probe-team` — Team scope and auth;
-`python3 scripts/planning_linear_client.py . docs-currency-gate` — operator-guide inventory before terminal merge.
+Init probes (fail-closed): `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_linear_client.py. probe-team` — Team scope and auth;
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_linear_client.py. docs-currency-gate` — operator-guide inventory before terminal merge.
 
 See `core/providers/issues/linear.md` for LCD verbs, stage-1 dogfood checklist, lock/overflow, and OAuth posture.
 
@@ -1289,7 +1289,7 @@ Fixture suite: `python3 scripts/test/run-planning-045-doc-impact-fixtures.sh` (`
 Fixture suite: `python3 scripts/test/run_visibility_fixtures.py` (registered as `visibility-fixtures` in the PR test-plan manifest).
 
 **Visibility-driven `.gitignore` :** regenerate tracking rules from the resolver via
-`python3 scripts/gitignore-generate.py --write`. The generated block is delimited by
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" gitignore-generate.py--write`. The generated block is delimited by
 `# BEGIN visibility-generated` / `# END visibility-generated` markers in `.gitignore`.
 
 Fixture suite: `python3 scripts/test/run_planning_visibility_acceptance_fixtures.py` (registered as
@@ -1329,9 +1329,9 @@ Example:
 }
 ```
 
-Inspect live ledger (counts only — no bodies/tokens): `python3 scripts/planning_request_budget.py . status`.
+Inspect live ledger (counts only — no bodies/tokens): `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_request_budget.py. status`.
 
-Fixture suite: `python3 scripts/test/run_pytest.py scripts/unit_tests/planning/test_planning_046_phase2.py -q`.
+Fixture suite: `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" test/run_pytest.py scripts/unit_tests/planning/test_planning_046_phase2.py -q`.
 
 ### Cutover-gate committed derivation
 
@@ -1351,7 +1351,7 @@ When the effective backend is `issue-store` and no tracked file-store bodies rem
 a fresh CI checkout (which never has any local override) always computes the correct default.
 
 `.cursor/hooks/state/planning-cutover-gate.json` remains a **local, gitignored override** for manual/operator
-testing (`python3 scripts/planning_cutover.py . set --discover-source issue`, for example) — `load_cutover_gate`
+testing (`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_cutover.py. set --discover-source issue`, for example) — `load_cutover_gate`
 layers it on top of the committed default when present. It is **not** a CI authority: its absence must never
 produce a wrong default, and `/sw-init` auto-configures it into `.gitignore` via `gitignore-generate --write`
 (see `core/commands/sw-init.md`) so it never accidentally lands in the git index.
@@ -1409,15 +1409,15 @@ preflight + command-tier binding, /).
 Mechanical validation:
 
 ```bash
-python3 scripts/wave.py plan validate --tier phase --phase-type ship --proposal <path|json>
-python3 scripts/wave.py plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
-python3 scripts/wave.py plan validate --tier orchestrator --orchestrator-type debug --proposal <path|json>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py plan validate --tier phase --phase-type ship --proposal <path|json>
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py plan validate --tier orchestrator --orchestrator-type debug --proposal <path|json>
 ```
 
 ### `/sw-cleanup` agent-driven confirm
 
 `/sw-cleanup` defaults to dry-run. The agent presents the `wouldRemove` set and asks for explicit confirm
-before running `python3 scripts/cleanup.py --confirm --yes` (or `SW_CLEANUP_CONFIRM=1`) on your behalf.
+before running `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" cleanup.py--confirm --yes` (or `SW_CLEANUP_CONFIRM=1`) on your behalf.
 All fail-closed protections (unmerged branches, in-flight deliver, indeterminate squash, no `rm -rf`) are
 unchanged — only the apply trigger moves from manual bash to agent-on-ack.
 
@@ -1555,7 +1555,7 @@ behavior only when the key is set to `advisory` or `blocking`.
 Assessment YAML lives at `architecture.assessment.path` (default `.cursor/architecture-assessment.yaml`).
 Each entry references a doctrine `AD-<n>` id with `verdict` ∈ `pass|fail|waived|manual`. A `waived` entry
 **requires** `waiver.{actor,reason,expires}`; expired waivers are treated as `fail`. Waivers must be
-authored by a human actor (`python3 scripts/architecture_assessment.py record-waiver …`) — autonomous
+authored by a human actor (`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" architecture_assessment.py record-waiver …`) — autonomous
 dispatch paths refuse waiver authorship (same posture as the sizing freeze override gate).
 
 Bundled `core/sw-reference/architecture-doctrine.md` is **Shipwright-self reference only**. Consumer
@@ -1605,12 +1605,12 @@ Without `--confirm`, configurator actions return `confirm-required` and write no
 ### Explicit promote and leakage
 
 Baseline → doctrine promotion requires an explicit operator command (for example
-`python3 scripts/sw-configure.py doctrine accept-promote --confirm`). Acceptance also requires a
+`python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py doctrine accept-promote --confirm`). Acceptance also requires a
 **leakage-green** verdict: consumer doctrine must not carry Shipwright-self markers as project law
 (`scripts/project_doctrine_leakage.py`). Reject and decline paths leave no durable doctrine (or clear
 it) and remain non-authoritative.
 
-Operator surface: `/sw-init` §5f and `python3 scripts/sw-configure.py doctrine …`. Route choices in
+Operator surface: `/sw-init` §5f and `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py doctrine …`. Route choices in
 the [decision tree](decision-tree.md#projectdoctrine-and-architecture-routing). Layout pointers:
 `.shipwright/layout.md`. Self vs consumer reference: `core/sw-reference/README.md`.
 
@@ -1639,8 +1639,8 @@ Wenyan variants are not supported in Shipwright — attach the external user ski
 `**Model tier:**` prose; resolve at runtime:
 
 ```bash
-python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-prd
-python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-doc --delegate sw-prd
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" resolve-model-tier.py -- --command sw-prd
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" resolve-model-tier.py -- --command sw-doc --delegate sw-prd
 ```
 
 Orchestrators (`sw-doc`, `sw-ship`, `sw-deliver`, `sw-retrospective`) route at `inherit` — always resolve the
@@ -1702,7 +1702,7 @@ Deprecated aliases `/sw-compound-ship` and `/sw-compound` route to it for one re
 | **supervised** (default) | `supervised` | Preserve retro/compound approval and merge-ack prompts |
 | hands-off pre-merge | `auto` | Run the pre-merge chain when the terminal PR is green without re-prompting; merge detection still gates INDEX → `complete` |
 
-Inspect at runtime: `python3 scripts/wave.py retrospective autonomy`. Autonomy never bypasses fail-closed
+Inspect at runtime: `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py retrospective autonomy`. Autonomy never bypasses fail-closed
 memory writes or rule-class human gates.
 
 ### Retrospective gap capture
@@ -1935,7 +1935,7 @@ surfaces are **projections** of registry lanes — not independent hand lists:
 **Regenerate workflow after manifest or registry `pr-ci` changes:**
 
 ```bash
-python3 scripts/generate-pr-test-plan-ci-workflow.py \
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" generate-pr-test-plan-ci-workflow.py\
 core/sw-reference/pr-test-plan.manifest.json \
 .github/workflows/pr-test-plan-ci.yml \
 .
@@ -2009,13 +2009,13 @@ CI regenerates in place and fails on a dirty tree — there is no update flag in
 
 ```bash
 # Regenerate locally after registry edits
-python3 scripts/capability_docs.py generate
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" capability_docs.py generate
 
 # CI / pre-commit parity check (default command)
-python3 scripts/capability_docs.py check
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" capability_docs.py check
 
 # Fail when regenerate would dirty the tree
-python3 scripts/capability_docs.py regen-check
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" capability_docs.py regen-check
 ```
 
 Do not edit generated capability markdown by hand; change the registry and re-run `generate`.
@@ -2041,8 +2041,7 @@ After editing `core/sw-reference/kernel-classification.*`, `guidelines.*`, or or
 
 ```bash
 python3 -m sw generate --all
-python3 scripts/test/run_emitter_fixtures.py
-```
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" test/run_emitter_fixtures.py```
 
 | Suite | Scope |
 | --- | --- |
@@ -2088,7 +2087,7 @@ When `/sw-tasks` freeze scores a list as `large`, a blocking gate applies unless
 is recorded:
 
 ```bash
-python3 scripts/phase_sizing.py override --task-list <path> --actor <who> --reason "<why>"
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" phase_sizing.py override --task-list <path> --actor <who> --reason "<why>"
 ```
 
 Overrides land in `.cursor/sw-sizing-overrides/` with required `actor` + `reason` attribution.
@@ -2102,7 +2101,7 @@ Defaults are **calibrated from the frozen task-list corpus** (SC6) — not autho
 Re-run calibration (read-only):
 
 ```bash
-PYTHONPATH=scripts python3 scripts/phase_sizing_corpus.py --root . audit
+PYTHONPATH=scripts python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" phase_sizing_corpus.py--root . audit
 ```
 
 Artifacts land under `scripts/test/fixtures/phase-sizing/` (`baseline-distribution.json`,
@@ -2142,7 +2141,7 @@ Offline calibration constants — advisory only; no workflow config keys gate li
 | `ELO_GATING_ENABLED` (`false`) | `graph.reviewer_metrics.elo` | Pairwise ratings never authorize/deny reviewers or alter panel composition |
 | `RANKING_GATING_ENABLED` (`false`) | `graph.reviewer_metrics.ranking` | Rankings never bind reviewer selection |
 
-Operator CLI: `python3 scripts/reviewer-metrics.py`. Storage authority: `.cursor/sw-learning-store/` via
+Operator CLI: `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" reviewer-metrics.py`. Storage authority: `.cursor/sw-learning-store/` via
 `ReviewerMetricsStoreAdapter` — see `.shipwright/layout.md` and `docs/guides/workflows.md`.
 
 ### Bounded selection (`review.selection`)
@@ -2188,7 +2187,7 @@ Downstream-cost diagnostic metrics. Default **disabled** (`loopHealth.enabled: f
 | `loopHealth.enabled` | `false` | Persist aggregated metrics to `${GIT_DIR}/shipwright-loop-health.json` |
 | `loopHealth.staleInboxDays` | `14` | Flag meta-inbox drafts older than this in living-status |
 
-CLI: `python3 scripts/loop_health.py` (`--summary`, `--stale-alerts`).
+CLI: `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" loop_health.py` (`--summary`, `--stale-alerts`).
 
 ## Self-improving loop — auto-propose driver ( /)
 
@@ -2249,7 +2248,7 @@ Greenfield `/sw-init` seeds `heuristic`. Tighten to `bind-only` when you need fa
 ### Release-please effective-config auto-regen
 
 On `release-please--branches--main` heads, the **Release dist regen** workflow
-(`.github/workflows/release-dist-regen.yml`) runs `python3 scripts/effective_config_gen.py all --write`
+(`.github/workflows/release-dist-regen.yml`) runs `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.py all --write`
 alongside `python3 -m sw generate --all` and commits refreshed `dist/` plus projection outputs
 (`docs/guides/configuration.md`, `core/sw-reference/generated/effective-config.json`,
 `core/sw-reference/generated/upgrade-manifest-*.json`) in a single chore commit when anything drifts.
@@ -2257,7 +2256,7 @@ alongside `python3 -m sw generate --all` and commits refreshed `dist/` plus proj
 Local remediation when automation has not run (or you are off the release-please head) remains:
 
 ```bash
-python3 scripts/effective_config_gen.py all --write
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.py all --write
 ```
 
 <!-- effective-config:begin generated (scripts/effective_config_gen.py) -->
@@ -2266,8 +2265,8 @@ python3 scripts/effective_config_gen.py all --write
 Machine-readable defaults for workflow settings. Regenerate with:
 
 ```bash
-python3 scripts/effective_config_gen.py generate --write
-python3 scripts/effective_config_gen.py project-docs --write
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.py generate --write
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.py project-docs --write
 ```
 
 Shipwright `2.10.0` · schema `config.schema.json`

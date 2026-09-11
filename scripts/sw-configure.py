@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -35,17 +36,9 @@ from host_lib import default_base_branch
 from init_ci_stub import STUB_WORKFLOW_REL, apply_ci_stub, plan_ci_stub
 from init_profile_report import (
     classify_profile,
-    derive_interview_priorities,
     greenfield_curated_patch,
-    interview_reuse_bundle,
-    load_config_schema,
     load_workflow_config,
     render_classification_markdown,
-)
-from init_scripts_facade import (
-    PRIORITY_ZERO_SURFACES,
-    record_priority_zero_surface,
-    validate_priority_zero_coverage,
 )
 import project_baseline as _project_baseline
 import project_doctrine as _project_doctrine
@@ -834,6 +827,84 @@ def cmd_doctrine(root: Path, subcmd: str, rest: list[str]) -> int:
 # Alias kept for callers / docs that say project-doctrine.
 cmd_project_doctrine = cmd_doctrine
 
+# Consumer portability scan (PRD 338 R26) — install-root docs must not cite repo-local harness paths.
+_CONSUMER_PORTABILITY_SCAN_REL = (
+    "core/documentation",
+    "README.md",
+)
+_CONSUMER_PORTABILITY_SCAN_SKIP = frozenset(
+    {
+        "core/documentation/testing.md",
+        "core/documentation/style-guide.md",
+    }
+)
+_FORBIDDEN_DEV_HARNESS_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"scripts/sw_bootstrap\.py"), "repo-local bootstrap path"),
+    (
+        re.compile(r"python3\s+scripts/(?!install\.py|test/)"),
+        "repo-local scripts tree invocation",
+    ),
+)
+_FORBIDDEN_DEV_SCRIPT_NAMES = frozenset(
+    {
+        "core_content_sync.py",
+        "snapshot-tree.py",
+        "model-routing-check.py",
+        "run-pr-test-plan-manifest.py",
+    }
+)
+
+
+def scan_dev_harness_refs(root: Path) -> dict[str, Any]:
+    """Scan consumer-facing artifacts for forbidden development-harness references (R26)."""
+    root = root.resolve()
+    findings: list[dict[str, str]] = []
+    for rel in _CONSUMER_PORTABILITY_SCAN_REL:
+        target = root / rel
+        if target.is_file():
+            candidates = [target]
+        elif target.is_dir():
+            candidates = sorted(p for p in target.rglob("*") if p.is_file())
+        else:
+            continue
+        for path in candidates:
+            rel_posix = path.relative_to(root).as_posix()
+            if rel_posix in _CONSUMER_PORTABILITY_SCAN_SKIP:
+                continue
+            if path.suffix not in {".md", ".json"}:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            for pattern, reason in _FORBIDDEN_DEV_HARNESS_PATTERNS:
+                for match in pattern.finditer(text):
+                    line = text.count("\n", 0, match.start()) + 1
+                    findings.append(
+                        {
+                            "path": rel_posix,
+                            "line": str(line),
+                            "reason": reason,
+                            "match": match.group(0),
+                        }
+                    )
+            for script in _FORBIDDEN_DEV_SCRIPT_NAMES:
+                if script in text:
+                    findings.append(
+                        {
+                            "path": rel_posix,
+                            "line": "0",
+                            "reason": "dev-only script reference",
+                            "match": script,
+                        }
+                    )
+    return {
+        "verdict": "pass" if not findings else "fail",
+        "findings": findings,
+        "scannedRoots": list(_CONSUMER_PORTABILITY_SCAN_REL),
+        "skipped": sorted(_CONSUMER_PORTABILITY_SCAN_SKIP),
+    }
+
 
 def cmd_portability_check(root: Path, config: str) -> int:
     from shipwright_paths import workflow_config_write_path
@@ -843,6 +914,8 @@ def cmd_portability_check(root: Path, config: str) -> int:
         [sys.executable, str(SCRIPT_DIR / "verify-unconfigured.py"), "--config", config_path or "/nonexistent", "--json"],
         cwd=str(root),
         check=False,
+        capture_output=True,
+        text=True,
     )
     detect_raw = subprocess.run(
         [sys.executable, str(SCRIPT_DIR / "detect-project-type.py"), "--root", str(root), "--propose"],
@@ -873,8 +946,22 @@ def cmd_portability_check(root: Path, config: str) -> int:
         lines.append(drift.get("notice", "config stale"))
     if gh == "missing":
         lines.append("warning: host token missing — set host.tokenEnv for CI-readiness gate")
-    print(json.dumps({"summary": lines, "gh": gh, "drift": drift}, indent=2))
-    return 0
+    dev_harness = scan_dev_harness_refs(root)
+    if dev_harness.get("findings"):
+        for item in dev_harness["findings"]:
+            lines.append(
+                "dev-harness ref: "
+                f"{item['path']}:{item['line']} — {item['reason']} ({item['match']})"
+            )
+    payload = {
+        "summary": lines,
+        "gh": gh,
+        "drift": drift,
+        "devHarnessScan": dev_harness,
+        "verdict": "pass" if dev_harness.get("verdict") == "pass" else "fail",
+    }
+    print(json.dumps(payload, indent=2))
+    return 0 if payload["verdict"] == "pass" else 1
 
 
 
@@ -968,115 +1055,12 @@ def _build_packaged_draft(root: Path) -> dict[str, Any]:
     return _strip_draft_side_channel(draft)
 
 
-# Documented packaged-init steps — single source for getting-started + R48 tests.
-PACKAGED_INIT_STEPS: tuple[str, ...] = (
-    "Install the packaged console entry point (`pip install shipwright`).",
-    "In the project repository, run `shipwright init --integration <host>`.",
-    "Reload the editor; run `/sw-init` only if priority-zero surfaces still need confirm.",
-    "Start a small loop (`/sw-doc` or `/sw-deliver run <frozen-task-list>`).",
-)
-
-
-def packaged_init_steps() -> list[str]:
-    """Return the initialization steps the packaged path seeds and documents (R48)."""
-    return list(PACKAGED_INIT_STEPS)
-
-
-def _json_safe(value: Any) -> Any:
-    if isinstance(value, dict):
-        return {str(k): _json_safe(v) for k, v in value.items()}
-    if isinstance(value, list):
-        return [_json_safe(v) for v in value]
-    if isinstance(value, (str, int, float, bool)) or value is None:
-        return value
-    return str(value)
-
-
-def _collect_deltas(
-    existing: dict[str, Any],
-    desired: dict[str, Any],
-    *,
-    prefix: str = "",
-) -> list[dict[str, Any]]:
-    """Return leaf-level deltas of ``desired`` relative to ``existing``."""
-    deltas: list[dict[str, Any]] = []
-    keys = sorted(set(existing) | set(desired), key=str)
-    for key in keys:
-        path = f"{prefix}.{key}" if prefix else str(key)
-        left = existing.get(key) if isinstance(existing, dict) else None
-        right = desired.get(key) if isinstance(desired, dict) else None
-        if isinstance(left, dict) and isinstance(right, dict):
-            deltas.extend(_collect_deltas(left, right, prefix=path))
-            continue
-        if left == right:
-            continue
-        if key not in desired:
-            continue
-        deltas.append(
-            {
-                "path": path,
-                "from": _json_safe(left),
-                "to": _json_safe(right),
-            }
-        )
-    return deltas
-
-
-def propose_configure_deltas(
-    root: Path,
-    *,
-    existing: dict[str, Any] | None = None,
-    desired: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    """Propose drift-only deltas against the recorded ``configuredWith`` stamp (R28).
-
-    Never writes. A second run on an already-configured repository reports only the
-    paths that differ from the desired packaged draft / current stamp.
-    """
-    root = root.resolve()
-    current = existing if existing is not None else load_workflow_config(root)
-    if not isinstance(current, dict):
-        current = {}
-    target = desired if desired is not None else _build_packaged_draft(root)
-    stamp = current.get("configuredWith") if isinstance(current.get("configuredWith"), dict) else {}
-    proposed_stamp = (
-        target.get("configuredWith") if isinstance(target.get("configuredWith"), dict) else {}
-    )
-    already_configured = bool(
-        str(stamp.get("shipwrightVersion") or "").strip()
-        or str(stamp.get("schemaVersion") or "").strip()
-    )
-    deltas = _collect_deltas(current, target) if already_configured else []
-    stamp_drift = (
-        str(stamp.get("shipwrightVersion") or "") != str(proposed_stamp.get("shipwrightVersion") or "")
-        or str(stamp.get("schemaVersion") or "") != str(proposed_stamp.get("schemaVersion") or "")
-    )
-    return {
-        "verdict": "pass",
-        "action": "propose-deltas",
-        "alreadyConfigured": already_configured,
-        "configuredWith": stamp,
-        "proposedConfiguredWith": proposed_stamp,
-        "stampDrift": bool(already_configured and stamp_drift),
-        "deltas": deltas,
-        "deltaCount": len(deltas),
-        "wrote": False,
-        "written": [],
-        "initSteps": packaged_init_steps(),
-    }
-
-
 def apply_packaged_configure(
     root: Path,
     *,
     accept_ci_stub: bool = True,
-    confirm: bool = False,
 ) -> dict[str, Any]:
-    """Write repo-scope configuration for packaged init (existing spine only).
-
-    R28: when ``configuredWith`` is already present, propose deltas only and apply
-    nothing unless ``confirm`` is true. Greenfield (no stamp) still writes on first run.
-    """
+    """Write repo-scope configuration for packaged init (existing spine only)."""
     from shipwright_paths import workflow_config_write_path
 
     root = root.resolve()
@@ -1087,59 +1071,14 @@ def apply_packaged_configure(
             "verdict": "fail",
             "error": "draft-fails-schema-validation",
             "validationErrors": validation_errors[:8],
-            "wrote": False,
-            "written": [],
         }
 
-    existing = load_workflow_config(root)
-    proposal = propose_configure_deltas(root, existing=existing, desired=draft)
     config_path = workflow_config_write_path(root)
-
-    if proposal.get("alreadyConfigured"):
-        if not confirm:
-            return {
-                "verdict": "confirm-required",
-                "action": "propose-deltas",
-                "error": "consent-required-before-apply",
-                "configPath": str(config_path),
-                "configuredWith": proposal.get("configuredWith"),
-                "proposedConfiguredWith": proposal.get("proposedConfiguredWith"),
-                "stampDrift": proposal.get("stampDrift"),
-                "deltas": proposal.get("deltas") or [],
-                "deltaCount": proposal.get("deltaCount") or 0,
-                "wrote": False,
-                "written": [],
-                "initSteps": packaged_init_steps(),
-            }
-        # Consent granted: apply only the drifted keys (deep-merge desired onto existing).
-        merged = _deep_merge(dict(existing), draft)
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-        config_path.write_text(json.dumps(merged, indent=2) + "\n", encoding="utf-8")
-        written = [config_path.relative_to(root).as_posix()]
-        ci_payload: dict[str, Any] | None = None
-        if accept_ci_stub:
-            ci_payload = apply_ci_stub(root, confirm=True, wire_verify="off")
-            if ci_payload.get("written"):
-                written.append(STUB_WORKFLOW_REL.as_posix())
-        return {
-            "verdict": "pass",
-            "action": "apply-deltas",
-            "configPath": str(config_path),
-            "deltas": proposal.get("deltas") or [],
-            "deltaCount": proposal.get("deltaCount") or 0,
-            "stampDrift": proposal.get("stampDrift"),
-            "wrote": True,
-            "written": written,
-            "ciStub": ci_payload,
-            "initSteps": packaged_init_steps(),
-        }
-
-    # Greenfield — first configure writes the packaged draft.
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(json.dumps(draft, indent=2) + "\n", encoding="utf-8")
     written = [config_path.relative_to(root).as_posix()]
 
-    ci_payload = None
+    ci_payload: dict[str, Any] | None = None
     if accept_ci_stub:
         ci_payload = apply_ci_stub(root, confirm=True, wire_verify="off")
         if ci_payload.get("written"):
@@ -1147,12 +1086,9 @@ def apply_packaged_configure(
 
     return {
         "verdict": "pass",
-        "action": "initial-configure",
         "configPath": str(config_path),
-        "wrote": True,
         "written": written,
         "ciStub": ci_payload,
-        "initSteps": packaged_init_steps(),
     }
 
 
@@ -1198,185 +1134,6 @@ def cmd_dry_run(
     return 0
 
 
-def _detect_priority_zero_surfaces(root: Path) -> dict[str, dict[str, Any]]:
-    """Probe the five priority-zero surfaces without writing (R24)."""
-    config = load_workflow_config(root)
-    detected: dict[str, dict[str, Any]] = {}
-
-    verify = config.get("verify")
-    if isinstance(verify, dict) and any(str(v).strip() for v in verify.values() if isinstance(v, str)):
-        detected["verify"] = {"value": verify, "source": "config"}
-    else:
-        try:
-            probe = _detect_project_type(root)
-        except (OSError, subprocess.CalledProcessError, json.JSONDecodeError):
-            probe = {}
-        proposals = {
-            key: meta.get("command")
-            for key, meta in (probe.get("proposals") or {}).items()
-            if isinstance(meta, dict) and meta.get("safe") and meta.get("command")
-        }
-        if proposals:
-            detected["verify"] = {"value": proposals, "source": "project-type-detection"}
-
-    default_branch = default_base_branch(root)
-    ci_scan = scan_ci_workflows(root, default_branch)
-    if ci_scan.get("presence") == CI_PRESENCE_SATISFIED:
-        detected["ci-stub"] = {"value": ci_scan, "source": "ci-presence"}
-    elif (root / STUB_WORKFLOW_REL).is_file():
-        detected["ci-stub"] = {"value": {"path": STUB_WORKFLOW_REL.as_posix()}, "source": "ci-stub-file"}
-
-    host = config.get("host") if isinstance(config.get("host"), dict) else {}
-    credential_ref = str(host.get("credentialRef") or "").strip()
-    project_id = str(config.get("projectId") or "").strip()
-    if credential_ref and project_id:
-        detected["credentials"] = {
-            "value": {"credentialRef": credential_ref, "projectId": project_id},
-            "source": "config",
-        }
-
-    models = config.get("models") if isinstance(config.get("models"), dict) else {}
-    tiers = models.get("tiers") if isinstance(models.get("tiers"), dict) else {}
-    if tiers:
-        detected["models.tiers"] = {"value": tiers, "source": "config"}
-
-    configured_branch = str(config.get("defaultBaseBranch") or "").strip()
-    if configured_branch:
-        detected["defaultBaseBranch"] = {"value": configured_branch, "source": "config"}
-    elif default_branch:
-        detected["defaultBaseBranch"] = {"value": default_branch, "source": "host-default"}
-
-    return detected
-
-
-def run_priority_zero_interview(
-    root: Path,
-    *,
-    accept_defaults: bool = False,
-    decline_surfaces: frozenset[str] | None = None,
-    plan_confirmed: bool = False,
-    apply_confirmed: bool = False,
-    progressive_disclosure: bool = False,
-) -> dict[str, Any]:
-    """Resolve all five priority-zero surfaces in one run (R24–R27).
-
-    Every surface ends as detected, confirmed, or declined-with-consequence —
-    never silently unset.
-    """
-    decline_surfaces = decline_surfaces or frozenset()
-    unknown = sorted(decline_surfaces - set(PRIORITY_ZERO_SURFACES))
-    if unknown:
-        return {
-            "verdict": "fail",
-            "error": "unknown-decline-surface",
-            "unknownSurfaces": unknown,
-        }
-
-    detected_map = _detect_priority_zero_surfaces(root)
-    records: list[dict[str, Any]] = []
-    for surface in PRIORITY_ZERO_SURFACES:
-        if surface in decline_surfaces:
-            records.append(record_priority_zero_surface(surface, "declined", source="operator-decline"))
-            continue
-        hit = detected_map.get(surface)
-        if hit is not None:
-            records.append(
-                record_priority_zero_surface(
-                    surface,
-                    "detected",
-                    value=hit.get("value"),
-                    source=str(hit.get("source") or "detected"),
-                )
-            )
-            continue
-        if accept_defaults:
-            records.append(
-                record_priority_zero_surface(
-                    surface,
-                    "confirmed",
-                    value={"acceptedDefault": True},
-                    source="accept-defaults",
-                )
-            )
-            continue
-        # Non-interactive completeness: record an explicit decline rather than leave unset.
-        records.append(
-            record_priority_zero_surface(
-                surface,
-                "declined",
-                source="unset-without-confirmation",
-            )
-        )
-
-    coverage = validate_priority_zero_coverage(records)
-    reuse = interview_reuse_bundle(
-        root,
-        plan_confirmed=plan_confirmed,
-        apply_confirmed=apply_confirmed,
-    )
-    schema = load_config_schema(root)
-    priorities = derive_interview_priorities(schema)
-    findings = build_findings_report(root)
-
-    payload: dict[str, Any] = {
-        "verdict": "pass" if coverage.get("verdict") == "pass" else "fail",
-        "action": "interview",
-        "priorityZero": coverage.get("surfaces") or records,
-        "coverage": {
-            "recorded": coverage.get("recorded"),
-            "expected": coverage.get("expected"),
-            "verdict": coverage.get("verdict"),
-            "errors": coverage.get("errors") or [],
-        },
-        "priorityOne": {
-            "keys": priorities.get("priorityOne") or [],
-            "inline": True,
-        },
-        "priorityTwo": {
-            "keys": priorities.get("priorityTwo") or [],
-            "progressiveDisclosure": True,
-            "included": bool(progressive_disclosure),
-        },
-        "defaultPriorityForNewKeys": priorities.get("defaultPriority"),
-        "findings": findings,
-        "infrastructure": reuse,
-        "secondInterviewEngine": False,
-    }
-    if coverage.get("verdict") != "pass":
-        payload["error"] = "priority-zero-coverage-incomplete"
-    return payload
-
-
-def cmd_interview(root: Path, rest: list[str]) -> int:
-    """CLI: resolve priority-zero interview surfaces in one invocation."""
-    accept_defaults = "--accept-defaults" in rest
-    plan_confirmed = "--plan-confirm" in rest or "--confirm-plan" in rest
-    apply_confirmed = "--apply-confirm" in rest or "--confirm-apply" in rest or "--confirm" in rest
-    progressive = "--include-priority-two" in rest or "--progressive-disclosure" in rest
-    decline: set[str] = set()
-    i = 0
-    while i < len(rest):
-        token = rest[i]
-        if token == "--decline" and i + 1 < len(rest):
-            decline.add(rest[i + 1])
-            i += 2
-            continue
-        if token.startswith("--decline="):
-            decline.add(token.split("=", 1)[1])
-            i += 1
-            continue
-        i += 1
-    payload = run_priority_zero_interview(
-        root,
-        accept_defaults=accept_defaults,
-        decline_surfaces=frozenset(decline),
-        plan_confirmed=plan_confirmed,
-        apply_confirmed=apply_confirmed,
-        progressive_disclosure=progressive,
-    )
-    print(json.dumps(payload, indent=2))
-    return 0 if payload.get("verdict") == "pass" else 1
-
 
 def main(argv: list[str] | None = None) -> int:
     args = list(argv if argv is not None else sys.argv[1:])
@@ -1384,7 +1141,7 @@ def main(argv: list[str] | None = None) -> int:
         print(
             "usage: sw-configure.py detect|schema-version|shipwright-version|"
             "drift-check|portability-check|findings|write-draft|dry-run|"
-            "interview|credential|ci-stub|doctrine",
+            "credential|ci-stub|doctrine",
             file=sys.stderr,
         )
         return 2 if args else 0
@@ -1477,8 +1234,6 @@ def main(argv: list[str] | None = None) -> int:
             accept_ci_stub=accept_ci_stub,
             source_root=Path(source_root) if source_root else None,
         )
-    if cmd == "interview":
-        return cmd_interview(root, rest)
     if cmd == "ci-stub":
         subcmd, sub_rest = _credential_argv(rest)
         return cmd_ci_stub(root, subcmd, sub_rest)

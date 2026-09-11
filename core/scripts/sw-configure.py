@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -826,6 +827,84 @@ def cmd_doctrine(root: Path, subcmd: str, rest: list[str]) -> int:
 # Alias kept for callers / docs that say project-doctrine.
 cmd_project_doctrine = cmd_doctrine
 
+# Consumer portability scan (PRD 338 R26) — install-root docs must not cite repo-local harness paths.
+_CONSUMER_PORTABILITY_SCAN_REL = (
+    "core/documentation",
+    "README.md",
+)
+_CONSUMER_PORTABILITY_SCAN_SKIP = frozenset(
+    {
+        "core/documentation/testing.md",
+        "core/documentation/style-guide.md",
+    }
+)
+_FORBIDDEN_DEV_HARNESS_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"scripts/sw_bootstrap\.py"), "repo-local bootstrap path"),
+    (
+        re.compile(r"python3\s+scripts/(?!install\.py|test/)"),
+        "repo-local scripts tree invocation",
+    ),
+)
+_FORBIDDEN_DEV_SCRIPT_NAMES = frozenset(
+    {
+        "core_content_sync.py",
+        "snapshot-tree.py",
+        "model-routing-check.py",
+        "run-pr-test-plan-manifest.py",
+    }
+)
+
+
+def scan_dev_harness_refs(root: Path) -> dict[str, Any]:
+    """Scan consumer-facing artifacts for forbidden development-harness references (R26)."""
+    root = root.resolve()
+    findings: list[dict[str, str]] = []
+    for rel in _CONSUMER_PORTABILITY_SCAN_REL:
+        target = root / rel
+        if target.is_file():
+            candidates = [target]
+        elif target.is_dir():
+            candidates = sorted(p for p in target.rglob("*") if p.is_file())
+        else:
+            continue
+        for path in candidates:
+            rel_posix = path.relative_to(root).as_posix()
+            if rel_posix in _CONSUMER_PORTABILITY_SCAN_SKIP:
+                continue
+            if path.suffix not in {".md", ".json"}:
+                continue
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            for pattern, reason in _FORBIDDEN_DEV_HARNESS_PATTERNS:
+                for match in pattern.finditer(text):
+                    line = text.count("\n", 0, match.start()) + 1
+                    findings.append(
+                        {
+                            "path": rel_posix,
+                            "line": str(line),
+                            "reason": reason,
+                            "match": match.group(0),
+                        }
+                    )
+            for script in _FORBIDDEN_DEV_SCRIPT_NAMES:
+                if script in text:
+                    findings.append(
+                        {
+                            "path": rel_posix,
+                            "line": "0",
+                            "reason": "dev-only script reference",
+                            "match": script,
+                        }
+                    )
+    return {
+        "verdict": "pass" if not findings else "fail",
+        "findings": findings,
+        "scannedRoots": list(_CONSUMER_PORTABILITY_SCAN_REL),
+        "skipped": sorted(_CONSUMER_PORTABILITY_SCAN_SKIP),
+    }
+
 
 def cmd_portability_check(root: Path, config: str) -> int:
     from shipwright_paths import workflow_config_write_path
@@ -835,6 +914,8 @@ def cmd_portability_check(root: Path, config: str) -> int:
         [sys.executable, str(SCRIPT_DIR / "verify-unconfigured.py"), "--config", config_path or "/nonexistent", "--json"],
         cwd=str(root),
         check=False,
+        capture_output=True,
+        text=True,
     )
     detect_raw = subprocess.run(
         [sys.executable, str(SCRIPT_DIR / "detect-project-type.py"), "--root", str(root), "--propose"],
@@ -865,8 +946,22 @@ def cmd_portability_check(root: Path, config: str) -> int:
         lines.append(drift.get("notice", "config stale"))
     if gh == "missing":
         lines.append("warning: host token missing — set host.tokenEnv for CI-readiness gate")
-    print(json.dumps({"summary": lines, "gh": gh, "drift": drift}, indent=2))
-    return 0
+    dev_harness = scan_dev_harness_refs(root)
+    if dev_harness.get("findings"):
+        for item in dev_harness["findings"]:
+            lines.append(
+                "dev-harness ref: "
+                f"{item['path']}:{item['line']} — {item['reason']} ({item['match']})"
+            )
+    payload = {
+        "summary": lines,
+        "gh": gh,
+        "drift": drift,
+        "devHarnessScan": dev_harness,
+        "verdict": "pass" if dev_harness.get("verdict") == "pass" else "fail",
+    }
+    print(json.dumps(payload, indent=2))
+    return 0 if payload["verdict"] == "pass" else 1
 
 
 
