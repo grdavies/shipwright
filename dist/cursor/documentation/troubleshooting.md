@@ -26,7 +26,7 @@ operator-facing `resumeCommand` on the halt payload (also echoed in deliver/livi
 2. Typical form:
 
    ```bash
-   python3 scripts/wave.py living-docs reconcile --commit
+   wave living-docs reconcile --commit
    ```
 
    When projection was scoped to a non-primary worktree, the command includes
