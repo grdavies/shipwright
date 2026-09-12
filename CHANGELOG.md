@@ -1220,6 +1220,7 @@
 * merge phase release-assets-medium into feat/shipwright-distribution-onboarding (b9218c2) <!-- sw-deliver:release-assets-medium -->
 * merge phase adopter-contributor-paths-small into feat/shipwright-distribution-onboarding (7bb2a26) <!-- sw-deliver:adopter-contributor-paths-small -->
 * merge phase accept-amendments-on-frozen-open-parents-small into feat/planning-store-correctness-provider-expansion (2f35e2d) <!-- sw-deliver:accept-amendments-on-frozen-open-parents-small -->
+* merge phase refine-email-secret-detection-small into feat/planning-store-correctness-provider-expansion (59e15ec) <!-- sw-deliver:refine-email-secret-detection-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
