@@ -1265,6 +1265,7 @@
 * merge phase close-the-planning-store-bundle-small into feat/planning-store-correctness-provider-expansion (406d446) <!-- sw-deliver:close-the-planning-store-bundle-small -->
 * merge phase postmerge-verify-argv into feat/deliver-pipeline-ops (8d8c206) <!-- sw-deliver:postmerge-verify-argv -->
 * merge phase finalize-hash-recovery into feat/deliver-pipeline-ops (858ea90) <!-- sw-deliver:finalize-hash-recovery -->
+* merge phase user-guide-provenance into feat/deliver-pipeline-ops (c800aca) <!-- sw-deliver:user-guide-provenance -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
