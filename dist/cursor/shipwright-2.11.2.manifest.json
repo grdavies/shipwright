@@ -799,6 +799,7 @@
     "wave_errors.py",
     "wave_failure.py",
     "wave_finalize.py",
+    "wave_finalize_completion.py",
     "wave_json_io.py",
     "wave_lifecycle.py",
     "wave_living_doc_lock.py",
@@ -835,6 +836,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 832,
+  "moduleCount": 833,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

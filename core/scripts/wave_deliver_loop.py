@@ -205,17 +205,9 @@ def has_flag(args: list[str], flag: str) -> bool:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                return data if isinstance(data, dict) else {}
-            except json.JSONDecodeError:
-                return {}
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def remediation_max(root: Path) -> int:
     deliver = load_workflow_config(root).get("deliver") or {}
     remediation = deliver.get("remediation") or {}
@@ -533,20 +525,30 @@ def rebind_orch_execution_identity(
 
 
 def _dual_drive_blocks_adopt(
-    state: dict[str, Any], loop_args: list[str] | None, *, fresh_seconds: int = 120
+    state: dict[str, Any], loop_args: list[str] | None, *, fresh_seconds: int | None = None
 ) -> bool:
-    """True when a fresh driver heartbeat means adopt would mask dual-drive (R7)."""
+    """True when a fresh driver heartbeat means adopt would mask dual-drive (R7).
+
+    Uses the PRD 348 R10 wall-clock timeout (``SW_DUAL_DRIVE_HEARTBEAT_TIMEOUT_SECONDS``,
+    default 120s) so a heartbeat that has not advanced beyond the timeout is treated as
+    stale and does not block finalize-completion / adopt recovery.
+    """
     if loop_args is not None and (
         has_flag(loop_args, "--self-wake") or has_flag(loop_args, "--dry-run")
     ):
         return False
     if state.get("verdict") != "running" or not state.get("phases"):
         return False
-    hb = state.get("driverHeartbeatAt")
-    if not isinstance(hb, str):
+    from wave_finalize_completion import (
+        DUAL_DRIVE_HEARTBEAT_TIMEOUT_SECONDS,
+        dual_drive_heartbeat_is_stale,
+    )
+
+    timeout = DUAL_DRIVE_HEARTBEAT_TIMEOUT_SECONDS if fresh_seconds is None else int(fresh_seconds)
+    # Stale (missing / past wall-clock timeout) heartbeats do not block (R10).
+    if dual_drive_heartbeat_is_stale(state, timeout_seconds=timeout):
         return False
-    age = age_seconds(hb)
-    return age is not None and age < fresh_seconds
+    return True
 
 
 def try_adopt_recorded_orchestrator_worktree(
@@ -2465,6 +2467,84 @@ def run_ship_loop_drive(
     return proc.returncode, data
 
 
+def run_ship_loop_consume_outcome(
+    worktree: Path,
+    phase_slug: str,
+    env: dict[str, str],
+) -> tuple[int, dict[str, Any]]:
+    try:
+        ship_loop_script = resolve_script(worktree, "ship_loop.py")
+    except ScriptsResolveError as exc:
+        return 20, _ship_loop_resolve_blocked(exc)
+    cmd = [
+        sys.executable,
+        str(ship_loop_script),
+        str(worktree),
+        "consume-outcome",
+        "--phase",
+        phase_slug,
+    ]
+    child_env = build_ship_dispatch_child_env(env)
+    proc = subprocess.run(
+        cmd,
+        cwd=str(worktree),
+        env=child_env,
+        capture_output=True,
+        text=True,
+    )
+    raw = (proc.stdout or "").strip()
+    if not raw:
+        return proc.returncode or 2, {
+            "verdict": "fail",
+            "error": "ship-loop-consume:empty-output",
+            "stderr": (proc.stderr or "")[-500:],
+        }
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return 2, {
+            "verdict": "fail",
+            "error": "ship-loop-consume:invalid-json",
+            "stdout": raw[-500:],
+            "stderr": (proc.stderr or "")[-500:],
+        }
+    if proc.returncode != 0 and data.get("verdict") not in ("pass",):
+        data.setdefault("verdict", "fail")
+    return proc.returncode, data
+
+
+def ship_loop_await_for_phase(
+    state: dict[str, Any], phase_id: str
+) -> dict[str, Any] | None:
+    pending = state.get("shipLoopAwait")
+    if not isinstance(pending, dict):
+        return None
+    if str(pending.get("phaseId") or "") != str(phase_id):
+        return None
+    return pending
+
+
+def clear_ship_loop_await(state: dict[str, Any], phase_id: str) -> None:
+    pending = state.get("shipLoopAwait")
+    if isinstance(pending, dict) and str(pending.get("phaseId") or "") == str(phase_id):
+        state.pop("shipLoopAwait", None)
+
+
+def persist_ship_loop_await(
+    state: dict[str, Any],
+    phase_id: str,
+    slug: str,
+    drive: dict[str, Any],
+) -> None:
+    state["shipLoopAwait"] = {
+        "phaseId": phase_id,
+        "phaseSlug": slug,
+        "step": drive.get("step"),
+        "contract": drive.get("contract"),
+        "updatedAt": utc_now(),
+    }
+
+
 def _apply_phase_provision_to_state(
     root: Path,
     state: dict[str, Any],
@@ -2548,36 +2628,72 @@ def execute_dispatch_ship(
     except ScriptsResolveError as exc:
         fail_payload(_ship_loop_resolve_blocked(exc), "ship-loop blocked", 20, phaseId=pid)
     env = ship_loop_env_for_phase(state, pid, slug, scripts_root=scripts_root)
-    ec, drive = run_ship_loop_drive(wt, slug, env)
-    out: dict[str, Any] = {
-        "executed": "dispatch-ship",
-        "phaseId": pid,
-        "phaseSlug": slug,
-        "shipLoop": drive,
-    }
-    if drive.get("awaitAgent") or (
-        isinstance(drive.get("note"), str)
-        and "deferred to agent ship chain" in drive["note"]
-    ):
-        out["awaitAgent"] = True
-        out["shipStep"] = drive.get("step")
-        out["shipContract"] = drive.get("contract")
-        state["shipLoopAwait"] = {
-            "phaseId": pid,
-            "phaseSlug": slug,
-            "step": drive.get("step"),
-            "contract": drive.get("contract"),
-        }
-        save_state(root, state)
-        return out
-    if drive.get("complete"):
-        out["shipComplete"] = True
-        return out
-    if drive.get("verdict") == "blocked":
-        fail_payload(drive, "ship-loop blocked", 20)
-    if ec != 0 or drive.get("verdict") == "fail":
-        fail_payload(drive, "ship-loop drive failed", ec or 20)
-    return out
+    max_rounds = int(os.environ.get("SW_INLINE_SHIP_MAX_ROUNDS", "32"))
+    drive_history: list[dict[str, Any]] = []
+    last_drive: dict[str, Any] = {}
+    ec = 0
+    for _round in range(max(1, max_rounds)):
+        if ship_loop_await_for_phase(state, pid) is not None:
+            _consume_ec, consumed = run_ship_loop_consume_outcome(wt, slug, env)
+            drive_history.append({"action": "consume-outcome", **consumed})
+            if consumed.get("verdict") == "fail":
+                pending = ship_loop_await_for_phase(state, pid) or {}
+                save_state(root, state)
+                return {
+                    "executed": "dispatch-ship",
+                    "phaseId": pid,
+                    "phaseSlug": slug,
+                    "awaitAgent": True,
+                    "shipStep": pending.get("step"),
+                    "shipContract": pending.get("contract"),
+                    "shipLoop": consumed,
+                    "shipLoopHistory": drive_history,
+                    "note": "inline ship awaiting agent outcome",
+                }
+            clear_ship_loop_await(state, pid)
+        ec, last_drive = run_ship_loop_drive(wt, slug, env)
+        drive_history.append(last_drive)
+        if last_drive.get("awaitAgent") or (
+            isinstance(last_drive.get("note"), str)
+            and "deferred to agent ship chain" in last_drive["note"]
+        ):
+            persist_ship_loop_await(state, pid, slug, last_drive)
+            save_state(root, state)
+            return {
+                "executed": "dispatch-ship",
+                "phaseId": pid,
+                "phaseSlug": slug,
+                "awaitAgent": True,
+                "shipStep": last_drive.get("step"),
+                "shipContract": last_drive.get("contract"),
+                "shipLoop": last_drive,
+                "shipLoopHistory": drive_history,
+            }
+        if last_drive.get("complete"):
+            clear_ship_loop_await(state, pid)
+            save_state(root, state)
+            return {
+                "executed": "dispatch-ship",
+                "phaseId": pid,
+                "phaseSlug": slug,
+                "shipComplete": True,
+                "shipLoop": last_drive,
+                "shipLoopHistory": drive_history,
+            }
+        if last_drive.get("verdict") == "blocked":
+            fail_payload(last_drive, "ship-loop blocked", 20)
+        if ec != 0 or last_drive.get("verdict") == "fail":
+            fail_payload(last_drive, "ship-loop drive failed", ec or 20)
+        if last_drive.get("verdict") != "pass":
+            break
+    fail(
+        "inline ship continuation budget exhausted",
+        exit_code=20,
+        phaseId=pid,
+        phaseSlug=slug,
+        rounds=max_rounds,
+        shipLoopHistory=drive_history,
+    )
 
 
 def execute_dispatch_batch(
@@ -2808,6 +2924,8 @@ def check_deliver_hang_desync(root: Path, state: dict[str, Any]) -> str | None:
         dispatched = meta.get("inlineDispatchedAt")
         if not dispatched:
             continue
+        if ship_loop_await_for_phase(state, str(pid)) is not None:
+            continue
         slug = str(meta.get("slug") or pid)
         _, status = read_phase_status_optional(root, slug, state)
         if status_is_consumable_terminal(status):
@@ -2819,18 +2937,17 @@ def check_deliver_hang_desync(root: Path, state: dict[str, Any]) -> str | None:
 
 
 def assert_driver_adopt_gate(
-    state: dict[str, Any], loop_args: list[str], *, fresh_seconds: int = 120
+    state: dict[str, Any], loop_args: list[str], *, fresh_seconds: int | None = None
 ) -> None:
-    """Refuse double-drive when heartbeat is fresh unless --self-wake (PRD 063 R6)."""
+    """Refuse double-drive when heartbeat is fresh unless --self-wake (PRD 063 R6 / PRD 348 R10)."""
     if has_flag(loop_args, "--self-wake") or has_flag(loop_args, "--dry-run"):
         return
-    if state.get("verdict") != "running" or not state.get("phases"):
-        return
-    hb = state.get("driverHeartbeatAt")
-    if not isinstance(hb, str):
-        return
-    age = age_seconds(hb)
-    if age is not None and age < fresh_seconds:
+    if _dual_drive_blocks_adopt(state, loop_args, fresh_seconds=fresh_seconds):
+        from wave_finalize_completion import DUAL_DRIVE_HEARTBEAT_TIMEOUT_SECONDS, age_seconds as hb_age
+
+        hb = state.get("driverHeartbeatAt")
+        timeout = DUAL_DRIVE_HEARTBEAT_TIMEOUT_SECONDS if fresh_seconds is None else int(fresh_seconds)
+        age = hb_age(hb) if isinstance(hb, str) else None
         fail(
             "driver-heartbeat-fresh-double-adopt",
             exit_code=20,
@@ -2838,6 +2955,7 @@ def assert_driver_adopt_gate(
             remediation="wait for driver heartbeat to go stale or use self-wake continuation",
             driverHeartbeatAt=hb,
             ageSeconds=age,
+            timeoutSeconds=timeout,
         )
 
 
@@ -3322,6 +3440,13 @@ def compute_next_action(
         if meta.get("inlineDispatchedAt") and inline_dispatch_lease_held_live(
             root, state, meta
         ):
+            if ship_loop_await_for_phase(state, pid) is not None:
+                return dispatch_or_phase_plan_entry(
+                    state,
+                    plan,
+                    pid,
+                    note="resume inline ship continuation (shipLoopAwait)",
+                )
             awaiting.append(pid)
             continue
         return dispatch_or_phase_plan_entry(
@@ -3702,10 +3827,45 @@ def _execute_mechanical_inner(
         ec, data = run_wave(root, "state", "init", "--plan", plan_rel)
         if ec != 0:
             fail_payload(data, "state init failed", ec)
-        state.update(load_state(root))
+        # state init writes the *scoped* path (target/task-list). Bare
+        # load_state(root) follows the unscoped breadcrumb and can miss
+        # phases → state-init/base-capture no-progress loop.
+        tl = str(task_list) if task_list else task_list_from(state, plan)
+        fresh = load_deliver_state(
+            root,
+            target=str(target_branch) if target_branch else None,
+            task_list=tl,
+        )
+        phases = fresh.get("phases")
+        if not isinstance(phases, dict) or not phases:
+            fail(
+                "state-init produced no phases on scoped state path",
+                exit_code=20,
+                halt="state-init:empty-phases",
+                target=target_branch,
+                taskList=tl,
+                statePath=str(
+                    resolve_state_path(
+                        root,
+                        target=str(target_branch) if target_branch else None,
+                        task_list=tl,
+                    )
+                ),
+            )
+        # Adopt phases without dropping in-memory run identity fields that
+        # state-init may not round-trip when breadcrumb reload is empty.
+        state["phases"] = phases
+        for key, value in fresh.items():
+            if key in {"phases", "nextAction", "verdict"}:
+                continue
+            if key not in state or state.get(key) in (None, "", {}, []):
+                state[key] = value
+        if tl and not state.get("source_task_list"):
+            state["source_task_list"] = tl
         ensure_driver_fields(state)
+        save_state(root, state)
         persist_cursor(root, state, "base-capture")
-        return {"executed": "state-init"}
+        return {"executed": "state-init", "phaseCount": len(phases)}
 
     if action == "base-capture":
         ec, data = run_resolve_capture(root)
@@ -4194,6 +4354,33 @@ def _execute_mechanical_inner(
         return {"executed": "all-phases-complete", "next": "inflight-signal-clear"}
 
     if action == "finalize-completion":
+        # PRD 348 R7–R10 — reclaim dead-PID leases/locks, fail-closed overdue receipts,
+        # and apply dual-drive wall-clock heartbeat timeout before finalize retries.
+        from wave_finalize_completion import (
+            IncompleteReceiptStallError,
+            prepare_finalize_completion_stall_recovery,
+        )
+
+        try:
+            stall_recovery = prepare_finalize_completion_stall_recovery(
+                root, state, run_id=str(state.get("runId") or "") or None
+            )
+        except IncompleteReceiptStallError as exc:
+            fail(
+                str(exc),
+                exit_code=20,
+                halt="incomplete-transition-receipt",
+                cause="finalize-completion:incomplete-receipt-past-deadline",
+                resumeCommand=exc.resume_command,
+                ageSeconds=exc.age_seconds,
+                receipt=exc.receipt,
+            )
+        # R10 — wall-clock timeout is applied inside prepare / _dual_drive_blocks_adopt.
+        # Stale heartbeats do not block finalize-completion; a still-fresh dual-drive
+        # heartbeat is recorded on stall_recovery for diagnostics but does not halt
+        # post-merge finalize (gap #950).
+        _ = stall_recovery
+
         ec, data = run_wave(root, "completion", "finalize-if-merged")
         if ec != 0:
             fail_payload(
