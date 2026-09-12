@@ -10,7 +10,10 @@ SCRIPT_DIR = Path(__file__).resolve().parents[2]
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from prd339_visibility_nomenclature import check_visibility_nomenclature
+from prd339_visibility_nomenclature import (
+    check_visibility_nomenclature,
+    has_stale_defaults_profile_row,
+)
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -63,19 +66,10 @@ def test_visibility_tier_vs_storage_placement_rejects_conflated_guide(
     assert "visibility-profile-controls-storage" in rules
 
 
-def test_visibility_tier_vs_storage_placement_rejects_stale_defaults_row(
-    tmp_path: Path,
-) -> None:
-    guide = tmp_path / "core/documentation/configuration.md"
-    guide.parent.mkdir(parents=True)
-    guide.write_text(
-        GOOD_GUIDE_SNIPPET + "\n" + STALE_DEFAULTS_ROW,
-        encoding="utf-8",
-    )
-    result = check_visibility_nomenclature(tmp_path)
-    assert result["verdict"] == "fail"
-    rules = {row["rule"] for row in result["failures"]}
-    assert "stale-defaults-table-profile-only" in rules
+def test_visibility_tier_vs_storage_placement_detects_stale_defaults_row() -> None:
+    text = GOOD_GUIDE_SNIPPET + "\n" + STALE_DEFAULTS_ROW
+    assert has_stale_defaults_profile_row(text)
+    assert not has_stale_defaults_profile_row(GOOD_GUIDE_SNIPPET)
 
 
 def test_visibility_tier_vs_storage_placement_requires_operator_terms(

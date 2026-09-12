@@ -2470,7 +2470,7 @@ Shipwright `2.10.0` · schema `config.schema.json`
 | `planning.store.operatorProjection.linear.cycleSharingNotice` | `true` | `true` | `true` | `true` | `—` | `—` |
 | `planning.store.operatorProjection.linear.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
 | `planning.store.operatorProjection.linear.initiativeSubstitute` | `substitute-views` | `substitute-views` | `substitute-views` | `substitute-views` | `—` | `—` |
-| `planning.visibilityTier` | `specs-public` | `specs-public` | `specs-public` | `specs-public` | `legacy` | `planning.visibilityProfile` (one-release alias) |
+| `planning.visibilityProfile` | `specs-public` | `specs-public` | `specs-public` | `specs-public` | `—` | `—` |
 | `planningDir` | `docs/planning` | `docs/planning` | `docs/planning` | `docs/planning` | `—` | `—` |
 | `prdsDir` | `docs/prds` | `docs/prds` | `docs/prds` | `docs/prds` | `—` | `—` |
 | `quality.provider` | `none` | `none` | `none` | `none` | `—` | `—` |

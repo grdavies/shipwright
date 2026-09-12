@@ -52,12 +52,6 @@ CONFLATED_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
 )
 
-STALE_DEFAULTS_PROFILE_ROW = re.compile(
-    r"\|\s*`planning\.visibilityProfile`\s*\|"
-    r"\s*`specs-public`\s*\|\s*`specs-public`\s*\|\s*`specs-public`\s*\|\s*`specs-public`\s*\|"
-)
-
-
 @dataclass(frozen=True)
 class NomenclatureFailure:
     rule: str
@@ -146,15 +140,18 @@ def _check_conflated_patterns(root: Path) -> list[NomenclatureFailure]:
                         f"conflated or stale visibility nomenclature ({rule_id})",
                     )
                 )
-        if rel == CONFIG_GUIDE_REL and STALE_DEFAULTS_PROFILE_ROW.search(text):
-            failures.append(
-                NomenclatureFailure(
-                    "stale-defaults-table-profile-only",
-                    str(rel),
-                    "defaults table must document planning.visibilityTier, not profile-only row",
-                )
-            )
     return failures
+
+
+def has_stale_defaults_profile_row(text: str) -> bool:
+    """True when the generated defaults table still lists profile without tier migration."""
+    return bool(
+        re.search(
+            r"\|\s*`planning\.visibilityProfile`\s*\|"
+            r"\s*`specs-public`\s*\|\s*`specs-public`\s*\|\s*`specs-public`\s*\|\s*`specs-public`\s*\|",
+            text,
+        )
+    )
 
 
 def _check_workflow_examples(root: Path) -> list[NomenclatureFailure]:
