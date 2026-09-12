@@ -1226,6 +1226,7 @@
 * merge phase refuse-marker-reuse-and-self-heal-indexes-medium into feat/planning-store-correctness-provider-expansion (513e035) <!-- sw-deliver:refuse-marker-reuse-and-self-heal-indexes-medium -->
 * merge phase accept-the-independent-correctness-release-small into feat/planning-store-correctness-provider-expansion (4d423fa) <!-- sw-deliver:accept-the-independent-correctness-release-small -->
 * merge phase clarify-planning-visibility-nomenclature-small into feat/planning-store-correctness-provider-expansion (be90e65) <!-- sw-deliver:clarify-planning-visibility-nomenclature-small -->
+* merge phase gate-linear-work-on-prd-061-small into feat/planning-store-correctness-provider-expansion (f1dc73e) <!-- sw-deliver:gate-linear-work-on-prd-061-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
