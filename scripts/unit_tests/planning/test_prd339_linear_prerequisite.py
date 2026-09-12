@@ -74,8 +74,13 @@ def test_linear_blocked_until_prd061_green(repo_root: Path) -> None:
     assert checks[PRD_061_PROJECTION_ACCEPTANCE_TEST]["verdict"] == "ready"
 
 
-def test_linear_client_live_path_refuses_without_prd061(tmp_path: Path) -> None:
+def test_linear_client_live_path_refuses_without_prd061(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """R34 — live LinearIssuesClient refuses activation when PRD 061 gate is blocked."""
+    # CI suites often set SW_ISSUES_FIXTURE=1; that skips the live gate — clear it.
+    monkeypatch.delenv("SW_ISSUES_FIXTURE", raising=False)
+    monkeypatch.delenv("SW_HOST_ISSUES_FIXTURE", raising=False)
     cfg = {
         "planning": {
             "store": {
