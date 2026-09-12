@@ -98,17 +98,18 @@ and [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow.
 conflicts on modern systems), then initialize each project repo:
 
 ```bash
-# Option 1: uv (recommended)
-uv tool install shipwright-workflow --from git+https://github.com/grdavies/shipwright.git@v2.10.0
+# Option 1: uv (recommended) — replace vX.Y.Z with desired release tag
+uv tool install shipwright --from git+https://github.com/grdavies/shipwright.git@vX.Y.Z
 
 # Option 2: pipx
-pipx install git+https://github.com/grdavies/shipwright.git@v2.10.0
+pipx install git+https://github.com/grdavies/shipwright.git@vX.Y.Z
 
 # Then configure each project
 cd /path/to/your-project
 shipwright init --integration cursor   # or claude-code
 ```
 
+See [releases](https://github.com/grdavies/shipwright/releases) for available versions.
 See [Getting started](core/documentation/getting-started.md) for additional install options including
 release wheels and the contributor clone path.
 

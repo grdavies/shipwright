@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "shipwright-workflow"
+name = "shipwright"
 dynamic = ["version"]
 description = "Shipwright — packaged installer console over the existing emit/install/configure/zipapp spine"
 readme = "README.md"

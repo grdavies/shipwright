@@ -21,21 +21,23 @@ Initialization steps (canonical — must match `packaged_init_steps()` in
 **Install options** (use isolated environments to avoid PEP 668 conflicts on modern systems):
 
 ```bash
-# Option 1: uv tool (recommended)
-uv tool install shipwright-workflow --from git+https://github.com/grdavies/shipwright.git@v2.10.0
+# Option 1: uv tool (recommended) — replace vX.Y.Z with desired release tag
+uv tool install shipwright --from git+https://github.com/grdavies/shipwright.git@vX.Y.Z
 
 # Option 2: pipx
-pipx install git+https://github.com/grdavies/shipwright.git@v2.10.0
+pipx install git+https://github.com/grdavies/shipwright.git@vX.Y.Z
 
 # Option 3: From a release wheel
-uv tool install shipwright-workflow --from /path/to/shipwright_workflow-2.10.0-py3-none-any.whl
-# or: pipx install /path/to/shipwright_workflow-2.10.0-py3-none-any.whl
+uv tool install shipwright --from /path/to/shipwright_workflow-X.Y.Z-py3-none-any.whl
+# or: pipx install /path/to/shipwright_workflow-X.Y.Z-py3-none-any.whl
 
 # Option 4: Explicit venv (if uv/pipx unavailable)
 python3 -m venv ~/.shipwright
-~/.shipwright/bin/pip install git+https://github.com/grdavies/shipwright.git@v2.10.0
+~/.shipwright/bin/pip install git+https://github.com/grdavies/shipwright.git@vX.Y.Z
 # Add ~/.shipwright/bin to PATH or symlink ~/.shipwright/bin/shipwright to ~/bin/
 ```
+
+See [releases](https://github.com/grdavies/shipwright/releases) for available versions.
 
 Then configure each project repository:
 
