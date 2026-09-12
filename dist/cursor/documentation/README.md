@@ -9,6 +9,7 @@ Shipwright source checkout.
 | Guide | Purpose |
 | --- | --- |
 | [Getting started](getting-started.md) | Packaged install, init, and first workflow |
+| [Self-upgrade](self-upgrade.md) | Release assets, missing-asset behavior, and recovery |
 | [Configuration](configuration.md) | Profiles, memory, planning, and credentials |
 | [Workflows](workflows.md) | End-to-end deliver, doc, debug, and ship loops |
 | [Commands](commands.md) | `sw-*` command reference |

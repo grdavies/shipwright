@@ -69,3 +69,22 @@ jobs:
 
       - name: Distribution channel unit tests
         run: python3 scripts/test/run_pytest.py scripts/unit_tests/test_distribution_channel.py
+
+  release-assets:
+    name: release-assets-verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build release assets
+        run: python3 scripts/release_assets.py build
+
+      - name: Verify release assets before tagging
+        run: python3 scripts/release_assets.py verify
+
+      - name: Release asset unit tests
+        run: python3 scripts/test/run_pytest.py scripts/unit_tests/test_release_assets.py
