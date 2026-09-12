@@ -16,6 +16,7 @@ import importlib.util
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -248,6 +249,26 @@ def init_packaged(
     }
 
 
+def install_console(*, root: Path | None = None) -> int:
+    """Install editable ``shipwright`` console from a source checkout (PRD 345 R9)."""
+    root = (root or repo_root()).resolve()
+    if not (root / "pyproject.toml").is_file():
+        return 0
+    if os.environ.get("SW_SKIP_CONSOLE_INSTALL", "").strip().lower() in ("1", "true", "yes"):
+        return 0
+    proc = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "-e", "."],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        logging_setup.error(proc.stderr or proc.stdout or "console install failed")
+        return proc.returncode
+    logging_setup.info("Installed shipwright console entry point (editable).")
+    return 0
+
+
 def seed_memory_provider_catalog(dest: Path) -> bool:
     """Ensure plugin installs expose the catalog under `.sw/` for hook validation.
 
@@ -350,6 +371,10 @@ def install(
             logging_setup.info(
                 "Run /sw-init in that repo to configure Shipwright for this project (opt-in)."
             )
+
+    console_rc = install_console(root=repo_root())
+    if console_rc != 0:
+        return console_rc
     return 0
 
 

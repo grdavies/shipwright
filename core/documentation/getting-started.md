@@ -67,12 +67,15 @@ Use the clone path when you are developing Shipwright itself or need a working t
 git clone https://github.com/grdavies/shipwright
 cd shipwright
 python3 scripts/install.py
-# then in a consumer repo:
-shipwright init --integration cursor
+/sw-init
 ```
 
-This path remains fully supported; it is the **contributor** path, not the default consumer path.
-The installer never configures projects for you — each project still needs init.
+Run **Developer: Reload Window** in Cursor after install. The installer mirrors the plugin locally and
+installs the editable `shipwright` console entry point. `/sw-init` is the contributor configure step after
+clone — not the packaged `shipwright init` adopter path.
+
+This path remains fully supported; it is the **contributor** path, not the default adopter path.
+The installer never configures projects for you automatically — `/sw-init` completes repo setup.
 
 ## Positioning
 
