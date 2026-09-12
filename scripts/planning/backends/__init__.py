@@ -27,6 +27,13 @@ from .gitlab import (
     gitlab_planning_store_parity_gate,
     register_gitlab_planning_store_stub,
 )
+from .linear import (
+    BACKEND_ID as LINEAR_SEMANTIC_BACKEND_ID,
+    LinearSemanticBackend,
+    LinearSemanticCrud,
+    register_linear_semantic_store,
+    wire_linear_semantic_crud,
+)
 from .local_synced import LocalSyncedBackend
 from .memory_cache import ReplicatedPlanningCacheBackend
 
@@ -39,10 +46,15 @@ __all__ = [
     "GitlabPlanningStoreStubBackend",
     "InRepoPublicBackend",
     "IssueStoreBackend",
+    "LINEAR_SEMANTIC_BACKEND_ID",
+    "LinearSemanticBackend",
+    "LinearSemanticCrud",
     "LocalSyncedBackend",
     "gitlab_planning_store_conformance_metadata",
     "gitlab_planning_store_parity_gate",
     "register_gitlab_planning_store_stub",
+    "register_linear_semantic_store",
+    "wire_linear_semantic_crud",
     "ReplicatedPlanningCacheBackend",
     "PUT_JOURNAL_PATH",
     "issue_index_key",
