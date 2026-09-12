@@ -1229,6 +1229,7 @@
 * merge phase gate-linear-work-on-prd-061-small into feat/planning-store-correctness-provider-expansion (f1dc73e) <!-- sw-deliver:gate-linear-work-on-prd-061-small -->
 * merge phase implement-linear-graphql-semantics-medium into feat/planning-store-correctness-provider-expansion (36bb10d) <!-- sw-deliver:implement-linear-graphql-semantics-medium -->
 * merge phase project-prds-brainstorms-and-gaps-medium into feat/planning-store-correctness-provider-expansion (a02db52) <!-- sw-deliver:project-prds-brainstorms-and-gaps-medium -->
+* merge phase project-phases-and-task-hierarchy-medium into feat/planning-store-correctness-provider-expansion (90d2041) <!-- sw-deliver:project-phases-and-task-hierarchy-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
