@@ -57,6 +57,11 @@ same turn (see `skills/conductor/SKILL.md`).
 Unverifiable terminal merge leaves the run **nonterminal** — finalize returns `finalize:merge-unverified`
 and does not release resources.
 
+**Finalize recovery (PRD 348):** `wave_terminal.finalize_run` calls `prepare_finalize_recovery` before
+identity assessment — rebinds a stale task-list hash and clears a dead orchestrator path when safe.
+`finalize-completion` stall prep recovers dead leases/locks and tolerates a missing `runId`. Mutating
+recovery is surfaced as `finalizeRecovery` on refusal or success payloads (no silent self-heal).
+
 **Merge-drain durability:** after each successful phase merge, `batchIntegrationHead` is re-frozen from the
 post-merge state load so parallel batch members do not false-halt on `batch-integration-head-moved`. Host
 HTTP verbs pass the broker `credentialObject` into urllib even when `tokenEnv` is empty, so authenticated
@@ -729,4 +734,4 @@ primary checkout). Repo-root cwd with an orchestrator path under `.sw-worktrees/
 orchestrator worktree; terminal closeout reuses the same order. Primary cwd stays when pruning orch;
 husk/parked trees do not fail the release path.
 
-<!-- currency: refreshed 2026-09-11T20:24:30Z — deliver-loop/terminal prepare vs wave_deliver_loop + wave_terminal -->
+<!-- currency: refreshed 2026-09-12T22:14:00Z — PRD 348 finalize recovery vs wave_deliver_loop + wave_terminal -->
