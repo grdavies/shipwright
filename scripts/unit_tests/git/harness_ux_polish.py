@@ -286,22 +286,14 @@ for req in style-guide.md glossary.md decision-tree.md; do
   fi
 done
 
-# User guides must not cite PRD / R-ID / GAP tokens (canonical bodies only)
-prd_hits=0
-while IFS= read -r f; do
-  if grep -nE '\bPRD[[:space:]]*[0-9]+|\bR[0-9]+\b|\bGAP-[0-9]+' "$f" >/dev/null 2>&1; then
-    echo "FAIL user-guide-provenance: $f still cites PRD/R-ID/GAP"
-    prd_hits=1
-  fi
-done < <(find "$ROOT/core/documentation" -maxdepth 1 -type f -name '*.md' | sort)
-if grep -nE '\bPRD[[:space:]]*[0-9]+|\bR[0-9]+\b|\bGAP-[0-9]+' "$ROOT/README.md" >/dev/null 2>&1; then
-  echo "FAIL user-guide-provenance: README.md still cites PRD/R-ID/GAP"
-  prd_hits=1
-fi
-if [[ "$prd_hits" -eq 0 ]]; then
-  ok "user-guide-provenance: README + core/documentation free of PRD/R-ID/GAP tokens"
+# User-guide-provenance via scripts/check_user_guide_provenance.py (PRD 348 R4).
+# Already-seeded guides (tokens present at diff base) are excluded; only net-new /
+# previously-clean adopter guide content is checked. Base from SW_PROVENANCE_BASE /
+# GITHUB_BASE_SHA / GITHUB_BASE_REF when set.
+if python3 "$ROOT/scripts/check_user_guide_provenance.py" --root "$ROOT"; then
+  ok "user-guide-provenance: adopter guides pass (seeded-guide exclusion applied when base set)"
 else
-  bad "user-guide-provenance: PRD/R-ID/GAP tokens remain in adopter docs"
+  bad "user-guide-provenance: PRD/R-ID/GAP tokens remain in net-new adopter docs"
 fi
 
 # Style guide must state slug-vs-title + Conventional Commits

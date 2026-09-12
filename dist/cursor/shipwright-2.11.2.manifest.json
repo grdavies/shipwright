@@ -217,6 +217,7 @@
     "check_frozen_scan.py",
     "check_gate_lib.py",
     "check_scripts_inventory.py",
+    "check_user_guide_provenance.py",
     "checkbox_diff.py",
     "ci_plan_gen.py",
     "ci_shard_lib.py",
@@ -834,6 +835,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 831,
+  "moduleCount": 832,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
