@@ -1223,6 +1223,7 @@
 * merge phase refine-email-secret-detection-small into feat/planning-store-correctness-provider-expansion (59e15ec) <!-- sw-deliver:refine-email-secret-detection-small -->
 * merge phase preserve-list-form-absorbs-projection-small into feat/planning-store-correctness-provider-expansion (fbce4b4) <!-- sw-deliver:preserve-list-form-absorbs-projection-small -->
 * merge phase disambiguate-deliver-issue-sources-medium into feat/planning-store-correctness-provider-expansion (a45d058) <!-- sw-deliver:disambiguate-deliver-issue-sources-medium -->
+* merge phase refuse-marker-reuse-and-self-heal-indexes-medium into feat/planning-store-correctness-provider-expansion (513e035) <!-- sw-deliver:refuse-marker-reuse-and-self-heal-indexes-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
