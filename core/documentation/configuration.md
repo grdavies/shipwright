@@ -1008,28 +1008,50 @@ plus legacy projections `docs/prds/INDEX.md`, `COMPLETION-LOG.md`, and `GAP-BACK
 branch; `docs-currency` gate hard-blocks terminal merge on drift. Resolve paths via `planningDir` with
 legacy `prdsDir`/`tasksDir` aliases until migration cutover.
 
-### Planning visibility (, three orthogonal axes per )
+### Planning visibility (redaction tier and storage placement)
 
 Per-unit bodies carry `visibility: public|private|memory`. When a unit omits `visibility`, a repo-level
-**tier** supplies the default via `scripts/planning_visibility.py` (wrapped by `scripts/visibility-resolve.py`).
+**redaction tier** supplies the default via `scripts/planning_visibility.py` (wrapped by
+`scripts/visibility-resolve.py`).
 
-Visibility configuration is modeled as **three orthogonal axes** rather than one flat
-profile — each is resolved and can be reasoned about independently:
+**Operator vocabulary (do not conflate):**
+
+| Operator term | Config key | Controls |
+|---------------|------------|----------|
+| **Redaction tier** | `planning.visibilityTier` | Default content redaction when a unit omits `visibility` (`all-private` \| `specs-public` \| `all-public`). |
+| **Storage placement** | `planning.store.storeLocation.mode` (+ `planning.store.backend`) | Where planning bodies are stored (`same-repo` \| `separate-project`, backend family). |
+| **Store-host privacy** | `planning.store.storeHostPrivacy` (or provider-probed) | Whether the configured issue-store host itself is private. |
+
+`planning.visibilityProfile` is the deprecated one-release alias for the **redaction tier only** — it
+**never controlled storage placement**. Use the operator terms above instead of the legacy umbrella label
+“visibility profile” when discussing config.
+
+Visibility configuration is modeled as **three orthogonal axes** rather than one flat profile — each is
+resolved and can be reasoned about independently:
 
 | Axis | Key | Values | Meaning |
 |------|-----|--------|---------|
-| Visibility (redaction) tier | `planning.visibilityTier` | `all-private` \| `specs-public` (default) \| `all-public` | Closed-world default redaction tier (schema-validated). |
-| Store location | `planning.store.storeLocation.mode` | `same-repo` \| `separate-project` | Whether the planning store lives in the code repo or a separate project (see Issue-store section below). |
+| Redaction tier | `planning.visibilityTier` | `all-private` \| `specs-public` (default) \| `all-public` | Closed-world default redaction tier (schema-validated). |
+| Storage placement | `planning.store.storeLocation.mode` | `same-repo` \| `separate-project` | Whether the planning store lives in the code repo or a separate project (see Issue-store section below). |
 | Store-host privacy | `planning.store.storeHostPrivacy` (or provider-probed) | `private` \| `public` \| `unknown` | Whether the configured issue-store host itself is private, evaluated per shipped provider via `probe_store_host_privacy`. `not-applicable` for non-issue-store backends (file-store parity, ). |
 | — | `planning.privacyAck` | object | Durable acknowledgement gate — see below. |
 | — | `planning.store.backend` | `in-repo-public` (default) \| `local-synced` \| `memory` \| `issue-store` | Pluggable planning-unit body backend ( /; `issue-store` opt-in per ). Pinned per deliver run at provision. |
 
+**Migration examples (redaction tier vs storage placement):**
+
+| Legacy / conflated name | Current operator term | Config migration |
+|-------------------------|----------------------|------------------|
+| `planning.visibilityProfile` | **Redaction tier** | Rename to `planning.visibilityTier` with the same tier value (`specs-public`, `all-private`, or `all-public`). |
+| “visibility profile” (umbrella) | **Redaction tier** + **storage placement** | Split concerns: tier under `planning.visibilityTier`; placement under `planning.store.storeLocation` / `planning.store.backend`. |
+| `storeLocation` under `visibilityProfile` | **Storage placement** | Move to `planning.store.storeLocation` — never nest placement under the redaction-tier alias. |
+
 **Tier-first rename + one-release alias map (/):** `planning.visibilityTier` is the current key.
-`planning.visibilityProfile` is a **deprecated, one-release back-compat alias** — both are accepted, but
-resolution is deterministic: the new key wins when both are set, *except* a mixed old/new config never
-resolves to a **less private** tier than the deprecated value (the redaction default is never weakened). A
-live config that still sets only the deprecated key resolves identically to pre-rename behavior and emits a
-`planning-doctor.py` deprecation finding (`visibility-tier-key-deprecated`) naming the exact rename remediation.
+`planning.visibilityProfile` is a **deprecated, one-release back-compat alias for the redaction tier only** —
+both are accepted, but resolution is deterministic: the new key wins when both are set, *except* a mixed
+old/new config never resolves to a **less private** tier than the deprecated value (the redaction default is
+never weakened). A live config that still sets only the deprecated key resolves identically to pre-rename
+behavior and emits a `planning-doctor.py` deprecation finding (`visibility-tier-key-deprecated`) naming the
+exact rename remediation.
 
 **Public-repo-aware default (, extended by /):** `/sw-init` (and `planning_visibility.py
 resolve-default-profile`) probes `origin` **and**, when the effective backend is an issue-store, the
@@ -2448,7 +2470,7 @@ Shipwright `2.10.0` · schema `config.schema.json`
 | `planning.store.operatorProjection.linear.cycleSharingNotice` | `true` | `true` | `true` | `true` | `—` | `—` |
 | `planning.store.operatorProjection.linear.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
 | `planning.store.operatorProjection.linear.initiativeSubstitute` | `substitute-views` | `substitute-views` | `substitute-views` | `substitute-views` | `—` | `—` |
-| `planning.visibilityProfile` | `specs-public` | `specs-public` | `specs-public` | `specs-public` | `—` | `—` |
+| `planning.visibilityTier` | `specs-public` | `specs-public` | `specs-public` | `specs-public` | `legacy` | `planning.visibilityProfile` (one-release alias) |
 | `planningDir` | `docs/planning` | `docs/planning` | `docs/planning` | `docs/planning` | `—` | `—` |
 | `prdsDir` | `docs/prds` | `docs/prds` | `docs/prds` | `docs/prds` | `—` | `—` |
 | `quality.provider` | `none` | `none` | `none` | `none` | `—` | `—` |
