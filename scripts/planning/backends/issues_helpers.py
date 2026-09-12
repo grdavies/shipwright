@@ -165,7 +165,14 @@ def self_heal_issue_unit_index(
     for item in removed:
         append_unit_index_audit(
             root,
-            {"event": "unit-index-self-heal", "projectKey": project_key, **item},
+            {
+                "event": "unit-index-self-heal",
+                "projectKey": project_key,
+                "before": {item["key"]: item["issueId"]},
+                "after": {},
+                "cause": item["reason"],
+                **item,
+            },
         )
     return {
         "verdict": "pass",

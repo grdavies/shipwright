@@ -6,7 +6,9 @@ from .issues import IssueStoreBackend
 from .issues_helpers import (
     ISSUE_STORE_TXN_ID,
     ISSUE_UNIT_INDEX,
+    ISSUE_UNIT_INDEX_AUDIT,
     PUT_JOURNAL_PATH,
+    append_unit_index_audit,
     issue_index_key,
     load_issue_unit_index,
     load_put_journal,
@@ -16,6 +18,7 @@ from .issues_helpers import (
     read_put_journal_locked,
     save_issue_unit_index,
     save_put_journal,
+    self_heal_issue_unit_index,
 )
 from .gitlab import (
     BACKEND_ID as GITLAB_PLANNING_STORE_BACKEND_ID,
@@ -30,6 +33,8 @@ from .memory_cache import ReplicatedPlanningCacheBackend
 __all__ = [
     "ISSUE_STORE_TXN_ID",
     "ISSUE_UNIT_INDEX",
+    "ISSUE_UNIT_INDEX_AUDIT",
+    "append_unit_index_audit",
     "GITLAB_PLANNING_STORE_BACKEND_ID",
     "GitlabPlanningStoreStubBackend",
     "InRepoPublicBackend",
@@ -49,4 +54,5 @@ __all__ = [
     "read_put_journal_locked",
     "save_issue_unit_index",
     "save_put_journal",
+    "self_heal_issue_unit_index",
 ]

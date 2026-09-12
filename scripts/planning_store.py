@@ -176,6 +176,7 @@ _EXPORTED_NAMES = (
     'resume_projection_from_checkpoint',
     'reverse_resolve_legacy_unit_id',
     'save_issue_unit_index',
+    'self_heal_unit_index',
     'save_legacy_unit_map',
     'save_projection_state',
     'secret_scan_text',
