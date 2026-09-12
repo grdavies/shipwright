@@ -1976,11 +1976,19 @@ def finalize_run(
         if loaded:
             work_state = loaded
 
+    # PRD 348 R2/R3/R3a — rebind stale task-list hash + clear dead orch before identity.
+    from wave_finalize import prepare_finalize_recovery
+
+    recovery = prepare_finalize_recovery(root, work_state, run_id=run_id, persist=True)
+
     from wave_run_adopt import assess_proven_run_scoped_identity, finalize_identity_refusal
 
     identity = assess_proven_run_scoped_identity(root, work_state, run_id=run_id)
     if not identity.get("proven"):
-        return finalize_identity_refusal(root, run_id, work_state, identity)
+        refused = finalize_identity_refusal(root, run_id, work_state, identity)
+        if recovery.get("mutated"):
+            refused = {**refused, "finalizeRecovery": recovery}
+        return refused
 
     if work_state.get("immutable"):
         existing = read_terminal_receipt(root, run_id)
@@ -2193,7 +2201,7 @@ def finalize_run(
     if receipt is None:
         receipt = read_terminal_receipt(root, run_id)
 
-    return {
+    success_payload: dict[str, Any] = {
         "verdict": "pass",
         "action": "run-finalize",
         "immutable": True,
@@ -2202,6 +2210,10 @@ def finalize_run(
         "projections": projections,
         "checkpoint": load_finalize_checkpoint(root, run_id),
     }
+    if recovery.get("mutated"):
+        success_payload["finalizeRecovery"] = recovery
+
+    return success_payload
 
 
 def cmd_finalize_run(root: Path, args: list[str]) -> None:

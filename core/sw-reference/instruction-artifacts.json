@@ -256,7 +256,7 @@
       "sourcePath": "core/commands/sw-debug.md"
     },
     {
-      "bodyDigest": "3d389476f67b69f58264d172eec0cb20f87a4260978e9c8d3fe35d5ef71e1f16",
+      "bodyDigest": "e04cc1ce90404d65f8d33d1ed6c81a50f6e2aaf95e5c08cd1ee5cfc059c5e30b",
       "capabilities": [],
       "description": "Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.",
       "id": "sw-deliver",

@@ -1445,4 +1445,9 @@ records are enumerated by `planning_backend_control.py list` and surfaced in `pl
 | Hook ephemeral state (`.cursor/hooks/state/*`) | R20-resolved active root (worktree when aligned) |
 **PRD 333 absorb closeout:** numeric absorb / ten-gap linkage remains on the facade boundary (planning_store_facade / planning_gap_capture); terminal finalize still fails closed on incomplete absorb audit.
 
-<!-- currency: refreshed 2026-09-12T10:36:26Z — PRD 339 terminal docs-currency; wave_state / wave_deliver / planning_store_facade -->
+**Layout dual-home (PRD 348):** `.shipwright/layout.md` and `core/sw-reference/layout.md` remain
+byte-identical; `scripts/layout_sync_check.py` enforces that contract in pre-commit and CI. Planning
+backend and authority prose stays on the facade boundary (`planning_store_facade`) — callers must not
+bypass it when documenting store mutations.
+
+<!-- currency: refreshed 2026-09-12T22:12:00Z — PRD 348 terminal docs-currency; planning_store_facade / layout dual-home -->

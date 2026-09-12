@@ -1263,6 +1263,11 @@
 * merge phase project-phases-and-task-hierarchy-medium into feat/planning-store-correctness-provider-expansion (90d2041) <!-- sw-deliver:project-phases-and-task-hierarchy-medium -->
 * merge phase document-and-verify-linear-operator-browsing-medium into feat/planning-store-correctness-provider-expansion (20fc5de) <!-- sw-deliver:document-and-verify-linear-operator-browsing-medium -->
 * merge phase close-the-planning-store-bundle-small into feat/planning-store-correctness-provider-expansion (406d446) <!-- sw-deliver:close-the-planning-store-bundle-small -->
+* merge phase postmerge-verify-argv into feat/deliver-pipeline-ops (8d8c206) <!-- sw-deliver:postmerge-verify-argv -->
+* merge phase finalize-hash-recovery into feat/deliver-pipeline-ops (858ea90) <!-- sw-deliver:finalize-hash-recovery -->
+* merge phase user-guide-provenance into feat/deliver-pipeline-ops (c800aca) <!-- sw-deliver:user-guide-provenance -->
+* merge phase finalize-stall-recovery into feat/deliver-pipeline-ops (885f4f4) <!-- sw-deliver:finalize-stall-recovery -->
+* merge phase layout-dual-home-sync into feat/deliver-pipeline-ops (9664441) <!-- sw-deliver:layout-dual-home-sync -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

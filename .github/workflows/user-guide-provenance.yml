@@ -1,0 +1,28 @@
+name: user-guide-provenance
+
+# PRD 348 R4 — seeded-guide exclusion gate for adopter-facing guides.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  provenance:
+    name: user-guide-provenance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check adopter guide provenance (seeded guides excluded)
+        env:
+          GITHUB_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: python3 scripts/check_user_guide_provenance.py --root .

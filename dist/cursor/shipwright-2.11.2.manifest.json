@@ -217,6 +217,7 @@
     "check_frozen_scan.py",
     "check_gate_lib.py",
     "check_scripts_inventory.py",
+    "check_user_guide_provenance.py",
     "checkbox_diff.py",
     "ci_plan_gen.py",
     "ci_shard_lib.py",
@@ -500,6 +501,7 @@
     "kernel-completeness-lint.py",
     "kernel_classification.py",
     "kernel_classification_lint.py",
+    "layout_sync_check.py",
     "living-status-gap-resolve.py",
     "local_merge_gate.py",
     "loop_autonomy.py",
@@ -797,6 +799,8 @@
     "wave_deliver_loop.py",
     "wave_errors.py",
     "wave_failure.py",
+    "wave_finalize.py",
+    "wave_finalize_completion.py",
     "wave_json_io.py",
     "wave_lifecycle.py",
     "wave_living_doc_lock.py",
@@ -808,6 +812,7 @@
     "wave_phase_pr.py",
     "wave_plan_benefit.py",
     "wave_plan_validate.py",
+    "wave_post_merge.py",
     "wave_preflight.py",
     "wave_remote_lease.py",
     "wave_run_adopt.py",
@@ -832,6 +837,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 829,
+  "moduleCount": 834,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

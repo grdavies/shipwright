@@ -525,20 +525,30 @@ def rebind_orch_execution_identity(
 
 
 def _dual_drive_blocks_adopt(
-    state: dict[str, Any], loop_args: list[str] | None, *, fresh_seconds: int = 120
+    state: dict[str, Any], loop_args: list[str] | None, *, fresh_seconds: int | None = None
 ) -> bool:
-    """True when a fresh driver heartbeat means adopt would mask dual-drive (R7)."""
+    """True when a fresh driver heartbeat means adopt would mask dual-drive (R7).
+
+    Uses the PRD 348 R10 wall-clock timeout (``SW_DUAL_DRIVE_HEARTBEAT_TIMEOUT_SECONDS``,
+    default 120s) so a heartbeat that has not advanced beyond the timeout is treated as
+    stale and does not block finalize-completion / adopt recovery.
+    """
     if loop_args is not None and (
         has_flag(loop_args, "--self-wake") or has_flag(loop_args, "--dry-run")
     ):
         return False
     if state.get("verdict") != "running" or not state.get("phases"):
         return False
-    hb = state.get("driverHeartbeatAt")
-    if not isinstance(hb, str):
+    from wave_finalize_completion import (
+        DUAL_DRIVE_HEARTBEAT_TIMEOUT_SECONDS,
+        dual_drive_heartbeat_is_stale,
+    )
+
+    timeout = DUAL_DRIVE_HEARTBEAT_TIMEOUT_SECONDS if fresh_seconds is None else int(fresh_seconds)
+    # Stale (missing / past wall-clock timeout) heartbeats do not block (R10).
+    if dual_drive_heartbeat_is_stale(state, timeout_seconds=timeout):
         return False
-    age = age_seconds(hb)
-    return age is not None and age < fresh_seconds
+    return True
 
 
 def try_adopt_recorded_orchestrator_worktree(
@@ -2927,18 +2937,17 @@ def check_deliver_hang_desync(root: Path, state: dict[str, Any]) -> str | None:
 
 
 def assert_driver_adopt_gate(
-    state: dict[str, Any], loop_args: list[str], *, fresh_seconds: int = 120
+    state: dict[str, Any], loop_args: list[str], *, fresh_seconds: int | None = None
 ) -> None:
-    """Refuse double-drive when heartbeat is fresh unless --self-wake (PRD 063 R6)."""
+    """Refuse double-drive when heartbeat is fresh unless --self-wake (PRD 063 R6 / PRD 348 R10)."""
     if has_flag(loop_args, "--self-wake") or has_flag(loop_args, "--dry-run"):
         return
-    if state.get("verdict") != "running" or not state.get("phases"):
-        return
-    hb = state.get("driverHeartbeatAt")
-    if not isinstance(hb, str):
-        return
-    age = age_seconds(hb)
-    if age is not None and age < fresh_seconds:
+    if _dual_drive_blocks_adopt(state, loop_args, fresh_seconds=fresh_seconds):
+        from wave_finalize_completion import DUAL_DRIVE_HEARTBEAT_TIMEOUT_SECONDS, age_seconds as hb_age
+
+        hb = state.get("driverHeartbeatAt")
+        timeout = DUAL_DRIVE_HEARTBEAT_TIMEOUT_SECONDS if fresh_seconds is None else int(fresh_seconds)
+        age = hb_age(hb) if isinstance(hb, str) else None
         fail(
             "driver-heartbeat-fresh-double-adopt",
             exit_code=20,
@@ -2946,6 +2955,7 @@ def assert_driver_adopt_gate(
             remediation="wait for driver heartbeat to go stale or use self-wake continuation",
             driverHeartbeatAt=hb,
             ageSeconds=age,
+            timeoutSeconds=timeout,
         )
 
 
@@ -4344,6 +4354,33 @@ def _execute_mechanical_inner(
         return {"executed": "all-phases-complete", "next": "inflight-signal-clear"}
 
     if action == "finalize-completion":
+        # PRD 348 R7–R10 — reclaim dead-PID leases/locks, fail-closed overdue receipts,
+        # and apply dual-drive wall-clock heartbeat timeout before finalize retries.
+        from wave_finalize_completion import (
+            IncompleteReceiptStallError,
+            prepare_finalize_completion_stall_recovery,
+        )
+
+        try:
+            stall_recovery = prepare_finalize_completion_stall_recovery(
+                root, state, run_id=str(state.get("runId") or "") or None
+            )
+        except IncompleteReceiptStallError as exc:
+            fail(
+                str(exc),
+                exit_code=20,
+                halt="incomplete-transition-receipt",
+                cause="finalize-completion:incomplete-receipt-past-deadline",
+                resumeCommand=exc.resume_command,
+                ageSeconds=exc.age_seconds,
+                receipt=exc.receipt,
+            )
+        # R10 — wall-clock timeout is applied inside prepare / _dual_drive_blocks_adopt.
+        # Stale heartbeats do not block finalize-completion; a still-fresh dual-drive
+        # heartbeat is recorded on stall_recovery for diagnostics but does not halt
+        # post-merge finalize (gap #950).
+        _ = stall_recovery
+
         ec, data = run_wave(root, "completion", "finalize-if-merged")
         if ec != 0:
             fail_payload(
