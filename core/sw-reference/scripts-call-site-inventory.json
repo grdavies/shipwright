@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-11T23:47:22Z",
+  "generatedAt": "2026-09-12T01:08:48Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -482,6 +482,24 @@
       "tree": ".github/workflows",
       "file": ".github/workflows/release.yml",
       "line": 35,
+      "column": 21,
+      "script": "test/run_pytest.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/release.yml:59:build_dist.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/release.yml",
+      "line": 59,
+      "column": 21,
+      "script": "build_dist.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/release.yml:71:test/run_pytest.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/release.yml",
+      "line": 71,
       "column": 21,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
