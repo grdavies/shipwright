@@ -4293,6 +4293,37 @@ def refuse_banned_living_doc_write(root: Path, *, action: str) -> dict[str, Any]
 
 
 
+def self_heal_unit_index(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """PRD 339 R39 — atomic polluted-index self-heal with audit records.
+
+    Single-writer compare-and-swap via ``planning_transaction``; concurrent
+    callers cannot silently repoint canonical unit mappings. Audit append records
+    before/after/cause for every removed polluted row.
+    """
+    backend = get_backend(root, cfg)
+    if backend.backend_id != "issue-store":
+        return {
+            "verdict": "ok",
+            "action": "unit-index-self-heal",
+            "skipped": True,
+            "reason": "issue-store-only",
+            "removedCount": 0,
+        }
+    heal = getattr(backend, "self_heal_unit_index", None)
+    if not callable(heal):
+        return {
+            "verdict": "fail",
+            "action": "unit-index-self-heal",
+            "error": "backend-missing-self-heal",
+        }
+    result = heal()
+    return {
+        **result,
+        "verdict": result.get("verdict", "pass"),
+        "action": "unit-index-self-heal",
+    }
+
+
 def backfill_frontmatter_hybrid(root: Path, cfg: dict[str, Any], *, apply: bool = False) -> dict[str, Any]:
     """PRD 061 R21 -- idempotent lazy migrate/backfill for YAML-embedded issues."""
     backend = get_backend(root, cfg)
