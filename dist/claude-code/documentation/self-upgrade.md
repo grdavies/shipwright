@@ -9,9 +9,8 @@ requires two release assets on that origin:
 | `shipwright-<version>.pyz` | Versioned scripts zipapp |
 | `shipwright-distribution-stamp.json` | Release version, origin, and zipapp integrity digest |
 
-The maintainer release pipeline builds and verifies these assets with
-`python3 scripts/release_assets.py build` and `python3 scripts/release_assets.py verify` before a
-tag is published.
+The maintainer release pipeline builds and verifies these assets before a tag is published (see the
+Shipwright source repository release workflow — not part of the install-root consumer surface).
 
 ## When assets are missing
 
@@ -41,5 +40,5 @@ full threat model.
 2. If assets are missing, wait for the maintainer release job or install from a checkout using the
    contributor path in [Getting started](getting-started.md).
 3. If integrity fails, delete the partial download under your install `dist/` tree and retry after
-   confirming the upstream release assets verify clean with `release_assets.py verify` in a source
-   checkout.
+   confirming the upstream release publishes both the zipapp and distribution stamp on the
+   distribution origin.
