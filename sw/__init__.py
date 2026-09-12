@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import importlib.metadata
 import importlib.util
 from pathlib import Path
+
+# Fallback floor when scripts/version.py is absent (should match scripts/version.py).
+_PYTHON_FLOOR_FALLBACK = "3.10"
 
 
 def _version_paths() -> list[Path]:
@@ -31,8 +35,24 @@ def _load_version_module():
     raise RuntimeError(f"cannot load version metadata ({detail}); tried: {tried}")
 
 
-_v = _load_version_module()
-__version__ = _v.__version__
-PYTHON_FLOOR = _v.PYTHON_FLOOR
+def _version_from_metadata() -> str | None:
+    for dist_name in ("shipwright", "shipwright-workflow"):
+        try:
+            return importlib.metadata.version(dist_name)
+        except importlib.metadata.PackageNotFoundError:
+            continue
+    return None
+
+
+try:
+    _v = _load_version_module()
+    __version__ = _v.__version__
+    PYTHON_FLOOR = _v.PYTHON_FLOOR
+except RuntimeError:
+    meta_version = _version_from_metadata()
+    if not meta_version:
+        raise
+    __version__ = meta_version
+    PYTHON_FLOOR = _PYTHON_FLOOR_FALLBACK
 
 __all__ = ["PYTHON_FLOOR", "__version__"]

@@ -1,4 +1,4 @@
-"""PRD 345 R13–R14 — version metadata parity across canonical sources."""
+"""PRD 345 R13–R14 — version metadata parity; version.txt is release-please SoT."""
 
 from __future__ import annotations
 
@@ -81,32 +81,35 @@ def _pyproject_python_floor() -> str:
     return match.group(1)
 
 
-def test_scripts_version_is_canonical() -> None:
-    """O — scripts/version.py exposes version and Python floor."""
+def test_scripts_version_reads_version_txt() -> None:
+    """O — scripts/version.py exposes version from version.txt plus Python floor."""
     version, floor = _load_scripts_version()
-    assert version == "2.10.0"
+    assert version == _version_txt()
     assert floor == "3.10"
+    # No manually maintained duplicate semver literal in scripts/version.py body.
+    body = (REPO_ROOT / "scripts" / "version.py").read_text(encoding="utf-8")
+    assert f'__version__ = "{version}"' not in body
+    assert "__version__ = _read_version_txt()" in body
 
 
 def test_sw_reexports_scripts_version() -> None:
     """M — packaged sw module reads the same canonical version."""
     import sw
 
-    canonical, _ = _load_scripts_version()
+    canonical, floor = _load_scripts_version()
     assert sw.__version__ == canonical
-    assert sw.PYTHON_FLOOR == _load_scripts_version()[1]
+    assert sw.PYTHON_FLOOR == floor
 
 
-def test_version_txt_matches_canonical() -> None:
-    """M — version.txt stays aligned with scripts/version.py."""
+def test_version_txt_is_release_please_source_of_truth() -> None:
+    """M — version.txt aligns with release-please manifest (RP-owned)."""
+    assert _version_txt() == _release_please_manifest()
+
+
+def test_scripts_version_matches_version_txt() -> None:
+    """M — scripts/version.py resolves to version.txt."""
     canonical, _ = _load_scripts_version()
     assert _version_txt() == canonical
-
-
-def test_release_please_manifest_matches_canonical() -> None:
-    """M — release-please manifest tracks canonical version."""
-    canonical, _ = _load_scripts_version()
-    assert _release_please_manifest() == canonical
 
 
 def test_dist_stamps_match_canonical() -> None:

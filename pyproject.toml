@@ -22,5 +22,8 @@ exclude = ["scripts*", "core*", "dist*", "platforms*"]
 [tool.setuptools.package-data]
 sw = ["scripts/**/*", "dist/**/*", "version.txt"]
 
+[tool.setuptools.cmdclass]
+build_py = "sw.build_support.build_py"
+
 [tool.setuptools.dynamic]
 version = {attr = "sw.__version__"}
