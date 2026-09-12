@@ -292,6 +292,7 @@ class PlanningIssueRefResolutionError(Exception):
 from planning_canonical import (  # noqa: E402
     ARTIFACT_TYPE_UNRESOLVED,
     FREEZE_INCOMPLETE_LABEL,
+    FRONTMATTER_EXTRA_MARKER,
     FROZEN_LABEL,
     GAP_LABEL_RESOLVED,
     IssueSnapshot,
@@ -306,6 +307,7 @@ from planning_canonical import (  # noqa: E402
     infer_artifact_type,
     is_resolved_artifact_type,
     MARKER_ARTIFACT_TYPE,
+    parse_absorbs_targets,
     parse_body_marker,
     parse_edges_block,
     parse_freeze_record_hash,
@@ -1805,6 +1807,71 @@ def _fm_field_as_str(value: Any) -> str:
     return str(value).strip()
 
 
+def _raw_frontmatter_extra(operator_body: str) -> dict[str, Any]:
+    """Parse ``sw-frontmatter-extra`` JSON without structural-key filtering."""
+    match = FRONTMATTER_EXTRA_MARKER.search(operator_body or "")
+    if not match:
+        return {}
+    try:
+        data = json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _edges_include_absorbs(edges: dict[str, Any] | None) -> bool:
+    edge_list = (edges or {}).get("edges") if isinstance(edges, dict) else None
+    if not isinstance(edge_list, list):
+        return False
+    for edge in edge_list:
+        if not isinstance(edge, dict):
+            continue
+        rel = str(edge.get("rel") or edge.get("relationship") or "").strip().lower()
+        if rel == "absorbs" and str(edge.get("target") or "").strip():
+            return True
+    return False
+
+
+def _recover_absorbs_from_frontmatter_extra(
+    full_body: str,
+    fm: dict[str, str],
+    edges: dict[str, Any],
+) -> tuple[dict[str, str], dict[str, Any]]:
+    """Recover mis-serialized ``absorbs`` from frontmatter-extra for closeout.
+
+    PRD 094 strips structural keys from ``sw-frontmatter-extra`` on normal read so
+    they cannot override edges. Hybrid PRDs that only stored ``absorbs`` in extra
+    (no YAML / sw-edges / labels) then fail closeout with
+    ``planning-issue-no-provenance`` despite declaring absorption intent.
+
+    When labels/YAML/edges do not already project absorbs, recover the raw extra
+    list into frontmatter + sw-edges for absorption discovery only — never
+    overrides an existing absorbs projection.
+    """
+    if fm.get("absorbs") or _edges_include_absorbs(edges):
+        return fm, edges
+    targets = parse_absorbs_targets(_raw_frontmatter_extra(full_body).get("absorbs"))
+    if not targets:
+        return fm, edges
+    recovered = dict(fm)
+    recovered["absorbs"] = ",".join(targets)
+    edge_list = list((edges or {}).get("edges") or []) if isinstance(edges, dict) else []
+    existing = {
+        str(edge.get("target") or "").strip()
+        for edge in edge_list
+        if isinstance(edge, dict)
+        and str(edge.get("rel") or edge.get("relationship") or "").strip().lower() == "absorbs"
+    }
+    for target in targets:
+        if target not in existing:
+            edge_list.append({"rel": "absorbs", "target": target})
+    recovered_edges = dict(edges or {})
+    recovered_edges["edges"] = edge_list
+    if "version" not in recovered_edges:
+        recovered_edges["version"] = 1
+    return recovered, recovered_edges
+
+
 def _resolve_prd_absorption_context(
     prd_record: Any,
     prd_unit: str,
@@ -1815,7 +1882,8 @@ def _resolve_prd_absorption_context(
     pmis = _migrate_issue_store()
     if has_raw_yaml_frontmatter(full_body):
         raw_content = strip_markers_and_edges(full_body)
-        return pmis.parse_frontmatter_fields(raw_content), edges
+        fm = pmis.parse_frontmatter_fields(raw_content)
+        return _recover_absorbs_from_frontmatter_extra(full_body, fm, edges)
     if is_hybrid_operator_body(full_body):
         hybrid = frontmatter_from_labels(
             list(getattr(prd_record, "labels", []) or []),
@@ -1829,9 +1897,10 @@ def _resolve_prd_absorption_context(
             for key, value in yaml_fm.items():
                 if value:
                     fm[key] = value
-        return fm, edges
+        return _recover_absorbs_from_frontmatter_extra(full_body, fm, edges)
     raw_content = strip_markers_and_edges(full_body)
-    return pmis.parse_frontmatter_fields(raw_content), edges
+    fm = pmis.parse_frontmatter_fields(raw_content)
+    return _recover_absorbs_from_frontmatter_extra(full_body, fm, edges)
 
 
 def _is_gap_unit_absorb_target(target: str) -> bool:
