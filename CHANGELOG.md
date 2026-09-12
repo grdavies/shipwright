@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.2](https://github.com/grdavies/shipwright/compare/v2.11.1...v2.11.2) (2026-09-12)
+
+
+### Bug Fixes
+
+* **packaging:** single-source version from version.txt + PEP517 bundle sync ([#1150](https://github.com/grdavies/shipwright/issues/1150)) ([b864d77](https://github.com/grdavies/shipwright/commit/b864d7782c193cc4624d09945cf9f4e58a9265fe))
+
 ## [2.11.1](https://github.com/grdavies/shipwright/compare/v2.11.0...v2.11.1) (2026-09-12)
 
 
