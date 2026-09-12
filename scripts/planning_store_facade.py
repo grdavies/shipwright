@@ -3965,6 +3965,20 @@ def close_delivery_units(
                 "prd339Gate": gate,
                 "resumeCommand": gate.get("resumeCommand"),
             }
+    if prd_unit_id == "339-prd-planning-store-correctness-provider-expansion":
+        from prd339_bundle_closeout import prd339_absorb_closeout_milestone
+
+        gate = prd339_absorb_closeout_milestone(root)
+        if gate.get("verdict") != "ready":
+            return {
+                "verdict": "not-ready",
+                "action": "close-delivery-units",
+                "error": "prd339-absorb-closeout-gate",
+                "cause": gate.get("cause"),
+                "prdUnitId": prd_unit_id,
+                "prd339CloseoutGate": gate,
+                "resumeCommand": gate.get("resumeCommand"),
+            }
     snapshot = resolve_delivery_linked_units(root, cfg, prd_unit_id)
     if snapshot.get("verdict") != "ok":
         return snapshot
