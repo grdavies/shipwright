@@ -20,6 +20,10 @@ def main() -> int:
     for guard, args in ((scripts / "index-region-guard.py", ("--staged",)), (scripts / "planning-privacy-guard.py", ("--staged",))):
         if guard.is_file() and _run_py(guard, repo, *args) != 0:
             return 1
+    # PRD 348 R5 — dual-home layout.md byte-identity at commit time.
+    layout_sync = scripts / "layout_sync_check.py"
+    if layout_sync.is_file() and _run_py(layout_sync, repo, "--root", str(repo)) != 0:
+        return 1
     graph = scripts / "planning_graph.py"
     if graph.is_file():
         proc = subprocess.run([sys.executable, str(graph), str(repo), "cycle-check", "--staged"], cwd=repo, env=env)
