@@ -808,6 +808,7 @@
     "wave_phase_pr.py",
     "wave_plan_benefit.py",
     "wave_plan_validate.py",
+    "wave_post_merge.py",
     "wave_preflight.py",
     "wave_remote_lease.py",
     "wave_run_adopt.py",
@@ -832,6 +833,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 829,
+  "moduleCount": 830,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
