@@ -5,7 +5,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
+import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +40,10 @@ from planning_canonical import (
 LIVE_CLIENT = True
 GRAPHQL_URL = "https://api.linear.app/graphql"
 DEFAULT_COMPLEXITY_ESTIMATE = 100
+MAX_GRAPHQL_RETRIES = 3
+MAX_SEARCH_PAGES = 10
+DEFAULT_PAGE_SIZE = 50
+GRAPHQL_RETRY_BASE_SECONDS = 0.05
 ADAPTER_VERBS = (
     "create",
     "get",
@@ -115,6 +122,15 @@ query IssuesSearch($filter: IssueFilter, $first: Int) {{
 }}
 """.strip()
 
+ISSUES_SEARCH_PAGINATED_QUERY = f"""
+query IssuesSearchPaginated($filter: IssueFilter, $first: Int, $after: String) {{
+  issues(filter: $filter, first: $first, after: $after) {{
+    nodes {{ {ISSUE_FIELDS} }}
+    pageInfo {{ hasNextPage endCursor }}
+  }}
+}}
+""".strip()
+
 LABEL_CREATE_MUTATION = """
 mutation LabelCreate($input: IssueLabelCreateInput!) {
   issueLabelCreate(input: $input) {
@@ -175,6 +191,30 @@ class LinearRateLimited(LinearClientError):
     ) -> None:
         super().__init__(message, code=code)
         self.retryable = retryable
+
+
+class LinearGraphQLAuthError(LinearClientError):
+    """Credential or authorization failure normalized from HTTP/GraphQL (R33)."""
+
+    def __init__(
+        self,
+        message: str = "Linear GraphQL auth denied",
+        *,
+        code: str = "auth-denied",
+    ) -> None:
+        super().__init__(message, code=code)
+
+
+class LinearGraphQLScopeError(LinearClientError):
+    """Team or credential scope failure normalized from GraphQL (R33)."""
+
+    def __init__(
+        self,
+        message: str = "Linear GraphQL scope failure",
+        *,
+        code: str = "scope-failure",
+    ) -> None:
+        super().__init__(message, code=code)
 
 
 def _issues_section(cfg: dict[str, Any]) -> dict[str, Any]:
@@ -279,7 +319,39 @@ def _complexity_from_headers(headers: dict[str, str]) -> int:
     return DEFAULT_COMPLEXITY_ESTIMATE
 
 
-def graphql(
+def normalize_graphql_errors(
+    payload: dict[str, Any],
+    *,
+    http_status: int,
+    auth_token: str = "",
+) -> None:
+    """Raise normalized client errors for auth, scope, and GraphQL failures (R33)."""
+    if http_status in {401, 403}:
+        raise LinearGraphQLAuthError(
+            _redact(f"HTTP {http_status} auth denied", auth_token),
+            code="auth-denied",
+        )
+
+    errors = payload.get("errors")
+    if isinstance(errors, list) and errors:
+        first = errors[0] if isinstance(errors[0], dict) else {}
+        message = str(first.get("message") or "GraphQL error")
+        ext = first.get("extensions") if isinstance(first.get("extensions"), dict) else {}
+        code = str(ext.get("code") or "graphql-error")
+        code_lower = code.lower()
+        if code_lower in {"forbidden", "unauthorized", "authentication_required"}:
+            raise LinearGraphQLAuthError(_redact(message, auth_token), code="auth-denied")
+        if code_lower in {"ratelimited", "rate_limit_exceeded"} or "ratelimit" in message.lower():
+            raise LinearRateLimited(_redact(message, auth_token))
+        if code_lower in {"insufficient_scopes", "overscoped"} or "scope" in message.lower():
+            raise LinearGraphQLScopeError(_redact(message, auth_token), code="scope-failure")
+        raise LinearClientError(_redact(message, auth_token), code="graphql-error")
+
+    if payload.get("data") is None and http_status < 400:
+        raise LinearClientError("GraphQL response missing data", code="invalid-payload")
+
+
+def _graphql_once(
     root: Path,
     cfg: dict[str, Any],
     *,
@@ -289,7 +361,7 @@ def graphql(
     credential: Resolution | ResolvedToken | None = None,
     charge_budget: bool = True,
 ) -> dict[str, Any]:
-    """POST a GraphQL operation to Linear; detect RATELIMITED extensions (R13)."""
+    """Single GraphQL POST — broker-bound auth, budget charge, normalized errors (R33)."""
     from planning_store import resolve_issues_credential
 
     auth_mode = resolve_auth_mode(cfg)
@@ -311,7 +383,6 @@ def graphql(
 
     auth_hdrs = auth_headers(auth_token, auth_mode=auth_mode)
     extra = issues_broker.strip_auth_headers(auth_hdrs)
-    # oauth → broker Bearer; api-key → raw Authorization in extra_headers (not Bearer).
     if auth_mode == "oauth":
         bearer = auth_token[7:].strip() if auth_token.lower().startswith("bearer ") else auth_token
         bearer_token: str | None = bearer
@@ -372,6 +443,8 @@ def graphql(
             code="http-error",
         )
 
+    normalize_graphql_errors(data, http_status=status, auth_token=auth_token)
+
     if charge_budget:
         try:
             import planning_request_budget as prb
@@ -385,6 +458,40 @@ def graphql(
             pass
 
     return data
+
+
+def graphql(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    query: str,
+    variables: dict[str, Any] | None = None,
+    token: str | None = None,
+    credential: Resolution | ResolvedToken | None = None,
+    charge_budget: bool = True,
+    max_retries: int = MAX_GRAPHQL_RETRIES,
+) -> dict[str, Any]:
+    """POST a GraphQL operation with bounded retries and normalized errors (R13/R33)."""
+    last_exc: Exception | None = None
+    for attempt in range(max(1, max_retries)):
+        try:
+            return _graphql_once(
+                root,
+                cfg,
+                query=query,
+                variables=variables,
+                token=token,
+                credential=credential,
+                charge_budget=charge_budget,
+            )
+        except LinearRateLimited as exc:
+            last_exc = exc
+            if not exc.retryable or attempt + 1 >= max_retries:
+                raise
+            time.sleep(GRAPHQL_RETRY_BASE_SECONDS * (2**attempt))
+    if last_exc is not None:
+        raise last_exc
+    raise LinearClientError("graphql failed after retries", code="transport-error")
 
 
 def detect_overscoped_key(
@@ -586,8 +693,30 @@ def overflow_chunk_policy() -> dict[str, Any]:
 
 
 
+PRD_061_UNIT_ID = "061-prd-planning-store-interface-architecture"
+PRD_061_FACADE_ACCEPTANCE_TEST = (
+    "scripts/unit_tests/planning/test_planning_061_facade.py"
+)
+PRD_061_PROJECTION_ACCEPTANCE_TEST = (
+    "scripts/unit_tests/planning/test_planning_061_github_projects.py"
+)
+
 LINEAR_PROVIDER_DOC_REL = Path("core/providers/issues/linear.md")
 WORKFLOWS_DOC_REL = Path("core/documentation/workflows.md")
+
+OPERATOR_BROWSE_DOC_MARKERS: tuple[str, ...] = (
+    "## Operator projection contract (PRD 061 prerequisite, R33, R34)",
+    "## Semantic entity mapping",
+    "## Rebuild semantics and semantic authority",
+    "## Linear UI operator browse checklist (R33)",
+    "### PRD browse questions (no markdown body)",
+    "### Gap browse questions (no markdown body)",
+    "### Task browse questions (no markdown body)",
+    "body-open-is-failure",
+    "portable-graph",
+    "prd061-readiness-gate",
+    "semantic-store authority",
+)
 
 STAGE1_DOGFOOD_DOC_MARKERS: tuple[str, ...] = (
     "## Stage-1 dogfood acceptance (R25)",
@@ -629,6 +758,119 @@ WORKFLOWS_R30_MARKERS: tuple[str, ...] = (
     "docs-currency-gate",
     "Stage promotion gates (M7/A)",
 )
+
+
+def _vendored_pytest_pythonpath(gate_repo: Path) -> list[str]:
+    """Resolve vendored pytest roots so nested CI runs don't need site pytest."""
+    try:
+        scripts = gate_repo / "scripts"
+        if str(scripts) not in sys.path:
+            sys.path.insert(0, str(scripts))
+        from _sw.vendor_paths import vendor_roots
+
+        return [str(path) for path in vendor_roots(gate_repo)]
+    except Exception:
+        return []
+
+
+def _acceptance_test_ready(root: Path, rel_test: str) -> dict[str, Any]:
+    test_path = root / rel_test
+    if not test_path.is_file():
+        return {
+            "verdict": "blocked",
+            "test": rel_test,
+            "reason": "acceptance-test-missing",
+        }
+    gate_repo = Path(__file__).resolve().parent.parent
+    env = os.environ.copy()
+    env.pop("PYTEST_ADDOPTS", None)
+    env.pop("PYTEST_CURRENT_TEST", None)
+    path_parts = [
+        str(root / "scripts"),
+        *_vendored_pytest_pythonpath(gate_repo),
+    ]
+    prev_pp = env.get("PYTHONPATH", "")
+    if prev_pp:
+        path_parts.append(prev_pp)
+    env["PYTHONPATH"] = os.pathsep.join(part for part in path_parts if part)
+    with tempfile.TemporaryDirectory(prefix="prd061-gate-pytest-") as td:
+        empty_ini = Path(td) / "pytest.ini"
+        empty_ini.write_text(
+            "[pytest]\npythonpath = scripts\n",
+            encoding="utf-8",
+        )
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                str(test_path),
+                "-q",
+                "--rootdir",
+                str(root),
+                "-c",
+                str(empty_ini),
+                "-p",
+                "no:cacheprovider",
+            ],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+    if proc.returncode == 0:
+        return {"verdict": "ready", "test": rel_test}
+    detail = "\n".join(
+        part
+        for part in ((proc.stdout or "").strip(), (proc.stderr or "").strip())
+        if part
+    )
+    return {
+        "verdict": "blocked",
+        "test": rel_test,
+        "reason": "acceptance-test-failed",
+        "exitCode": proc.returncode,
+        "stderr": detail[:4000] or None,
+    }
+
+
+def prd061_facade_projection_readiness(root: Path | None = None) -> dict[str, Any]:
+    """Return ready when PRD 061 facade/projection contract acceptance tests are green (R34)."""
+    repo = root if root is not None else Path(__file__).resolve().parent.parent
+    facade = _acceptance_test_ready(repo, PRD_061_FACADE_ACCEPTANCE_TEST)
+    projection = _acceptance_test_ready(repo, PRD_061_PROJECTION_ACCEPTANCE_TEST)
+    blocked = [item for item in (facade, projection) if item.get("verdict") != "ready"]
+    if blocked:
+        return {
+            "verdict": "blocked",
+            "action": "linear-prd061-readiness-gate",
+            "cause": "prd-061-facade-projection-not-merged-green",
+            "prd061UnitId": PRD_061_UNIT_ID,
+            "requirements": ["facade-contract", "projection-contract"],
+            "blocked": blocked,
+            "resumeCommand": (
+                "merge and green PRD 061 facade/projection contract "
+                f"({PRD_061_FACADE_ACCEPTANCE_TEST}, "
+                f"{PRD_061_PROJECTION_ACCEPTANCE_TEST}), then retry linear adapter activation"
+            ),
+        }
+    return {
+        "verdict": "ready",
+        "action": "linear-prd061-readiness-gate",
+        "prd061UnitId": PRD_061_UNIT_ID,
+        "requirements": ["facade-contract", "projection-contract"],
+        "checks": [facade, projection],
+    }
+
+
+def require_prd061_facade_projection_ready(root: Path) -> None:
+    """Fail-closed PRD 061 readiness preflight before live Linear adapter activation (R34)."""
+    gate = prd061_facade_projection_readiness(root)
+    if gate.get("verdict") != "ready":
+        raise LinearClientError(
+            str(gate.get("cause") or "prd-061-facade-projection-not-merged-green"),
+            code="prd061-readiness-blocked",
+        )
 
 
 def resolve_linear_provider_doc(root: Path) -> Path:
@@ -706,6 +948,20 @@ def linear_promotion_gate_evidence(root: Path) -> dict[str, Any]:
         "live": live,
         "failures": failures,
     }
+
+
+def operator_browse_checklist_gate(root: Path) -> dict[str, Any]:
+    """R33 — Linear operator browse checklist documented in linear.md."""
+    doc = linear_provider_doc_text(root)
+    result = _doc_marker_gate(doc, OPERATOR_BROWSE_DOC_MARKERS, gate="operator-browse-checklist-gate")
+    if result["verdict"] == "ok":
+        result["checklist"] = {
+            "prdQuestions": True,
+            "gapQuestions": True,
+            "taskQuestions": True,
+            "bodyOpenIsFailure": True,
+        }
+    return result
 
 
 def stage1_dogfood_checklist_gate(root: Path) -> dict[str, Any]:
@@ -1035,6 +1291,7 @@ class LinearIssuesClient:
             self._fixture = None
 
         if self._fixture is None:
+            require_prd061_facade_projection_ready(self.root)
             scope = resolve_team_scope(self.cfg)
             self._team_key = scope.get("teamKey") or ""
             self._team_id = scope.get("teamId") or ""
@@ -1334,6 +1591,34 @@ class LinearIssuesClient:
         record.locked = True
         return record
 
+    def _paginated_issue_nodes(
+        self,
+        filter_obj: dict[str, Any],
+        *,
+        page_size: int = DEFAULT_PAGE_SIZE,
+        max_pages: int = MAX_SEARCH_PAGES,
+    ) -> list[dict[str, Any]]:
+        """Fetch issue nodes with bounded cursor pagination (R33)."""
+        nodes: list[dict[str, Any]] = []
+        after: str | None = None
+        for _ in range(max(1, max_pages)):
+            variables: dict[str, Any] = {"filter": filter_obj, "first": page_size}
+            if after:
+                variables["after"] = after
+            payload = self._gql(ISSUES_SEARCH_PAGINATED_QUERY, variables)
+            connection = ((payload.get("data") or {}).get("issues")) or {}
+            batch = connection.get("nodes") or []
+            if isinstance(batch, list):
+                nodes.extend(item for item in batch if isinstance(item, dict))
+            page_info = connection.get("pageInfo") if isinstance(connection.get("pageInfo"), dict) else {}
+            if not page_info.get("hasNextPage"):
+                break
+            cursor = page_info.get("endCursor")
+            after = str(cursor) if cursor else None
+            if not after:
+                break
+        return nodes
+
     def search(
         self,
         *,
@@ -1360,8 +1645,7 @@ class LinearIssuesClient:
         if self._team_id or self._team_key:
             team_id = self._ensure_team_id()
             filter_obj["team"] = {"id": {"eq": team_id}}
-        payload = self._gql(ISSUES_SEARCH_QUERY, {"filter": filter_obj, "first": 50})
-        nodes = (((payload.get("data") or {}).get("issues") or {}).get("nodes")) or []
+        nodes = self._paginated_issue_nodes(filter_obj)
         out: list[Any] = []
         for node in nodes:
             if not isinstance(node, dict):
@@ -1494,7 +1778,7 @@ class LinearIssuesClient:
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
-        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|promotion-gate-evidence|docs-currency-gate|comments-relations-surface>"}))
+        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|promotion-gate-evidence|docs-currency-gate|prd061-readiness-gate|operator-browse-checklist-gate|comments-relations-surface>"}))
         raise SystemExit(2)
     root = Path(args[0]).resolve()
     cfg = load_workflow_config(root)
@@ -1515,6 +1799,13 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(linear_promotion_gate_evidence(root), indent=2))
     elif cmd == "docs-currency-gate":
         print(json.dumps(docs_currency_gate(root), indent=2))
+    elif cmd == "prd061-readiness-gate":
+        out = prd061_facade_projection_readiness(root)
+        print(json.dumps(out, indent=2))
+        if out.get("verdict") != "ready":
+            raise SystemExit(20)
+    elif cmd == "operator-browse-checklist-gate":
+        print(json.dumps(operator_browse_checklist_gate(root), indent=2))
     elif cmd == "comments-relations-surface":
         issue_id = args[2] if len(args) > 2 else ""
         if not issue_id:

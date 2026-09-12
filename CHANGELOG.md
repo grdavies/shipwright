@@ -1219,6 +1219,19 @@
 * merge phase distribution-channel-medium into feat/shipwright-distribution-onboarding (5ae2c62) <!-- sw-deliver:distribution-channel-medium -->
 * merge phase release-assets-medium into feat/shipwright-distribution-onboarding (b9218c2) <!-- sw-deliver:release-assets-medium -->
 * merge phase adopter-contributor-paths-small into feat/shipwright-distribution-onboarding (7bb2a26) <!-- sw-deliver:adopter-contributor-paths-small -->
+* merge phase accept-amendments-on-frozen-open-parents-small into feat/planning-store-correctness-provider-expansion (2f35e2d) <!-- sw-deliver:accept-amendments-on-frozen-open-parents-small -->
+* merge phase refine-email-secret-detection-small into feat/planning-store-correctness-provider-expansion (59e15ec) <!-- sw-deliver:refine-email-secret-detection-small -->
+* merge phase preserve-list-form-absorbs-projection-small into feat/planning-store-correctness-provider-expansion (fbce4b4) <!-- sw-deliver:preserve-list-form-absorbs-projection-small -->
+* merge phase disambiguate-deliver-issue-sources-medium into feat/planning-store-correctness-provider-expansion (a45d058) <!-- sw-deliver:disambiguate-deliver-issue-sources-medium -->
+* merge phase refuse-marker-reuse-and-self-heal-indexes-medium into feat/planning-store-correctness-provider-expansion (513e035) <!-- sw-deliver:refuse-marker-reuse-and-self-heal-indexes-medium -->
+* merge phase accept-the-independent-correctness-release-small into feat/planning-store-correctness-provider-expansion (4d423fa) <!-- sw-deliver:accept-the-independent-correctness-release-small -->
+* merge phase clarify-planning-visibility-nomenclature-small into feat/planning-store-correctness-provider-expansion (be90e65) <!-- sw-deliver:clarify-planning-visibility-nomenclature-small -->
+* merge phase gate-linear-work-on-prd-061-small into feat/planning-store-correctness-provider-expansion (f1dc73e) <!-- sw-deliver:gate-linear-work-on-prd-061-small -->
+* merge phase implement-linear-graphql-semantics-medium into feat/planning-store-correctness-provider-expansion (36bb10d) <!-- sw-deliver:implement-linear-graphql-semantics-medium -->
+* merge phase project-prds-brainstorms-and-gaps-medium into feat/planning-store-correctness-provider-expansion (a02db52) <!-- sw-deliver:project-prds-brainstorms-and-gaps-medium -->
+* merge phase project-phases-and-task-hierarchy-medium into feat/planning-store-correctness-provider-expansion (90d2041) <!-- sw-deliver:project-phases-and-task-hierarchy-medium -->
+* merge phase document-and-verify-linear-operator-browsing-medium into feat/planning-store-correctness-provider-expansion (20fc5de) <!-- sw-deliver:document-and-verify-linear-operator-browsing-medium -->
+* merge phase close-the-planning-store-bundle-small into feat/planning-store-correctness-provider-expansion (406d446) <!-- sw-deliver:close-the-planning-store-bundle-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

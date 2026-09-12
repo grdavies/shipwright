@@ -105,7 +105,11 @@ def test_r16_registration_footprint_surface() -> None:
     assert footprint["capabilityIndexIds"]["linear"] == "provider.providers.issues.linear"
     assert "scripts/planning_migrate_issue_store.py" in footprint["migrationHooks"]
     assert footprint["linear"]["liveClientWired"] is True
-    assert footprint["linear"]["promotionGatedBy"] == ["conformance", "oauth-docs-gate"]
+    assert footprint["linear"]["promotionGatedBy"] == [
+        "conformance",
+        "oauth-docs-gate",
+        "prd061-readiness-gate",
+    ]
 
 
 def test_r2_linear_recognized_and_shipped() -> None:

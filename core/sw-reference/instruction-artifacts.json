@@ -256,7 +256,7 @@
       "sourcePath": "core/commands/sw-debug.md"
     },
     {
-      "bodyDigest": "6c208bb9f5cd1fd6caff6d3689c0ebe8be90c242b6b12bedf58e7cc3fd9094e4",
+      "bodyDigest": "3d389476f67b69f58264d172eec0cb20f87a4260978e9c8d3fe35d5ef71e1f16",
       "capabilities": [],
       "description": "Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.",
       "id": "sw-deliver",
@@ -319,7 +319,7 @@
       "sourcePath": "core/commands/sw-feedback-close.md"
     },
     {
-      "bodyDigest": "a63394cb54dae2899228dfd7edcb0cb1d8820d72ac8bd81fcd042ebb22495980",
+      "bodyDigest": "5f064a3b4fbf7674e674e01c00f835de7805abed9877b981c4243f79802e2a8e",
       "capabilities": [],
       "description": "Stamp frozen: true on an artifact, register in INDEX, and enforce immutability. Does not unfreeze or edit frozen parents.",
       "id": "sw-freeze",

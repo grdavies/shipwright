@@ -132,6 +132,126 @@ Complexity-aware query planner splits work under the ~10k points/query cap.
 `issueBatchCreate` inputs MUST use `{ "issues": [ ... ] }`. A bare issues array silently
 creates zero issues and is rejected by `validate_batch_create_input`.
 
+## Operator projection contract (PRD 061 prerequisite, R33, R34)
+
+Linear is both the LCD issue-store **and** the operator browse projection for planning units.
+Implementation MUST consume the merged-green PRD 061 facade/projection contract — it does not
+recreate or bypass that surface.
+
+### Setup
+
+| Step | Action |
+| --- | --- |
+| 1 | Merge and green PRD 061 (`061-prd-planning-store-interface-architecture`) facade + projection acceptance tests |
+| 2 | Set `planning.store.issuesProvider: linear` with `teamKey` or `teamId` |
+| 3 | Configure `planning.store.operatorProjection.linear` (`enabled`, `initiativeSubstitute`, `budget`) |
+| 4 | Probe readiness: `python3 scripts/planning_linear_client.py . prd061-readiness-gate` |
+| 5 | Activate Team-scoped token via `planning.store.issues.credentialRef` (broker-only; never commit tokens) |
+
+Preflight refuses live adapter activation until `prd061-readiness-gate` reports `verdict: ready`
+(`prd061-readiness-gate`). Hermetic fixture harnesses (`SW_ISSUES_FIXTURE=1` or injected fixture
+store) may skip the live gate for unit tests only.
+
+### PRD 061 prerequisite (R34)
+
+| Gate | Acceptance test |
+| --- | --- |
+| Facade contract | `scripts/unit_tests/planning/harness_planning_061_facade.py` |
+| Projection contract | `scripts/unit_tests/planning/test_planning_061_github_projects.py` |
+
+Both must exist in the repo and pass before Linear projection work ships. Partial readiness
+(one test missing or red) blocks adapter activation with `prd061-readiness-blocked`.
+
+## Semantic entity mapping
+
+Portable semantic graph is the **semantic-store authority**; Linear entities are rebuildable
+projection mirrors (`semantic-store authority`). LCD Issues remain the canonical body/hash path
+for freeze when Linear is the issue-store.
+
+| Artifact | Linear entity | Browse role |
+| --- | --- | --- |
+| PRD | **Project** | Program/PRD status, requirements summary, absorbed gaps, attached brainstorms |
+| Brainstorm | **Document** | Linked to PRD Project; not freeze authority |
+| Gap | **Issue** + `Gap` label | Project membership + lifecycle/prerequisite metadata |
+| Phase | **Milestone** | Phase delivery status and dependency order on PRD Project |
+| Task | **Issue** (sub-issue) | Milestone membership, task ref, R-IDs, completion status |
+| Program | **Initiative** (or substitute views) | Cross-PRD backlog/in-flight/done (R1 question 4) |
+| Cycle wave | **Cycle** (issue assignment only) | Wave time-box; orthogonal to Milestone membership |
+
+**LCD issue+labels-only is explicitly insufficient (gap-079).** Mapping every planning unit to a
+flat Issue with labels only — without Project/Document/Milestone hierarchy — fails
+`gap079-linear-ui-answerability` with `linear-lcd-labels-only-rejected`.
+
+Edge encodings (no stub Issue endpoints for non-Issue sources):
+
+| Edge | Encoding |
+| --- | --- |
+| `absorbs` | Project membership + Gap label/field |
+| `feeds` | Document attachment + project metadata |
+| `depends` | Native IssueRelation between Issue endpoints |
+
+## Rebuild semantics and semantic authority
+
+| Rule | Detail |
+| --- | --- |
+| Authority | Portable semantic graph / semantic store (`freezeAuthority: portable-graph`) |
+| Projection | Rebuildable; `isSourceOfTruth: false` on Project/Document/Milestone/Initiative/Cycle |
+| Freeze/hash | LCD Issue or explicit Document-backed body only — never projection mirrors |
+| Rebuild entry | `reconcile_linear_operator_projection_from_semantic_store` (resumable steps: prd-brainstorm-gap → phases → tasks → tombstone) |
+| Drift | `owned_fields_digest` compare; fail closed unless `overwrite_drift: true` with audit |
+| Tombstone | Entities absent from semantic authority are tombstoned; no duplicate Projects per `unit-id` |
+| Split brain | `projection-prefer` and projection-mirror freeze claims fail closed |
+
+CLI/schema surfaces:
+
+```bash
+python3 scripts/planning_store.py linear-projection-schema
+python3 scripts/planning_linear_client.py . operator-browse-checklist-gate
+```
+
+## Linear UI operator browse checklist (R33)
+
+Operator browse questions MUST be answerable from Linear list/board/card metadata **without
+opening markdown bodies** (`body-open-is-failure`). Saved views below are required operator
+setup (or documented equivalents).
+
+### PRD browse questions (no markdown body)
+
+| Question | Linear surface | Saved view / filter | Card-visible fields |
+| --- | --- | --- | --- |
+| Which gaps does this PRD absorb? | Project detail + linked Gap Issues | `gap-by-prd-project` | `projectMembership`, `gapLabelOrField`, `gapIssueIdentity` |
+| Which brainstorms feed this PRD? | Project detail + attached Documents | `documents-by-project` | `documentAttachmentOrMembership`, `brainstormIdentity`, `prdProjectLink` |
+| What is task/phase completion? | Project Milestones + task Issues | `tasks-by-milestone` | `issueSemanticStatus`, `milestonePhaseMembership`, `milestoneProgress` |
+| Program backlog / in-flight / done? | Initiative **or** substitute Team/Project views | `program-backlog`, `program-in-flight`, `program-done` | `initiativeOrProgramDiscriminator`, `programSemanticStatus`, `substituteViewsOrFilters` |
+
+### Gap browse questions (no markdown body)
+
+| Question | Linear surface | Saved view / filter | Card-visible fields |
+| --- | --- | --- | --- |
+| Which PRD absorbs this gap? | Gap Issue on PRD Project | `gap-by-prd-project` | `projectMembership`, `gapLabelOrField`, `gapIssueIdentity` |
+| Gap lifecycle and prerequisites? | Gap Issue list | `gaps-open` / `gaps-absorbed` | `lifecycle`, `prerequisites`, `absorbs` |
+| Is this gap blocked on another unit? | Gap Issue relations | `gap-depends` | `issueRelation`, `prerequisiteUnitIds` |
+
+### Task browse questions (no markdown body)
+
+| Question | Linear surface | Saved view / filter | Card-visible fields |
+| --- | --- | --- | --- |
+| Which phase owns this task? | Task sub-issue Milestone membership | `tasks-by-milestone` | `milestonePhaseMembership`, `taskRef`, `phaseId` |
+| Task completion and traceability? | Task Issue board by status | `tasks-by-status` | `issueSemanticStatus`, `completionStatus`, `rIds`, `scenarios` |
+| Sub-task hierarchy? | Parent/child Issue tree | `task-subissues` | `parentIssueId`, `subIssue`, `taskRef` |
+
+Acceptance gate:
+
+```bash
+python3 scripts/test/run_pytest.py scripts/unit_tests/planning/test_prd339_linear_operator_browse.py
+```
+
+Live probe (after PRD 061 green):
+
+```bash
+python3 scripts/planning_linear_client.py . operator-browse-checklist-gate
+```
+
 ## Stage-1 dogfood acceptance (R25)
 
 Normative operator-surface acceptance before the stage-1 ship increment. The stage-1 gate asserts

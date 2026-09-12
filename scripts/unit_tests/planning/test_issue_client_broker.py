@@ -157,6 +157,11 @@ class TestAllFourClients:
             assert client._token == _TEST_VALUE
             assert client._bearer_token == _TEST_VALUE  # dc flavor
         else:
+            monkeypatch.setattr(
+                linear_client,
+                "require_prd061_facade_projection_ready",
+                lambda root: None,
+            )
             client = linear_client.LinearIssuesClient(tmp_path, credential=credential, cfg=cfg)
             assert client._token == _TEST_VALUE
 

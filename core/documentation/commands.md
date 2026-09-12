@@ -50,12 +50,12 @@ Shipwright harness development still invokes helpers directly from a source chec
 
 - **Mode auto-detect:** `--task-list` → phase-mode; `--items`/`--edges` → multi-feature; both → halt.
 - **Single terminal merge gate:** per-phase PRs auto-merge into `<type>/<slug>` on green; one
- human-gated `<type>/<slug> → main` PR at the end.
+human-gated `<type>/<slug> → main` PR at the end.
 - **Orchestrator auto-adopt:** on resume, reuse `.sw-worktrees/<slug>-orchestrator` when branch/slug match and the tree is clean; otherwise provision halts with a typed cause. Resume with `/sw-deliver run` — consumable state skips nested preflight.
 - **Resumption:** re-run `run` after interrupt; durable `deliver-loop` cursor in
- `.cursor/sw-deliver-state.<slug>.json` at repo root; `plan --from <phase>` when resuming mid-wave.
+`.cursor/sw-deliver-state.<slug>.json` at repo root; `plan --from <phase>` when resuming mid-wave.
 - **Pre-merge compounding:** full `/sw-compound-ship --pre-merge` before the terminal human merge gate;
- completion stays `completed-pending-merge` until merge is detected.
+completion stays `completed-pending-merge` until merge is detected.
 - **Dry-run:** `scripts/wave.py plan --task-list <path> --dry-run` — plan JSON only, no artifact write.
 
 **Autonomy:** default `deliver.autonomy.mode: autonomous` — conductor in-turn loop to terminal
@@ -95,7 +95,7 @@ Mechanical entrypoints (same surfaces `/sw-status` delegates to):
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave_deliver.py explain-plan [--task-list <path>|--plan <path>|--graph-json <path>] [--compact] [--text]
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.py graph-progress --run-id <runId> [--format json|text] [--compact]
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" status_integrity.py explain <nodeId> --run-id <runId> [--format json|text] [--compact]
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning-graph.py status --unit-id <unit-id>   # planning graph — not execution
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning-graph.py status --unit-id <unit-id> # planning graph — not execution
 ```
 
 Receipts, in-flight intents, and status/explain index by the generic graph `runId` (mapped from the
@@ -147,7 +147,7 @@ Composition, convergence, and domain terms:
 [`graph-domain-terminology.md`](graph-domain-terminology.md).
 
 ### Deliver operator surface
-<!-- currency: refreshed 2026-09-11T20:22:52Z — terminal prepare docs-currency gate vs wave_terminal; resume-locate / run-finalize -->
+<!-- currency: refreshed 2026-09-12T10:36:26Z — terminal docs-currency; wave_deliver / wave_terminal / wave_run_adopt -->
 
 Mechanical list / resume / finalize commands report run identity, target branch, stage, lock holder,
 and `requiresAdoption` **before** any mutation. Operators invoke them via `wave_deliver.py` (or
@@ -298,15 +298,15 @@ control changes fail closed — finish or abort the run first.
 
 1. Leave committed `credentialRef` values and selector `ref` keys unchanged.
 2. Replace secret material at the backend only:
-   - **`environment`:** rotate the declared env var in your profile or CI secret store.
-   - **`keystore`:** update the native Keychain / Credential Manager item for service
-     `shipwright.credential/<ref>` (macOS/Windows workstations only).
-   - **`github_cli`:** re-authenticate with GitHub CLI (`gh auth login`) under the isolated config dir.
-   - **`git_credential`:** update the credential helper store for the scoped hostname.
+- **`environment`:** rotate the declared env var in your profile or CI secret store.
+- **`keystore`:** update the native Keychain / Credential Manager item for service
+`shipwright.credential/<ref>` (macOS/Windows workstations only).
+- **`github_cli`:** re-authenticate with GitHub CLI (`gh auth login`) under the isolated config dir.
+- **`git_credential`:** update the credential helper store for the scoped hostname.
 3. Re-run `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" credentials-doctor.py--root .` and confirm `lastSuccessfulResolution` updates
-   for the rotated ref.
+for the rotated ref.
 4. Optional audit: append a `rotation` event to the machine-local provenance journal (string metadata only —
-   no secrets). See `.shipwright/layout.md` **Credential machine-local records**.
+no secrets). See `.shipwright/layout.md` **Credential machine-local records**.
 
 Never widen selector scope (`allowedRepos`, `allowedProjectIds`, `allowedEndpoints`) without pairing
 approval.
@@ -437,7 +437,7 @@ replay refused writes.
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_refusal_ledger_cli.py -- list
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_refusal_ledger_cli.py -- show <entryId>
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_refusal_ledger_cli.py -- export [--out path]
-python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_refusal_ledger_cli.py -- purge --entry-id <id>   # or --all (journaled)
+python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_refusal_ledger_cli.py -- purge --entry-id <id> # or --all (journaled)
 ```
 
 `/sw-cleanup` dry-run may enumerate `refusal-ledger-entry` purge candidates; confirm applies the same purge

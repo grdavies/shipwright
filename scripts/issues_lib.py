@@ -321,6 +321,11 @@ class FixtureIssuesStore:
         return record
 
     def get(self, issue_id: str) -> IssueRecord:
+        record = self._issues.get(issue_id)
+        if record is None and issue_id.isdigit():
+            for candidate in self._issues.values():
+                if str(candidate.number) == issue_id:
+                    return self._resolve_get(candidate.id)
         return self._resolve_get(issue_id)
 
     def update(
@@ -529,8 +534,16 @@ def fixture_store_path(root: Path) -> Path:
     return root / ".cursor/hooks/state/issue-store-fixture.json"
 
 
+def host_fixture_store_path(root: Path) -> Path:
+    return root / ".cursor/hooks/state/host-issue-fixture.json"
+
+
 def use_fixture_mode() -> bool:
     return os.environ.get("SW_ISSUES_FIXTURE", "").strip() in {"1", "true", "yes"}
+
+
+def use_host_fixture_mode() -> bool:
+    return os.environ.get("SW_HOST_ISSUES_FIXTURE", "").strip() in {"1", "true", "yes"}
 
 
 def get_fixture_store(root: Path) -> FixtureIssuesStore:

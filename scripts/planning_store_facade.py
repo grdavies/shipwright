@@ -75,6 +75,8 @@ from projection_state import (
     save_projection_state,
 )
 from planning_linear_projection import (
+    LINEAR_HIERARCHY_REBUILD_STEPS,
+    LinearProjectionRebuildStore,
     apply_initiative_capability,
     assert_cycle_orthogonal_to_milestone,
     assert_projection_mirrors_not_freeze_authority,
@@ -92,7 +94,9 @@ from planning_linear_projection import (
     probe_initiative_availability,
     project_graph_to_linear_layout,
     r1_4_substitute_views,
+    rebuild_linear_projection_from_semantic_store,
     resolve_canonical_freeze_body,
+    tombstone_stale_linear_projection_entities,
 )
 from planning_notion_projection import (
     apply_dual_property_capability as apply_notion_dual_property_capability,
@@ -505,6 +509,7 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
             shipped="linear" in SHIPPED_ISSUES_PROVIDERS,
             live_client_wired=linear_wired,
         ),
+        "linearSemanticCrud": _linear_semantic_crud_registration(),
         "notion": load_providers_package().notion.registration_footprint(
             recognized="notion" in ISSUES_PROVIDERS,
             shipped="notion" in SHIPPED_ISSUES_PROVIDERS,
@@ -519,6 +524,72 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
             for provider in sorted(_BASE_ISSUES_PROVIDERS | live_recognized)
         },
     }
+
+
+def _linear_semantic_crud_registration() -> dict[str, Any]:
+    """PRD 339 R33 — semantic CRUD registration for Linear GraphQL backend."""
+    from _planning_pkg_loader import load_backends_package
+
+    return load_backends_package().register_linear_semantic_store()
+
+
+def wire_linear_semantic_crud(root: Path, cfg: dict[str, Any] | None = None, *, client: Any | None = None) -> Any:
+    """Construct Linear semantic CRUD via planning/backends/linear.py (R33)."""
+    from _planning_pkg_loader import load_backends_package
+
+    resolved = cfg if cfg is not None else load_workflow_config(root)
+    return load_backends_package().wire_linear_semantic_crud(root, resolved, client=client)
+
+
+def linear_semantic_crud(
+    root: Path,
+    *,
+    operation: str,
+    unit_id: str = "",
+    body_path: str = "",
+    content: str = "",
+    issue_id: str = "",
+    artifact_type: str | None = None,
+    project_key: str | None = None,
+    labels: list[str] | None = None,
+    if_match: str | None = None,
+    client: Any | None = None,
+) -> dict[str, Any]:
+    """Facade semantic CRUD/search over Linear GraphQL (PRD 339 R33)."""
+    cfg = load_workflow_config(root)
+    crud = wire_linear_semantic_crud(root, cfg, client=client)
+    op = str(operation or "").strip().lower()
+    if op == "create":
+        if not unit_id or not body_path or not content:
+            return {"verdict": "fail", "error": "create-requires-unit-id-body-path-content"}
+        return crud.create(unit_id=unit_id, body_path=body_path, content=content, artifact_type=artifact_type)
+    if op == "get":
+        if not issue_id or not unit_id or not body_path:
+            return {"verdict": "fail", "error": "get-requires-issue-id-unit-id-body-path"}
+        return crud.get(issue_id, unit_id=unit_id, body_path=body_path)
+    if op == "update":
+        if not issue_id or not unit_id or not body_path:
+            return {"verdict": "fail", "error": "update-requires-issue-id-unit-id-body-path"}
+        return crud.update(
+            issue_id,
+            unit_id=unit_id,
+            body_path=body_path,
+            content=content or None,
+            labels=labels,
+            if_match=if_match,
+        )
+    if op == "search":
+        return {
+            "verdict": "ok",
+            "action": "linear-semantic-search",
+            "matches": crud.search(
+                project_key=project_key,
+                artifact_type=artifact_type,
+                unit_id=unit_id or None,
+                labels=labels,
+            ),
+        }
+    return {"verdict": "fail", "error": "unknown-linear-semantic-operation", "operation": op}
 
 
 def planning_store_p2_stub_registration_footprint() -> dict[str, Any]:
@@ -3894,6 +3965,20 @@ def close_delivery_units(
                 "prd339Gate": gate,
                 "resumeCommand": gate.get("resumeCommand"),
             }
+    if prd_unit_id == "339-prd-planning-store-correctness-provider-expansion":
+        from prd339_bundle_closeout import prd339_absorb_closeout_milestone
+
+        gate = prd339_absorb_closeout_milestone(root)
+        if gate.get("verdict") != "ready":
+            return {
+                "verdict": "not-ready",
+                "action": "close-delivery-units",
+                "error": "prd339-absorb-closeout-gate",
+                "cause": gate.get("cause"),
+                "prdUnitId": prd_unit_id,
+                "prd339CloseoutGate": gate,
+                "resumeCommand": gate.get("resumeCommand"),
+            }
     snapshot = resolve_delivery_linked_units(root, cfg, prd_unit_id)
     if snapshot.get("verdict") != "ok":
         return snapshot
@@ -4293,6 +4378,37 @@ def refuse_banned_living_doc_write(root: Path, *, action: str) -> dict[str, Any]
 
 
 
+def self_heal_unit_index(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
+    """PRD 339 R39 — atomic polluted-index self-heal with audit records.
+
+    Single-writer compare-and-swap via ``planning_transaction``; concurrent
+    callers cannot silently repoint canonical unit mappings. Audit append records
+    before/after/cause for every removed polluted row.
+    """
+    backend = get_backend(root, cfg)
+    if backend.backend_id != "issue-store":
+        return {
+            "verdict": "ok",
+            "action": "unit-index-self-heal",
+            "skipped": True,
+            "reason": "issue-store-only",
+            "removedCount": 0,
+        }
+    heal = getattr(backend, "self_heal_unit_index", None)
+    if not callable(heal):
+        return {
+            "verdict": "fail",
+            "action": "unit-index-self-heal",
+            "error": "backend-missing-self-heal",
+        }
+    result = heal()
+    return {
+        **result,
+        "verdict": result.get("verdict", "pass"),
+        "action": "unit-index-self-heal",
+    }
+
+
 def backfill_frontmatter_hybrid(root: Path, cfg: dict[str, Any], *, apply: bool = False) -> dict[str, Any]:
     """PRD 061 R21 -- idempotent lazy migrate/backfill for YAML-embedded issues."""
     backend = get_backend(root, cfg)
@@ -4441,6 +4557,164 @@ def projection_refresh(
 
     payload = items if items is not None else sample_projection_items(root, cfg)
     return refresh_projection(root, cfg, dry_run=dry_run, items=payload)
+
+
+_LINEAR_REBUILD_STEP_TYPES: dict[str, tuple[str, ...]] = {
+    "prd-brainstorm-gap": ("prd", "brainstorm", "gap"),
+    "phases": ("phase",),
+    "tasks": ("task",),
+}
+
+
+def reconcile_linear_operator_projection_from_semantic_store(
+    root: Path,
+    records: list[dict[str, Any]],
+    *,
+    project_key: str = "demo",
+    scope: str = "default",
+    overwrite_drift: bool = False,
+    store: LinearProjectionRebuildStore | None = None,
+    resume: bool = True,
+) -> dict[str, Any]:
+    """R33 — resumable Linear operator projection rebuild from semantic-store authority."""
+    authority = assert_portable_graph_authority(
+        {"freezeAuthority": "portable-graph"},
+        projection={"freezeAuthority": "derived", "isSourceOfTruth": False},
+    )
+    if authority.get("verdict") != "pass":
+        return {**authority, "action": "reconcile-linear-operator-projection-from-semantic-store"}
+
+    projection_scope_key = projection_scope(prd=project_key, slug="linear-hierarchy", action="reconcile")
+    state = load_projection_state(root, projection_scope_key) if resume else empty_projection_state(
+        scope=projection_scope_key,
+        prd=project_key,
+        slug="linear-hierarchy",
+        action="reconcile",
+        steps=LINEAR_HIERARCHY_REBUILD_STEPS,
+    )
+    if not resume:
+        clear_projection_state(root, projection_scope_key)
+        state = empty_projection_state(
+            scope=projection_scope_key,
+            prd=project_key,
+            slug="linear-hierarchy",
+            action="reconcile",
+            steps=LINEAR_HIERARCHY_REBUILD_STEPS,
+        )
+    elif state.get("steps") != list(LINEAR_HIERARCHY_REBUILD_STEPS):
+        state = empty_projection_state(
+            scope=projection_scope_key,
+            prd=project_key,
+            slug="linear-hierarchy",
+            action="reconcile",
+            steps=LINEAR_HIERARCHY_REBUILD_STEPS,
+        )
+
+    projection_store = store or LinearProjectionRebuildStore()
+    completed = [str(step) for step in (state.get("completedSteps") or [])]
+    step_results: dict[str, Any] = dict(state.get("results") or {})
+    aggregate_created = 0
+    aggregate_updated = 0
+    aggregate_repaired = 0
+    aggregate_upserts: list[dict[str, Any]] = []
+
+    for step in LINEAR_HIERARCHY_REBUILD_STEPS:
+        if step in completed:
+            continue
+        if step == "tombstone":
+            tombstone = tombstone_stale_linear_projection_entities(
+                projection_store,
+                {
+                    str(marker)
+                    for record in records
+                    if isinstance(record, dict)
+                    for marker in [f"sw:unit:{_record_str(record, 'unitId', 'id')}"]
+                    if marker != "sw:unit:"
+                },
+            )
+            step_results[step] = tombstone
+            mark_step_complete(state, step, tombstone)
+            save_projection_state(root, state)
+            continue
+
+        artifact_types = _LINEAR_REBUILD_STEP_TYPES.get(step)
+        result = rebuild_linear_projection_from_semantic_store(
+            root,
+            records,
+            project_key=project_key,
+            store=projection_store,
+            overwrite_drift=overwrite_drift,
+            scope=scope,
+            artifact_types=artifact_types,
+            tombstone_stale=False,
+        )
+        if result.get("verdict") != "pass":
+            record_interrupt(state, step=step, reason=str(result.get("error") or "rebuild-interrupted"))
+            save_projection_state(root, state)
+            return {
+                **result,
+                "action": "reconcile-linear-operator-projection-from-semantic-store",
+                "interruptedStep": step,
+                "resumeScope": projection_scope_key,
+            }
+        aggregate_created += int(result.get("created") or 0)
+        aggregate_updated += int(result.get("updated") or 0)
+        aggregate_repaired += int(result.get("repaired") or 0)
+        aggregate_upserts.extend(list(result.get("entities") or []))
+        step_results[step] = result
+        mark_step_complete(state, step, result)
+        save_projection_state(root, state)
+
+    if is_projection_complete(state):
+        clear_projection_state(root, projection_scope_key)
+        clear_projection_dirty(root, scope=scope)
+
+    mirror_check = assert_projection_mirrors_not_freeze_authority(
+        [
+            {
+                "entityKind": row.get("linearEntity"),
+                "entityId": row.get("entityId"),
+                "isFreezeAuthority": False,
+                "isSourceOfTruth": False,
+            }
+            for row in aggregate_upserts
+        ]
+    )
+    if mirror_check.get("verdict") != "pass":
+        return {
+            **mirror_check,
+            "action": "reconcile-linear-operator-projection-from-semantic-store",
+        }
+
+    return {
+        "verdict": "pass",
+        "action": "reconcile-linear-operator-projection-from-semantic-store",
+        "provider": "linear",
+        "semanticAuthority": True,
+        "freezeAuthority": "portable-graph",
+        "created": aggregate_created,
+        "updated": aggregate_updated,
+        "repaired": aggregate_repaired,
+        "upsertCount": len(aggregate_upserts),
+        "entities": aggregate_upserts,
+        "steps": list(LINEAR_HIERARCHY_REBUILD_STEPS),
+        "completedSteps": list(state.get("completedSteps") or []),
+        "results": step_results,
+        "counts": {
+            "Project": len(projection_store.projects),
+            "Document": len(projection_store.documents),
+            "Milestone": len(projection_store.milestones),
+            "Issue": len(projection_store.issues),
+        },
+    }
+
+
+def _record_str(record: dict[str, Any], *keys: str, default: str = "") -> str:
+    for key in keys:
+        value = record.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return default
 
 
 _PROGRESS_FACADE_NOTICE_EMITTED = False
@@ -4752,9 +5026,19 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
         "description": "Provider-agnostic operator-projection API + R1 browse capability matrix (PRD 066)",
     },
     {
+        "name": "linear_semantic_crud",
+        "status": "shipped",
+        "description": "Semantic create/get/update/search over Linear GraphQL preserving planning markers (PRD 339 R33)",
+    },
+    {
         "name": "linear_projection_schema",
         "status": "shipped",
         "description": "Linear operator schema: entity map, Initiative/Cycles, typed edges (PRD 066 R6–R8/R29)",
+    },
+    {
+        "name": "reconcile_linear_operator_projection",
+        "status": "shipped",
+        "description": "Resumable Linear hierarchy rebuild from semantic store (PRD 339 R33)",
     },
     {
         "name": "notion_projection_schema",
@@ -5036,6 +5320,67 @@ def issue_get_facade(root: Path, cfg: dict[str, Any], issue_ref: str) -> dict[st
     except IssueBudgetExhausted:
         return {"verdict": "fail", "error": "issue-budget-exhausted", "issue": issue_ref}
     return {"verdict": "ok", "record": record}
+
+
+def host_issue_probe_facade(root: Path, cfg: dict[str, Any], issue_ref: str) -> dict[str, Any]:
+    """Probe host-repo issue number for separate-project collision checks (PRD 339 R38)."""
+    location = resolve_store_location(root, cfg)
+    if location.get("verdict") != "ok" or location.get("mode") != "separate-project":
+        return {"verdict": "absent", "reason": "not-separate-project"}
+    from issues_lib import (
+        FixtureIssuesStore,
+        IssueNotFound,
+        host_fixture_store_path,
+        use_host_fixture_mode,
+    )
+
+    if use_host_fixture_mode():
+        store = FixtureIssuesStore(host_fixture_store_path(root))
+        try:
+            record = store.get(issue_ref)
+        except IssueNotFound:
+            return {"verdict": "absent", "issue": issue_ref}
+        return {
+            "verdict": "ok",
+            "issue": issue_ref,
+            "record": record,
+            "issueSource": "host-repo",
+            "unitId": str(record.unit_id or "").strip(),
+        }
+
+    if resolve_effective_backend(root, cfg).get("configured") != "issue-store":
+        return {"verdict": "absent", "reason": "issue-store-not-configured"}
+    from host_lib import parse_owner_repo, resolve_provider
+
+    host = resolve_provider(root)
+    owner_repo = parse_owner_repo(host.get("remoteUrl") if isinstance(host.get("remoteUrl"), str) else None)
+    if not owner_repo:
+        return {"verdict": "absent", "reason": "host-remote-unresolved"}
+    owner, repo = owner_repo
+    provider = str(resolve_issues_provider(cfg).get("provider", "none"))
+    if provider != "github-issues":
+        return {"verdict": "absent", "reason": "host-probe-unsupported-provider"}
+    if (
+        location.get("owner") == owner
+        and location.get("repo") == repo
+    ):
+        return {"verdict": "absent", "reason": "host-equals-store-location"}
+    try:
+        from planning_github_client import GitHubIssuesClient
+
+        client = GitHubIssuesClient(root)
+        client.owner = owner
+        client.repo = repo
+        record = client.get(issue_ref)
+    except Exception:
+        return {"verdict": "absent", "issue": issue_ref}
+    return {
+        "verdict": "ok",
+        "issue": issue_ref,
+        "record": record,
+        "issueSource": "host-repo",
+        "unitId": str(getattr(record, "unit_id", "") or "").strip(),
+    }
 
 
 def issue_search_by_unit_facade(root: Path, cfg: dict[str, Any], *, unit_id: str) -> dict[str, Any]:
@@ -5349,6 +5694,264 @@ def operator_projection_contract() -> dict[str, Any]:
         "adapterCompleteClaim": operator_projection_adapter_complete_claim(matrix),
         "semanticStatuses": sorted(SEMANTIC_STATUSES),
         "commentsRelations": comments_relations_schema_contract(),
+    }
+
+
+LINEAR_OPERATOR_BROWSE_MAPPED_VIEWS: dict[str, dict[str, Any]] = {
+    "prd": {
+        "linearSurface": "Project",
+        "browseQuestions": [1, 2, 3, 4],
+        "savedView": "project-detail",
+        "cardFields": [
+            "projectStatus",
+            "requirementsSummary",
+            "unitMarker",
+            "brainstormAttachments",
+            "gapMembership",
+        ],
+    },
+    "gap": {
+        "linearSurface": "Issue",
+        "browseQuestions": [1],
+        "savedView": "gap-by-prd-project",
+        "cardFields": [
+            "projectMembership",
+            "gapLabelOrField",
+            "gapIssueIdentity",
+            "lifecycle",
+            "prerequisites",
+        ],
+    },
+    "task": {
+        "linearSurface": "Issue/sub-issue",
+        "browseQuestions": [3],
+        "savedView": "tasks-by-milestone",
+        "cardFields": [
+            "issueSemanticStatus",
+            "milestonePhaseMembership",
+            "taskRef",
+            "rIds",
+            "completionStatus",
+        ],
+    },
+    "phase": {
+        "linearSurface": "Milestone",
+        "browseQuestions": [3],
+        "savedView": "milestones-by-project",
+        "cardFields": ["milestoneProgress", "deliveryStatus", "phaseDependencyOrder"],
+    },
+    "brainstorm": {
+        "linearSurface": "Document",
+        "browseQuestions": [2],
+        "savedView": "documents-by-project",
+        "cardFields": [
+            "documentAttachmentOrMembership",
+            "brainstormIdentity",
+            "prdProjectLink",
+        ],
+    },
+}
+
+_LCD_ONLY_LINEAR_SURFACES = frozenset(
+    {
+        "issue",
+        "issue+labels",
+        "issue+gap-label",
+        "issue/sub-issue",
+        "labels",
+    }
+)
+
+
+def linear_operator_browse_mapped_views() -> dict[str, Any]:
+    """R33 — required Linear UI mapped views for PRD/Gap/Task operator browse."""
+    return {
+        "verdict": "ok",
+        "action": "linear-operator-browse-mapped-views",
+        "views": {key: dict(value) for key, value in LINEAR_OPERATOR_BROWSE_MAPPED_VIEWS.items()},
+        "bodyOpenIsFailure": True,
+    }
+
+
+def assert_linear_not_lcd_labels_only(
+    surfaces: list[str] | None = None,
+) -> dict[str, Any]:
+    """R33 — reject LCD issue+labels-only projections (gap-079 / PRD 339)."""
+    if surfaces is not None:
+        normalized = {str(item).strip().lower() for item in surfaces if str(item).strip()}
+        if not normalized:
+            return {
+                "verdict": "fail",
+                "error": "linear-lcd-labels-only-rejected",
+                "action": "assert-linear-not-lcd-labels-only",
+                "surfaces": [],
+            }
+        if normalized <= _LCD_ONLY_LINEAR_SURFACES or all(
+            "issue" in surface and "project" not in surface and "document" not in surface
+            for surface in normalized
+        ):
+            return {
+                "verdict": "fail",
+                "error": "linear-lcd-labels-only-rejected",
+                "action": "assert-linear-not-lcd-labels-only",
+                "surfaces": sorted(normalized),
+            }
+        return {
+            "verdict": "pass",
+            "action": "assert-linear-not-lcd-labels-only",
+            "surfaces": sorted(normalized),
+        }
+
+    mapping = linear_entity_mapping()
+    by_type = mapping.get("byArtifactType") or {}
+    required_entities = {
+        "prd": "Project",
+        "brainstorm": "Document",
+        "phase": "Milestone",
+        "gap": "Issue",
+        "task": "Issue",
+    }
+    mismatches: list[dict[str, str]] = []
+    for artifact_type, expected in required_entities.items():
+        row = by_type.get(artifact_type) or {}
+        actual = str(row.get("linearEntity") or "")
+        if actual != expected:
+            mismatches.append(
+                {
+                    "artifactType": artifact_type,
+                    "expected": expected,
+                    "actual": actual or "(missing)",
+                }
+            )
+    matrix_surfaces = [
+        str(row.get("linear") or "")
+        for row in OPERATOR_PROJECTION_MATRIX_ROWS
+        if row.get("row") in {"prd", "brainstorm", "phase"}
+    ]
+    if matrix_surfaces and all(surface in _LCD_ONLY_LINEAR_SURFACES for surface in matrix_surfaces):
+        return {
+            "verdict": "fail",
+            "error": "linear-lcd-labels-only-rejected",
+            "action": "assert-linear-not-lcd-labels-only",
+            "matrixSurfaces": matrix_surfaces,
+        }
+    if mismatches:
+        return {
+            "verdict": "fail",
+            "error": "linear-lcd-labels-only-rejected",
+            "action": "assert-linear-not-lcd-labels-only",
+            "mismatches": mismatches,
+        }
+    return {
+        "verdict": "pass",
+        "action": "assert-linear-not-lcd-labels-only",
+        "entityMapping": required_entities,
+    }
+
+
+def gap079_linear_ui_answerability(
+    root: Path,
+    *,
+    evidence: dict[str, Any] | None = None,
+    cfg: dict[str, Any] | None = None,
+    skip_prd061: bool = False,
+) -> dict[str, Any]:
+    """PRD 339 R33/R34 — gap-079 Linear operator UI browse answerability gate."""
+    from planning_linear_client import operator_browse_checklist_gate, prd061_facade_projection_readiness
+
+    if not skip_prd061:
+        prd061_gate = prd061_facade_projection_readiness(root)
+        if prd061_gate.get("verdict") != "ready":
+            return {
+                "verdict": "fail",
+                "action": "gap079-linear-ui-answerability",
+                "error": "prd061-prerequisite-blocked",
+                "prd061Gate": prd061_gate,
+            }
+
+    lcd_check = assert_linear_not_lcd_labels_only()
+    if lcd_check.get("verdict") != "pass":
+        return {**lcd_check, "action": "gap079-linear-ui-answerability"}
+
+    doc_gate = operator_browse_checklist_gate(root)
+    if doc_gate.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "action": "gap079-linear-ui-answerability",
+            "error": "operator-browse-doc-incomplete",
+            "docGate": doc_gate,
+        }
+
+    mapped_views = linear_operator_browse_mapped_views()
+    required_artifact_views = ("prd", "gap", "task")
+    missing_views = [
+        name for name in required_artifact_views if name not in (mapped_views.get("views") or {})
+    ]
+    if missing_views:
+        return {
+            "verdict": "fail",
+            "action": "gap079-linear-ui-answerability",
+            "error": "mapped-views-incomplete",
+            "missingViews": missing_views,
+        }
+
+    questions: dict[str, Any] = {}
+    for qid, entry in R1_BROWSE_CONTRACT["questions"].items():
+        answerable = any(
+            int(qid) in (view.get("browseQuestions") or [])
+            for view in (mapped_views.get("views") or {}).values()
+        )
+        questions[qid] = {
+            "id": int(qid),
+            "prompt": entry["prompt"],
+            "answerable": answerable,
+            "cardVisibleFields": list(entry["cardVisibleFields"]),
+        }
+    if not all(row["answerable"] for row in questions.values()):
+        return {
+            "verdict": "fail",
+            "action": "gap079-linear-ui-answerability",
+            "error": "mapped-views-missing-r1-questions",
+            "questions": questions,
+            "mappedViews": mapped_views,
+        }
+
+    metadata_check: dict[str, Any]
+    if evidence is not None:
+        metadata_check = assert_r1_answerability_from_metadata(evidence)
+        if metadata_check.get("verdict") != "pass":
+            return {
+                **metadata_check,
+                "action": "gap079-linear-ui-answerability",
+                "questions": questions,
+                "mappedViews": mapped_views,
+            }
+    else:
+        metadata_check = {"verdict": "pass", "skipped": True}
+
+    substitute = r1_4_substitute_views()
+    store_cfg = cfg or load_workflow_config(root)
+    planning = store_cfg.get("planning") if isinstance(store_cfg.get("planning"), dict) else {}
+    store = planning.get("store") if isinstance(planning.get("store"), dict) else {}
+    linear_op = store.get("operatorProjection", {}).get("linear", {})
+    workspace_caps = linear_op.get("workspaceCapabilities") if isinstance(linear_op, dict) else {}
+    initiative_probe = probe_initiative_availability(
+        workspace=workspace_caps if isinstance(workspace_caps, dict) else None
+    )
+    return {
+        "verdict": "pass",
+        "action": "gap079-linear-ui-answerability",
+        "gapUnitId": "gap-079-add-linear-as-a-new-planning-store-issue-trackin",
+        "bodyOpenIsFailure": True,
+        "semanticAuthority": "portable-graph",
+        "freezeAuthority": "lcd-issue-or-document-backed",
+        "questions": questions,
+        "mappedViews": mapped_views,
+        "metadataCheck": metadata_check,
+        "r14SubstituteViews": substitute,
+        "initiativeProbe": initiative_probe,
+        "docGate": doc_gate,
+        "lcdCheck": lcd_check,
     }
 
 
