@@ -58,6 +58,10 @@ def test_sync_runtime_bundle_mirrors_scripts_and_dist(tmp_path: Path) -> None:
     assert (targets["version.txt"]).read_text(encoding="utf-8").strip() == "9.9.9"
 
 
+def _built_wheels(wheel_dir: Path) -> list[Path]:
+    return sorted(wheel_dir.glob("shipwright*.whl"))
+
+
 def test_wheel_is_self_contained(repo_root: Path, tmp_path: Path) -> None:
     """R2/R3 — wheel built after bundle sync includes scripts + dist payloads."""
     missing = []
@@ -77,12 +81,43 @@ def test_wheel_is_self_contained(repo_root: Path, tmp_path: Path) -> None:
         text=True,
     )
     assert proc.returncode == 0, proc.stderr or proc.stdout
-    wheels = sorted(wheel_dir.glob("shipwright_workflow-*.whl"))
-    assert wheels, "expected shipwright_workflow wheel"
+    wheels = _built_wheels(wheel_dir)
+    assert wheels, "expected shipwright*.whl"
     with zipfile.ZipFile(wheels[0]) as archive:
         names = set(archive.namelist())
     assert any(name.startswith("sw/scripts/version.py") for name in names)
     assert any(name.startswith("sw/dist/") for name in names)
+
+
+def test_wheel_bundles_version_without_manual_presync(repo_root: Path, tmp_path: Path) -> None:
+    """R2 — plain PEP 517 build (no manual sync) still packs sw/scripts/version.py."""
+    if not (repo_root / "scripts" / "version.py").is_file():
+        pytest.skip("scripts/version.py missing")
+    if not (repo_root / "version.txt").is_file():
+        pytest.skip("version.txt missing")
+
+    # Simulate a clean git checkout where sw/scripts has not been synced yet.
+    mirrored = repo_root / "sw" / "scripts"
+    if mirrored.exists():
+        import shutil
+
+        shutil.rmtree(mirrored)
+
+    wheel_dir = tmp_path / "wheels-no-presync"
+    wheel_dir.mkdir()
+    proc = subprocess.run(
+        [sys.executable, "-m", "pip", "wheel", ".", "--no-deps", "-w", str(wheel_dir)],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr or proc.stdout
+    wheels = _built_wheels(wheel_dir)
+    assert wheels, "expected shipwright*.whl from plain PEP 517 build"
+    with zipfile.ZipFile(wheels[0]) as archive:
+        names = set(archive.namelist())
+    assert any(name.startswith("sw/scripts/version.py") for name in names)
+    assert any(name == "sw/version.txt" or name.endswith("/sw/version.txt") for name in names)
 
 
 def test_getting_started_documents_shipwright_workflow_package() -> None:
