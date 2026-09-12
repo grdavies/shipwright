@@ -3817,10 +3817,45 @@ def _execute_mechanical_inner(
         ec, data = run_wave(root, "state", "init", "--plan", plan_rel)
         if ec != 0:
             fail_payload(data, "state init failed", ec)
-        state.update(load_state(root))
+        # state init writes the *scoped* path (target/task-list). Bare
+        # load_state(root) follows the unscoped breadcrumb and can miss
+        # phases → state-init/base-capture no-progress loop.
+        tl = str(task_list) if task_list else task_list_from(state, plan)
+        fresh = load_deliver_state(
+            root,
+            target=str(target_branch) if target_branch else None,
+            task_list=tl,
+        )
+        phases = fresh.get("phases")
+        if not isinstance(phases, dict) or not phases:
+            fail(
+                "state-init produced no phases on scoped state path",
+                exit_code=20,
+                halt="state-init:empty-phases",
+                target=target_branch,
+                taskList=tl,
+                statePath=str(
+                    resolve_state_path(
+                        root,
+                        target=str(target_branch) if target_branch else None,
+                        task_list=tl,
+                    )
+                ),
+            )
+        # Adopt phases without dropping in-memory run identity fields that
+        # state-init may not round-trip when breadcrumb reload is empty.
+        state["phases"] = phases
+        for key, value in fresh.items():
+            if key in {"phases", "nextAction", "verdict"}:
+                continue
+            if key not in state or state.get(key) in (None, "", {}, []):
+                state[key] = value
+        if tl and not state.get("source_task_list"):
+            state["source_task_list"] = tl
         ensure_driver_fields(state)
+        save_state(root, state)
         persist_cursor(root, state, "base-capture")
-        return {"executed": "state-init"}
+        return {"executed": "state-init", "phaseCount": len(phases)}
 
     if action == "base-capture":
         ec, data = run_resolve_capture(root)

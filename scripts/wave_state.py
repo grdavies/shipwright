@@ -1454,21 +1454,52 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
             "updatedAt": utc_now(),
         }
 
+    target_branch = (plan.get("target") or {}).get("branch")
+    task_list = plan.get("source_task_list")
+    state_path = resolve_state_path(root, task_list=task_list, target=target_branch)
+    # Merge into existing scoped state so deliver-loop identity (runId, locks,
+    # planHash) survives init. A full overwrite left the loop reloading an
+    # empty breadcrumb path and re-entering state-init forever.
+    existing: dict[str, Any] = {}
+    if state_path.is_file():
+        try:
+            loaded = json.loads(state_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict) and not loaded.get("migrated"):
+                existing = loaded
+        except json.JSONDecodeError:
+            existing = {}
+    preserve_keys = (
+        "runId",
+        "targetLock",
+        "runLease",
+        "planHash",
+        "planPath",
+        "planRevision",
+        "planCommitSha",
+        "orchestratorWorktree",
+        "driverIterationCount",
+        "budgetCounters",
+        "source_task_list",
+    )
     state = {
+        **existing,
         "verdict": "running",
-        "target": plan.get("target"),
-        "source_task_list": plan.get("source_task_list"),
-        "prd_number": plan.get("prd_number"),
+        "target": plan.get("target") or existing.get("target"),
+        "source_task_list": task_list or existing.get("source_task_list"),
+        "prd_number": plan.get("prd_number") or existing.get("prd_number"),
         "phases": phases,
-        "mergeJournal": None,
-        "completedMerges": [],
-        "currentWave": 1,
+        "mergeJournal": existing.get("mergeJournal"),
+        "completedMerges": existing.get("completedMerges") or [],
+        "currentWave": int(existing.get("currentWave") or 1),
         "nextAction": "base-capture",
-        "remediationAttempts": {},
-        "phaseWorktrees": {},
+        "remediationAttempts": existing.get("remediationAttempts") or {},
+        "phaseWorktrees": existing.get("phaseWorktrees") or {},
         "driverHeartbeatAt": utc_now(),
         "updatedAt": utc_now(),
     }
+    for key in preserve_keys:
+        if key in existing and existing[key] not in (None, "", {}, []):
+            state[key] = existing[key]
     from shipwright_paths import load_workflow_config
 
     cfg = load_workflow_config(root)
@@ -1488,9 +1519,9 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
                     }
                 ),
             )
-        state["twoTierLifecycle"] = empty_lifecycle()
-        state["planRejectionLog"] = empty_rejection_log()
-    write_json(resolve_state_path(root, task_list=plan.get("source_task_list"), target=(plan.get("target") or {}).get("branch")), state)
+        state["twoTierLifecycle"] = existing.get("twoTierLifecycle") or empty_lifecycle()
+        state["planRejectionLog"] = existing.get("planRejectionLog") or empty_rejection_log()
+    write_json(state_path, state)
     append_log(
         root,
         {
