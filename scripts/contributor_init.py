@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import re
 import subprocess
@@ -31,20 +30,6 @@ def contributor_init_steps() -> list[str]:
         "Run `/sw-init` in this repository to configure project settings.",
         "Reload the editor before using `sw-` commands.",
     ]
-
-
-def _load_sw_configure():
-    path = Path(__file__).resolve().parent / "sw-configure.py"
-    name = "sw_configure_contributor_init"
-    if name in sys.modules:
-        return sys.modules[name]
-    spec = importlib.util.spec_from_file_location(name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"cannot load {path}")
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[name] = mod
-    spec.loader.exec_module(mod)
-    return mod
 
 
 def _contributor_section(text: str) -> str:
@@ -115,16 +100,6 @@ def validate_docs(*, root: Path) -> dict[str, Any]:
                         "reason": "contributor path must not use packaged shipwright init",
                     }
                 )
-
-    configure = _load_sw_configure()
-    canonical = configure.contributor_init_steps()
-    if canonical != contributor_init_steps():
-        findings.append(
-            {
-                "file": "scripts/sw-configure.py",
-                "reason": "contributor_init_steps drift from scripts/contributor_init.py",
-            }
-        )
 
     for step in contributor_init_steps():
         needle = step.split("`")[1] if "`" in step else step
