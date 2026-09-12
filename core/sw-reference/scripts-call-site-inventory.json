@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-12T01:50:30Z",
+  "generatedAt": "2026-09-12T03:29:27Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -181,37 +181,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:107:test/git-push-secret-scan-chokepoint.test",
+      "id": ".github/workflows/ci.yml:107:contributor_init.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
       "line": 107,
+      "column": 21,
+      "script": "contributor_init.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/ci.yml:110:test/git-push-secret-scan-chokepoint.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/ci.yml",
+      "line": 110,
       "column": 21,
       "script": "test/git-push-secret-scan-chokepoint.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:110:test/rca-fanout-unit.test",
+      "id": ".github/workflows/ci.yml:113:test/rca-fanout-unit.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 110,
+      "line": 113,
       "column": 21,
       "script": "test/rca-fanout-unit.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:113:check_scripts_inventory.py",
+      "id": ".github/workflows/ci.yml:116:check_scripts_inventory.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 113,
+      "line": 116,
       "column": 21,
       "script": "check_scripts_inventory.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:116:test/skills-spec-guard.test",
+      "id": ".github/workflows/ci.yml:119:test/skills-spec-guard.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 116,
+      "line": 119,
       "column": 21,
       "script": "test/skills-spec-guard.test",
       "classification": "self-repo-only"
