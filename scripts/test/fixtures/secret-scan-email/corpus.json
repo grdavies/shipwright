@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "SecretScanEmailCorpus@v1",
+  "allowed": [
+    {
+      "id": "semver-package-json",
+      "text": "core/sw-reference/workflows/packages/shipwright-quick@1.0.0.json"
+    },
+    {
+      "id": "semver-package-review",
+      "text": "shipwright-review@0.2.0.json"
+    },
+    {
+      "id": "schema-dot-suffix",
+      "text": "bundleVersion: pkg@2.1.0.schema"
+    },
+    {
+      "id": "schema-version-handoff",
+      "text": "\"schemaVersion\": \"HandoffBundle@v1\""
+    },
+    {
+      "id": "schema-version-planning",
+      "text": "schemaVersion: PlanningBundle@v1"
+    }
+  ],
+  "blocked": [
+    {
+      "id": "contact-email",
+      "text": "owner: team@company.io"
+    },
+    {
+      "id": "credential-email",
+      "text": "smtp_user=alice@corp.example.com"
+    },
+    {
+      "id": "short-domain-email",
+      "text": "notify foo@bar.co for alerts"
+    }
+  ]
+}
