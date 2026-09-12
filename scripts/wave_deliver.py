@@ -1619,6 +1619,21 @@ def cmd_finalize(root: Path, args: list[str]) -> None:
 def cmd_run(root: Path, args: list[str]) -> None:
     """Resolve deliver entry reference and materialize frozen task list (PRD 059 R1)."""
     import planning_materialize as pm
+    import planning_unit_status as pus
+
+    issue_ref = parse_kv(args, "--issue")
+    issue_resolution: dict[str, Any] | None = None
+    if issue_ref:
+        issue_resolution = pus.resolve_issue_entry(
+            root,
+            issue_ref,
+            issue_source=parse_kv(args, "--issue-source"),
+        )
+        print(
+            f"issue-source={issue_resolution['issueSource']} "
+            f"sw-unit-id={issue_resolution['unitId']}",
+            file=sys.stderr,
+        )
 
     task_list = resolve_task_list_arg(root, args)
     run_id = parse_kv(args, "--run-id")
@@ -1642,31 +1657,42 @@ def cmd_run(root: Path, args: list[str]) -> None:
             cause=resume.get("cause"),
             **{k: v for k, v in resume.items() if k not in ("halt", "consumable", "state")},
         )
-    if resume.get("consumable"):
-        emit(
-            {
-                "verdict": "pass",
-                "action": "deliver-run-entry",
-                "taskList": task_list,
-                "resumeShortCircuit": True,
-                "target": resume.get("target") or resume.get("targetBranch"),
-                "deliverState": {
-                    "verdict": (resume.get("state") or {}).get("verdict"),
-                    "nextAction": (resume.get("state") or {}).get("nextAction"),
-                },
-            }
-        )
-    result = pm.ensure_run_entry_materialized(root, task_list)
-    orch = ensure_run_entry_orchestrator(root, task_list, args)
-    emit(
+    issue_resolution_payload = (
         {
+            "issue": issue_resolution.get("issue"),
+            "issueSource": issue_resolution.get("issueSource"),
+            "swUnitId": issue_resolution.get("unitId"),
+        }
+        if issue_resolution
+        else None
+    )
+    if resume.get("consumable"):
+        payload = {
             "verdict": "pass",
             "action": "deliver-run-entry",
             "taskList": task_list,
-            **result,
-            "runEntry": orch,
+            "resumeShortCircuit": True,
+            "target": resume.get("target") or resume.get("targetBranch"),
+            "deliverState": {
+                "verdict": (resume.get("state") or {}).get("verdict"),
+                "nextAction": (resume.get("state") or {}).get("nextAction"),
+            },
         }
-    )
+        if issue_resolution_payload:
+            payload["issueResolution"] = issue_resolution_payload
+        emit(payload)
+    result = pm.ensure_run_entry_materialized(root, task_list)
+    orch = ensure_run_entry_orchestrator(root, task_list, args)
+    payload = {
+        "verdict": "pass",
+        "action": "deliver-run-entry",
+        "taskList": task_list,
+        **result,
+        "runEntry": orch,
+    }
+    if issue_resolution_payload:
+        payload["issueResolution"] = issue_resolution_payload
+    emit(payload)
 
 
 def cmd_preflight(root: Path, args: list[str]) -> None:
