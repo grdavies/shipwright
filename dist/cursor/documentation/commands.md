@@ -32,13 +32,13 @@ Shipwright harness development still invokes helpers directly from a source chec
 
 | Command | Scope | Does not |
 |---------|-------|----------|
-| [`/sw-doc`](../commands/sw-doc.md) | Doc pipeline: triage → brainstorm (Full) → PRD → review → freeze → **single-pass** `/sw-tasks`; then `doc.afterTasks` (`stop` \| `confirm` \| `auto`) | Implement, merge, or skip human gates |
-| [`/sw-deliver`](../commands/sw-deliver.md) | **Primary** implementation orchestrator — frozen task-list phase-mode or multi-feature wave | Bypass `/sw-ship`, auto-merge to `main`, or re-author frozen tasks |
-| [`/sw-ship`](../commands/sw-ship.md) | **Manual** single-phase loop: execute → verify → review → commit → PR → CI → stabilize → ready; also runs **inside** each `/sw-deliver` phase | Merge (halts at merge gate) |
-| [`/sw-debug`](../commands/sw-debug.md) | Production/dev RCA and route by fix size | Implement, commit, or merge |
-| [`/sw-feedback`](../commands/sw-feedback.md) | Normalize inbound signals and route to debug, gaps, or brainstorm | Analyze, author, or dispatch without confirmation |
-| [`/sw-compound-ship`](../commands/sw-compound-ship.md) | Pre-merge (in-loop) or post-merge: retro → compound → optional memory-sync | Merge or auto-promote rules |
-| [`/sw-cleanup`](../commands/sw-cleanup.md) | Dry-run default cleanup of merged branches, stale worktrees, completed run-state | Delete without confirm or drop in-flight runs |
+| [`/sw-doc`](../../core/commands/sw-doc.md) | Doc pipeline: triage → brainstorm (Full) → PRD → review → freeze → **single-pass** `/sw-tasks`; then `doc.afterTasks` (`stop` \| `confirm` \| `auto`) | Implement, merge, or skip human gates |
+| [`/sw-deliver`](../../core/commands/sw-deliver.md) | **Primary** implementation orchestrator — frozen task-list phase-mode or multi-feature wave | Bypass `/sw-ship`, auto-merge to `main`, or re-author frozen tasks |
+| [`/sw-ship`](../../core/commands/sw-ship.md) | **Manual** single-phase loop: execute → verify → review → commit → PR → CI → stabilize → ready; also runs **inside** each `/sw-deliver` phase | Merge (halts at merge gate) |
+| [`/sw-debug`](../../core/commands/sw-debug.md) | Production/dev RCA and route by fix size | Implement, commit, or merge |
+| [`/sw-feedback`](../../core/commands/sw-feedback.md) | Normalize inbound signals and route to debug, gaps, or brainstorm | Analyze, author, or dispatch without confirmation |
+| [`/sw-compound-ship`](../../core/commands/sw-compound-ship.md) | Pre-merge (in-loop) or post-merge: retro → compound → optional memory-sync | Merge or auto-promote rules |
+| [`/sw-cleanup`](../../core/commands/sw-cleanup.md) | Dry-run default cleanup of merged branches, stale worktrees, completed run-state | Delete without confirm or drop in-flight runs |
 
 ### `/sw-deliver` — phase-mode and multi-feature
 
@@ -70,8 +70,8 @@ terminal merge on drift.
 **Multi-feature mode:** `plan`/`run` with `--items` and `--edges`; integration surface at
 `integration/<stamp>`; promotion via `promote` (human-gated).
 
-See [`core/commands/sw-deliver.md`](../commands/sw-deliver.md) and
-[`core/skills/deliver/SKILL.md`](../skills/deliver/SKILL.md).
+See [`core/commands/sw-deliver.md`](../../core/commands/sw-deliver.md) and
+[`core/skills/deliver/SKILL.md`](../../core/skills/deliver/SKILL.md).
 
 ### Graph execution runtime
 
@@ -101,7 +101,7 @@ python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning-graph.py status --uni
 Receipts, in-flight intents, and status/explain index by the generic graph `runId` (mapped from the
 deliver/orchestrator `runId`). Domain vocabulary:
 [`graph-domain-terminology.md`](graph-domain-terminology.md). Command detail:
-[`sw-deliver.md`](../commands/sw-deliver.md), [`sw-status.md`](../commands/sw-status.md).
+[`sw-deliver.md`](../../core/commands/sw-deliver.md), [`sw-status.md`](../../core/commands/sw-status.md).
 
 **Conductor vs GraphScheduler:** `/sw-deliver` conductor fan-out (parallel phases, merge queue)
 is not the `GraphScheduler` owning loop. Graph node admission, `ExecutionBackend` envelopes, cache consult, and
@@ -213,7 +213,7 @@ python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py plan validate --tier p
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py plan validate --tier wave --proposal <path|json> --plan .cursor/sw-deliver-plan.json
 ```
 
-Call-site map: `call-site-map.md`.
+Call-site map: [`call-site-map.md`](../../scripts/test/fixtures/planning-post-migration/022-kernel-classification-and-plan-validation/call-site-map.md).
 
 **Push safety:** workflow pushes route through `scripts/git-push.py` → `scripts/secret-scan.py`
 before `git push` (including `sw-pr` and stabilize re-pushes).
@@ -233,8 +233,8 @@ Extends `/sw-doc` — no `/sw-plan` command.
 | Gap capture from feedback | `/sw-feedback` → `planning_gap_capture.py` (not legacy `GAP-BACKLOG.md`) |
 | Retro painful gap capture | `/sw-retro` → `planning_gap_capture.py retro-capture` (draft); `retro-confirm` / `retro-materialize` per item |
 
-See [`core/commands/sw-doc.md`](../commands/sw-doc.md) **Planning command surface** and
-[`core/skills/conductor/SKILL.md`](../skills/conductor/SKILL.md) **Bounded planning full-conductor**.
+See [`core/commands/sw-doc.md`](../../core/commands/sw-doc.md) **Planning command surface** and
+[`core/skills/conductor/SKILL.md`](../../core/skills/conductor/SKILL.md) **Bounded planning full-conductor**.
 
 
 
@@ -242,12 +242,12 @@ See [`core/commands/sw-doc.md`](../commands/sw-doc.md) **Planning command surfac
 
 | Command | Role |
 | --- | --- |
-| [`/sw-migrate`](../commands/sw-migrate.md) | Bidirectional files ⇄ issues migration; dry-run default |
+| [`/sw-migrate`](../../core/commands/sw-migrate.md) | Bidirectional files ⇄ issues migration; dry-run default |
 | `store-doctor` | Detect/repair half-migrated journal states |
 | `store-scan-quiesce` | Inspect deliver/reconcile blockers before migrating |
 
 Quiesce deliver and reconciler before `--apply`. During transition `GAP-BACKLOG.md` is a read-only
-projection — use `planning_gap_capture.py` for new gaps (see [`feedback` skill](../skills/feedback/SKILL.md)).
+projection — use `planning_gap_capture.py` for new gaps (see [`feedback` skill](../../core/skills/feedback/SKILL.md)).
 
 
 ### Issue-store probes
@@ -316,11 +316,11 @@ approval.
 
 | Command | When to use | Does not |
 |---------|-------------|----------|
-| [`/sw`](../commands/sw.md) | Bare state-aware entry — reads worktree/planning state and proposes the one next action, with confirm | Implement, ship, or merge on its own; it hands off to the command it proposes |
-| [`/sw-triage`](../commands/sw-triage.md) | Classify Quick / Standard / Full before doc or impl | Draft docs or implement |
-| [`/sw-init`](../commands/sw-init.md) | First run in a target repo — guided scan → confirm → unresolved-only interview, providers, `doc.afterTasks`, memory store, doctor | Scaffold CI or migrate memories |
-| [`/sw-worktree`](../commands/sw-worktree.md) | Isolate work in a per-item worktree (required before impl on bare `main`) | Run phase loop or merge |
-| [`/sw-start`](../commands/sw-start.md) | Open a phase branch inside the active worktree; worktree guard runs before writes | Push or open PR |
+| [`/sw`](../../core/commands/sw.md) | Bare state-aware entry — reads worktree/planning state and proposes the one next action, with confirm | Implement, ship, or merge on its own; it hands off to the command it proposes |
+| [`/sw-triage`](../../core/commands/sw-triage.md) | Classify Quick / Standard / Full before doc or impl | Draft docs or implement |
+| [`/sw-init`](../../core/commands/sw-init.md) | First run in a target repo — guided scan → confirm → unresolved-only interview, providers, `doc.afterTasks`, memory store, doctor | Scaffold CI or migrate memories |
+| [`/sw-worktree`](../../core/commands/sw-worktree.md) | Isolate work in a per-item worktree (required before impl on bare `main`) | Run phase loop or merge |
+| [`/sw-start`](../../core/commands/sw-start.md) | Open a phase branch inside the active worktree; worktree guard runs before writes | Push or open PR |
 
 ## Consult and capture
 
@@ -329,10 +329,10 @@ implement, or merge.
 
 | Command | Role | Does not |
 |---------|------|----------|
-| [`/sw-ask`](../commands/sw-ask.md) | Route a free-form question to the best-fit existing persona for a read-only answer | Write, review, freeze, or dispatch another command |
-| [`/sw-become`](../commands/sw-become.md) | Research and crystallize a new persona for later `/sw-ask` consults, confirm-before-write | Overwrite an existing persona; run the doc-review panel |
-| [`/sw-note`](../commands/sw-note.md) | One-line idea/task/note capture outside the planning store, with confirm-first graduation to a gap or brainstorm | Write to the planning store directly, or replace feedback gap-capture |
-| [`/sw-guide`](../commands/sw-guide.md) | Read-only explanation of workflow behavior plus config/state/planning-backend diagnosis | Mutate config, git, or the planning store |
+| [`/sw-ask`](../../core/commands/sw-ask.md) | Route a free-form question to the best-fit existing persona for a read-only answer | Write, review, freeze, or dispatch another command |
+| [`/sw-become`](../../core/commands/sw-become.md) | Research and crystallize a new persona for later `/sw-ask` consults, confirm-before-write | Overwrite an existing persona; run the doc-review panel |
+| [`/sw-note`](../../core/commands/sw-note.md) | One-line idea/task/note capture outside the planning store, with confirm-first graduation to a gap or brainstorm | Write to the planning store directly, or replace feedback gap-capture |
+| [`/sw-guide`](../../core/commands/sw-guide.md) | Read-only explanation of workflow behavior plus config/state/planning-backend diagnosis | Mutate config, git, or the planning store |
 
 ### `/sw-note` — local notebook capture
 
@@ -382,12 +382,12 @@ See [decision tree](decision-tree.md) for retirement timing and routing.
 
 | Command | Role |
 |---------|------|
-| [`/sw-brainstorm`](../commands/sw-brainstorm.md) | Requirements exploration (Full tier) |
-| [`/sw-prd`](../commands/sw-prd.md) | PRD or decision-record draft |
-| [`/sw-doc-review`](../commands/sw-doc-review.md) | Persona panel on spec drafts |
-| [`/sw-freeze`](../commands/sw-freeze.md) | Irreversible artifact freeze |
-| [`/sw-tasks`](../commands/sw-tasks.md) | Complete frozen task list in **one pass** (no Go gate); standalone run stops without implementation prompt |
-| [`/sw-amend`](../commands/sw-amend.md) | Post-freeze PRD amendment |
+| [`/sw-brainstorm`](../../core/commands/sw-brainstorm.md) | Requirements exploration (Full tier) |
+| [`/sw-prd`](../../core/commands/sw-prd.md) | PRD or decision-record draft |
+| [`/sw-doc-review`](../../core/commands/sw-doc-review.md) | Persona panel on spec drafts |
+| [`/sw-freeze`](../../core/commands/sw-freeze.md) | Irreversible artifact freeze |
+| [`/sw-tasks`](../../core/commands/sw-tasks.md) | Complete frozen task list in **one pass** (no Go gate); standalone run stops without implementation prompt |
+| [`/sw-amend`](../../core/commands/sw-amend.md) | Post-freeze PRD amendment |
 
 `doc.afterTasks` is the sole human checkpoint between PRD freeze and implementation when using
 `/sw-doc`.
@@ -400,14 +400,14 @@ debugging one phase, or when you deliberately skip the orchestrator.
 
 | Command | Role |
 |---------|------|
-| [`/sw-execute`](../commands/sw-execute.md) | One phase-sized implementation slice; worktree guard before writes |
-| [`/sw-verify`](../commands/sw-verify.md) | Scoped local verification |
-| [`/sw-review`](../commands/sw-review.md) | Local then provider code review (`review.provider`; default **`none`**) |
-| [`/sw-commit`](../commands/sw-commit.md) | Commit after verify + review |
-| [`/sw-pr`](../commands/sw-pr.md) | Push and open/update PR |
-| [`/sw-watch-ci`](../commands/sw-watch-ci.md) | Poll PR checks via `check-gate.py`; **halt** (not poll) on unavailable Checks capability |
-| [`/sw-stabilize`](../commands/sw-stabilize.md) | Clear CI + review blockers |
-| [`/sw-ready`](../commands/sw-ready.md) | Terminal readiness report; echoes `review: off` or `review: not configured` from gate JSON |
+| [`/sw-execute`](../../core/commands/sw-execute.md) | One phase-sized implementation slice; worktree guard before writes |
+| [`/sw-verify`](../../core/commands/sw-verify.md) | Scoped local verification |
+| [`/sw-review`](../../core/commands/sw-review.md) | Local then provider code review (`review.provider`; default **`none`**) |
+| [`/sw-commit`](../../core/commands/sw-commit.md) | Commit after verify + review |
+| [`/sw-pr`](../../core/commands/sw-pr.md) | Push and open/update PR |
+| [`/sw-watch-ci`](../../core/commands/sw-watch-ci.md) | Poll PR checks via `check-gate.py`; **halt** (not poll) on unavailable Checks capability |
+| [`/sw-stabilize`](../../core/commands/sw-stabilize.md) | Clear CI + review blockers |
+| [`/sw-ready`](../../core/commands/sw-ready.md) | Terminal readiness report; echoes `review: off` or `review: not configured` from gate JSON |
 
 **Unavailable Checks capability (`host-auth-required`):** when `check-gate.py` reports `blocked` with `reasonCode: host-auth-required`, the host token cannot read CI check status. This is a **remediation halt** — emit guidance from `core/providers/host/remediation-checks.md` and stop. Do not poll CI, attempt stabilization, or treat the state as retryable yellow/pending.
 
@@ -451,11 +451,11 @@ in-process attempt.
 
 | Command | Role |
 |---------|------|
-| [`/sw-memory-sync`](../commands/sw-memory-sync.md) | Distill transcript deltas to durable memory |
-| [`/sw-memory-audit`](../commands/sw-memory-audit.md) | Read-only memory hygiene audit |
-| [`/sw-compound`](../commands/sw-compound.md) | Distill retro into memories |
-| [`/sw-retro`](../commands/sw-retro.md) | Post-ship retrospective (report-only) |
-| [`/sw-retrospective`](../commands/sw-retrospective.md) | Consolidated retro → compound → memory-sync chain |
+| [`/sw-memory-sync`](../../core/commands/sw-memory-sync.md) | Distill transcript deltas to durable memory |
+| [`/sw-memory-audit`](../../core/commands/sw-memory-audit.md) | Read-only memory hygiene audit |
+| [`/sw-compound`](../../core/commands/sw-compound.md) | Distill retro into memories |
+| [`/sw-retro`](../../core/commands/sw-retro.md) | Post-ship retrospective (report-only) |
+| [`/sw-retrospective`](../../core/commands/sw-retrospective.md) | Consolidated retro → compound → memory-sync chain |
 
 ### Retro gap capture — per-item digest-bound confirm
 
@@ -471,7 +471,7 @@ python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" planning_gap_capture.py -- ret
 ```
 
 Digest mismatch halts with `retro-gap-digest-mismatch`; materialize without prior confirm halts with
-`retro-gap-ack-required`. See [`/sw-retrospective`](../commands/sw-retrospective.md) and
+`retro-gap-ack-required`. See [`/sw-retrospective`](../../core/commands/sw-retrospective.md) and
 [`configuration.md`](configuration.md#retrospective-gap-capture).
 
 ## Quick reference — commands you invoke directly

@@ -83,6 +83,17 @@ Shipwright does **not** use the Python `keyring` package. On Linux and in contai
 Shipwright installs **once per machine**; you configure it **per project repo**. Once installed,
 `sw-` commands appear in the palette (e.g. `/sw-init`, `/sw-doc`).
 
+**Adopter default (PyPI):** install the packaged console, then initialize each project repo:
+
+```bash
+pip install shipwright-workflow
+cd /path/to/your-project
+shipwright init --integration cursor   # or claude-code
+```
+
+Publication uses the non-colliding PyPI name `shipwright-workflow`; the console command remains
+`shipwright`. See [Getting started](core/documentation/getting-started.md) for the full packaged path.
+
 <details open>
 <summary><b>Cursor</b></summary>
 

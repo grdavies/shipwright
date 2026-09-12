@@ -705,6 +705,7 @@
     "rule_verification.py",
     "rule_verification_lib.py",
     "rule_verifier_sweep.py",
+    "runtime_requirements.py",
     "secret-scan.py",
     "secret_patterns.py",
     "secret_scan.py",
@@ -825,6 +826,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 822,
+  "moduleCount": 823,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

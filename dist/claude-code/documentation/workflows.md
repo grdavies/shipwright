@@ -1,7 +1,7 @@
 # Workflow guide
 
 This guide covers the four Shipwright workstreams in depth: tiers, per-workstream flows, diagrams,
-and sample prompts. For the high-level overview, see the [README](README.md).
+and sample prompts. For the high-level overview, see the [README](../../README.md).
 
 ## Tiers: Quick, Standard, and Full
 
@@ -28,7 +28,7 @@ mechanical floor require detector no-fire or a recorded human waiver.
 `graphExecution.profiles.optimization` (`fast` | `balanced` | `thorough`) adjusts optional reviewers
 only — **cache**, **loop bounds**, and **resourceLimits** are kernel immutables and rejected in
 profile bodies. Per-node budgets (`graphExecution.budget`) halt fail-closed to **non-ready**;
-required capabilities are never shed to recover budget headroom. See `INVARIANTS.md`.
+required capabilities are never shed to recover budget headroom. See [`INVARIANTS.md`](../../INVARIANTS.md).
 
 ### TraceRef / CoverageEdge status
 
@@ -651,7 +651,7 @@ blocks past the per-lookup hard timeout — recorded as a legitimate conductor h
 **Merge-exec recovery:** when `merge run-next` halts with an open `mergeJournal`, resume via the
 printed `resumeCommand` — journal auto-clear runs when ancestry shows the phase already merged; otherwise use
 `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" wave.py merge ancestry-check` then `merge exec` or `/sw-deliver run`. See
-[`parallel-merge-and-recovery.md`](../skills/deliver/references/parallel-merge-and-recovery.md).
+[`parallel-merge-and-recovery.md`](../../core/skills/deliver/references/parallel-merge-and-recovery.md).
 
 Every halt emits one consolidated report with an exact `resumeCommand` — not “continue?”.
 
@@ -678,7 +678,7 @@ further drafts and surfaces an operator message (no silent overflow). Materializ
 operators run `planning_gap_capture.py` confirm/materialize with per-item digest binding after review.
 Draft → confirm → materialize lifecycle and route records are documented in
 [`configuration.md`](configuration.md#retrospective-gap-capture) and
-[`/sw-retrospective`](../commands/sw-retrospective.md). Distinct from terminal
+[`/sw-retrospective`](../../core/commands/sw-retrospective.md). Distinct from terminal
 `deliver.terminal.gapCapture` at deliver completion.
 
 **Task currency:** frozen task checkboxes may be toggled in-loop; a currency gate blocks the terminal
@@ -1248,7 +1248,7 @@ with PRD-023 pilot guards on `/sw-deliver`. Invalid proposals fail closed to the
 
 Two-tier persistence: wave batching → shared deliver run-state (conductor-only); phase step plans → per-phase
 run dir. See [configuration](configuration.md#orchestration-plan-policy-orchestrationplanpolicy) and
-call-site map.
+[call-site map](../../scripts/test/fixtures/planning-post-migration/022-kernel-classification-and-plan-validation/call-site-map.md).
 
 ## Orchestrator plan-policy fan-out
 
