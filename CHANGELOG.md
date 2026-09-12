@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.12.0](https://github.com/grdavies/shipwright/compare/v2.11.2...v2.12.0) (2026-09-12)
+
+
+### Features
+
+* **prd-348:** deliver pipeline ops ([#1157](https://github.com/grdavies/shipwright/issues/1157)) ([09240d3](https://github.com/grdavies/shipwright/commit/09240d30b8d6649842c06c067980e018a86418ca))
+
 ## [2.11.2](https://github.com/grdavies/shipwright/compare/v2.11.1...v2.11.2) (2026-09-12)
 
 
