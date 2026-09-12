@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -116,11 +117,18 @@ def test_phase1_gate_blocked_until_acceptance_modules_exist(tmp_path: Path) -> N
 
 def test_phase1_gate_ready_on_repo(repo_root: Path) -> None:
     """R35/R36 — independently shippable correctness gate is green on merged phase work."""
-    out = prd339_phase1_correctness_milestone(repo_root)
-    if out.get("verdict") != "ready":
-        blocked = out.get("blocked") or []
-        detail = json.dumps(blocked, ensure_ascii=False, indent=2)
-        raise AssertionError(f"phase1 gate not ready: {out.get('cause')} blocked={detail}")
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root / "scripts")
+    proc = subprocess.run(
+        [sys.executable, str(repo_root / "scripts/prd339_phase1_acceptance.py"), str(repo_root)],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert proc.returncode == 0, (proc.stdout or "") + (proc.stderr or "")
+    out = json.loads(proc.stdout)
+    assert out.get("verdict") == "ready", out
     assert out.get("requirements") == ["R35", "R36", "R38"]
 
 

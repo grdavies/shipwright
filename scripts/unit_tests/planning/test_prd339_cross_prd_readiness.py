@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from prd339_cross_prd_gate import (
@@ -24,13 +27,18 @@ def test_cross_prd_milestone_blocked_until_acceptance_tests_exist(tmp_path: Path
 
 def test_cross_prd_milestone_ready_without_prd337_closeout(repo_root: Path) -> None:
     """R37/R39 — merged-green milestone evidence without implementing PRD 337 closeout."""
-    out = prd339_absorb_acceptance_milestone(repo_root)
-    if out.get("verdict") != "ready":
-        blocked = out.get("blocked") or []
-        detail = json.dumps(blocked, ensure_ascii=False, indent=2)
-        raise AssertionError(
-            f"cross-prd readiness not green: {out.get('cause')} blocked={detail}"
-        )
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(repo_root / "scripts")
+    proc = subprocess.run(
+        [sys.executable, str(repo_root / "scripts/prd339_cross_prd_gate.py"), str(repo_root)],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert proc.returncode == 0, (proc.stdout or "") + (proc.stderr or "")
+    out = json.loads(proc.stdout)
+    assert out.get("verdict") == "ready", out
     assert out.get("requirements") == ["R37", "R39"]
     checks = {item["test"]: item for item in out.get("checks") or []}
     assert checks[PRD_339_R37_ACCEPTANCE_TEST]["verdict"] == "ready"
