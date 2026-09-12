@@ -249,24 +249,76 @@ def init_packaged(
     }
 
 
+def _is_externally_managed() -> bool:
+    """Detect PEP 668 externally managed environment (e.g., Homebrew Python on macOS)."""
+    import sysconfig
+    stdlib = Path(sysconfig.get_path("stdlib"))
+    marker = stdlib / "EXTERNALLY-MANAGED"
+    return marker.is_file()
+
+
 def install_console(*, root: Path | None = None) -> int:
-    """Install editable ``shipwright`` console from a source checkout (PRD 345 R9)."""
+    """Install editable ``shipwright`` console from a source checkout (PRD 345 R9).
+
+    Handles PEP 668 externally managed environments by using --user or providing
+    guidance on using uv/pipx.
+    """
     root = (root or repo_root()).resolve()
     if not (root / "pyproject.toml").is_file():
         return 0
     if os.environ.get("SW_SKIP_CONSOLE_INSTALL", "").strip().lower() in ("1", "true", "yes"):
         return 0
+
+    # Try standard editable install first
     proc = subprocess.run(
         [sys.executable, "-m", "pip", "install", "-e", "."],
         cwd=str(root),
         capture_output=True,
         text=True,
     )
-    if proc.returncode != 0:
-        logging_setup.error(proc.stderr or proc.stdout or "console install failed")
-        return proc.returncode
-    logging_setup.info("Installed shipwright console entry point (editable).")
-    return 0
+    if proc.returncode == 0:
+        logging_setup.info("Installed shipwright console entry point (editable).")
+        return 0
+
+    # Check if this is a PEP 668 failure (externally managed environment)
+    if _is_externally_managed() or "externally-managed" in proc.stderr.lower():
+        logging_setup.warning(
+            "PEP 668 externally managed environment detected (e.g., Homebrew Python)."
+        )
+        logging_setup.info("Trying pip install --user -e . ...")
+
+        # Try --user install
+        proc_user = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--user", "-e", "."],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+        )
+        if proc_user.returncode == 0:
+            logging_setup.info("Installed shipwright console entry point (editable, --user).")
+            logging_setup.info(
+                "Note: Ensure ~/.local/bin is in your PATH for the 'shipwright' command."
+            )
+            return 0
+
+        # --user also failed — provide guidance
+        logging_setup.error("Console install failed in externally managed environment.")
+        logging_setup.info("")
+        logging_setup.info("Recommended alternatives for contributors:")
+        logging_setup.info("  1. Use a virtual environment:")
+        logging_setup.info("       python3 -m venv .venv && source .venv/bin/activate")
+        logging_setup.info("       pip install -e .")
+        logging_setup.info("  2. Use pipx for editable development:")
+        logging_setup.info("       pipx install --editable .")
+        logging_setup.info("  3. Skip console install and use scripts directly:")
+        logging_setup.info("       export SW_SKIP_CONSOLE_INSTALL=1")
+        logging_setup.info("       python3 scripts/install.py")
+        logging_setup.info("")
+        return proc_user.returncode
+
+    # Non-PEP-668 failure
+    logging_setup.error(proc.stderr or proc.stdout or "console install failed")
+    return proc.returncode
 
 
 def seed_memory_provider_catalog(dest: Path) -> bool:

@@ -87,23 +87,30 @@ Shipwright installs **once per machine**; you configure it **per project repo**.
 
 | Path | Audience | Setup |
 |------|----------|-------|
-| **Adopter** (default) | Using Shipwright in your projects | `pip install shipwright-workflow`, then `shipwright init --integration <host>` in each repo |
+| **Adopter** (default) | Using Shipwright in your projects | Install via `uv tool` or `pipx` (see below), then `shipwright init --integration <host>` in each repo |
 | **Contributor** | Developing Shipwright itself | Clone this repo, run `python3 scripts/install.py`, then `/sw-init` in the clone |
 
 Adopters **do not** need to clone this repository. Contributors use the clone path — see
 [Getting started — Contributor path](core/documentation/getting-started.md#contributor-path-clone-this-repository)
 and [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow.
 
-**Adopter default (PyPI):** install the packaged console, then initialize each project repo:
+**Adopter install:** use `uv tool` or `pipx` to install in an isolated environment (avoids PEP 668
+conflicts on modern systems), then initialize each project repo:
 
 ```bash
-pip install shipwright-workflow
+# Option 1: uv (recommended)
+uv tool install shipwright-workflow --from git+https://github.com/grdavies/shipwright.git@v2.10.0
+
+# Option 2: pipx
+pipx install git+https://github.com/grdavies/shipwright.git@v2.10.0
+
+# Then configure each project
 cd /path/to/your-project
 shipwright init --integration cursor   # or claude-code
 ```
 
-Publication uses the non-colliding PyPI name `shipwright-workflow`; the console command remains
-`shipwright`. See [Getting started](core/documentation/getting-started.md) for the full packaged path.
+See [Getting started](core/documentation/getting-started.md) for additional install options including
+release wheels and the contributor clone path.
 
 <details open>
 <summary><b>Contributor (clone this repo)</b></summary>
