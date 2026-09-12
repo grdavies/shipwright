@@ -878,3 +878,507 @@ def dual_write_projection_mirror(
         "action": "dual-write-projection-mirror",
         "mirror": mirror,
     }
+
+
+UNIT_MARKER_PREFIX = "sw:unit:"
+GAP_LABEL = "Gap"
+_PROJECTION_ARTIFACT_ORDER = ("prd", "brainstorm", "gap")
+
+
+def unit_projection_marker(unit_id: str) -> str:
+    """Stable unit-id marker embedded on rebuildable Linear projection entities."""
+    return f"{UNIT_MARKER_PREFIX}{unit_id}"
+
+
+def _record_str(record: dict[str, Any], *keys: str, default: str = "") -> str:
+    for key in keys:
+        value = record.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return default
+
+
+def _record_list(record: dict[str, Any], *keys: str) -> list[str]:
+    for key in keys:
+        value = record.get(key)
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        if isinstance(value, str) and value.strip():
+            if "," in value:
+                return [part.strip() for part in value.split(",") if part.strip()]
+            return [value.strip()]
+    return []
+
+
+def _requirements_summary(content: str) -> str:
+    body = (content or "").strip()
+    if not body:
+        return ""
+    if body.startswith("---"):
+        parts = body.split("---", 2)
+        if len(parts) >= 3:
+            body = parts[2].strip()
+    for line in body.splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            return stripped[:280]
+    return body[:280]
+
+
+def semantic_owned_fields(record: dict[str, Any], *, project_key: str = "") -> dict[str, Any]:
+    """Derive projection-owned fields from a semantic-store record (SoT)."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    unit_id = _record_str(record, "unitId", "id")
+    title = _record_str(record, "title")
+    content = _record_str(record, "content", "body")
+    status = _record_str(record, "status", "state", default="proposed")
+    if not title and content:
+        for line in content.splitlines():
+            if line.strip().startswith("#"):
+                title = line.strip().lstrip("#").strip()
+                break
+    if not title:
+        title = unit_id
+    owned: dict[str, Any] = {
+        "title": title,
+        "status": status,
+        "marker": unit_projection_marker(unit_id),
+    }
+    if project_key:
+        owned["projectKey"] = project_key
+    if artifact_type == "prd":
+        owned["requirementsSummary"] = _record_str(record, "requirementsSummary") or _requirements_summary(
+            content
+        )
+        owned["links"] = _record_list(record, "links", "native_links", "nativeLinks")
+    elif artifact_type == "brainstorm":
+        owned["summary"] = _record_str(record, "summary") or _requirements_summary(content)
+        owned["prdUnitId"] = _record_str(record, "prdUnitId", "projectId", "parentUnitId")
+    elif artifact_type == "gap":
+        owned["lifecycle"] = _record_str(record, "lifecycle", "gapStatus", default=status)
+        owned["prerequisites"] = _record_list(record, "prerequisites", "depends", "prerequisite")
+        owned["absorbs"] = _record_list(record, "absorbs", "absorbedBy", "absorption")
+        owned["prdUnitId"] = _record_str(record, "prdUnitId", "projectId", "parentUnitId")
+        owned["labels"] = sorted(
+            set(_record_list(record, "labels") or [GAP_LABEL, f"sw:gap", f"sw:unit:{unit_id}"])
+        )
+    return owned
+
+
+def build_prd_project_spec(
+    record: dict[str, Any],
+    *,
+    project_key: str,
+) -> dict[str, Any]:
+    """R33 — semantic PRD record → deterministic Linear Project projection."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    if artifact_type != "prd":
+        return {
+            "verdict": "fail",
+            "error": "unsupported-artifact-type",
+            "action": "build-prd-project-spec",
+            "artifactType": artifact_type,
+        }
+    unit_id = _record_str(record, "unitId", "id")
+    owned = semantic_owned_fields(record, project_key=project_key)
+    prefix = f"[{project_key}] " if project_key else ""
+    title = owned["title"]
+    if prefix and not title.startswith(prefix):
+        title = f"{prefix}{title}"
+    owned["title"] = title
+    return {
+        "verdict": "pass",
+        "action": "build-prd-project-spec",
+        "linearEntity": "Project",
+        "unitId": unit_id,
+        "artifactType": "prd",
+        "marker": unit_projection_marker(unit_id),
+        "ownedFields": owned,
+        "isFreezeAuthority": False,
+        "isSourceOfTruth": False,
+        "freezeAuthority": "portable-graph",
+    }
+
+
+def build_brainstorm_document_spec(
+    record: dict[str, Any],
+    *,
+    project_key: str,
+    prd_project_entity_id: str | None = None,
+) -> dict[str, Any]:
+    """R33 — semantic brainstorm record → linked Linear Document (projection only)."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    if artifact_type != "brainstorm":
+        return {
+            "verdict": "fail",
+            "error": "unsupported-artifact-type",
+            "action": "build-brainstorm-document-spec",
+            "artifactType": artifact_type,
+        }
+    unit_id = _record_str(record, "unitId", "id")
+    owned = semantic_owned_fields(record, project_key=project_key)
+    return {
+        "verdict": "pass",
+        "action": "build-brainstorm-document-spec",
+        "linearEntity": "Document",
+        "unitId": unit_id,
+        "artifactType": "brainstorm",
+        "marker": unit_projection_marker(unit_id),
+        "attachedToProject": prd_project_entity_id or record.get("prdProjectEntityId"),
+        "ownedFields": owned,
+        "isFreezeAuthority": False,
+        "isSourceOfTruth": False,
+        "freezeAuthority": "portable-graph",
+    }
+
+
+def build_gap_issue_spec(
+    record: dict[str, Any],
+    *,
+    project_key: str,
+    prd_project_entity_id: str | None = None,
+) -> dict[str, Any]:
+    """R33 — semantic gap record → searchable Linear Issue with lifecycle + links."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    if artifact_type != "gap":
+        return {
+            "verdict": "fail",
+            "error": "unsupported-artifact-type",
+            "action": "build-gap-issue-spec",
+            "artifactType": artifact_type,
+        }
+    unit_id = _record_str(record, "unitId", "id")
+    owned = semantic_owned_fields(record, project_key=project_key)
+    labels = list(owned.get("labels") or [])
+    if GAP_LABEL not in labels:
+        labels.append(GAP_LABEL)
+    if project_key:
+        labels.append(f"sw:project:{project_key}")
+    owned["labels"] = sorted(set(labels))
+    return {
+        "verdict": "pass",
+        "action": "build-gap-issue-spec",
+        "linearEntity": "Issue",
+        "unitId": unit_id,
+        "artifactType": "gap",
+        "marker": unit_projection_marker(unit_id),
+        "labels": owned["labels"],
+        "projectMembership": prd_project_entity_id or record.get("prdProjectEntityId"),
+        "ownedFields": owned,
+        "isFreezeAuthority": False,
+        "isSourceOfTruth": False,
+        "freezeAuthority": "portable-graph",
+    }
+
+
+def semantic_record_to_projection_spec(
+    record: dict[str, Any],
+    *,
+    project_key: str,
+    prd_project_entity_id: str | None = None,
+) -> dict[str, Any]:
+    """Dispatch semantic record → Linear projection entity spec."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    if artifact_type == "prd":
+        return build_prd_project_spec(record, project_key=project_key)
+    if artifact_type == "brainstorm":
+        return build_brainstorm_document_spec(
+            record,
+            project_key=project_key,
+            prd_project_entity_id=prd_project_entity_id,
+        )
+    if artifact_type == "gap":
+        return build_gap_issue_spec(
+            record,
+            project_key=project_key,
+            prd_project_entity_id=prd_project_entity_id,
+        )
+    return {
+        "verdict": "fail",
+        "error": "unsupported-artifact-type",
+        "action": "semantic-record-to-projection-spec",
+        "artifactType": artifact_type,
+    }
+
+
+class LinearProjectionRebuildStore:
+    """In-memory Linear projection store for rebuild tests and dry-run rebuilds."""
+
+    def __init__(self) -> None:
+        self.projects: dict[str, dict[str, Any]] = {}
+        self.documents: dict[str, dict[str, Any]] = {}
+        self.issues: dict[str, dict[str, Any]] = {}
+
+    def _bucket(self, linear_entity: str) -> dict[str, dict[str, Any]]:
+        kind = linear_entity.lower()
+        if kind == "project":
+            return self.projects
+        if kind == "document":
+            return self.documents
+        if kind == "issue":
+            return self.issues
+        raise KeyError(linear_entity)
+
+    def find_by_marker(self, marker: str, linear_entity: str) -> dict[str, Any] | None:
+        bucket = self._bucket(linear_entity)
+        for entity in bucket.values():
+            if entity.get("marker") == marker:
+                return dict(entity)
+        return None
+
+    def upsert(self, spec: dict[str, Any]) -> dict[str, Any]:
+        linear_entity = str(spec.get("linearEntity") or "")
+        marker = str(spec.get("marker") or "")
+        unit_id = str(spec.get("unitId") or "")
+        bucket = self._bucket(linear_entity)
+        existing = self.find_by_marker(marker, linear_entity) if marker else None
+        entity_id = str((existing or {}).get("entityId") or spec.get("entityId") or f"lin-{linear_entity.lower()}-{unit_id}")
+        entity = {
+            "entityId": entity_id,
+            "linearEntity": linear_entity,
+            "unitId": unit_id,
+            "artifactType": spec.get("artifactType"),
+            "marker": marker,
+            "ownedFields": dict(spec.get("ownedFields") or {}),
+            "isFreezeAuthority": False,
+            "isSourceOfTruth": False,
+        }
+        if linear_entity == "Document":
+            entity["attachedToProject"] = spec.get("attachedToProject")
+        if linear_entity == "Issue":
+            entity["labels"] = list(spec.get("labels") or [])
+            entity["projectMembership"] = spec.get("projectMembership")
+        created = existing is None
+        bucket[entity_id] = entity
+        return {
+            "verdict": "pass",
+            "action": "linear-projection-store-upsert",
+            "created": created,
+            "updated": not created,
+            "entityId": entity_id,
+            "entity": entity,
+        }
+
+
+def rebuild_projection_for_unit(
+    graph: dict[str, Any],
+    *,
+    unit_id: str,
+    workspace: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """R33 — idempotent re-project for one unit; no duplicate entities."""
+    del workspace  # reserved for initiative/cycle capability probes
+    layout = project_graph_to_linear_layout(graph)
+    if layout.get("verdict") != "pass":
+        return layout
+    matches = [entity for entity in layout.get("entities") or [] if entity.get("unitId") == unit_id]
+    if len(matches) > 1:
+        return {
+            "verdict": "fail",
+            "error": "duplicate-projection-entities",
+            "action": "rebuild-projection-for-unit",
+            "unitId": unit_id,
+            "count": len(matches),
+        }
+    layout2 = project_graph_to_linear_layout(graph)
+    matches2 = [entity for entity in layout2.get("entities") or [] if entity.get("unitId") == unit_id]
+    if len(matches) != len(matches2):
+        return {
+            "verdict": "fail",
+            "error": "duplicate-projection-entities",
+            "action": "rebuild-projection-for-unit",
+            "unitId": unit_id,
+        }
+    return {
+        "verdict": "pass",
+        "action": "rebuild-projection-for-unit",
+        "unitId": unit_id,
+        "entity": matches[0] if matches else None,
+        "idempotent": True,
+        "duplicateEntities": False,
+    }
+
+
+def rebuild_linear_projection_from_semantic_store(
+    root: Any,
+    records: list[dict[str, Any]],
+    *,
+    project_key: str = "demo",
+    store: LinearProjectionRebuildStore | None = None,
+    overwrite_drift: bool = False,
+    scope: str = "default",
+) -> dict[str, Any]:
+    """R33 — rebuild PRD/Brainstorm/Gap projections from semantic-store authority."""
+    from pathlib import Path
+
+    from planning_projection_ledger import (
+        assert_portable_graph_authority,
+        check_projection_drift,
+        owned_fields_digest,
+        projection_ledger_lookup,
+        projection_ledger_upsert,
+    )
+
+    root_path = Path(root)
+    authority = assert_portable_graph_authority(
+        {"freezeAuthority": "portable-graph"},
+        projection={"freezeAuthority": "derived", "isSourceOfTruth": False},
+    )
+    if authority.get("verdict") != "pass":
+        return authority
+
+    projection_store = store or LinearProjectionRebuildStore()
+    ordered = sorted(
+        [record for record in records if isinstance(record, dict)],
+        key=lambda row: (
+            _PROJECTION_ARTIFACT_ORDER.index(
+                _record_str(row, "artifactType", "type").lower()
+            )
+            if _record_str(row, "artifactType", "type").lower() in _PROJECTION_ARTIFACT_ORDER
+            else 99,
+            _record_str(row, "unitId", "id"),
+        ),
+    )
+
+    prd_entity_by_unit: dict[str, str] = {}
+    created = 0
+    updated = 0
+    repaired = 0
+    upserts: list[dict[str, Any]] = []
+
+    for record in ordered:
+        artifact_type = _record_str(record, "artifactType", "type").lower()
+        unit_id = _record_str(record, "unitId", "id")
+        if not unit_id or artifact_type not in _PROJECTION_ARTIFACT_ORDER:
+            return {
+                "verdict": "fail",
+                "error": "rebuild-record-incomplete",
+                "action": "rebuild-linear-projection-from-semantic-store",
+                "record": record,
+            }
+
+        prd_project_entity_id = None
+        if artifact_type in {"brainstorm", "gap"}:
+            prd_unit = _record_str(record, "prdUnitId", "projectId", "parentUnitId")
+            if prd_unit:
+                prd_project_entity_id = prd_entity_by_unit.get(prd_unit)
+                if not prd_project_entity_id:
+                    lookup = projection_ledger_lookup(
+                        root_path,
+                        unit_id=prd_unit,
+                        artifact_type="prd",
+                        provider="linear",
+                        scope=scope,
+                    )
+                    if lookup.get("verdict") == "pass":
+                        prd_project_entity_id = str((lookup.get("entry") or {}).get("entityId") or "")
+
+        spec = semantic_record_to_projection_spec(
+            record,
+            project_key=project_key,
+            prd_project_entity_id=prd_project_entity_id or None,
+        )
+        if spec.get("verdict") != "pass":
+            return {**spec, "action": "rebuild-linear-projection-from-semantic-store"}
+
+        marker = str(spec.get("marker") or "")
+        linear_entity = str(spec.get("linearEntity") or "")
+        existing = projection_store.find_by_marker(marker, linear_entity) if marker else None
+        ledger = projection_ledger_lookup(
+            root_path,
+            unit_id=unit_id,
+            artifact_type=artifact_type,
+            provider="linear",
+            scope=scope,
+        )
+
+        if existing is None and ledger.get("verdict") == "pass":
+            entity_id = str((ledger.get("entry") or {}).get("entityId") or "")
+            bucket = projection_store._bucket(linear_entity)
+            existing = bucket.get(entity_id)
+
+        owned = dict(spec.get("ownedFields") or {})
+        if existing:
+            prior_owned = dict(existing.get("ownedFields") or {})
+            if owned_fields_digest(prior_owned) != owned_fields_digest(owned):
+                drift = check_projection_drift(
+                    root_path,
+                    unit_id=unit_id,
+                    artifact_type=artifact_type,
+                    provider="linear",
+                    provider_owned_fields=owned,
+                    overwrite_drift=overwrite_drift,
+                    audit_actor="linear-projection-rebuild",
+                    scope=scope,
+                )
+                if drift.get("verdict") != "pass":
+                    return {
+                        **drift,
+                        "action": "rebuild-linear-projection-from-semantic-store",
+                        "semanticAuthority": True,
+                    }
+                repaired += 1
+        result = projection_store.upsert(spec)
+        if result.get("verdict") != "pass":
+            return result
+        if result.get("created"):
+            created += 1
+        else:
+            updated += 1
+        entity_id = str(result.get("entityId") or "")
+        if artifact_type == "prd" and entity_id:
+            prd_entity_by_unit[unit_id] = entity_id
+
+        ledger_result = projection_ledger_upsert(
+            root_path,
+            unit_id=unit_id,
+            artifact_type=artifact_type,
+            provider="linear",
+            entity_id=entity_id,
+            owned_fields=owned,
+            marker=marker,
+            scope=scope,
+        )
+        if ledger_result.get("verdict") != "pass":
+            return ledger_result
+        upserts.append(
+            {
+                "unitId": unit_id,
+                "artifactType": artifact_type,
+                "linearEntity": linear_entity,
+                "entityId": entity_id,
+                "marker": marker,
+            }
+        )
+
+    mirror_check = assert_projection_mirrors_not_freeze_authority(
+        [
+            {
+                "entityKind": row["linearEntity"],
+                "entityId": row["entityId"],
+                "isFreezeAuthority": False,
+                "isSourceOfTruth": False,
+            }
+            for row in upserts
+        ]
+    )
+    if mirror_check.get("verdict") != "pass":
+        return {**mirror_check, "action": "rebuild-linear-projection-from-semantic-store"}
+
+    return {
+        "verdict": "pass",
+        "action": "rebuild-linear-projection-from-semantic-store",
+        "provider": "linear",
+        "semanticAuthority": True,
+        "freezeAuthority": "portable-graph",
+        "created": created,
+        "updated": updated,
+        "repaired": repaired,
+        "upsertCount": len(upserts),
+        "entities": upserts,
+        "counts": {
+            "Project": len(projection_store.projects),
+            "Document": len(projection_store.documents),
+            "Issue": len(projection_store.issues),
+        },
+    }
