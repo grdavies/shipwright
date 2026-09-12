@@ -656,6 +656,15 @@ def compose_canonical_document(fm: dict[str, Any], body: str) -> str:
     return f"{render_frontmatter(fm)}\n\n{normalize_body(body)}\n"
 
 
+def edges_from_frontmatter(fm: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build portable sw-edges from structural frontmatter edge keys (R37)."""
+    edges: list[dict[str, Any]] = []
+    for rel in EDGE_LABEL_PREFIXES:
+        for target in parse_absorbs_targets(fm.get(rel)):
+            edges.append({"rel": rel, "target": target})
+    return edges
+
+
 def operator_body_from_canonical(content: str) -> str:
     """R20 -- operator-visible body without raw YAML frontmatter."""
     fm, body = split_frontmatter(content)
@@ -670,6 +679,9 @@ def operator_body_from_canonical(content: str) -> str:
         )
     if body:
         parts.append(body)
+    edge_list = edges_from_frontmatter(fm)
+    if edge_list:
+        parts.append(build_edges_block(edge_list, []))
     return "\n".join(parts)
 
 

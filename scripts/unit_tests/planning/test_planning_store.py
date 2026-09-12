@@ -51,6 +51,8 @@ from planning_canonical import (
     parse_edges_block,
     reconcile_edges,
     resolve_put_edge_projection,
+    split_frontmatter,
+    structural_labels_from_content,
     type_label,
     unit_id_label,
     edge_labels_for,
@@ -81,6 +83,60 @@ def _issue_store_cfg(project_key: str = "absorbs-put-094") -> dict:
     }
 
 
+def test_absorbs_list_scalar_round_trip_equivalence() -> None:
+    """R37 — canonical→operator→canonical parity for scalar and list absorbs."""
+    scalar_one = (
+        "---\n"
+        "id: demo-prd\n"
+        "type: prd\n"
+        "status: proposed\n"
+        "visibility: public\n"
+        "absorbs: gap-single\n"
+        "---\n"
+        "# Demo\n"
+    )
+    list_many = (
+        "---\n"
+        "id: demo-prd\n"
+        "type: prd\n"
+        "status: proposed\n"
+        "visibility: public\n"
+        "absorbs:\n"
+        "  - gap-a\n"
+        "  - gap-b\n"
+        "---\n"
+        "# Demo\n"
+    )
+    scalar_many = (
+        "---\n"
+        "id: demo-prd\n"
+        "type: prd\n"
+        "status: proposed\n"
+        "visibility: public\n"
+        "absorbs: gap-a, gap-b\n"
+        "---\n"
+        "# Demo\n"
+    )
+
+    for canonical in (scalar_one, list_many, scalar_many):
+        fm, _ = split_frontmatter(canonical)
+        assert fm is not None
+        expected = parse_absorbs_from_canonical_content(canonical)
+        labels = structural_labels_from_content(canonical)
+        operator = operator_body_from_canonical(canonical)
+        assert "```sw-edges" in operator
+        edges_block = parse_edges_block(operator)
+        assert edges_block is not None
+        absorbs_edges = [e for e in edges_block.get("edges") or [] if e.get("rel") == "absorbs"]
+        assert [e["target"] for e in absorbs_edges] == expected
+        roundtrip = canonical_content_from_operator(labels, operator, unit_id=str(fm.get("id")))
+        assert parse_absorbs_from_canonical_content(roundtrip) == expected
+
+    list_operator = operator_body_from_canonical(list_many)
+    scalar_operator = operator_body_from_canonical(scalar_many)
+    assert parse_edges_block(list_operator) == parse_edges_block(scalar_operator)
+
+
 def test_resolve_put_emits_absorbs_sw_edges() -> None:
     """R1 — canonical absorbs frontmatter becomes durable sw-edges on put projection."""
     canonical = (
@@ -98,7 +154,7 @@ def test_resolve_put_emits_absorbs_sw_edges() -> None:
         store_content=store_content,
         canonical_content=canonical,
     )
-    assert "```sw-edges" not in store_content
+    assert "```sw-edges" in store_content
     assert edges is not None
     absorbs = [e for e in edges if e.get("rel") == "absorbs"]
     assert {e["target"] for e in absorbs} == {"gap-261", "gap-263"}
