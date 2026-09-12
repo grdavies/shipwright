@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-12T11:14:38Z",
+  "generatedAt": "2026-09-12T21:00:45Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -538,6 +538,15 @@
       "line": 90,
       "column": 21,
       "script": "test/run_pytest.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/user-guide-provenance.yml:28:check_user_guide_provenance.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/user-guide-provenance.yml",
+      "line": 28,
+      "column": 21,
+      "script": "check_user_guide_provenance.py",
       "classification": "self-repo-only"
     },
     {
