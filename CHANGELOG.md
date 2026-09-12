@@ -1267,6 +1267,7 @@
 * merge phase finalize-hash-recovery into feat/deliver-pipeline-ops (858ea90) <!-- sw-deliver:finalize-hash-recovery -->
 * merge phase user-guide-provenance into feat/deliver-pipeline-ops (c800aca) <!-- sw-deliver:user-guide-provenance -->
 * merge phase finalize-stall-recovery into feat/deliver-pipeline-ops (885f4f4) <!-- sw-deliver:finalize-stall-recovery -->
+* merge phase layout-dual-home-sync into feat/deliver-pipeline-ops (9664441) <!-- sw-deliver:layout-dual-home-sync -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
