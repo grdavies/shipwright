@@ -8,6 +8,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +40,10 @@ from planning_canonical import (
 LIVE_CLIENT = True
 GRAPHQL_URL = "https://api.linear.app/graphql"
 DEFAULT_COMPLEXITY_ESTIMATE = 100
+MAX_GRAPHQL_RETRIES = 3
+MAX_SEARCH_PAGES = 10
+DEFAULT_PAGE_SIZE = 50
+GRAPHQL_RETRY_BASE_SECONDS = 0.05
 ADAPTER_VERBS = (
     "create",
     "get",
@@ -117,6 +122,15 @@ query IssuesSearch($filter: IssueFilter, $first: Int) {{
 }}
 """.strip()
 
+ISSUES_SEARCH_PAGINATED_QUERY = f"""
+query IssuesSearchPaginated($filter: IssueFilter, $first: Int, $after: String) {{
+  issues(filter: $filter, first: $first, after: $after) {{
+    nodes {{ {ISSUE_FIELDS} }}
+    pageInfo {{ hasNextPage endCursor }}
+  }}
+}}
+""".strip()
+
 LABEL_CREATE_MUTATION = """
 mutation LabelCreate($input: IssueLabelCreateInput!) {
   issueLabelCreate(input: $input) {
@@ -177,6 +191,30 @@ class LinearRateLimited(LinearClientError):
     ) -> None:
         super().__init__(message, code=code)
         self.retryable = retryable
+
+
+class LinearGraphQLAuthError(LinearClientError):
+    """Credential or authorization failure normalized from HTTP/GraphQL (R33)."""
+
+    def __init__(
+        self,
+        message: str = "Linear GraphQL auth denied",
+        *,
+        code: str = "auth-denied",
+    ) -> None:
+        super().__init__(message, code=code)
+
+
+class LinearGraphQLScopeError(LinearClientError):
+    """Team or credential scope failure normalized from GraphQL (R33)."""
+
+    def __init__(
+        self,
+        message: str = "Linear GraphQL scope failure",
+        *,
+        code: str = "scope-failure",
+    ) -> None:
+        super().__init__(message, code=code)
 
 
 def _issues_section(cfg: dict[str, Any]) -> dict[str, Any]:
@@ -281,7 +319,39 @@ def _complexity_from_headers(headers: dict[str, str]) -> int:
     return DEFAULT_COMPLEXITY_ESTIMATE
 
 
-def graphql(
+def normalize_graphql_errors(
+    payload: dict[str, Any],
+    *,
+    http_status: int,
+    auth_token: str = "",
+) -> None:
+    """Raise normalized client errors for auth, scope, and GraphQL failures (R33)."""
+    if http_status in {401, 403}:
+        raise LinearGraphQLAuthError(
+            _redact(f"HTTP {http_status} auth denied", auth_token),
+            code="auth-denied",
+        )
+
+    errors = payload.get("errors")
+    if isinstance(errors, list) and errors:
+        first = errors[0] if isinstance(errors[0], dict) else {}
+        message = str(first.get("message") or "GraphQL error")
+        ext = first.get("extensions") if isinstance(first.get("extensions"), dict) else {}
+        code = str(ext.get("code") or "graphql-error")
+        code_lower = code.lower()
+        if code_lower in {"forbidden", "unauthorized", "authentication_required"}:
+            raise LinearGraphQLAuthError(_redact(message, auth_token), code="auth-denied")
+        if code_lower in {"ratelimited", "rate_limit_exceeded"} or "ratelimit" in message.lower():
+            raise LinearRateLimited(_redact(message, auth_token))
+        if code_lower in {"insufficient_scopes", "overscoped"} or "scope" in message.lower():
+            raise LinearGraphQLScopeError(_redact(message, auth_token), code="scope-failure")
+        raise LinearClientError(_redact(message, auth_token), code="graphql-error")
+
+    if payload.get("data") is None and http_status < 400:
+        raise LinearClientError("GraphQL response missing data", code="invalid-payload")
+
+
+def _graphql_once(
     root: Path,
     cfg: dict[str, Any],
     *,
@@ -291,7 +361,7 @@ def graphql(
     credential: Resolution | ResolvedToken | None = None,
     charge_budget: bool = True,
 ) -> dict[str, Any]:
-    """POST a GraphQL operation to Linear; detect RATELIMITED extensions (R13)."""
+    """Single GraphQL POST — broker-bound auth, budget charge, normalized errors (R33)."""
     from planning_store import resolve_issues_credential
 
     auth_mode = resolve_auth_mode(cfg)
@@ -313,7 +383,6 @@ def graphql(
 
     auth_hdrs = auth_headers(auth_token, auth_mode=auth_mode)
     extra = issues_broker.strip_auth_headers(auth_hdrs)
-    # oauth → broker Bearer; api-key → raw Authorization in extra_headers (not Bearer).
     if auth_mode == "oauth":
         bearer = auth_token[7:].strip() if auth_token.lower().startswith("bearer ") else auth_token
         bearer_token: str | None = bearer
@@ -374,6 +443,8 @@ def graphql(
             code="http-error",
         )
 
+    normalize_graphql_errors(data, http_status=status, auth_token=auth_token)
+
     if charge_budget:
         try:
             import planning_request_budget as prb
@@ -387,6 +458,40 @@ def graphql(
             pass
 
     return data
+
+
+def graphql(
+    root: Path,
+    cfg: dict[str, Any],
+    *,
+    query: str,
+    variables: dict[str, Any] | None = None,
+    token: str | None = None,
+    credential: Resolution | ResolvedToken | None = None,
+    charge_budget: bool = True,
+    max_retries: int = MAX_GRAPHQL_RETRIES,
+) -> dict[str, Any]:
+    """POST a GraphQL operation with bounded retries and normalized errors (R13/R33)."""
+    last_exc: Exception | None = None
+    for attempt in range(max(1, max_retries)):
+        try:
+            return _graphql_once(
+                root,
+                cfg,
+                query=query,
+                variables=variables,
+                token=token,
+                credential=credential,
+                charge_budget=charge_budget,
+            )
+        except LinearRateLimited as exc:
+            last_exc = exc
+            if not exc.retryable or attempt + 1 >= max_retries:
+                raise
+            time.sleep(GRAPHQL_RETRY_BASE_SECONDS * (2**attempt))
+    if last_exc is not None:
+        raise last_exc
+    raise LinearClientError("graphql failed after retries", code="transport-error")
 
 
 def detect_overscoped_key(
@@ -1458,6 +1563,34 @@ class LinearIssuesClient:
         record.locked = True
         return record
 
+    def _paginated_issue_nodes(
+        self,
+        filter_obj: dict[str, Any],
+        *,
+        page_size: int = DEFAULT_PAGE_SIZE,
+        max_pages: int = MAX_SEARCH_PAGES,
+    ) -> list[dict[str, Any]]:
+        """Fetch issue nodes with bounded cursor pagination (R33)."""
+        nodes: list[dict[str, Any]] = []
+        after: str | None = None
+        for _ in range(max(1, max_pages)):
+            variables: dict[str, Any] = {"filter": filter_obj, "first": page_size}
+            if after:
+                variables["after"] = after
+            payload = self._gql(ISSUES_SEARCH_PAGINATED_QUERY, variables)
+            connection = ((payload.get("data") or {}).get("issues")) or {}
+            batch = connection.get("nodes") or []
+            if isinstance(batch, list):
+                nodes.extend(item for item in batch if isinstance(item, dict))
+            page_info = connection.get("pageInfo") if isinstance(connection.get("pageInfo"), dict) else {}
+            if not page_info.get("hasNextPage"):
+                break
+            cursor = page_info.get("endCursor")
+            after = str(cursor) if cursor else None
+            if not after:
+                break
+        return nodes
+
     def search(
         self,
         *,
@@ -1484,8 +1617,7 @@ class LinearIssuesClient:
         if self._team_id or self._team_key:
             team_id = self._ensure_team_id()
             filter_obj["team"] = {"id": {"eq": team_id}}
-        payload = self._gql(ISSUES_SEARCH_QUERY, {"filter": filter_obj, "first": 50})
-        nodes = (((payload.get("data") or {}).get("issues") or {}).get("nodes")) or []
+        nodes = self._paginated_issue_nodes(filter_obj)
         out: list[Any] = []
         for node in nodes:
             if not isinstance(node, dict):

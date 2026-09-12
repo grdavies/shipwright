@@ -505,6 +505,7 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
             shipped="linear" in SHIPPED_ISSUES_PROVIDERS,
             live_client_wired=linear_wired,
         ),
+        "linearSemanticCrud": _linear_semantic_crud_registration(),
         "notion": load_providers_package().notion.registration_footprint(
             recognized="notion" in ISSUES_PROVIDERS,
             shipped="notion" in SHIPPED_ISSUES_PROVIDERS,
@@ -519,6 +520,72 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
             for provider in sorted(_BASE_ISSUES_PROVIDERS | live_recognized)
         },
     }
+
+
+def _linear_semantic_crud_registration() -> dict[str, Any]:
+    """PRD 339 R33 — semantic CRUD registration for Linear GraphQL backend."""
+    from _planning_pkg_loader import load_backends_package
+
+    return load_backends_package().register_linear_semantic_store()
+
+
+def wire_linear_semantic_crud(root: Path, cfg: dict[str, Any] | None = None, *, client: Any | None = None) -> Any:
+    """Construct Linear semantic CRUD via planning/backends/linear.py (R33)."""
+    from _planning_pkg_loader import load_backends_package
+
+    resolved = cfg if cfg is not None else load_workflow_config(root)
+    return load_backends_package().wire_linear_semantic_crud(root, resolved, client=client)
+
+
+def linear_semantic_crud(
+    root: Path,
+    *,
+    operation: str,
+    unit_id: str = "",
+    body_path: str = "",
+    content: str = "",
+    issue_id: str = "",
+    artifact_type: str | None = None,
+    project_key: str | None = None,
+    labels: list[str] | None = None,
+    if_match: str | None = None,
+    client: Any | None = None,
+) -> dict[str, Any]:
+    """Facade semantic CRUD/search over Linear GraphQL (PRD 339 R33)."""
+    cfg = load_workflow_config(root)
+    crud = wire_linear_semantic_crud(root, cfg, client=client)
+    op = str(operation or "").strip().lower()
+    if op == "create":
+        if not unit_id or not body_path or not content:
+            return {"verdict": "fail", "error": "create-requires-unit-id-body-path-content"}
+        return crud.create(unit_id=unit_id, body_path=body_path, content=content, artifact_type=artifact_type)
+    if op == "get":
+        if not issue_id or not unit_id or not body_path:
+            return {"verdict": "fail", "error": "get-requires-issue-id-unit-id-body-path"}
+        return crud.get(issue_id, unit_id=unit_id, body_path=body_path)
+    if op == "update":
+        if not issue_id or not unit_id or not body_path:
+            return {"verdict": "fail", "error": "update-requires-issue-id-unit-id-body-path"}
+        return crud.update(
+            issue_id,
+            unit_id=unit_id,
+            body_path=body_path,
+            content=content or None,
+            labels=labels,
+            if_match=if_match,
+        )
+    if op == "search":
+        return {
+            "verdict": "ok",
+            "action": "linear-semantic-search",
+            "matches": crud.search(
+                project_key=project_key,
+                artifact_type=artifact_type,
+                unit_id=unit_id or None,
+                labels=labels,
+            ),
+        }
+    return {"verdict": "fail", "error": "unknown-linear-semantic-operation", "operation": op}
 
 
 def planning_store_p2_stub_registration_footprint() -> dict[str, Any]:
@@ -4781,6 +4848,11 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
         "name": "operator_projection_contract",
         "status": "shipped",
         "description": "Provider-agnostic operator-projection API + R1 browse capability matrix (PRD 066)",
+    },
+    {
+        "name": "linear_semantic_crud",
+        "status": "shipped",
+        "description": "Semantic create/get/update/search over Linear GraphQL preserving planning markers (PRD 339 R33)",
     },
     {
         "name": "linear_projection_schema",
