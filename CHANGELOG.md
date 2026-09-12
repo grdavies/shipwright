@@ -1214,6 +1214,11 @@
 * merge phase add-timeout-and-retry-wrappers-small into feat/issue-store-projection-performance (89c261a) <!-- sw-deliver:add-timeout-and-retry-wrappers-small -->
 * merge phase add-resumable-state-persistence-medium into feat/issue-store-projection-performance (ceac94d) <!-- sw-deliver:add-resumable-state-persistence-medium -->
 * merge phase validate-and-enable-small into feat/issue-store-projection-performance (a33eb58) <!-- sw-deliver:validate-and-enable-small -->
+* merge phase single-source-version-metadata-small into feat/shipwright-distribution-onboarding (442c193) <!-- sw-deliver:single-source-version-metadata-small -->
+* merge phase fix-helper-examples-small into feat/shipwright-distribution-onboarding (e71b67d) <!-- sw-deliver:fix-helper-examples-small -->
+* merge phase distribution-channel-medium into feat/shipwright-distribution-onboarding (5ae2c62) <!-- sw-deliver:distribution-channel-medium -->
+* merge phase release-assets-medium into feat/shipwright-distribution-onboarding (b9218c2) <!-- sw-deliver:release-assets-medium -->
+* merge phase adopter-contributor-paths-small into feat/shipwright-distribution-onboarding (7bb2a26) <!-- sw-deliver:adopter-contributor-paths-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

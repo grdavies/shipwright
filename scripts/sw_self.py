@@ -191,6 +191,32 @@ def resolve_available_from_origin(
     }
 
 
+def missing_release_assets_message(available: dict[str, Any]) -> str:
+    """Return actionable guidance when a release lacks required distribution assets (R8)."""
+    missing: list[str] = []
+    if not available.get("artifactUrl"):
+        missing.append("shipwright zipapp (.pyz)")
+    stamp_name = STAMP_NAME
+    if not available.get("stampUrl"):
+        missing.append(f"distribution stamp ({stamp_name})")
+    if not missing:
+        return (
+            "release is missing shipwright artifact or distribution stamp assets; "
+            "see documentation/self-upgrade.md"
+        )
+    joined = " and ".join(missing)
+    return (
+        f"release is missing required distribution assets ({joined}); "
+        "self upgrade cannot proceed until the maintainer publishes the zipapp and "
+        f"{stamp_name} on the release. See documentation/self-upgrade.md for behavior "
+        "when assets are not yet available."
+    )
+
+
+def release_assets_available(available: dict[str, Any]) -> bool:
+    return bool(available.get("artifactUrl") and available.get("stampUrl"))
+
+
 def compare_versions(installed: str, available: str) -> str:
     """Return newer|same|older|unknown using simple dotted-int comparison."""
 
@@ -240,9 +266,15 @@ def self_check(
         }
 
     avail_ver = str(available.get("availableVersion") or "")
+    assets_available = release_assets_available(available)
     relation = compare_versions(installed, avail_ver)
-    update_available = relation == "newer"
-    if update_available:
+    update_available = relation == "newer" and assets_available
+    if not assets_available:
+        message = (
+            f"release {avail_ver or 'at origin'} is missing required release assets; "
+            f"{missing_release_assets_message(available)}"
+        )
+    elif update_available:
         message = f"update available: {installed} → {avail_ver}"
     elif relation == "same":
         message = f"installed {installed} matches available {avail_ver}"
@@ -255,6 +287,7 @@ def self_check(
         "availableVersion": avail_ver,
         "distributionOrigin": origin,
         "updateAvailable": update_available,
+        "assetsAvailable": assets_available,
         "relation": relation,
         "message": message,
         "available": available,
@@ -279,7 +312,16 @@ def self_upgrade(
             "message": check.get("message"),
             "check": check,
         }
+    available = check.get("available") or {}
     if not check.get("updateAvailable"):
+        if check.get("relation") == "newer" and not release_assets_available(available):
+            return {
+                "verdict": "fail",
+                "status": "missing-assets",
+                "upgradeApplied": False,
+                "message": missing_release_assets_message(available),
+                "check": check,
+            }
         return {
             "verdict": "pass",
             "status": "noop",
@@ -288,7 +330,6 @@ def self_upgrade(
             "check": check,
         }
 
-    available = check.get("available") or {}
     artifact_url = available.get("artifactUrl")
     stamp_url = available.get("stampUrl")
     if not artifact_url or not stamp_url:
@@ -296,7 +337,7 @@ def self_upgrade(
             "verdict": "fail",
             "status": "missing-assets",
             "upgradeApplied": False,
-            "message": "release is missing shipwright artifact or distribution stamp assets",
+            "message": missing_release_assets_message(available),
             "check": check,
         }
 

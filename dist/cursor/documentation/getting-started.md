@@ -13,7 +13,7 @@ conventions live in the [style guide](style-guide.md). Coined terms are in the
 Initialization steps (canonical — must match `packaged_init_steps()` in
 `scripts/sw-configure.py`):
 
-1. Install the packaged console entry point (`pip install shipwright`).
+1. Install the packaged console entry point (`pip install shipwright-workflow`).
 2. In the project repository, run `shipwright init --integration <host>`.
 3. Reload the editor; run `/sw-init` only if priority-zero surfaces still need confirm.
 4. Start a small loop (`/sw-doc` or `/sw-deliver run <frozen-task-list>`).
@@ -21,7 +21,7 @@ Initialization steps (canonical — must match `packaged_init_steps()` in
 Concrete example:
 
 ```bash
-pip install shipwright
+pip install shipwright-workflow
 # or, from a checked-out release tag / wheel:
 # pip install .
 
@@ -67,12 +67,15 @@ Use the clone path when you are developing Shipwright itself or need a working t
 git clone https://github.com/grdavies/shipwright
 cd shipwright
 python3 scripts/install.py
-# then in a consumer repo:
-shipwright init --integration cursor
+/sw-init
 ```
 
-This path remains fully supported; it is the **contributor** path, not the default consumer path.
-The installer never configures projects for you — each project still needs init.
+Run **Developer: Reload Window** in Cursor after install. The installer mirrors the plugin locally and
+installs the editable `shipwright` console entry point. `/sw-init` is the contributor configure step after
+clone — not the packaged `shipwright init` adopter path.
+
+This path remains fully supported; it is the **contributor** path, not the default adopter path.
+The installer never configures projects for you automatically — `/sw-init` completes repo setup.
 
 ## Positioning
 
@@ -89,7 +92,7 @@ Shipwright optimizes for **repeatable delivery**, not for skipping human merge j
 
 ### First session (packaged default)
 
-1. `pip install shipwright` (or install a release wheel).
+1. `pip install shipwright-workflow` (or install a release wheel).
 2. In your project repo: `shipwright init --integration cursor` (or `claude-code`).
 3. Reload the editor; run a small `/sw-doc` or `/sw-deliver run …` loop.
 4. Stop at the merge gate — do not force-merge to the default branch from the agent.

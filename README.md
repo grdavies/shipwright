@@ -64,7 +64,7 @@ Check you have the essentials:
 git --version && python3 --version
 ```
 
-- [x] **Python ≥ 3.9** and **git** — the only runtime dependencies for install, hooks, gates, and tests
+- [x] **Python ≥ 3.10** and **git** — the only runtime dependencies for install, hooks, gates, and tests
 - [x] **Host credential** — set `host.credentialRef` in `.cursor/workflow.config.json` and add a
   machine-local selector entry (`~/.config/shipwright/credential-selector.json`). During the one-release
   `tokenEnv` alias window, `GITHUB_TOKEN` (or `host.tokenEnv`) names the presence env var for an
@@ -83,8 +83,44 @@ Shipwright does **not** use the Python `keyring` package. On Linux and in contai
 Shipwright installs **once per machine**; you configure it **per project repo**. Once installed,
 `sw-` commands appear in the palette (e.g. `/sw-init`, `/sw-doc`).
 
+### Adopter vs contributor
+
+| Path | Audience | Setup |
+|------|----------|-------|
+| **Adopter** (default) | Using Shipwright in your projects | `pip install shipwright-workflow`, then `shipwright init --integration <host>` in each repo |
+| **Contributor** | Developing Shipwright itself | Clone this repo, run `python3 scripts/install.py`, then `/sw-init` in the clone |
+
+Adopters **do not** need to clone this repository. Contributors use the clone path — see
+[Getting started — Contributor path](core/documentation/getting-started.md#contributor-path-clone-this-repository)
+and [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow.
+
+**Adopter default (PyPI):** install the packaged console, then initialize each project repo:
+
+```bash
+pip install shipwright-workflow
+cd /path/to/your-project
+shipwright init --integration cursor   # or claude-code
+```
+
+Publication uses the non-colliding PyPI name `shipwright-workflow`; the console command remains
+`shipwright`. See [Getting started](core/documentation/getting-started.md) for the full packaged path.
+
 <details open>
-<summary><b>Cursor</b></summary>
+<summary><b>Contributor (clone this repo)</b></summary>
+
+```bash
+git clone https://github.com/grdavies/shipwright
+cd shipwright
+python3 scripts/install.py
+/sw-init
+```
+
+Run **Developer: Reload Window** in Cursor. `install.py` mirrors the plugin locally and installs the
+editable `shipwright` console; `/sw-init` configures this repository for development.
+</details>
+
+<details>
+<summary><b>Cursor (legacy inline clone snippet)</b></summary>
 
 ```bash
 git clone https://github.com/grdavies/shipwright

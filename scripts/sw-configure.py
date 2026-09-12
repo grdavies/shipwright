@@ -63,6 +63,23 @@ FUTURE_EXPLORE_HANDOFF = {
 }
 
 
+def packaged_init_steps() -> list[str]:
+    """Canonical packaged adopter steps — must match getting-started.md (PRD 345 R4)."""
+    return [
+        "Install the packaged console entry point (`pip install shipwright-workflow`).",
+        "In the project repository, run `shipwright init --integration <host>`.",
+        "Reload the editor; run `/sw-init` only if priority-zero surfaces still need confirm.",
+        "Start a small loop (`/sw-doc` or `/sw-deliver run <frozen-task-list>`).",
+    ]
+
+
+def contributor_init_steps() -> list[str]:
+    """Canonical contributor clone steps — must match getting-started.md (PRD 345 R9)."""
+    from contributor_init import contributor_init_steps as _steps
+
+    return _steps()
+
+
 def _plugin_root() -> Path:
     from sw_resolve_plugin_root import resolve_plugin_root
 
