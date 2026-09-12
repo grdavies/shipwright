@@ -147,7 +147,7 @@ Composition, convergence, and domain terms:
 [`graph-domain-terminology.md`](graph-domain-terminology.md).
 
 ### Deliver operator surface
-<!-- currency: refreshed 2026-09-12T22:12:00Z — PRD 348 terminal docs-currency; wave_deliver / wave_terminal / wave_run_adopt -->
+<!-- currency: refreshed 2026-09-12T22:12:00Z — terminal docs-currency; wave_deliver / wave_terminal / wave_run_adopt -->
 
 Mechanical list / resume / finalize commands report run identity, target branch, stage, lock holder,
 and `requiresAdoption` **before** any mutation. Operators invoke them via `wave_deliver.py` (or
@@ -183,7 +183,7 @@ surfaces in `list` output — never silent fallback to repository-global plan pa
 marks the run `immutable`, and releases target-lock resources. It does **not** close planning units, absorb
 gaps, or delete worktrees — those are separate hygiene steps after merge detection.
 
-**Finalize recovery (PRD 348):** before identity assessment, `prepare_finalize_recovery` rebinds a stale
+**Finalize recovery:** before identity assessment, `prepare_finalize_recovery` rebinds a stale
 task-list hash and clears a dead orchestrator worktree lease/path when safe. Stall prep tolerates a
 missing `runId` and recovers dead leases/locks so finalize can resume instead of hard-failing; when
 recovery mutates state, the refusal or success payload includes `finalizeRecovery`.
