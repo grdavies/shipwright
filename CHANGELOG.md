@@ -1224,6 +1224,7 @@
 * merge phase preserve-list-form-absorbs-projection-small into feat/planning-store-correctness-provider-expansion (fbce4b4) <!-- sw-deliver:preserve-list-form-absorbs-projection-small -->
 * merge phase disambiguate-deliver-issue-sources-medium into feat/planning-store-correctness-provider-expansion (a45d058) <!-- sw-deliver:disambiguate-deliver-issue-sources-medium -->
 * merge phase refuse-marker-reuse-and-self-heal-indexes-medium into feat/planning-store-correctness-provider-expansion (513e035) <!-- sw-deliver:refuse-marker-reuse-and-self-heal-indexes-medium -->
+* merge phase accept-the-independent-correctness-release-small into feat/planning-store-correctness-provider-expansion (4d423fa) <!-- sw-deliver:accept-the-independent-correctness-release-small -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
