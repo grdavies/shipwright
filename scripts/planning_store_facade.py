@@ -5683,6 +5683,264 @@ def operator_projection_contract() -> dict[str, Any]:
     }
 
 
+LINEAR_OPERATOR_BROWSE_MAPPED_VIEWS: dict[str, dict[str, Any]] = {
+    "prd": {
+        "linearSurface": "Project",
+        "browseQuestions": [1, 2, 3, 4],
+        "savedView": "project-detail",
+        "cardFields": [
+            "projectStatus",
+            "requirementsSummary",
+            "unitMarker",
+            "brainstormAttachments",
+            "gapMembership",
+        ],
+    },
+    "gap": {
+        "linearSurface": "Issue",
+        "browseQuestions": [1],
+        "savedView": "gap-by-prd-project",
+        "cardFields": [
+            "projectMembership",
+            "gapLabelOrField",
+            "gapIssueIdentity",
+            "lifecycle",
+            "prerequisites",
+        ],
+    },
+    "task": {
+        "linearSurface": "Issue/sub-issue",
+        "browseQuestions": [3],
+        "savedView": "tasks-by-milestone",
+        "cardFields": [
+            "issueSemanticStatus",
+            "milestonePhaseMembership",
+            "taskRef",
+            "rIds",
+            "completionStatus",
+        ],
+    },
+    "phase": {
+        "linearSurface": "Milestone",
+        "browseQuestions": [3],
+        "savedView": "milestones-by-project",
+        "cardFields": ["milestoneProgress", "deliveryStatus", "phaseDependencyOrder"],
+    },
+    "brainstorm": {
+        "linearSurface": "Document",
+        "browseQuestions": [2],
+        "savedView": "documents-by-project",
+        "cardFields": [
+            "documentAttachmentOrMembership",
+            "brainstormIdentity",
+            "prdProjectLink",
+        ],
+    },
+}
+
+_LCD_ONLY_LINEAR_SURFACES = frozenset(
+    {
+        "issue",
+        "issue+labels",
+        "issue+gap-label",
+        "issue/sub-issue",
+        "labels",
+    }
+)
+
+
+def linear_operator_browse_mapped_views() -> dict[str, Any]:
+    """R33 — required Linear UI mapped views for PRD/Gap/Task operator browse."""
+    return {
+        "verdict": "ok",
+        "action": "linear-operator-browse-mapped-views",
+        "views": {key: dict(value) for key, value in LINEAR_OPERATOR_BROWSE_MAPPED_VIEWS.items()},
+        "bodyOpenIsFailure": True,
+    }
+
+
+def assert_linear_not_lcd_labels_only(
+    surfaces: list[str] | None = None,
+) -> dict[str, Any]:
+    """R33 — reject LCD issue+labels-only projections (gap-079 / PRD 339)."""
+    if surfaces is not None:
+        normalized = {str(item).strip().lower() for item in surfaces if str(item).strip()}
+        if not normalized:
+            return {
+                "verdict": "fail",
+                "error": "linear-lcd-labels-only-rejected",
+                "action": "assert-linear-not-lcd-labels-only",
+                "surfaces": [],
+            }
+        if normalized <= _LCD_ONLY_LINEAR_SURFACES or all(
+            "issue" in surface and "project" not in surface and "document" not in surface
+            for surface in normalized
+        ):
+            return {
+                "verdict": "fail",
+                "error": "linear-lcd-labels-only-rejected",
+                "action": "assert-linear-not-lcd-labels-only",
+                "surfaces": sorted(normalized),
+            }
+        return {
+            "verdict": "pass",
+            "action": "assert-linear-not-lcd-labels-only",
+            "surfaces": sorted(normalized),
+        }
+
+    mapping = linear_entity_mapping()
+    by_type = mapping.get("byArtifactType") or {}
+    required_entities = {
+        "prd": "Project",
+        "brainstorm": "Document",
+        "phase": "Milestone",
+        "gap": "Issue",
+        "task": "Issue",
+    }
+    mismatches: list[dict[str, str]] = []
+    for artifact_type, expected in required_entities.items():
+        row = by_type.get(artifact_type) or {}
+        actual = str(row.get("linearEntity") or "")
+        if actual != expected:
+            mismatches.append(
+                {
+                    "artifactType": artifact_type,
+                    "expected": expected,
+                    "actual": actual or "(missing)",
+                }
+            )
+    matrix_surfaces = [
+        str(row.get("linear") or "")
+        for row in OPERATOR_PROJECTION_MATRIX_ROWS
+        if row.get("row") in {"prd", "brainstorm", "phase"}
+    ]
+    if matrix_surfaces and all(surface in _LCD_ONLY_LINEAR_SURFACES for surface in matrix_surfaces):
+        return {
+            "verdict": "fail",
+            "error": "linear-lcd-labels-only-rejected",
+            "action": "assert-linear-not-lcd-labels-only",
+            "matrixSurfaces": matrix_surfaces,
+        }
+    if mismatches:
+        return {
+            "verdict": "fail",
+            "error": "linear-lcd-labels-only-rejected",
+            "action": "assert-linear-not-lcd-labels-only",
+            "mismatches": mismatches,
+        }
+    return {
+        "verdict": "pass",
+        "action": "assert-linear-not-lcd-labels-only",
+        "entityMapping": required_entities,
+    }
+
+
+def gap079_linear_ui_answerability(
+    root: Path,
+    *,
+    evidence: dict[str, Any] | None = None,
+    cfg: dict[str, Any] | None = None,
+    skip_prd061: bool = False,
+) -> dict[str, Any]:
+    """PRD 339 R33/R34 — gap-079 Linear operator UI browse answerability gate."""
+    from planning_linear_client import operator_browse_checklist_gate, prd061_facade_projection_readiness
+
+    if not skip_prd061:
+        prd061_gate = prd061_facade_projection_readiness(root)
+        if prd061_gate.get("verdict") != "ready":
+            return {
+                "verdict": "fail",
+                "action": "gap079-linear-ui-answerability",
+                "error": "prd061-prerequisite-blocked",
+                "prd061Gate": prd061_gate,
+            }
+
+    lcd_check = assert_linear_not_lcd_labels_only()
+    if lcd_check.get("verdict") != "pass":
+        return {**lcd_check, "action": "gap079-linear-ui-answerability"}
+
+    doc_gate = operator_browse_checklist_gate(root)
+    if doc_gate.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "action": "gap079-linear-ui-answerability",
+            "error": "operator-browse-doc-incomplete",
+            "docGate": doc_gate,
+        }
+
+    mapped_views = linear_operator_browse_mapped_views()
+    required_artifact_views = ("prd", "gap", "task")
+    missing_views = [
+        name for name in required_artifact_views if name not in (mapped_views.get("views") or {})
+    ]
+    if missing_views:
+        return {
+            "verdict": "fail",
+            "action": "gap079-linear-ui-answerability",
+            "error": "mapped-views-incomplete",
+            "missingViews": missing_views,
+        }
+
+    questions: dict[str, Any] = {}
+    for qid, entry in R1_BROWSE_CONTRACT["questions"].items():
+        answerable = any(
+            int(qid) in (view.get("browseQuestions") or [])
+            for view in (mapped_views.get("views") or {}).values()
+        )
+        questions[qid] = {
+            "id": int(qid),
+            "prompt": entry["prompt"],
+            "answerable": answerable,
+            "cardVisibleFields": list(entry["cardVisibleFields"]),
+        }
+    if not all(row["answerable"] for row in questions.values()):
+        return {
+            "verdict": "fail",
+            "action": "gap079-linear-ui-answerability",
+            "error": "mapped-views-missing-r1-questions",
+            "questions": questions,
+            "mappedViews": mapped_views,
+        }
+
+    metadata_check: dict[str, Any]
+    if evidence is not None:
+        metadata_check = assert_r1_answerability_from_metadata(evidence)
+        if metadata_check.get("verdict") != "pass":
+            return {
+                **metadata_check,
+                "action": "gap079-linear-ui-answerability",
+                "questions": questions,
+                "mappedViews": mapped_views,
+            }
+    else:
+        metadata_check = {"verdict": "pass", "skipped": True}
+
+    substitute = r1_4_substitute_views()
+    store_cfg = cfg or load_workflow_config(root)
+    planning = store_cfg.get("planning") if isinstance(store_cfg.get("planning"), dict) else {}
+    store = planning.get("store") if isinstance(planning.get("store"), dict) else {}
+    linear_op = store.get("operatorProjection", {}).get("linear", {})
+    workspace_caps = linear_op.get("workspaceCapabilities") if isinstance(linear_op, dict) else {}
+    initiative_probe = probe_initiative_availability(
+        workspace=workspace_caps if isinstance(workspace_caps, dict) else None
+    )
+    return {
+        "verdict": "pass",
+        "action": "gap079-linear-ui-answerability",
+        "gapUnitId": "gap-079-add-linear-as-a-new-planning-store-issue-trackin",
+        "bodyOpenIsFailure": True,
+        "semanticAuthority": "portable-graph",
+        "freezeAuthority": "lcd-issue-or-document-backed",
+        "questions": questions,
+        "mappedViews": mapped_views,
+        "metadataCheck": metadata_check,
+        "r14SubstituteViews": substitute,
+        "initiativeProbe": initiative_probe,
+        "docGate": doc_gate,
+        "lcdCheck": lcd_check,
+    }
+
+
 def assert_r1_answerability_from_metadata(evidence: dict[str, Any]) -> dict[str, Any]:
     """R31 harness helper — R1 answers must come from card/list metadata; body-open fails."""
     missing: list[str] = []

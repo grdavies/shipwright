@@ -704,6 +704,20 @@ PRD_061_PROJECTION_ACCEPTANCE_TEST = (
 LINEAR_PROVIDER_DOC_REL = Path("core/providers/issues/linear.md")
 WORKFLOWS_DOC_REL = Path("core/documentation/workflows.md")
 
+OPERATOR_BROWSE_DOC_MARKERS: tuple[str, ...] = (
+    "## Operator projection contract (PRD 061 prerequisite, R33, R34)",
+    "## Semantic entity mapping",
+    "## Rebuild semantics and semantic authority",
+    "## Linear UI operator browse checklist (R33)",
+    "### PRD browse questions (no markdown body)",
+    "### Gap browse questions (no markdown body)",
+    "### Task browse questions (no markdown body)",
+    "body-open-is-failure",
+    "portable-graph",
+    "prd061-readiness-gate",
+    "semantic-store authority",
+)
+
 STAGE1_DOGFOOD_DOC_MARKERS: tuple[str, ...] = (
     "## Stage-1 dogfood acceptance (R25)",
     "### Volume floors",
@@ -934,6 +948,20 @@ def linear_promotion_gate_evidence(root: Path) -> dict[str, Any]:
         "live": live,
         "failures": failures,
     }
+
+
+def operator_browse_checklist_gate(root: Path) -> dict[str, Any]:
+    """R33 — Linear operator browse checklist documented in linear.md."""
+    doc = linear_provider_doc_text(root)
+    result = _doc_marker_gate(doc, OPERATOR_BROWSE_DOC_MARKERS, gate="operator-browse-checklist-gate")
+    if result["verdict"] == "ok":
+        result["checklist"] = {
+            "prdQuestions": True,
+            "gapQuestions": True,
+            "taskQuestions": True,
+            "bodyOpenIsFailure": True,
+        }
+    return result
 
 
 def stage1_dogfood_checklist_gate(root: Path) -> dict[str, Any]:
@@ -1750,7 +1778,7 @@ class LinearIssuesClient:
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
-        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|promotion-gate-evidence|docs-currency-gate|prd061-readiness-gate|comments-relations-surface>"}))
+        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|promotion-gate-evidence|docs-currency-gate|prd061-readiness-gate|operator-browse-checklist-gate|comments-relations-surface>"}))
         raise SystemExit(2)
     root = Path(args[0]).resolve()
     cfg = load_workflow_config(root)
@@ -1776,6 +1804,8 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(out, indent=2))
         if out.get("verdict") != "ready":
             raise SystemExit(20)
+    elif cmd == "operator-browse-checklist-gate":
+        print(json.dumps(operator_browse_checklist_gate(root), indent=2))
     elif cmd == "comments-relations-surface":
         issue_id = args[2] if len(args) > 2 else ""
         if not issue_id:
