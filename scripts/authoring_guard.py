@@ -28,6 +28,7 @@ PLANNING_UNIT_RE = re.compile(
     r"docs/planning/(brainstorm|gap|prd|decision|amendment)/([^/]+)/"
 )
 AMEND_ALLOWED_STATUSES = frozenset({"planned", "in-progress"})
+CLOSED_LIFECYCLE_STATUSES = frozenset({"complete", "superseded", "cancelled", "deferred"})
 LEGACY_UNIT_ID_RE = re.compile(r"^prd-(\d{3})-")
 # Pre-031 cutover: legacy INDEX uses not-started; frozen-but-unshipped PRDs amend as planned.
 LEGACY_INDEX_AMEND_STATUS = {"not-started": "planned"}
@@ -196,6 +197,37 @@ def reconcile_generation_token(root: Path, unit_id: str) -> dict[str, Any]:
     }
 
 
+def unit_body_path(root: Path, unit_id: str) -> Path | None:
+    """Resolve the canonical body path for a planning unit (planning model or legacy PRD)."""
+    units = {u.id: u for u in pig.discover_units(root)}
+    unit = units.get(unit_id)
+    if unit:
+        return root / unit.body_path
+    match = LEGACY_UNIT_ID_RE.match(unit_id)
+    if not match:
+        return None
+    prd_dir = root / "docs" / "prds"
+    if not prd_dir.is_dir():
+        return None
+    prefix = f"{match.group(1)}-"
+    for child in prd_dir.iterdir():
+        if not child.is_dir() or not child.name.startswith(prefix):
+            continue
+        for md in child.glob("*-prd-*.md"):
+            return md
+    return None
+
+
+def is_frozen_open_parent(root: Path, unit_id: str) -> bool:
+    """True when parent body is frozen and lifecycle is not closed (PRD 339 R35)."""
+    from check_frozen_lib import artifact_is_frozen
+
+    body = unit_body_path(root, unit_id)
+    if body is None or not body.is_file():
+        return False
+    return artifact_is_frozen(body)
+
+
 def propose_complete_change_route(root: Path, unit_id: str) -> dict[str, Any]:
     """Route completed-unit change requests to a new unit or gap (PRD 032 R8)."""
     units = {u.id: u for u in pig.discover_units(root)}
@@ -229,9 +261,13 @@ def propose_complete_change_route(root: Path, unit_id: str) -> dict[str, Any]:
 
 
 def amend_status_guard(root: Path, unit_id: str, artifact: str | None) -> None:
-    """Enforce /sw-amend allowed statuses and route complete-unit requests (R7/R8)."""
+    """Enforce /sw-amend allowed statuses and route complete-unit requests (R7/R8/R35)."""
     info = reconcile_generation_token(root, unit_id)
     status = info["consumerStatus"]
+    token = info["token"]
+    body = unit_body_path(root, unit_id)
+    frozen_open = is_frozen_open_parent(root, unit_id)
+
     if status == "complete":
         route = propose_complete_change_route(root, unit_id)
         emit(
@@ -241,19 +277,53 @@ def amend_status_guard(root: Path, unit_id: str, artifact: str | None) -> None:
                 "outcome": "route",
                 "unitId": unit_id,
                 "artifact": artifact,
-                "generationToken": info["token"],
+                "generationToken": token,
                 "route": route,
             },
             exit_code=21,
         )
-    if status not in AMEND_ALLOWED_STATUSES:
+
+    if status in CLOSED_LIFECYCLE_STATUSES:
         fail(
-            f"/sw-amend refused: unit status is {status!r} "
-            f"(allowed: {sorted(AMEND_ALLOWED_STATUSES)})",
+            f"/sw-amend refused: parent lifecycle is closed ({status!r})",
+            cause="closed-parent",
             unitId=unit_id,
             consumerStatus=status,
-            generationToken=info["token"],
+            lifecycleState="closed",
+            generationToken=token,
         )
+
+    if body is None or not body.is_file():
+        fail(
+            f"/sw-amend refused: parent body not found for unit {unit_id!r}",
+            cause="missing-parent",
+            unitId=unit_id,
+            consumerStatus=status,
+            generationToken=token,
+        )
+
+    if frozen_open:
+        return
+
+    if status in AMEND_ALLOWED_STATUSES:
+        fail(
+            f"/sw-amend refused: parent is not frozen-open (status {status!r})",
+            cause="unfrozen-parent",
+            unitId=unit_id,
+            consumerStatus=status,
+            lifecycleState="unfrozen",
+            generationToken=token,
+        )
+
+    fail(
+        f"/sw-amend refused: unit status is {status!r} "
+        f"(requires frozen-open parent or status in {sorted(AMEND_ALLOWED_STATUSES)})",
+        cause="status-not-allowed",
+        unitId=unit_id,
+        consumerStatus=status,
+        lifecycleState="unfrozen",
+        generationToken=token,
+    )
 
 
 def handoffs_path(root: Path) -> Path:
