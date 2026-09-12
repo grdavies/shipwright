@@ -93,7 +93,7 @@ def registration_footprint(
         "recognized": recognized,
         "shipped": shipped,
         "liveClientWired": live_client_wired,
-        "promotionGatedBy": ["conformance", "oauth-docs-gate"],
+        "promotionGatedBy": ["conformance", "oauth-docs-gate", "prd061-readiness-gate"],
         "adapterModule": "scripts/planning_linear_client.py",
         "doctorHooks": ["doctor-issues-provider-stub", "planning_linear_client.doctor-oauth"],
     }

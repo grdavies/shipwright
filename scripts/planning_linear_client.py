@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -586,6 +588,14 @@ def overflow_chunk_policy() -> dict[str, Any]:
 
 
 
+PRD_061_UNIT_ID = "061-prd-planning-store-interface-architecture"
+PRD_061_FACADE_ACCEPTANCE_TEST = (
+    "scripts/unit_tests/planning/test_planning_061_facade.py"
+)
+PRD_061_PROJECTION_ACCEPTANCE_TEST = (
+    "scripts/unit_tests/planning/test_planning_061_github_projects.py"
+)
+
 LINEAR_PROVIDER_DOC_REL = Path("core/providers/issues/linear.md")
 WORKFLOWS_DOC_REL = Path("core/documentation/workflows.md")
 
@@ -629,6 +639,119 @@ WORKFLOWS_R30_MARKERS: tuple[str, ...] = (
     "docs-currency-gate",
     "Stage promotion gates (M7/A)",
 )
+
+
+def _vendored_pytest_pythonpath(gate_repo: Path) -> list[str]:
+    """Resolve vendored pytest roots so nested CI runs don't need site pytest."""
+    try:
+        scripts = gate_repo / "scripts"
+        if str(scripts) not in sys.path:
+            sys.path.insert(0, str(scripts))
+        from _sw.vendor_paths import vendor_roots
+
+        return [str(path) for path in vendor_roots(gate_repo)]
+    except Exception:
+        return []
+
+
+def _acceptance_test_ready(root: Path, rel_test: str) -> dict[str, Any]:
+    test_path = root / rel_test
+    if not test_path.is_file():
+        return {
+            "verdict": "blocked",
+            "test": rel_test,
+            "reason": "acceptance-test-missing",
+        }
+    gate_repo = Path(__file__).resolve().parent.parent
+    env = os.environ.copy()
+    env.pop("PYTEST_ADDOPTS", None)
+    env.pop("PYTEST_CURRENT_TEST", None)
+    path_parts = [
+        str(root / "scripts"),
+        *_vendored_pytest_pythonpath(gate_repo),
+    ]
+    prev_pp = env.get("PYTHONPATH", "")
+    if prev_pp:
+        path_parts.append(prev_pp)
+    env["PYTHONPATH"] = os.pathsep.join(part for part in path_parts if part)
+    with tempfile.TemporaryDirectory(prefix="prd061-gate-pytest-") as td:
+        empty_ini = Path(td) / "pytest.ini"
+        empty_ini.write_text(
+            "[pytest]\npythonpath = scripts\n",
+            encoding="utf-8",
+        )
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                str(test_path),
+                "-q",
+                "--rootdir",
+                str(root),
+                "-c",
+                str(empty_ini),
+                "-p",
+                "no:cacheprovider",
+            ],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+    if proc.returncode == 0:
+        return {"verdict": "ready", "test": rel_test}
+    detail = "\n".join(
+        part
+        for part in ((proc.stdout or "").strip(), (proc.stderr or "").strip())
+        if part
+    )
+    return {
+        "verdict": "blocked",
+        "test": rel_test,
+        "reason": "acceptance-test-failed",
+        "exitCode": proc.returncode,
+        "stderr": detail[:4000] or None,
+    }
+
+
+def prd061_facade_projection_readiness(root: Path | None = None) -> dict[str, Any]:
+    """Return ready when PRD 061 facade/projection contract acceptance tests are green (R34)."""
+    repo = root if root is not None else Path(__file__).resolve().parent.parent
+    facade = _acceptance_test_ready(repo, PRD_061_FACADE_ACCEPTANCE_TEST)
+    projection = _acceptance_test_ready(repo, PRD_061_PROJECTION_ACCEPTANCE_TEST)
+    blocked = [item for item in (facade, projection) if item.get("verdict") != "ready"]
+    if blocked:
+        return {
+            "verdict": "blocked",
+            "action": "linear-prd061-readiness-gate",
+            "cause": "prd-061-facade-projection-not-merged-green",
+            "prd061UnitId": PRD_061_UNIT_ID,
+            "requirements": ["facade-contract", "projection-contract"],
+            "blocked": blocked,
+            "resumeCommand": (
+                "merge and green PRD 061 facade/projection contract "
+                f"({PRD_061_FACADE_ACCEPTANCE_TEST}, "
+                f"{PRD_061_PROJECTION_ACCEPTANCE_TEST}), then retry linear adapter activation"
+            ),
+        }
+    return {
+        "verdict": "ready",
+        "action": "linear-prd061-readiness-gate",
+        "prd061UnitId": PRD_061_UNIT_ID,
+        "requirements": ["facade-contract", "projection-contract"],
+        "checks": [facade, projection],
+    }
+
+
+def require_prd061_facade_projection_ready(root: Path) -> None:
+    """Fail-closed PRD 061 readiness preflight before live Linear adapter activation (R34)."""
+    gate = prd061_facade_projection_readiness(root)
+    if gate.get("verdict") != "ready":
+        raise LinearClientError(
+            str(gate.get("cause") or "prd-061-facade-projection-not-merged-green"),
+            code="prd061-readiness-blocked",
+        )
 
 
 def resolve_linear_provider_doc(root: Path) -> Path:
@@ -1035,6 +1158,7 @@ class LinearIssuesClient:
             self._fixture = None
 
         if self._fixture is None:
+            require_prd061_facade_projection_ready(self.root)
             scope = resolve_team_scope(self.cfg)
             self._team_key = scope.get("teamKey") or ""
             self._team_id = scope.get("teamId") or ""
@@ -1494,7 +1618,7 @@ class LinearIssuesClient:
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
-        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|promotion-gate-evidence|docs-currency-gate|comments-relations-surface>"}))
+        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|promotion-gate-evidence|docs-currency-gate|prd061-readiness-gate|comments-relations-surface>"}))
         raise SystemExit(2)
     root = Path(args[0]).resolve()
     cfg = load_workflow_config(root)
@@ -1515,6 +1639,11 @@ def main(argv: list[str] | None = None) -> None:
         print(json.dumps(linear_promotion_gate_evidence(root), indent=2))
     elif cmd == "docs-currency-gate":
         print(json.dumps(docs_currency_gate(root), indent=2))
+    elif cmd == "prd061-readiness-gate":
+        out = prd061_facade_projection_readiness(root)
+        print(json.dumps(out, indent=2))
+        if out.get("verdict") != "ready":
+            raise SystemExit(20)
     elif cmd == "comments-relations-surface":
         issue_id = args[2] if len(args) > 2 else ""
         if not issue_id:
