@@ -9,7 +9,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
-from secret_patterns import DENY_PATTERNS
+from secret_patterns import DENY_PATTERNS, email_match_is_schema_version_token
 
 EXIT_PASS = 0
 EXIT_DENY = 1
@@ -76,6 +76,10 @@ def scan_text(
         for deny in DENY_PATTERNS:
             for match in deny.pattern.finditer(line):
                 matched = match.group(0)
+                if deny.name == "EMAIL" and email_match_is_schema_version_token(
+                    matched, line=line
+                ):
+                    continue
                 if is_allowed(matched=matched, line=line, path=path, allowlist=allowlist):
                     continue
                 excerpt = line.strip()

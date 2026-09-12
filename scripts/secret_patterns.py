@@ -88,3 +88,24 @@ def _patterns() -> list[DenyPattern]:
 
 DENY_PATTERNS: list[DenyPattern] = _patterns()
 REDACTIONS: list[tuple[re.Pattern[str], str]] = [(p.pattern, p.replacement) for p in DENY_PATTERNS]
+
+# R36 — semver/package @-tokens and schema-version suffixes that resemble EMAIL addresses.
+_SCHEMA_VERSION_EMAIL_TOKEN = re.compile(
+    r"(?ix)"
+    r"(?:"
+    r"[A-Za-z][A-Za-z0-9._+-]*@\d+\.\d+(?:\.\d+)?(?:\.(?:json|schema|ya?ml|toml|lock))?"
+    r"|[A-Z][A-Za-z0-9+-]*@v\d+(?:\.\d+)*"
+    r")"
+)
+
+
+def email_match_is_schema_version_token(matched: str, *, line: str = "") -> bool:
+    """True when an EMAIL-pattern match is a schema-version token, not a credential (R36)."""
+    token = matched.strip()
+    if _SCHEMA_VERSION_EMAIL_TOKEN.fullmatch(token):
+        return True
+    if re.search(r"(?i)schema[-_]?version", line):
+        suffix = token.split("@", 1)[1] if "@" in token else ""
+        if suffix and re.fullmatch(r"v?\d+(?:\.\d+)*", suffix):
+            return True
+    return False
