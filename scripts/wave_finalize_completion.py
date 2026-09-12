@@ -294,6 +294,11 @@ def check_incomplete_transition_receipt(
     from wave_transition_receipt import find_incomplete_receipt
 
     rid = (run_id or "").strip() or None
+    # Finalize-completion may run before runId is bound (closure completeness tests /
+    # early mechanical steps). Missing run id means there is no receipt namespace to
+    # inspect — do not raise RunIdRequiredError.
+    if not rid:
+        return {"blocked": False, "reason": "no-run-id"}
     receipt = find_incomplete_receipt(root, rid)
     if not receipt:
         return {"blocked": False, "reason": "no-incomplete-receipt"}
