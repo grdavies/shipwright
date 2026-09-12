@@ -140,7 +140,7 @@ def test_solely_watchdog_verify_after_merge_skips_blast_radius(
 
     monkeypatch.setattr("wave_failure.load_state", lambda _root: state)
     monkeypatch.setattr("wave_failure.load_state_for_deliver", lambda _root, target=None: state)
-    monkeypatch.setattr("wave_failure.run_verify_suite", lambda *_a, **_k: outcome)
+    monkeypatch.setattr("wave_failure.run_post_merge_verify", lambda *_a, **_k: outcome)
     monkeypatch.setattr("wave_failure.resolve_orchestrator_worktree", lambda *_a, **_k: tmp_path)
     monkeypatch.setattr("wave_failure.post_merge_verify_scope", lambda _root: "phase")
     monkeypatch.setattr("wave_failure.save_state", lambda *_a, **_k: None)
@@ -180,7 +180,7 @@ def test_mixed_verify_after_merge_applies_blast_radius(
 
     monkeypatch.setattr("wave_failure.load_state", lambda _root: state)
     monkeypatch.setattr("wave_failure.load_state_for_deliver", lambda _root, target=None: state)
-    monkeypatch.setattr("wave_failure.run_verify_suite", lambda *_a, **_k: outcome)
+    monkeypatch.setattr("wave_failure.run_post_merge_verify", lambda *_a, **_k: outcome)
     monkeypatch.setattr("wave_failure.resolve_orchestrator_worktree", lambda *_a, **_k: tmp_path)
     monkeypatch.setattr("wave_failure.post_merge_verify_scope", lambda _root: "phase")
     monkeypatch.setattr("wave_failure.save_state", lambda *_a, **_k: None)

@@ -13,6 +13,8 @@ from pathlib import Path
 from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+
+from wave_post_merge import run_post_merge_verify
 FLAKY_DEFAULT_RETRIES = 1
 
 # Harness-only test switches keep the SW_TEST_* prefix (PRD 080 R8 / phase 16.1).
@@ -518,7 +520,7 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
     if has_flag(args, "--dry-run"):
         cmd_verify_run(root, args)
     merge_scope = post_merge_verify_scope(root)
-    outcome = run_verify_suite(
+    outcome = run_post_merge_verify(
         root,
         resolve_orchestrator_worktree(root, args),
         flaky_retries=int(parse_kv(args, "--flaky-retries", str(FLAKY_DEFAULT_RETRIES)) or "1"),
