@@ -196,6 +196,7 @@
       "stalenessTtlHours": 72
     },
     "visibilityTier": "specs-public",
+    "visibilityProfile": "specs-public",
     "store": {
       "backend": "in-repo-public",
       "storeLocation": { "mode": "same-repo" },

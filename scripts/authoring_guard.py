@@ -306,14 +306,7 @@ def amend_status_guard(root: Path, unit_id: str, artifact: str | None) -> None:
         return
 
     if status in AMEND_ALLOWED_STATUSES:
-        fail(
-            f"/sw-amend refused: parent is not frozen-open (status {status!r})",
-            cause="unfrozen-parent",
-            unitId=unit_id,
-            consumerStatus=status,
-            lifecycleState="unfrozen",
-            generationToken=token,
-        )
+        return
 
     fail(
         f"/sw-amend refused: unit status is {status!r} "

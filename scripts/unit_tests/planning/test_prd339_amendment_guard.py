@@ -79,12 +79,23 @@ def test_frozen_open_proposed_parent(tmp_path: Path) -> None:
     amend_status_guard(tmp_path, unit_id, None)
 
 
-def test_unfrozen_parent_rejected(tmp_path: Path) -> None:
-    """R35 — unfrozen parent fails with typed unfrozen-parent cause."""
+def test_unfrozen_planned_parent_allowed(tmp_path: Path) -> None:
+    """R35 — planned/in-progress parents may amend without frozen-open (OR semantics)."""
     _init_repo(tmp_path)
     unit_id = "339-prd-unfrozen-parent"
     _write_index(tmp_path)
     _write_parent(tmp_path, unit_id, status="planned", frozen=False)
+    _commit_all(tmp_path)
+
+    amend_status_guard(tmp_path, unit_id, None)
+
+
+def test_unfrozen_proposed_parent_rejected(tmp_path: Path) -> None:
+    """R35 — unfrozen proposed parent fails with typed status-not-allowed cause."""
+    _init_repo(tmp_path)
+    unit_id = "339-prd-unfrozen-proposed"
+    _write_index(tmp_path)
+    _write_parent(tmp_path, unit_id, status="proposed", frozen=False)
     _commit_all(tmp_path)
 
     with pytest.raises(SystemExit) as exc:
@@ -130,11 +141,11 @@ def test_mismatched_parent_rejected(tmp_path: Path) -> None:
 
 
 def test_amend_guard_json_causes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """R35 — subprocess guard emits typed cause fields."""
+    """R35 — subprocess guard emits typed cause fields for disallowed unfrozen status."""
     _init_repo(tmp_path)
     unit_id = "339-prd-json-parent"
     _write_index(tmp_path)
-    _write_parent(tmp_path, unit_id, status="planned", frozen=False)
+    _write_parent(tmp_path, unit_id, status="proposed", frozen=False)
     _commit_all(tmp_path)
 
     script = Path(__file__).resolve().parents[2] / "authoring_guard.py"
@@ -156,4 +167,4 @@ def test_amend_guard_json_causes(tmp_path: Path, capsys: pytest.CaptureFixture[s
     assert proc.returncode == 20
     payload = json.loads(proc.stdout)
     assert payload["verdict"] == "fail"
-    assert payload["cause"] == "unfrozen-parent"
+    assert payload["cause"] == "status-not-allowed"

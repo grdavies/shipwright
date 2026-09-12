@@ -878,3 +878,814 @@ def dual_write_projection_mirror(
         "action": "dual-write-projection-mirror",
         "mirror": mirror,
     }
+
+
+UNIT_MARKER_PREFIX = "sw:unit:"
+GAP_LABEL = "Gap"
+TASK_LABEL = "Task"
+_PROJECTION_ARTIFACT_ORDER = ("prd", "brainstorm", "gap", "phase", "task")
+LINEAR_HIERARCHY_REBUILD_STEPS = ("prd-brainstorm-gap", "phases", "tasks", "tombstone")
+
+
+def unit_projection_marker(unit_id: str) -> str:
+    """Stable unit-id marker embedded on rebuildable Linear projection entities."""
+    return f"{UNIT_MARKER_PREFIX}{unit_id}"
+
+
+def _record_str(record: dict[str, Any], *keys: str, default: str = "") -> str:
+    for key in keys:
+        value = record.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return default
+
+
+def _record_list(record: dict[str, Any], *keys: str) -> list[str]:
+    for key in keys:
+        value = record.get(key)
+        if isinstance(value, list):
+            return [str(item).strip() for item in value if str(item).strip()]
+        if isinstance(value, str) and value.strip():
+            if "," in value:
+                return [part.strip() for part in value.split(",") if part.strip()]
+            return [value.strip()]
+    return []
+
+
+def _requirements_summary(content: str) -> str:
+    body = (content or "").strip()
+    if not body:
+        return ""
+    if body.startswith("---"):
+        parts = body.split("---", 2)
+        if len(parts) >= 3:
+            body = parts[2].strip()
+    for line in body.splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            return stripped[:280]
+    return body[:280]
+
+
+def semantic_owned_fields(record: dict[str, Any], *, project_key: str = "") -> dict[str, Any]:
+    """Derive projection-owned fields from a semantic-store record (SoT)."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    unit_id = _record_str(record, "unitId", "id")
+    title = _record_str(record, "title")
+    content = _record_str(record, "content", "body")
+    status = _record_str(record, "status", "state", default="proposed")
+    if not title and content:
+        for line in content.splitlines():
+            if line.strip().startswith("#"):
+                title = line.strip().lstrip("#").strip()
+                break
+    if not title:
+        title = unit_id
+    owned: dict[str, Any] = {
+        "title": title,
+        "status": status,
+        "marker": unit_projection_marker(unit_id),
+    }
+    if project_key:
+        owned["projectKey"] = project_key
+    if artifact_type == "prd":
+        owned["requirementsSummary"] = _record_str(record, "requirementsSummary") or _requirements_summary(
+            content
+        )
+        owned["links"] = _record_list(record, "links", "native_links", "nativeLinks")
+    elif artifact_type == "brainstorm":
+        owned["summary"] = _record_str(record, "summary") or _requirements_summary(content)
+        owned["prdUnitId"] = _record_str(record, "prdUnitId", "projectId", "parentUnitId")
+    elif artifact_type == "gap":
+        owned["lifecycle"] = _record_str(record, "lifecycle", "gapStatus", default=status)
+        owned["prerequisites"] = _record_list(record, "prerequisites", "depends", "prerequisite")
+        owned["absorbs"] = _record_list(record, "absorbs", "absorbedBy", "absorption")
+        owned["prdUnitId"] = _record_str(record, "prdUnitId", "projectId", "parentUnitId")
+        owned["labels"] = sorted(
+            set(_record_list(record, "labels") or [GAP_LABEL, f"sw:gap", f"sw:unit:{unit_id}"])
+        )
+    elif artifact_type == "phase":
+        owned["phaseId"] = _record_str(record, "phaseId", "id", default=unit_id)
+        owned["dependsOn"] = _record_list(record, "dependsOn", "depends", "prerequisite")
+        owned["deliveryStatus"] = _record_str(
+            record, "deliveryStatus", "completionStatus", "status", default=status
+        )
+        owned["sortOrder"] = record.get("sortOrder")
+        owned["prdUnitId"] = _record_str(record, "prdUnitId", "projectId", "parentUnitId")
+    elif artifact_type == "task":
+        owned["taskRef"] = _record_str(record, "taskRef", "ref", default=unit_id)
+        owned["phaseUnitId"] = _record_str(record, "phaseUnitId", "phaseId", "milestoneId")
+        owned["parentTaskUnitId"] = _record_str(record, "parentTaskUnitId", "parentUnitId")
+        owned["rIds"] = _record_list(record, "rIds", "requirements", "r_ids")
+        owned["scenarios"] = _record_list(record, "scenarios", "testScenarios")
+        owned["completionStatus"] = _record_str(
+            record, "completionStatus", "checkboxStatus", "status", default=status
+        )
+        owned["labels"] = sorted(
+            set(_record_list(record, "labels") or [TASK_LABEL, f"sw:task:{owned['taskRef']}"])
+        )
+    return owned
+
+
+def _phase_sort_key(record: dict[str, Any]) -> tuple[int, str]:
+    phase_id = _record_str(record, "phaseId", "id")
+    digits = "".join(ch for ch in phase_id if ch.isdigit())
+    order = int(digits) if digits else 999
+    return (order, _record_str(record, "unitId", "id"))
+
+
+def _sort_phases_by_dependency(phases: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Topological sort on phase dependsOn with numeric phase-id fallback."""
+    by_phase_id: dict[str, dict[str, Any]] = {}
+    by_unit: dict[str, dict[str, Any]] = {}
+    for phase in phases:
+        unit_id = _record_str(phase, "unitId", "id")
+        phase_id = _record_str(phase, "phaseId", "id", default=unit_id)
+        by_phase_id[phase_id] = phase
+        by_unit[unit_id] = phase
+
+    ordered: list[dict[str, Any]] = []
+    visited: set[str] = set()
+
+    def visit(phase: dict[str, Any]) -> None:
+        unit_id = _record_str(phase, "unitId", "id")
+        if unit_id in visited:
+            return
+        for dep in _record_list(phase, "dependsOn", "depends", "prerequisite"):
+            parent = by_phase_id.get(dep) or by_unit.get(dep)
+            if parent is not None:
+                visit(parent)
+        visited.add(unit_id)
+        ordered.append(phase)
+
+    for phase in sorted(phases, key=_phase_sort_key):
+        visit(phase)
+    return ordered
+
+
+def build_prd_project_spec(
+    record: dict[str, Any],
+    *,
+    project_key: str,
+) -> dict[str, Any]:
+    """R33 — semantic PRD record → deterministic Linear Project projection."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    if artifact_type != "prd":
+        return {
+            "verdict": "fail",
+            "error": "unsupported-artifact-type",
+            "action": "build-prd-project-spec",
+            "artifactType": artifact_type,
+        }
+    unit_id = _record_str(record, "unitId", "id")
+    owned = semantic_owned_fields(record, project_key=project_key)
+    prefix = f"[{project_key}] " if project_key else ""
+    title = owned["title"]
+    if prefix and not title.startswith(prefix):
+        title = f"{prefix}{title}"
+    owned["title"] = title
+    return {
+        "verdict": "pass",
+        "action": "build-prd-project-spec",
+        "linearEntity": "Project",
+        "unitId": unit_id,
+        "artifactType": "prd",
+        "marker": unit_projection_marker(unit_id),
+        "ownedFields": owned,
+        "isFreezeAuthority": False,
+        "isSourceOfTruth": False,
+        "freezeAuthority": "portable-graph",
+    }
+
+
+def build_brainstorm_document_spec(
+    record: dict[str, Any],
+    *,
+    project_key: str,
+    prd_project_entity_id: str | None = None,
+) -> dict[str, Any]:
+    """R33 — semantic brainstorm record → linked Linear Document (projection only)."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    if artifact_type != "brainstorm":
+        return {
+            "verdict": "fail",
+            "error": "unsupported-artifact-type",
+            "action": "build-brainstorm-document-spec",
+            "artifactType": artifact_type,
+        }
+    unit_id = _record_str(record, "unitId", "id")
+    owned = semantic_owned_fields(record, project_key=project_key)
+    return {
+        "verdict": "pass",
+        "action": "build-brainstorm-document-spec",
+        "linearEntity": "Document",
+        "unitId": unit_id,
+        "artifactType": "brainstorm",
+        "marker": unit_projection_marker(unit_id),
+        "attachedToProject": prd_project_entity_id or record.get("prdProjectEntityId"),
+        "ownedFields": owned,
+        "isFreezeAuthority": False,
+        "isSourceOfTruth": False,
+        "freezeAuthority": "portable-graph",
+    }
+
+
+def build_gap_issue_spec(
+    record: dict[str, Any],
+    *,
+    project_key: str,
+    prd_project_entity_id: str | None = None,
+) -> dict[str, Any]:
+    """R33 — semantic gap record → searchable Linear Issue with lifecycle + links."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    if artifact_type != "gap":
+        return {
+            "verdict": "fail",
+            "error": "unsupported-artifact-type",
+            "action": "build-gap-issue-spec",
+            "artifactType": artifact_type,
+        }
+    unit_id = _record_str(record, "unitId", "id")
+    owned = semantic_owned_fields(record, project_key=project_key)
+    labels = list(owned.get("labels") or [])
+    if GAP_LABEL not in labels:
+        labels.append(GAP_LABEL)
+    if project_key:
+        labels.append(f"sw:project:{project_key}")
+    owned["labels"] = sorted(set(labels))
+    return {
+        "verdict": "pass",
+        "action": "build-gap-issue-spec",
+        "linearEntity": "Issue",
+        "unitId": unit_id,
+        "artifactType": "gap",
+        "marker": unit_projection_marker(unit_id),
+        "labels": owned["labels"],
+        "projectMembership": prd_project_entity_id or record.get("prdProjectEntityId"),
+        "ownedFields": owned,
+        "isFreezeAuthority": False,
+        "isSourceOfTruth": False,
+        "freezeAuthority": "portable-graph",
+    }
+
+
+def build_phase_milestone_spec(
+    record: dict[str, Any],
+    *,
+    project_key: str,
+    prd_project_entity_id: str | None = None,
+) -> dict[str, Any]:
+    """R33 — semantic phase record → Linear Milestone with dependency order + delivery status."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    if artifact_type != "phase":
+        return {
+            "verdict": "fail",
+            "error": "unsupported-artifact-type",
+            "action": "build-phase-milestone-spec",
+            "artifactType": artifact_type,
+        }
+    unit_id = _record_str(record, "unitId", "id")
+    owned = semantic_owned_fields(record, project_key=project_key)
+    phase_id = owned.get("phaseId") or unit_id
+    prefix = f"[{project_key}] " if project_key else ""
+    title = owned["title"]
+    if prefix and not title.startswith(prefix):
+        title = f"{prefix}Phase {phase_id}: {title}"
+    owned["title"] = title
+    return {
+        "verdict": "pass",
+        "action": "build-phase-milestone-spec",
+        "linearEntity": "Milestone",
+        "unitId": unit_id,
+        "artifactType": "phase",
+        "marker": unit_projection_marker(unit_id),
+        "projectId": prd_project_entity_id or record.get("prdProjectEntityId"),
+        "ownedFields": owned,
+        "isFreezeAuthority": False,
+        "isSourceOfTruth": False,
+        "freezeAuthority": "portable-graph",
+    }
+
+
+def build_task_issue_spec(
+    record: dict[str, Any],
+    *,
+    project_key: str,
+    prd_project_entity_id: str | None = None,
+    phase_milestone_entity_id: str | None = None,
+    parent_issue_entity_id: str | None = None,
+) -> dict[str, Any]:
+    """R33 — semantic task record → linked sub-issue with phase parentage and traceability."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    if artifact_type != "task":
+        return {
+            "verdict": "fail",
+            "error": "unsupported-artifact-type",
+            "action": "build-task-issue-spec",
+            "artifactType": artifact_type,
+        }
+    unit_id = _record_str(record, "unitId", "id")
+    owned = semantic_owned_fields(record, project_key=project_key)
+    task_ref = owned.get("taskRef") or unit_id
+    prefix = f"[{project_key}] " if project_key else ""
+    title = owned["title"]
+    if prefix and not title.startswith(prefix):
+        title = f"{prefix}{task_ref} {title}"
+    owned["title"] = title
+    labels = list(owned.get("labels") or [])
+    if TASK_LABEL not in labels:
+        labels.append(TASK_LABEL)
+    if project_key:
+        labels.append(f"sw:project:{project_key}")
+    owned["labels"] = sorted(set(labels))
+    return {
+        "verdict": "pass",
+        "action": "build-task-issue-spec",
+        "linearEntity": "Issue",
+        "unitId": unit_id,
+        "artifactType": "task",
+        "marker": unit_projection_marker(unit_id),
+        "labels": owned["labels"],
+        "projectMembership": prd_project_entity_id or record.get("prdProjectEntityId"),
+        "milestoneId": phase_milestone_entity_id or record.get("phaseMilestoneEntityId"),
+        "parentIssueId": parent_issue_entity_id or record.get("parentIssueEntityId"),
+        "subIssue": True,
+        "ownedFields": owned,
+        "isFreezeAuthority": False,
+        "isSourceOfTruth": False,
+        "freezeAuthority": "portable-graph",
+    }
+
+
+def semantic_record_to_projection_spec(
+    record: dict[str, Any],
+    *,
+    project_key: str,
+    prd_project_entity_id: str | None = None,
+    phase_milestone_entity_id: str | None = None,
+    parent_issue_entity_id: str | None = None,
+) -> dict[str, Any]:
+    """Dispatch semantic record → Linear projection entity spec."""
+    artifact_type = _record_str(record, "artifactType", "type").lower()
+    if artifact_type == "prd":
+        return build_prd_project_spec(record, project_key=project_key)
+    if artifact_type == "brainstorm":
+        return build_brainstorm_document_spec(
+            record,
+            project_key=project_key,
+            prd_project_entity_id=prd_project_entity_id,
+        )
+    if artifact_type == "gap":
+        return build_gap_issue_spec(
+            record,
+            project_key=project_key,
+            prd_project_entity_id=prd_project_entity_id,
+        )
+    if artifact_type == "phase":
+        return build_phase_milestone_spec(
+            record,
+            project_key=project_key,
+            prd_project_entity_id=prd_project_entity_id,
+        )
+    if artifact_type == "task":
+        return build_task_issue_spec(
+            record,
+            project_key=project_key,
+            prd_project_entity_id=prd_project_entity_id,
+            phase_milestone_entity_id=phase_milestone_entity_id,
+            parent_issue_entity_id=parent_issue_entity_id,
+        )
+    return {
+        "verdict": "fail",
+        "error": "unsupported-artifact-type",
+        "action": "semantic-record-to-projection-spec",
+        "artifactType": artifact_type,
+    }
+
+
+class LinearProjectionRebuildStore:
+    """In-memory Linear projection store for rebuild tests and dry-run rebuilds."""
+
+    def __init__(self) -> None:
+        self.projects: dict[str, dict[str, Any]] = {}
+        self.documents: dict[str, dict[str, Any]] = {}
+        self.milestones: dict[str, dict[str, Any]] = {}
+        self.issues: dict[str, dict[str, Any]] = {}
+
+    def _bucket(self, linear_entity: str) -> dict[str, dict[str, Any]]:
+        kind = linear_entity.lower()
+        if kind == "project":
+            return self.projects
+        if kind == "document":
+            return self.documents
+        if kind == "milestone":
+            return self.milestones
+        if kind == "issue":
+            return self.issues
+        raise KeyError(linear_entity)
+
+    def iter_entities(self) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        for bucket in (self.projects, self.documents, self.milestones, self.issues):
+            rows.extend(dict(entity) for entity in bucket.values())
+        return rows
+
+    def find_by_marker(self, marker: str, linear_entity: str) -> dict[str, Any] | None:
+        bucket = self._bucket(linear_entity)
+        for entity in bucket.values():
+            if entity.get("marker") == marker:
+                return dict(entity)
+        return None
+
+    def tombstone(self, entity_id: str, linear_entity: str) -> dict[str, Any]:
+        bucket = self._bucket(linear_entity)
+        existing = bucket.get(entity_id)
+        if existing is None:
+            return {
+                "verdict": "miss",
+                "action": "linear-projection-store-tombstone",
+                "entityId": entity_id,
+                "linearEntity": linear_entity,
+            }
+        entity = dict(existing)
+        entity["tombstoned"] = True
+        entity["isSourceOfTruth"] = False
+        entity["isFreezeAuthority"] = False
+        bucket[entity_id] = entity
+        return {
+            "verdict": "pass",
+            "action": "linear-projection-store-tombstone",
+            "entityId": entity_id,
+            "linearEntity": linear_entity,
+            "tombstoned": True,
+        }
+
+    def upsert(self, spec: dict[str, Any]) -> dict[str, Any]:
+        linear_entity = str(spec.get("linearEntity") or "")
+        marker = str(spec.get("marker") or "")
+        unit_id = str(spec.get("unitId") or "")
+        bucket = self._bucket(linear_entity)
+        existing = self.find_by_marker(marker, linear_entity) if marker else None
+        entity_id = str((existing or {}).get("entityId") or spec.get("entityId") or f"lin-{linear_entity.lower()}-{unit_id}")
+        entity = {
+            "entityId": entity_id,
+            "linearEntity": linear_entity,
+            "unitId": unit_id,
+            "artifactType": spec.get("artifactType"),
+            "marker": marker,
+            "ownedFields": dict(spec.get("ownedFields") or {}),
+            "isFreezeAuthority": False,
+            "isSourceOfTruth": False,
+            "tombstoned": False,
+        }
+        if linear_entity == "Document":
+            entity["attachedToProject"] = spec.get("attachedToProject")
+        if linear_entity == "Milestone":
+            entity["projectId"] = spec.get("projectId")
+        if linear_entity == "Issue":
+            entity["labels"] = list(spec.get("labels") or [])
+            entity["projectMembership"] = spec.get("projectMembership")
+            entity["milestoneId"] = spec.get("milestoneId")
+            entity["parentIssueId"] = spec.get("parentIssueId")
+            entity["subIssue"] = bool(spec.get("subIssue"))
+        created = existing is None
+        bucket[entity_id] = entity
+        return {
+            "verdict": "pass",
+            "action": "linear-projection-store-upsert",
+            "created": created,
+            "updated": not created,
+            "entityId": entity_id,
+            "entity": entity,
+        }
+
+
+def rebuild_projection_for_unit(
+    graph: dict[str, Any],
+    *,
+    unit_id: str,
+    workspace: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """R33 — idempotent re-project for one unit; no duplicate entities."""
+    del workspace  # reserved for initiative/cycle capability probes
+    layout = project_graph_to_linear_layout(graph)
+    if layout.get("verdict") != "pass":
+        return layout
+    matches = [entity for entity in layout.get("entities") or [] if entity.get("unitId") == unit_id]
+    if len(matches) > 1:
+        return {
+            "verdict": "fail",
+            "error": "duplicate-projection-entities",
+            "action": "rebuild-projection-for-unit",
+            "unitId": unit_id,
+            "count": len(matches),
+        }
+    layout2 = project_graph_to_linear_layout(graph)
+    matches2 = [entity for entity in layout2.get("entities") or [] if entity.get("unitId") == unit_id]
+    if len(matches) != len(matches2):
+        return {
+            "verdict": "fail",
+            "error": "duplicate-projection-entities",
+            "action": "rebuild-projection-for-unit",
+            "unitId": unit_id,
+        }
+    return {
+        "verdict": "pass",
+        "action": "rebuild-projection-for-unit",
+        "unitId": unit_id,
+        "entity": matches[0] if matches else None,
+        "idempotent": True,
+        "duplicateEntities": False,
+    }
+
+
+def _resolve_prd_project_entity_id(
+    root_path: Any,
+    *,
+    prd_unit: str,
+    prd_entity_by_unit: dict[str, str],
+    scope: str,
+) -> str | None:
+    if not prd_unit:
+        return None
+    cached = prd_entity_by_unit.get(prd_unit)
+    if cached:
+        return cached
+    from planning_projection_ledger import projection_ledger_lookup
+
+    lookup = projection_ledger_lookup(
+        root_path,
+        unit_id=prd_unit,
+        artifact_type="prd",
+        provider="linear",
+        scope=scope,
+    )
+    if lookup.get("verdict") == "pass":
+        return str((lookup.get("entry") or {}).get("entityId") or "") or None
+    return None
+
+
+def _order_semantic_records(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    base = [record for record in records if isinstance(record, dict)]
+    phases = [row for row in base if _record_str(row, "artifactType", "type").lower() == "phase"]
+    others = [row for row in base if _record_str(row, "artifactType", "type").lower() != "phase"]
+    ordered_others = sorted(
+        others,
+        key=lambda row: (
+            _PROJECTION_ARTIFACT_ORDER.index(
+                _record_str(row, "artifactType", "type").lower()
+            )
+            if _record_str(row, "artifactType", "type").lower() in _PROJECTION_ARTIFACT_ORDER
+            else 99,
+            _record_str(row, "unitId", "id"),
+        ),
+    )
+    ordered_phases = _sort_phases_by_dependency(phases)
+    tasks = [row for row in ordered_others if _record_str(row, "artifactType", "type").lower() == "task"]
+    non_tasks = [row for row in ordered_others if _record_str(row, "artifactType", "type").lower() != "task"]
+    return non_tasks + ordered_phases + sorted(tasks, key=lambda row: _record_str(row, "taskRef", "ref", "unitId", "id"))
+
+
+def tombstone_stale_linear_projection_entities(
+    projection_store: LinearProjectionRebuildStore,
+    active_markers: set[str],
+) -> dict[str, Any]:
+    """Tombstone projection entities absent from the semantic-store authority set."""
+    tombstoned: list[dict[str, Any]] = []
+    for entity in projection_store.iter_entities():
+        marker = str(entity.get("marker") or "")
+        if not marker or marker in active_markers or entity.get("tombstoned"):
+            continue
+        result = projection_store.tombstone(
+            str(entity.get("entityId") or ""),
+            str(entity.get("linearEntity") or ""),
+        )
+        if result.get("verdict") == "pass":
+            tombstoned.append(
+                {
+                    "entityId": result.get("entityId"),
+                    "linearEntity": result.get("linearEntity"),
+                    "marker": marker,
+                }
+            )
+    return {
+        "verdict": "pass",
+        "action": "tombstone-stale-linear-projection-entities",
+        "tombstoneCount": len(tombstoned),
+        "tombstoned": tombstoned,
+    }
+
+
+def rebuild_linear_projection_from_semantic_store(
+    root: Any,
+    records: list[dict[str, Any]],
+    *,
+    project_key: str = "demo",
+    store: LinearProjectionRebuildStore | None = None,
+    overwrite_drift: bool = False,
+    scope: str = "default",
+    artifact_types: tuple[str, ...] | None = None,
+    tombstone_stale: bool = True,
+) -> dict[str, Any]:
+    """R33 — rebuild PRD/Brainstorm/Gap/Phase/Task projections from semantic-store authority."""
+    from pathlib import Path
+
+    from planning_projection_ledger import (
+        assert_portable_graph_authority,
+        check_projection_drift,
+        owned_fields_digest,
+        projection_ledger_lookup,
+        projection_ledger_upsert,
+    )
+
+    root_path = Path(root)
+    authority = assert_portable_graph_authority(
+        {"freezeAuthority": "portable-graph"},
+        projection={"freezeAuthority": "derived", "isSourceOfTruth": False},
+    )
+    if authority.get("verdict") != "pass":
+        return authority
+
+    projection_store = store or LinearProjectionRebuildStore()
+    ordered = _order_semantic_records(records)
+    if artifact_types is not None:
+        allowed = {str(item).lower() for item in artifact_types}
+        ordered = [
+            row
+            for row in ordered
+            if _record_str(row, "artifactType", "type").lower() in allowed
+        ]
+
+    prd_entity_by_unit: dict[str, str] = {}
+    phase_entity_by_unit: dict[str, str] = {}
+    task_entity_by_unit: dict[str, str] = {}
+    created = 0
+    updated = 0
+    repaired = 0
+    upserts: list[dict[str, Any]] = []
+    active_markers: set[str] = set()
+
+    for record in ordered:
+        artifact_type = _record_str(record, "artifactType", "type").lower()
+        unit_id = _record_str(record, "unitId", "id")
+        if not unit_id or artifact_type not in _PROJECTION_ARTIFACT_ORDER:
+            return {
+                "verdict": "fail",
+                "error": "rebuild-record-incomplete",
+                "action": "rebuild-linear-projection-from-semantic-store",
+                "record": record,
+            }
+
+        prd_project_entity_id = None
+        phase_milestone_entity_id = None
+        parent_issue_entity_id = None
+        if artifact_type in {"brainstorm", "gap", "phase", "task"}:
+            prd_unit = _record_str(record, "prdUnitId", "projectId", "parentUnitId")
+            prd_project_entity_id = _resolve_prd_project_entity_id(
+                root_path,
+                prd_unit=prd_unit,
+                prd_entity_by_unit=prd_entity_by_unit,
+                scope=scope,
+            )
+        if artifact_type == "task":
+            phase_unit = _record_str(record, "phaseUnitId", "phaseId", "milestoneId")
+            phase_milestone_entity_id = phase_entity_by_unit.get(phase_unit)
+            if not phase_milestone_entity_id and phase_unit:
+                lookup = projection_ledger_lookup(
+                    root_path,
+                    unit_id=phase_unit,
+                    artifact_type="phase",
+                    provider="linear",
+                    scope=scope,
+                )
+                if lookup.get("verdict") == "pass":
+                    phase_milestone_entity_id = str((lookup.get("entry") or {}).get("entityId") or "")
+            parent_task_unit = _record_str(record, "parentTaskUnitId", "parentUnitId")
+            if parent_task_unit:
+                parent_issue_entity_id = task_entity_by_unit.get(parent_task_unit)
+
+        spec = semantic_record_to_projection_spec(
+            record,
+            project_key=project_key,
+            prd_project_entity_id=prd_project_entity_id or None,
+            phase_milestone_entity_id=phase_milestone_entity_id or None,
+            parent_issue_entity_id=parent_issue_entity_id or None,
+        )
+        if spec.get("verdict") != "pass":
+            return {**spec, "action": "rebuild-linear-projection-from-semantic-store"}
+
+        marker = str(spec.get("marker") or "")
+        linear_entity = str(spec.get("linearEntity") or "")
+        if marker:
+            active_markers.add(marker)
+        existing = projection_store.find_by_marker(marker, linear_entity) if marker else None
+        ledger = projection_ledger_lookup(
+            root_path,
+            unit_id=unit_id,
+            artifact_type=artifact_type,
+            provider="linear",
+            scope=scope,
+        )
+
+        if existing is None and ledger.get("verdict") == "pass":
+            entity_id = str((ledger.get("entry") or {}).get("entityId") or "")
+            bucket = projection_store._bucket(linear_entity)
+            existing = bucket.get(entity_id)
+
+        owned = dict(spec.get("ownedFields") or {})
+        if existing:
+            prior_owned = dict(existing.get("ownedFields") or {})
+            if owned_fields_digest(prior_owned) != owned_fields_digest(owned):
+                drift = check_projection_drift(
+                    root_path,
+                    unit_id=unit_id,
+                    artifact_type=artifact_type,
+                    provider="linear",
+                    provider_owned_fields=owned,
+                    overwrite_drift=overwrite_drift,
+                    audit_actor="linear-projection-rebuild",
+                    scope=scope,
+                )
+                if drift.get("verdict") != "pass":
+                    return {
+                        **drift,
+                        "action": "rebuild-linear-projection-from-semantic-store",
+                        "semanticAuthority": True,
+                    }
+                repaired += 1
+        result = projection_store.upsert(spec)
+        if result.get("verdict") != "pass":
+            return result
+        if result.get("created"):
+            created += 1
+        else:
+            updated += 1
+        entity_id = str(result.get("entityId") or "")
+        if artifact_type == "prd" and entity_id:
+            prd_entity_by_unit[unit_id] = entity_id
+        if artifact_type == "phase" and entity_id:
+            phase_entity_by_unit[unit_id] = entity_id
+        if artifact_type == "task" and entity_id:
+            task_entity_by_unit[unit_id] = entity_id
+
+        ledger_result = projection_ledger_upsert(
+            root_path,
+            unit_id=unit_id,
+            artifact_type=artifact_type,
+            provider="linear",
+            entity_id=entity_id,
+            owned_fields=owned,
+            marker=marker,
+            scope=scope,
+        )
+        if ledger_result.get("verdict") != "pass":
+            return ledger_result
+        upserts.append(
+            {
+                "unitId": unit_id,
+                "artifactType": artifact_type,
+                "linearEntity": linear_entity,
+                "entityId": entity_id,
+                "marker": marker,
+            }
+        )
+
+    tombstone_result: dict[str, Any] | None = None
+    if tombstone_stale and artifact_types is None:
+        tombstone_result = tombstone_stale_linear_projection_entities(
+            projection_store, active_markers
+        )
+
+    mirror_check = assert_projection_mirrors_not_freeze_authority(
+        [
+            {
+                "entityKind": row["linearEntity"],
+                "entityId": row["entityId"],
+                "isFreezeAuthority": False,
+                "isSourceOfTruth": False,
+            }
+            for row in upserts
+        ]
+    )
+    if mirror_check.get("verdict") != "pass":
+        return {**mirror_check, "action": "rebuild-linear-projection-from-semantic-store"}
+
+    return {
+        "verdict": "pass",
+        "action": "rebuild-linear-projection-from-semantic-store",
+        "provider": "linear",
+        "semanticAuthority": True,
+        "freezeAuthority": "portable-graph",
+        "created": created,
+        "updated": updated,
+        "repaired": repaired,
+        "upsertCount": len(upserts),
+        "entities": upserts,
+        "tombstone": tombstone_result,
+        "counts": {
+            "Project": len(projection_store.projects),
+            "Document": len(projection_store.documents),
+            "Milestone": len(projection_store.milestones),
+            "Issue": len(projection_store.issues),
+        },
+    }
