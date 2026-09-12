@@ -103,6 +103,9 @@ jobs:
           python3 scripts/docs-link-check.py --context install-root --install-root dist/cursor --strict
           python3 scripts/docs-link-check.py --context install-root --install-root dist/claude-code --strict
 
+      - name: minimum-python contributor-init-clean-environment
+        run: python3 scripts/contributor_init.py --strict
+
       - name: minimum-python git-push-secret-scan-chokepoint
         run: python3 scripts/test/git-push-secret-scan-chokepoint.test
 

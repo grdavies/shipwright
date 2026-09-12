@@ -73,6 +73,13 @@ def packaged_init_steps() -> list[str]:
     ]
 
 
+def contributor_init_steps() -> list[str]:
+    """Canonical contributor clone steps — must match getting-started.md (PRD 345 R9)."""
+    from contributor_init import contributor_init_steps as _steps
+
+    return _steps()
+
+
 def _plugin_root() -> Path:
     from sw_resolve_plugin_root import resolve_plugin_root
 
