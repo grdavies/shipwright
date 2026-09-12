@@ -501,6 +501,7 @@
     "kernel-completeness-lint.py",
     "kernel_classification.py",
     "kernel_classification_lint.py",
+    "layout_sync_check.py",
     "living-status-gap-resolve.py",
     "local_merge_gate.py",
     "loop_autonomy.py",
@@ -836,6 +837,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 833,
+  "moduleCount": 834,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

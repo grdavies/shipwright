@@ -1,0 +1,23 @@
+name: layout-dual-home-sync
+
+# PRD 348 R6 — byte-identity gate for .sw/layout.md and core/sw-reference/layout.md.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  layout-sync:
+    name: layout-dual-home-sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check layout.md dual-home byte-identity
+        run: python3 scripts/layout_sync_check.py --root .

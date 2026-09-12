@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-12T21:00:45Z",
+  "generatedAt": "2026-09-12T21:29:12Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -295,6 +295,15 @@
       "line": 55,
       "column": 12,
       "script": "eval_corpus.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/layout-dual-home-sync.yml:23:layout_sync_check.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/layout-dual-home-sync.yml",
+      "line": 23,
+      "column": 21,
+      "script": "layout_sync_check.py",
       "classification": "self-repo-only"
     },
     {
@@ -19834,6 +19843,15 @@
       "line": 35,
       "column": 8,
       "script": "worktree.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:34:layout_sync_check.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 34,
+      "column": 11,
+      "script": "layout_sync_check.py",
       "classification": "self-repo-only"
     }
   ]
