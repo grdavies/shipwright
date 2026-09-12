@@ -1217,6 +1217,7 @@
 * merge phase single-source-version-metadata-small into feat/shipwright-distribution-onboarding (442c193) <!-- sw-deliver:single-source-version-metadata-small -->
 * merge phase fix-helper-examples-small into feat/shipwright-distribution-onboarding (e71b67d) <!-- sw-deliver:fix-helper-examples-small -->
 * merge phase distribution-channel-medium into feat/shipwright-distribution-onboarding (5ae2c62) <!-- sw-deliver:distribution-channel-medium -->
+* merge phase release-assets-medium into feat/shipwright-distribution-onboarding (b9218c2) <!-- sw-deliver:release-assets-medium -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
