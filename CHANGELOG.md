@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.1](https://github.com/grdavies/shipwright/compare/v2.11.0...v2.11.1) (2026-09-12)
+
+
+### Bug Fixes
+
+* **planning:** recover absorbs from frontmatter-extra for closeout ([#1148](https://github.com/grdavies/shipwright/issues/1148)) ([b8ae3da](https://github.com/grdavies/shipwright/commit/b8ae3da9090ba0b1f7d1b6225decfa91a4ed2a4f))
+
 ## [2.11.0](https://github.com/grdavies/shipwright/compare/v2.10.0...v2.11.0) (2026-09-12)
 
 
