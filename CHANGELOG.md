@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.11.0](https://github.com/grdavies/shipwright/compare/v2.10.0...v2.11.0) (2026-09-12)
+
+
+### Features
+
+* **prd-338:** distribution adopter portability docs surface ([#1127](https://github.com/grdavies/shipwright/issues/1127)) ([8dd64dd](https://github.com/grdavies/shipwright/commit/8dd64ddb6f37ec10b1421dd097a24f1ec58e392b))
+* **prd-339:** planning store correctness provider expansion ([#1147](https://github.com/grdavies/shipwright/issues/1147)) ([1f00949](https://github.com/grdavies/shipwright/commit/1f0094965acbfd8df87d37da00534c6ced3c7fad))
+* **prd-343:** golden manifest automation ([#1131](https://github.com/grdavies/shipwright/issues/1131)) ([d14472e](https://github.com/grdavies/shipwright/commit/d14472ed9626482ffa0338b24c8789988105e7a5))
+* **prd-344:** issue store projection performance ([#1135](https://github.com/grdavies/shipwright/issues/1135)) ([9885f3b](https://github.com/grdavies/shipwright/commit/9885f3b841fdf0b9259a80644a12fd326fb22baa))
+* **prd-345:** shipwright distribution onboarding ([#1142](https://github.com/grdavies/shipwright/issues/1142)) ([75a1a62](https://github.com/grdavies/shipwright/commit/75a1a62759892401212e096214419305870302f3))
+
+
+### Bug Fixes
+
+* **install:** handle PEP 668 and correct installation docs ([#1143](https://github.com/grdavies/shipwright/issues/1143)) ([0e68902](https://github.com/grdavies/shipwright/commit/0e689024f2ffec715321f24b0d80e577eac360d3))
+* **install:** revert package name to 'shipwright' and use version placeholders ([#1144](https://github.com/grdavies/shipwright/issues/1144)) ([1503ce2](https://github.com/grdavies/shipwright/commit/1503ce2286707b26625fcd5390fad73f4dbe5af3))
+
 ## [2.10.0](https://github.com/grdavies/shipwright/compare/v2.9.0...v2.10.0) (2026-09-04)
 
 
