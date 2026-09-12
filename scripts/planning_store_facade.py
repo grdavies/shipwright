@@ -75,6 +75,8 @@ from projection_state import (
     save_projection_state,
 )
 from planning_linear_projection import (
+    LINEAR_HIERARCHY_REBUILD_STEPS,
+    LinearProjectionRebuildStore,
     apply_initiative_capability,
     assert_cycle_orthogonal_to_milestone,
     assert_projection_mirrors_not_freeze_authority,
@@ -92,7 +94,9 @@ from planning_linear_projection import (
     probe_initiative_availability,
     project_graph_to_linear_layout,
     r1_4_substitute_views,
+    rebuild_linear_projection_from_semantic_store,
     resolve_canonical_freeze_body,
+    tombstone_stale_linear_projection_entities,
 )
 from planning_notion_projection import (
     apply_dual_property_capability as apply_notion_dual_property_capability,
@@ -4541,6 +4545,164 @@ def projection_refresh(
     return refresh_projection(root, cfg, dry_run=dry_run, items=payload)
 
 
+_LINEAR_REBUILD_STEP_TYPES: dict[str, tuple[str, ...]] = {
+    "prd-brainstorm-gap": ("prd", "brainstorm", "gap"),
+    "phases": ("phase",),
+    "tasks": ("task",),
+}
+
+
+def reconcile_linear_operator_projection_from_semantic_store(
+    root: Path,
+    records: list[dict[str, Any]],
+    *,
+    project_key: str = "demo",
+    scope: str = "default",
+    overwrite_drift: bool = False,
+    store: LinearProjectionRebuildStore | None = None,
+    resume: bool = True,
+) -> dict[str, Any]:
+    """R33 — resumable Linear operator projection rebuild from semantic-store authority."""
+    authority = assert_portable_graph_authority(
+        {"freezeAuthority": "portable-graph"},
+        projection={"freezeAuthority": "derived", "isSourceOfTruth": False},
+    )
+    if authority.get("verdict") != "pass":
+        return {**authority, "action": "reconcile-linear-operator-projection-from-semantic-store"}
+
+    projection_scope_key = projection_scope(prd=project_key, slug="linear-hierarchy", action="reconcile")
+    state = load_projection_state(root, projection_scope_key) if resume else empty_projection_state(
+        scope=projection_scope_key,
+        prd=project_key,
+        slug="linear-hierarchy",
+        action="reconcile",
+        steps=LINEAR_HIERARCHY_REBUILD_STEPS,
+    )
+    if not resume:
+        clear_projection_state(root, projection_scope_key)
+        state = empty_projection_state(
+            scope=projection_scope_key,
+            prd=project_key,
+            slug="linear-hierarchy",
+            action="reconcile",
+            steps=LINEAR_HIERARCHY_REBUILD_STEPS,
+        )
+    elif state.get("steps") != list(LINEAR_HIERARCHY_REBUILD_STEPS):
+        state = empty_projection_state(
+            scope=projection_scope_key,
+            prd=project_key,
+            slug="linear-hierarchy",
+            action="reconcile",
+            steps=LINEAR_HIERARCHY_REBUILD_STEPS,
+        )
+
+    projection_store = store or LinearProjectionRebuildStore()
+    completed = [str(step) for step in (state.get("completedSteps") or [])]
+    step_results: dict[str, Any] = dict(state.get("results") or {})
+    aggregate_created = 0
+    aggregate_updated = 0
+    aggregate_repaired = 0
+    aggregate_upserts: list[dict[str, Any]] = []
+
+    for step in LINEAR_HIERARCHY_REBUILD_STEPS:
+        if step in completed:
+            continue
+        if step == "tombstone":
+            tombstone = tombstone_stale_linear_projection_entities(
+                projection_store,
+                {
+                    str(marker)
+                    for record in records
+                    if isinstance(record, dict)
+                    for marker in [f"sw:unit:{_record_str(record, 'unitId', 'id')}"]
+                    if marker != "sw:unit:"
+                },
+            )
+            step_results[step] = tombstone
+            mark_step_complete(state, step, tombstone)
+            save_projection_state(root, state)
+            continue
+
+        artifact_types = _LINEAR_REBUILD_STEP_TYPES.get(step)
+        result = rebuild_linear_projection_from_semantic_store(
+            root,
+            records,
+            project_key=project_key,
+            store=projection_store,
+            overwrite_drift=overwrite_drift,
+            scope=scope,
+            artifact_types=artifact_types,
+            tombstone_stale=False,
+        )
+        if result.get("verdict") != "pass":
+            record_interrupt(state, step=step, reason=str(result.get("error") or "rebuild-interrupted"))
+            save_projection_state(root, state)
+            return {
+                **result,
+                "action": "reconcile-linear-operator-projection-from-semantic-store",
+                "interruptedStep": step,
+                "resumeScope": projection_scope_key,
+            }
+        aggregate_created += int(result.get("created") or 0)
+        aggregate_updated += int(result.get("updated") or 0)
+        aggregate_repaired += int(result.get("repaired") or 0)
+        aggregate_upserts.extend(list(result.get("entities") or []))
+        step_results[step] = result
+        mark_step_complete(state, step, result)
+        save_projection_state(root, state)
+
+    if is_projection_complete(state):
+        clear_projection_state(root, projection_scope_key)
+        clear_projection_dirty(root, scope=scope)
+
+    mirror_check = assert_projection_mirrors_not_freeze_authority(
+        [
+            {
+                "entityKind": row.get("linearEntity"),
+                "entityId": row.get("entityId"),
+                "isFreezeAuthority": False,
+                "isSourceOfTruth": False,
+            }
+            for row in aggregate_upserts
+        ]
+    )
+    if mirror_check.get("verdict") != "pass":
+        return {
+            **mirror_check,
+            "action": "reconcile-linear-operator-projection-from-semantic-store",
+        }
+
+    return {
+        "verdict": "pass",
+        "action": "reconcile-linear-operator-projection-from-semantic-store",
+        "provider": "linear",
+        "semanticAuthority": True,
+        "freezeAuthority": "portable-graph",
+        "created": aggregate_created,
+        "updated": aggregate_updated,
+        "repaired": aggregate_repaired,
+        "upsertCount": len(aggregate_upserts),
+        "entities": aggregate_upserts,
+        "steps": list(LINEAR_HIERARCHY_REBUILD_STEPS),
+        "completedSteps": list(state.get("completedSteps") or []),
+        "results": step_results,
+        "counts": {
+            "Project": len(projection_store.projects),
+            "Document": len(projection_store.documents),
+            "Milestone": len(projection_store.milestones),
+            "Issue": len(projection_store.issues),
+        },
+    }
+
+
+def _record_str(record: dict[str, Any], *keys: str, default: str = "") -> str:
+    for key in keys:
+        value = record.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return default
+
+
 _PROGRESS_FACADE_NOTICE_EMITTED = False
 
 
@@ -4858,6 +5020,11 @@ FACADE_OPERATIONS: tuple[dict[str, str], ...] = (
         "name": "linear_projection_schema",
         "status": "shipped",
         "description": "Linear operator schema: entity map, Initiative/Cycles, typed edges (PRD 066 R6–R8/R29)",
+    },
+    {
+        "name": "reconcile_linear_operator_projection",
+        "status": "shipped",
+        "description": "Resumable Linear hierarchy rebuild from semantic store (PRD 339 R33)",
     },
     {
         "name": "notion_projection_schema",

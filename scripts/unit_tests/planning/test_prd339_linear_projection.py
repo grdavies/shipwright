@@ -108,7 +108,7 @@ def test_linear_projection_rebuild_from_semantic_store(
     assert first["semanticAuthority"] is True
     assert first["freezeAuthority"] == "portable-graph"
     assert first["created"] == 3
-    assert first["counts"] == {"Project": 1, "Document": 1, "Issue": 1}
+    assert first["counts"] == {"Project": 1, "Document": 1, "Milestone": 0, "Issue": 1}
 
     prd_lookup = ps.projection_ledger_lookup(
         tmp_path,
@@ -137,7 +137,7 @@ def test_linear_projection_rebuild_from_semantic_store(
     )
     assert second["verdict"] == "pass"
     assert second["created"] == 0
-    assert second["counts"] == {"Project": 1, "Document": 1, "Issue": 1}
+    assert second["counts"] == {"Project": 1, "Document": 1, "Milestone": 0, "Issue": 1}
 
     # Drift without overwrite halts (semantic store remains authority).
     drifted = list(_semantic_records())
