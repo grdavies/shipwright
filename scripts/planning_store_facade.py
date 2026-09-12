@@ -5038,6 +5038,67 @@ def issue_get_facade(root: Path, cfg: dict[str, Any], issue_ref: str) -> dict[st
     return {"verdict": "ok", "record": record}
 
 
+def host_issue_probe_facade(root: Path, cfg: dict[str, Any], issue_ref: str) -> dict[str, Any]:
+    """Probe host-repo issue number for separate-project collision checks (PRD 339 R38)."""
+    location = resolve_store_location(root, cfg)
+    if location.get("verdict") != "ok" or location.get("mode") != "separate-project":
+        return {"verdict": "absent", "reason": "not-separate-project"}
+    from issues_lib import (
+        FixtureIssuesStore,
+        IssueNotFound,
+        host_fixture_store_path,
+        use_host_fixture_mode,
+    )
+
+    if use_host_fixture_mode():
+        store = FixtureIssuesStore(host_fixture_store_path(root))
+        try:
+            record = store.get(issue_ref)
+        except IssueNotFound:
+            return {"verdict": "absent", "issue": issue_ref}
+        return {
+            "verdict": "ok",
+            "issue": issue_ref,
+            "record": record,
+            "issueSource": "host-repo",
+            "unitId": str(record.unit_id or "").strip(),
+        }
+
+    if resolve_effective_backend(root, cfg).get("configured") != "issue-store":
+        return {"verdict": "absent", "reason": "issue-store-not-configured"}
+    from host_lib import parse_owner_repo, resolve_provider
+
+    host = resolve_provider(root)
+    owner_repo = parse_owner_repo(host.get("remoteUrl") if isinstance(host.get("remoteUrl"), str) else None)
+    if not owner_repo:
+        return {"verdict": "absent", "reason": "host-remote-unresolved"}
+    owner, repo = owner_repo
+    provider = str(resolve_issues_provider(cfg).get("provider", "none"))
+    if provider != "github-issues":
+        return {"verdict": "absent", "reason": "host-probe-unsupported-provider"}
+    if (
+        location.get("owner") == owner
+        and location.get("repo") == repo
+    ):
+        return {"verdict": "absent", "reason": "host-equals-store-location"}
+    try:
+        from planning_github_client import GitHubIssuesClient
+
+        client = GitHubIssuesClient(root)
+        client.owner = owner
+        client.repo = repo
+        record = client.get(issue_ref)
+    except Exception:
+        return {"verdict": "absent", "issue": issue_ref}
+    return {
+        "verdict": "ok",
+        "issue": issue_ref,
+        "record": record,
+        "issueSource": "host-repo",
+        "unitId": str(getattr(record, "unit_id", "") or "").strip(),
+    }
+
+
 def issue_search_by_unit_facade(root: Path, cfg: dict[str, Any], *, unit_id: str) -> dict[str, Any]:
     """Facade wrapper for issue search by unit id."""
     effective = resolve_effective_backend(root, cfg)
