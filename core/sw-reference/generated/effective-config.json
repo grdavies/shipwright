@@ -1,7 +1,7 @@
 {
   "schemaVersion": "config.schema.json",
-  "shipwrightVersion": "2.11.0",
-  "generatedAt": "2026-09-12T16:39:48Z",
+  "shipwrightVersion": "2.11.1",
+  "generatedAt": "2026-09-12T18:29:26Z",
   "generator": "scripts/effective_config_gen.py",
   "settings": {
     "agentsFile": {
