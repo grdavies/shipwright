@@ -13,18 +13,33 @@ conventions live in the [style guide](style-guide.md). Coined terms are in the
 Initialization steps (canonical — must match `packaged_init_steps()` in
 `scripts/sw-configure.py`):
 
-1. Install the packaged console entry point (`pip install shipwright-workflow`).
+1. Install the packaged console entry point (use `uv tool` or `pipx` — see below).
 2. In the project repository, run `shipwright init --integration <host>`.
 3. Reload the editor; run `/sw-init` only if priority-zero surfaces still need confirm.
 4. Start a small loop (`/sw-doc` or `/sw-deliver run <frozen-task-list>`).
 
-Concrete example:
+**Install options** (use isolated environments to avoid PEP 668 conflicts on modern systems):
 
 ```bash
-pip install shipwright-workflow
-# or, from a checked-out release tag / wheel:
-# pip install .
+# Option 1: uv tool (recommended)
+uv tool install shipwright-workflow --from git+https://github.com/grdavies/shipwright.git@v2.10.0
 
+# Option 2: pipx
+pipx install git+https://github.com/grdavies/shipwright.git@v2.10.0
+
+# Option 3: From a release wheel
+uv tool install shipwright-workflow --from /path/to/shipwright_workflow-2.10.0-py3-none-any.whl
+# or: pipx install /path/to/shipwright_workflow-2.10.0-py3-none-any.whl
+
+# Option 4: Explicit venv (if uv/pipx unavailable)
+python3 -m venv ~/.shipwright
+~/.shipwright/bin/pip install git+https://github.com/grdavies/shipwright.git@v2.10.0
+# Add ~/.shipwright/bin to PATH or symlink ~/.shipwright/bin/shipwright to ~/bin/
+```
+
+Then configure each project repository:
+
+```bash
 cd /path/to/your-project
 shipwright init --integration cursor
 # or
@@ -92,7 +107,7 @@ Shipwright optimizes for **repeatable delivery**, not for skipping human merge j
 
 ### First session (packaged default)
 
-1. `pip install shipwright-workflow` (or install a release wheel).
+1. Install via `uv tool` or `pipx` (see install options above).
 2. In your project repo: `shipwright init --integration cursor` (or `claude-code`).
 3. Reload the editor; run a small `/sw-doc` or `/sw-deliver run …` loop.
 4. Stop at the merge gate — do not force-merge to the default branch from the agent.
