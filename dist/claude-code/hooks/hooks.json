@@ -22,6 +22,28 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
@@ -33,7 +55,29 @@
         ]
       }
     ],
-    "PreToolUse": [
+    "SubagentStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+          }
+        ]
+      }
+    ],
+    "Notification": [
       {
         "matcher": "",
         "hooks": [
