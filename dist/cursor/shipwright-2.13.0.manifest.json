@@ -381,6 +381,7 @@
     "graph/__init__.py",
     "graph/absolute_floor.py",
     "graph/artifact_registry.py",
+    "graph/attribution_store.py",
     "graph/benchmark/__init__.py",
     "graph/benchmark/acceptance.py",
     "graph/benchmark/fake_provider.py",
@@ -837,6 +838,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 834,
+  "moduleCount": 835,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
