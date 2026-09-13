@@ -810,6 +810,15 @@ def apply_resume_entry(root: Path, state: dict[str, Any], plan: dict[str, Any], 
         adopt = try_adopt_recorded_orchestrator_worktree(
             root, state, plan, loop_args=args, perform_reentry=True
         )
+    # PRD 350 R12/R17 — synthesize interruption when resume lacks trailing event.
+    try:
+        import wave_journal as capture
+
+        run_id = capture.resolve_capture_run_id(state)
+        if run_id and capture.capture_enabled(root):
+            capture.ensure_interruption_on_resume(run_id, root=root, state=state)
+    except Exception:
+        pass
     return {"resume": resume, "orchestratorAdopt": adopt}
 
 def fixture_tree_clean_or_halt(root: Path, state: dict[str, Any]) -> None:
@@ -2621,13 +2630,38 @@ def execute_dispatch_ship(
     lease_ec, lease_data = acquire_inline_dispatch_lease(root, state, pid, meta)
     if lease_ec != 0:
         fail_payload(lease_data, "dispatch-ship lease acquire failed", lease_ec)
-    mark_phases_in_flight(state, [pid], background=False)
+    # PRD 350 R11/R15 — delegation + capture env before ship Task dispatch.
+    try:
+        import uuid as _uuid
+
+        import wave_journal as capture
+
+        run_id = capture.resolve_capture_run_id(state)
+        if run_id and capture.capture_enabled(root):
+            dispatch_id = f"ship-{pid}-{_uuid.uuid4().hex[:8]}"
+            files = list(meta.get("files") or meta.get("paths") or [])
+            capture._emit_delegation(
+                f"ship-loop:{slug}", pid, files, run_id, root=root
+            )
+            state.setdefault("_captureDispatch", {})[pid] = dispatch_id
+            state.setdefault("_captureEnv", {})[pid] = capture.capture_dispatch_env(
+                run_id, dispatch_id
+            )
+    except Exception:
+        pass
+    mark_phases_in_flight(state, [pid], background=False, root=root)
     wt = _ensure_phase_worktree_for_dispatch(root, state, pid)
     try:
         scripts_root = _resolve_ship_scripts_root(wt)
     except ScriptsResolveError as exc:
         fail_payload(_ship_loop_resolve_blocked(exc), "ship-loop blocked", 20, phaseId=pid)
     env = ship_loop_env_for_phase(state, pid, slug, scripts_root=scripts_root)
+    try:
+        extra = (state.get("_captureEnv") or {}).get(pid) or {}
+        if isinstance(extra, dict):
+            env.update({str(k): str(v) for k, v in extra.items()})
+    except Exception:
+        pass
     max_rounds = int(os.environ.get("SW_INLINE_SHIP_MAX_ROUNDS", "32"))
     drive_history: list[dict[str, Any]] = []
     last_drive: dict[str, Any] = {}
@@ -2671,6 +2705,17 @@ def execute_dispatch_ship(
             }
         if last_drive.get("complete"):
             clear_ship_loop_await(state, pid)
+            try:
+                import wave_journal as capture
+
+                run_id = capture.resolve_capture_run_id(state)
+                dispatch_id = (state.get("_captureDispatch") or {}).get(pid)
+                if run_id and dispatch_id and capture.capture_enabled(root):
+                    capture.consolidate_sub_agent_events(
+                        run_id, str(dispatch_id), root=root
+                    )
+            except Exception:
+                pass
             save_state(root, state)
             return {
                 "executed": "dispatch-ship",
@@ -2702,7 +2747,26 @@ def execute_dispatch_batch(
     step: dict[str, Any],
 ) -> dict[str, Any]:
     phase_ids = [str(p) for p in step.get("phaseIds") or []]
-    mark_phases_in_flight(state, phase_ids, background=True)
+    # PRD 350 R11/R15 batch — delegation markers for background Tasks.
+    try:
+        import uuid as _uuid
+
+        import wave_journal as capture
+
+        run_id = capture.resolve_capture_run_id(state)
+        if run_id and capture.capture_enabled(root):
+            for pid in phase_ids:
+                dispatch_id = f"batch-{pid}-{_uuid.uuid4().hex[:8]}"
+                capture._emit_delegation(
+                    f"background-task:{pid}", pid, [], run_id, root=root
+                )
+                state.setdefault("_captureDispatch", {})[pid] = dispatch_id
+                state.setdefault("_captureEnv", {})[pid] = capture.capture_dispatch_env(
+                    run_id, dispatch_id
+                )
+    except Exception:
+        pass
+    mark_phases_in_flight(state, phase_ids, background=True, root=root)
     save_state(root, state)
     return {
         "executed": "dispatch-batch",
@@ -2713,7 +2777,7 @@ def execute_dispatch_batch(
 
 
 def mark_phases_in_flight(
-    state: dict[str, Any], phase_ids: list[str], *, background: bool = False
+    state: dict[str, Any], phase_ids: list[str], *, background: bool = False, root: Path | None = None
 ) -> None:
     phases = state.setdefault("phases", {})
     now = utc_now()
@@ -2721,6 +2785,7 @@ def mark_phases_in_flight(
         meta = phases.get(pid)
         if not isinstance(meta, dict):
             continue
+        meta["_priorStatus"] = meta.get("status")
         meta["status"] = "in-flight"
         meta["startedAt"] = meta.get("startedAt") or now
         if background:
@@ -2729,6 +2794,34 @@ def mark_phases_in_flight(
             meta.pop("backgroundDispatchedAt", None)
             meta["inlineDispatchedAt"] = now
         phases[pid] = meta
+        # PRD 350 R6/R7 — task_start + phase_boundary on pending→in-flight.
+        prior = str(meta.get("_priorStatus") or "")
+        try:
+            import wave_journal as capture
+        
+            repo = root or Path(state.get("root") or state.get("repoRoot") or Path.cwd())
+            run_id = capture.resolve_capture_run_id(state)
+            if run_id and capture.capture_enabled(repo):
+                task_row = {
+                    "id": pid,
+                    "title": str(meta.get("title") or meta.get("slug") or pid),
+                    "phaseId": pid,
+                    "files": list(meta.get("files") or meta.get("paths") or []),
+                    "acceptance": meta.get("acceptance") or meta.get("acceptanceCriteria"),
+                    "body": meta.get("body") or meta.get("description"),
+                }
+                capture.transition_task_to_in_progress(
+                    task_row, run_id, root=repo, phase_id=pid
+                )
+                capture._emit_milestone(
+                    "phase_boundary",
+                    pid,
+                    run_id,
+                    f"phase_boundary: {pid} entered in-flight",
+                    root=repo,
+                )
+        except Exception:
+            pass
 
 
 def phase_lease_branches(
@@ -3616,6 +3709,36 @@ def persist_cursor(root: Path, state: dict[str, Any], action: str, **extra: Any)
 
 
 def write_blocker_report(root: Path, state: dict[str, Any], cause: str) -> Path:
+    # PRD 350 R10/R12 — blocker + interruption before halt surfaces to operator.
+    try:
+        import wave_journal as capture
+
+        run_id = capture.resolve_capture_run_id(state)
+        if run_id and capture.capture_enabled(root):
+            phases = state.get("phases") or {}
+            in_flight = [
+                pid
+                for pid, meta in phases.items()
+                if isinstance(meta, dict) and meta.get("status") == "in-flight"
+            ]
+            phase_id = in_flight[0] if in_flight else "session"
+            pending = {
+                "tasks": [
+                    {
+                        "id": pid,
+                        "status": str((phases.get(pid) or {}).get("status") or ""),
+                    }
+                    for pid in sorted(phases)
+                    if isinstance(phases.get(pid), dict)
+                    and str((phases.get(pid) or {}).get("status") or "")
+                    in {"in-flight", "blocked", "in_progress", "in-progress"}
+                ]
+            }
+            capture._emit_blocker(str(cause), pending, phase_id, run_id, root=root)
+            capture._emit_interruption(pending, run_id, root=root, phase_id=phase_id)
+    except Exception:
+        pass
+
     from wave_failure import resume_deliver_command
 
     ec, report_payload = run_wave(root, "report", "blockers")
@@ -4194,6 +4317,20 @@ def _execute_mechanical_inner(
                 meta.pop("verifyEnvironmental", None)
                 meta.pop("cause", None)
                 meta["status"] = "green-merged"
+                try:
+                    import wave_journal as capture
+
+                    run_id = capture.resolve_capture_run_id(state)
+                    if run_id and capture.capture_enabled(root):
+                        capture._emit_milestone(
+                            "phase_boundary",
+                            str(pid),
+                            run_id,
+                            f"phase_boundary: {pid} green-merged",
+                            root=root,
+                        )
+                except Exception:
+                    pass
                 meta["updatedAt"] = utc_now()
                 save_state(root, state)
             persist_cursor(root, state, compute_next_action(root, state, plan)["action"])

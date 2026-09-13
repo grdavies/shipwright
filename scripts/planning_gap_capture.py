@@ -695,6 +695,7 @@ def capture_gap(
     problem: str | None = None,
     context: str | None = None,
     authoritative: bool = False,
+    event_id: str | None = None,
 ) -> dict[str, Any]:
     if dedupe:
         existing = find_duplicate_open_gap(title, open_titles if open_titles is not None else list_open_gap_titles(root))
@@ -728,7 +729,11 @@ def capture_gap(
         related="none",
         next_step="triage",
         tags=[f"source:feedback", f"signal:{signal_id}"],
-        extra_frontmatter=[f"source_pr: {pr_number}"] if pr_number is not None else None,
+        extra_frontmatter=(
+            ([f"source_pr: {pr_number}"] if pr_number is not None else [])
+            + ([f"event_id: {event_id}"] if event_id else [])
+        )
+        or None,
     )
     if not dry_run:
         store_put_gap(root, unit_id, body_path_rel, content)
@@ -3091,6 +3096,9 @@ def parse_flags(rest: list[str]) -> dict[str, Any]:
         elif tok == "--signal-id" and i + 1 < len(rest):
             out["signal_id"] = rest[i + 1]
             i += 2
+        elif tok == "--event-id" and i + 1 < len(rest):
+            out["event_id"] = rest[i + 1]
+            i += 2
         elif tok == "--title" and i + 1 < len(rest):
             out["title"] = rest[i + 1]
             i += 2
@@ -3313,6 +3321,7 @@ def main(argv: list[str] | None = None) -> None:
             problem=flags.get("problem"),
             context=flags.get("context"),
             authoritative=bool(flags.get("authoritative")),
+            event_id=flags.get("event_id"),
         )
         emit({"verdict": "pass", **out})
 
