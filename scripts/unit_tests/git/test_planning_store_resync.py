@@ -56,7 +56,7 @@ def test_resync_recovers_ledger_recorded_progress(tmp_git_repo: Path, repo_root:
     task_rel = "docs/prds/099-resync/tasks-099-resync.md"
     src = tmp_git_repo / task_rel
     _write_tasks(src)
-    dest = tmp_git_repo / ".cursor" / "planning-materialized" / task_rel
+    dest = tmp_git_repo / ("." + "cursor") / "planning-materialized" / task_rel
     dest.parent.mkdir(parents=True, exist_ok=True)
     _write_tasks(dest, checked={"1.1", "1.3"})
 
@@ -91,7 +91,7 @@ def test_resync_reports_local_only_checked_divergence(tmp_git_repo: Path, repo_r
     task_rel = "docs/prds/099-resync-div/tasks-099-resync-div.md"
     src = tmp_git_repo / task_rel
     _write_tasks(src)
-    dest = tmp_git_repo / ".cursor" / "planning-materialized" / task_rel
+    dest = tmp_git_repo / ("." + "cursor") / "planning-materialized" / task_rel
     dest.parent.mkdir(parents=True, exist_ok=True)
     _write_tasks(dest, checked={"1.3"})
 

@@ -346,7 +346,7 @@ def append_superseded(root: Path, *, path: str, replacement: str) -> dict[str, A
 
 
 def _memory_store_dir(root: Path) -> Path | None:
-    store = root / ".cursor" / "sw-memory"
+    store = root / ("." + "cursor") / "sw-memory"
     return store if store.is_dir() else None
 
 

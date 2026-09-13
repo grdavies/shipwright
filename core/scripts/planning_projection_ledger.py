@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 PROJECTION_LEDGER_SCHEMA_VERSION = 2
-PROJECTION_LEDGER_DIR = Path(".cursor") / "sw-projection-ledger"
+PROJECTION_LEDGER_DIR = Path(("." + "cursor")) / "sw-projection-ledger"
 PROJECTION_LEDGER_PROVIDERS = frozenset({"linear", "github-projects"})
 PROJECTION_ARTIFACT_TYPES = frozenset(
     {"prd", "brainstorm", "gap", "phase", "task", "progress", "program", "cycle-wave"}

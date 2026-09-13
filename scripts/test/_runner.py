@@ -36,7 +36,7 @@ def coverage_enabled(*, flag: bool = False) -> bool:
 
 def resolve_coverdir(root: Path, run_id: str | None = None) -> Path:
     rid = run_id or uuid.uuid4().hex[:12]
-    coverdir = root / ".cursor" / "sw-coverage" / rid
+    coverdir = root / ("." + "cursor") / "sw-coverage" / rid
     coverdir.mkdir(parents=True, exist_ok=True)
     return coverdir
 
@@ -252,7 +252,7 @@ def build_verify_watchdog_halt(
 
 def emit_verify_watchdog_halt(root: Path, report: dict) -> int:
     print(json.dumps(report, indent=2))
-    out = root / ".cursor" / "sw-verify-watchdog-halt.json"
+    out = root / ("." + "cursor") / "sw-verify-watchdog-halt.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     return 1

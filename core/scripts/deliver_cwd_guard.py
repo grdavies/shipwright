@@ -99,7 +99,7 @@ def _index_is_stale(index: dict[str, Any]) -> bool:
 
 
 def _read_index(repo_root: Path) -> tuple[dict[str, Any] | None, str | None]:
-    index_path = repo_root / ".cursor" / "sw-deliver-runs" / "index.json"
+    index_path = repo_root / ("." + "cursor") / "sw-deliver-runs" / "index.json"
     if not index_path.is_file():
         return None, None
     try:

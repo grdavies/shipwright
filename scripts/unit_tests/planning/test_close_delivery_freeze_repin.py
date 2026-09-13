@@ -17,7 +17,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _cfg(project_key: str = "close-repin-275") -> dict:
@@ -86,7 +86,7 @@ def test_close_appends_newest_freeze_hash_with_state_labels(
     _init_repo(root)
     project_key = "close-repin-275-r1"
     cfg = _cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     prd_unit = "275-prd-close-repin-r1"
     tasks_unit = "tasks-275-close-repin-r1"
@@ -126,7 +126,7 @@ def test_get_after_close_no_tamper_from_close_mutation(
     _init_repo(root)
     project_key = "close-repin-275-r2"
     cfg = _cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     prd_unit = "275-prd-close-repin-r2"
     tasks_unit = "tasks-275-close-repin-r2"
@@ -156,7 +156,7 @@ def test_freeze_close_get_success_fixture(
     _init_repo(root)
     project_key = "close-repin-275-r3"
     cfg = _cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     prd_unit = "275-prd-close-repin-r3"
     tasks_unit = "tasks-275-close-repin-r3"

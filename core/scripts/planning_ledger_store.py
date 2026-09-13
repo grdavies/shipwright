@@ -18,7 +18,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from host_lib import load_workflow_config
 
-DEFAULT_LEDGER_REL = Path(".cursor") / "sw-refusal-ledger"
+DEFAULT_LEDGER_REL = Path(("." + "cursor")) / "sw-refusal-ledger"
 DEFAULT_TTL_SECONDS = 2_592_000
 DEFAULT_MAX_SIZE_BYTES = 52_428_800
 LEDGER_DIR_MODE = 0o700

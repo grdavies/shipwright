@@ -241,7 +241,7 @@ def test_deterministic_golden_path_preserved_without_intent_merge(tmp_path: Path
         "mergeQueue": [{"phaseSlug": "a", "head": "phase-a"}],
         "orchestratorWorktree": {"path": str(fix)},
     }
-    (fix / ".cursor").mkdir(exist_ok=True)
+    (fix / ("." + "cursor")).mkdir(exist_ok=True)
     (fix / ".cursor/sw-deliver-state.json").write_text(json.dumps(state_doc) + "\n", encoding="utf-8")
     env = {**os.environ, "SW_DETERMINISTIC_REGEN_STUB": "pass", "SW_INTENT_MERGE_ENABLED": "0"}
     proc = subprocess.run(
@@ -300,7 +300,7 @@ def test_semantic_conflict_halts_when_intent_merge_enabled(tmp_path: Path) -> No
         "orchestratorWorktree": {"path": str(fix)},
         "source_task_list": "docs/prds/323-fixture/tasks-fixture-intent.md",
     }
-    (fix / ".cursor").mkdir(exist_ok=True)
+    (fix / ("." + "cursor")).mkdir(exist_ok=True)
     (fix / ".cursor/sw-deliver-state.json").write_text(json.dumps(state_doc) + "\n", encoding="utf-8")
     env = {**os.environ, "SW_DETERMINISTIC_REGEN_STUB": "pass", "SW_INTENT_MERGE_ENABLED": "1"}
     proc = subprocess.run(

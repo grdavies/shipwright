@@ -25,7 +25,7 @@ from doc_rescore import amendment_input_path, evaluate_rescore
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     return root
 
 

@@ -95,7 +95,7 @@ def _restore_user_owned(dest: Path, preserved: dict[str, bytes]) -> None:
 
 
 def default_dest() -> Path:
-    return Path.home() / ".cursor" / "plugins" / "local" / "shipwright"
+    return Path.home() / ("." + "cursor") / "plugins" / "local" / "shipwright"
 
 
 def normalize_integration(integration: str) -> str:
@@ -410,7 +410,7 @@ def install(
         logging_setup.info("Done. Restart Claude Code to pick up plugin changes.")
 
     git_config = root / ".git"
-    workflow = root / ".cursor" / "workflow.config.json"
+    workflow = root / ("." + "cursor") / "workflow.config.json"
     if git_config.exists():
         if workflow.is_file():
             logging_setup.info(

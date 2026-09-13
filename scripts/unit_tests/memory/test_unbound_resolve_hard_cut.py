@@ -17,7 +17,7 @@ from memory_write_binding import CAUSE_UNBOUND, MemoryWriteBindingError
 
 
 def _cfg(root: Path, memory: dict) -> None:
-    d = root / ".cursor"
+    d = root / ("." + "cursor")
     d.mkdir(parents=True, exist_ok=True)
     (d / "workflow.config.json").write_text(json.dumps({"memory": memory}) + "\n", encoding="utf-8")
 

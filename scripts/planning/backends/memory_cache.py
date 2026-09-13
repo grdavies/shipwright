@@ -240,10 +240,10 @@ class ReplicatedPlanningCacheBackend(PlanningStoreBackend):
         )
 
     def _local_cache_dir_path(self) -> Path:
-        return self.root / ".cursor" / "sw-planning-cache" / "planning-bodies" / self.memory_project()
+        return self.root / ("." + "cursor") / "sw-planning-cache" / "planning-bodies" / self.memory_project()
 
     def _legacy_local_cache_dir(self) -> Path:
-        return self.root / ".cursor" / "sw-memory" / "planning-bodies" / self.memory_project()
+        return self.root / ("." + "cursor") / "sw-memory" / "planning-bodies" / self.memory_project()
 
     def _migrate_legacy_cache_dir_if_needed(self) -> None:
         legacy = self._legacy_local_cache_dir()

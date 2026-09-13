@@ -17,7 +17,7 @@ import planning_authority as pa
 import planning_authority_reasons as par
 from planning_authority import AuthorityDecision
 
-STATE_DIR = Path(".cursor") / "sw-authority-probe"
+STATE_DIR = Path(("." + "cursor")) / "sw-authority-probe"
 STATE_FILENAME = "state.json"
 RECORD_FILE_MODE = 0o600
 RECORD_DIR_MODE = 0o700

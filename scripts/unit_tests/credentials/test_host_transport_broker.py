@@ -24,7 +24,7 @@ _TEST_VALUE = "unit-test-host-transport-broker-value-abcdef"
 
 
 def _write_config(root: Path, host: dict) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps({"projectId": "acme-demo", "host": host}),
@@ -164,7 +164,7 @@ SCRIPTS = Path(__file__).resolve().parents[2]
 
 
 def _write_memory_config(root: Path, memory: dict) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps(

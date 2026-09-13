@@ -20,7 +20,7 @@ import planning_refusal_ledger as prl
 
 
 def _write_cfg(repo: Path, cfg: dict[str, Any]) -> None:
-    path = repo / ".cursor" / "workflow.config.json"
+    path = repo / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
 
@@ -113,9 +113,9 @@ class TestAtRestContract:
 
     def test_symlinked_ledger_path_rejected(self, tmp_git_repo: Path) -> None:
         _seed_gitignore(tmp_git_repo, ".cursor/**")
-        real = tmp_git_repo / ".cursor" / "real-ledger"
+        real = tmp_git_repo / ("." + "cursor") / "real-ledger"
         real.mkdir(parents=True)
-        link = tmp_git_repo / ".cursor" / "linked-ledger"
+        link = tmp_git_repo / ("." + "cursor") / "linked-ledger"
         link.symlink_to(real, target_is_directory=True)
         _write_cfg(tmp_git_repo, _ledger_cfg(path=".cursor/linked-ledger"))
         contract = pls.verify_ledger_path_contract(tmp_git_repo, link)

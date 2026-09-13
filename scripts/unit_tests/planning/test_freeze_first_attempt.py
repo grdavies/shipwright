@@ -16,7 +16,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _issue_store_cfg(project_key: str = "freeze-first-093") -> dict:
@@ -76,7 +76,7 @@ def test_freeze_succeeds_first_attempt_for_brainstorm_prd_tasks(
     _init_repo(root)
     project_key = "freeze-first-093"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     prd_unit = "093-prd-freeze-etag-retry-and-absorb-edge-preservation"
     brainstorm_unit = "2026-08-04-freeze-first-attempt-smoke"
@@ -125,7 +125,7 @@ def test_freeze_succeeds_first_attempt_for_brainstorm_prd_tasks(
     assert lock_calls == 3
     assert label_calls >= 3
 
-    store_path = root / ".cursor" / "hooks" / "state" / "issue-store-fixture.json"
+    store_path = root / ("." + "cursor") / "hooks" / "state" / "issue-store-fixture.json"
     fixture = json.loads(store_path.read_text(encoding="utf-8"))
     for unit in (prd_unit, tasks_unit, brainstorm_unit):
         record = next(

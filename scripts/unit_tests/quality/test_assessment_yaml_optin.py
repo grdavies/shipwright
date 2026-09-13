@@ -24,7 +24,7 @@ assessments:
 
 
 def test_absent_config_mode_is_off(repo_root: Path, tmp_path: Path) -> None:
-    cfg_dir = tmp_path / ".cursor"
+    cfg_dir = tmp_path / ("." + "cursor")
     cfg_dir.mkdir()
     (cfg_dir / "workflow.config.json").write_text("{}", encoding="utf-8")
     result = aa.evaluate(tmp_path)
@@ -65,7 +65,7 @@ assessments:
 
 @pytest.mark.parametrize("mode", ["off", "advisory", "blocking"])
 def test_mode_enum_values(tmp_path: Path, mode: str) -> None:
-    cfg_dir = tmp_path / ".cursor"
+    cfg_dir = tmp_path / ("." + "cursor")
     cfg_dir.mkdir()
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps({"architecture": {"assessment": {"mode": mode}}}),

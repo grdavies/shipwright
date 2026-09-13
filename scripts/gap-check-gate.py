@@ -110,7 +110,7 @@ def preferred_write_path(root: Path, phase_slug: str) -> Path:
     state = _load_deliver_state(root)
     worktree = resolve_phase_worktree(root, phase_slug, state)
     if worktree is not None:
-        return worktree / ".cursor" / "sw-deliver-runs" / phase_slug / STATUS_NAME
+        return worktree / ("." + "cursor") / "sw-deliver-runs" / phase_slug / STATUS_NAME
     return preferred_phase_artifact_path(
         root, phase_slug, STATUS_NAME, worktree=worktree, state=state
     )

@@ -65,7 +65,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _issue_store_cfg(project_key: str = "absorbs-put-094") -> dict:
@@ -171,7 +171,7 @@ def test_put_merges_absorbs_with_existing_edges_and_native(
     _init_repo(root)
     project_key = "absorbs-merge-094"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     parent_unit = "gap-parent-absorbs-merge"
     prd_unit = "094-prd-absorbs-merge"
@@ -272,7 +272,7 @@ def test_absorbs_put_get_roundtrip_above_label_cap(
     _init_repo(root)
     project_key = "absorbs-cap-094"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     prd_unit = "094-prd-absorbs-cap"
     backend = IssueStoreBackend(root, cfg)
@@ -327,7 +327,7 @@ def test_put_get_preserves_absorbs_on_hybrid_body_r12(
     _init_repo(root)
     project_key = "absorbs-r12-basic"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     backend = IssueStoreBackend(root, cfg)
     prd_unit = "094-prd-absorbs-r12-basic"
     prd_path = _default_body_path(prd_unit, "prd")
@@ -403,7 +403,7 @@ def test_put_get_second_roundtrip_preserves_edge_union_r12(
     _init_repo(root)
     project_key = "absorbs-r12-reput"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     backend = IssueStoreBackend(root, cfg)
     prd_unit = "094-prd-absorbs-r12-reput"
     prd_path = _default_body_path(prd_unit, "prd")

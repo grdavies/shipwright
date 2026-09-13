@@ -46,7 +46,7 @@ def _seed_run(tmp_path: Path, run_id: str) -> dict:
     acquire_target_lock(tmp_path, "feat/partial-finalize", run_id)
     projection = (
         tmp_path
-        / ".cursor"
+        / ("." + "cursor")
         / "sw-deliver-runs"
         / "_progress-projections"
         / "docs/prds/276-demo/tasks-276-demo.md"

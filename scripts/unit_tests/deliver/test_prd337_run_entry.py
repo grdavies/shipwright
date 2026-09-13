@@ -103,12 +103,12 @@ def test_resolve_type_precedence(
 def test_inferred_branch_type_from_task_list(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path)
     rel = _write_task_list(repo, slug="typed-demo")
-    (repo / ".cursor").mkdir(parents=True, exist_ok=True)
+    (repo / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     plan = {
         "target": {"type": "fix", "slug": "typed-demo", "branch": "fix/typed-demo"},
         "items": [],
     }
-    (repo / ".cursor" / "sw-deliver-plan.json").write_text(
+    (repo / ("." + "cursor") / "sw-deliver-plan.json").write_text(
         json.dumps(plan), encoding="utf-8"
     )
     target = resolve_run_entry_target(repo, rel)

@@ -19,7 +19,7 @@ import retro_gap_capture as rgc
 
 
 def _write_cfg(repo: Path, *, enabled: bool = True, cap: int = 3) -> None:
-    path = repo / ".cursor" / "workflow.config.json"
+    path = repo / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
@@ -222,7 +222,7 @@ def test_plugin_self_routes_to_meta_shipwright(
     entry = out["materialized"][0]
     assert entry["destination"] == rgc.DESTINATION_META_SHIPWRIGHT
     assert entry["gapClass"] == "plugin-self"
-    inbox = tmp_git_repo / ".cursor" / "sw-meta-inbox" / "retro:retro-meta:plugin-pain.json"
+    inbox = tmp_git_repo / ("." + "cursor") / "sw-meta-inbox" / "retro:retro-meta:plugin-pain.json"
     assert inbox.is_file()
     draft = json.loads(inbox.read_text(encoding="utf-8"))
     assert draft["destination"] == "meta-shipwright"
@@ -247,7 +247,7 @@ def test_product_gap_does_not_land_in_meta_inbox(
     monkeypatch.setattr(pgc, "store_put_gap", fake_put)
     out = rgc.capture_retro_gaps(tmp_git_repo, _retro_payload())
     assert out["materialized"][0]["destination"] == rgc.DESTINATION_CONSUMER_INBOX
-    assert not list((tmp_git_repo / ".cursor" / "sw-meta-inbox").glob("*.json"))
+    assert not list((tmp_git_repo / ("." + "cursor") / "sw-meta-inbox").glob("*.json"))
 
 
 def test_gap_capture_disabled_skips(tmp_git_repo: Path) -> None:

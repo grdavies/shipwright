@@ -1,38 +1,100 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/grdavies/shipwright/core/schemas/events.json",
-  "title": "Shipwright lifecycle event map (phase-1 stub; phase 2 expands)",
-  "description": "Canonical lifecycle events with per-host names. Adapters must not embed event name literals outside this map.",
+  "title": "Shipwright lifecycle event map",
+  "description": "Canonical lifecycle events with per-host names. Adapters must not embed event name literals outside this map (PRD 349 R19).",
   "events": [
     {
       "canonical": "SessionStart",
-      "hosts": { "claude-code": "SessionStart", "cursor": "sessionStart" },
+      "hosts": {
+        "claude-code": "SessionStart",
+        "cursor": "sessionStart",
+        "codex": "session.start",
+        "opencode": "session.start"
+      },
       "emitter_params": ["event_name"],
       "unsupported_on": []
     },
     {
       "canonical": "UserPromptSubmit",
-      "hosts": { "claude-code": "UserPromptSubmit", "cursor": "beforeSubmitPrompt" },
-      "emitter_params": [],
-      "unsupported_on": []
-    },
-    {
-      "canonical": "Stop",
-      "hosts": { "claude-code": "Stop", "cursor": "stop" },
+      "hosts": {
+        "claude-code": "UserPromptSubmit",
+        "cursor": "beforeSubmitPrompt",
+        "codex": "prompt.submit",
+        "opencode": "prompt.submit"
+      },
       "emitter_params": [],
       "unsupported_on": []
     },
     {
       "canonical": "PreToolUse",
-      "hosts": { "claude-code": "PreToolUse", "cursor": "preToolUse" },
+      "hosts": {
+        "claude-code": "PreToolUse",
+        "cursor": "preToolUse",
+        "codex": "tool.pre",
+        "opencode": "tool.pre"
+      },
       "emitter_params": ["tool_name_map"],
       "unsupported_on": []
+    },
+    {
+      "canonical": "PostToolUse",
+      "hosts": {
+        "claude-code": "PostToolUse",
+        "cursor": "postToolUse",
+        "codex": "tool.post",
+        "opencode": "tool.post"
+      },
+      "emitter_params": [],
+      "unsupported_on": []
+    },
+    {
+      "canonical": "Stop",
+      "hosts": {
+        "claude-code": "Stop",
+        "cursor": "stop",
+        "codex": "session.stop",
+        "opencode": "session.stop"
+      },
+      "emitter_params": [],
+      "unsupported_on": []
+    },
+    {
+      "canonical": "SubagentStart",
+      "hosts": {
+        "claude-code": "SubagentStart",
+        "cursor": "subagentStart",
+        "codex": "agent.start",
+        "opencode": "agent.start"
+      },
+      "emitter_params": ["agent_id"],
+      "unsupported_on": []
+    },
+    {
+      "canonical": "SubagentStop",
+      "hosts": {
+        "claude-code": "SubagentStop",
+        "cursor": "subagentStop",
+        "codex": "agent.stop",
+        "opencode": "agent.stop"
+      },
+      "emitter_params": ["agent_id"],
+      "unsupported_on": []
+    },
+    {
+      "canonical": "Notification",
+      "hosts": {
+        "claude-code": "Notification",
+        "cursor": "afterAgentResponse"
+      },
+      "emitter_params": [],
+      "unsupported_on": ["codex", "opencode"]
     },
     {
       "canonical": "ContextSwitch",
       "hosts": {},
       "emitter_params": [],
-      "unsupported_on": ["claude-code", "cursor"],
+      "unsupported_on": ["claude-code", "cursor", "codex", "opencode"],
       "unsupported_flag": true
     }
   ]

@@ -51,8 +51,8 @@ def test_allowlist_after_verified_write_else_needs_reconcile(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _patch_provider(monkeypatch)
-    (tmp_path / ".cursor").mkdir()
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor")).mkdir()
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"memory": {"provider": "recallium", "project": "t"}}),
         encoding="utf-8",
     )

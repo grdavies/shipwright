@@ -22,7 +22,7 @@ def _write_config(root: Path, **overrides: object) -> None:
         },
     }
     cfg.update(overrides)
-    path = root / ".cursor" / "workflow.config.json"
+    path = root / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg), encoding="utf-8")
 

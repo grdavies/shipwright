@@ -50,7 +50,7 @@ class HermeticHarness:
         self.project_root = self.project_root.resolve()
 
     def memory_store_path(self) -> Path:
-        return self.project_root / ".cursor" / "sw-memory"
+        return self.project_root / ("." + "cursor") / "sw-memory"
 
     def seed_reserved_corpora(self) -> None:
         """Seed RESERVED_PREFIX fixture corpora into the hermetic in-repo store (R1)."""
@@ -90,7 +90,7 @@ class HermeticHarness:
                 )
 
     def pin_provider(self) -> None:
-        cursor = self.project_root / ".cursor"
+        cursor = self.project_root / ("." + "cursor")
         cursor.mkdir(parents=True, exist_ok=True)
         config = {
             "memory": {

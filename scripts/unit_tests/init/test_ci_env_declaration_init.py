@@ -69,7 +69,7 @@ class TestCiDeclarationResolvesWithoutLocalSelector:
         root.mkdir()
         _init_git_remote(root)
         plan = build_init_plan(root, account_detector=_one_account_detector)
-        config_path = root / ".cursor" / "workflow.config.json"
+        config_path = root / ("." + "cursor") / "workflow.config.json"
         config_path.parent.mkdir(parents=True, exist_ok=True)
         from init_credential_migration import credential_refs_patch, merge_config_patch
 

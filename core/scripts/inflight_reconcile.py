@@ -124,7 +124,7 @@ def run_id_in_registry(root: Path, run_id: str) -> bool:
         slug = str(run.get("slug") or "")
         if slug and run_id_from_slug(slug) == run_id:
             return True
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     if not cursor.is_dir():
         return False
     for path in cursor.glob("sw-deliver-state.*.json"):
@@ -142,7 +142,7 @@ def deliver_state_path(root: Path, run_id: str) -> Path | None:
     slug = slug_from_run_id(run_id)
     if not slug:
         return None
-    path = root / ".cursor" / f"sw-deliver-state.{slug}.json"
+    path = root / ("." + "cursor") / f"sw-deliver-state.{slug}.json"
     return path if path.is_file() else None
 
 

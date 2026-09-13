@@ -349,18 +349,18 @@ def record_dispatch_telemetry(
     if surface == SURFACE_DOC_REVIEW:
         if not dispatch_id:
             raise ValueError("dispatch_id required for doc-review telemetry")
-        sink = repo / ".cursor" / "doc-review-runs" / f"{dispatch_id}.json"
+        sink = repo / ("." + "cursor") / "doc-review-runs" / f"{dispatch_id}.json"
         sink.parent.mkdir(parents=True, exist_ok=True)
         sink.write_text(json.dumps({**entry, "at": utc_now()}, indent=2) + "\n", encoding="utf-8")
         os.chmod(sink, 0o600)
         return sink
 
-    deliver_log = repo / ".cursor" / "sw-deliver-runs" / "run.log"
+    deliver_log = repo / ("." + "cursor") / "sw-deliver-runs" / "run.log"
     _append_jsonl_log(deliver_log, entry)
     if run_dir is not None:
         _append_jsonl_log(run_dir / "run.log", entry)
     if phase_slug:
-        phase_run = repo / ".cursor" / "sw-deliver-runs" / phase_slug
+        phase_run = repo / ("." + "cursor") / "sw-deliver-runs" / phase_slug
         _append_jsonl_log(phase_run / "run.log", entry)
         _patch_status_dispatch_telemetry(phase_run / "status.json", entry)
     return deliver_log

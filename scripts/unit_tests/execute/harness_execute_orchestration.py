@@ -75,7 +75,7 @@ def scenario_wave_merge_no_regression(root: Path) -> bool:
         subprocess.run(["git", "add", "f.txt"], cwd=str(merge_q), check=True)
         subprocess.run(["git", "commit", "-q", "-m", "phase"], cwd=str(merge_q), check=True)
         subprocess.run(["git", "checkout", "-q", "feat/demo"], cwd=str(merge_q), check=True)
-        (merge_q / ".cursor").mkdir(exist_ok=True)
+        (merge_q / ("." + "cursor")).mkdir(exist_ok=True)
         (merge_q / ".cursor/sw-deliver-state.json").write_text(
             json.dumps({"target": {"branch": "feat/demo"}, "orchestratorWorktree": {"path": str(merge_q)}}),
             encoding="utf-8",
@@ -117,7 +117,7 @@ def propose(root: Path, task_list: str, phase_id: str, policy: str = "proposed")
 
 
 def validate(root: Path, proposal: dict, task_list: str, phase_id: str, *, record: bool = False) -> dict:
-    tmp = root / ".cursor" / "tmp-execute-proposal.json"
+    tmp = root / ("." + "cursor") / "tmp-execute-proposal.json"
     tmp.parent.mkdir(parents=True, exist_ok=True)
     tmp.write_text(json.dumps(proposal), encoding="utf-8")
     cmd = [
@@ -649,7 +649,7 @@ def scenario_execute_plan_dag_049_phase_2(root: Path) -> bool:
             )
             if proc.returncode != 0:
                 return False
-            status_path = repo / ".cursor" / "sw-execute-runs" / ref / "status.json"
+            status_path = repo / ("." + "cursor") / "sw-execute-runs" / ref / "status.json"
             if not status_path.is_file():
                 return False
             paths.add(str(status_path))

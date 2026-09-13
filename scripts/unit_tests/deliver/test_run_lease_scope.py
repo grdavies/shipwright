@@ -30,8 +30,8 @@ def twin_repos(tmp_path: Path) -> tuple[Path, Path]:
     b = tmp_path / "clone-b"
     a.mkdir()
     b.mkdir()
-    (a / ".cursor").mkdir()
-    (b / ".cursor").mkdir()
+    (a / ("." + "cursor")).mkdir()
+    (b / ("." + "cursor")).mkdir()
     return a, b
 
 

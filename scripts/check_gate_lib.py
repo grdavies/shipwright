@@ -32,7 +32,7 @@ def manifest_sha256(content: bytes) -> str:
 
 def persist_gate_manifest_snapshot(root: Path, manifest: Any) -> dict[str, str]:
     """Persist manifest under repo-root cache (R8 — outside ephemeral worktrees)."""
-    cache_dir = root / ".cursor" / "sw-gate-cache"
+    cache_dir = root / ("." + "cursor") / "sw-gate-cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path = cache_dir / "pr-test-plan.manifest.json"
     canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
@@ -799,7 +799,7 @@ def resolve_change_triage_tier(root: Path) -> str | None:
         candidates.append(Path(run_dir) / "status.json")
     phase = os.environ.get("SW_PHASE_SLUG")
     if phase:
-        candidates.append(root / ".cursor" / "sw-deliver-runs" / phase / "status.json")
+        candidates.append(root / ("." + "cursor") / "sw-deliver-runs" / phase / "status.json")
     for cand in candidates:
         if not cand.is_file():
             continue

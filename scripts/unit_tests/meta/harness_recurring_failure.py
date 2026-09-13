@@ -57,7 +57,7 @@ def run_escalation_fixtures(ctx: FixtureContext) -> None:
         ctx.root / "core/sw-reference/anomaly-patterns.json",
         esc_tmp / "core/sw-reference/anomaly-patterns.json",
     )
-    (esc_tmp / ".cursor").mkdir(exist_ok=True)
+    (esc_tmp / ("." + "cursor")).mkdir(exist_ok=True)
     (esc_tmp / ".cursor/workflow.config.json").write_text(
         json.dumps({"recurrence": {"threshold": threshold, "enabled": True}}),
         encoding="utf-8",

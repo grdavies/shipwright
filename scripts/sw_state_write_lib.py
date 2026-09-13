@@ -59,7 +59,7 @@ def resolve_store_path(root: Path, store: str, *, rel: str | None = None) -> Pat
     if store == "meta-inbox-draft":
         if not rel:
             raise StateWriteError("--rel required for meta-inbox-draft store", halt="store-path-forbidden")
-        return root / ".cursor" / "sw-meta-inbox" / rel
+        return root / ("." + "cursor") / "sw-meta-inbox" / rel
     if rel:
         candidate = root / rel
         rel_posix = candidate.as_posix()

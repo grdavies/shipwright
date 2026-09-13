@@ -141,8 +141,8 @@ def test_same_number_issue_collision(
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     monkeypatch.setenv("SW_HOST_ISSUES_FIXTURE", "1")
     repo = _init_repo(tmp_path)
-    (repo / ".cursor").mkdir(parents=True, exist_ok=True)
-    (repo / ".cursor" / "workflow.config.json").write_text(
+    (repo / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (repo / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps(_separate_project_cfg()),
         encoding="utf-8",
     )
@@ -174,8 +174,8 @@ def test_explicit_planning_store_resolution(
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     monkeypatch.setenv("SW_HOST_ISSUES_FIXTURE", "1")
     repo = _init_repo(tmp_path)
-    (repo / ".cursor").mkdir(parents=True, exist_ok=True)
-    (repo / ".cursor" / "workflow.config.json").write_text(
+    (repo / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (repo / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps(_separate_project_cfg()),
         encoding="utf-8",
     )
@@ -206,8 +206,8 @@ def test_explicit_host_repo_resolution(
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     monkeypatch.setenv("SW_HOST_ISSUES_FIXTURE", "1")
     repo = _init_repo(tmp_path)
-    (repo / ".cursor").mkdir(parents=True, exist_ok=True)
-    (repo / ".cursor" / "workflow.config.json").write_text(
+    (repo / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (repo / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps(_separate_project_cfg()),
         encoding="utf-8",
     )

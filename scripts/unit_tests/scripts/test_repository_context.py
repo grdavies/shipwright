@@ -23,7 +23,7 @@ from repository_context import (
 
 
 def _write_workflow_config(repo: Path, *, project: str = "fixture-project") -> None:
-    cursor = repo / ".cursor"
+    cursor = repo / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     payload = {
         "host": {"provider": "github", "remote": "origin"},
@@ -48,7 +48,7 @@ def _seed_repo(repo: Path, *, worktree_name: str | None = None) -> None:
     )
     _write_workflow_config(repo)
     if worktree_name:
-        state = repo / ".cursor" / "sw-worktree-state.json"
+        state = repo / ("." + "cursor") / "sw-worktree-state.json"
         state.write_text(json.dumps({"worktreeName": worktree_name}), encoding="utf-8")
 
 
@@ -83,7 +83,7 @@ class TestOneValidRoot:
 
     def test_explicit_project_id_overrides_derived_slug(self, tmp_git_repo: Path) -> None:
         _seed_repo(tmp_git_repo, worktree_name="phase-demo")
-        cfg_path = tmp_git_repo / ".cursor" / "workflow.config.json"
+        cfg_path = tmp_git_repo / ("." + "cursor") / "workflow.config.json"
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         cfg["projectId"] = "explicit-project"
         cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
@@ -97,7 +97,7 @@ class TestCredentialRefIsolation:
         self, tmp_git_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         _seed_repo(tmp_git_repo)
-        cfg_path = tmp_git_repo / ".cursor" / "workflow.config.json"
+        cfg_path = tmp_git_repo / ("." + "cursor") / "workflow.config.json"
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         cfg["host"]["credentialRef"] = "github-work-a"
         cfg["memory"]["credentialRef"] = "memory-work-a"

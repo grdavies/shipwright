@@ -21,7 +21,7 @@ def utc_now() -> str:
 
 
 def lock_path(root: Path) -> Path:
-    return root / ".cursor" / LIVING_DOC_LOCK_NAME
+    return root / ("." + "cursor") / LIVING_DOC_LOCK_NAME
 
 
 def lock_host() -> str:

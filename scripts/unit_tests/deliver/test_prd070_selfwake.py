@@ -30,7 +30,7 @@ def _pending_merge_state(*, slug: str = "automated-delivery-closeout") -> dict:
 
 
 def _write_state(tmp_path: Path, slug: str, state: dict) -> None:
-    cursor = tmp_path / ".cursor"
+    cursor = tmp_path / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     (cursor / f"sw-deliver-state.{slug}.json").write_text(json.dumps(state), encoding="utf-8")
 

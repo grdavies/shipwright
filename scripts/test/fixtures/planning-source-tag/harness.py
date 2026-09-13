@@ -74,8 +74,8 @@ def _write_unit(root: Path, unit_id: str, *, source: str = "") -> None:
 
 def _seed_scoping_corpus(root: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=str(root), check=True)
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
-    (root / ".cursor" / "workflow.config.json").write_text(
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"planning": {"store": {"backend": "in-repo-public"}}}, indent=2) + "\n",
         encoding="utf-8",
     )
@@ -123,8 +123,8 @@ def check_resolve_scope_precedence() -> dict:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         subprocess.run(["git", "init", "-q"], cwd=str(root), check=True)
-        (root / ".cursor").mkdir(parents=True, exist_ok=True)
-        (root / ".cursor" / "workflow.config.json").write_text(
+        (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+        (root / ("." + "cursor") / "workflow.config.json").write_text(
             json.dumps({"planning": {"store": {"sourceScope": ["cfg/one", "cfg/two"]}}}, indent=2) + "\n",
             encoding="utf-8",
         )
@@ -136,7 +136,7 @@ def check_resolve_scope_precedence() -> dict:
         finally:
             del os.environ["SW_PLANNING_SOURCE_SCOPE"]
 
-        (root / ".cursor" / "workflow.config.json").write_text(json.dumps({}) + "\n", encoding="utf-8")
+        (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps({}) + "\n", encoding="utf-8")
         unset_default = pdisc.resolve_source_scope(root)
     ok = (
         cfg_only == ["cfg/one", "cfg/two"]

@@ -1,0 +1,66 @@
+{
+  "host": "cursor",
+  "surface": "ide",
+  "version_range": ">=1.0.0",
+  "os_scope": ["mac", "linux", "windows"],
+  "adapter_id": "cursor",
+  "declared_at": "2026-09-12T00:00:00Z",
+  "observed_at": "2026-09-12T00:00:00Z",
+  "trust_level": "declared",
+  "capabilities": {
+    "load_context": {
+      "implementation_mode": "native",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt with diagnostic"
+    },
+    "invoke_workflow": {
+      "implementation_mode": "native",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt with diagnostic"
+    },
+    "inspect_tool_call": {
+      "implementation_mode": "native",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "deny tool call"
+    },
+    "block_action": {
+      "implementation_mode": "native",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "deny action"
+    },
+    "dispatch_reviewer": {
+      "implementation_mode": "native",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt dispatch"
+    },
+    "capture_progress": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": ["progress persistence surface varies by IDE build"],
+      "failure_behavior": "continue without progress capture"
+    },
+    "restore_state": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt restore"
+    },
+    "emit_hook": {
+      "implementation_mode": "native",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "fail closed"
+    },
+    "resolve_instruction": {
+      "implementation_mode": "native",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "omit instruction"
+    }
+  }
+}

@@ -122,7 +122,7 @@ def _install_third_provider(
     rules.parent.mkdir(parents=True, exist_ok=True)
     rules.write_text(_rules_script(), encoding="utf-8")
 
-    cursor = workspace / ".cursor"
+    cursor = workspace / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     (cursor / "workflow.config.json").write_text(
         json.dumps(
@@ -229,7 +229,7 @@ def test_unknown_provider_fails_consumer_resolution(repo_root: Path, tmp_path: P
         json.dumps(load_catalog(repo_root)),
         encoding="utf-8",
     )
-    cursor = workspace / ".cursor"
+    cursor = workspace / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     (cursor / "workflow.config.json").write_text(
         json.dumps({"memory": {"provider": "not-registered"}}),

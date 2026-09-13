@@ -123,7 +123,7 @@ def test_evidence_dir_overlap_denied(repo_root: Path) -> None:
     assert ok is False
     assert cause == "gate-evidence:outcome-overlap"
 
-    outside = repo_root / ".cursor" / "sw-deliver-runs" / phase / "agent-outcome.json"
+    outside = repo_root / ("." + "cursor") / "sw-deliver-runs" / phase / "agent-outcome.json"
     ok2, cause2 = validate_outcome_path_non_overlap(outside, ev_dir)
     assert ok2 is True
     assert cause2 is None

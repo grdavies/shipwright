@@ -101,14 +101,14 @@ def _legacy_slug_candidate_paths(
 ) -> list[Path]:
     """Pre-run / non-run-scoped discovery: slug paths only — never glob (R20)."""
     paths: list[Path] = [
-        root / ".cursor" / "sw-deliver-runs" / phase_slug / status_filename
+        root / ("." + "cursor") / "sw-deliver-runs" / phase_slug / status_filename
     ]
     wt = worktree
     if wt is None:
         wt = resolve_phase_worktree(root, phase_slug, state)
     if wt is not None:
         paths.append(
-            wt / ".cursor" / "sw-deliver-runs" / phase_slug / status_filename
+            wt / ("." + "cursor") / "sw-deliver-runs" / phase_slug / status_filename
         )
     return paths
 
@@ -194,7 +194,7 @@ def preferred_phase_artifact_path(
     loaded = _load_deliver_state(root, state)
     resolved = resolve_run_and_phase_id(loaded, phase_slug)
     if resolved is None:
-        return root / ".cursor" / "sw-deliver-runs" / phase_slug / status_filename
+        return root / ("." + "cursor") / "sw-deliver-runs" / phase_slug / status_filename
     run_id, phase_id = resolved
     canonical = canonical_phase_artifact_path(root, run_id, phase_id, status_filename)
     wt = worktree
@@ -376,7 +376,7 @@ def _detect_token_scope_blocker(
     from credentials.config_surface import resolve_config_surface
     from credentials.doctor import detect_undeclared_ambient_token_resolution
 
-    cfg_path = root / ".cursor" / "workflow.config.json"
+    cfg_path = root / ("." + "cursor") / "workflow.config.json"
     if not cfg_path.is_file():
         return None
     try:

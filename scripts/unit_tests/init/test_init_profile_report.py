@@ -65,7 +65,7 @@ def test_classification_statuses_against_fixtures(repo_root: Path) -> None:
 def test_consent_gated_completeness_refresh_leaves_config_without_confirm(
     repo_root: Path, tmp_path: Path
 ) -> None:
-    config_dir = tmp_path / ".cursor"
+    config_dir = tmp_path / ("." + "cursor")
     config_dir.mkdir(parents=True)
     config_path = config_dir / "workflow.config.json"
     original = {

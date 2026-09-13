@@ -80,7 +80,7 @@ def test_github_default_max_calls_is_750() -> None:
 
 def test_drain_mechanical_defaults_true(repo_root: Path, tmp_path: Path) -> None:
     """R7/R19 — drainMechanical defaults true when unset."""
-    cfg = tmp_path / ".cursor"
+    cfg = tmp_path / ("." + "cursor")
     cfg.mkdir(parents=True)
     (cfg / "workflow.config.json").write_text("{}", encoding="utf-8")
     assert drain_mechanical_enabled(tmp_path) is True

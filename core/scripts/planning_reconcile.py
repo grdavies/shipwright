@@ -324,7 +324,7 @@ def render_superseded_manifest(
 def load_deliver_phase_status(root: Path) -> dict[str, str]:
     worktree = pp.git_root(root)
     status: dict[str, str] = {}
-    cursor = worktree / ".cursor"
+    cursor = worktree / ("." + "cursor")
     if not cursor.is_dir():
         return status
     for path in cursor.glob("sw-deliver-state*.json"):

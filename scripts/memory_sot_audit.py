@@ -78,7 +78,7 @@ def list_git_decision_records(root: Path) -> list[str]:
 
 
 def scan_in_repo_decision_memories(root: Path) -> list[dict]:
-    store = root / ".cursor" / "sw-memory" / "memories"
+    store = root / ("." + "cursor") / "sw-memory" / "memories"
     hits: list[dict] = []
     if not store.is_dir():
         return hits

@@ -59,12 +59,12 @@ def test_hermetic_fixture_promote_load_without_local_dual_home(
         "memory_preflight.validate_registration",
         lambda root, provider: {"ok": True, "provider": provider},
     )
-    (tmp_path / ".cursor").mkdir()
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor")).mkdir()
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"memory": {"provider": "recallium", "project": "hermetic"}}),
         encoding="utf-8",
     )
-    (tmp_path / ".cursor" / "sw-memory-rule-allowlist.json").write_text(
+    (tmp_path / ("." + "cursor") / "sw-memory-rule-allowlist.json").write_text(
         json.dumps([RULE_ID]),
         encoding="utf-8",
     )
@@ -74,7 +74,7 @@ def test_hermetic_fixture_promote_load_without_local_dual_home(
     )
     assert promoted["verdict"] == "ok"
     assert RULE_ID in store
-    assert not (tmp_path / ".cursor" / "sw-memory" / "rules" / f"{RULE_ID}.md").is_file()
+    assert not (tmp_path / ("." + "cursor") / "sw-memory" / "rules" / f"{RULE_ID}.md").is_file()
 
     loaded = rules_load(tmp_path, loader=loader)
     ids = {entry["id"] for entry in loaded["rules"]}

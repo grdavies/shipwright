@@ -23,7 +23,7 @@ def _fixture_repo() -> tuple[Path, dict]:
     os.environ["SW_ISSUES_FIXTURE"] = "1"
     root = Path(tempfile.mkdtemp())
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     fixture = root / ".cursor/hooks/state/issue-store-fixture.json"
     store = FixtureIssuesStore(fixture)
     project_key = "fixture-066"

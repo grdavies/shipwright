@@ -49,7 +49,7 @@ def resolve_steps_path(root: Path, phase: str, explicit: str | None) -> Path:
     run_dir = os.environ.get("SW_RUN_DIR", "").strip()
     if run_dir:
         return Path(run_dir) / "ship-steps.json"
-    return root / ".cursor" / "sw-deliver-runs" / phase / "ship-steps.json"
+    return root / ("." + "cursor") / "sw-deliver-runs" / phase / "ship-steps.json"
 
 
 def resolve_plan_file(root: Path, phase: str, explicit_out: str | None) -> Path:

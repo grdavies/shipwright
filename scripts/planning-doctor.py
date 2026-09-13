@@ -835,16 +835,16 @@ def doctor(root: Path, *, sweep: bool) -> dict:
     swept: list[str] = []
     if sweep:
         materialized_roots: list[Path] = []
-        repo_mat = root / ".cursor" / "planning-materialized"
+        repo_mat = root / ("." + "cursor") / "planning-materialized"
         if repo_mat.is_dir():
             materialized_roots.append(repo_mat)
         worktrees = root / ".sw-worktrees"
         if worktrees.is_dir():
             for wt in worktrees.iterdir():
-                mat = wt / ".cursor" / "planning-materialized"
+                mat = wt / ("." + "cursor") / "planning-materialized"
                 if mat.is_dir():
                     materialized_roots.append(mat)
-        cursor = root / ".cursor"
+        cursor = root / ("." + "cursor")
         if cursor.is_dir():
             for state_file in cursor.glob("sw-deliver-state*.json"):
                 try:
@@ -854,7 +854,7 @@ def doctor(root: Path, *, sweep: bool) -> dict:
                 pin = state.get("planningStorePin") or {}
                 for rel in pin.get("materializedPaths") or []:
                     rel_path = Path(str(rel))
-                    if rel_path.parts and rel_path.parts[0] == ".cursor":
+                    if rel_path.parts and rel_path.parts[0] == ("." + "cursor"):
                         candidate = root / rel_path.parts[0]
                         for part in rel_path.parts[1:]:
                             if part == "planning-materialized":

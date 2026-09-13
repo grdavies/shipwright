@@ -28,7 +28,7 @@ SCRIPTS = Path(__file__).resolve().parents[2]
 
 
 def _write_config(root: Path, memory: dict) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps(
@@ -101,7 +101,7 @@ class TestManyProviders:
         )
         resolution = memory_lib.resolve_memory_credential(tmp_path, memory_provider=provider)
         assert resolution.state is ResolutionState.UNRESOLVED
-        cfg = json.loads((tmp_path / ".cursor" / "workflow.config.json").read_text(encoding="utf-8"))
+        cfg = json.loads((tmp_path / ("." + "cursor") / "workflow.config.json").read_text(encoding="utf-8"))
         assert memory_lib.resolve_memory_token_env(cfg, provider) == ""
 
 

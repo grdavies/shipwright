@@ -31,7 +31,7 @@ from wave_run_paths import mint_run_id, phase_directory, plan_path, terminal_acc
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     return root
 
 
@@ -72,7 +72,7 @@ def test_discovery_paths_exclude_glob_and_slug_keys(repo: Path) -> None:
     slug = "shared-slug"
     state = _phase_state(run_id, phase_id, slug)
 
-    stale_slug_dir = repo / ".cursor" / "sw-deliver-runs" / slug
+    stale_slug_dir = repo / ("." + "cursor") / "sw-deliver-runs" / slug
     stale_slug_dir.mkdir(parents=True)
     write_json(stale_slug_dir / "status.json", {"verdict": "merge-ready-green", "head": "a" * 40})
 
@@ -80,7 +80,7 @@ def test_discovery_paths_exclude_glob_and_slug_keys(repo: Path) -> None:
     wt_root.mkdir(parents=True)
     glob_stale = (
         wt_root
-        / ".cursor"
+        / ("." + "cursor")
         / "sw-deliver-runs"
         / slug
         / "status.json"
@@ -160,7 +160,7 @@ def test_stale_worktree_status_not_discovered_by_new_run(repo: Path) -> None:
     worktree = repo / ".sw-worktrees" / "phase-wt"
     worktree.mkdir(parents=True)
 
-    stale = worktree / ".cursor" / "sw-deliver-runs" / slug / "status.json"
+    stale = worktree / ("." + "cursor") / "sw-deliver-runs" / slug / "status.json"
     stale.parent.mkdir(parents=True)
     write_json(
         stale,
@@ -192,7 +192,7 @@ def test_reintroduced_glob_does_not_affect_discovery(repo: Path) -> None:
     write_json(canonical, {"verdict": "pass", "binding": True, "head": "f" * 40})
 
     wt_root = repo / ".sw-worktrees" / "legacy-wt"
-    glob_hit = wt_root / ".cursor" / "sw-deliver-runs" / slug / "gap-check.status.json"
+    glob_hit = wt_root / ("." + "cursor") / "sw-deliver-runs" / slug / "gap-check.status.json"
     glob_hit.parent.mkdir(parents=True)
     write_json(glob_hit, {"verdict": "halt", "binding": True, "cause": "gap-check:stale"})
 

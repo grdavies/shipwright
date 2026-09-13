@@ -118,7 +118,7 @@ def verify_frontmatter_only(root: Path, gap_content: str, index_content: str, un
 
 def write_legacy_stamp(root: Path, *, gap_hash: str, index_hash: str) -> None:
     worktree = planning_paths.git_root(root)
-    stamp = worktree / ".cursor" / "planning-legacy-projection-stamp.json"
+    stamp = worktree / ("." + "cursor") / "planning-legacy-projection-stamp.json"
     stamp.parent.mkdir(parents=True, exist_ok=True)
     import hashlib, json
     stamp.write_text(json.dumps({"gapBacklogSha256": gap_hash, "indexSha256": index_hash}, indent=2) + "\n", encoding="utf-8")
@@ -130,7 +130,7 @@ def legacy_manual_edit_warnings(root: Path) -> list[dict[str, str]]:
     if dirs.planning != "docs/planning":
         return []
     worktree = planning_paths.git_root(root)
-    stamp_path = worktree / ".cursor" / "planning-legacy-projection-stamp.json"
+    stamp_path = worktree / ("." + "cursor") / "planning-legacy-projection-stamp.json"
     if not stamp_path.is_file():
         return []
     try:

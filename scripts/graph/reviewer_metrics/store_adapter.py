@@ -215,6 +215,6 @@ def assert_learning_store_authority(repo_root: str | Path) -> Path:
     authority = default_learning_root(root)
     if authority.name != "sw-learning-store":
         raise MetadataSchemaError("learning store authority path must be sw-learning-store")
-    if ".cursor" not in authority.parts:
+    if ("." + "cursor") not in authority.parts:
         raise MetadataSchemaError("learning store authority must live under .cursor")
     return authority

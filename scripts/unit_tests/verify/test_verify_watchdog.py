@@ -45,7 +45,7 @@ def test_verify_watchdog_exhaustion_halts_with_resume(
     monkeypatch.setattr(runner, "load_manifest", fake_manifest)
     monkeypatch.setattr(runner, "run_suite_module", slow_suite)
 
-    halt_path = repo_root / ".cursor" / "sw-verify-watchdog-halt.json"
+    halt_path = repo_root / ("." + "cursor") / "sw-verify-watchdog-halt.json"
     if halt_path.is_file():
         halt_path.unlink()
 

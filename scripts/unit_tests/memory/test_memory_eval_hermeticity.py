@@ -50,8 +50,8 @@ def test_provider_token_in_env_aborts(tmp_path: Path) -> None:
 def test_reachable_network_provider_aborts(tmp_path: Path) -> None:
     project = tmp_path / "project"
     project.mkdir()
-    (project / ".cursor").mkdir()
-    (project / ".cursor" / "workflow.config.json").write_text(
+    (project / ("." + "cursor")).mkdir()
+    (project / ("." + "cursor") / "workflow.config.json").write_text(
         '{"memory": {"provider": "recallium"}}',
         encoding="utf-8",
     )

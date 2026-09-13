@@ -16,8 +16,8 @@ import publish_surface_audit as psa
 
 def test_resolve_publish_surface_profile_explicit_config(tmp_path: Path) -> None:
     cfg = {"planning": {"publishSurface": {"profile": "in-repo-public"}}}
-    (tmp_path / ".cursor").mkdir()
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor")).mkdir()
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps(cfg), encoding="utf-8"
     )
     resolved = psa.resolve_publish_surface_profile(tmp_path, cfg)

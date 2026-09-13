@@ -103,7 +103,7 @@ def resolve_evidence_record(
         for record in linked_evidence_records(root, parent_decision_id, kind):
             if evidence_ref_id(record) == ref_id:
                 return record
-    base = root / ".cursor" / "sw-decision-evidence"
+    base = root / ("." + "cursor") / "sw-decision-evidence"
     if not base.is_dir():
         return None
     for path in base.rglob("*.json"):

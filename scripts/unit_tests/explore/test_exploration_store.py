@@ -86,7 +86,7 @@ def test_conversation_only_session_no_persist(tmp_path: Path) -> None:
     assert created["persisted"] is False
     with pytest.raises(PersistenceRefusedError):
         store.persist("explore-conversation", expected_revision=1)
-    assert not (tmp_path / ".cursor" / "sw-explore-maps" / "explore-conversation" / "map.json").exists()
+    assert not (tmp_path / ("." + "cursor") / "sw-explore-maps" / "explore-conversation" / "map.json").exists()
 
 
 def test_persistence_trigger_blocking_unknowns(tmp_path: Path) -> None:

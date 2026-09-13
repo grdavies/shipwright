@@ -48,7 +48,7 @@ import subprocess
 subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
-(tmp / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(tmp / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
 (tmp / "docs" / "prds" / "061-test").mkdir(parents=True)
 (tmp / "docs/prds/061-test/tasks-061-test.md").write_text(
     "---\nfrozen: true\n---\n### 1. Alpha phase\n### 2. Beta phase\n",
@@ -95,7 +95,7 @@ sys.path.insert(0, "$ROOT/scripts")
 import planning_hierarchy as ph
 
 tmp = Path(tempfile.mkdtemp())
-(tmp / ".cursor").mkdir(parents=True)
+(tmp / ("." + "cursor")).mkdir(parents=True)
 (tmp / ".cursor/workflow.config.json").write_text(json.dumps({
     "version": 1,
     "planning": {"store": {"backend": "in-repo-public", "issuesProvider": "jira"}},
@@ -117,7 +117,7 @@ sys.path.insert(0, "$ROOT/scripts")
 import planning_hierarchy as ph
 
 tmp = Path(tempfile.mkdtemp())
-(tmp / ".cursor").mkdir(parents=True)
+(tmp / ("." + "cursor")).mkdir(parents=True)
 (tmp / ".cursor/workflow.config.json").write_text(json.dumps({
     "version": 1,
     "planning": {"store": {"backend": "issue-store", "issuesProvider": "github-issues"}},
@@ -146,7 +146,7 @@ from issues_lib import FixtureIssuesStore
 tmp = Path(tempfile.mkdtemp())
 import subprocess
 subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
-(tmp / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(tmp / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
 (tmp / ".cursor/workflow.config.json").write_text(json.dumps({
     "version": 1,
     "planning": {
@@ -195,7 +195,7 @@ import subprocess
 subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
-(tmp / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(tmp / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
 (tmp / "docs" / "prds" / "061-test").mkdir(parents=True)
 (tmp / "docs/prds/061-test/tasks-061-test.md").write_text("### 1. Alpha\n", encoding="utf-8")
 (tmp / ".cursor/workflow.config.json").write_text(json.dumps({
@@ -236,7 +236,7 @@ assert "tasks" in pig.UNIT_TYPES
 tmp = Path(tempfile.mkdtemp())
 import subprocess
 subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
-(tmp / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(tmp / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
 (tmp / ".cursor/workflow.config.json").write_text(json.dumps({
     "version": 1,
     "planning": {

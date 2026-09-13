@@ -50,7 +50,7 @@ def guardrail_core():
 
 
 def _write_enforce_config(workspace: Path, provider: str = "recallium") -> None:
-    cursor = workspace / ".cursor"
+    cursor = workspace / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     (cursor / "workflow.config.json").write_text(
         json.dumps(

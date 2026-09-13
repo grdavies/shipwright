@@ -32,7 +32,7 @@ from wave_transition_receipt import persist_external_mutation_receipt
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     (root / "docs" / "brainstorms").mkdir(parents=True)
     (root / "docs" / "prds" / "081-demo").mkdir(parents=True)
     return root

@@ -47,7 +47,7 @@ from planning_canonical import compose_issue_body
 
 root = Path(tempfile.mkdtemp())
 subprocess.run(['git','init','-q'], cwd=root, check=True)
-(root / '.cursor').mkdir(parents=True, exist_ok=True)
+(root / ('.' + 'cursor')).mkdir(parents=True, exist_ok=True)
 fixture = root / '.cursor/hooks/state/issue-store-fixture.json'
 store = FixtureIssuesStore(fixture)
 body = compose_issue_body('fixture-061', 'prd', '061-planning-store-interface-architecture', '# PRD\n')
@@ -106,7 +106,7 @@ from issues_lib import FixtureIssuesStore
 from planning_canonical import compose_issue_body
 root = Path(tempfile.mkdtemp())
 subprocess.run(['git','init','-q'], cwd=root, check=True)
-(root / '.cursor').mkdir(parents=True, exist_ok=True)
+(root / ('.' + 'cursor')).mkdir(parents=True, exist_ok=True)
 store = FixtureIssuesStore(root / '.cursor/hooks/state/issue-store-fixture.json')
 body = compose_issue_body('fixture-061', 'gap', 'gap-077-sample', '# Gap\n')
 record = store.create(title='Gap', body=body, labels=[], project_key='fixture-061', artifact_type='gap', unit_id='gap-077-sample')

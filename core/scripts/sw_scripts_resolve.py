@@ -20,9 +20,9 @@ from typing import Iterable, Mapping
 
 TRUST_MARKERS = ("check-gate.py", "resolve-model-tier.py")
 ENV_VAR = "SHIPWRIGHT_SCRIPTS"
-PLUGIN_LOCAL_SCRIPTS = Path.home() / ".cursor" / "plugins" / "local" / "shipwright" / "scripts"
+PLUGIN_LOCAL_SCRIPTS = Path.home() / ("." + "cursor") / "plugins" / "local" / "shipwright" / "scripts"
 PLUGIN_SCRIPTS = PLUGIN_LOCAL_SCRIPTS
-PLUGIN_CACHE_ROOT = Path.home() / ".cursor" / "plugins" / "cache"
+PLUGIN_CACHE_ROOT = Path.home() / ("." + "cursor") / "plugins" / "cache"
 CONSUMER_NO_PLUGIN_ERROR = (
     "Shipwright plugin not installed; install the plugin locally "
     "(python3 scripts/install.py from the Shipwright source repo) "

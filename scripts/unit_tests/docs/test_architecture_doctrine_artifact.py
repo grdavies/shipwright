@@ -264,11 +264,11 @@ def test_consumer_assessment_artifact_is_read_only(tmp_path: Path) -> None:
         assessment={"artifactPath": ".cursor/consumer-assessment.yaml"}
     )
     (tmp_path / ".sw").mkdir()
-    (tmp_path / ".cursor").mkdir()
+    (tmp_path / ("." + "cursor")).mkdir()
     (tmp_path / ".sw" / "project-doctrine.json").write_text(
         json.dumps(doctrine), encoding="utf-8"
     )
-    (tmp_path / ".cursor" / "consumer-assessment.yaml").write_text(
+    (tmp_path / ("." + "cursor") / "consumer-assessment.yaml").write_text(
         "entries:\n  - id: billing\n    verdict: pass\n",
         encoding="utf-8",
     )

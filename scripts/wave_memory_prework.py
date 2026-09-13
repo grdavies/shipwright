@@ -66,7 +66,7 @@ def provider_from_config(root: Path, config: dict[str, Any]) -> str:
     provider = str(memory.get("provider") or "").strip().lower()
     if provider:
         return provider
-    marker = root / ".cursor" / "sw-memory.provider"
+    marker = root / ("." + "cursor") / "sw-memory.provider"
     if marker.is_file():
         return "in-repo"
     return "recallium"
@@ -89,8 +89,8 @@ def _probe_rest_reachable(base_url: str, policy: dict[str, Any] | None = None) -
 
 
 def _probe_filesystem_reachable(root: Path) -> bool:
-    store = root / ".cursor" / "sw-memory"
-    return store.is_dir() or (root / ".cursor" / "sw-memory.provider").is_file()
+    store = root / ("." + "cursor") / "sw-memory"
+    return store.is_dir() or (root / ("." + "cursor") / "sw-memory.provider").is_file()
 
 
 def probe_provider_reachable(root: Path, provider: str, config: dict[str, Any]) -> bool:

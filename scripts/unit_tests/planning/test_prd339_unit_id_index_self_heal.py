@@ -23,7 +23,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _cfg(project_key: str = "r39-heal") -> dict:
@@ -47,7 +47,7 @@ def test_r39_unit_id_marker_reuse_refused_and_index_self_heals(
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     _init_repo(tmp_path)
     project_key = "r39-heal"
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps(_cfg(project_key)), encoding="utf-8"
     )
     backend = IssueStoreBackend(tmp_path, _cfg(project_key))

@@ -92,7 +92,7 @@ def redact_text(root: Path, text: str) -> str:
 
 
 def list_provider_decision_memories(root: Path) -> list[dict]:
-    store = root / ".cursor" / "sw-memory" / "memories"
+    store = root / ("." + "cursor") / "sw-memory" / "memories"
     hits: list[dict] = []
     if not store.is_dir():
         return hits

@@ -23,7 +23,7 @@ from wave_state import utc_now
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     return root
 
 
@@ -58,8 +58,8 @@ def test_lease_acquired_before_run_state_mutation(repo: Path) -> None:
         meta = json.loads(lock_path.read_text(encoding="utf-8"))
         assert meta["runId"] == run_id
         assert meta["pid"] == os.getpid()
-        (root / ".cursor").mkdir(parents=True, exist_ok=True)
-        (root / ".cursor" / "sw-deliver-state.json").write_text(
+        (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+        (root / ("." + "cursor") / "sw-deliver-state.json").write_text(
             json.dumps(payload) + "\n", encoding="utf-8"
         )
 

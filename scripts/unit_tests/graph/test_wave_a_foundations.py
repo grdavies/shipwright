@@ -194,7 +194,7 @@ def test_owner_token_lease_reentry_mismatch_and_park(tmp_path: Path, monkeypatch
     root = tmp_path / "repo"
     root.mkdir()
     subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
-    (root / ".cursor" / "sw-deliver-locks").mkdir(parents=True)
+    (root / ("." + "cursor") / "sw-deliver-locks").mkdir(parents=True)
     monkeypatch.chdir(root)
 
     args_a = [

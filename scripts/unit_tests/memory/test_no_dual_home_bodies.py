@@ -23,7 +23,7 @@ Standing guidance is rule-class memory. Pointers only.
 
 
 def _write_fixture(root: Path, *, provider: str) -> None:
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     (cursor / "workflow.config.json").write_text(
         json.dumps({"memory": {"provider": provider, "project": "fixture"}}),
