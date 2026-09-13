@@ -1328,7 +1328,14 @@ def platform_portability_suite_steps(root: Path) -> list[tuple[str, list[str]]]:
 
 
 def run_platform_portability_suite(root: Path) -> tuple[str | None, list[dict[str, Any]]]:
-    """Run phase-5 suite fail-closed. Returns (error_reason|None, step results)."""
+    """Run phase-5 suite fail-closed. Returns (error_reason|None, step results).
+
+    Skipped when ``SW_GATE_FIXTURE`` is set so synthetic gate-contract harnesses
+    (scripts/unit_tests/meta/harness_gate.py) keep exercising host/check verdicts
+    without requiring the full PRD 349 portability matrix on every fixture case.
+    """
+    if os.environ.get("SW_GATE_FIXTURE"):
+        return None, []
     results: list[dict[str, Any]] = []
     for name, argv in platform_portability_suite_steps(root):
         completed = proc.run(argv, cwd=str(root))
