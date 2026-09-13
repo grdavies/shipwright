@@ -1,0 +1,8 @@
+{
+  "host": "opencode",
+  "surface": "cli",
+  "host_version": "0.3.0",
+  "capability": "emit_hook",
+  "level": "loads",
+  "tested_at": "2026-09-12T21:00:00Z"
+}

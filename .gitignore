@@ -60,6 +60,8 @@ docs/*
 docs/prds/
 !docs/guides/
 !docs/guides/**
+!docs/operator/
+!docs/operator/**
 # Decision index only — bodies stay local-only (PRD 069 R4).
 docs/decisions/*
 !docs/decisions/INDEX.md
