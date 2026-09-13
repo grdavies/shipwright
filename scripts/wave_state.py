@@ -1200,8 +1200,14 @@ def write_run_local_lease(
     if extra:
         lease.update(extra)
     write_json(path, lease)
-    return path
+    try:
+        from wave_journal import ensure_capture_files
 
+        ensure_capture_files(root, run_id)
+    except (OSError, ImportError):
+        # Capture init must not block lease recording when journal is unavailable.
+        pass
+    return path
 
 def read_run_local_lease(root: Path, run_id: str) -> dict[str, Any]:
     from wave_run_paths import lease_path as run_lease_path

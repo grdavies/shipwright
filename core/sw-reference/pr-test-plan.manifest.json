@@ -1723,6 +1723,17 @@
       "ciShard": 6
     },
     {
+      "id": "capture-event-schema-conformance",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "tests/conformance/test_event_schema_conformance.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1
+    },
+    {
       "id": "skills-spec-guard-fixtures",
       "script": "scripts/test/skills-spec-guard.test",
       "args": [],

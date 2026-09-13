@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1",
+  "runId": "deliver-fixture-run-001",
+  "phaseId": "phase-1",
+  "agentId": "agent-parent",
+  "provenanceKind": "tool_output",
+  "provenanceRef": "tool-call-fixture-1",
+  "pendingState": null,
+  "gapRef": "gap-draft-1",
+  "eventType": "discovery",
+  "timestamp": "2026-09-12T10:10:00Z",
+  "summary": "Found undocumented helper for run paths",
+  "eventId": "f0601dbb007357ec"
+}

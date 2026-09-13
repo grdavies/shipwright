@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from wave_json_io import StateCorruptError, read_json, write_json
+from wave_journal import ensure_capture_files
 from wave_run_paths import mint_run_id, plan_path, plan_pending_path, require_run_id
 from wave_state import path_normalize_anchor
 
@@ -53,9 +54,12 @@ def resolve_run_id(state: dict[str, Any]) -> str:
 def ensure_run_id(root: Path, state: dict[str, Any]) -> str:
     existing = state.get("runId")
     if existing:
-        return require_run_id(str(existing))
-    run_id = mint_run_id(root)
-    state["runId"] = run_id
+        run_id = require_run_id(str(existing))
+    else:
+        run_id = mint_run_id(root)
+        state["runId"] = run_id
+    # PRD 350 R13: initialize empty capture journals at run-dir creation / resume.
+    ensure_capture_files(root, run_id)
     return run_id
 
 

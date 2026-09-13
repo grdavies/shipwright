@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1",
+  "runId": "deliver-fixture-run-001",
+  "phaseId": "phase-1",
+  "agentId": "agent-parent",
+  "provenanceKind": "human_statement",
+  "provenanceRef": "msg-42",
+  "pendingState": {
+    "tasks": [
+      {
+        "id": "1.1",
+        "status": "in_progress"
+      }
+    ]
+  },
+  "blockerCondition": "operator_confirmation_required",
+  "eventType": "blocker",
+  "timestamp": "2026-09-12T10:20:00Z",
+  "summary": "Awaiting operator confirmation on gap capture",
+  "eventId": "e179a802f97b2d93"
+}

@@ -1145,6 +1145,43 @@ def finalize_gate_payload(
     except Exception:
         payload = dict(payload)
         payload["packagedInstallGa"] = {"present": False, "error": "wiring-helper-unavailable"}
+    # PRD 350 R9 — verification capture after gate evaluation.
+    try:
+        import wave_journal as capture
+
+        run_id = (os.environ.get("SW_CAPTURE_RUN_ID") or os.environ.get("SW_RUN_ID") or "").strip()
+        if not run_id:
+            run_dir = (os.environ.get("SW_RUN_DIR") or "").strip()
+            if run_dir:
+                run_id = Path(run_dir).name
+        if run_id and capture.capture_enabled(root):
+            phase_id = (os.environ.get("SW_PHASE_SLUG") or "gate").strip() or "gate"
+            v = str(payload.get("verdict") or verdict or "").lower()
+            failing = list(payload.get("requiredFailingChecks") or required_failing or [])
+            failing_ids = [str(x) for x in failing if str(x).strip()]
+            if v in {"pass", "green", "ok"} and not failing_ids:
+                outcome = "pass"
+            elif failing_ids:
+                outcome = "partial"
+            elif v in {"red", "fail", "blocked"}:
+                outcome = "fail"
+            else:
+                outcome = "pass"
+            evidence = ",".join(failing_ids)[:500]
+            digest = hashlib.sha256(
+                repr(sorted(failing_ids or [v])).encode()
+            ).hexdigest()[:16]
+            capture.emit_verification(
+                root=root,
+                run_id=run_id,
+                phase_id=phase_id,
+                outcome=outcome,
+                evidence=evidence,
+                provenance_ref=f"check-gate:{digest}",
+                summary=f"check-gate verdict={v or outcome}",
+            )
+    except Exception:
+        pass
     jsonio.emit(payload)
     return VERDICT_EXIT.get(verdict, 1), payload
 

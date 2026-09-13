@@ -21,6 +21,19 @@
     "treatNeutralAsPass": true,
     "neutralAllowlist": []
   },
+  "capture": {
+    "enabled": true,
+    "gapKeywords": [
+      "missing documented",
+      "undocumented",
+      "not covered by spec",
+      "gap identified",
+      "sw:gap-marker"
+    ],
+    "maxSummaryLength": 500,
+    "subAgentSidecarEnabled": true,
+    "maxFileSizeBytes": 52428800
+  },
   "dispatch": {
     "unregisteredParentModelTier": "deep"
   },
