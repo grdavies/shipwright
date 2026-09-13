@@ -212,18 +212,41 @@ def aggregate(split_verified: bool = False) -> dict[str, Any]:
 
 
 def health_snapshot() -> dict[str, Any]:
-    """Lightweight telemetry-health counters without full aggregate recalculation."""
+    """Lightweight telemetry-health counters without full aggregate recalculation.
+
+    Surfaces suspect ratio and confirms both cost-per-task metrics are present
+    (SC-M5 / SC-M6). Does not trigger a full ``aggregate`` recalculation.
+    """
     eligible = [r for r in _ingested_records if not r.get("telemetry_suspect")]
-    return {
-        "total_records": len(_ingested_records),
-        "suspect_count": _suspect_count,
-        "unverified_exclusion_count": _unverified_exclusion_count,
-        "cost_per_task_all_count": len(eligible),
-        "cost_per_verified_successful_task_count": sum(
-            1
+    total = len(_ingested_records)
+    suspect = _suspect_count
+    verified_count = sum(
+        1
+        for r in eligible
+        if r.get("verification_result") == "pass" and r.get("rework_required") is False
+    )
+    # Derive costs from in-memory records only — no aggregate() side effects.
+    all_cost = sum(_record_cost(r) for r in eligible)
+    cost_per_task_all: float | None = (all_cost / len(eligible)) if eligible else 0.0
+    if verified_count:
+        verified_cost = sum(
+            _record_cost(r)
             for r in eligible
             if r.get("verification_result") == "pass" and r.get("rework_required") is False
-        ),
+        )
+        cost_per_verified: float | None = verified_cost / verified_count
+    else:
+        cost_per_verified = None
+
+    return {
+        "total_records": total,
+        "suspect_count": suspect,
+        "unverified_exclusion_count": _unverified_exclusion_count,
+        "cost_per_task_all_count": len(eligible),
+        "cost_per_verified_successful_task_count": verified_count,
+        "suspect_ratio": (suspect / total) if total else 0.0,
+        "cost_per_task_all": cost_per_task_all,
+        "cost_per_verified_successful_task": cost_per_verified,
     }
 
 

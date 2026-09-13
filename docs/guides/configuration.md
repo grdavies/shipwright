@@ -91,3 +91,70 @@ Optional block under `models.routing` (all fields optional; defaults shown):
 - Unknown keys under `models.routing` fail
   `python3 scripts/check-gate.py --section models.routing`.
 
+
+### Advisory graduation and autoApply
+
+Advisory routing ships **read-only** (`autoApply: false`) until steady-state
+monitoring clears the SC-M1–SC-M7 gates. Do not enable auto-apply from a fresh
+install.
+
+**Pre-conditions for `autoApply: true`**
+
+1. SC-M1–SC-M7 thresholds met on the monitoring dashboard (null-purity,
+   telemetry-suspect ratio, verified-cost coverage, independence resolution,
+   advisory surfacing).
+2. At least **14 consecutive days** of production monitoring with no SC-M
+   regressions.
+3. `minSampleCount` set **explicitly** in `workflow.config.json` (do not rely on
+   the default of `10` — `python3 scripts/check-gate.py --section models.routing` warns when
+   auto-apply uses the default).
+4. `advisoryRouting.enabled: true` (auto-apply is rejected when disabled).
+
+**Rollback (no code revert)**
+
+Set `advisoryRouting.enabled: false` (or `autoApply: false`) in
+`workflow.config.json`. Dispatch immediately returns to tier-only selection;
+no package rollback is required.
+
+**Legacy records**
+
+Set `includeLegacyRecords: true` only when you intentionally want schema-less
+legacy attribution rows in comparison cohorts. Default is exclude-legacy.
+
+**Read-only (default) snippet**
+
+```json
+{
+  "models": {
+    "routing": {
+      "advisoryRouting": {
+        "enabled": true,
+        "autoApply": false,
+        "minSampleCount": 10,
+        "maxFreshnessAgeDays": 30
+      }
+    }
+  }
+}
+```
+
+**Auto-apply (after graduation) snippet**
+
+```json
+{
+  "models": {
+    "routing": {
+      "advisoryRouting": {
+        "enabled": true,
+        "autoApply": true,
+        "minSampleCount": 25,
+        "maxFreshnessAgeDays": 14,
+        "includeLegacyRecords": false
+      }
+    }
+  }
+}
+```
+
+Cross-reference: `scripts/dispatch-check.py` module docstring points here for
+operator graduation guidance.
