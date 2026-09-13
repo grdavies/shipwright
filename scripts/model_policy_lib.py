@@ -44,6 +44,49 @@ class ModelPolicy:
     def escalate_one_step(self, current_tier: str) -> str | None:
         return self.next_tier(current_tier)
 
+    def evaluate_advisory(
+        self,
+        recommendation: Mapping[str, Any],
+        *,
+        min_sample_count: int = 10,
+        max_freshness_age_days: int = 30,
+        now_ts: str | None = None,
+    ) -> bool:
+        """Return True when recommendation meets sample/freshness gates (R17/R26).
+
+        Centralises ``minSampleCount`` and ``maxFreshnessAgeDays`` checks (DL-5).
+        """
+        from datetime import datetime, timezone
+
+        sample_count = recommendation.get("sample_count")
+        if sample_count is None or int(sample_count) < int(min_sample_count):
+            return False
+
+        freshness = recommendation.get("data_freshness_ts")
+        if not isinstance(freshness, str) or not freshness.strip():
+            return False
+        try:
+            fresh_dt = datetime.fromisoformat(freshness.replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        if fresh_dt.tzinfo is None:
+            fresh_dt = fresh_dt.replace(tzinfo=timezone.utc)
+
+        if now_ts:
+            try:
+                now_dt = datetime.fromisoformat(now_ts.replace("Z", "+00:00"))
+            except ValueError:
+                now_dt = datetime.now(timezone.utc)
+        else:
+            now_dt = datetime.now(timezone.utc)
+        if now_dt.tzinfo is None:
+            now_dt = now_dt.replace(tzinfo=timezone.utc)
+
+        age_days = (now_dt - fresh_dt).total_seconds() / 86400.0
+        if age_days > float(max_freshness_age_days):
+            return False
+        return True
+
 
 def ordered_tiers(tiers: Mapping[str, str]) -> tuple[str, ...]:
     """Order tiers from ``models.tiers`` keys; insert ``mid`` between ``build`` and ``deep``."""
