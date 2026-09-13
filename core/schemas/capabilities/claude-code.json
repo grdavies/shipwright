@@ -1,0 +1,66 @@
+{
+  "host": "claude-code",
+  "surface": "cli",
+  "version_range": ">=1.0.0",
+  "os_scope": ["mac", "linux", "windows"],
+  "adapter_id": "claude-code",
+  "declared_at": "2026-09-12T00:00:00Z",
+  "observed_at": "2026-09-12T00:00:00Z",
+  "trust_level": "declared",
+  "capabilities": {
+    "load_context": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": ["plugin instruction placement is host-specific"],
+      "failure_behavior": "halt with BuildError"
+    },
+    "invoke_workflow": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt with diagnostic"
+    },
+    "inspect_tool_call": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": ["tool names require adapter map"],
+      "failure_behavior": "return unrecognised verdict"
+    },
+    "block_action": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "deny action"
+    },
+    "dispatch_reviewer": {
+      "implementation_mode": "explicit",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": ["subagent surface differs from Cursor Task tool"],
+      "failure_behavior": "halt dispatch"
+    },
+    "capture_progress": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "continue without progress capture"
+    },
+    "restore_state": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt restore"
+    },
+    "emit_hook": {
+      "implementation_mode": "native",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": ["ContextSwitch unsupported"],
+      "failure_behavior": "fail closed"
+    },
+    "resolve_instruction": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "omit instruction"
+    }
+  }
+}

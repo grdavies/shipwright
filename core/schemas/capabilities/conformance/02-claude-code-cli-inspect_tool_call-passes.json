@@ -1,0 +1,8 @@
+{
+  "host": "claude-code",
+  "surface": "cli",
+  "host_version": "1.0.109",
+  "capability": "inspect_tool_call",
+  "level": "passes",
+  "tested_at": "2026-09-12T18:00:00Z"
+}

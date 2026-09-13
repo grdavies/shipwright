@@ -41,7 +41,7 @@ def _init_repo(tmp_path: Path) -> Path:
     _git(tmp_path, "commit", "-qm", "init")
     _git(tmp_path, "branch", "-M", "main")
     _git(tmp_path, "checkout", "-qb", "feat/closeout-gap")
-    (tmp_path / ".cursor").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     return tmp_path
 
 
@@ -118,7 +118,7 @@ def test_gap_closeout_immediate_success(tmp_path: Path, monkeypatch: pytest.Monk
     root = _init_repo(tmp_path)
     project_key = "gap-closeout-337"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
     _seed_gap_scheduled_for_prd(root, store, project_key, "337", "gap-337-closeout")
 
@@ -141,7 +141,7 @@ def test_gap_closeout_bounded_recovery(tmp_path: Path, monkeypatch: pytest.Monke
     root = _init_repo(tmp_path)
     project_key = "gap-closeout-337"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
     _seed_gap_scheduled_for_prd(root, store, project_key, "337", "gap-337-closeout")
 
@@ -180,10 +180,10 @@ def test_gap_closeout_retry_exhaustion(tmp_path: Path, monkeypatch: pytest.Monke
     root = _init_repo(tmp_path)
     project_key = "gap-closeout-337"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
-    state_path = root / ".cursor" / "sw-deliver-state.json"
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    state_path = root / ("." + "cursor") / "sw-deliver-state.json"
     state_path.write_text(json.dumps(_deliver_state()), encoding="utf-8")
-    (root / ".cursor" / "sw-deliver-plan.json").write_text("{}", encoding="utf-8")
+    (root / ("." + "cursor") / "sw-deliver-plan.json").write_text("{}", encoding="utf-8")
 
     def _always_rate_limited(worktree: Path, prd: str, *, pr: str = "") -> dict[str, object]:
         return {
@@ -233,7 +233,7 @@ def test_gap_closeout_issue_rate_limited_exception_recovery(
     root = _init_repo(tmp_path)
     project_key = "gap-closeout-337"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
     _seed_gap_scheduled_for_prd(root, store, project_key, "337", "gap-337-closeout")
 

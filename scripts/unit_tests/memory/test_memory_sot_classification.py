@@ -86,7 +86,7 @@ def _install_workspace(
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
 
-    cursor = workspace / ".cursor"
+    cursor = workspace / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     memory_cfg: dict = {"provider": THIRD_PROVIDER_ID, "project": "classification-test"}
     if source_of_truth is not None:

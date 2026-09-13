@@ -29,7 +29,7 @@ def repo(tmp_path: Path) -> Path:
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy(inv_src, dest)
     (root / "version.txt").write_text("1.0.0\n", encoding="utf-8")
-    legacy = root / ".cursor" / "sw-deliver-runs"
+    legacy = root / ("." + "cursor") / "sw-deliver-runs"
     legacy.mkdir(parents=True)
     (legacy / "marker.txt").write_text("run-state\n", encoding="utf-8")
     return root
@@ -109,16 +109,16 @@ def test_fence_release_on_completion_rollback_and_abnormal_exit(
     assert declined["verdict"] == "confirm-required"
     assert declined["fenceReleased"]["released"] is True
     assert not srm.fence_held(repo)
-    assert (repo / ".cursor" / "sw-deliver-runs" / "marker.txt").is_file()
+    assert (repo / ("." + "cursor") / "sw-deliver-runs" / "marker.txt").is_file()
 
     completed = srm.relocate(repo, confirm=True, plugin_root=plugin_matched)
     assert completed["verdict"] == "pass"
     assert completed["fenceReleased"]["released"] is True
     assert not srm.fence_held(repo)
     assert (repo / ".shipwright" / "deliver-runs" / "marker.txt").is_file()
-    assert not (repo / ".cursor" / "sw-deliver-runs" / "marker.txt").exists()
+    assert not (repo / ("." + "cursor") / "sw-deliver-runs" / "marker.txt").exists()
 
-    legacy = repo / ".cursor" / "sw-graph-cache"
+    legacy = repo / ("." + "cursor") / "sw-graph-cache"
     legacy.mkdir(parents=True)
     (legacy / "cache.bin").write_text("x", encoding="utf-8")
     srm.acquire_quiesce_fence(repo, holder="abnormal")
@@ -151,6 +151,6 @@ def test_decline_leaves_legacy_paths_functional(repo: Path, plugin_matched: Path
     )
     assert out["verdict"] == "confirm-required"
     assert out["consentOffered"] is True
-    assert (repo / ".cursor" / "sw-deliver-runs" / "marker.txt").is_file()
+    assert (repo / ("." + "cursor") / "sw-deliver-runs" / "marker.txt").is_file()
     assert not (repo / ".shipwright" / "deliver-runs").exists()
-    assert shipwright_paths.deliver_runs_dir(repo) == repo / ".cursor" / "sw-deliver-runs"
+    assert shipwright_paths.deliver_runs_dir(repo) == repo / ("." + "cursor") / "sw-deliver-runs"

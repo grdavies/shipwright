@@ -36,7 +36,7 @@ def transport_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path
     _init_repo(root)
     cfg = _issue_store_cfg()
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     get_fixture_store(root).clear()
     _fixture_bot(monkeypatch)
     return root

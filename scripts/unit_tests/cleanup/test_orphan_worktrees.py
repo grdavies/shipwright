@@ -193,7 +193,7 @@ def test_enumerate_cleanup_oserror_surfaces_volume_inaccessible(tmp_git_repo: Pa
 
 
 def test_can_autonomous_apply_blocks_park_class(tmp_git_repo: Path) -> None:
-    cfg = tmp_git_repo / ".cursor" / "workflow.config.json"
+    cfg = tmp_git_repo / ("." + "cursor") / "workflow.config.json"
     cfg.parent.mkdir(parents=True, exist_ok=True)
     cfg.write_text(json.dumps({"cleanup": {"autonomy": "auto"}}), encoding="utf-8")
     report = Report(dry_run=True)

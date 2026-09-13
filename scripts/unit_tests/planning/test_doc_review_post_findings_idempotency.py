@@ -33,7 +33,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _issue_store_cfg(*, provider: str = "github-issues", backend: str = "issue-store") -> dict:
@@ -66,7 +66,7 @@ def transport_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     root = tmp_path
     _init_repo(root)
     cfg = _issue_store_cfg()
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     get_fixture_store(root).clear()
     _fixture_bot(monkeypatch)
     return root

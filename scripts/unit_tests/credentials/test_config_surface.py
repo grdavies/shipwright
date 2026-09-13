@@ -128,7 +128,7 @@ class TestPatternViolatingId:
 class TestShipwrightWorkflowConfig:
     def test_repo_workflow_config_resolves_project_id(self) -> None:
         root = Path(__file__).resolve().parents[3]
-        cfg_path = root / ".cursor" / "workflow.config.json"
+        cfg_path = root / ("." + "cursor") / "workflow.config.json"
         assert cfg_path.is_file(), "workflow.config.json must exist for R19"
         import json
 

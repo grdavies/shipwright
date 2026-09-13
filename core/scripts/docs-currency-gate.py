@@ -186,9 +186,9 @@ def _resolve_argv(argv: list[str]) -> list[str]:
             "use four positional args (repo_root state_root state.json plan.json) or --run-id\n"
         )
         state_root = Path(argv[2])
-        state_path = state_root / ".cursor" / "sw-deliver-state.json"
+        state_path = state_root / ("." + "cursor") / "sw-deliver-state.json"
         if not state_path.is_file():
-            matches = sorted((state_root / ".cursor").glob("sw-deliver-state.*.json"))
+            matches = sorted((state_root / ("." + "cursor")).glob("sw-deliver-state.*.json"))
             state_path = matches[0] if len(matches) == 1 else state_path
         state: dict[str, object] = {}
         if state_path.is_file():

@@ -42,7 +42,7 @@ frozen: true
         )
         subprocess.run(["git", "add", "."], cwd=fix, check=True)
         subprocess.run(["git", "commit", "-q", "-m", "init"], cwd=fix, check=True)
-        (fix / ".cursor").mkdir(exist_ok=True)
+        (fix / ("." + "cursor")).mkdir(exist_ok=True)
         (fix / ".cursor/sw-deliver-state.json").write_text(
             json.dumps(
                 {

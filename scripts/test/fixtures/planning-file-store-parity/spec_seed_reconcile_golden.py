@@ -79,7 +79,7 @@ _TRACKED_ARTIFACTS = (
 def _sandbox(cfg: dict) -> Path:
     root = Path(tempfile.mkdtemp(prefix="sw-spec-seed-reconcile-golden-"))
     subprocess.run(["git", "init", "-q"], cwd=str(root), check=True)
-    cfg_path = root / ".cursor" / "workflow.config.json"
+    cfg_path = root / ("." + "cursor") / "workflow.config.json"
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
     return root

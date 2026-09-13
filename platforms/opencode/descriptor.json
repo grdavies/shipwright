@@ -1,0 +1,10 @@
+{
+  "platform": "opencode",
+  "hooks": "lifecycle-plugin",
+  "skills": "projected",
+  "commands": "projected",
+  "rules": "adapter-resolved",
+  "subagents": "projected",
+  "mcp": "optional",
+  "memoryXport": "mcp"
+}

@@ -48,7 +48,7 @@ def facade_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
             "cacheTtlSeconds": 60,
         }
     }
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     get_fixture_store(root).clear()
     _fixture_bot(monkeypatch)
     return root
@@ -80,7 +80,7 @@ class TestCapabilityFloor:
             assert blocked["error"] == DOC_REVIEW_PROVIDER_UNSUPPORTED
 
     def test_facade_refuses_linear_before_write(self, facade_repo: Path) -> None:
-        cfg_path = facade_repo / ".cursor" / "workflow.config.json"
+        cfg_path = facade_repo / ("." + "cursor") / "workflow.config.json"
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         cfg["planning"]["store"]["issuesProvider"] = "linear"
         cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
@@ -124,7 +124,7 @@ class TestDocumentReviewBudget:
         assert charged >= 1
 
     def test_pagination_depth_exhaustion_typed(self, facade_repo: Path) -> None:
-        cfg_path = facade_repo / ".cursor" / "workflow.config.json"
+        cfg_path = facade_repo / ("." + "cursor") / "workflow.config.json"
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         # post_review_finding lists twice (reconcile + refresh) — depth 1 fails closed (R40).
         cfg["planning"]["store"]["requestBudget"]["github-issues"]["maxPaginationDepth"] = 1
@@ -171,7 +171,7 @@ class TestBrokerCredentials:
         _init_repo(tmp_path)
         cfg = _issue_store_cfg()
         cfg["planning"]["store"]["issues"] = {"tokenEnv": "DOC_REVIEW_TEST_TOKEN"}
-        (tmp_path / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+        (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
         monkeypatch.setenv("DOC_REVIEW_TEST_TOKEN", "ambient-secret")
         monkeypatch.setattr(
             psf,

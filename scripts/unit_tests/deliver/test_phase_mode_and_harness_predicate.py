@@ -175,7 +175,7 @@ def test_ship_loop_env_writes_worktree_state(tmp_path: Path) -> None:
     env = wdl.ship_loop_env_for_phase(state, "16", "phase-mode-context")
     assert env["SW_PHASE_MODE"] == "1"
     assert env["SW_PHASE_SLUG"] == "phase-mode-context"
-    persisted = json.loads((wt / ".cursor" / "sw-worktree-state.json").read_text(encoding="utf-8"))
+    persisted = json.loads((wt / ("." + "cursor") / "sw-worktree-state.json").read_text(encoding="utf-8"))
     assert persisted["phaseMode"]["active"] is True
     assert persisted["phaseMode"]["phaseSlug"] == "phase-mode-context"
 

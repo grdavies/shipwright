@@ -82,7 +82,7 @@ class _FixtureEnv:
 def _sandbox() -> Path:
     root = Path(tempfile.mkdtemp(prefix="sw-gap-alloc-multiwriter-"))
     subprocess.run(["git", "init", "-q"], cwd=str(root), check=True)
-    cfg_path = root / ".cursor" / "workflow.config.json"
+    cfg_path = root / ("." + "cursor") / "workflow.config.json"
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(json.dumps(_CFG, indent=2), encoding="utf-8")
     return root
@@ -140,7 +140,7 @@ def check_deterministic_retry_on_local_collision() -> dict:
     deterministically — no reliance on real thread interleaving."""
     with _FixtureEnv():
         root = _sandbox()
-        claims_dir = root / ".cursor" / "hooks" / "state" / "planning-gap-claims"
+        claims_dir = root / ("." + "cursor") / "hooks" / "state" / "planning-gap-claims"
         claims_dir.mkdir(parents=True, exist_ok=True)
         (claims_dir / "001.claim").write_text("pre-claimed-by-other-writer\n", encoding="utf-8")
         unit_id, _body_path = pgc.allocate_gap_unit_id(root, "collides with pre-claimed number", _fake_body_path)

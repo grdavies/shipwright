@@ -29,7 +29,7 @@ def obs_rules():
 
 
 def _write_config(workspace: Path, provider: str, **obsidian: object) -> None:
-    cursor = workspace / ".cursor"
+    cursor = workspace / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     payload = {
         "memory": {

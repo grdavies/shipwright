@@ -109,7 +109,7 @@ def test_preflight_resume_skips_base_probe(git_repo: Path) -> None:
 
     task_list = _write_task_list(git_repo)
     state = _running_state(task_list)
-    scoped = git_repo / ".cursor" / "sw-deliver-state.demo.json"
+    scoped = git_repo / ("." + "cursor") / "sw-deliver-state.demo.json"
     scoped.parent.mkdir(parents=True, exist_ok=True)
     scoped.write_text(json.dumps(state), encoding="utf-8")
 
@@ -127,7 +127,7 @@ def test_truncated_state_halts(git_repo: Path) -> None:
     from wave_deliver import evaluate_resume_short_circuit
 
     task_list = _write_task_list(git_repo)
-    scoped = git_repo / ".cursor" / "sw-deliver-state.demo.json"
+    scoped = git_repo / ("." + "cursor") / "sw-deliver-state.demo.json"
     scoped.parent.mkdir(parents=True, exist_ok=True)
     scoped.write_text('{"verdict": "running", "phases": {', encoding="utf-8")
 

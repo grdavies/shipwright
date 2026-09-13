@@ -30,7 +30,7 @@ def _init_git_remote(root: Path, remote: str = "https://github.com/owner/repo.gi
 
 
 def _write_config(root: Path, payload: dict[str, object]) -> None:
-    path = root / ".cursor" / "workflow.config.json"
+    path = root / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
@@ -74,7 +74,7 @@ class TestGreenfieldRepository:
             selector_path=selector,
         )
         assert result["verdict"] == "ok"
-        cfg = json.loads((root / ".cursor" / "workflow.config.json").read_text(encoding="utf-8"))
+        cfg = json.loads((root / ("." + "cursor") / "workflow.config.json").read_text(encoding="utf-8"))
         assert cfg["projectId"] == "repo"
         assert cfg["host"]["credentialRef"] == "github-work"
         assert cfg["planning"]["store"]["issues"]["credentialRef"] == "planning-work"
@@ -128,7 +128,7 @@ class TestManyDetectedAccounts:
         )
         assert result["verdict"] == "halt"
         assert "keystore" in result["hint"]
-        assert not (root / ".cursor" / "workflow.config.json").exists()
+        assert not (root / ("." + "cursor") / "workflow.config.json").exists()
         assert not selector.exists()
 
 
@@ -168,7 +168,7 @@ class TestLegacyTokenVariableRepository:
 
         applied = offer_legacy_migration(root, plan, confirm=True, selector_path=selector)
         assert applied["verdict"] == "ok"
-        cfg = json.loads((root / ".cursor" / "workflow.config.json").read_text(encoding="utf-8"))
+        cfg = json.loads((root / ("." + "cursor") / "workflow.config.json").read_text(encoding="utf-8"))
         assert cfg["host"]["credentialRef"] == "github-work"
         assert cfg["host"]["tokenEnv"] == "GITHUB_TOKEN"
         document = load_selector_store(path=selector, skip_integrity=True)

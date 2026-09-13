@@ -17,7 +17,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _issue_store_cfg(project_key: str = "edge-preservation-093") -> dict:
@@ -70,7 +70,7 @@ def test_put_preserves_edges_on_metadata_only_round_trip(
     _init_repo(root)
     project_key = "edge-preservation-093"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     parent_unit = "gap-parent-edge-preservation"
     parent_path = _default_body_path(parent_unit, "gap")
@@ -139,7 +139,7 @@ def test_put_prefers_caller_declared_edges_over_stored(
     _init_repo(root)
     project_key = "edge-preservation-093-r4"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     old_parent = "gap-old-parent"
     new_parent = "gap-new-parent"

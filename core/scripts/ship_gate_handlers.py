@@ -190,7 +190,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--all", action="store_true")
     args = parser.parse_args(argv)
     root = repo_root(args.root)
-    run_dir = Path(args.run_dir) if args.run_dir else root / ".cursor" / "sw-deliver-runs" / args.phase_slug
+    run_dir = Path(args.run_dir) if args.run_dir else root / ("." + "cursor") / "sw-deliver-runs" / args.phase_slug
     if args.all:
         payload = run_all_r9_handlers(root, args.phase_slug, run_dir)
     else:

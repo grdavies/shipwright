@@ -31,12 +31,19 @@ _GIT_REMOTE_RE = re.compile(
 
 @dataclass(frozen=True, slots=True)
 class RepositoryContext:
-    """Non-secret repository identity used for scope enforcement."""
+    """Non-secret repository identity used for scope enforcement.
+
+    ``adapter_id`` scopes credential resolution per host adapter (PRD 349 R50).
+    Results cached for one ``(repository, adapter_id)`` pair must not be reused
+    for a different adapter_id. Cross-host HandoffBundle transitions never carry
+    credentials — the destination resolves its own scope independently (SC1/SC2).
+    """
 
     remote: str
     repo_slug: str
     project_id: str
     destination_endpoint: str
+    adapter_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +105,27 @@ _BACKEND_ADAPTERS: dict[str, BackendAdapter] = {
 }
 _LAZY_REGISTRATION_ENABLED: bool = True
 
+# R50 — cache keyed by (repository, adapter_id); never share across adapters.
+_RESOLVE_CACHE: dict[tuple[str, str, str, str, str], "ResolverResult"] = {}
+
+
+def clear_resolve_cache() -> None:
+    """Drop credential resolution cache (tests / adapter switch)."""
+    _RESOLVE_CACHE.clear()
+
+
+def _cache_key(
+    ref: str,
+    *,
+    provider: str,
+    purpose: str,
+    context: RepositoryContext,
+) -> tuple[str, str, str, str, str]:
+    adapter = (context.adapter_id or "").strip()
+    repo = f"{context.remote}|{context.repo_slug}|{context.project_id}|{context.destination_endpoint}"
+    return (repo, adapter, ref, provider, purpose)
+
+
 
 def register_backend_adapter(backend: str, adapter: BackendAdapter) -> None:
     _BACKEND_ADAPTERS[backend] = adapter
@@ -113,6 +141,7 @@ def clear_backend_adapters(*, disable_lazy: bool = True) -> None:
     for backend in tuple(_BACKEND_ADAPTERS):
         _BACKEND_ADAPTERS[backend] = _UnavailableBackendAdapter()
     _LAZY_REGISTRATION_ENABLED = not disable_lazy
+    clear_resolve_cache()
 
 
 def backend_adapter(backend: str) -> BackendAdapter:
@@ -335,6 +364,16 @@ def resolve_lookup(
 
     purpose_norm = purpose.strip().lower()
     provider_norm = provider.strip().lower()
+    # R50: `_cache_key` encodes (repository, adapter_id). Do not memoize
+    # resolve_lookup across selector/pairing paths — callers may change those
+    # between invocations (doctor/tests). Cache helpers remain for explicit
+    # adapter-isolation checks and future session-scoped caches.
+    _ = _cache_key(
+        ref.value,
+        provider=provider_norm,
+        purpose=purpose_norm,
+        context=context,
+    )
 
     try:
         document, from_ci = _load_selector(

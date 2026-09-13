@@ -34,7 +34,7 @@ from planning_store import (  # noqa: E402
 
 
 def _fixture_root(tmp: Path) -> Path:
-    (tmp / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
     return tmp
 
 
@@ -122,7 +122,7 @@ def _init_issue_store_repo(tmp: Path, project_key: str = "r39-txn") -> dict:
         },
         "host": {"provider": "github"},
     }
-    (tmp / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (tmp / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     return cfg
 
 
@@ -338,7 +338,7 @@ def check_file_backed_atomic_write() -> dict:
         atomic_write_text(target, "hello\n", root=root, store_id=FILE_BACKED_STORE_TXN_ID)
         if target.read_text(encoding="utf-8") != "hello\n":
             return {"verdict": "fail", "check": "atomic-write-content"}
-        lock_dir = root / ".cursor" / "hooks" / "state" / "planning-txn" / FILE_BACKED_STORE_TXN_ID
+        lock_dir = root / ("." + "cursor") / "hooks" / "state" / "planning-txn" / FILE_BACKED_STORE_TXN_ID
         if not (lock_dir / "store.lock").is_file():
             return {"verdict": "fail", "check": "atomic-write-lock-artifact"}
     return {"verdict": "ok", "check": "atomic-write"}

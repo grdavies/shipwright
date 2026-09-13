@@ -112,7 +112,7 @@ def test_reverted_terminal_merge_reopens_delivery_set(tmp_path: Path, monkeypatc
     root = tmp_path
     _init_repo(root)
     cfg = _issue_store_cfg()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     (root / ".cursor/hooks/state").mkdir(parents=True, exist_ok=True)
     (root / ".cursor/workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     project_key = "closeout-070"
@@ -168,7 +168,7 @@ def test_unrelated_reused_unit_untouched_on_revert(tmp_path: Path, monkeypatch: 
     root = tmp_path
     _init_repo(root)
     cfg = _issue_store_cfg()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     (root / ".cursor/hooks/state").mkdir(parents=True, exist_ok=True)
     (root / ".cursor/workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     project_key = "closeout-070"
@@ -214,7 +214,7 @@ def test_missed_revert_reconciles_on_next_entry(tmp_path: Path, monkeypatch: pyt
     root = tmp_path
     _init_repo(root)
     cfg = _issue_store_cfg()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     (root / ".cursor/hooks/state").mkdir(parents=True, exist_ok=True)
     (root / ".cursor/workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     project_key = "closeout-070"

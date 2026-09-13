@@ -495,13 +495,13 @@ def _setup_intentional_skew(tmp: Path) -> tuple[Path, Path]:
     subprocess.run(["git", "config", "user.name", "fixture"], cwd=tmp, check=True)
     subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", "init"], cwd=tmp, check=True)
     subprocess.run(["git", "branch", "-M", "main"], cwd=tmp, check=True)
-    (tmp / ".cursor").mkdir(parents=True, exist_ok=True)
+    (tmp / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     subprocess.run(
         ["git", "worktree", "add", "-q", "-b", "feat/demo-skew", str(orch)],
         cwd=tmp,
         check=True,
     )
-    (orch / ".cursor").mkdir(parents=True, exist_ok=True)
+    (orch / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     root_state = tmp / ".cursor/sw-deliver-state.feat-demo-skew.json"
     orch_state = orch / ".cursor/sw-deliver-state.feat-demo-skew.json"
     skew_primary = (

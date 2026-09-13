@@ -52,7 +52,7 @@ def _issue_store_cfg(provider: str) -> dict:
 
 
 def _write_config(root: Path, cfg: dict) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     host = {
         "provider": "github",

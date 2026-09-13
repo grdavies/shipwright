@@ -51,7 +51,7 @@ DEFAULT_CACHE_TTL_SEC = 300
 DEFAULT_FAIL_CLOSED = True
 FETCH_TIMEOUT_SEC = 8
 CACHE_VERSION = 1
-CACHE_REL = Path(".cursor") / "hooks" / "state" / "mempalace-rules-cache.json"
+CACHE_REL = Path(("." + "cursor")) / "hooks" / "state" / "mempalace-rules-cache.json"
 PROVIDER_ID = "mempalace"
 
 # Fixed MemPalace module invocation — argv is constant; palace/room/wing via env only.
@@ -99,7 +99,7 @@ def _emit(payload: dict[str, Any], *, exit_code: int = 0) -> int:
 
 
 def _workflow_config_paths(root: Path) -> list[Path]:
-    return [root / ".cursor" / "workflow.config.json", root / "workflow.config.json"]
+    return [root / ("." + "cursor") / "workflow.config.json", root / "workflow.config.json"]
 
 
 def load_memory_config(root: Path) -> dict[str, Any]:

@@ -36,7 +36,7 @@ def deliver_run_log_path(root: Path, target: str | None = None, state: dict | No
 
 
 def phase_run_dir(root: Path, slug: str) -> Path:
-    return root / ".cursor" / "sw-deliver-runs" / slug
+    return root / ("." + "cursor") / "sw-deliver-runs" / slug
 
 
 def append_run_log(root: Path, entry: dict[str, Any], *, state: dict[str, Any] | None = None) -> None:

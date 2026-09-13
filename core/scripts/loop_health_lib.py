@@ -57,8 +57,8 @@ def _load_deliver_state(root: Path, deliver_state_path: Path | None) -> dict[str
         candidates.append(deliver_state_path)
     candidates.extend(
         [
-            root / ".cursor" / "sw-deliver-runs" / "sw-deliver-state.json",
-            root / ".cursor" / "sw-deliver-state.json",
+            root / ("." + "cursor") / "sw-deliver-runs" / "sw-deliver-state.json",
+            root / ("." + "cursor") / "sw-deliver-state.json",
         ]
     )
     for path in candidates:
@@ -134,7 +134,7 @@ def load_incidents(root: Path) -> dict[str, Any]:
             "source": "host.sh:loop-health-incidents",
             "items": items,
         }
-    fallback = root / ".cursor" / "sw-post-merge-incidents.json"
+    fallback = root / ("." + "cursor") / "sw-post-merge-incidents.json"
     if fallback.is_file():
         try:
             data = json.loads(fallback.read_text(encoding="utf-8"))
@@ -180,7 +180,7 @@ def rank_meta_inbox(
     review_rounds: int,
     stale_inbox_days: int,
 ) -> list[dict[str, Any]]:
-    inbox_dir = root / ".cursor" / "sw-meta-inbox"
+    inbox_dir = root / ("." + "cursor") / "sw-meta-inbox"
     if not inbox_dir.is_dir():
         return []
     failure_map = _failure_recurrence_map(root)

@@ -56,7 +56,7 @@ def _init_git(path: Path) -> None:
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     _init_git(root)
     return root
 

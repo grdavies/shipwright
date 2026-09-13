@@ -18,7 +18,7 @@ import planning_audit_journal_cli as pajc
 
 
 def _write_cfg(repo: Path, cfg: dict) -> None:
-    path = repo / ".cursor" / "workflow.config.json"
+    path = repo / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
 

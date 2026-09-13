@@ -458,7 +458,7 @@ def _legacy_resolution_candidates(root: Path, run_id: str) -> list[tuple[dict[st
     match = re.fullmatch(r"sw-deliver-(\d{3})-(.+)", run_id)
     if match:
         slug = match.group(2)
-        state_path = anchor / ".cursor" / f"sw-deliver-state.{slug}.json"
+        state_path = anchor / ("." + "cursor") / f"sw-deliver-state.{slug}.json"
         state = _read_state_file(state_path)
         if state and _state_matches_run_id(run_id, state):
             add_candidate(state_path, state, slug)

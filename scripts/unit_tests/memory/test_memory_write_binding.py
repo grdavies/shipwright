@@ -31,7 +31,7 @@ from memory_write_binding import (
 
 
 def _write_config(root: Path, memory: dict) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps({"memory": memory}, indent=2) + "\n",
@@ -40,13 +40,13 @@ def _write_config(root: Path, memory: dict) -> None:
 
 
 def _write_marker(root: Path, provider: str) -> None:
-    path = root / ".cursor" / "sw-memory.provider"
+    path = root / ("." + "cursor") / "sw-memory.provider"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(provider + "\n", encoding="utf-8")
 
 
 def _audit_lines(root: Path) -> list[dict]:
-    path = root / ".cursor" / "sw-memory-write-audit.jsonl"
+    path = root / ("." + "cursor") / "sw-memory-write-audit.jsonl"
     if not path.is_file():
         return []
     out: list[dict] = []

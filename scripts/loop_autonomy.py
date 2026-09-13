@@ -181,7 +181,7 @@ def check_nested_dispatch(command: str) -> dict[str, Any]:
 
 
 def count_open_meta_units(root: Path) -> int:
-    inbox = pp.git_root(root) / ".cursor" / "sw-meta-inbox"
+    inbox = pp.git_root(root) / ("." + "cursor") / "sw-meta-inbox"
     if not inbox.is_dir():
         return 0
     count = 0

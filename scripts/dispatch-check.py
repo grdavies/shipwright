@@ -483,7 +483,7 @@ def _main_legacy_positional(argv: list[str]) -> int:
             config = tail[i + 1]
             break
 
-    config_path = Path(config) if config else Path(root) / ".cursor" / "workflow.config.json"
+    config_path = Path(config) if config else Path(root) / ("." + "cursor") / "workflow.config.json"
     if not config_path.is_file():
         config_path = Path(root) / "workflow.config.json"
     models = {}
@@ -713,7 +713,7 @@ def main(argv: list[str] | None = None) -> int:
             }))
             return 20
 
-    config_path = Path(args.config) if args.config else root / ".cursor" / "workflow.config.json"
+    config_path = Path(args.config) if args.config else root / ("." + "cursor") / "workflow.config.json"
     if not config_path.is_file():
         config_path = root / "workflow.config.json"
     models = {}

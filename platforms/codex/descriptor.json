@@ -1,0 +1,10 @@
+{
+  "platform": "codex",
+  "hooks": "native",
+  "skills": "ref-index",
+  "commands": "projected",
+  "rules": "adapter-resolved",
+  "subagents": "native",
+  "mcp": "optional",
+  "memoryXport": "mcp"
+}

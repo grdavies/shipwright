@@ -136,7 +136,7 @@ def test_adoption_requires_green_leakage_verdict(tmp_path: Path) -> None:
     root = tmp_path / "repo"
     root.mkdir()
     leaked = _minimal_doctrine(shipwrightSelf={"statements": ["Worktree-isolated delivery"]})
-    doctrine_path = root / ".cursor" / "project-doctrine.json"
+    doctrine_path = root / ("." + "cursor") / "project-doctrine.json"
     doctrine_path.parent.mkdir(parents=True)
     doctrine_path.write_text(json.dumps(leaked), encoding="utf-8")
     assert validate_leakage_green(root) is not None

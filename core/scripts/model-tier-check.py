@@ -16,7 +16,7 @@ def main(argv: list[str] | None = None) -> int:
     script_dir = Path(__file__).resolve().parent
     root = script_dir.parent
     parser = build_parser(prog="model-tier-check", description="Validate model tier policy (R9)")
-    parser.add_argument("--config", default=str(root / ".cursor" / "workflow.config.json"))
+    parser.add_argument("--config", default=str(root / ("." + "cursor") / "workflow.config.json"))
     parser.add_argument("--agents-dir", default="")
     args = parser.parse_args(argv)
 

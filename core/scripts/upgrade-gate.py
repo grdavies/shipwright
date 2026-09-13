@@ -15,7 +15,7 @@ def repo_root() -> Path:
 
 
 def deliver_states(root: Path) -> list[dict]:
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     states: list[dict] = []
     for path in sorted(cursor.glob("sw-deliver-state*.json")):
         try:

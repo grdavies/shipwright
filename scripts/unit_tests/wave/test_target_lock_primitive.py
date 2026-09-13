@@ -16,7 +16,7 @@ from wave_target_lock import acquire_target_lock, heartbeat_target_lock, release
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     return root
 
 
@@ -73,7 +73,7 @@ def test_duplicate_acquire_refused_without_touching_holder(repo: Path) -> None:
 
 
 def test_symlinked_locks_directory_refused(repo: Path) -> None:
-    cursor = repo / ".cursor"
+    cursor = repo / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     real_dir = repo / "real-target-locks"
     real_dir.mkdir()

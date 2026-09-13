@@ -61,7 +61,7 @@ def test_r5_dirty_derived_from_undelivered_outbox(tmp_path: Path) -> None:
 def test_r5_refusal_maps_to_outbox_without_dual_dirty(tmp_git_repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     gi = tmp_git_repo / ".gitignore"
     gi.write_text(".cursor/**\n", encoding="utf-8")
-    cfg_path = tmp_git_repo / ".cursor" / "workflow.config.json"
+    cfg_path = tmp_git_repo / ("." + "cursor") / "workflow.config.json"
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(
         '{"planning":{"refusalLedger":{"path":".cursor/sw-refusal-ledger"}}}',

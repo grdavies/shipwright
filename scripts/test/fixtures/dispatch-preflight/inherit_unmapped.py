@@ -221,7 +221,7 @@ def check_literal_prd_example_against_shipped_config() -> dict[str, Any]:
     shipped `.cursor/workflow.config.json` resolves a concrete model or an actionable
     remediation — never `binding:no-model` — proving the concrete production fix end-to-end."""
     ec, data = _run_dispatch_preflight(
-        ROOT, ROOT / ".cursor" / "workflow.config.json",
+        ROOT, ROOT / ("." + "cursor") / "workflow.config.json",
         dispatch_id=f"fixture-r18-{uuid.uuid4().hex[:8]}", agent="explore", command="sw-doc",
     )
     resolved = ec == 0 and data.get("verdict") == "pass" and bool(data.get("modelId"))

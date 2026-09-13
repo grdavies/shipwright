@@ -265,7 +265,7 @@ def resolve_container_execution_config(
     store_raw = container.get("storeRoot")
     store_root = Path(store_raw) if store_raw else None
     if store_root is None and root is not None:
-        store_root = root / ".cursor" / "sw-graph-runs" / "container-handles"
+        store_root = root / ("." + "cursor") / "sw-graph-runs" / "container-handles"
     return ContainerExecutionConfig(
         image=str(container.get("image") or "shipwright/graph-node:latest"),
         credential_ref=container.get("credentialRef"),

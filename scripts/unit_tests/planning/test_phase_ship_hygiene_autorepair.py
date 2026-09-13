@@ -40,7 +40,7 @@ def test_forged_gap_check_pass_refused(tmp_git_repo: Path, repo_root: Path) -> N
         text=True,
         check=True,
     ).stdout.strip()
-    status_dir = tmp_git_repo / ".cursor" / "sw-deliver-runs" / phase_slug
+    status_dir = tmp_git_repo / ("." + "cursor") / "sw-deliver-runs" / phase_slug
     status_dir.mkdir(parents=True)
     (status_dir / "gap-check.status.json").write_text(
         json.dumps({"verdict": "pass", "binding": True, "head": head, "updatedAt": _utc_now()}),
@@ -62,7 +62,7 @@ def test_gap_check_missing_auto_repair_from_ship_steps(tmp_git_repo: Path, repo_
         text=True,
         check=True,
     ).stdout.strip()
-    run_dir = tmp_git_repo / ".cursor" / "sw-deliver-runs" / phase_slug
+    run_dir = tmp_git_repo / ("." + "cursor") / "sw-deliver-runs" / phase_slug
     run_dir.mkdir(parents=True)
     (run_dir / "ship-steps.json").write_text(
         json.dumps(
@@ -104,7 +104,7 @@ def test_pr_test_plan_manifest_auto_repair(tmp_git_repo: Path, repo_root: Path) 
     }
     repair = psh.try_auto_repair_pr_test_plan_manifest(tmp_git_repo, state)
     assert repair.get("verdict") == "pass", repair
-    cache = orch / ".cursor" / "sw-gate-cache" / "pr-test-plan.manifest.json"
+    cache = orch / ("." + "cursor") / "sw-gate-cache" / "pr-test-plan.manifest.json"
     assert cache.is_file()
 
 

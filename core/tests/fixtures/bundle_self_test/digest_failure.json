@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "HandoffBundle@v1",
+  "exportedAt": "2026-08-20T12:00:00Z",
+  "expiresAt": "2099-01-01T00:00:00Z",
+  "goal": "phase1 fixture",
+  "currentState": {
+    "summary": "ok",
+    "phaseStatus": "in-progress"
+  },
+  "resolvedDecisions": [],
+  "unresolvedDecisions": [],
+  "activeNode": null,
+  "blockers": [],
+  "evidence": [],
+  "changedFiles": [
+    "x.py"
+  ],
+  "relevantRules": [],
+  "nextAction": {
+    "action": "continue",
+    "detail": "test"
+  },
+  "workflowDigest": "sha256:775ca99fe5702307d9089598d3d4b478d4e0ec5ec3446f5141d51e46c68f0558",
+  "bundleDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+}

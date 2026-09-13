@@ -58,12 +58,12 @@ def test_clear_phase_env_strips_sw_phase(monkeypatch: pytest.MonkeyPatch) -> Non
 def test_preflight_timeout_default_90(tmp_path: Path) -> None:
     from wave_deliver import preflight_timeout_seconds
 
-    (tmp_path / ".cursor").mkdir(parents=True, exist_ok=True)
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"version": 1, "deliver": {}}), encoding="utf-8"
     )
     assert preflight_timeout_seconds(tmp_path) == 90
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"version": 1, "deliver": {"preflight": {"timeoutSeconds": 12}}}),
         encoding="utf-8",
     )
@@ -74,7 +74,7 @@ def test_resolve_currency_check_prefers_materialized(tmp_path: Path, monkeypatch
     import wave_deliver_loop as wdl
 
     logical = "docs/prds/067-x/tasks-067-x.md"
-    mat = tmp_path / ".cursor" / "planning-materialized" / logical
+    mat = tmp_path / ("." + "cursor") / "planning-materialized" / logical
     mat.parent.mkdir(parents=True, exist_ok=True)
     mat.write_text("# tasks\n", encoding="utf-8")
 

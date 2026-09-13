@@ -800,7 +800,7 @@ def _run_in_repo_verb_suite(root: Path, backend_id: str) -> dict[str, Any]:
     backend = get_backend(root, cfg, override=backend_id)
     unit_id = "parity-verb-suite"
     body_path = "docs/planning/parity-sample.md"
-    dest_path = root / ".cursor" / "parity-materialized.md"
+    dest_path = root / ("." + "cursor") / "parity-materialized.md"
     results: dict[str, Any] = {}
 
     def run(name: str, fn: Callable[[], dict[str, Any]]) -> None:

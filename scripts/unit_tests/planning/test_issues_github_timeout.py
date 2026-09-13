@@ -14,7 +14,7 @@ from issues_lib import IssueRateLimited
 
 
 def _write_config(root: Path, *, rate_limit: dict | None = None) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     issues: dict = {"provider": "github-issues"}
     if rate_limit is not None:

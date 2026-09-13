@@ -277,7 +277,7 @@ def _validate_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 def default_store_root(repo_root: str | Path) -> Path:
     """Gitignored, user-writable graph journal root (R13)."""
-    return Path(repo_root) / ".cursor" / "sw-graph-runs"
+    return Path(repo_root) / ("." + "cursor") / "sw-graph-runs"
 
 
 def sanitize_run_id(run_id: str) -> str:

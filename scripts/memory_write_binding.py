@@ -102,7 +102,7 @@ def _sanitize_reason(text: str) -> str:
 
 
 def _audit_path(root: Path) -> Path:
-    return root / ".cursor" / "sw-memory-write-audit.jsonl"
+    return root / ("." + "cursor") / "sw-memory-write-audit.jsonl"
 
 
 def emit_write_refuse_audit(

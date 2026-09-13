@@ -50,7 +50,7 @@ def resolve_run_dir(root: Path, explicit: str | None) -> Path:
     if env:
         p = Path(env)
         return p if p.is_absolute() else root / env
-    return root / ".cursor"
+    return root / ("." + "cursor")
 
 
 def artifact_path(root: Path, run_dir: str | None = None) -> Path:

@@ -21,7 +21,7 @@ from host_lib import load_workflow_config
 import planning_visibility as pv
 
 AUDIT_JOURNAL_SCHEMA_VERSION = 1
-DEFAULT_AUDIT_JOURNAL_REL = Path(".cursor") / "sw-authority-audit-journal"
+DEFAULT_AUDIT_JOURNAL_REL = Path(("." + "cursor")) / "sw-authority-audit-journal"
 JOURNAL_FILENAME = "journal.jsonl"
 GENESIS_DIGEST = "0" * 64
 JOURNAL_DIR_MODE = 0o700

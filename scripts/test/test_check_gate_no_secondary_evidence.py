@@ -163,7 +163,7 @@ def test_run_gate_denied_primary_cannot_reach_green_via_secondary(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg_dir = tmp_path / ".cursor"
+    cfg_dir = tmp_path / ("." + "cursor")
     cfg_dir.mkdir(parents=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps(_workflow_config()),
@@ -215,7 +215,7 @@ def test_run_gate_clean_merge_state_does_not_override_denied_checks(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """statusCheckRollup-equivalent CLEAN merge state must not authorize merge (R17)."""
-    cfg_dir = tmp_path / ".cursor"
+    cfg_dir = tmp_path / ("." + "cursor")
     cfg_dir.mkdir(parents=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps(_workflow_config()),

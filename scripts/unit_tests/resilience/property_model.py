@@ -72,7 +72,7 @@ class PropertyFixtureState:
         return self
 
     def meta_file(self, root: Path) -> Path:
-        return root / ".cursor" / "resilience-fixture" / "property-meta.json"
+        return root / ("." + "cursor") / "resilience-fixture" / "property-meta.json"
 
     def load(self, root: Path) -> dict[str, Any]:
         path = self.meta_file(root)

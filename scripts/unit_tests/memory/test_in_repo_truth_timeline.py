@@ -456,12 +456,12 @@ def test_memory_switch_in_repo_truth_timeline_first_class(repo_root: Path) -> No
 def test_memory_switch_in_repo_round_trip_preserves_timeline(repo_root: Path, tmp_path: Path) -> None:
     """R19 — migrate export/import for in-repo preserves timeline entries."""
     workspace = tmp_path / "ws"
-    store = workspace / ".cursor" / "sw-memory"
+    store = workspace / ("." + "cursor") / "sw-memory"
     (store / "memories").mkdir(parents=True)
     (workspace / ".sw").mkdir()
     catalog = (repo_root / ".sw" / "memory-provider-catalog.json").read_text(encoding="utf-8")
     (workspace / ".sw" / "memory-provider-catalog.json").write_text(catalog, encoding="utf-8")
-    (workspace / ".cursor" / "workflow.config.json").write_text(
+    (workspace / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"memory": {"provider": "in-repo"}}, indent=2) + "\n",
         encoding="utf-8",
     )

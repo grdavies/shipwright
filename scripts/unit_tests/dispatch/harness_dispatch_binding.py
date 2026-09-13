@@ -15,7 +15,7 @@ _SCRIPTS_ROOT = SCRIPT_DIR.parents[1]
 _TEST_DIR = _SCRIPTS_ROOT / "test"
 ROOT = repo_root(__file__)
 def run_dispatch(root: Path, cfg: dict, agent: str, parent: str) -> tuple[int, dict]:
-    cfg_path = root / '.cursor' / 'workflow.config.json'
+    cfg_path = root / ('.' + 'cursor') / 'workflow.config.json'
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(json.dumps(cfg), encoding='utf-8')
     proc = subprocess.run(

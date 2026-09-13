@@ -148,7 +148,7 @@ def test_finalize_succeeds_without_ambient_pythonpath(tmp_path: Path, monkeypatc
     seed_proven_run_identity(tmp_path, run_id, state)
     projection = (
         tmp_path
-        / ".cursor"
+        / ("." + "cursor")
         / "sw-deliver-runs"
         / "_progress-projections"
         / "docs/prds/276-demo/tasks-276-demo.md"

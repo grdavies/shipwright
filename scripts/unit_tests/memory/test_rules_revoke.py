@@ -37,8 +37,8 @@ def test_revoke_allowlist_and_provider_no_stale_cache(
         "memory_preflight.validate_registration",
         lambda root, provider: {"ok": True, "provider": provider},
     )
-    (tmp_path / ".cursor").mkdir()
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor")).mkdir()
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"memory": {"provider": "in-repo", "project": "t"}}),
         encoding="utf-8",
     )

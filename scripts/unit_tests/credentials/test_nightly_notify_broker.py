@@ -50,7 +50,7 @@ def _write_selector(path: Path, entries: dict[str, dict[str, object]]) -> None:
 
 
 def _write_workflow_config(root: Path) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps(

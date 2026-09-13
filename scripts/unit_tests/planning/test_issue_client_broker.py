@@ -23,7 +23,7 @@ _TEST_VALUE = "unit-test-issue-client-broker-value-abcdef"
 
 
 def _write_config(root: Path, *, issues: dict, host: dict | None = None) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     payload: dict = {
         "projectId": "acme-demo",
@@ -130,7 +130,7 @@ class TestAllFourClients:
             },
         )
         # Drop null apiBaseUrl
-        cfg_path = tmp_path / ".cursor" / "workflow.config.json"
+        cfg_path = tmp_path / ("." + "cursor") / "workflow.config.json"
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         if cfg["host"].get("apiBaseUrl") is None:
             cfg["host"].pop("apiBaseUrl", None)

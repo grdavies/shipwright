@@ -45,6 +45,20 @@ def _discover_platforms(root: Path) -> tuple[str, ...]:
     return tuple(names) if names else PLATFORMS
 
 
+def _credential_platforms(root: Path) -> tuple[str, ...]:
+    """Platforms that package credential surfaces into dist (zipapp hosts).
+
+    Codex/OpenCode emitters (PRD 349) are discovered for ``sw generate --all`` but
+    do not ship ``shipwright*.pyz`` credential trees — exclude them from drift.
+    """
+    discovered = _discover_platforms(root)
+    with_pyz = tuple(p for p in discovered if _resolve_zipapp(root, p) is not None)
+    if with_pyz:
+        return with_pyz
+    # Before first generate, zipapps may be absent — keep historical hosts.
+    return tuple(p for p in discovered if p in PLATFORMS) or PLATFORMS
+
+
 def credential_affected_rel_paths(root: Path | None = None) -> list[str]:
     """Return repo-relative paths for credential-affected broker and workflow surfaces."""
     base = root or REPO_ROOT
@@ -138,7 +152,7 @@ def credential_dist_drift(root: Path | None = None) -> list[str]:
             continue
         digest = _file_hash(canonical)
         arcname = _zipapp_arcname(rel)
-        for platform in _discover_platforms(base):
+        for platform in _credential_platforms(base):
             if arcname is not None:
                 pyz = _resolve_zipapp(base, platform)
                 label = f"dist/{platform}/shipwright.pyz#{arcname}"

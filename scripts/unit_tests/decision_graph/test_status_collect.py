@@ -17,7 +17,7 @@ from status_collect import collect_decision_frontier_summary  # noqa: E402
 
 
 def _write_graph(root: Path, unit_id: str, document: dict) -> Path:
-    path = root / ".cursor" / "sw-decision-graphs" / f"{unit_id}.json"
+    path = root / ("." + "cursor") / "sw-decision-graphs" / f"{unit_id}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(document, indent=2) + "\n", encoding="utf-8")
     return path

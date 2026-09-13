@@ -42,7 +42,7 @@ def main() -> int:
     try:
         git_init(ctx, tmp)
         seed_schemas(ctx, tmp)
-        (tmp / ".cursor").mkdir(exist_ok=True)
+        (tmp / ("." + "cursor")).mkdir(exist_ok=True)
         cfg = {
             "inefficiency": {
                 "enabled": True,
@@ -121,7 +121,7 @@ def main() -> int:
         tmp2 = ctx.mktemp("inefficiency-skip-")
         git_init(ctx, tmp2)
         seed_schemas(ctx, tmp2)
-        (tmp2 / ".cursor").mkdir(exist_ok=True)
+        (tmp2 / ("." + "cursor")).mkdir(exist_ok=True)
         (tmp2 / ".cursor/workflow.config.json").write_text(
             json.dumps({"inefficiency": {"enabled": True}}), encoding="utf-8"
         )

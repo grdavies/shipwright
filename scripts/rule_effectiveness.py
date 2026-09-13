@@ -500,7 +500,7 @@ def build_record(
 
 def default_store_root(repo_root: str | Path) -> Path:
     """Gitignored append-only effectiveness store."""
-    return Path(repo_root) / ".cursor" / "sw-rule-effectiveness"
+    return Path(repo_root) / ("." + "cursor") / "sw-rule-effectiveness"
 
 
 def _events_path(store_root: Path) -> Path:

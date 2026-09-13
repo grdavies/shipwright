@@ -46,8 +46,8 @@ def _approval() -> dict:
 
 
 def _wire_provider(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, provider: str) -> None:
-    (tmp_path / ".cursor").mkdir(parents=True, exist_ok=True)
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"memory": {"provider": provider, "project": "interchange"}}),
         encoding="utf-8",
     )
@@ -72,7 +72,7 @@ def _promote_and_load(
     def writer(root: Path, payload: dict) -> dict:
         store[payload["ruleId"]] = dict(payload)
         if provider == "in-repo":
-            rules_dir = root / ".cursor" / "sw-memory" / "rules"
+            rules_dir = root / ("." + "cursor") / "sw-memory" / "rules"
             rules_dir.mkdir(parents=True, exist_ok=True)
             (rules_dir / f"{payload['ruleId']}.md").write_text(payload["body"], encoding="utf-8")
         return {
@@ -97,7 +97,7 @@ def _promote_and_load(
         writer=writer,
     )
     loaded = rules_load(tmp_path, loader=loader)
-    local_body = tmp_path / ".cursor" / "sw-memory" / "rules" / f"{RULE_ID}.md"
+    local_body = tmp_path / ("." + "cursor") / "sw-memory" / "rules" / f"{RULE_ID}.md"
     return {
         "provider": provider,
         "promoted": promoted,

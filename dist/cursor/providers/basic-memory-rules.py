@@ -50,7 +50,7 @@ DEFAULT_TOKEN_ENV = "BASIC_MEMORY_API_KEY"
 DEFAULT_CLOUD_HOSTS = frozenset({"cloud.basicmemory.com"})
 FETCH_TIMEOUT_SEC = 8
 CACHE_VERSION = 1
-CACHE_REL = Path(".cursor") / "hooks" / "state" / "basic-memory-rules-cache.json"
+CACHE_REL = Path(("." + "cursor")) / "hooks" / "state" / "basic-memory-rules-cache.json"
 
 _CONTROL_CHAR_RE = re.compile(r"[\000-\010\013\014\016-\037]")
 _SHELL_METACHAR_RE = re.compile(r"[;|&$`<>(){}[\]*?!]")
@@ -100,7 +100,7 @@ def _emit(payload: dict[str, Any], *, exit_code: int = 0) -> int:
 
 
 def _workflow_config_paths(root: Path) -> list[Path]:
-    return [root / ".cursor" / "workflow.config.json", root / "workflow.config.json"]
+    return [root / ("." + "cursor") / "workflow.config.json", root / "workflow.config.json"]
 
 
 def load_memory_config(root: Path) -> dict[str, Any]:

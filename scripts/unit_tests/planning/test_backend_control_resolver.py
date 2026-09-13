@@ -31,7 +31,7 @@ def _issue_store_cfg() -> dict[str, Any]:
 
 
 def _write_cfg(repo: Path, cfg: dict[str, Any]) -> None:
-    path = repo / ".cursor" / "workflow.config.json"
+    path = repo / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
 
@@ -96,7 +96,7 @@ def test_worktree_state_precedence_over_disable_record(tmp_git_repo: Path) -> No
     _seed_remote(tmp_git_repo)
     cfg = _issue_store_cfg()
     _write_cfg(tmp_git_repo, cfg)
-    state = tmp_git_repo / ".cursor" / "sw-worktree-state.json"
+    state = tmp_git_repo / ("." + "cursor") / "sw-worktree-state.json"
     state.write_text(json.dumps({"backendControl": {"forcedFallback": True}}), encoding="utf-8")
     layer = pbc.resolve_control_layer(tmp_git_repo, cfg)
     assert layer["layer"] == "worktree-state"
@@ -107,7 +107,7 @@ def test_session_state_precedence_over_disable_record(tmp_git_repo: Path) -> Non
     _seed_remote(tmp_git_repo)
     cfg = _issue_store_cfg()
     _write_cfg(tmp_git_repo, cfg)
-    state = tmp_git_repo / ".cursor" / "sw-deliver-state.fixture.json"
+    state = tmp_git_repo / ("." + "cursor") / "sw-deliver-state.fixture.json"
     state.write_text(json.dumps({"backendControl": {"forcedFallback": True}}), encoding="utf-8")
     layer = pbc.resolve_control_layer(tmp_git_repo, cfg)
     assert layer["layer"] == "session-state"

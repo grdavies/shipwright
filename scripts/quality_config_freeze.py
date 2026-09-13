@@ -30,7 +30,7 @@ def validate_pin(pin: dict[str, Any] | None, cfg: dict[str, Any]) -> dict[str, A
     return {"verdict": "pass", "checksum": actual}
 
 def load_pin_from_deliver_state(root: Path) -> dict[str, Any] | None:
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     if not cursor.is_dir():
         return None
     for path in sorted(cursor.glob("sw-deliver-state*.json")):

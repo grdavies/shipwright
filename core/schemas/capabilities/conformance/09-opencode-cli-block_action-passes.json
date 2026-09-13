@@ -1,0 +1,8 @@
+{
+  "host": "opencode",
+  "surface": "cli",
+  "host_version": "0.3.0",
+  "capability": "block_action",
+  "level": "passes",
+  "tested_at": "2026-09-12T21:00:00Z"
+}

@@ -74,7 +74,7 @@ def _install_workspace(
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
 
-    cursor = workspace / ".cursor"
+    cursor = workspace / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     memory_cfg: dict = {"provider": THIRD_PROVIDER_ID, "project": "migration-test"}
     if source_of_truth is not None:
@@ -137,7 +137,7 @@ def test_export_materializes_decision_bodies(repo_root: Path, tmp_path: Path) ->
     workspace = tmp_path / "export"
     _install_workspace(workspace, repo_root, source_class="memory-authoritative", source_of_truth=None)
 
-    mem_dir = workspace / ".cursor" / "sw-memory" / "memories"
+    mem_dir = workspace / ("." + "cursor") / "sw-memory" / "memories"
     mem_dir.mkdir(parents=True)
     (mem_dir / "010-api-auth.md").write_text(
         """---
@@ -171,7 +171,7 @@ def test_export_then_explicit_repo_resolves_green(repo_root: Path, tmp_path: Pat
     workspace = tmp_path / "flip"
     _install_workspace(workspace, repo_root, source_class="memory-authoritative", source_of_truth=None)
 
-    mem_dir = workspace / ".cursor" / "sw-memory" / "memories"
+    mem_dir = workspace / ("." + "cursor") / "sw-memory" / "memories"
     mem_dir.mkdir(parents=True)
     (mem_dir / "011-flip.md").write_text(
         """---

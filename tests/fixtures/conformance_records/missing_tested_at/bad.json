@@ -1,0 +1,7 @@
+{
+  "host": "codex",
+  "surface": "cli",
+  "host_version": "0.42.0",
+  "capability": "emit_hook",
+  "level": "passes"
+}

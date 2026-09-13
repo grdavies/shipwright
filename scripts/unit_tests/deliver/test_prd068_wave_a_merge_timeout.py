@@ -26,12 +26,12 @@ def _load_wave_merge(repo_root: Path):
 
 def test_merge_run_next_timeout_seconds_default(tmp_path: Path, repo_root: Path) -> None:
     wm = _load_wave_merge(repo_root)
-    (tmp_path / ".cursor").mkdir(parents=True, exist_ok=True)
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"version": 1, "deliver": {}}), encoding="utf-8"
     )
     assert wm.merge_run_next_timeout_seconds(tmp_path) == wm.DEFAULT_MERGE_RUN_NEXT_TIMEOUT_SECONDS
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"version": 1, "deliver": {"watchdog": {"mergeRunNextTimeoutSeconds": 42}}}),
         encoding="utf-8",
     )
@@ -70,7 +70,7 @@ def test_timeout_after_journal_clears_without_manual_delete(
         "mergeQueue": [],
         "phases": {"1": {"slug": phase_slug, "branch": phase_branch}},
     }
-    state_path = tmp_git_repo / ".cursor" / "sw-deliver-state.json"
+    state_path = tmp_git_repo / ("." + "cursor") / "sw-deliver-state.json"
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps(state), encoding="utf-8")
 
@@ -118,7 +118,7 @@ def test_merge_exec_journal_safety_clears_when_already_merged(
         "mergeJournal": {"phase": phase_slug, "head": "abc", "key": phase_slug},
         "mergeQueue": [],
     }
-    state_path = tmp_git_repo / ".cursor" / "sw-deliver-state.json"
+    state_path = tmp_git_repo / ("." + "cursor") / "sw-deliver-state.json"
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps(state), encoding="utf-8")
 

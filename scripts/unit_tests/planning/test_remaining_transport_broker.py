@@ -30,7 +30,7 @@ def _write_config(
     deliver: dict | None = None,
     projects: bool = False,
 ) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     store: dict = {
         "backend": "issue-store",

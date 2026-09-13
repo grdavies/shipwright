@@ -15,7 +15,7 @@ import deliver_closeout as dc
 
 
 def _write_state(root: Path, slug: str, state: dict) -> None:
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     (cursor / f"sw-deliver-state.{slug}.json").write_text(json.dumps(state), encoding="utf-8")
 

@@ -41,7 +41,8 @@ def test_sw_entry_command_exists_and_routes_from_state() -> None:
 # --- R26: closed rename table, no PRD/R-ID tokens in docs --------------------------------------
 
 def test_commands_guide_has_closed_rename_table() -> None:
-    text = _read(GUIDES / "commands.md")
+    # docs/guides/commands.md is a durable stub; canonical body is core/documentation.
+    text = _read(ROOT / "core" / "documentation" / "commands.md")
     assert "/sw-setup" in text
     assert "/sw-init" in text
     assert "/sw-compound" in text
@@ -50,7 +51,7 @@ def test_commands_guide_has_closed_rename_table() -> None:
 
 
 def test_new_commands_documented_in_commands_guide() -> None:
-    text = _read(GUIDES / "commands.md")
+    text = _read(ROOT / "core" / "documentation" / "commands.md")
     for cmd in ("/sw`", "/sw-ask`", "/sw-become`", "/sw-note`", "/sw-guide`"):
         assert cmd in text, f"missing {cmd} in commands.md"
 
