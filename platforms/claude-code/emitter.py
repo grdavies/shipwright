@@ -326,7 +326,7 @@ if __name__ == "__main__":
         chunks: list[str] = [
             "---",
             "name: sw-always-apply",
-            "description: Shipwright always-applied guardrails for Claude Code sessions.",
+            "description: Shipwright always-applied guardrails for Claude Code sessions. Use when starting or continuing any Claude Code session with this plugin installed.",
             "---",
             "",
             "# Shipwright always-applied rules",
