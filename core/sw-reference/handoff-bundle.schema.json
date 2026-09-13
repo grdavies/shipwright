@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/grdavies/shipwright/core/sw-reference/handoff-bundle.schema.json",
   "title": "HandoffBundle@v1",
-  "description": "Portable cross-harness handoff bundle (PRD 280 gap-324 R8–R13). Harness-agnostic required fields; optional extensions bags are non-authoritative.",
+  "description": "Portable cross-harness handoff bundle (PRD 280 gap-324 R8\u2013R13). Harness-agnostic required fields; optional extensions bags are non-authoritative.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -23,44 +23,90 @@
     "workflowDigest"
   ],
   "properties": {
-    "schemaVersion": { "type": "string", "const": "HandoffBundle@v1" },
-    "exportedAt": { "type": "string", "minLength": 1 },
-    "expiresAt": { "type": "string", "minLength": 1 },
-    "bundleDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "schemaVersion": {
+      "type": "string",
+      "const": "HandoffBundle@v1"
+    },
+    "exportedAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "expiresAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bundleDigest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
     "runId": {
       "type": "string",
-      "description": "Source run reference only — MUST NOT resume deliver on foreign harness (R13)."
+      "description": "Source run reference only \u2014 MUST NOT resume deliver on foreign harness (R13)."
     },
-    "unitId": { "type": "string" },
-    "phaseSlug": { "type": "string" },
-    "headSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "goal": { "type": "string", "minLength": 1 },
+    "unitId": {
+      "type": "string"
+    },
+    "phaseSlug": {
+      "type": "string"
+    },
+    "headSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1
+    },
     "currentState": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["summary", "phaseStatus"],
+      "required": [
+        "summary",
+        "phaseStatus"
+      ],
       "properties": {
-        "summary": { "type": "string" },
-        "phaseStatus": { "type": "string" },
-        "branch": { "type": "string" },
-        "deliverVerdict": { "type": "string" }
+        "summary": {
+          "type": "string"
+        },
+        "phaseStatus": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "deliverVerdict": {
+          "type": "string"
+        }
       }
     },
     "resolvedDecisions": {
       "type": "array",
-      "items": { "$ref": "#/$defs/decisionEntry" }
+      "items": {
+        "$ref": "#/$defs/decisionEntry"
+      }
     },
     "unresolvedDecisions": {
       "type": "array",
-      "items": { "$ref": "#/$defs/decisionEntry" }
+      "items": {
+        "$ref": "#/$defs/decisionEntry"
+      }
     },
     "activeNode": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": false,
       "properties": {
-        "nodeId": { "type": "string" },
-        "title": { "type": "string" },
-        "kind": { "type": "string" }
+        "nodeId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        }
       }
     },
     "blockers": {
@@ -68,11 +114,20 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["kind", "detail"],
+        "required": [
+          "kind",
+          "detail"
+        ],
         "properties": {
-          "kind": { "type": "string" },
-          "detail": { "type": "string" },
-          "nodeId": { "type": "string" }
+          "kind": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          }
         }
       }
     },
@@ -81,33 +136,67 @@
       "items": {
         "type": "object",
         "additionalProperties": true,
-        "required": ["kind", "path"],
+        "required": [
+          "kind",
+          "path"
+        ],
         "properties": {
-          "kind": { "type": "string" },
-          "path": { "type": "string" },
-          "verdict": { "type": "string" }
+          "kind": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "verdict": {
+            "type": "string"
+          },
+          "digest": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "type": {
+            "type": "string"
+          }
         }
       }
     },
     "changedFiles": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "relevantRules": {
       "type": "array",
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "nextAction": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action", "detail"],
+      "required": [
+        "action",
+        "detail"
+      ],
       "properties": {
-        "action": { "type": "string" },
-        "detail": { "type": "string" },
-        "command": { "type": "string" }
+        "action": {
+          "type": "string"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        }
       }
     },
-    "workflowDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "workflowDigest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
     "handoffDegraded": {
       "type": "boolean",
       "description": "True when DecisionGraph export was unavailable but operator acked degraded export."
@@ -125,30 +214,63 @@
       "properties": {
         "sourceHarness": {
           "type": "string",
-          "enum": ["cursor", "claude-code", "unknown"]
+          "enum": [
+            "cursor",
+            "claude-code",
+            "unknown"
+          ]
         },
         "destinationHarness": {
           "type": "string",
-          "enum": ["cursor", "claude-code", "unknown"]
+          "enum": [
+            "cursor",
+            "claude-code",
+            "unknown"
+          ]
         },
         "sessionTransition": {
           "type": "string",
-          "enum": ["resume", "switch"]
+          "enum": [
+            "resume",
+            "switch"
+          ]
         },
         "modelTransition": {
           "type": "string",
-          "enum": ["same", "changed", "unknown"]
+          "enum": [
+            "same",
+            "changed",
+            "unknown"
+          ]
         },
-        "sourceModel": { "type": "string", "minLength": 1 },
-        "destinationModel": { "type": "string", "minLength": 1 },
+        "sourceModel": {
+          "type": "string",
+          "minLength": 1
+        },
+        "destinationModel": {
+          "type": "string",
+          "minLength": 1
+        },
         "integrity": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["workflowDigest", "bundleDigest"],
+          "required": [
+            "workflowDigest",
+            "bundleDigest"
+          ],
           "properties": {
-            "workflowDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-            "bundleDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
-            "headSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+            "workflowDigest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "bundleDigest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "headSha": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            }
           }
         },
         "extensions": {
@@ -162,10 +284,63 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "cursor": { "type": "object", "additionalProperties": true },
-        "claude": { "type": "object", "additionalProperties": true },
-        "exploration": { "$ref": "#/$defs/explorationExtension" }
+        "cursor": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "claude": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "exploration": {
+          "$ref": "#/$defs/explorationExtension"
+        }
       }
+    },
+    "source_host": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Source adapter_id for cross-host transition (PRD 349 R31)."
+    },
+    "destination_host": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Destination adapter_id for cross-host transition (PRD 349 R31)."
+    },
+    "transition_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "UUID identifying a cross-host transition (PRD 349 R31)."
+    },
+    "transition_schema_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Schema version for cross-host transition fields (PRD 349 R31)."
+    },
+    "continuation_payload": {
+      "$ref": "#/$defs/continuationPayload",
+      "description": "Continuation state for cross-host resume (PRD 349 R32). Must not contain credentials."
+    },
+    "pending_captures": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/pendingCapture"
+      },
+      "description": "Gap/evidence items identified but not yet written (PRD 349 R33)."
+    },
+    "source_repo_id": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "SHA-256 of canonical remote URL at export (PRD 349 R51)."
+    },
+    "source_head": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$",
+      "description": "Expected HEAD sha at destination (PRD 349 R37)."
+    },
+    "destination_ack": {
+      "$ref": "#/$defs/destinationAck",
+      "description": "Populated after successful destination import (PRD 349 R35). Excluded from bundleDigest."
     }
   },
   "$defs": {
@@ -179,35 +354,306 @@
         "recoveryInstructions"
       ],
       "properties": {
-        "explorationMapId": { "type": "string", "minLength": 1 },
-        "revision": { "type": "integer", "minimum": 1 },
-        "notebookProvenance": { "type": "object", "additionalProperties": true },
+        "explorationMapId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "notebookProvenance": {
+          "type": "object",
+          "additionalProperties": true
+        },
         "interactionState": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["mode"],
+          "required": [
+            "mode"
+          ],
           "properties": {
-            "mode": { "type": "string", "minLength": 1 },
-            "activeNodeId": { "type": "string" },
-            "lastPrompt": { "type": "string" }
+            "mode": {
+              "type": "string",
+              "minLength": 1
+            },
+            "activeNodeId": {
+              "type": "string"
+            },
+            "lastPrompt": {
+              "type": "string"
+            }
           }
         },
-        "briefId": { "type": "string" },
-        "briefSourceRevision": { "type": "integer", "minimum": 1 },
-        "recoveryInstructions": { "type": "string", "minLength": 1 },
-        "forwardHandoffReady": { "type": "boolean" }
+        "briefId": {
+          "type": "string"
+        },
+        "briefSourceRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "recoveryInstructions": {
+          "type": "string",
+          "minLength": 1
+        },
+        "forwardHandoffReady": {
+          "type": "boolean"
+        }
       }
     },
     "decisionEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["nodeId", "title", "status"],
+      "required": [
+        "nodeId",
+        "title",
+        "status"
+      ],
       "properties": {
-        "nodeId": { "type": "string" },
-        "title": { "type": "string" },
-        "status": { "type": "string" },
-        "kind": { "type": "string" },
-        "resolution": { "type": "string" }
+        "nodeId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "resolution": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "blocking": {
+          "type": "boolean"
+        }
+      }
+    },
+    "continuationPayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "taskBaseline",
+        "prdBaseline",
+        "repo",
+        "currentWorkflowNodeId",
+        "completedTaskRows",
+        "remainingTaskRows",
+        "unresolvedDecisions",
+        "evidenceReferences",
+        "modelAttemptLineage"
+      ],
+      "properties": {
+        "taskBaseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "unitId",
+            "canonicalVersion"
+          ],
+          "properties": {
+            "unitId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "canonicalVersion": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "prdBaseline": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "frozenCanonicalVersion"
+          ],
+          "properties": {
+            "frozenCanonicalVersion": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "repo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "worktree",
+            "head"
+          ],
+          "properties": {
+            "worktree": {
+              "type": "string",
+              "minLength": 1
+            },
+            "head": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "remoteUrl": {
+              "type": "string"
+            }
+          }
+        },
+        "currentWorkflowNodeId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "completedTaskRows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "remainingTaskRows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "unresolvedDecisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "title",
+              "options",
+              "blocking"
+            ],
+            "properties": {
+              "title": {
+                "type": "string"
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "blocking": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "evidenceReferences": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "path",
+              "type",
+              "digest"
+            ],
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "digest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        "modelAttemptLineage": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "host",
+              "modelId",
+              "attemptUuid"
+            ],
+            "properties": {
+              "host": {
+                "type": "string"
+              },
+              "modelId": {
+                "type": "string"
+              },
+              "attemptUuid": {
+                "type": "string",
+                "minLength": 1
+              },
+              "step": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "pendingCapture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "title"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "gap",
+            "evidence"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "detail": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    },
+    "destinationAck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hostAdapterId",
+        "importedAt",
+        "importDigest"
+      ],
+      "properties": {
+        "hostAdapterId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "importedAt": {
+          "type": "string",
+          "minLength": 1
+        },
+        "importDigest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "transitionId": {
+          "type": "string"
+        },
+        "agentIdentity": {
+          "type": "string"
+        }
       }
     }
   }

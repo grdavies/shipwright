@@ -64,7 +64,11 @@ def canonical_json(value: Any) -> str:
 
 
 def digest_payload(payload: Mapping[str, Any]) -> str:
-    material = {k: v for k, v in payload.items() if k != "bundleDigest"}
+    material = {
+        k: v
+        for k, v in payload.items()
+        if k not in {"bundleDigest", "destination_ack"}
+    }
     transition = material.get("transitionProvenance")
     if isinstance(transition, dict):
         copy = dict(transition)
