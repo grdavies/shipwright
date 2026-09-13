@@ -59,9 +59,17 @@ def test_privacy_error_on_bearer_token() -> None:
 
 def test_privacy_error_on_long_base64() -> None:
     event = _load_fixture("discovery.json")
-    event["summary"] = "blob " + ("A" * 44)
+    # Non-hex base64 alphabet (+ / =) so pure-hex digests are not flagged.
+    event["summary"] = "blob " + ("AbCdEfGhIjKlMnOpQrStUvWxYz0123456789+/" * 2)
     with pytest.raises(CapturePrivacyError, match="base64"):
         validate_event(event)
+
+
+def test_privacy_allows_git_sha_and_hex_digest() -> None:
+    event = _load_fixture("discovery.json")
+    event["summary"] = "tip " + ("a" * 40)
+    event["provenanceRef"] = "sha256:" + ("b" * 64)
+    validate_event(event)  # must not raise
 
 
 def test_privacy_error_on_private_key_header() -> None:

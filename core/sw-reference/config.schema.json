@@ -741,6 +741,49 @@
         }
       }
     },
+    "capture": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Implementation capture and gap recording (PRD 350 R29). Disabled by default in Phase 1.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Master switch. When false, record_event is a no-op and no capture side-effects occur."
+        },
+        "gapKeywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "missing documented",
+            "undocumented",
+            "not covered by spec",
+            "gap identified",
+            "sw:gap-marker"
+          ],
+          "description": "Multi-word phrases that mark discovery summaries as gap candidates (R19)."
+        },
+        "maxSummaryLength": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 500,
+          "description": "Maximum summary field length enforced by schema validation."
+        },
+        "subAgentSidecarEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "When true, sub-agents write capture events to per-dispatch sidecar files (R15)."
+        },
+        "maxFileSizeBytes": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 52428800,
+          "description": "Hard cap on events.jsonl size before CaptureStorageError (TR7; default 50 MiB)."
+        }
+      }
+    },
     "checks": {
       "type": "object",
       "additionalProperties": false,

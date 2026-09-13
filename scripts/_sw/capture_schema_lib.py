@@ -88,9 +88,11 @@ _BEARER_RE = re.compile(r"Bearer\s+[A-Za-z0-9._\-+=/]{8,}", re.IGNORECASE)
 _PRIVATE_KEY_RE = re.compile(
     r"-----BEGIN (?:RSA |EC |OPENSSH |ENCRYPTED )?PRIVATE KEY-----"
 )
-# Long base64-looking tokens (SC5); require mostly-base64 alphabet and length > 40.
-_BASE64_RE = re.compile(r"(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{40,}={0,2}(?![A-Za-z0-9+/])")
-
+# Long base64-looking tokens (SC5). Pure hex (git SHA / digests) excluded in _privacy_scan.
+_BASE64_RE = re.compile(
+    r"(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{40,}={0,2}(?![A-Za-z0-9+/])"
+)
+_PURE_HEX_RE = re.compile(r"^[0-9a-fA-F]+$")
 _ISO8601_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
 )
@@ -147,7 +149,11 @@ def _privacy_scan(event: Mapping[str, Any]) -> None:
                 raise CapturePrivacyError("credential pattern: Bearer token")
             if _PRIVATE_KEY_RE.search(line):
                 raise CapturePrivacyError("credential pattern: private key header")
-            if _BASE64_RE.search(line):
+            for match in _BASE64_RE.finditer(line):
+                token = match.group(0).rstrip("=")
+                # Git SHAs / content digests are pure hex — allow them.
+                if _PURE_HEX_RE.fullmatch(token):
+                    continue
                 raise CapturePrivacyError("credential pattern: base64 string > 40 chars")
 
 

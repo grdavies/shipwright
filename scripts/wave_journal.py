@@ -172,31 +172,37 @@ def record_event(
         return
 
     limit = max_file_size_bytes(root)
-    try:
-        current_size = path.stat().st_size if path.is_file() else 0
-    except OSError:
-        current_size = 0
     payload = json.dumps(event, ensure_ascii=False, sort_keys=True) + "\n"
-    if current_size + len(payload.encode("utf-8")) > limit:
-        err = CaptureStorageError(
-            f"events.jsonl would exceed maxFileSizeBytes ({limit})"
-        )
-        _append_error(
-            root,
-            journal_run_id,
-            {
-                "at": _utc_now(),
-                "kind": "CaptureStorageError",
-                "message": str(err),
-                "eventId": event_id,
-                "sizeBytes": current_size,
-                "limitBytes": limit,
-            },
-        )
-        raise err
+    payload_bytes = len(payload.encode("utf-8"))
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.is_file():
+        path.touch()
 
     with path.open("a", encoding="utf-8") as handle:
         fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        # Size check inside flock to avoid TOCTOU under concurrent writers (CR-P2-001).
+        try:
+            current_size = path.stat().st_size
+        except OSError:
+            current_size = 0
+        if current_size + payload_bytes > limit:
+            err = CaptureStorageError(
+                f"events.jsonl would exceed maxFileSizeBytes ({limit})"
+            )
+            _append_error(
+                root,
+                journal_run_id,
+                {
+                    "at": _utc_now(),
+                    "kind": "CaptureStorageError",
+                    "message": str(err),
+                    "eventId": event_id,
+                    "sizeBytes": current_size,
+                    "limitBytes": limit,
+                },
+            )
+            raise err
         try:
             if event_id in _existing_event_ids(path):
                 return
