@@ -106,7 +106,7 @@ install.
 2. At least **14 consecutive days** of production monitoring with no SC-M
    regressions.
 3. `minSampleCount` set **explicitly** in `workflow.config.json` (do not rely on
-   the default of `10` — `python3 scripts/check-gate.py --section models.routing` warns when
+   the default of 10 — `python3 scripts/check-gate.py --section models.routing` warns when
    auto-apply uses the default).
 4. `advisoryRouting.enabled: true` (auto-apply is rejected when disabled).
 
