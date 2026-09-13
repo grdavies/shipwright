@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
-"""Learning consumers with exogenous outcome gates (PRD 272 R13)."""
+"""Learning consumers with exogenous outcome gates (PRD 272 R13).
+
+Advisory snapshot cache invalidation contract (PRD 351 R15 / TR2)
+-----------------------------------------------------------------
+``get_current_advisory`` reads from an **immutable** module-level snapshot.
+Callers never mutate the snapshot in place. To publish new recommendations,
+invoke ``replace_advisory_snapshot`` (or ``clear_advisory_snapshot``), which
+swaps the entire mapping under a lock. Concurrent readers may observe either
+the previous or the new snapshot — never a partially updated map.
+"""
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any, Mapping
 
 from graph.learning_store import LearningEvent, LearningStore, validate_admission
 from model_policy_lib import ModelPolicy, TierRecommendation, recommend_implement_tier
+from workflow_intelligence import AdvisoryRecommendation
 
 EXOGENOUS_SIGNAL_KEYS = frozenset(
     {
@@ -16,6 +28,42 @@ EXOGENOUS_SIGNAL_KEYS = frozenset(
         "reopenedGapUnitRate",
     }
 )
+
+_SNAPSHOT_LOCK = threading.RLock()
+_ADVISORY_SNAPSHOT: Mapping[str, AdvisoryRecommendation] = MappingProxyType({})
+
+
+def replace_advisory_snapshot(
+    entries: Mapping[str, AdvisoryRecommendation],
+) -> None:
+    """Atomically replace the advisory snapshot (immutable publish; TR2)."""
+    global _ADVISORY_SNAPSHOT
+    frozen = MappingProxyType(dict(entries))
+    with _SNAPSHOT_LOCK:
+        _ADVISORY_SNAPSHOT = frozen
+
+
+def clear_advisory_snapshot() -> None:
+    """Clear the advisory snapshot (test/helper)."""
+    replace_advisory_snapshot({})
+
+
+def get_current_advisory(
+    task_type: str,
+    dimension_record: dict[str, Any],
+) -> AdvisoryRecommendation | None:
+    """Return the current advisory recommendation or None (R15).
+
+    No side effects. Thread-safe via immutable snapshot cache. Returns ``None``
+    for all no-data paths (never raises for missing data).
+    """
+    del dimension_record  # reserved for future dimension-scoped lookup
+    key = str(task_type or "").strip()
+    if not key:
+        return None
+    with _SNAPSHOT_LOCK:
+        snapshot = _ADVISORY_SNAPSHOT
+    return snapshot.get(key)
 
 
 @dataclass(frozen=True)

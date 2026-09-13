@@ -163,8 +163,16 @@
         "verification-gate": "cheap",
         "worktree": "cheap",
         "tournament": "cheap"
+      },
+      "advisoryRouting": {
+        "enabled": true,
+        "autoApply": false,
+        "minSampleCount": 10,
+        "maxFreshnessAgeDays": 30,
+        "lookupTimeoutMs": 200
       }
-    }
+    },
+    "excludedModels": []
   },
   "host": {
     "provider": "github",
@@ -415,5 +423,13 @@
       "handoffBundle": false,
       "packageSdk": false
     }
+  },
+  "redaction": {
+    "fields": [
+      "raw_prompt",
+      "api_key",
+      "user_id",
+      "user_token"
+    ]
   }
 }

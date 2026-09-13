@@ -210,6 +210,139 @@ def load_workflow_config(root: Path) -> dict[str, Any]:
     from shipwright_paths import load_workflow_config as _load_workflow_config
 
     return _load_workflow_config(root)
+
+
+# Known keys under models.routing — tier maps plus PRD 351 advisoryRouting (TR6).
+KNOWN_MODELS_ROUTING_KEYS = frozenset({"commands", "agents", "skills", "advisoryRouting"})
+KNOWN_ADVISORY_ROUTING_KEYS = frozenset(
+    {
+        "enabled",
+        "autoApply",
+        "minSampleCount",
+        "maxFreshnessAgeDays",
+        "lookupTimeoutMs",
+        "includeLegacyRecords",
+    }
+)
+DEFAULT_ADVISORY_MIN_SAMPLE_COUNT = 10
+
+
+def validate_models_routing(config: dict[str, Any]) -> list[str]:
+    """Validate ``models.routing``; return error strings (empty => ok) (TR6 / R25 / R27)."""
+    errors: list[str] = []
+    models = config.get("models")
+    if not isinstance(models, dict):
+        return errors
+    routing = models.get("routing")
+    if routing is None:
+        return errors
+    if not isinstance(routing, dict):
+        return ["models.routing must be an object"]
+
+    unknown = sorted(str(key) for key in routing if str(key) not in KNOWN_MODELS_ROUTING_KEYS)
+    for key in unknown:
+        errors.append(f"models.routing unknown key: {key}")
+
+    advisory = routing.get("advisoryRouting")
+    if advisory is None:
+        return errors
+    if not isinstance(advisory, dict):
+        errors.append("models.routing.advisoryRouting must be an object")
+        return errors
+
+    for key in sorted(str(k) for k in advisory if str(k) not in KNOWN_ADVISORY_ROUTING_KEYS):
+        errors.append(f"models.routing.advisoryRouting unknown key: {key}")
+
+    auto_apply = bool(advisory.get("autoApply", False))
+    enabled = bool(advisory.get("enabled", True))
+    if auto_apply and not enabled:
+        errors.append(
+            "models.routing.advisoryRouting.autoApply requires advisoryRouting.enabled: true"
+        )
+    return errors
+
+
+def validate_models_routing_warnings(config: dict[str, Any]) -> list[str]:
+    """Non-fatal warnings for advisoryRouting (R27)."""
+    warnings: list[str] = []
+    models = config.get("models")
+    if not isinstance(models, dict):
+        return warnings
+    routing = models.get("routing")
+    if not isinstance(routing, dict):
+        return warnings
+    advisory = routing.get("advisoryRouting")
+    if not isinstance(advisory, dict):
+        return warnings
+    auto_apply = bool(advisory.get("autoApply", False))
+    if auto_apply and "minSampleCount" not in advisory:
+        warnings.append(
+            "models.routing.advisoryRouting.autoApply is true but minSampleCount is unset "
+            f"(default {DEFAULT_ADVISORY_MIN_SAMPLE_COUNT})"
+        )
+    elif auto_apply and int(advisory.get("minSampleCount", DEFAULT_ADVISORY_MIN_SAMPLE_COUNT)) == DEFAULT_ADVISORY_MIN_SAMPLE_COUNT:
+        # Explicit default still warns per R27 / TS10.
+        if advisory.get("minSampleCount") == DEFAULT_ADVISORY_MIN_SAMPLE_COUNT:
+            warnings.append(
+                "models.routing.advisoryRouting.autoApply is true with minSampleCount at default"
+            )
+    return warnings
+
+
+
+# Fixture prompt substrings that must never appear in attribution records (SC-M8).
+SC_M8_RAW_PROMPT_FIXTURES = (
+    "SYSTEM PROMPT:",
+    "sk-test",
+    "you are a helpful assistant with secret key",
+)
+
+
+def scan_attribution_raw_prompts(root: Path, *, run_dirs: list[Path] | None = None) -> list[str]:
+    """SC-M8 — fail if attribution JSON contains fixture/raw prompt substrings."""
+    errors: list[str] = []
+    candidates: list[Path] = []
+    if run_dirs:
+        candidates.extend(Path(p) / "attribution" for p in run_dirs)
+    else:
+        for base in (
+            root / ".cursor" / "sw-deliver-runs",
+            root / ".shipwright" / "runs",
+            root / "attribution",
+        ):
+            if not base.exists():
+                continue
+            if base.is_dir() and base.name == "attribution":
+                candidates.append(base)
+            elif base.is_dir():
+                candidates.extend(sorted(base.glob("*/attribution")))
+    seen: set[Path] = set()
+    for attr_dir in candidates:
+        try:
+            attr_dir = attr_dir.resolve()
+        except OSError:
+            continue
+        if attr_dir in seen or not attr_dir.is_dir():
+            continue
+        seen.add(attr_dir)
+        for path in sorted(attr_dir.glob("*.json")):
+            try:
+                blob = path.read_text(encoding="utf-8")
+            except OSError as exc:
+                errors.append(f"SC-M8: cannot read {path}: {exc}")
+                continue
+            for fixture in SC_M8_RAW_PROMPT_FIXTURES:
+                if fixture in blob:
+                    rel = path
+                    try:
+                        rel = path.relative_to(root)
+                    except ValueError:
+                        pass
+                    errors.append(f"SC-M8 raw-prompt match in {rel}: {fixture!r}")
+                    break
+    return errors
+
+
 def cfg_bool(cfg: dict[str, Any], key: str, default: bool) -> bool:
     checks = cfg.get("checks")
     if not isinstance(checks, dict):

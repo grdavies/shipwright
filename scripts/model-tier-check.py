@@ -88,6 +88,33 @@ def main(argv: list[str] | None = None) -> int:
 
     routing = models.get("routing", {}) if isinstance(models.get("routing"), dict) else {}
     agents_map = routing.get("agents", {}) if isinstance(routing.get("agents"), dict) else {}
+    advisory_routing = (
+        routing.get("advisoryRouting") if isinstance(routing.get("advisoryRouting"), dict) else {}
+    )
+    warnings: list[dict[str, Any]] = []
+    if advisory_routing:
+        auto_apply = bool(advisory_routing.get("autoApply", False))
+        enabled = bool(advisory_routing.get("enabled", True))
+        if auto_apply and not enabled:
+            violations.append(
+                {
+                    "kind": "config",
+                    "error": "models.routing.advisoryRouting.autoApply requires enabled: true",
+                }
+            )
+        if auto_apply and (
+            "minSampleCount" not in advisory_routing
+            or int(advisory_routing.get("minSampleCount", 10)) == 10
+        ):
+            warnings.append(
+                {
+                    "kind": "config",
+                    "warning": (
+                        "models.routing.advisoryRouting.autoApply is true with "
+                        "minSampleCount at default; set an explicit minSampleCount"
+                    ),
+                }
+            )
 
     for agent_id, tier_name in sorted(agents_map.items()):
         resolved = tier_name
@@ -162,6 +189,7 @@ def main(argv: list[str] | None = None) -> int:
         "reviewerRoleTier": reviewer_role_tier,
         "inheritReviewers": inherit_count,
         "agentsMapped": len(agents_map),
+        "warnings": warnings or None,
         "runtimeR9": "orchestrator must dispatch reviewers only when parent model tier >= builder tier"
         if inherit_count else None,
     }
