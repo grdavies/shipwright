@@ -11,6 +11,11 @@ import uuid
 from pathlib import Path
 from typing import Any, Literal, Mapping, MutableMapping, Optional, TypedDict
 
+# Allow `python scripts/graph/attribution_store.py ...` without PYTHONPATH.
+_SCRIPTS_DIR = Path(__file__).resolve().parents[1]
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
 ATTRIBUTION_SCHEMA_VERSION = "1.0.0"
 
 VerificationResult = Literal["pass", "fail", "partial", "unknown"]
@@ -180,10 +185,22 @@ def write_attribution_record(record: AttributionRecord, run_dir: Path) -> None:
 
 
 def audit_null_purity(run_dir: Path) -> dict[str, Any]:
-    """Scan attribution JSON for sentinel substitution violations (SC-M1 hook)."""
+    """Scan attribution JSON for sentinel substitution violations (SC-M1/SC-M2).
+
+    Also loads records into ``workflow_intelligence.filter_comparison_group`` and
+    asserts every retained group member has fully known dimension values (R6/R7).
+    """
+    # Local import keeps store usable without intelligence module at import time.
+    from workflow_intelligence import (
+        ATTRIBUTION_DIMENSION_KEYS,
+        dimension_record_complete,
+        filter_comparison_group,
+    )
+
     attribution_dir = Path(run_dir) / "attribution"
     violations: list[str] = []
     scanned = 0
+    loaded: list[dict[str, Any]] = []
     if attribution_dir.is_dir():
         for path in sorted(attribution_dir.glob("*.json")):
             scanned += 1
@@ -199,10 +216,28 @@ def audit_null_purity(run_dir: Path) -> dict[str, Any]:
                 if isinstance(value, str) and value.strip().lower() in KNOWN_DIMENSION_SENTINELS:
                     violations.append(record_id)
                     break
+            loaded.append(payload)
+
+    comparison_group = filter_comparison_group(loaded)
+    incomplete_members: list[str] = []
+    for member in comparison_group:
+        dims = member.get("dimensions") if isinstance(member.get("dimensions"), dict) else member
+        if not dimension_record_complete(dims):
+            incomplete_members.append(str(member.get("task_record_id") or ""))
+        # Explicit known-dimension assertion for SC-M2.
+        for key in ATTRIBUTION_DIMENSION_KEYS:
+            if dims.get(key) is None:
+                rid = str(member.get("task_record_id") or "")
+                if rid and rid not in incomplete_members:
+                    incomplete_members.append(rid)
+                break
+
     return {
         "substitution_violations": len(violations),
         "records_scanned": scanned,
         "violation_record_ids": violations,
+        "comparison_group_size": len(comparison_group),
+        "comparison_group_incomplete_members": incomplete_members,
     }
 
 

@@ -55,6 +55,8 @@ class ModelPolicy:
         """Return True when recommendation meets sample/freshness gates (R17/R26).
 
         Centralises ``minSampleCount`` and ``maxFreshnessAgeDays`` checks (DL-5).
+        Phase-3 load validation (SC-M3/SC-M4) exercises this gate under 50 mixed
+        dispatch calls — see ``tests/integration/test_model_policy_advisory.py``.
         """
         from datetime import datetime, timezone
 

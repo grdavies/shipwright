@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-13T04:08:26Z",
+  "generatedAt": "2026-09-13T05:17:27Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -19860,6 +19860,15 @@
       "file": "docs/guides/configuration.md",
       "line": 92,
       "column": 11,
+      "script": "check-gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/configuration.md:109:check-gate.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/configuration.md",
+      "line": 109,
+      "column": 32,
       "script": "check-gate.py",
       "classification": "self-repo-only"
     }

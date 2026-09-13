@@ -289,6 +289,60 @@ def validate_models_routing_warnings(config: dict[str, Any]) -> list[str]:
     return warnings
 
 
+
+# Fixture prompt substrings that must never appear in attribution records (SC-M8).
+SC_M8_RAW_PROMPT_FIXTURES = (
+    "SYSTEM PROMPT:",
+    "sk-test",
+    "you are a helpful assistant with secret key",
+)
+
+
+def scan_attribution_raw_prompts(root: Path, *, run_dirs: list[Path] | None = None) -> list[str]:
+    """SC-M8 — fail if attribution JSON contains fixture/raw prompt substrings."""
+    errors: list[str] = []
+    candidates: list[Path] = []
+    if run_dirs:
+        candidates.extend(Path(p) / "attribution" for p in run_dirs)
+    else:
+        for base in (
+            root / ".cursor" / "sw-deliver-runs",
+            root / ".shipwright" / "runs",
+            root / "attribution",
+        ):
+            if not base.exists():
+                continue
+            if base.is_dir() and base.name == "attribution":
+                candidates.append(base)
+            elif base.is_dir():
+                candidates.extend(sorted(base.glob("*/attribution")))
+    seen: set[Path] = set()
+    for attr_dir in candidates:
+        try:
+            attr_dir = attr_dir.resolve()
+        except OSError:
+            continue
+        if attr_dir in seen or not attr_dir.is_dir():
+            continue
+        seen.add(attr_dir)
+        for path in sorted(attr_dir.glob("*.json")):
+            try:
+                blob = path.read_text(encoding="utf-8")
+            except OSError as exc:
+                errors.append(f"SC-M8: cannot read {path}: {exc}")
+                continue
+            for fixture in SC_M8_RAW_PROMPT_FIXTURES:
+                if fixture in blob:
+                    rel = path
+                    try:
+                        rel = path.relative_to(root)
+                    except ValueError:
+                        pass
+                    errors.append(f"SC-M8 raw-prompt match in {rel}: {fixture!r}")
+                    break
+    return errors
+
+
 def cfg_bool(cfg: dict[str, Any], key: str, default: bool) -> bool:
     checks = cfg.get("checks")
     if not isinstance(checks, dict):

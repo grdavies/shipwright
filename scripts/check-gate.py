@@ -33,10 +33,23 @@ def main(argv: list[str] | None = None) -> int:
         cfg = gate.load_workflow_config(root)
         errors = gate.validate_models_routing(cfg)
         warnings = gate.validate_models_routing_warnings(cfg)
+        # SC-M8 raw-prompt scan (attribution records must not contain fixture prompts).
+        errors.extend(gate.scan_attribution_raw_prompts(root))
         payload = {
             "section": "models.routing",
             "errors": errors,
             "warnings": warnings,
+            "verdict": "fail" if errors else "pass",
+        }
+        print(json.dumps(payload, ensure_ascii=False))
+        return 20 if errors else 0
+
+    if args.section == "attribution.sc-m8":
+        errors = gate.scan_attribution_raw_prompts(root)
+        payload = {
+            "section": "attribution.sc-m8",
+            "errors": errors,
+            "warnings": [],
             "verdict": "fail" if errors else "pass",
         }
         print(json.dumps(payload, ensure_ascii=False))
