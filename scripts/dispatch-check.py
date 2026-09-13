@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
-"""Fail-closed dispatch binding preflight for delegated Task spawns."""
+"""Fail-closed dispatch binding preflight for delegated Task spawns.
+
+Advisory graduation / autoApply operator guidance: see
+``docs/guides/configuration.md`` (PRD 351 phase 3 expands graduation criteria).
+"""
 from __future__ import annotations
 
+import concurrent.futures
 import json
+import logging
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from _sw.cli import run_module_main
 from dispatch_intensity_check import validate_directive_anchor
@@ -14,8 +21,10 @@ from dispatch_reader_lib import evaluate_reader_role, validate_reader_tool_log_f
 from dispatch_complexity_lib import probe_complexity
 from dispatch_budget_lib import resolve_token_budget
 from graph.cost_telemetry import aggregate
+from graph.learning_consumers import get_current_advisory
 from model_policy_lib import ModelPolicy, ensure_mid_tier, preflight_missing_mid, tier_rank
 from task_model_allowlist_lib import enforce_task_model_allowlist
+from workflow_intelligence import AdvisoryRecommendation, InsufficientSampleError
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 NATIVE_PANEL_AGENTS = frozenset({
@@ -23,6 +32,180 @@ NATIVE_PANEL_AGENTS = frozenset({
     "scope-fidelity", "testing", "performance", "api-contract", "reliability",
     "ui-ux", "type-design", "comment-accuracy", "ai-native",
 })
+
+_LOG = logging.getLogger("dispatch-check")
+
+DEFAULT_ADVISORY_LOOKUP_TIMEOUT_MS = 200
+DEFAULT_MIN_SAMPLE_COUNT = 10
+DEFAULT_MAX_FRESHNESS_AGE_DAYS = 30
+
+
+def _advisory_routing_config(config: Mapping[str, Any] | None) -> dict[str, Any]:
+    models = (config or {}).get("models") if isinstance(config, Mapping) else None
+    routing = models.get("routing") if isinstance(models, Mapping) else None
+    advisory = routing.get("advisoryRouting") if isinstance(routing, Mapping) else None
+    if not isinstance(advisory, dict):
+        return {
+            "enabled": True,
+            "autoApply": False,
+            "minSampleCount": DEFAULT_MIN_SAMPLE_COUNT,
+            "maxFreshnessAgeDays": DEFAULT_MAX_FRESHNESS_AGE_DAYS,
+            "lookupTimeoutMs": DEFAULT_ADVISORY_LOOKUP_TIMEOUT_MS,
+        }
+    return {
+        "enabled": bool(advisory.get("enabled", True)),
+        "autoApply": bool(advisory.get("autoApply", False)),
+        "minSampleCount": int(advisory.get("minSampleCount", DEFAULT_MIN_SAMPLE_COUNT)),
+        "maxFreshnessAgeDays": int(
+            advisory.get("maxFreshnessAgeDays", DEFAULT_MAX_FRESHNESS_AGE_DAYS)
+        ),
+        "lookupTimeoutMs": int(
+            advisory.get("lookupTimeoutMs", DEFAULT_ADVISORY_LOOKUP_TIMEOUT_MS)
+        ),
+    }
+
+
+def _model_allow_deny(config: Mapping[str, Any] | None) -> tuple[set[str] | None, set[str]]:
+    models = (config or {}).get("models") if isinstance(config, Mapping) else None
+    if not isinstance(models, Mapping):
+        return None, set()
+    allowed_raw = models.get("allowedModels")
+    excluded_raw = models.get("excludedModels")
+    allowed: set[str] | None
+    if isinstance(allowed_raw, list) and allowed_raw:
+        allowed = {str(item) for item in allowed_raw}
+    else:
+        allowed = None
+    excluded = {str(item) for item in excluded_raw} if isinstance(excluded_raw, list) else set()
+    return allowed, excluded
+
+
+def _advisory_allowed(
+    model: str,
+    *,
+    allowed: set[str] | None,
+    excluded: set[str],
+) -> tuple[bool, str]:
+    if model in excluded:
+        return False, "excludedModels"
+    if allowed is not None and model not in allowed:
+        return False, "not-in-allowedModels"
+    return True, ""
+
+
+def format_advisory_line(
+    recommendation: AdvisoryRecommendation,
+    *,
+    status: str,
+) -> str:
+    """Format the preflight ``[advisory]`` line (R16)."""
+    confidence_pct = int(round(float(recommendation["confidence_score"]) * 100))
+    return (
+        f"[advisory] Recommended: {recommendation['recommended_model']} | "
+        f"Confidence: {confidence_pct}% | "
+        f"Basis: {recommendation['sample_count']} tasks "
+        f"({recommendation['data_freshness_ts']}) | "
+        f"Status: {status}"
+    )
+
+
+def run_preflight(
+    *,
+    task_type: str,
+    dimension_record: dict[str, Any] | None = None,
+    config: Mapping[str, Any] | None = None,
+    selected_model: str | None = None,
+    now_ts: str | None = None,
+) -> dict[str, Any]:
+    """Run advisory-aware dispatch preflight and return a report dict (R16–R19).
+
+    Advisory lookup is bounded by ``advisoryRouting.lookupTimeoutMs`` (default 200ms).
+    """
+    dimension_record = dict(dimension_record or {})
+    routing = _advisory_routing_config(config)
+    allowed, excluded = _model_allow_deny(config)
+    policy = ModelPolicy.from_config(config if isinstance(config, Mapping) else {})
+
+    lines: list[str] = []
+    advisory: AdvisoryRecommendation | None = None
+    applied = False
+    effective_model = selected_model
+
+    if not routing["enabled"]:
+        return {
+            "advisory_lines": lines,
+            "advisory": None,
+            "selected_model": effective_model,
+            "advisory_applied": False,
+            "autoApply": False,
+        }
+
+    timeout_s = max(routing["lookupTimeoutMs"], 1) / 1000.0
+
+    def _lookup() -> AdvisoryRecommendation | None:
+        return get_current_advisory(task_type, dimension_record)
+
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(_lookup)
+            try:
+                advisory = future.result(timeout=timeout_s)
+            except concurrent.futures.TimeoutError:
+                _LOG.warning("[advisory-timeout] lookup exceeded %sms", routing["lookupTimeoutMs"])
+                lines.append("[advisory-timeout]")
+                advisory = None
+    except InsufficientSampleError:
+        lines.append("[advisory] Insufficient data — no recommendation")
+        advisory = None
+
+    if advisory is None and not any(line.startswith("[advisory-timeout]") for line in lines):
+        lines.append("[advisory] Insufficient data — no recommendation")
+    elif advisory is not None:
+        model = str(advisory["recommended_model"])
+        ok, reason = _advisory_allowed(model, allowed=allowed, excluded=excluded)
+        if not ok:
+            lines.append(
+                f"[advisory] Insufficient data — no recommendation"
+            )
+            _LOG.info("advisory suppressed: model %s (%s)", model, reason)
+            advisory = None
+        elif not policy.evaluate_advisory(
+            advisory,
+            min_sample_count=routing["minSampleCount"],
+            max_freshness_age_days=routing["maxFreshnessAgeDays"],
+            now_ts=now_ts,
+        ):
+            lines.append("[advisory] Insufficient data — no recommendation")
+            advisory = None
+        else:
+            auto_apply = bool(routing["autoApply"])
+            status = "will-apply" if auto_apply else "read-only"
+            # SC3: never apply without autoApply:true
+            lines.append(format_advisory_line(advisory, status=status))
+            if auto_apply:
+                # Availability: model must not be excluded / must be allowed.
+                available, why = _advisory_allowed(model, allowed=allowed, excluded=excluded)
+                if not available:
+                    _LOG.warning(
+                        "[advisory-fallback] Recommended %s unavailable: %s",
+                        model,
+                        why,
+                    )
+                    lines.append(
+                        f"[advisory-fallback] Recommended {model} unavailable: {why}"
+                    )
+                else:
+                    effective_model = model
+                    applied = True
+
+    return {
+        "advisory_lines": lines,
+        "advisory": advisory,
+        "selected_model": effective_model,
+        "advisory_applied": applied,
+        "autoApply": bool(routing["autoApply"]),
+        "generated_at": now_ts or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
 
 
 def model_to_tier(concrete: str, tiers: dict) -> str | None:
@@ -608,6 +791,20 @@ def main(argv: list[str] | None = None) -> int:
 
     token_budget = resolve_token_budget(cfg_doc)
 
+    # PRD 351 R16–R19 — advisory preflight before final model binding.
+    task_type = command_name or skill_name or agent
+    preflight = run_preflight(
+        task_type=str(task_type or "unknown"),
+        dimension_record={},
+        config=cfg_doc,
+        selected_model=model_id,
+    )
+    if preflight.get("advisory_applied") and preflight.get("selected_model"):
+        model_id = str(preflight["selected_model"])
+        resolved_tier = model_to_tier(model_id, tiers)
+        if resolved_tier:
+            model_tier = resolved_tier
+
     result = evaluate_dispatch(
         agent=agent,
         parent_model=parent_model,
@@ -633,6 +830,8 @@ def main(argv: list[str] | None = None) -> int:
         result["boundary"] = boundary
     result["tokenBudget"] = token_budget
     result["complexityProbe"] = complexity
+    result["advisoryLines"] = preflight.get("advisory_lines") or []
+    result["advisoryApplied"] = bool(preflight.get("advisory_applied"))
     print(json.dumps(result))
     if result.get("verdict") == "fail":
         return 20
