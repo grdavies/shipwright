@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/grdavies/shipwright/scripts/_sw/capture-event-schema.json",
+  "title": "Shipwright capture event",
+  "description": "Versioned schema for implementation-capture events (PRD 350 R1–R4).",
+  "schemaVersion": "1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "eventId",
+    "schemaVersion",
+    "eventType",
+    "runId",
+    "phaseId",
+    "agentId",
+    "timestamp",
+    "provenanceKind",
+    "provenanceRef",
+    "summary",
+    "pendingState"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "minLength": 16,
+      "maxLength": 16,
+      "pattern": "^[0-9a-f]{16}$",
+      "description": "Deterministic SHA-256 truncation of runId:phaseId:eventType:timestamp."
+    },
+    "schemaVersion": {
+      "type": "string",
+      "const": "1"
+    },
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "task_start",
+        "milestone",
+        "discovery",
+        "verification",
+        "blocker",
+        "delegation",
+        "interruption"
+      ]
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "phaseId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp."
+    },
+    "provenanceKind": {
+      "type": "string",
+      "enum": [
+        "tool_output",
+        "test_result",
+        "human_statement",
+        "inferred",
+        "sub_agent_feed"
+      ]
+    },
+    "provenanceRef": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Opaque reference (tool call id, test run id, message ordinal). Never raw transcript."
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "pendingState": {
+      "type": ["object", "null"],
+      "additionalProperties": true
+    },
+    "gapRef": {
+      "type": "string"
+    },
+    "memoryObservationRef": {
+      "type": "string"
+    },
+    "delegationTarget": {
+      "type": "string"
+    },
+    "blockerCondition": {
+      "type": "string"
+    },
+    "verificationOutcome": {
+      "type": "string",
+      "enum": ["pass", "fail", "partial"]
+    },
+    "verificationEvidence": {
+      "type": "string",
+      "maxLength": 500
+    },
+    "resumedFromEventId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{16}$"
+    }
+  }
+}

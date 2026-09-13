@@ -1,0 +1,14 @@
+{
+  "eventId": "0a4c3c70455ce230",
+  "schemaVersion": "1",
+  "eventType": "delegation",
+  "runId": "deliver-fixture-run",
+  "phaseId": "1",
+  "agentId": "fixture-agent",
+  "timestamp": "2026-09-12T19:00:00Z",
+  "provenanceKind": "sub_agent_feed",
+  "provenanceRef": "fixture:delegation",
+  "summary": "delegation: handed schema work to sub-agent",
+  "pendingState": null,
+  "delegationTarget": "sub-agent:schema"
+}

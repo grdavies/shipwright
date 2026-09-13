@@ -1,0 +1,13 @@
+{
+  "eventId": "0f25072cfeed4aa1",
+  "schemaVersion": "1",
+  "eventType": "interruption",
+  "runId": "deliver-fixture-run",
+  "phaseId": "1",
+  "agentId": "fixture-agent",
+  "timestamp": "2026-09-12T19:00:00Z",
+  "provenanceKind": "inferred",
+  "provenanceRef": "fixture:interruption",
+  "summary": "interruption: session paused",
+  "pendingState": null
+}
