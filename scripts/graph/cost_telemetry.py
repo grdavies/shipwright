@@ -6,7 +6,12 @@ import argparse
 import json
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Iterable, Mapping, MutableMapping
+
+_SCRIPTS = Path(__file__).resolve().parents[1]
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
 
 from model_policy_lib import (
     ESCALATION_TRIGGERS,

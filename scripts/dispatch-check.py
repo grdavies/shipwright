@@ -13,6 +13,7 @@ from dispatch_intensity_check import validate_directive_anchor
 from dispatch_reader_lib import evaluate_reader_role, validate_reader_tool_log_file
 from dispatch_complexity_lib import probe_complexity
 from dispatch_budget_lib import resolve_token_budget
+from graph.cost_telemetry import aggregate
 from model_policy_lib import ModelPolicy, ensure_mid_tier, preflight_missing_mid, tier_rank
 from task_model_allowlist_lib import enforce_task_model_allowlist
 
@@ -353,6 +354,10 @@ def _main_legacy_positional(argv: list[str]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     raw = list(argv if argv is not None else sys.argv[1:])
+    # PRD 351 R23 — named consumer for cost_telemetry aggregate --split-verified.
+    if "--split-verified" in raw and "--agent" not in raw:
+        print(json.dumps(aggregate(split_verified=True), indent=2, ensure_ascii=False))
+        return 0
     if raw and not raw[0].startswith("-"):
         return _main_legacy_positional(raw)
 
@@ -367,6 +372,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--override", action="store_true")
     parser.add_argument("--config", default="")
     parser.add_argument("--simulate-capacity", action="store_true")
+    parser.add_argument(
+        "--split-verified",
+        action="store_true",
+        help="emit cost_telemetry aggregate --split-verified JSON (PRD 351 R23)",
+    )
     parser.add_argument(
         "--prompt",
         default="",
