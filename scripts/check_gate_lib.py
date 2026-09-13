@@ -1327,18 +1327,39 @@ def platform_portability_suite_steps(root: Path) -> list[tuple[str, list[str]]]:
     ]
 
 
-def run_platform_portability_suite(root: Path) -> tuple[str | None, list[dict[str, Any]]]:
-    """Run phase-5 suite fail-closed. Returns (error_reason|None, step results).
+def _platform_portability_suite_enabled(root: Path) -> bool:
+    """Whether the PRD 349 portability suite should run for this gate invocation.
 
-    Skipped when ``SW_GATE_FIXTURE`` is set so synthetic gate-contract harnesses
-    (scripts/unit_tests/meta/harness_gate.py) keep exercising host/check verdicts
-    without requiring the full PRD 349 portability matrix on every fixture case.
+    Skipped when:
+    - ``SW_GATE_FIXTURE`` is set (synthetic gate-contract harnesses), or
+    - ``SW_SKIP_PLATFORM_PORTABILITY_SUITE`` is set, or
+    - ``root`` is not a full plugin checkout (missing conformance records / platforms).
+      Ephemeral deliver fixture repos call check-gate for live-evidence reconcile and
+      must not pay the full portability matrix tax.
     """
     if os.environ.get("SW_GATE_FIXTURE"):
+        return False
+    if os.environ.get("SW_SKIP_PLATFORM_PORTABILITY_SUITE"):
+        return False
+    records = root / "core" / "schemas" / "capabilities" / "conformance"
+    platforms = root / "platforms"
+    return records.is_dir() and platforms.is_dir()
+
+
+def run_platform_portability_suite(root: Path) -> tuple[str | None, list[dict[str, Any]]]:
+    """Run phase-5 suite fail-closed. Returns (error_reason|None, step results)."""
+    if not _platform_portability_suite_enabled(root):
         return None, []
+    plugin_root = SCRIPT_DIR.parent
+    # ``python -m core.handoff...`` and pytest collection need the plugin root on PYTHONPATH.
+    path_parts = [str(plugin_root), str(SCRIPT_DIR)]
+    existing = os.environ.get("PYTHONPATH", "").strip()
+    if existing:
+        path_parts.append(existing)
+    child_env = proc.HookVerifyEnv(pythonpath=os.pathsep.join(path_parts))
     results: list[dict[str, Any]] = []
     for name, argv in platform_portability_suite_steps(root):
-        completed = proc.run(argv, cwd=str(root))
+        completed = proc.run(argv, cwd=str(root), child_env=child_env)
         entry = {
             "step": name,
             "argv": argv,
