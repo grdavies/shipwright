@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Thin Claude Code entrypoint — context-switch HandoffBundle export (PRD 333 R3)."""
+"""Thin Claude Code entrypoint — context-switch HandoffBundle export."""
 from __future__ import annotations
 import sys
 from pathlib import Path

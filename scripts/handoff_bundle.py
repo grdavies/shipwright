@@ -175,47 +175,44 @@ def _validate_transition_provenance(document: Mapping[str, Any]) -> dict[str, An
 
 
 def validate_bundle(document: Mapping[str, Any], *, root: Path | None = None) -> dict[str, Any]:
-    """Fail-closed schema validation for HandoffBundle@v1."""
-    missing = [
-        key
-        for key in (
-            "schemaVersion",
-            "goal",
-            "currentState",
-            "resolvedDecisions",
-            "unresolvedDecisions",
-            "activeNode",
-            "blockers",
-            "evidence",
-            "changedFiles",
-            "relevantRules",
-            "nextAction",
-            "workflowDigest",
-            "exportedAt",
-            "expiresAt",
-            "bundleDigest",
-        )
-        if key not in document
-    ]
-    if missing:
-        return {"verdict": "fail", "error": "handoff:missing-keys", "missing": missing}
-    if str(document.get("schemaVersion")) != SCHEMA_VERSION:
-        return {"verdict": "fail", "error": "handoff:schema-version", "expected": SCHEMA_VERSION}
-    expected = digest_payload(document)
-    if str(document.get("bundleDigest")) != expected:
-        return {"verdict": "fail", "error": "handoff:digest-mismatch", "expected": expected}
+    """Fail-closed schema validation for HandoffBundle@v1 (stdlib-only; PRD 349 R7)."""
+    # Prefer packaged stdlib validator — never soft-skip when jsonschema is absent.
+    core_root = Path(__file__).resolve().parents[1] / "core"
+    if str(core_root) not in sys.path:
+        sys.path.insert(0, str(core_root.parent))
     try:
-        import jsonschema
-
-        jsonschema.validate(dict(document), load_schema(root))
+        from core.handoff.validate_bundle import validate_bundle as _stdlib_validate
     except ImportError:
-        pass
-    except Exception as exc:  # noqa: BLE001
-        return {"verdict": "fail", "error": "handoff:schema-invalid", "detail": str(exc)}
-    transition_issue = _validate_transition_provenance(document)
-    if transition_issue is not None:
-        return transition_issue
-    return {"verdict": "pass"}
+        # Editable checkout: load by path.
+        from importlib.util import module_from_spec, spec_from_file_location
+
+        path = core_root / "handoff" / "validate_bundle.py"
+        spec = spec_from_file_location("sw_core_handoff_validate_bundle", path)
+        if spec is None or spec.loader is None:
+            return {"verdict": "schema_failure", "error": "handoff:validator-unavailable"}
+        mod = module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _stdlib_validate = mod.validate_bundle
+
+    result = _stdlib_validate(document, root=root)
+    verdict = str(result.get("verdict") or "")
+    # Preserve legacy error codes for schemaVersion mismatches.
+    fields = result.get("fields") or []
+    if verdict == "schema_failure" and "schemaVersion" in fields:
+        result = {
+            **result,
+            "error": "handoff:schema-version",
+            "expected": SCHEMA_VERSION,
+        }
+    # Preserve transition provenance checks after digest+schema pass.
+    if verdict == "pass":
+        transition_issue = _validate_transition_provenance(document)
+        if transition_issue is not None:
+            # Map legacy fail → schema_failure for structured consumers.
+            if transition_issue.get("verdict") == "fail":
+                transition_issue = {**transition_issue, "verdict": "schema_failure"}
+            return transition_issue
+    return result
 
 
 def _parse_iso8601(value: str) -> datetime | None:
@@ -1067,7 +1064,8 @@ def cmd_import_exploration(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="HandoffBundle@v1 export/import (PRD 280 gap-324)")
     parser.add_argument("--root", default="", help="Repository root (default: git root from cwd)")
-    sub = parser.add_subparsers(dest="command", required=True)
+    parser.add_argument("--self-test", action="store_true", help="Run stdlib validator fixture suite (PRD 349 R10)")
+    sub = parser.add_subparsers(dest="command", required=False)
 
     validate = sub.add_parser("validate", help="Validate bundle JSON against schema + digest")
     validate.add_argument("path")
@@ -1112,7 +1110,18 @@ def main(argv: list[str] | None = None) -> int:
     import_exploration.add_argument("--expected-revision", default="")
     import_exploration.set_defaults(func=cmd_import_exploration)
 
-    args = parser.parse_args(argv)
+    args = parser.parse_args(list(sys.argv[1:] if argv is None else argv))
+    if getattr(args, "self_test", False):
+        core_parent = Path(__file__).resolve().parents[1]
+        if str(core_parent) not in sys.path:
+            sys.path.insert(0, str(core_parent))
+        from core.handoff.validate_bundle import run_self_test
+
+        payload = run_self_test()
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0 if payload.get("verdict") == "pass" else 1
+    if not getattr(args, "command", None):
+        parser.error("command required unless --self-test")
     return int(args.func(args))
 
 

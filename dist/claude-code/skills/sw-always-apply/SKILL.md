@@ -1,4 +1,9 @@
-# Shipwright
+---
+name: sw-always-apply
+description: Shipwright always-applied guardrails for Claude Code sessions.
+---
+
+# Shipwright always-applied rules
 
 
 ## sw-freeze-guardrail

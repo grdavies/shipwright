@@ -10,6 +10,29 @@ from pathlib import Path
 from emitter_base import EmitterBase, EmitterError, ensure_clean_dir, read_version
 # verify-presets.json emitted via emitter_base.SW_REFERENCE_CLOSED_EMIT
 
+import sys as _sys
+
+_GENERATORS = Path(__file__).resolve().parent / "generators"
+if str(_GENERATORS) not in _sys.path:
+    _sys.path.insert(0, str(_GENERATORS))
+
+from event_registry import (  # noqa: E402
+    assert_no_context_switch_registration,
+    registered_host_events,
+    unsupported_events,
+)
+from hook_manifest import (  # noqa: E402
+    build_hooks_manifest,
+    validate_native_hooks_manifest,
+)
+
+ALWAYS_APPLY_SKILL_REL = Path("skills") / "sw-always-apply" / "SKILL.md"
+
+
+class BuildError(EmitterError):
+    """Fail-closed when a required Claude Code emit target cannot be resolved."""
+
+
 SUPPORTED = {
     "hooks": {"native"},
     "skills": {"native"},
@@ -233,52 +256,60 @@ if __name__ == "__main__":
             shutil.copy2(template_src, hooks_dir / "session-context.md")
         if adapter_src.is_file():
             shutil.copy2(adapter_src, hooks_dir / "hook_adapter.py")
-        wrapper = '''#!/usr/bin/env python3
-import sys
-from pathlib import Path
-_REPO = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_REPO / "core" / "hooks"))
-sys.path.insert(0, str(_REPO / "platforms" / "claude-code"))
-import hook_adapter
-if __name__ == "__main__":
-    raise SystemExit(hook_adapter.dispatch(_REPO))
-'''
+        adapters_src = repo_root / "platforms" / "claude-code" / "adapters"
+        if adapters_src.is_dir():
+            dest_adapters = dest / "platforms" / "claude-code" / "adapters"
+            dest_adapters.mkdir(parents=True, exist_ok=True)
+            for item in adapters_src.iterdir():
+                if item.is_file() and item.suffix == ".py":
+                    shutil.copy2(item, dest_adapters / item.name)
+        pre_tool_src = repo_root / "core" / "adapters" / "pre_tool_evaluator.py"
+        if pre_tool_src.is_file():
+            dest_core_adapters = dest / "core" / "adapters"
+            dest_core_adapters.mkdir(parents=True, exist_ok=True)
+            (dest_core_adapters / "__init__.py").write_text("", encoding="utf-8")
+            shutil.copy2(pre_tool_src, dest_core_adapters / "pre_tool_evaluator.py")
+        wrapper = (
+            "#!/usr/bin/env python3\n"
+            "import sys\n"
+            "from pathlib import Path\n"
+            "_REPO = Path(__file__).resolve().parent.parent\n"
+            "sys.path.insert(0, str(_REPO / \"core\" / \"hooks\"))\n"
+            "sys.path.insert(0, str(_REPO / \"core\"))\n"
+            "sys.path.insert(0, str(_REPO / \"platforms\" / \"claude-code\"))\n"
+            "sys.path.insert(0, str(_REPO / \"platforms\" / \"claude-code\" / \"adapters\"))\n"
+            "import hook_adapter\n"
+            "if __name__ == \"__main__\":\n"
+            "    raise SystemExit(hook_adapter.dispatch(_REPO))\n"
+        )
         (hooks_dir / "claude-hook.py").write_text(wrapper, encoding="utf-8")
-        context_switch_shim = '''#!/usr/bin/env python3
-"""Thin Claude Code entrypoint — context-switch HandoffBundle export (PRD 333 R3)."""
-from __future__ import annotations
-import sys
-from pathlib import Path
-_REPO = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_REPO / "core" / "hooks"))
-import context_switch_handoff  # noqa: E402
-if __name__ == "__main__":
-    raise SystemExit(context_switch_handoff.main())
-'''
+        context_switch_shim = (
+            "#!/usr/bin/env python3\n"
+            '"""Thin Claude Code entrypoint — context-switch HandoffBundle export."""\n'
+            "from __future__ import annotations\n"
+            "import sys\n"
+            "from pathlib import Path\n"
+            "_REPO = Path(__file__).resolve().parent.parent\n"
+            "sys.path.insert(0, str(_REPO / \"core\" / \"hooks\"))\n"
+            "import context_switch_handoff  # noqa: E402\n"
+            "if __name__ == \"__main__\":\n"
+            "    raise SystemExit(context_switch_handoff.main())\n"
+        )
         (hooks_dir / "context-switch-handoff.py").write_text(context_switch_shim, encoding="utf-8")
         (hooks_dir / "context-switch-handoff.py").chmod(0o755)
-        hooks_json = {
-            "hooks": {
-                "SessionStart": [
-                    {"command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py"'}
-                ],
-                "UserPromptSubmit": [
-                    {"command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py"'}
-                ],
-                "Stop": [
-                    {"command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py"'}
-                ],
-                "PreToolUse": [
-                    {"command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py"'}
-                ],
-                "ContextSwitch": [
-                    {
-                        "command": 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/context-switch-handoff.py" --trigger context-switch',
-                        "metadata": {"trigger": "context-switch", "event": "pause"},
-                    }
-                ],
-            }
-        }
+
+        events = registered_host_events("claude-code")
+        assert_no_context_switch_registration(events)
+        command = 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py"'
+        hooks_json = build_hooks_manifest(events=events, command=command)
+        unsupported = unsupported_events("claude-code")
+        if unsupported:
+            hooks_json["unsupportedEvents"] = unsupported
+        errors = validate_native_hooks_manifest(hooks_json)
+        if errors:
+            raise BuildError(
+                "claude-code hooks.json failed native schema checks: " + "; ".join(errors)
+            )
         canonical_hooks = repo_root / "core" / "hooks" / "hooks.json"
         if canonical_hooks.is_file():
             hooks_json["canonicalManifest"] = str(canonical_hooks.relative_to(repo_root))
@@ -288,16 +319,44 @@ if __name__ == "__main__":
         )
 
     def _emit_claude_md(self, core_root: Path, dest: Path) -> None:
+        """Place always-applied rules in the plugin skill context path (R4)."""
         rules_dir = core_root / "rules"
         if not rules_dir.is_dir():
             return
-        chunks: list[str] = ["# Shipwright\n"]
+        chunks: list[str] = [
+            "---",
+            "name: sw-always-apply",
+            "description: Shipwright always-applied guardrails for Claude Code sessions.",
+            "---",
+            "",
+            "# Shipwright always-applied rules",
+            "",
+        ]
+        found = False
         for path in sorted(rules_dir.glob("*.mdc")):
-            text = path.read_text(encoding="utf-8")
-            if "alwaysApply: true" in text or "alwaysApply:true" in text:
-                chunks.append(f"\n## {path.stem}\n\n{text}")
-        if len(chunks) > 1:
-            (dest / "CLAUDE.md").write_text("\n".join(chunks) + "\n", encoding="utf-8")
+            rule_text = path.read_text(encoding="utf-8")
+            if "alwaysApply: true" in rule_text or "alwaysApply:true" in rule_text:
+                chunks.append(f"\n## {path.stem}\n\n{rule_text}")
+                found = True
+        if not found:
+            return
+        skills_root = dest / "skills"
+        if not skills_root.exists():
+            raise BuildError(
+                "cannot resolve Claude Code plugin always-apply skill path: "
+                f"{ALWAYS_APPLY_SKILL_REL} (skills/ missing under {dest})"
+            )
+        target = dest / ALWAYS_APPLY_SKILL_REL
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text("\n".join(chunks) + "\n", encoding="utf-8")
+        except OSError as exc:
+            raise BuildError(
+                f"cannot write always-apply rules to plugin skill path {ALWAYS_APPLY_SKILL_REL}: {exc}"
+            ) from exc
+        stale = dest / "CLAUDE.md"
+        if stale.is_file():
+            stale.unlink()
 
 
 def emit(core_root: Path, repo_root: Path, dest: Path) -> None:
