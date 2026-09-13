@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.0](https://github.com/grdavies/shipwright/compare/v2.12.0...v2.13.0) (2026-09-13)
+
+
+### Features
+
+* **prd-347:** init step authority single source ([#1160](https://github.com/grdavies/shipwright/issues/1160)) ([fea5036](https://github.com/grdavies/shipwright/commit/fea5036ea43deda32775b3dc6b0e91f1d59cc049))
+
 ## [2.12.0](https://github.com/grdavies/shipwright/compare/v2.11.2...v2.12.0) (2026-09-12)
 
 
