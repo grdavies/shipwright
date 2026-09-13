@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-12T22:19:28Z",
+  "generatedAt": "2026-09-13T05:33:42Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -73,154 +73,127 @@
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:54:test/_runner.py",
+      "id": ".github/workflows/ci.yml:45:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 54,
+      "line": 45,
+      "column": 21,
+      "script": "test/run_pytest.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/ci.yml:57:test/_runner.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/ci.yml",
+      "line": 57,
       "column": 40,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:54:test/_runner.py",
+      "id": ".github/workflows/ci.yml:57:test/_runner.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 54,
+      "line": 57,
       "column": 13,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:67:test/_runner.py",
+      "id": ".github/workflows/ci.yml:70:test/_runner.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 67,
+      "line": 70,
       "column": 40,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:67:test/_runner.py",
+      "id": ".github/workflows/ci.yml:70:test/_runner.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 67,
+      "line": 70,
       "column": 13,
       "script": "test/_runner.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:73:nightly-failure-notify.py",
+      "id": ".github/workflows/ci.yml:76:nightly-failure-notify.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 73,
+      "line": 76,
       "column": 37,
       "script": "nightly-failure-notify.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:73:nightly-failure-notify.py",
+      "id": ".github/workflows/ci.yml:76:nightly-failure-notify.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 73,
+      "line": 76,
       "column": 10,
       "script": "nightly-failure-notify.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:92:test/bash-py-invocation-guard.test",
+      "id": ".github/workflows/ci.yml:95:test/bash-py-invocation-guard.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 92,
+      "line": 95,
       "column": 21,
       "script": "test/bash-py-invocation-guard.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:95:test/claims-audit-unit.test",
+      "id": ".github/workflows/ci.yml:98:test/claims-audit-unit.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 95,
+      "line": 98,
       "column": 21,
       "script": "test/claims-audit-unit.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:98:docs-link-check.py",
+      "id": ".github/workflows/ci.yml:101:docs-link-check.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 98,
+      "line": 101,
       "column": 21,
       "script": "docs-link-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:102:build_dist.py",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/ci.yml",
-      "line": 102,
-      "column": 18,
-      "script": "build_dist.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/ci.yml:103:docs-link-check.py",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/ci.yml",
-      "line": 103,
-      "column": 18,
-      "script": "docs-link-check.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/ci.yml:104:docs-link-check.py",
+      "id": ".github/workflows/ci.yml:104:test/git-push-secret-scan-chokepoint.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
       "line": 104,
-      "column": 18,
-      "script": "docs-link-check.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/ci.yml:107:contributor_init.py",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/ci.yml",
-      "line": 107,
-      "column": 21,
-      "script": "contributor_init.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/ci.yml:110:test/git-push-secret-scan-chokepoint.test",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/ci.yml",
-      "line": 110,
       "column": 21,
       "script": "test/git-push-secret-scan-chokepoint.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:113:test/rca-fanout-unit.test",
+      "id": ".github/workflows/ci.yml:107:test/rca-fanout-unit.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 113,
+      "line": 107,
       "column": 21,
       "script": "test/rca-fanout-unit.test",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:116:check_scripts_inventory.py",
+      "id": ".github/workflows/ci.yml:110:check_scripts_inventory.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 116,
+      "line": 110,
       "column": 21,
       "script": "check_scripts_inventory.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/ci.yml:119:test/skills-spec-guard.test",
+      "id": ".github/workflows/ci.yml:113:test/skills-spec-guard.test",
       "tree": ".github/workflows",
       "file": ".github/workflows/ci.yml",
-      "line": 119,
+      "line": 113,
       "column": 21,
       "script": "test/skills-spec-guard.test",
       "classification": "self-repo-only"
@@ -406,73 +379,82 @@
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:142:check_scripts_inventory.py",
+      "id": ".github/workflows/pr-test-plan-ci.yml:142:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
       "line": 142,
-      "column": 21,
-      "script": "check_scripts_inventory.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:153:docs-link-check.py",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 153,
-      "column": 21,
-      "script": "docs-link-check.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:164:test/bash-py-invocation-guard.test",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 164,
-      "column": 21,
-      "script": "test/bash-py-invocation-guard.test",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:175:test/claims-audit-unit.test",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 175,
-      "column": 21,
-      "script": "test/claims-audit-unit.test",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:186:test/git-push-secret-scan-chokepoint.test",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 186,
-      "column": 21,
-      "script": "test/git-push-secret-scan-chokepoint.test",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:197:test/rca-fanout-unit.test",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 197,
-      "column": 21,
-      "script": "test/rca-fanout-unit.test",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": ".github/workflows/pr-test-plan-ci.yml:209:test/run_pytest.py",
-      "tree": ".github/workflows",
-      "file": ".github/workflows/pr-test-plan-ci.yml",
-      "line": 209,
       "column": 21,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": ".github/workflows/pr-test-plan-ci.yml:220:test/skills-spec-guard.test",
+      "id": ".github/workflows/pr-test-plan-ci.yml:153:check_scripts_inventory.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 153,
+      "column": 21,
+      "script": "check_scripts_inventory.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:164:docs-link-check.py",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 164,
+      "column": 21,
+      "script": "docs-link-check.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:175:test/bash-py-invocation-guard.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 175,
+      "column": 21,
+      "script": "test/bash-py-invocation-guard.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:186:test/claims-audit-unit.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 186,
+      "column": 21,
+      "script": "test/claims-audit-unit.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:197:test/git-push-secret-scan-chokepoint.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 197,
+      "column": 21,
+      "script": "test/git-push-secret-scan-chokepoint.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:208:test/rca-fanout-unit.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 208,
+      "column": 21,
+      "script": "test/rca-fanout-unit.test",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:220:test/run_pytest.py",
       "tree": ".github/workflows",
       "file": ".github/workflows/pr-test-plan-ci.yml",
       "line": 220,
+      "column": 21,
+      "script": "test/run_pytest.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": ".github/workflows/pr-test-plan-ci.yml:231:test/skills-spec-guard.test",
+      "tree": ".github/workflows",
+      "file": ".github/workflows/pr-test-plan-ci.yml",
+      "line": 231,
       "column": 21,
       "script": "test/skills-spec-guard.test",
       "classification": "self-repo-only"
@@ -2935,147 +2917,138 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:46:wave.py",
+      "id": "core/commands/sw-retrospective.md:54:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 46,
+      "line": 54,
       "column": 41,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:54:wave.py",
+      "id": "core/commands/sw-retrospective.md:62:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 54,
+      "line": 62,
       "column": 20,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:77:loop_health.py",
+      "id": "core/commands/sw-retrospective.md:85:loop_health.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 77,
+      "line": 85,
       "column": 40,
       "script": "loop_health.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:84:execution_telemetry.py",
+      "id": "core/commands/sw-retrospective.md:92:execution_telemetry.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 84,
+      "line": 92,
       "column": 8,
       "script": "execution_telemetry.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:85:execution_telemetry.py",
+      "id": "core/commands/sw-retrospective.md:93:execution_telemetry.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 85,
+      "line": 93,
       "column": 8,
       "script": "execution_telemetry.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:98:wave.py",
+      "id": "core/commands/sw-retrospective.md:106:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 98,
+      "line": 106,
       "column": 21,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:107:reconcile.py",
+      "id": "core/commands/sw-retrospective.md:115:reconcile.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 107,
+      "line": 115,
       "column": 31,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:111:wave.py",
+      "id": "core/commands/sw-retrospective.md:119:wave.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 111,
+      "line": 119,
       "column": 12,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:121:planning_store.py",
+      "id": "core/commands/sw-retrospective.md:129:planning_store.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 121,
+      "line": 129,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:136:planning_store.py",
+      "id": "core/commands/sw-retrospective.md:144:planning_store.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 136,
+      "line": 144,
       "column": 53,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:146:planning_store.py",
+      "id": "core/commands/sw-retrospective.md:154:planning_store.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 146,
+      "line": 154,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:178:planning_store.py",
+      "id": "core/commands/sw-retrospective.md:186:planning_store.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 178,
+      "line": 186,
       "column": 11,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:198:sw_bootstrap.py",
+      "id": "core/commands/sw-retrospective.md:206:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 198,
+      "line": 206,
       "column": 65,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-retrospective.md:227:deliver_closeout.py",
+      "id": "core/commands/sw-retrospective.md:235:deliver_closeout.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 227,
+      "line": 235,
       "column": 159,
       "script": "deliver_closeout.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:228:closeout_ci.py",
+      "id": "core/commands/sw-retrospective.md:236:closeout_ci.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 228,
+      "line": 236,
       "column": 146,
       "script": "closeout_ci.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "core/commands/sw-retrospective.md:229:planning_store.py",
-      "tree": "core/commands",
-      "file": "core/commands/sw-retrospective.md",
-      "line": 229,
-      "column": 127,
-      "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
@@ -3083,42 +3056,51 @@
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
       "line": 237,
+      "column": 127,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-retrospective.md:245:planning_store.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-retrospective.md",
+      "line": 245,
       "column": 37,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:268:planning_store.py",
+      "id": "core/commands/sw-retrospective.md:276:planning_store.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 268,
+      "line": 276,
       "column": 25,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-retrospective.md:297:planning_gap_capture.py",
+      "id": "core/commands/sw-retrospective.md:305:planning_gap_capture.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 297,
+      "line": 305,
       "column": 8,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-retrospective.md:298:planning_gap_capture.py",
+      "id": "core/commands/sw-retrospective.md:306:planning_gap_capture.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 298,
+      "line": 306,
       "column": 8,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-retrospective.md:299:planning_gap_capture.py",
+      "id": "core/commands/sw-retrospective.md:307:planning_gap_capture.py",
       "tree": "core/commands",
       "file": "core/commands/sw-retrospective.md",
-      "line": 299,
+      "line": 307,
       "column": 8,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
@@ -6958,6 +6940,24 @@
       "classification": "consumer-capable"
     },
     {
+      "id": "core/skills/retro/SKILL.md:107:retrospective_evidence.py",
+      "tree": "core/skills",
+      "file": "core/skills/retro/SKILL.md",
+      "line": 107,
+      "column": 27,
+      "script": "retrospective_evidence.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/retro/SKILL.md:107:retrospective_evidence.py",
+      "tree": "core/skills",
+      "file": "core/skills/retro/SKILL.md",
+      "line": 107,
+      "column": 0,
+      "script": "retrospective_evidence.py",
+      "classification": "self-repo-only"
+    },
+    {
       "id": "core/skills/retro/references/rule-adversarial-verification.md:9:rule_verification.py",
       "tree": "core/skills",
       "file": "core/skills/retro/references/rule-adversarial-verification.md",
@@ -10198,147 +10198,138 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:46:wave.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:54:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 46,
+      "line": 54,
       "column": 41,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:54:wave.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:62:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 54,
+      "line": 62,
       "column": 20,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:77:loop_health.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:85:loop_health.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 77,
+      "line": 85,
       "column": 40,
       "script": "loop_health.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:84:execution_telemetry.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:92:execution_telemetry.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 84,
+      "line": 92,
       "column": 8,
       "script": "execution_telemetry.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:85:execution_telemetry.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:93:execution_telemetry.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 85,
+      "line": 93,
       "column": 8,
       "script": "execution_telemetry.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:98:wave.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:106:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 98,
+      "line": 106,
       "column": 21,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:107:reconcile.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:115:reconcile.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 107,
+      "line": 115,
       "column": 31,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:111:wave.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:119:wave.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 111,
+      "line": 119,
       "column": 12,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:121:planning_store.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:129:planning_store.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 121,
+      "line": 129,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:136:planning_store.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:144:planning_store.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 136,
+      "line": 144,
       "column": 53,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:146:planning_store.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:154:planning_store.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 146,
+      "line": 154,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:178:planning_store.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:186:planning_store.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 178,
+      "line": 186,
       "column": 11,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:198:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:206:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 198,
+      "line": 206,
       "column": 65,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:227:deliver_closeout.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:235:deliver_closeout.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 227,
+      "line": 235,
       "column": 159,
       "script": "deliver_closeout.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:228:closeout_ci.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:236:closeout_ci.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 228,
+      "line": 236,
       "column": 146,
       "script": "closeout_ci.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/commands/sw-retrospective.md:229:planning_store.py",
-      "tree": "dist/claude-code/commands",
-      "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 229,
-      "column": 127,
-      "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
@@ -10346,42 +10337,51 @@
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
       "line": 237,
+      "column": 127,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-retrospective.md:245:planning_store.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-retrospective.md",
+      "line": 245,
       "column": 37,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:268:planning_store.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:276:planning_store.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 268,
+      "line": 276,
       "column": 25,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:297:planning_gap_capture.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:305:planning_gap_capture.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 297,
+      "line": 305,
       "column": 8,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:298:planning_gap_capture.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:306:planning_gap_capture.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 298,
+      "line": 306,
       "column": 8,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-retrospective.md:299:planning_gap_capture.py",
+      "id": "dist/claude-code/commands/sw-retrospective.md:307:planning_gap_capture.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-retrospective.md",
-      "line": 299,
+      "line": 307,
       "column": 8,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
@@ -13292,6 +13292,24 @@
       "column": 18,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
+    },
+    {
+      "id": "dist/claude-code/skills/retro/SKILL.md:107:retrospective_evidence.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/retro/SKILL.md",
+      "line": 107,
+      "column": 27,
+      "script": "retrospective_evidence.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/retro/SKILL.md:107:retrospective_evidence.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/retro/SKILL.md",
+      "line": 107,
+      "column": 0,
+      "script": "retrospective_evidence.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/claude-code/skills/retro/references/rule-adversarial-verification.md:9:rule_verification.py",
@@ -16210,147 +16228,138 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:46:wave.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:54:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 46,
+      "line": 54,
       "column": 41,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:54:wave.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:62:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 54,
+      "line": 62,
       "column": 20,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:77:loop_health.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:85:loop_health.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 77,
+      "line": 85,
       "column": 40,
       "script": "loop_health.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:84:execution_telemetry.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:92:execution_telemetry.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 84,
+      "line": 92,
       "column": 8,
       "script": "execution_telemetry.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:85:execution_telemetry.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:93:execution_telemetry.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 85,
+      "line": 93,
       "column": 8,
       "script": "execution_telemetry.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:98:wave.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:106:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 98,
+      "line": 106,
       "column": 21,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:107:reconcile.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:115:reconcile.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 107,
+      "line": 115,
       "column": 31,
       "script": "reconcile.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:111:wave.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:119:wave.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 111,
+      "line": 119,
       "column": 12,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:121:planning_store.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:129:planning_store.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 121,
+      "line": 129,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:136:planning_store.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:144:planning_store.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 136,
+      "line": 144,
       "column": 53,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:146:planning_store.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:154:planning_store.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 146,
+      "line": 154,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:178:planning_store.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:186:planning_store.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 178,
+      "line": 186,
       "column": 11,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:198:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:206:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 198,
+      "line": 206,
       "column": 65,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:227:deliver_closeout.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:235:deliver_closeout.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 227,
+      "line": 235,
       "column": 159,
       "script": "deliver_closeout.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:228:closeout_ci.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:236:closeout_ci.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 228,
+      "line": 236,
       "column": 146,
       "script": "closeout_ci.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/cursor/commands/sw-retrospective.md:229:planning_store.py",
-      "tree": "dist/cursor/commands",
-      "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 229,
-      "column": 127,
-      "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
@@ -16358,42 +16367,51 @@
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
       "line": 237,
+      "column": 127,
+      "script": "planning_store.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-retrospective.md:245:planning_store.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-retrospective.md",
+      "line": 245,
       "column": 37,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:268:planning_store.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:276:planning_store.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 268,
+      "line": 276,
       "column": 25,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:297:planning_gap_capture.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:305:planning_gap_capture.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 297,
+      "line": 305,
       "column": 8,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:298:planning_gap_capture.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:306:planning_gap_capture.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 298,
+      "line": 306,
       "column": 8,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-retrospective.md:299:planning_gap_capture.py",
+      "id": "dist/cursor/commands/sw-retrospective.md:307:planning_gap_capture.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-retrospective.md",
-      "line": 299,
+      "line": 307,
       "column": 8,
       "script": "planning_gap_capture.py",
       "classification": "consumer-capable"
@@ -19304,6 +19322,24 @@
       "column": 18,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
+    },
+    {
+      "id": "dist/cursor/skills/retro/SKILL.md:107:retrospective_evidence.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/retro/SKILL.md",
+      "line": 107,
+      "column": 27,
+      "script": "retrospective_evidence.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/retro/SKILL.md:107:retrospective_evidence.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/retro/SKILL.md",
+      "line": 107,
+      "column": 0,
+      "script": "retrospective_evidence.py",
+      "classification": "self-repo-only"
     },
     {
       "id": "dist/cursor/skills/retro/references/rule-adversarial-verification.md:9:rule_verification.py",

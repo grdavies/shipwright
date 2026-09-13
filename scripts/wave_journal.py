@@ -357,6 +357,8 @@ def consolidate_sub_agent_events(
         after_ids = _existing_event_ids(events_path(root, run_id))
         if isinstance(eid, str) and eid in after_ids and eid not in before_ids:
             appended += 1
+    if appended:
+        route_sub_agent_memory_candidates(run_id, root=root)
     return appended
 
 
@@ -668,6 +670,8 @@ def emit_discovery(
         event["memoryObservationRef"] = "sw:observation-pending"
 
     eid = _safe_record(event, root=root, run_id=run_id)
+    if matched and eid:
+        route_memory_observation(event, root=root, run_id=run_id)
     if matched:
         _append_error(
             root,
@@ -921,6 +925,141 @@ def capture_dispatch_env(run_id: str, dispatch_id: str) -> dict[str, str]:
 
 
 
+def update_memory_observation_ref(
+    run_id: str,
+    event_id: str,
+    observation_ref: str | None,
+    *,
+    root: Path,
+) -> bool:
+    """Set memoryObservationRef on an existing event in-place (R24).
+
+    Append-only storage is preserved for new events; this updates the matching
+    JSONL line under flock so a successful observation write can fill a prior
+    null/pending ref without inventing a second eventId.
+    """
+    if not capture_enabled(root):
+        return False
+    path = events_path(root, run_id)
+    if not path.is_file():
+        return False
+    with path.open("r+", encoding="utf-8") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            lines = handle.read().splitlines()
+            updated = False
+            out: list[str] = []
+            for line in lines:
+                if not line.strip():
+                    continue
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    out.append(line)
+                    continue
+                if isinstance(obj, dict) and obj.get("eventId") == event_id:
+                    obj["memoryObservationRef"] = observation_ref
+                    out.append(json.dumps(obj, ensure_ascii=False, sort_keys=True))
+                    updated = True
+                else:
+                    out.append(line)
+            if updated:
+                handle.seek(0)
+                handle.truncate()
+                handle.write("\n".join(out) + ("\n" if out else ""))
+                handle.flush()
+            return updated
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def route_memory_observation(
+    event: dict[str, Any],
+    *,
+    root: Path,
+    run_id: str,
+) -> str | None:
+    """Route a discovery/milestone memory candidate through observation mode (R21/R24).
+
+    Never blocks event persistence on preflight failure — logs to capture-errors
+    and leaves memoryObservationRef null/pending.
+    """
+    try:
+        from memory_observation_gate import write_observation
+    except Exception as exc:  # pragma: no cover
+        _append_error(
+            root,
+            run_id,
+            {
+                "at": _utc_now(),
+                "kind": "observation_preflight_import_error",
+                "message": str(exc),
+                "eventId": event.get("eventId"),
+            },
+        )
+        return None
+    try:
+        result = write_observation(
+            root,
+            summary=str(event.get("summary") or ""),
+            source_event_id=str(event.get("eventId") or "") or None,
+            run_id=run_id,
+        )
+        ref = str(result.get("observationRef") or "") or None
+        if ref and event.get("eventId"):
+            update_memory_observation_ref(
+                run_id, str(event["eventId"]), ref, root=root
+            )
+            event["memoryObservationRef"] = ref
+        return ref
+    except Exception as exc:
+        _append_error(
+            root,
+            run_id,
+            {
+                "at": _utc_now(),
+                "kind": "observation_preflight_failed",
+                "message": str(exc),
+                "eventId": event.get("eventId"),
+            },
+        )
+        if event.get("eventId"):
+            update_memory_observation_ref(
+                run_id, str(event["eventId"]), None, root=root
+            )
+        event["memoryObservationRef"] = None
+        return None
+
+
+def route_sub_agent_memory_candidates(
+    run_id: str,
+    *,
+    root: Path,
+) -> int:
+    """After consolidation, route sub_agent_feed memory candidates via parent preflight (R23).
+
+    Sub-agents must not call memory-preflight locally for these candidates.
+    """
+    if not capture_enabled(root):
+        return 0
+    events = read_events(run_id, root=root)
+    routed = 0
+    for event in events:
+        if event.get("provenanceKind") != "sub_agent_feed":
+            continue
+        markers = event.get("memoryCandidate") or event.get("memoryObservationRef")
+        if not markers:
+            continue
+        # Already has a real observation ref (not pending placeholder).
+        ref = event.get("memoryObservationRef")
+        if isinstance(ref, str) and ref.startswith("observations/"):
+            continue
+        if route_memory_observation(event, root=root, run_id=run_id):
+            routed += 1
+    return routed
+
+
+
 __all__ = [
     "CAPTURE_ERRORS_FILENAME",
     "CaptureStorageError",
@@ -952,4 +1091,7 @@ __all__ = [
     "_emit_interruption",
     "_emit_milestone",
     "_emit_task_start",
+    "update_memory_observation_ref",
+    "route_memory_observation",
+    "route_sub_agent_memory_candidates",
 ]

@@ -51,9 +51,9 @@ class ScriptsResolveResult:
 
 
 def is_shipwright_self_repo(workspace: Path) -> bool:
-    from repository_context import is_plugin_self_repository
-
     try:
+        from repository_context import is_plugin_self_repository
+
         return is_plugin_self_repository(workspace)
     except Exception:
         return False

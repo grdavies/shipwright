@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-"""Work-start memory preflight: resolve provider, rules-load, and write-binding assert (PRD 277/279)."""
+"""Work-start memory preflight (PRD 277/279) + observation gate (PRD 350 R21–R23):
+
+Sub-agent routing contract (R23): events with provenanceKind ``sub_agent_feed``
+that carry memory-candidate markers are NOT processed by a sub-agent-local
+preflight. After the parent consolidates sidecars, the parent invokes
+``--mode observation`` (see ``memory_observation_gate`` / wave_journal
+``route_sub_agent_memory_candidates``).
+
+Work-start memory preflight: resolve provider, rules-load, and write-binding assert (PRD 277/279)."""
 
 from __future__ import annotations
 
@@ -32,6 +40,14 @@ from memory_write_binding import (
 )
 from sw_resolve_plugin_root import resolve_plugin_root
 import shipwright_paths
+
+from memory_observation_gate import (
+    CAPTURE_RUN_ENV,
+    OBSERVATION_STATUS,
+    PromotionGateError,
+    enforce_promotion_gate,
+    write_observation,
+)
 
 RulesLoader = Callable[[Path, str], dict[str, Any]]
 MutatingWriter = Callable[[MemoryWriteBinding], dict[str, Any]]
@@ -419,6 +435,12 @@ def dispatch_mutating_store(
     cfg: dict[str, Any] | None = None,
     project_override: str | None = None,
 ) -> dict[str, Any]:
+    enforce_promotion_gate(
+        category=category,
+        namespace=category,
+        root=root,
+        summary=f"mutating store op={operation}",
+    )
     """Assert write binding, then invoke ``writer(binding)`` (no silent unbound fallback)."""
     binding = assert_write_binding(
         root,
@@ -480,10 +502,26 @@ def memory_sync_store_path(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Resolve provider, load allowlisted rules, and assert write bindings"
+        description="Resolve provider, load allowlisted rules, assert write bindings, or write observations"
     )
     parser.add_argument("--root", default=".")
+    parser.add_argument(
+        "--mode",
+        choices=["observation"],
+        default=None,
+        help="observation: write pending_human_review observation (R21)",
+    )
+    parser.add_argument("--summary", default="", help="Observation summary (with --mode observation)")
+    parser.add_argument("--source-event-id", default=None)
+    parser.add_argument("--run-id", default=None)
     sub = parser.add_subparsers(dest="command")
+    obs_p = sub.add_parser(
+        "observation",
+        help="Write observation-state memory with status pending_human_review (R21)",
+    )
+    obs_p.add_argument("--summary", default="")
+    obs_p.add_argument("--source-event-id", default=None)
+    obs_p.add_argument("--run-id", default=None)
     sub.add_parser("rules-load", help="Resolve provider and load allowlisted rules (default)")
     sync_p = sub.add_parser(
         "assert-sync-store",
@@ -509,6 +547,41 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     root = Path(args.root).resolve()
     command = args.command or "rules-load"
+    if args.mode == "observation" or command == "observation":
+        summary = str(getattr(args, "summary", "") or "")
+        if not summary.strip():
+            print(
+                json.dumps(
+                    {
+                        "verdict": "fail",
+                        "error": "summary required for observation mode",
+                        "cause": "observation-summary-missing",
+                    },
+                    indent=2,
+                )
+            )
+            return 20
+        try:
+            result = write_observation(
+                root,
+                summary=summary,
+                source_event_id=getattr(args, "source_event_id", None),
+                run_id=getattr(args, "run_id", None),
+            )
+        except Exception as exc:
+            print(
+                json.dumps(
+                    {
+                        "verdict": "fail",
+                        "error": str(exc),
+                        "cause": "observation-write-failed",
+                    },
+                    indent=2,
+                )
+            )
+            return 20
+        print(json.dumps(result, indent=2))
+        return 0
     try:
         if command == "assert-sync-store":
             result = memory_sync_store_path(root, category=str(args.category))
@@ -523,6 +596,19 @@ def main(argv: list[str] | None = None) -> int:
             result = exploration_query(root, str(args.query))
         else:
             result = preflight(root)
+    except PromotionGateError as exc:
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "error": str(exc),
+                    "cause": "promotion-gate",
+                    "redirected": bool(getattr(exc, "redirected", False)),
+                },
+                indent=2,
+            )
+        )
+        return 20
     except MemoryWriteBindingError as exc:
         refuse = exc.refuse
         print(
@@ -545,6 +631,7 @@ def main(argv: list[str] | None = None) -> int:
         return 20
     print(json.dumps(result, indent=2))
     return 0
+
 
 
 if __name__ == "__main__":
