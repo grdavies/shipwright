@@ -2326,6 +2326,7 @@
       ],
       "classification": "required",
       "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "ciShard": 1,
       "pytestPath": "tests/conformance/test_event_schema_conformance.py",
       "pathTriggers": [
         "scripts/_sw/capture-event-schema.json",
