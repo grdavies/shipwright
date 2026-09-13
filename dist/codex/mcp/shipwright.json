@@ -1,11 +1,11 @@
 {
   "adapter_id": "codex",
-  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/release-2.14.0-dist-regen/.shipwright/mcp/codex.json",
+  "config_path": "/home/runner/work/shipwright/shipwright/.shipwright/mcp/codex.json",
   "mcpServers": {
     "shipwright-bounded": {
       "command": "python3",
       "args": [
-        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/release-2.14.0-dist-regen/core/mcp/server.py"
+        "/home/runner/work/shipwright/shipwright/core/mcp/server.py"
       ],
       "transport": "stdio"
     }
