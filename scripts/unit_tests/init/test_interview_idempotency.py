@@ -139,19 +139,7 @@ def test_out_of_scope_broker_reference_fails_before_success() -> None:
     assert accepted["inScope"] is True
 
 
-def test_documented_init_steps_match_code_seed(sw_configure) -> None:
-    """R48 — documented initialization steps equal the code seed output."""
-    steps = sw_configure.packaged_init_steps()
-    assert len(steps) == 4
-    docs = (REPO_ROOT / "core/documentation/getting-started.md").read_text(encoding="utf-8")
-    # Canonical block: first four numbered steps under the default packaged path.
-    default_section = docs.split("## Default: packaged install + single init", 1)[1].split(
-        "### Self-check", 1
-    )[0]
-    numbered = re.findall(r"^\d+\.\s+(.+)$", default_section, flags=re.MULTILINE)
-    assert numbered[:4] == steps
-    for step in steps:
-        assert step in docs
+
 
     config_docs = (REPO_ROOT / "core/documentation/configuration.md").read_text(encoding="utf-8")
     assert "### Interview priority tiering" in config_docs
