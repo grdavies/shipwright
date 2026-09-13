@@ -2303,6 +2303,11 @@ Shipwright `2.13.0` · schema `config.schema.json`
 | `agentsFile` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` | `—` | `—` |
 | `architecture.assessment.mode` | `off` | `off` | `off` | `off` | `—` | `—` |
 | `architecture.assessment.path` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `.cursor/architecture-assessment.yaml` | `—` | `—` |
+| `capture.enabled` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `capture.gapKeywords` | `["missing documented", "undocumented", "not covered by spec", "gap identified", "sw:gap-marker"]` | `["missing documented", "undocumented", "not covered by spec", "gap identified", "sw:gap-marker"]` | `["missing documented", "undocumented", "not covered by spec", "gap identified", "sw:gap-marker"]` | `["missing documented", "undocumented", "not covered by spec", "gap identified", "sw:gap-marker"]` | `—` | `—` |
+| `capture.maxFileSizeBytes` | `52428800` | `52428800` | `52428800` | `52428800` | `—` | `—` |
+| `capture.maxSummaryLength` | `500` | `500` | `500` | `500` | `—` | `—` |
+| `capture.subAgentSidecarEnabled` | `true` | `true` | `true` | `true` | `—` | `—` |
 | `checks.treatNeutralAsPass` | `true` | `true` | `true` | `true` | `—` | `—` |
 | `checks.watch.maxWaitMinutes` | `20` | `20` | `20` | `20` | `—` | `—` |
 | `checks.watch.pollSeconds` | `45` | `45` | `45` | `45` | `—` | `—` |

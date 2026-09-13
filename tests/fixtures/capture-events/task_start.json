@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1",
+  "runId": "deliver-fixture-run-001",
+  "phaseId": "phase-1",
+  "agentId": "agent-parent",
+  "provenanceKind": "tool_output",
+  "provenanceRef": "tool-call-fixture-1",
+  "pendingState": null,
+  "eventType": "task_start",
+  "timestamp": "2026-09-12T10:00:00Z",
+  "summary": "Begin schema scaffolding task",
+  "eventId": "33fc680a4d23b27f"
+}

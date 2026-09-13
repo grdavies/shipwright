@@ -4,6 +4,8 @@
   "modules": [
     "_planning_pkg_loader.py",
     "_sw/__init__.py",
+    "_sw/capture-event-schema.json",
+    "_sw/capture_schema_lib.py",
     "_sw/cli.py",
     "_sw/completion_log.py",
     "_sw/credential-migration-release.json",
@@ -801,6 +803,7 @@
     "wave_failure.py",
     "wave_finalize.py",
     "wave_finalize_completion.py",
+    "wave_journal.py",
     "wave_json_io.py",
     "wave_lifecycle.py",
     "wave_living_doc_lock.py",
@@ -837,6 +840,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 834,
+  "moduleCount": 837,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

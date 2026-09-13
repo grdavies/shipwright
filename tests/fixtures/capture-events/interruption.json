@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1",
+  "runId": "deliver-fixture-run-001",
+  "phaseId": "phase-1",
+  "agentId": "agent-parent",
+  "provenanceKind": "inferred",
+  "provenanceRef": "unknown",
+  "pendingState": {
+    "tasks": [
+      {
+        "id": "1.7",
+        "status": "in_progress"
+      }
+    ]
+  },
+  "eventType": "interruption",
+  "timestamp": "2026-09-12T10:30:00Z",
+  "summary": "Session pause before commit",
+  "eventId": "109734e7ed0b8a94"
+}

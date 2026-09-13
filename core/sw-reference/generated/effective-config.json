@@ -1,7 +1,7 @@
 {
   "schemaVersion": "config.schema.json",
   "shipwrightVersion": "2.13.0",
-  "generatedAt": "2026-09-13T01:33:46Z",
+  "generatedAt": "2026-09-13T03:05:16Z",
   "generator": "scripts/effective_config_gen.py",
   "settings": {
     "agentsFile": {
@@ -25,6 +25,70 @@
       "greenfieldDefault": ".cursor/architecture-assessment.yaml",
       "migrationDefault": ".cursor/architecture-assessment.yaml",
       "runtimeFallback": ".cursor/architecture-assessment.yaml",
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "capture.enabled": {
+      "schemaDefault": false,
+      "greenfieldDefault": false,
+      "migrationDefault": false,
+      "runtimeFallback": false,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "capture.gapKeywords": {
+      "schemaDefault": [
+        "missing documented",
+        "undocumented",
+        "not covered by spec",
+        "gap identified",
+        "sw:gap-marker"
+      ],
+      "greenfieldDefault": [
+        "missing documented",
+        "undocumented",
+        "not covered by spec",
+        "gap identified",
+        "sw:gap-marker"
+      ],
+      "migrationDefault": [
+        "missing documented",
+        "undocumented",
+        "not covered by spec",
+        "gap identified",
+        "sw:gap-marker"
+      ],
+      "runtimeFallback": [
+        "missing documented",
+        "undocumented",
+        "not covered by spec",
+        "gap identified",
+        "sw:gap-marker"
+      ],
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "capture.maxFileSizeBytes": {
+      "schemaDefault": 52428800,
+      "greenfieldDefault": 52428800,
+      "migrationDefault": 52428800,
+      "runtimeFallback": 52428800,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "capture.maxSummaryLength": {
+      "schemaDefault": 500,
+      "greenfieldDefault": 500,
+      "migrationDefault": 500,
+      "runtimeFallback": 500,
+      "deprecatedSince": null,
+      "removedIn": null
+    },
+    "capture.subAgentSidecarEnabled": {
+      "schemaDefault": true,
+      "greenfieldDefault": true,
+      "migrationDefault": true,
+      "runtimeFallback": true,
       "deprecatedSince": null,
       "removedIn": null
     },
