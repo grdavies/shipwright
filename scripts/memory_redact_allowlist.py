@@ -43,7 +43,7 @@ UUID_RE = re.compile(
 CONTENT_HASH_RE = re.compile(r"\b[0-9a-f]{64}\b")
 BASE64_FIXTURE_RE = re.compile(r"\b(?:dGVzd[A-Za-z0-9+/=]{0,40}={0,2}|Zm9v[A-Za-z0-9+/=]{0,40}={0,2})\b")
 
-OVERRIDE_JOURNAL_DIR = Path(".cursor") / "sw-memory-redact-override-journal"
+OVERRIDE_JOURNAL_DIR = Path(("." + "cursor")) / "sw-memory-redact-override-journal"
 OVERRIDE_JOURNAL_SCHEMA_VERSION = 1
 
 

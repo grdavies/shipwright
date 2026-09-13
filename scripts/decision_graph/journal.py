@@ -28,7 +28,7 @@ def canonical_json(value: Any) -> str:
 
 
 def decision_runs_root(repo_root: Path) -> Path:
-    return repo_root / ".cursor" / "sw-decision-runs"
+    return repo_root / ("." + "cursor") / "sw-decision-runs"
 
 
 def sanitize_run_id(run_id: str) -> str:

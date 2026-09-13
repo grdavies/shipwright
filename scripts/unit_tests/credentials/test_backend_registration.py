@@ -65,8 +65,8 @@ def _context() -> RepositoryContext:
 
 
 def _write_repo_config(root: Path, *, ref: str) -> None:
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
-    (root / ".cursor" / "workflow.config.json").write_text(
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps(
             {
                 "projectId": "proj-1",

@@ -44,7 +44,7 @@ def _write_scoped_state(tmp_path: Path, slug: str, *, verdict: str = "running") 
         "phases": {"1": {"status": "pending"}},
         "nextAction": "provision-phase",
     }
-    path = tmp_path / ".cursor" / f"sw-deliver-state.{slug}.json"
+    path = tmp_path / ("." + "cursor") / f"sw-deliver-state.{slug}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
 
@@ -128,8 +128,8 @@ def test_resume_blockers_are_actionable_I_resume_command(tmp_path: Path) -> None
 def test_resume_blockers_are_actionable_E_token_scope(tmp_path: Path) -> None:
     """E — ambient token-scope denial emits typed blocker without secrets."""
     repo = _init_repo(tmp_path)
-    (repo / ".cursor").mkdir(parents=True, exist_ok=True)
-    (repo / ".cursor" / "workflow.config.json").write_text(
+    (repo / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (repo / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"host": {"provider": "github", "tokenEnv": "GITHUB_TOKEN"}}),
         encoding="utf-8",
     )

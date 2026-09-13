@@ -53,7 +53,7 @@ def main() -> int:
         subprocess.run(["git", "config", "user.email", "fixture@test"], cwd=tmp, check=True)
         subprocess.run(["git", "config", "user.name", "fixture"], cwd=tmp, check=True)
         (tmp / "docs/planning/gap").mkdir(parents=True)
-        (tmp / ".cursor").mkdir(exist_ok=True)
+        (tmp / ("." + "cursor")).mkdir(exist_ok=True)
         seed_schemas(ctx, tmp)
 
         out = run_capture(

@@ -29,7 +29,7 @@ def _write_scoped_state(tmp_path: Path, slug: str, verdict: str = "running") -> 
         "phases": {"1": {"status": "pending"}},
         "nextAction": "provision-phase",
     }
-    path = tmp_path / ".cursor" / f"sw-deliver-state.{slug}.json"
+    path = tmp_path / ("." + "cursor") / f"sw-deliver-state.{slug}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
     return path

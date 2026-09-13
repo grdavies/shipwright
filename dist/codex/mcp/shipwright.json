@@ -1,0 +1,13 @@
+{
+  "adapter_id": "codex",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/platform-portability-phase-cross-host-handoffbundle-continuation-and-mcp-transport/.shipwright/mcp/codex.json",
+  "mcpServers": {
+    "shipwright-bounded": {
+      "command": "python3",
+      "args": [
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/platform-portability-phase-cross-host-handoffbundle-continuation-and-mcp-transport/core/mcp/server.py"
+      ],
+      "transport": "stdio"
+    }
+  }
+}

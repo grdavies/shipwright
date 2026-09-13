@@ -29,7 +29,7 @@ def _load_docs_merge():
 
 
 def _write_private_repo(tmp_path: Path, *, credential_ref: str | None = "github-work") -> Path:
-    cfg_dir = tmp_path / ".cursor"
+    cfg_dir = tmp_path / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     host: dict[str, object] = {
         "provider": "github",

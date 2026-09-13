@@ -1,0 +1,71 @@
+{
+  "handlers": [
+    {
+      "canonical": "SessionStart",
+      "host_event": "session.start",
+      "handler": "lifecycle_plugin.ts"
+    },
+    {
+      "canonical": "UserPromptSubmit",
+      "host_event": "prompt.submit",
+      "handler": "lifecycle_plugin.ts"
+    },
+    {
+      "canonical": "PreToolUse",
+      "host_event": "tool.pre",
+      "handler": "lifecycle_plugin.ts"
+    },
+    {
+      "canonical": "PostToolUse",
+      "host_event": "tool.post",
+      "handler": "lifecycle_plugin.ts"
+    },
+    {
+      "canonical": "Stop",
+      "host_event": "session.stop",
+      "handler": "lifecycle_plugin.ts"
+    },
+    {
+      "canonical": "SubagentStart",
+      "host_event": "agent.start",
+      "handler": "lifecycle_plugin.ts"
+    },
+    {
+      "canonical": "SubagentStop",
+      "host_event": "agent.stop",
+      "handler": "lifecycle_plugin.ts"
+    }
+  ],
+  "unsupportedEvents": [
+    {
+      "canonical": "Notification",
+      "unsupported_flag": true,
+      "host": "opencode",
+      "diagnostic": {
+        "code": "unsupported_event",
+        "message": "event 'Notification' is unsupported on opencode; not registered"
+      }
+    },
+    {
+      "canonical": "ContextSwitch",
+      "unsupported_flag": true,
+      "host": "opencode",
+      "diagnostic": {
+        "code": "unsupported_event",
+        "message": "event 'ContextSwitch' is unsupported on opencode; not registered"
+      }
+    }
+  ],
+  "unsupportedDiagnostics": [
+    {
+      "code": "unsupported_event",
+      "message": "event 'Notification' is unsupported on opencode; not registered",
+      "canonical": "Notification"
+    },
+    {
+      "code": "unsupported_event",
+      "message": "event 'ContextSwitch' is unsupported on opencode; not registered",
+      "canonical": "ContextSwitch"
+    }
+  ]
+}

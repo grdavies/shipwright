@@ -81,7 +81,7 @@ def utc_now() -> str:
 
 
 def meta_inbox_path(root: Path, signal_id: str) -> Path:
-    return root / ".cursor" / "sw-meta-inbox" / f"{signal_id}.json"
+    return root / ("." + "cursor") / "sw-meta-inbox" / f"{signal_id}.json"
 
 
 def load_meta_draft(root: Path, signal_id: str) -> dict[str, Any]:

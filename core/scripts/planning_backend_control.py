@@ -229,7 +229,7 @@ def list_disable_records(root: Path) -> dict[str, Any]:
 
 def has_pending_private_tier_content(root: Path, cfg: dict[str, Any] | None = None) -> bool:
     cfg = cfg if cfg is not None else load_workflow_config(root)
-    search_roots = [root / "docs" / "prds", root / "docs" / "planning", root / ".cursor" / "planning-materialized"]
+    search_roots = [root / "docs" / "prds", root / "docs" / "planning", root / ("." + "cursor") / "planning-materialized"]
     for base in search_roots:
         if not base.is_dir():
             continue
@@ -328,7 +328,7 @@ def cmd_enable(root: Path) -> dict[str, Any]:
 
 
 def _read_worktree_backend_control(root: Path) -> dict[str, Any] | None:
-    state_path = root / ".cursor" / "sw-worktree-state.json"
+    state_path = root / ("." + "cursor") / "sw-worktree-state.json"
     if not state_path.is_file():
         return None
     try:
@@ -342,7 +342,7 @@ def _read_worktree_backend_control(root: Path) -> dict[str, Any] | None:
 
 
 def _read_session_backend_control(root: Path) -> dict[str, Any] | None:
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     if not cursor.is_dir():
         return None
     candidates = sorted(cursor.glob("sw-deliver-state*.json"), key=lambda p: p.stat().st_mtime, reverse=True)

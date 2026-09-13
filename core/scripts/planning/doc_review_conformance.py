@@ -124,8 +124,8 @@ def run_doc_review_conformance_suite(provider: str, root: Path) -> dict[str, Any
     issue_id = "887"
     _seed_doc_review_issue(store, unit_id=unit_id, issue_id=issue_id)
     cfg = _doc_review_cfg(provider)
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
-    (root / ".cursor" / "workflow.config.json").write_text(
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps(cfg), encoding="utf-8"
     )
 

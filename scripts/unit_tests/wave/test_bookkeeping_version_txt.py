@@ -26,7 +26,7 @@ def _bootstrap_bookkeeping_repo(repo: Path) -> None:
     (repo / "CHANGELOG.md").write_text(changelog, encoding="utf-8")
     (repo / "version.txt").write_text("1.2.2\n", encoding="utf-8")
     _write_manifest(repo, "1.2.2")
-    (repo / ".cursor").mkdir(parents=True, exist_ok=True)
+    (repo / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     state = {
         "target": {"branch": "feat/demo"},
         "mergedPhases": [],

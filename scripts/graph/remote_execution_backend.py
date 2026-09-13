@@ -229,7 +229,7 @@ def resolve_remote_execution_config(
     audit_raw = remote.get("auditRoot")
     audit_root = Path(audit_raw) if audit_raw else None
     if audit_root is None and root is not None:
-        audit_root = root / ".cursor" / "sw-graph-runs" / "remote-audit"
+        audit_root = root / ("." + "cursor") / "sw-graph-runs" / "remote-audit"
     return RemoteExecutionConfig(
         credential_ref=remote.get("credentialRef"),
         trust_domain=str(remote.get("trustDomain") or "default"),

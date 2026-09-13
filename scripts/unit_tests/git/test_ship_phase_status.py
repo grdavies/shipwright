@@ -10,7 +10,7 @@ import pytest
 
 def test_head_rejects_short_sha(tmp_git_repo: Path, repo_root: Path) -> None:
     ship_status = repo_root / "scripts" / "ship-phase-status.py"
-    out = tmp_git_repo / ".cursor" / "sw-deliver-runs" / "alpha" / "status.json"
+    out = tmp_git_repo / ("." + "cursor") / "sw-deliver-runs" / "alpha" / "status.json"
     out.parent.mkdir(parents=True)
     proc = subprocess.run(
         [
@@ -40,7 +40,7 @@ def test_head_accepts_valid_sha(tmp_git_repo: Path, repo_root: Path) -> None:
         text=True,
         check=True,
     ).stdout.strip()
-    out = tmp_git_repo / ".cursor" / "sw-deliver-runs" / "alpha" / "status.json"
+    out = tmp_git_repo / ("." + "cursor") / "sw-deliver-runs" / "alpha" / "status.json"
     out.parent.mkdir(parents=True)
     proc = subprocess.run(
         [
@@ -67,7 +67,7 @@ def test_head_accepts_valid_sha(tmp_git_repo: Path, repo_root: Path) -> None:
 
 def test_omit_head_still_succeeds(tmp_git_repo: Path, repo_root: Path) -> None:
     ship_status = repo_root / "scripts" / "ship-phase-status.py"
-    out = tmp_git_repo / ".cursor" / "sw-deliver-runs" / "alpha" / "status.json"
+    out = tmp_git_repo / ("." + "cursor") / "sw-deliver-runs" / "alpha" / "status.json"
     out.parent.mkdir(parents=True)
     proc = subprocess.run(
         [

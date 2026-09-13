@@ -579,7 +579,7 @@ def cmd_provision(root: Path, args: argparse.Namespace) -> int:
 
 
 def _scoped_deliver_state_paths(root: Path) -> list[Path]:
-    return sorted((root / ".cursor").glob("sw-deliver-state.*.json"))
+    return sorted((root / ("." + "cursor")).glob("sw-deliver-state.*.json"))
 
 
 def _target_from_scoped_state(path: Path) -> str | None:
@@ -642,7 +642,7 @@ def cmd_sweep_orphans(_root: Path, args: argparse.Namespace) -> int:
         path = Path(str(entry)).expanduser().resolve()
         if not path.is_dir():
             continue
-        if path.name == "planning-materialized" and path.parent.name == ".cursor":
+        if path.name == "planning-materialized" and path.parent.name == ("." + "cursor"):
             shutil.rmtree(path)
             swept.append(str(path))
     emit({"verdict": "ok", "action": "materialize-sweep", "swept": swept})

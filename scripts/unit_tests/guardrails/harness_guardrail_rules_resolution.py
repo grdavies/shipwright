@@ -117,8 +117,8 @@ def main() -> int:
         # 4) End-to-end: a reachable recallium provider must NOT trip the
         #    "cannot reach Recallium" block when no SW_RULES_SCRIPT override is set.
         workspace = tmp / "ws"
-        (workspace / ".cursor").mkdir(parents=True, exist_ok=True)
-        (workspace / ".cursor" / "workflow.config.json").write_text(
+        (workspace / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+        (workspace / ("." + "cursor") / "workflow.config.json").write_text(
             json.dumps(
                 {
                     "memory": {

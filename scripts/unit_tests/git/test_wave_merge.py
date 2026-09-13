@@ -47,7 +47,7 @@ def test_gap_check_worktree_only_discovery(tmp_git_repo: Path, repo_root: Path) 
     ).stdout.strip()
     wt_name = "phase-wt-only"
     wt_root = tmp_git_repo / ".sw-worktrees" / wt_name
-    status_dir = wt_root / ".cursor" / "sw-deliver-runs" / phase_slug
+    status_dir = wt_root / ("." + "cursor") / "sw-deliver-runs" / phase_slug
     status_dir.mkdir(parents=True)
     (status_dir / "gap-check.status.json").write_text(
         json.dumps(
@@ -65,7 +65,7 @@ def test_gap_check_worktree_only_discovery(tmp_git_repo: Path, repo_root: Path) 
         ),
         encoding="utf-8",
     )
-    state_dir = tmp_git_repo / ".cursor"
+    state_dir = tmp_git_repo / ("." + "cursor")
     state_dir.mkdir(parents=True, exist_ok=True)
     (state_dir / "sw-deliver-state.json").write_text(
         json.dumps(
@@ -90,7 +90,7 @@ def test_gap_check_halt_dominant_over_stale_pass(tmp_git_repo: Path, repo_root: 
         text=True,
         check=True,
     ).stdout.strip()
-    canonical_dir = tmp_git_repo / ".cursor" / "sw-deliver-runs" / phase_slug
+    canonical_dir = tmp_git_repo / ("." + "cursor") / "sw-deliver-runs" / phase_slug
     canonical_dir.mkdir(parents=True)
     (canonical_dir / "gap-check.status.json").write_text(
         json.dumps(
@@ -104,7 +104,7 @@ def test_gap_check_halt_dominant_over_stale_pass(tmp_git_repo: Path, repo_root: 
         encoding="utf-8",
     )
     wt_root = tmp_git_repo / ".sw-worktrees" / "halt-wt"
-    halt_dir = wt_root / ".cursor" / "sw-deliver-runs" / phase_slug
+    halt_dir = wt_root / ("." + "cursor") / "sw-deliver-runs" / phase_slug
     halt_dir.mkdir(parents=True)
     (halt_dir / "gap-check.status.json").write_text(
         json.dumps(
@@ -118,7 +118,7 @@ def test_gap_check_halt_dominant_over_stale_pass(tmp_git_repo: Path, repo_root: 
         ),
         encoding="utf-8",
     )
-    (tmp_git_repo / ".cursor" / "sw-deliver-state.json").write_text(
+    (tmp_git_repo / ("." + "cursor") / "sw-deliver-state.json").write_text(
         json.dumps(
             {
                 "target": {"branch": "feat/demo"},

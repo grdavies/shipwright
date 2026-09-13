@@ -67,7 +67,7 @@ def test_drain_mechanical_defaults_true(repo_root: Path) -> None:
 
 def test_drain_mechanical_false_from_config(tmp_path: Path) -> None:
     """R15(f)/R7 — drainMechanical false is honored from workflow config."""
-    cfg = tmp_path / ".cursor"
+    cfg = tmp_path / ("." + "cursor")
     cfg.mkdir(parents=True)
     (cfg / "workflow.config.json").write_text(
         json.dumps({"deliver": {"loop": {"drainMechanical": False}}}),

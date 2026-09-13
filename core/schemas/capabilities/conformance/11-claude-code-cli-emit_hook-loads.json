@@ -1,0 +1,8 @@
+{
+  "host": "claude-code",
+  "surface": "cli",
+  "host_version": "1.0.109",
+  "capability": "emit_hook",
+  "level": "loads",
+  "tested_at": "2026-09-12T17:00:00Z"
+}

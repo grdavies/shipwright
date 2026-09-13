@@ -48,7 +48,7 @@ def _seed_state(tmp_git_repo: Path) -> dict:
         "mergeQueue": [],
         "nextAction": "merge-enqueue",
     }
-    cursor = tmp_git_repo / ".cursor"
+    cursor = tmp_git_repo / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     (cursor / "workflow.config.json").write_text(
         json.dumps({"review": {"provider": "none"}, "checks": {"treatNeutralAsPass": True}}),

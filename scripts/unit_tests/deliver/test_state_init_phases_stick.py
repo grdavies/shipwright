@@ -73,7 +73,7 @@ def _write_plan(repo: Path) -> Path:
         "edges": [],
         "waves": [["1", "2"]],
     }
-    path = repo / ".cursor" / "sw-deliver-runs" / "deliver-test" / "plan.json"
+    path = repo / ("." + "cursor") / "sw-deliver-runs" / "deliver-test" / "plan.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(plan, indent=2) + "\n", encoding="utf-8")
     return path

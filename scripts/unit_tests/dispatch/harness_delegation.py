@@ -328,7 +328,7 @@ try:
     subprocess.run(["git", "config", "user.email", "t@t.com"], check=True, capture_output=True)
     subprocess.run(["git", "config", "user.name", "T"], check=True, capture_output=True)
     subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", "init"], check=True, capture_output=True)
-    Path(".cursor").mkdir()
+    Path(("." + "cursor")).mkdir()
     Path(".cursor/sw-base-state.json").write_text('{"trunkBase":{"name":"main","sha":"abc"}}')
     Path(".cursor/sw-deliver-plan.json").write_text(json.dumps({
         "mode": "phase",

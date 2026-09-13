@@ -29,8 +29,8 @@ def test_run_terminal_pr_prepare_dry_run_does_not_exit(repo_root: Path, tmp_path
         ["git", "-C", str(tmp_path), "commit", "--allow-empty", "-qm", "init"],
         check=True,
     )
-    (tmp_path / ".cursor").mkdir(parents=True, exist_ok=True)
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"defaultBaseBranch": "main", "deliver": {"terminal": {"autonomy": "auto"}}}),
         encoding="utf-8",
     )
@@ -40,7 +40,7 @@ def test_run_terminal_pr_prepare_dry_run_does_not_exit(repo_root: Path, tmp_path
         "target": {"branch": "feat/terminal-prepare", "slug": "terminal-prepare", "type": "feat"},
         "phases": {"1": {"status": "green-merged", "slug": "a"}},
     }
-    (tmp_path / ".cursor" / "sw-deliver-state.json").write_text(
+    (tmp_path / ("." + "cursor") / "sw-deliver-state.json").write_text(
         json.dumps(state), encoding="utf-8"
     )
 

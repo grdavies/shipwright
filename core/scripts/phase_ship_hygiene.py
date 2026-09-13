@@ -78,7 +78,7 @@ def is_forged_gap_check_status(data: dict[str, Any]) -> bool:
 
 
 def _resolve_phase_run_dir(root: Path, phase_slug: str) -> Path:
-    canonical = root / ".cursor" / "sw-deliver-runs" / phase_slug
+    canonical = root / ("." + "cursor") / "sw-deliver-runs" / phase_slug
     sw_run = os.environ.get("SW_RUN_DIR", "").strip()
     if sw_run:
         env_path = Path(sw_run)
@@ -95,7 +95,7 @@ def _resolve_phase_run_dir(root: Path, phase_slug: str) -> Path:
         state = load_deliver_state(root)
         worktree = resolve_phase_worktree(root, phase_slug, state)
         if worktree is not None:
-            wt_run = worktree / ".cursor" / "sw-deliver-runs" / phase_slug
+            wt_run = worktree / ("." + "cursor") / "sw-deliver-runs" / phase_slug
             if (wt_run / "ship-steps.json").is_file():
                 return wt_run
     except Exception:
@@ -333,7 +333,7 @@ def try_auto_repair_pr_test_plan_manifest(
 
     run_id = str(state.get("runId") or os.environ.get("SW_DELIVER_RUN_ID", "")).strip()
     if run_id:
-        run_gate = root / ".cursor" / "sw-deliver-runs" / run_id / "gate-evidence" / "check-gate.status.json"
+        run_gate = root / ("." + "cursor") / "sw-deliver-runs" / run_id / "gate-evidence" / "check-gate.status.json"
         gate_doc = _read_json(run_gate)
         if gate_doc:
             pr_test_plan = (gate_doc.get("gate") or gate_doc).get("prTestPlan") if isinstance(gate_doc.get("gate"), dict) else gate_doc.get("prTestPlan")

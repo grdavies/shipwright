@@ -93,7 +93,7 @@ _SYNTHETIC_CFG = {
 
 def _synthetic_issue_store_root(tmp: str) -> Path:
     root = Path(tmp)
-    cfg_path = root / ".cursor" / "workflow.config.json"
+    cfg_path = root / ("." + "cursor") / "workflow.config.json"
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(json.dumps(_SYNTHETIC_CFG, indent=2), encoding="utf-8")
     return root

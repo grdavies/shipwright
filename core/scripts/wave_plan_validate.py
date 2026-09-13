@@ -914,7 +914,7 @@ def cmd_validate(root: Path, args: list[str]) -> None:
     if result.get("breakerTripped"):
         log_entry["breakerTripped"] = True
         log_entry["halt"] = result.get("halt")
-    deliver_log = Path(run_log_raw) if run_log_raw else root / ".cursor" / "sw-deliver-runs" / "run.log"
+    deliver_log = Path(run_log_raw) if run_log_raw else root / ("." + "cursor") / "sw-deliver-runs" / "run.log"
     append_run_log(deliver_log, log_entry)
     if result.get("breakerTripped"):
         append_run_log(

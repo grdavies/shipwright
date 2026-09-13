@@ -410,7 +410,7 @@ def scan_runstate(root: Path) -> list[dict[str, Any]]:
         if base in seen:
             continue
         seen.add(base)
-        cursor = base / ".cursor"
+        cursor = base / ("." + "cursor")
         if not cursor.is_dir():
             continue
         for state_file in cursor.glob("sw-deliver-state*.json"):

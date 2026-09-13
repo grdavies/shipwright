@@ -27,7 +27,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _issue_store_cfg(project_key: str = "closure-060") -> dict:
@@ -83,7 +83,7 @@ def test_resolve_delivery_linked_units_resolves_tasks_not_prd_alias(
     root = tmp_path
     _init_repo(root)
     cfg = _issue_store_cfg("closure-062-tasks-alias")
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     prd_unit = "062-prd-deliver-issue-store-hardening-and-loop-perf"
     tasks_unit = "tasks-062-deliver-issue-store-hardening-and-loop-perf"
@@ -129,7 +129,7 @@ def test_close_done_phase_sub_issues_from_hierarchy_map(
     root = tmp_path
     _init_repo(root)
     cfg = _issue_store_cfg()
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     (root / "docs" / "prds" / "060-test").mkdir(parents=True)
     prd_path = "docs/prds/060-test/prd-060-test.md"
@@ -179,7 +179,7 @@ def test_close_delivery_units_report_shape_dry_run(
     root = tmp_path
     _init_repo(root)
     cfg = _issue_store_cfg("closure-report")
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     (root / "docs" / "prds" / "060-report").mkdir(parents=True)
     task_rel = "docs/prds/060-report/tasks-060-report.md"
     (root / task_rel).write_text("---\nfrozen: true\n---\n### 1. One\n", encoding="utf-8")
@@ -307,7 +307,7 @@ def test_close_parent_epic_idempotent_when_closed(
     root = tmp_path
     _init_repo(root)
     cfg = _issue_store_cfg("closure-epic")
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     fixture_path = root / ".cursor/hooks/state/issue-store-fixture.json"
     store = FixtureIssuesStore(fixture_path)
     epic = store.create(

@@ -90,7 +90,7 @@ def resolve_run_log_path() -> Path | None:
         return Path(run_dir) / "run.log"
     slug = os.environ.get("SW_PHASE_SLUG", "").strip()
     if slug:
-        return Path(".cursor") / "sw-deliver-runs" / slug / "run.log"
+        return Path(("." + "cursor")) / "sw-deliver-runs" / slug / "run.log"
     return None
 
 

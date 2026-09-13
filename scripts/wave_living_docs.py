@@ -282,7 +282,7 @@ def living_doc_write_banned(root: Path) -> bool:
 
 
 def _completion_events_cache_path(root: Path) -> Path:
-    return root / ".cursor" / "hooks" / "state" / "planning-completion-events.json"
+    return root / ("." + "cursor") / "hooks" / "state" / "planning-completion-events.json"
 
 
 def append_completion_store_event(

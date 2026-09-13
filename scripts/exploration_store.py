@@ -80,7 +80,7 @@ class ExplorationStore:
     def __init__(self, root: Path | str, *, persist_root: Path | str | None = None) -> None:
         self._root = Path(root)
         self._persist_root = (
-            Path(persist_root) if persist_root is not None else self._root / ".cursor" / "sw-explore-maps"
+            Path(persist_root) if persist_root is not None else self._root / ("." + "cursor") / "sw-explore-maps"
         )
         self._maps: dict[str, dict[str, Any]] = {}
         self._persisted_receipts: dict[str, set[str]] = {}

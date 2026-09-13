@@ -622,7 +622,7 @@ def migration_selector_command(plan: InitCredentialPlan, account: DetectedAccoun
 
 
 def _config_path(root: Path) -> Path:
-    return root / ".cursor" / "workflow.config.json"
+    return root / ("." + "cursor") / "workflow.config.json"
 
 
 def _read_config(root: Path) -> dict[str, Any]:

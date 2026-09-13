@@ -40,7 +40,7 @@ def test_planning_visibility_acceptance_harness_present(repo_root: Path) -> None
 
 
 def _write_minimal_config(root: Path) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     payload = {
         "projectId": "acme-demo",

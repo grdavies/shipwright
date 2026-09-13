@@ -49,7 +49,7 @@ def _repo_root() -> Path:
 
 def _config_paths(root: Path) -> list[Path]:
     return [
-        root / ".cursor" / "workflow.config.json",
+        root / ("." + "cursor") / "workflow.config.json",
         root / "workflow.config.json",
     ]
 

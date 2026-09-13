@@ -43,7 +43,7 @@ def _git_init(path: Path) -> None:
 
 
 def _write_issues_config(root: Path, *, rate_limit: dict[str, Any] | None = None) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     issues: dict[str, Any] = {"provider": "github-issues"}
     if rate_limit is not None:

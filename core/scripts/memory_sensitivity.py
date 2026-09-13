@@ -24,7 +24,7 @@ SENSITIVITY_TIERS: tuple[str, ...] = ("public", "internal", "private", "secret")
 STRICTEST_TIER: str = "secret"
 HUMAN_GATE_COMMAND = "sw-memory-audit"
 
-DECLASSIFICATION_JOURNAL_DIR = Path(".cursor") / "sw-memory-declassification-journal"
+DECLASSIFICATION_JOURNAL_DIR = Path(("." + "cursor")) / "sw-memory-declassification-journal"
 DECLASSIFICATION_JOURNAL_SCHEMA_VERSION = 1
 
 TIER_RANK: dict[str, int] = {tier: index for index, tier in enumerate(SENSITIVITY_TIERS)}

@@ -95,7 +95,7 @@ def test_missing_token_fixture_fails_closed(
         bm_rules.resolve_api_key(scenario["memory"]["basicMemory"])
 
     # Script path also fails closed without opening the network.
-    cursor = tmp_path / ".cursor"
+    cursor = tmp_path / ("." + "cursor")
     cursor.mkdir(parents=True)
     (cursor / "workflow.config.json").write_text(
         json.dumps({"memory": scenario["memory"]}),

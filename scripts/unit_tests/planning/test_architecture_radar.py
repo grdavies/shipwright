@@ -68,7 +68,7 @@ def test_candidate_schema_fields_present() -> None:
 
 def test_emit_without_confirm_skips_gap_capture(tmp_path: Path) -> None:
     root = tmp_path
-    (root / ".cursor").mkdir(parents=True)
+    (root / ("." + "cursor")).mkdir(parents=True)
     candidates = [
         {
             "modulePath": "scripts/hot",

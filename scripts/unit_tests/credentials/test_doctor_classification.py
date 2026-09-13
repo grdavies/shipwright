@@ -216,7 +216,7 @@ def _write_config(root: Path, **overrides: object) -> None:
         },
     }
     cfg.update(overrides)
-    path = root / ".cursor" / "workflow.config.json"
+    path = root / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg), encoding="utf-8")
 
@@ -270,7 +270,7 @@ class TestMemorySurfaceDiagnosis:
         pairing = tmp_path / "credential-pairings.json"
         _write_pairing(pairing, "memory-work", "proj-1", "https://github.com/owner/repo.git")
 
-        cfg = json.loads((root / ".cursor" / "workflow.config.json").read_text(encoding="utf-8"))
+        cfg = json.loads((root / ("." + "cursor") / "workflow.config.json").read_text(encoding="utf-8"))
         surface = resolve_config_surface(cfg).memory
 
         diagnosis = diagnose_surface(

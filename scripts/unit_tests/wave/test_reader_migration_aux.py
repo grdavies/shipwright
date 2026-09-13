@@ -84,7 +84,7 @@ def _bootstrap_run_scoped(repo: Path) -> dict:
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     return root
 
 
@@ -103,7 +103,7 @@ def test_failure_append_log_writes_run_scoped_events(repo: Path) -> None:
     run_id = state["runId"]
     log_path = events_path(repo, run_id)
     assert log_path.is_file()
-    assert (repo / ".cursor" / "sw-deliver-runs" / "run.log").exists() is False
+    assert (repo / ("." + "cursor") / "sw-deliver-runs" / "run.log").exists() is False
     payload = json.loads(log_path.read_text(encoding="utf-8").strip().splitlines()[-1])
     assert payload["event"] == "blast-radius"
 

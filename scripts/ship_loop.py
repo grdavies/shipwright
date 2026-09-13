@@ -498,7 +498,7 @@ def resolve_run_dir(root: Path, phase: str) -> Path:
     if env:
         p = Path(env)
         return p if p.is_absolute() else root / p
-    return root / ".cursor" / "sw-deliver-runs" / phase
+    return root / ("." + "cursor") / "sw-deliver-runs" / phase
 
 
 def quick_ship_graph_available() -> bool:

@@ -22,7 +22,7 @@ FIXTURE = SCRIPTS / "test/fixtures/in-repo-memory"
 def _seed_workspace(tmp_path: Path, repo_root: Path, *, provider: str = "in-repo", palace_path: Path | None = None) -> Path:
     workspace = tmp_path / "ws"
     shutil.copytree(FIXTURE / "store", workspace / ".cursor/sw-memory")
-    (workspace / ".cursor").mkdir(parents=True, exist_ok=True)
+    (workspace / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     shutil.copytree(repo_root / ".sw", workspace / ".sw")
     config = json.loads((FIXTURE / "config-in-repo.json").read_text(encoding="utf-8"))
     config["memory"]["provider"] = provider

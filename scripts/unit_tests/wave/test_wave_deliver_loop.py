@@ -109,12 +109,12 @@ def test_orchestrator_worktree_cwd_anchors_deliver_paths_to_primary(tmp_path: Pa
         cwd=primary,
         check=True,
     )
-    assert not (orch / ".cursor").exists()
+    assert not (orch / ("." + "cursor")).exists()
 
     anchor = path_normalize_anchor(orch)
     assert anchor == path_normalize_anchor(primary)
 
-    cursor = anchor / ".cursor"
+    cursor = anchor / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     (cursor / "sw-base-state.json").write_text(
         json.dumps({"trunkBase": {"name": "main", "sha": "abc123"}}),

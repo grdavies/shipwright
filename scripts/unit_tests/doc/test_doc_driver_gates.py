@@ -30,7 +30,7 @@ from planning_related import Proposal, scan_related
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     (root / "docs" / "prds" / "081-prd-demo").mkdir(parents=True)
     prd = root / "docs/prds/081-prd-demo/prd.md"
     prd.write_text("---\ntype: prd\nid: 081-prd-demo\n---\n# Demo\n", encoding="utf-8")

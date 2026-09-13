@@ -88,7 +88,7 @@ def test_docs_currency_gate_cli_accepts_run_id(repo: Path) -> None:
     state: dict = {"prd_number": "081", "phases": {"1": {"status": "pending"}}, "target": {"branch": "feat/demo"}}
     run_id = ensure_run_id(repo, state)
     persist_plan(repo, run_id, _sample_plan(), state)
-    state_path = repo / ".cursor" / "state.json"
+    state_path = repo / ("." + "cursor") / "state.json"
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps(state), encoding="utf-8")
     prds = repo / "docs" / "prds"

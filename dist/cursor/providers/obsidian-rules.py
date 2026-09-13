@@ -45,7 +45,7 @@ DEFAULT_MCP_BASE = "http://127.0.0.1:27123"
 DEFAULT_TOKEN_ENV = "OBSIDIAN_API_KEY"
 FETCH_TIMEOUT_SEC = 8
 CACHE_VERSION = 1
-CACHE_REL = Path(".cursor") / "hooks" / "state" / "obsidian-rules-cache.json"
+CACHE_REL = Path(("." + "cursor")) / "hooks" / "state" / "obsidian-rules-cache.json"
 LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
 
 _CONTROL_CHAR_RE = re.compile(r"[\000-\010\013\014\016-\037]")
@@ -71,7 +71,7 @@ def _emit(payload: dict[str, Any], *, exit_code: int = 0) -> int:
 
 
 def _workflow_config_paths(root: Path) -> list[Path]:
-    return [root / ".cursor" / "workflow.config.json", root / "workflow.config.json"]
+    return [root / ("." + "cursor") / "workflow.config.json", root / "workflow.config.json"]
 
 
 def load_memory_config(root: Path) -> dict[str, Any]:

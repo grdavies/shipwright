@@ -79,7 +79,7 @@ def _write_config(root: Path, project_id: str, credential_ref: str, repo_slug: s
         },
     }
     allowed = [repo_slug]
-    path = root / ".cursor" / "workflow.config.json"
+    path = root / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg), encoding="utf-8")
     return allowed

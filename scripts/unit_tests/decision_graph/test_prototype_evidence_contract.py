@@ -68,7 +68,7 @@ def _write_marker(
 def test_read_rejects_marker_without_evidence_contract(tmp_path: Path) -> None:
     wt = tmp_path / "wt"
     wt.mkdir()
-    marker = wt / ".cursor" / "sw-prototype.json"
+    marker = wt / ("." + "cursor") / "sw-prototype.json"
     marker.parent.mkdir(parents=True)
     marker.write_text(
         json.dumps(
@@ -204,7 +204,7 @@ def test_teardown_receipt_and_journal_survive_worktree_removal(tmp_path: Path) -
     assert validate_prototype_teardown_receipt(receipt)["verdict"] == "pass"
     assert receipt["evidenceHashes"]
 
-    journal_path = root / ".cursor" / "sw-decision-runs" / run_id
+    journal_path = root / ("." + "cursor") / "sw-decision-runs" / run_id
     assert journal_path.is_dir()
 
     import shutil

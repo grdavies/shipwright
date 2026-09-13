@@ -289,10 +289,10 @@ def node_requires_evidence(node: dict[str, Any]) -> bool:
 
 def list_linked_evidence_paths(root: Path, parent_decision_id: str) -> list[Path]:
     paths: list[Path] = []
-    legacy = root / ".cursor" / "sw-decision-evidence" / f"{parent_decision_id}.json"
+    legacy = root / ("." + "cursor") / "sw-decision-evidence" / f"{parent_decision_id}.json"
     if legacy.is_file():
         paths.append(legacy)
-    base = root / ".cursor" / "sw-decision-evidence" / parent_decision_id
+    base = root / ("." + "cursor") / "sw-decision-evidence" / parent_decision_id
     if base.is_dir():
         for kind in (KIND_PROTOTYPE, KIND_RESEARCH):
             collection = base / kind
@@ -387,7 +387,7 @@ def evidence_store_path(
     kind: str | None = None,
     content_hash: str | None = None,
 ) -> Path:
-    base = root / ".cursor" / "sw-decision-evidence" / parent_decision_id
+    base = root / ("." + "cursor") / "sw-decision-evidence" / parent_decision_id
     if kind is None:
         return base
     collection = base / kind

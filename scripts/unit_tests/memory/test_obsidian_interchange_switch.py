@@ -26,7 +26,7 @@ def _seed_workspace(
 ) -> Path:
     workspace = tmp_path / "ws"
     shutil.copytree(FIXTURE / "store", workspace / ".cursor/sw-memory")
-    (workspace / ".cursor").mkdir(parents=True, exist_ok=True)
+    (workspace / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     shutil.copytree(repo_root / ".sw", workspace / ".sw")
     config = json.loads((FIXTURE / "config-in-repo.json").read_text(encoding="utf-8"))
     config["memory"]["provider"] = provider

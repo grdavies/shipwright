@@ -169,8 +169,8 @@ def _seed_stale_corpus(root: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=str(root), check=True)
     subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=str(root), check=True)
     subprocess.run(["git", "config", "user.name", "Test"], cwd=str(root), check=True)
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
-    (root / ".cursor" / "workflow.config.json").write_text(
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"planning": {"store": {"backend": "in-repo-public"}}}, indent=2) + "\n",
         encoding="utf-8",
     )

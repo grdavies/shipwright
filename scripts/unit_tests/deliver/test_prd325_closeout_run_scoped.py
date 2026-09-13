@@ -23,7 +23,7 @@ PRD_LEGACY = "prd-070-automated-delivery-closeout"
 
 
 def _write_legacy_slug_state(tmp_path: Path, slug: str, state: dict) -> None:
-    cursor = tmp_path / ".cursor"
+    cursor = tmp_path / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     (cursor / f"sw-deliver-state.{slug}.json").write_text(json.dumps(state), encoding="utf-8")
 

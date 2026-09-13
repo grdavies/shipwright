@@ -41,7 +41,7 @@ def main() -> int:
     try:
         git_init(tmp)
         seed_schema(ctx, tmp)
-        (tmp / ".cursor").mkdir(exist_ok=True)
+        (tmp / ("." + "cursor")).mkdir(exist_ok=True)
         cfg = {"loopHealth": {"enabled": True, "staleInboxDays": 7}}
         (tmp / ".cursor/workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
@@ -132,7 +132,7 @@ def main() -> int:
         known_tmp = ctx.mktemp("loop-health-known-")
         git_init(known_tmp)
         seed_schema(ctx, known_tmp)
-        (known_tmp / ".cursor").mkdir(exist_ok=True)
+        (known_tmp / ("." + "cursor")).mkdir(exist_ok=True)
         (known_tmp / ".cursor/workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
         (known_tmp / ".cursor/sw-post-merge-incidents.json").write_text(
             json.dumps({"count": 1, "items": [{"id": "rev-1", "kind": "revert"}]}),

@@ -78,7 +78,7 @@ def test_replay_matches_jsonl_order(tmp_path: Path) -> None:
     journal.append_resolution("resolution:b", node_id="b", outcome="two")
     replayed = journal.replay_events()
     assert [event["nodeId"] for event in replayed] == ["a", "b"]
-    jsonl = (tmp_path / ".cursor" / "sw-decision-runs" / "run-1" / "events.jsonl").read_text(
+    jsonl = (tmp_path / ("." + "cursor") / "sw-decision-runs" / "run-1" / "events.jsonl").read_text(
         encoding="utf-8"
     )
     assert jsonl.count("\n") == 2

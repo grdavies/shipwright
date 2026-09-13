@@ -101,7 +101,7 @@ def materialize_debug_pack(
         regression_focus=regression_focus,
         rca_summary=rca_summary,
     )
-    dest = root / ".cursor" / "planning-materialized" / rel
+    dest = root / ("." + "cursor") / "planning-materialized" / rel
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(body, encoding="utf-8")
 

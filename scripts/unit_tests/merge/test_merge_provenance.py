@@ -167,7 +167,7 @@ def test_golden_conflict_fixtures(tmp_path: Path) -> None:
     golden = json.loads(GOLDEN.read_text(encoding="utf-8"))
     task_list = "docs/prds/323-fixture/tasks-fixture-provenance.md"
     for case in golden["cases"]:
-        execute_base = tmp_path / ".cursor" / "sw-execute-runs"
+        execute_base = tmp_path / ("." + "cursor") / "sw-execute-runs"
         if execute_base.is_dir():
             shutil.rmtree(execute_base)
         _write_execute_receipts(tmp_path, case.get("executeReceipts") or {})

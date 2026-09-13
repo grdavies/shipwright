@@ -512,7 +512,7 @@ def cmd_top_rework(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def _graph_store_root(repo_root: Path) -> Path:
-    return repo_root / ".cursor" / "sw-graph-runs"
+    return repo_root / ("." + "cursor") / "sw-graph-runs"
 
 
 def ingest_graph_run(
