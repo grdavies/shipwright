@@ -11,7 +11,7 @@ import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Mapping, Optional, TypedDict
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -32,6 +32,98 @@ COHORT_DIMENSION_KEYS = (
     "repoSize",
     "planPolicy",
 )
+
+# Attribution comparison dimensions (PRD 351 R6/R7) — never substitute sentinels.
+ATTRIBUTION_DIMENSION_KEYS = (
+    "task_type",
+    "effort_hint",
+    "complexity_indicators",
+)
+
+DEFAULT_MIN_SAMPLE_COUNT = 10
+
+
+class InsufficientSampleError(ValueError):
+    """Raised when advisory sample_count is below configured minSampleCount (R8)."""
+
+
+class AdvisoryRecommendation(TypedDict):
+    """Advisory recommendation metadata shape (R8) — all five fields required."""
+
+    recommended_model: str
+    confidence_score: float
+    comparison_basis: list[str]
+    sample_count: int
+    data_freshness_ts: str
+
+
+def _optional_dimension(value: Any) -> Any | None:
+    """Return None for missing/blank dimension values — never substitute sentinels (R6)."""
+    if value is None:
+        return None
+    if isinstance(value, str) and not value.strip():
+        return None
+    return value
+
+
+def build_dimension_record(source: Mapping[str, Any]) -> dict[str, Any]:
+    """Build attribution dimension record with nulls for unavailable fields (R6).
+
+    Missing ``task_type`` / ``effort_hint`` / ``complexity_indicators`` become
+    ``None`` — never ``python`` / ``build`` / ``medium``.
+    """
+    return {
+        "task_type": _optional_dimension(source.get("task_type")),
+        "effort_hint": _optional_dimension(source.get("effort_hint")),
+        "complexity_indicators": _optional_dimension(source.get("complexity_indicators")),
+    }
+
+
+def dimension_record_complete(dimensions: Mapping[str, Any]) -> bool:
+    """True when every attribution dimension is non-null (R7)."""
+    return all(dimensions.get(key) is not None for key in ATTRIBUTION_DIMENSION_KEYS)
+
+
+def filter_comparison_group(records: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """Exclude records with any null attribution dimension before grouping (R7)."""
+    filtered: list[dict[str, Any]] = []
+    for record in records:
+        dimensions = record.get("dimensions") if isinstance(record.get("dimensions"), dict) else record
+        if dimension_record_complete(dimensions):
+            filtered.append(dict(record))
+    return filtered
+
+
+def build_advisory(
+    *,
+    recommended_model: str,
+    confidence_score: float,
+    comparison_basis: list[str],
+    sample_count: int,
+    data_freshness_ts: str,
+    min_sample_count: int = DEFAULT_MIN_SAMPLE_COUNT,
+) -> AdvisoryRecommendation:
+    """Build advisory metadata; raise InsufficientSampleError below minSampleCount (R8).
+
+    Advisories MUST NOT promote to auto-apply when low-sample is set.
+    """
+    if sample_count < min_sample_count:
+        # low-sample warning — advisory must not auto-apply
+        raise InsufficientSampleError(
+            f"low-sample: sample_count={sample_count} < minSampleCount={min_sample_count}"
+        )
+    return AdvisoryRecommendation(
+        recommended_model=recommended_model,
+        confidence_score=confidence_score,
+        comparison_basis=list(comparison_basis),
+        sample_count=sample_count,
+        data_freshness_ts=data_freshness_ts,
+    )
+
+
+def _cohort_dimension_value(telemetry: Mapping[str, Any], key: str) -> Any | None:
+    """Null-preserving cohort dimension lookup — no default substitution (R6)."""
+    return _optional_dimension(telemetry.get(key))
 
 
 def emit(obj: dict[str, Any], code: int = 0) -> None:
@@ -531,14 +623,16 @@ def ingest_graph_run(
     )
     receipts = journal.list_run_receipts(safe_graph)
     telemetry = journal.read_telemetry() or {}
+    # Null-preserving ingestion — never substitute python/build/medium (R6).
     cohort_dimensions = {
-        "workflowType": telemetry.get("workflowType") or "deliver",
-        "riskClass": telemetry.get("riskClass") or "standard",
-        "modelTier": telemetry.get("modelTier") or "build",
-        "language": telemetry.get("language") or "python",
-        "repoSize": telemetry.get("repoSize") or "medium",
-        "planPolicy": telemetry.get("planPolicy") or "canonical",
+        "workflowType": _cohort_dimension_value(telemetry, "workflowType"),
+        "riskClass": _cohort_dimension_value(telemetry, "riskClass"),
+        "modelTier": _cohort_dimension_value(telemetry, "modelTier"),
+        "language": _cohort_dimension_value(telemetry, "language"),
+        "repoSize": _cohort_dimension_value(telemetry, "repoSize"),
+        "planPolicy": _cohort_dimension_value(telemetry, "planPolicy"),
     }
+    attribution_dimensions = build_dimension_record(telemetry)
     metrics = metrics_from_graph_snapshot(receipts, telemetry)
     store = WorkflowIntelligenceStore(repo_root)
     record = store.upsert_record(
@@ -548,6 +642,36 @@ def ingest_graph_run(
         metrics=metrics,
         updated_at=str(telemetry.get("updatedAt") or utc_now_iso()),
     )
+    # Persist attribution record alongside intelligence ingest (TR3 wiring).
+    attribution_payload = None
+    run_dir_raw = telemetry.get("runDir") or telemetry.get("deliverRunDir")
+    if run_dir_raw:
+        from graph.attribution_store import (
+            ATTRIBUTION_SCHEMA_VERSION,
+            build_attribution_record,
+            write_attribution_record,
+        )
+
+        attribution_payload = build_attribution_record(
+            attribution_schema_version=ATTRIBUTION_SCHEMA_VERSION,
+            task_type=attribution_dimensions.get("task_type"),
+            effort_hint=attribution_dimensions.get("effort_hint"),
+            complexity_indicators=attribution_dimensions.get("complexity_indicators"),
+            requested_model=_optional_dimension(telemetry.get("requested_model")),
+            actual_model=_optional_dimension(telemetry.get("actual_model")),
+            host_version=_optional_dimension(telemetry.get("host_version")),
+            attempt_count=max(1, int(telemetry.get("attempt_count") or 1)),
+            failed_attempt_count=telemetry.get("failed_attempt_count"),
+            failed_tokens_null_count=telemetry.get("failed_tokens_null_count"),
+            tokens_input=telemetry.get("tokens_input"),
+            tokens_output=telemetry.get("tokens_output"),
+            verification_result=str(telemetry.get("verification_result") or "unknown"),  # type: ignore[arg-type]
+            rework_required=telemetry.get("rework_required"),
+            zero_tokens_attested=bool(telemetry.get("zero_tokens_attested")),
+            telemetry_suspect=bool(telemetry.get("telemetry_suspect")),
+            legacy=False,
+        )
+        write_attribution_record(attribution_payload, Path(str(run_dir_raw)))
     return {
         "verdict": "pass",
         "action": "ingest",
@@ -555,6 +679,8 @@ def ingest_graph_run(
         "deliverRunId": deliver_run_id,
         "record": record,
         "receiptCount": len(receipts),
+        "dimensions": attribution_dimensions,
+        "attributionRecord": attribution_payload,
     }
 
 
