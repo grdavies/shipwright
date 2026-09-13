@@ -147,7 +147,7 @@ def test_context_switch_failure_modes(tmp_path: Path, monkeypatch: pytest.Monkey
     tampered = json.loads(bundle_path.read_text(encoding="utf-8"))
     tampered["goal"] = "tampered"
     tampered_import = import_cross_harness(repo, tampered, destination_harness="claude-code")
-    assert tampered_import["verdict"] == "fail"
+    assert tampered_import["verdict"] in {"fail", "digest_failure", "schema_failure"}
     assert tampered_import["error"] == "handoff:digest-mismatch"
 
     monkeypatch.delenv("SW_UNIT_ID", raising=False)

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/grdavies/shipwright/core/schemas/events.json",
+  "title": "Shipwright lifecycle event map (phase-1 stub; phase 2 expands)",
+  "description": "Canonical lifecycle events with per-host names. Adapters must not embed event name literals outside this map.",
+  "events": [
+    {
+      "canonical": "SessionStart",
+      "hosts": { "claude-code": "SessionStart", "cursor": "sessionStart" },
+      "emitter_params": ["event_name"],
+      "unsupported_on": []
+    },
+    {
+      "canonical": "UserPromptSubmit",
+      "hosts": { "claude-code": "UserPromptSubmit", "cursor": "beforeSubmitPrompt" },
+      "emitter_params": [],
+      "unsupported_on": []
+    },
+    {
+      "canonical": "Stop",
+      "hosts": { "claude-code": "Stop", "cursor": "stop" },
+      "emitter_params": [],
+      "unsupported_on": []
+    },
+    {
+      "canonical": "PreToolUse",
+      "hosts": { "claude-code": "PreToolUse", "cursor": "preToolUse" },
+      "emitter_params": ["tool_name_map"],
+      "unsupported_on": []
+    },
+    {
+      "canonical": "ContextSwitch",
+      "hosts": {},
+      "emitter_params": [],
+      "unsupported_on": ["claude-code", "cursor"],
+      "unsupported_flag": true
+    }
+  ]
+}

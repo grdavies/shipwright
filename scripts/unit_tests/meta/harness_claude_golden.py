@@ -86,9 +86,24 @@ assert_grep "hooks-user-prompt" "$DIST/hooks/hooks.json" 'UserPromptSubmit'
 assert_grep "hooks-stop" "$DIST/hooks/hooks.json" 'Stop'
 assert_grep "hooks-claude-root-env" "$DIST/hooks/hooks.json" 'CLAUDE_PLUGIN_ROOT'
 
-assert_file "claude-md" "$DIST/CLAUDE.md"
-assert_grep "claude-md-always-apply" "$DIST/CLAUDE.md" 'sw-naming'
-assert_grep "claude-md-freeze-rule" "$DIST/CLAUDE.md" 'sw-freeze-guardrail'
+assert_file "always-apply-skill" "$DIST/skills/sw-always-apply/SKILL.md"
+assert_grep "always-apply-skill-naming" "$DIST/skills/sw-always-apply/SKILL.md" 'sw-naming'
+assert_grep "always-apply-skill-freeze" "$DIST/skills/sw-always-apply/SKILL.md" 'sw-freeze-guardrail'
+python3 - "$DIST/hooks/hooks.json" <<'PY2'
+import json, sys
+hooks = json.loads(open(sys.argv[1], encoding="utf-8").read())
+raise SystemExit(0 if "ContextSwitch" not in hooks.get("hooks", {}) else 1)
+PY2
+if [ $? -eq 0 ]; then echo "OK  hooks-no-context-switch-registration"; else echo "FAIL hooks-no-context-switch-registration"; FAIL=1; fi
+assert_file "no-root-claude-md" "$DIST/skills/sw-always-apply/SKILL.md"
+if [ -f "$DIST/CLAUDE.md" ]; then
+  echo "FAIL root-claude-md-must-not-exist"
+  FAIL=1
+else
+  echo "OK  root-claude-md-absent"
+fi
+assert_grep "hooks-type-command" "$DIST/hooks/hooks.json" '"type"[[:space:]]*:[[:space:]]*"command"'
+assert_grep "hooks-matcher-field" "$DIST/hooks/hooks.json" '"matcher"'
 
 assert_file "sample-command" "$DIST/commands/sw-watch-ci.md"
 assert_grep "command-claude-root" "$DIST/commands/sw-watch-ci.md" 'CLAUDE_PLUGIN_ROOT'

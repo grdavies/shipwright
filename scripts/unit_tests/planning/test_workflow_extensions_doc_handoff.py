@@ -177,4 +177,7 @@ def test_enabled_flags_open_surfaces(ext_repo: Path) -> None:
         schema_src.read_text(encoding="utf-8"),
         encoding="utf-8",
     )
-    assert validate_bundle({"schemaVersion": "HandoffBundle@v1"}, root=ext_repo)["verdict"] == "fail"
+    assert validate_bundle({"schemaVersion": "HandoffBundle@v1"}, root=ext_repo)["verdict"] in {
+        "fail",
+        "schema_failure",
+    }

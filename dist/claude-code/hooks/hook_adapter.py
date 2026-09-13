@@ -31,31 +31,28 @@ def _session_context_template(repo_root: Path) -> Path:
     return repo_root / "core" / "hooks" / "session-context.md"
 
 
+def _session_start_payload(context: str) -> dict:
+    """Claude SessionStart structured output — includes event_name (R5)."""
+    return {
+        "event_name": "SessionStart",
+        "hookSpecificOutput": {
+            "additionalContext": context,
+        },
+    }
+
+
 def run_session_start(repo_root: Path) -> int:
     payload = read_stdin_json()
     root = workspace_root(payload)
     template = _session_context_template(repo_root)
     try:
         context = build_session_context(root, plugin_root(repo_root), template)
-        print(
-            json.dumps(
-                {
-                    "hookSpecificOutput": {
-                        "additionalContext": context,
-                    }
-                },
-                ensure_ascii=False,
-            )
-        )
+        print(json.dumps(_session_start_payload(context), ensure_ascii=False))
         return 0
     except Exception as exc:  # noqa: BLE001 — session hook is fail-open
         print(
             json.dumps(
-                {
-                    "hookSpecificOutput": {
-                        "additionalContext": f"(Shipwright hook degraded: {exc})",
-                    }
-                }
+                _session_start_payload(f"(Shipwright hook degraded: {exc})")
             )
         )
         return 0
@@ -77,11 +74,9 @@ def run_stop(repo_root: Path) -> int:
     payload = read_stdin_json()
     root = workspace_root(payload)
     try:
-        result = evaluate_stop_sync(payload, root)
-        if result.followup_message:
-            print(json.dumps({"followup_message": result.followup_message}, ensure_ascii=False))
-        else:
-            print(json.dumps({}))
+        # Still evaluate sync side-effects, but never emit followup_message (R5).
+        evaluate_stop_sync(payload, root)
+        print(json.dumps({}))
         return 0
     except Exception as exc:  # noqa: BLE001 — stop hook is fail-open
         print(json.dumps({}))
@@ -93,7 +88,6 @@ def dispatch(repo_root: Path) -> int:
     payload = read_stdin_json()
     event = _hook_event(payload).lower()
     if event in {"sessionstart", "session_start"}:
-        # Re-feed payload via module-level hack: write to a temp approach
         return _run_session_with_payload(repo_root, payload)
     if event in {"userpromptsubmit", "user_prompt_submit", "beforesubmitprompt"}:
         return _run_submit_with_payload(repo_root, payload)
@@ -101,7 +95,6 @@ def dispatch(repo_root: Path) -> int:
         return _run_stop_with_payload(repo_root, payload)
     if event in {"pretooluse", "pre_tool_use"}:
         return _run_pre_tool_use_with_payload(repo_root, payload)
-    # Unknown event — allow
     print(json.dumps({}))
     return 0
 
@@ -111,19 +104,10 @@ def _run_session_with_payload(repo_root: Path, payload: dict) -> int:
     template = _session_context_template(repo_root)
     try:
         context = build_session_context(root, plugin_root(repo_root), template)
-        print(
-            json.dumps(
-                {"hookSpecificOutput": {"additionalContext": context}},
-                ensure_ascii=False,
-            )
-        )
+        print(json.dumps(_session_start_payload(context), ensure_ascii=False))
         return 0
     except Exception as exc:  # noqa: BLE001
-        print(
-            json.dumps(
-                {"hookSpecificOutput": {"additionalContext": f"(Shipwright hook degraded: {exc})"}}
-            )
-        )
+        print(json.dumps(_session_start_payload(f"(Shipwright hook degraded: {exc})")))
         return 0
 
 
@@ -141,11 +125,8 @@ def _run_submit_with_payload(repo_root: Path, payload: dict) -> int:
 def _run_stop_with_payload(repo_root: Path, payload: dict) -> int:
     root = workspace_root(payload)
     try:
-        result = evaluate_stop_sync(payload, root)
-        if result.followup_message:
-            print(json.dumps({"followup_message": result.followup_message}, ensure_ascii=False))
-        else:
-            print(json.dumps({}))
+        evaluate_stop_sync(payload, root)
+        print(json.dumps({}))
         return 0
     except Exception as exc:  # noqa: BLE001
         print(json.dumps({}))
@@ -156,9 +137,17 @@ def _run_stop_with_payload(repo_root: Path, payload: dict) -> int:
 def _run_pre_tool_use_with_payload(repo_root: Path, payload: dict) -> int:
     root = workspace_root(payload)
     try:
-        from before_task_dispatch import evaluate_pre_tool_use  # noqa: PLC0415
-        result = evaluate_pre_tool_use(payload, root)
-        if result.verdict == "pass":
+        # core/ is on sys.path via claude-hook.py wrapper; adapters/ too.
+        import importlib
+        pre_mod = importlib.import_module("adapters.pre_tool_evaluator")
+        map_mod = importlib.import_module("tool_name_map")
+        result = pre_mod.evaluate_pre_tool(
+            payload,
+            root,
+            tool_name_map=map_mod.TOOL_NAME_MAP,
+            map_tool_name=map_mod.map_tool_name,
+        )
+        if result.verdict == "pass" and result.model_id:
             print(
                 f"sw-model-binding: PreToolUse mutation attempted"
                 f" model={result.model_id} agent={result.agent}",
@@ -166,7 +155,7 @@ def _run_pre_tool_use_with_payload(repo_root: Path, payload: dict) -> int:
             )
         print(json.dumps(result.to_claude_hook_output(), ensure_ascii=False))
         return 0
-    except Exception as exc:  # noqa: BLE001 — fail-open; preflight check is the enforcement floor
+    except Exception as exc:  # noqa: BLE001 — fail-open outside directive enforcement
         print(json.dumps({"decision": "approve"}))
         print(f"Shipwright before-task-dispatch hook degraded: {exc}", file=sys.stderr)
         return 0

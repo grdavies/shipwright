@@ -2,33 +2,55 @@
   "hooks": {
     "SessionStart": [
       {
-        "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
       {
-        "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+          }
+        ]
       }
     ],
     "Stop": [
       {
-        "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
-        "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
-      }
-    ],
-    "ContextSwitch": [
-      {
-        "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-switch-handoff.py\" --trigger context-switch",
-        "metadata": {
-          "trigger": "context-switch",
-          "event": "pause"
-        }
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py\""
+          }
+        ]
       }
     ]
   },
+  "unsupportedEvents": [
+    {
+      "canonical": "ContextSwitch",
+      "unsupported_flag": true,
+      "host": "claude-code"
+    }
+  ],
   "canonicalManifest": "core/hooks/hooks.json"
 }
