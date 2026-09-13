@@ -1,6 +1,6 @@
 """Implementation-capture event journal (PRD 350 R13–R16, R25–R26).
 
-Sole write/read API for ``.cursor/sw-deliver-runs/{runId}/events.jsonl``.
+Sole write/read API for run-scoped ``events.jsonl`` (via ``wave_run_paths.events_path``).
 When ``capture.enabled`` is false (Phase 1 default), ``record_event`` is a no-op.
 
 Agents outside this module must not open ``events.jsonl`` directly (R25).
