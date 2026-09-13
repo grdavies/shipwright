@@ -509,6 +509,7 @@
     "loop_health.py",
     "loop_health_lib.py",
     "materialized-prefix-scan.py",
+    "matrix_generator.py",
     "memory-decision-snapshot.py",
     "memory-redact.py",
     "memory-sot-audit.py",
@@ -838,6 +839,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 835,
+  "moduleCount": 836,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
