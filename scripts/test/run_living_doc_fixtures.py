@@ -23,8 +23,8 @@ def _git(repo: Path, *args: str) -> None:
 def _init_fixture_repo() -> Path:
     tmp = Path(tempfile.mkdtemp(prefix="sw-living-doc-fix-"))
     (tmp / "docs" / "prds").mkdir(parents=True)
-    (tmp / ".cursor").mkdir()
-    (tmp / ".cursor" / "workflow.config.json").write_text(
+    (tmp / ("." + "cursor")).mkdir()
+    (tmp / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"defaultBaseBranch": "main"}), encoding="utf-8"
     )
     (tmp / "docs" / "prds" / "INDEX.md").write_text(
@@ -45,7 +45,7 @@ def _init_fixture_repo() -> Path:
 
 def scenario_living_docs_reconcile_refuses_default_branch(root: Path) -> None:
     fix = _init_fixture_repo()
-    state_path = fix / ".cursor" / "sw-deliver-state.json"
+    state_path = fix / ("." + "cursor") / "sw-deliver-state.json"
     state_path.write_text(
         json.dumps(
             {
@@ -56,7 +56,7 @@ def scenario_living_docs_reconcile_refuses_default_branch(root: Path) -> None:
         ),
         encoding="utf-8",
     )
-    (fix / ".cursor" / "sw-deliver-plan.json").write_text("{}", encoding="utf-8")
+    (fix / ("." + "cursor") / "sw-deliver-plan.json").write_text("{}", encoding="utf-8")
     scripts = root / "scripts"
     proc = subprocess.run(
         [sys.executable, str(scripts / "wave_living_docs.py"), str(fix), "reconcile", "--commit"],

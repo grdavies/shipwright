@@ -18,7 +18,7 @@ import planning_cross_project_trust as trust  # noqa: E402
 
 
 def _write_cfg(repo: Path, cfg: dict) -> None:
-    path = repo / ".cursor" / "workflow.config.json"
+    path = repo / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
 

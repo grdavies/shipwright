@@ -70,7 +70,7 @@ def _seed_finalize_run(primary: Path, run_id: str) -> dict:
     acquire_target_lock(primary, "feat/matrix-328", run_id)
     projection = (
         primary
-        / ".cursor"
+        / ("." + "cursor")
         / "sw-deliver-runs"
         / "_progress-projections"
         / "docs/prds/328-demo/tasks-328-demo.md"

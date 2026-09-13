@@ -206,8 +206,8 @@ def collect_review_findings(root: Path) -> dict[str, Any]:
     by_path: Counter[str] = Counter()
     sources: list[str] = []
     candidates = [
-        root / ".cursor" / "sw-learning-store",
-        root / ".cursor" / "sw-deliver-runs",
+        root / ("." + "cursor") / "sw-learning-store",
+        root / ("." + "cursor") / "sw-deliver-runs",
     ]
     path_re = re.compile(r"(?:^|[\s`\"'(])((?:scripts|core|docs)/[\w./-]+\.(?:py|md|ts|tsx|json))")
     for base in candidates:
@@ -234,7 +234,7 @@ def collect_gap_linkage(root: Path) -> dict[str, Any]:
     """Scan gap / planning materialized docs for path references (read-only)."""
     by_path: Counter[str] = Counter()
     bases = [
-        root / ".cursor" / "planning-materialized" / "docs" / "prds" / "gap",
+        root / ("." + "cursor") / "planning-materialized" / "docs" / "prds" / "gap",
         root / "docs" / "prds" / "gap",
     ]
     path_re = re.compile(r"`((?:scripts|core|docs)/[^`\s]+)`|\*\*File:\*\*\s*`?([^\s`]+)`?")

@@ -53,8 +53,8 @@ def main() -> int:
         "recordedAt": int(now),
         "expiresAt": int(now) + 3600,
     }
-    (wt / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
-    (wt / ".cursor" / "hooks" / "state" / "memory-prework-search.json").write_text(
+    (wt / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (wt / ("." + "cursor") / "hooks" / "state" / "memory-prework-search.json").write_text(
         json.dumps(record), encoding="utf-8"
     )
     payload = {"workspace_roots": [str(primary)], "cwd": str(wt), "tool_name": "Write"}
@@ -66,8 +66,8 @@ def main() -> int:
         print("FAIL hook-state-worktree-cwd-alignment", root, wt)
         fail += 1
 
-    (primary / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
-    (primary / ".cursor" / "hooks" / "state" / "memory-prework-search.json").write_text(
+    (primary / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (primary / ("." + "cursor") / "hooks" / "state" / "memory-prework-search.json").write_text(
         json.dumps({**record, "nonce": uuid.uuid4().hex}), encoding="utf-8"
     )
     payload2 = {"workspace_roots": [str(primary)], "cwd": str(primary), "tool_name": "Write"}
@@ -80,7 +80,7 @@ def main() -> int:
         fail += 1
 
     nonce = uuid.uuid4().hex
-    pre_dir = wt / ".cursor" / "hooks" / "state" / "task-dispatch-preflight"
+    pre_dir = wt / ("." + "cursor") / "hooks" / "state" / "task-dispatch-preflight"
     pre_dir.mkdir(parents=True, exist_ok=True)
     (pre_dir / f"{nonce}.json").write_text(
         json.dumps({

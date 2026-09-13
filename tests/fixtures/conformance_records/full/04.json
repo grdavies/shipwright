@@ -1,0 +1,8 @@
+{
+  "host": "codex",
+  "surface": "cli",
+  "host_version": "0.42.0",
+  "capability": "load_context",
+  "level": "passes",
+  "tested_at": "2026-09-11T00:00:00Z"
+}

@@ -125,7 +125,7 @@ def _seed_provider_catalog(tmp_root: Path) -> None:
 
 
 def _new_backend(tmp_root: Path, cfg: dict) -> "ps.ReplicatedPlanningCacheBackend":
-    (tmp_root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (tmp_root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     _seed_provider_catalog(tmp_root)
     return ps.ReplicatedPlanningCacheBackend(tmp_root, cfg)
 

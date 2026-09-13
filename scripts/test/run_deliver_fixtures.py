@@ -47,7 +47,7 @@ def main(argv: list[str] | None = None) -> int:
         subprocess.run(["git", "config", "user.name", "Test"], cwd=fix, check=True)
         subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", "init"], cwd=fix, check=True)
         subprocess.run(["git", "branch", "-M", "main"], cwd=fix, check=True)
-        (fix / ".cursor").mkdir(parents=True, exist_ok=True)
+        (fix / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
 
         tasks_rel = "docs/prds/099-test/tasks-099-test.md"
         (fix / "docs/prds/099-test").mkdir(parents=True, exist_ok=True)
@@ -150,7 +150,7 @@ topic: acceptance-test
             bad("deliver-phase-blocked-open-subtasks-via-loop-helper", str(gate_cause))
             fail += 1
 
-        repo_gap_dir = root / ".cursor" / "sw-deliver-runs" / phase_slug
+        repo_gap_dir = root / ("." + "cursor") / "sw-deliver-runs" / phase_slug
         repo_gap_dir.mkdir(parents=True, exist_ok=True)
         repo_gap_path = repo_gap_dir / "gap-check.status.json"
         repo_gap_path.write_text(

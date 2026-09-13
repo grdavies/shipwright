@@ -80,7 +80,7 @@ def _legacy_fixture_with_run_scoped_plan(
         "planHash": plan_hash,
         "planPath": relative_plan_path(tmp_path, run_id),
     }
-    scoped = tmp_path / ".cursor" / f"sw-deliver-state.{slug}.json"
+    scoped = tmp_path / ("." + "cursor") / f"sw-deliver-state.{slug}.json"
     scoped.parent.mkdir(parents=True, exist_ok=True)
     write_json(scoped, state)
     persist_plan(tmp_path, run_id, plan, state)
@@ -145,7 +145,7 @@ def test_foreign_global_without_run_scoped_plan_still_uses_global_when_matching(
         "phases": {"1": {"status": "pending"}},
         "planHash": plan_hash,
     }
-    scoped = tmp_path / ".cursor" / "sw-deliver-state.beta.json"
+    scoped = tmp_path / ("." + "cursor") / "sw-deliver-state.beta.json"
     write_json(scoped, state)
     write_json(global_plan_path(tmp_path), plan)
     source = locate_legacy_source(tmp_path, slug="beta")

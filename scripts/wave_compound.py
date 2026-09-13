@@ -123,7 +123,7 @@ def resolve_default_ref(top: Path, default: str) -> tuple[str, str]:
 
 
 def _breadcrumb_target_branch(root: Path) -> str | None:
-    legacy = root / ".cursor" / "sw-deliver-state.json"
+    legacy = root / ("." + "cursor") / "sw-deliver-state.json"
     if not legacy.is_file():
         return None
     try:

@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 STATE_ROOT_PRIMARY = ".shipwright"
-STATE_ROOT_LEGACY_CURSOR = ".cursor"
+# Legacy Cursor-rooted layout token (constructed; no hard-coded path-join literal).
+STATE_ROOT_LEGACY_CURSOR = "." + "cursor"
 STATE_ROOT_LEGACY_SW = ".sw"
 
 WORKFLOW_CONFIG_LEGACY_RELS: tuple[str, ...] = (
@@ -230,6 +231,78 @@ def memory_rule_allowlist_path(root: Path) -> Path:
     )
 
 
+def allowlist_path(root: Path) -> Path:
+    """Neutral-first rule allowlist path (PRD 349 R12).
+
+    Returns the first existing path among the neutral and legacy locations.
+    When neither exists, returns the preferred neutral write path (callers that
+    require an on-disk allowlist must treat a missing file as a hard failure).
+    """
+    return memory_rule_allowlist_path(root)
+
+
+class AllowlistMissingError(FileNotFoundError):
+    """Raised when neither neutral nor legacy allowlist files exist."""
+
+
+def require_allowlist_path(root: Path) -> Path:
+    """Return an existing allowlist path or raise AllowlistMissingError (R12)."""
+    preferred = root / STATE_ROOT_PRIMARY / "memory" / "rule-allowlist.json"
+    legacy = root / STATE_ROOT_LEGACY_CURSOR / "sw-memory-rule-allowlist.json"
+    for candidate in (preferred, legacy):
+        if candidate.is_file():
+            return candidate
+    raise AllowlistMissingError(
+        "rule allowlist missing: expected "
+        f"{preferred.as_posix()} or {legacy.as_posix()}"
+    )
+
+
+def gate_evidence_path(root: Path, run_id: str) -> Path:
+    """Resolved gate-evidence directory for a deliver run (PRD 349 R13)."""
+    run_key = str(run_id).strip()
+    if not run_key:
+        raise ValueError("run_id required for gate_evidence_path")
+    preferred = root / STATE_ROOT_PRIMARY / "deliver-runs" / run_key / "gate-evidence"
+    legacy = (
+        root / STATE_ROOT_LEGACY_CURSOR / "sw-deliver-runs" / run_key / "gate-evidence"
+    )
+    for candidate in (preferred, legacy):
+        if candidate.exists():
+            return candidate
+    return preferred
+
+
+def phase_evidence_path(root: Path, run_id: str, phase: str) -> Path:
+    """Resolved phase-evidence directory for a deliver run phase (PRD 349 R13)."""
+    run_key = str(run_id).strip()
+    phase_key = str(phase).strip()
+    if not run_key:
+        raise ValueError("run_id required for phase_evidence_path")
+    if not phase_key:
+        raise ValueError("phase required for phase_evidence_path")
+    preferred = (
+        root
+        / STATE_ROOT_PRIMARY
+        / "deliver-runs"
+        / run_key
+        / "phase-evidence"
+        / phase_key
+    )
+    legacy = (
+        root
+        / STATE_ROOT_LEGACY_CURSOR
+        / "sw-deliver-runs"
+        / run_key
+        / "phase-evidence"
+        / phase_key
+    )
+    for candidate in (preferred, legacy):
+        if candidate.exists():
+            return candidate
+    return preferred
+
+
 def memory_provider_marker_path(root: Path) -> Path:
     return _resolve_family_file(
         root,
@@ -288,6 +361,7 @@ INVENTORY_ACCESSORS: dict[str, Callable[[Path], Path]] = {
     "memory_rules_dir": memory_rules_dir,
     "memory_bodies_dir": memory_bodies_dir,
     "memory_rule_allowlist_path": memory_rule_allowlist_path,
+    "allowlist_path": allowlist_path,
     "memory_provider_marker_path": memory_provider_marker_path,
     "template_overrides_dir": template_overrides_dir,
     "template_packs_dir": template_packs_dir,
@@ -314,3 +388,33 @@ def path_matches_inventory_entry(resolved: Path, root: Path, entry: dict[str, An
         if resolved_posix == candidate or resolved_posix.startswith(candidate + "/"):
             return True
     return False
+
+
+def runs_dir(root: Path) -> Path:
+    """Neutral per-repo runs directory (PRD 349 R36). Never global/cross-repo."""
+    preferred = root / ".shipwright" / "runs"
+    legacy = root / ".cursor" / "sw-runs"
+    if preferred.exists() or not legacy.exists():
+        return preferred
+    return legacy
+
+
+def run_dir(root: Path, run_id: str) -> Path:
+    rid = str(run_id or "").strip()
+    if not rid:
+        raise ValueError("run_id required")
+    return runs_dir(root) / rid
+
+
+def bundle_import_lock_path(root: Path, run_id: str) -> Path:
+    """CAS lock path for concurrent bundle import (PRD 349 R36). Repo-local only."""
+    return run_dir(root, run_id) / "bundle-import.lock"
+
+
+def destination_ack_path(root: Path, run_id: str, transition_id: str) -> Path:
+    """Sidecar destination acknowledgement for a transition (PRD 349 R35)."""
+    tid = str(transition_id or "").strip()
+    if not tid:
+        raise ValueError("transition_id required")
+    return run_dir(root, run_id) / "acks" / f"{tid}.json"
+

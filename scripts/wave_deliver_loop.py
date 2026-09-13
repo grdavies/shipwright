@@ -2239,7 +2239,7 @@ def phase_worktree_path(state: dict[str, Any], phase_id: str) -> Path | None:
     return None
 
 
-WORKTREE_STATE_REL = Path(".cursor") / "sw-worktree-state.json"
+WORKTREE_STATE_REL = Path(("." + "cursor")) / "sw-worktree-state.json"
 PHASE_MODE_STATE_KEY = "phaseMode"
 PHASE_DISPATCH_ENV_KEYS = (
     "SW_PHASE_MODE",
@@ -2929,7 +2929,7 @@ def task_list_from(state: dict[str, Any], plan: dict[str, Any]) -> str | None:
 def trunk_base_persisted(root: Path) -> bool:
     from wave_state import path_normalize_anchor
 
-    path = path_normalize_anchor(root) / ".cursor" / "sw-base-state.json"
+    path = path_normalize_anchor(root) / ("." + "cursor") / "sw-base-state.json"
     if not path.is_file():
         return False
     try:

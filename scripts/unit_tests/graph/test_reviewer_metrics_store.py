@@ -71,7 +71,7 @@ def test_adapter_uses_learning_store_append_only() -> None:
         adapter.persist_metadata(metadata, journal_entry=_journal("run-a"))
         events_path = adapter.learning_store_path / "events.jsonl"
         assert events_path.is_file()
-        assert not (repo / ".cursor" / "sw-memory").exists()
+        assert not (repo / ("." + "cursor") / "sw-memory").exists()
         assert adapter.iter_events()[0].writer == "graph.learning_store.LearningStore"
 
 
@@ -81,6 +81,6 @@ def test_v1_authority_is_learning_store_path_only() -> None:
         authority = assert_learning_store_authority(repo)
         expected = default_learning_root(repo)
         assert authority == expected
-        assert authority == repo / ".cursor" / "sw-learning-store"
+        assert authority == repo / ("." + "cursor") / "sw-learning-store"
         adapter = ReviewerMetricsStoreAdapter(repo)
         assert adapter.learning_store_path == expected

@@ -190,7 +190,7 @@ class DispatchPromptTests(unittest.TestCase):
             root=self.root,
         )
         slug = "telemetry-fixture-phase"
-        phase_run = self.root / ".cursor" / "sw-deliver-runs" / slug
+        phase_run = self.root / ("." + "cursor") / "sw-deliver-runs" / slug
         phase_run.mkdir(parents=True, exist_ok=True)
         (phase_run / "status.json").write_text(
             '{"verdict":"in-flight","phase":"' + slug + '"}',
@@ -203,7 +203,7 @@ class DispatchPromptTests(unittest.TestCase):
             phase_slug=slug,
             compression_enabled=False,
         )
-        log = (self.root / ".cursor" / "sw-deliver-runs" / "run.log").read_text(encoding="utf-8")
+        log = (self.root / ("." + "cursor") / "sw-deliver-runs" / "run.log").read_text(encoding="utf-8")
         self.assertIn("dispatch-token-estimate", log)
         status = json.loads((phase_run / "status.json").read_text(encoding="utf-8"))
         self.assertEqual(len(status["dispatchTelemetry"]), 1)

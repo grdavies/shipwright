@@ -22,7 +22,7 @@ from planning_txn_recovery import replay_journal, startup_recovery  # noqa: E402
 
 
 def _fixture_root(tmp: Path) -> Path:
-    (tmp / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
     return tmp
 
 

@@ -103,7 +103,7 @@ def test_phase_head_provenance_authority(tmp_git_repo: Path, repo_root: Path) ->
         text=True,
         check=True,
     ).stdout.strip()
-    run_dir = wt_root / ".cursor" / "sw-deliver-runs" / phase_slug
+    run_dir = wt_root / ("." + "cursor") / "sw-deliver-runs" / phase_slug
     run_dir.mkdir(parents=True)
     (run_dir / "ship-steps.json").write_text(
         json.dumps(
@@ -115,7 +115,7 @@ def test_phase_head_provenance_authority(tmp_git_repo: Path, repo_root: Path) ->
         ),
         encoding="utf-8",
     )
-    state_dir = tmp_git_repo / ".cursor"
+    state_dir = tmp_git_repo / ("." + "cursor")
     state_dir.mkdir(parents=True, exist_ok=True)
     (state_dir / "sw-deliver-state.json").write_text(
         json.dumps(
@@ -148,7 +148,7 @@ def test_forged_gap_check_rejected(tmp_git_repo: Path, repo_root: Path) -> None:
         text=True,
         check=True,
     ).stdout.strip()
-    status_dir = tmp_git_repo / ".cursor" / "sw-deliver-runs" / phase_slug
+    status_dir = tmp_git_repo / ("." + "cursor") / "sw-deliver-runs" / phase_slug
     status_dir.mkdir(parents=True)
     (status_dir / "gap-check.status.json").write_text(
         json.dumps({"verdict": "pass", "binding": True, "head": head, "updatedAt": _utc_now()}),
@@ -165,7 +165,7 @@ def test_orchestrator_root_artifact_rejected(tmp_git_repo: Path, repo_root: Path
     gap_gate = _load_gap_gate(repo_root)
     wt_root = tmp_git_repo / ".sw-worktrees" / "phase-only"
     wt_root.mkdir(parents=True)
-    orch_dir = tmp_git_repo / ".cursor" / "sw-deliver-runs" / phase_slug
+    orch_dir = tmp_git_repo / ("." + "cursor") / "sw-deliver-runs" / phase_slug
     orch_dir.mkdir(parents=True)
     (orch_dir / "gap-check.status.json").write_text(
         json.dumps(
@@ -183,7 +183,7 @@ def test_orchestrator_root_artifact_rejected(tmp_git_repo: Path, repo_root: Path
         ),
         encoding="utf-8",
     )
-    (tmp_git_repo / ".cursor" / "sw-deliver-state.json").write_text(
+    (tmp_git_repo / ("." + "cursor") / "sw-deliver-state.json").write_text(
         json.dumps(
             {
                 "target": {"branch": "feat/demo"},

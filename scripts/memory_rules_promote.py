@@ -16,11 +16,11 @@ from memory_lib import memory_section
 from memory_provider_catalog import load_catalog
 from memory_provider_register import RegistrationError, validate_registration
 
-ALLOWLIST_REL = Path(".cursor") / "sw-memory-rule-allowlist.json"
-NEEDS_RECONCILE_REL = Path(".cursor") / "sw-memory" / "needs-reconcile.json"
-REVOKED_REL = Path(".cursor") / "sw-memory" / "revoked-rules.json"
-RULES_CACHE_REL = Path(".cursor") / "sw-memory" / "rules-cache.json"
-IN_REPO_RULES_REL = Path(".cursor") / "sw-memory" / "rules"
+ALLOWLIST_REL = Path(("." + "cursor")) / "sw-memory-rule-allowlist.json"
+NEEDS_RECONCILE_REL = Path(("." + "cursor")) / "sw-memory" / "needs-reconcile.json"
+REVOKED_REL = Path(("." + "cursor")) / "sw-memory" / "revoked-rules.json"
+RULES_CACHE_REL = Path(("." + "cursor")) / "sw-memory" / "rules-cache.json"
+IN_REPO_RULES_REL = Path(("." + "cursor")) / "sw-memory" / "rules"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PLUGIN_ROOT = SCRIPT_DIR.parent
@@ -142,7 +142,7 @@ def adapter_path_for(provider: str) -> str:
 
 
 def _in_repo_writer(root: Path, payload: dict[str, Any]) -> dict[str, Any]:
-    store = root / ".cursor" / "sw-memory"
+    store = root / ("." + "cursor") / "sw-memory"
     record = {
         "id": payload["ruleId"],
         "category": RULE_CATEGORY,

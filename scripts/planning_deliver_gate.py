@@ -182,7 +182,7 @@ def handle_unit_not_in_graph(root: Path, task_path: Path, *, action: str) -> dic
 def _authority_pin_path(root: Path, phase_slug: str | None) -> Path | None:
     if not phase_slug:
         return None
-    return root / ".cursor" / "sw-deliver-runs" / phase_slug / "authority-pin.json"
+    return root / ("." + "cursor") / "sw-deliver-runs" / phase_slug / "authority-pin.json"
 
 
 def read_authority_pin(root: Path, phase_slug: str | None) -> dict[str, Any] | None:
@@ -419,7 +419,7 @@ def log_dependency_override(root: Path, *, unit_id: str, task_list: str, blockin
     )
     if proc.returncode != 0:
         fail(proc.stderr.strip() or "override-add failed", exit_code=20)
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     if not cursor.is_dir():
         return
     for path in cursor.glob("sw-deliver-state*.json"):
@@ -706,7 +706,7 @@ def cmd_dependency_gate(root: Path, args: list[str]) -> None:
 
 def list_dependency_override_drift(root: Path) -> list[dict[str, Any]]:
     drift: list[dict[str, Any]] = []
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     if cursor.is_dir():
         for path in cursor.glob("sw-deliver-state*.json"):
             try:

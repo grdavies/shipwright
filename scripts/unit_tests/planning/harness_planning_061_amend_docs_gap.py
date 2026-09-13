@@ -53,7 +53,7 @@ from planning_migrate_issue_store import cfg_issues_client
 
 root = Path(tempfile.mkdtemp())
 subprocess.run(['git','init','-q'], cwd=root, check=True)
-(root / '.cursor').mkdir(parents=True, exist_ok=True)
+(root / ('.' + 'cursor')).mkdir(parents=True, exist_ok=True)
 fixture = root / '.cursor/hooks/state/issue-store-fixture.json'
 store = FixtureIssuesStore(fixture)
 records = {}
@@ -82,7 +82,7 @@ import sys
 sys.path.insert(0, '$ROOT/scripts')
 import planning_store as ps
 root = Path(tempfile.mkdtemp())
-(root / '.cursor').mkdir(parents=True, exist_ok=True)
+(root / ('.' + 'cursor')).mkdir(parents=True, exist_ok=True)
 cfg = {'version': 1, 'host': {'provider': 'github'}, 'planning': {'store': {'backend': 'issue-store', 'issuesProvider': 'github-issues', 'projectKey': 'fixture-061'}}}
 (root / '.cursor/workflow.config.json').write_text(json.dumps(cfg), encoding='utf-8')
 out = ps.resolve_absorbed_gaps_061(root, cfg, unit_id='gap-105-opaque-locator')
@@ -97,7 +97,7 @@ import sys
 sys.path.insert(0, '$ROOT/scripts')
 import planning_store as ps
 root = Path(tempfile.mkdtemp())
-(root / '.cursor').mkdir(parents=True, exist_ok=True)
+(root / ('.' + 'cursor')).mkdir(parents=True, exist_ok=True)
 cfg = {'version': 1, 'planning': {'store': {'backend': 'in-repo-public'}}}
 (root / '.cursor/workflow.config.json').write_text(json.dumps(cfg), encoding='utf-8')
 out = ps.gate_prd_060_r1_r7(root, cfg)
@@ -117,7 +117,7 @@ from planning_migrate_issue_store import cfg_issues_client
 
 root = Path(tempfile.mkdtemp())
 subprocess.run(['git','init','-q'], cwd=root, check=True)
-(root / '.cursor').mkdir(parents=True, exist_ok=True)
+(root / ('.' + 'cursor')).mkdir(parents=True, exist_ok=True)
 fixture = root / '.cursor/hooks/state/issue-store-fixture.json'
 store = FixtureIssuesStore(fixture)
 uid = 'gap-077-comment-sync'

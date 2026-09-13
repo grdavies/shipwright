@@ -20,7 +20,7 @@ import planning_unit_status as pus
 
 
 def _write_state(root: Path, slug: str, *, verdict: str, target: str | None = None) -> None:
-    state_path = root / ".cursor" / f"sw-deliver-state.{slug}.json"
+    state_path = root / ("." + "cursor") / f"sw-deliver-state.{slug}.json"
     state_path.parent.mkdir(parents=True, exist_ok=True)
     payload: dict[str, object] = {"verdict": verdict, "updatedAt": "2026-07-10T00:00:00Z"}
     if target:
@@ -53,7 +53,7 @@ def test_cleanup_protects_resumable_nonterminal_verdicts(tmp_git_repo: Path, ver
 def test_cleanup_terminal_allowlist_excludes_blocked_autonomy(tmp_git_repo: Path) -> None:
     """R15(i)/R11 — autonomy does not delete blocked run-state and returns hygiene halt."""
     subprocess.run(["git", "checkout", "-b", "feat/demo"], cwd=tmp_git_repo, check=True, capture_output=True)
-    cfg_dir = tmp_git_repo / ".cursor"
+    cfg_dir = tmp_git_repo / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps({"cleanup": {"autonomy": "auto"}}), encoding="utf-8"

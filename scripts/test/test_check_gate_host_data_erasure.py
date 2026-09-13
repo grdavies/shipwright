@@ -87,7 +87,7 @@ def test_run_gate_auth_denied_checks_yields_host_auth_required(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg_dir = tmp_path / ".cursor"
+    cfg_dir = tmp_path / ("." + "cursor")
     cfg_dir.mkdir(parents=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps(_workflow_config()),

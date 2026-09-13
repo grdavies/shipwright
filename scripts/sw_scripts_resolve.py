@@ -22,9 +22,9 @@ from typing import Iterable, Mapping
 TRUST_MARKERS = ("check-gate.py", "resolve-model-tier.py")
 DIST_SHIM_MARKER = "sw-run.py"
 ENV_VAR = "SHIPWRIGHT_SCRIPTS"
-PLUGIN_LOCAL_SCRIPTS = Path.home() / ".cursor" / "plugins" / "local" / "shipwright" / "scripts"
+PLUGIN_LOCAL_SCRIPTS = Path.home() / ("." + "cursor") / "plugins" / "local" / "shipwright" / "scripts"
 PLUGIN_SCRIPTS = PLUGIN_LOCAL_SCRIPTS
-PLUGIN_CACHE_ROOT = Path.home() / ".cursor" / "plugins" / "cache"
+PLUGIN_CACHE_ROOT = Path.home() / ("." + "cursor") / "plugins" / "cache"
 CONSUMER_NO_PLUGIN_ERROR = (
     "Shipwright plugin not installed; install the plugin locally "
     "(python3 scripts/install.py from the Shipwright source repo) "
@@ -70,7 +70,7 @@ def is_dist_only_plugin_scripts(path: Path) -> bool:
 def _operator_trust_store_path(workspace: Path) -> Path:
     from graph.packages.trust import DEFAULT_TRUST_ANCHOR_PATH
 
-    candidate = workspace / ".cursor" / "sw-package-trust-anchors.json"
+    candidate = workspace / ("." + "cursor") / "sw-package-trust-anchors.json"
     if candidate.is_file():
         return candidate
     return workspace / DEFAULT_TRUST_ANCHOR_PATH

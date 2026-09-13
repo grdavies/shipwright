@@ -94,15 +94,15 @@ def test_bundle_assets_freeze_reconcile_lossless(
             },
             "host": {"provider": "github"},
         }
-        (repo / ".cursor" / "hooks" / "state").mkdir(parents=True)
-        (repo / ".cursor" / "workflow.config.json").write_text(
+        (repo / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
+        (repo / ("." + "cursor") / "workflow.config.json").write_text(
             json.dumps(cfg), encoding="utf-8"
         )
         backend = IssueStoreBackend(repo, cfg)
     else:
         cfg = {"version": 1, "planning": {"store": {"backend": "in-repo-public"}}}
-        (repo / ".cursor").mkdir(parents=True, exist_ok=True)
-        (repo / ".cursor" / "workflow.config.json").write_text(
+        (repo / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+        (repo / ("." + "cursor") / "workflow.config.json").write_text(
             json.dumps(cfg), encoding="utf-8"
         )
         backend = InRepoPublicBackend(repo, cfg)

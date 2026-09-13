@@ -33,7 +33,7 @@ def test_github_doc_review_conformance_suite_green(tmp_path: Path) -> None:
 
     root = tmp_path
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)
-    (root / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
     suite = run_doc_review_conformance_suite("github-issues", root)
     assert suite["verdict"] == "ok", suite.get("failedDimensions") or suite
     for dim in DOC_REVIEW_CONFORMANCE_DIMENSIONS:

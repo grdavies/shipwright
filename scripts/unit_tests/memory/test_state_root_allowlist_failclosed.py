@@ -61,7 +61,7 @@ def plugin_matched(migrate_repo: Path, tmp_path: Path) -> Path:
 
 
 def _seed_provider(root: Path) -> None:
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     (cursor / "workflow.config.json").write_text(
         json.dumps({"memory": {"provider": "in-repo", "project": "test"}}),

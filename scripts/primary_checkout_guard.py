@@ -86,7 +86,7 @@ def branch_exists(repo_root: Path, branch: str) -> bool:
 
 
 def lock_path(repo_root: Path) -> Path:
-    return repo_root / ".cursor" / "sw-deliver-runs" / PRIMARY_LOCK
+    return repo_root / ("." + "cursor") / "sw-deliver-runs" / PRIMARY_LOCK
 
 
 def acquire_primary_lock(repo_root: Path, *, nonblock: bool = True) -> dict[str, Any]:

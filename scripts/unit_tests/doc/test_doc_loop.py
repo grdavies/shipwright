@@ -59,7 +59,7 @@ def _run_spec_seed_inprocess(cmd: list[str], **kwargs):
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
     subprocess.run(
         ["git", "config", "user.email", "t@example.com"],

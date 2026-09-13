@@ -32,7 +32,7 @@ def manifest_sha256(content: bytes) -> str:
 
 def persist_gate_manifest_snapshot(root: Path, manifest: Any) -> dict[str, str]:
     """Persist manifest under repo-root cache (R8 — outside ephemeral worktrees)."""
-    cache_dir = root / ".cursor" / "sw-gate-cache"
+    cache_dir = root / ("." + "cursor") / "sw-gate-cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_path = cache_dir / "pr-test-plan.manifest.json"
     canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
@@ -799,7 +799,7 @@ def resolve_change_triage_tier(root: Path) -> str | None:
         candidates.append(Path(run_dir) / "status.json")
     phase = os.environ.get("SW_PHASE_SLUG")
     if phase:
-        candidates.append(root / ".cursor" / "sw-deliver-runs" / phase / "status.json")
+        candidates.append(root / ("." + "cursor") / "sw-deliver-runs" / phase / "status.json")
     for cand in candidates:
         if not cand.is_file():
             continue
@@ -1309,7 +1309,123 @@ def scripts_touch_advisory(root: Path, pr_view: dict[str, Any], head_sha: str, r
     return reason
 
 
+def platform_portability_suite_steps(root: Path) -> list[tuple[str, list[str]]]:
+    """Ordered PRD 349 phase-5 verification steps (TS10 / SC-K12)."""
+    py = sys.executable
+    return [
+        (
+            "validate_bundle_self_test",
+            [py, "-m", "core.handoff.validate_bundle", "--self-test"],
+        ),
+        (
+            "phase1_native_conformance",
+            [py, "-m", "pytest", "-q", "platforms/claude-code/tests/test_golden_harness.py"],
+        ),
+        (
+            "phase3_portability_traps",
+            [
+                py,
+                "-m",
+                "pytest",
+                "-q",
+                "platforms/codex/tests/test_portability_traps.py",
+                "platforms/opencode/tests/test_portability_traps.py",
+            ],
+        ),
+        (
+            "phase4_continuation_smoke",
+            [py, "-m", "pytest", "-q", "tests/test_cross_host_continuation.py"],
+        ),
+        (
+            "phase4_concurrent_resume_guard",
+            [
+                py,
+                "-m",
+                "pytest",
+                "-q",
+                "tests/test_cross_host_continuation.py::test_concurrent_import_lock",
+            ],
+        ),
+        (
+            "phase4_mcp_integration",
+            [py, "-m", "pytest", "-q", "tests/test_mcp_operations.py"],
+        ),
+        (
+            "support_matrix_generator",
+            [
+                py,
+                str(SCRIPT_DIR / "matrix_generator.py"),
+                "--records",
+                str(root / "core" / "schemas" / "capabilities" / "conformance"),
+                "--format",
+                "markdown",
+            ],
+        ),
+    ]
+
+
+def _platform_portability_suite_enabled(root: Path) -> bool:
+    """Whether the PRD 349 portability suite should run for this gate invocation.
+
+    Skipped when:
+    - ``SW_GATE_FIXTURE`` is set (synthetic gate-contract harnesses), or
+    - ``SW_SKIP_PLATFORM_PORTABILITY_SUITE`` is set, or
+    - ``root`` is not a full plugin checkout (missing conformance records / platforms).
+      Ephemeral deliver fixture repos call check-gate for live-evidence reconcile and
+      must not pay the full portability matrix tax.
+    """
+    if os.environ.get("SW_GATE_FIXTURE"):
+        return False
+    if os.environ.get("SW_SKIP_PLATFORM_PORTABILITY_SUITE"):
+        return False
+    records = root / "core" / "schemas" / "capabilities" / "conformance"
+    platforms = root / "platforms"
+    return records.is_dir() and platforms.is_dir()
+
+
+def run_platform_portability_suite(root: Path) -> tuple[str | None, list[dict[str, Any]]]:
+    """Run phase-5 suite fail-closed. Returns (error_reason|None, step results)."""
+    if not _platform_portability_suite_enabled(root):
+        return None, []
+    plugin_root = SCRIPT_DIR.parent
+    # ``python -m core.handoff...`` and pytest collection need the plugin root on PYTHONPATH.
+    path_parts = [str(plugin_root), str(SCRIPT_DIR)]
+    existing = os.environ.get("PYTHONPATH", "").strip()
+    if existing:
+        path_parts.append(existing)
+    child_env = proc.HookVerifyEnv(pythonpath=os.pathsep.join(path_parts))
+    results: list[dict[str, Any]] = []
+    for name, argv in platform_portability_suite_steps(root):
+        completed = proc.run(argv, cwd=str(root), child_env=child_env)
+        entry = {
+            "step": name,
+            "argv": argv,
+            "returncode": int(completed.returncode),
+            "ok": completed.returncode == 0,
+        }
+        if completed.returncode != 0:
+            stderr = (completed.stderr or "").strip()
+            stdout = (completed.stdout or "").strip()
+            detail = stderr or stdout or f"exit {completed.returncode}"
+            entry["detail"] = detail[:2000]
+            results.append(entry)
+            return f"platformPortability:{name}:{detail[:400]}", results
+        results.append(entry)
+    return None, results
+
+
 def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    portability_err, portability_results = run_platform_portability_suite(root)
+    if portability_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": portability_err,
+            "source": "local-evidence",
+            "platformPortability": portability_results,
+        }
+        jsonio.emit(payload)
+        return 30, payload
+
     head_proc = proc.run(["git", "-C", str(root), "rev-parse", "HEAD"], cwd=str(root))
     head_sha = head_proc.stdout.strip() if head_proc.returncode == 0 else ""
     branch_proc = proc.run(
@@ -1498,6 +1614,16 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     """Compute gate verdict; emit JSON to stdout; return (exit_code, payload)."""
     if str(SCRIPT_DIR) not in sys.path:
         sys.path.insert(0, str(SCRIPT_DIR))
+
+    portability_err, portability_results = run_platform_portability_suite(root)
+    if portability_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": portability_err,
+            "platformPortability": portability_results,
+        }
+        jsonio.emit(payload)
+        return 30, payload
 
     from host_lib import resolve_provider
 

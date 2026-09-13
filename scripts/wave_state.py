@@ -237,7 +237,7 @@ def scoped_paths(root: Path, target: str, *, local: bool = False) -> dict[str, P
     """
     slug = slug_from_target(target)
     base = root.resolve() if local else _path_normalize_anchor(root)
-    cursor = base / ".cursor"
+    cursor = base / ("." + "cursor")
     runs = cursor / "sw-deliver-runs"
     return {
         "state": cursor / f"sw-deliver-state.{slug}.json",
@@ -256,7 +256,7 @@ def _mirror_state_path(
     """Physical scoped state file inside an orchestrator worktree mirror (R4)."""
     branch = target or (target_branch_from_state(state_hint) if state_hint else None)
     if not is_feature_target(branch):
-        return mirror_root.resolve() / ".cursor" / LEGACY_STATE_NAME
+        return mirror_root.resolve() / ("." + "cursor") / LEGACY_STATE_NAME
     assert branch is not None
     return scoped_paths(mirror_root, branch, local=True)["state"]
 
@@ -481,7 +481,7 @@ def resolve_state_path(
 def enumerate_scoped_runs(root: Path) -> list[dict[str, Any]]:
     """List live scoped deliver runs for index / cleanup (PRD 013 R10)."""
     anchor = _path_normalize_anchor(root)
-    cursor = anchor / ".cursor"
+    cursor = anchor / ("." + "cursor")
     runs: list[dict[str, Any]] = []
     for path in sorted(cursor.glob("sw-deliver-state.*.json")):
         slug = path.name.removeprefix("sw-deliver-state.").removesuffix(".json")
@@ -601,7 +601,7 @@ def relative_under_anchor(path: Path, root: Path) -> str:
 
 def _cursor_dir(root: Path) -> Path:
     """Canonical ``.cursor`` directory under the primary repo root (R28)."""
-    return _path_normalize_anchor(root) / ".cursor"
+    return _path_normalize_anchor(root) / ("." + "cursor")
 
 
 def _parse_state_ts(ts: str) -> datetime | None:

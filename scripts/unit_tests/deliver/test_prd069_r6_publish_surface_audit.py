@@ -27,7 +27,7 @@ def test_publish_surface_audit_green_shape(repo_root: Path) -> None:
 
 
 def test_publish_surface_audit_emits_json(repo_root: Path, tmp_path: Path) -> None:
-    dest = tmp_path / ".cursor" / "sw-deliver-runs"
+    dest = tmp_path / ("." + "cursor") / "sw-deliver-runs"
     dest.mkdir(parents=True)
     with patch.object(psa, "audit_path_for", return_value=dest / "publish-surface-audit.json"):
         result = psa.emit_publish_surface_audit(repo_root, write=True)

@@ -33,12 +33,24 @@ def _load_emitter_module(platform: str):
     emitter_path = PLATFORMS_ROOT / platform / "emitter.py"
     if not emitter_path.is_file():
         raise SystemExit(f"sw generate: no emitter for platform '{platform}' at {emitter_path}")
+    # Platforms share sibling module basenames (generator, hook_registry, …).
+    # Clear them between loads so `sw generate --all` cannot cross-wire adapters
+    # (PRD 349: Codex/OpenCode both expose generator.py).
+    for shared in (
+        "generator",
+        "hook_registry",
+        "plugin_manifest",
+        "emitter_base",
+        "lifecycle_plugin",
+    ):
+        sys.modules.pop(shared, None)
     spec = importlib.util.spec_from_file_location(f"sw_emitter_{platform}", emitter_path)
     if spec is None or spec.loader is None:
         raise SystemExit(f"sw generate: failed to load emitter module for {platform}")
     mod = importlib.util.module_from_spec(spec)
-    sys.path.insert(0, str(emitter_path.parent))
-    sys.path.insert(0, str(REPO_ROOT / "sw"))
+    # Prefer this platform dir for sibling imports; keep prior platform dirs from winning.
+    plat_dir = str(emitter_path.parent)
+    sys.path = [plat_dir, str(REPO_ROOT / "sw"), *[p for p in sys.path if p != plat_dir]]
     spec.loader.exec_module(mod)
     return mod
 

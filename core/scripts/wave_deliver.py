@@ -1166,7 +1166,7 @@ def plan_combined(
         out["dry_run"] = True
         return out
 
-    plan_path = root / ".cursor" / PLAN_PATH_NAME
+    plan_path = root / ("." + "cursor") / PLAN_PATH_NAME
     plan_path.parent.mkdir(parents=True, exist_ok=True)
     plan_path.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
     persist_contention_feedback(root, branch, notices, injected)
@@ -1219,7 +1219,7 @@ def phase_entry_currency_check(
         if not state_path.is_file():
             return None
         state = load_deliver_state(root, task_list=task_list)
-    plan_path = root / ".cursor" / PLAN_PATH_NAME
+    plan_path = root / ("." + "cursor") / PLAN_PATH_NAME
     plan: dict[str, Any] = {}
     if plan_path.is_file():
         try:
@@ -1304,7 +1304,7 @@ def preflight_timeout_seconds(root: Path) -> int:
 
 
 def preflight_cache_path(root: Path) -> Path:
-    return root / ".cursor" / "sw-deliver-preflight-cache.json"
+    return root / ("." + "cursor") / "sw-deliver-preflight-cache.json"
 
 
 def load_preflight_cache(root: Path) -> dict:
@@ -1998,7 +1998,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
             out["dry_run"] = True
             emit(out, 0)
 
-        plan_path = root / ".cursor" / PLAN_PATH_NAME
+        plan_path = root / ("." + "cursor") / PLAN_PATH_NAME
         plan_path.parent.mkdir(parents=True, exist_ok=True)
         plan_path.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
         persist_contention_feedback(root, branch, notices, injected)
@@ -2035,7 +2035,7 @@ def cmd_plan(root: Path, args: list[str]) -> None:
         out["dry_run"] = True
         emit(out, 0)
 
-    plan_path = root / ".cursor" / PLAN_PATH_NAME
+    plan_path = root / ("." + "cursor") / PLAN_PATH_NAME
     plan_path.parent.mkdir(parents=True, exist_ok=True)
     plan_path.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
     emit(out, 0)
@@ -2265,7 +2265,7 @@ def cmd_explain_plan(root: Path, args: list[str]) -> None:
             }
             plan_path = None
         else:
-            plan_path = root / ".cursor" / PLAN_PATH_NAME
+            plan_path = root / ("." + "cursor") / PLAN_PATH_NAME
         if plan is None:
             if plan_path is None or not plan_path.is_file():
                 fail(

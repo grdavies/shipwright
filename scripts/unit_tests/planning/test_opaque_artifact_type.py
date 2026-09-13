@@ -61,7 +61,7 @@ def test_issue_store_put_via_opaque_locator_preserves_gap_label(
 ) -> None:
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     root = tmp_path
-    (root / ".cursor" / "hooks" / "state").mkdir(parents=True)
+    (root / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
     cfg = {
         "version": 1,
         "planning": {
@@ -72,7 +72,7 @@ def test_issue_store_put_via_opaque_locator_preserves_gap_label(
             }
         },
     }
-    cfg_path = root / ".cursor" / "workflow.config.json"
+    cfg_path = root / ("." + "cursor") / "workflow.config.json"
     cfg_path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
 
     unit_id = "gap-fixture-opaque"

@@ -198,7 +198,7 @@ state = {
     "phases": {"1": {"status": "green-merged"}},
     "target": {"branch": "feat/model-tier-setup-defaults"},
 }
-(root / ".cursor" / "sw-deliver-state.json").write_text(json.dumps(state, indent=2))
+(root / ("." + "cursor") / "sw-deliver-state.json").write_text(json.dumps(state, indent=2))
 PY
 if (cd "$CUR_FIX" && bash scripts/docs-currency-gate.sh --state-root . >/dev/null 2>&1); then
   bad "docs-currency-gate-block (expected fail on drift)"

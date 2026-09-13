@@ -1,0 +1,1 @@
+"""Codex platform adapter package."""

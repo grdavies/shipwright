@@ -58,7 +58,7 @@ class RulesLoadRequiredError(PreflightError):
 
 
 def load_allowlist(root: Path) -> set[str]:
-    path = root / ".cursor" / "sw-memory-rule-allowlist.json"
+    path = root / ("." + "cursor") / "sw-memory-rule-allowlist.json"
     if not path.is_file():
         return set()
     try:

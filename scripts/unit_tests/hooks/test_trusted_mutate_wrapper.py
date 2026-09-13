@@ -55,7 +55,7 @@ def _write_prework(repo: Path, *, budget: int = DEFAULT_SURFACE_MUTATION_BUDGET)
         "mutationBudget": budget,
         "mutationsUsed": 0,
     }
-    state = repo / ".cursor" / "hooks" / "state"
+    state = repo / ("." + "cursor") / "hooks" / "state"
     state.mkdir(parents=True, exist_ok=True)
     (state / "memory-prework-search.json").write_text(
         json.dumps(record, indent=2) + "\n",

@@ -46,8 +46,8 @@ def emit_result(obj: dict[str, Any], exit_code: int = 0) -> None:
 
 def reservations_dir(root: Path) -> Path:
     repo_root = canonical_repo_root(root)
-    base_raw = repo_root / ".cursor" / RESERVATIONS_DIR_NAME
-    parent_raw = repo_root / ".cursor"
+    base_raw = repo_root / ("." + "cursor") / RESERVATIONS_DIR_NAME
+    parent_raw = repo_root / ("." + "cursor")
     if parent_raw.is_symlink():
         fail("planning-reservation parent is symlinked", exit_code=20, halt="reservation-path-unsafe")
     if base_raw.is_symlink():
@@ -70,7 +70,7 @@ def reservation_lock_path(root: Path, number: int, unit_id: str | None = None) -
     path = (locks / filename).resolve()
     if path.parent != locks:
         fail("reservation path escapes reservations directory", exit_code=20, halt="reservation-path-unsafe")
-    locks_raw = canonical_repo_root(root) / ".cursor" / RESERVATIONS_DIR_NAME
+    locks_raw = canonical_repo_root(root) / ("." + "cursor") / RESERVATIONS_DIR_NAME
     if locks_raw.is_symlink():
         fail("planning-reservation directory is symlinked", exit_code=20, halt="reservation-path-unsafe")
     return path

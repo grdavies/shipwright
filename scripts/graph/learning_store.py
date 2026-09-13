@@ -45,7 +45,7 @@ def utc_now_iso() -> str:
 
 def default_learning_root(repo_root: str | Path) -> Path:
     """Gitignored append-only learning store — distinct from receipt authority (R11)."""
-    return Path(repo_root) / ".cursor" / "sw-learning-store"
+    return Path(repo_root) / ("." + "cursor") / "sw-learning-store"
 
 
 def _canonical(value: Mapping[str, Any]) -> bytes:

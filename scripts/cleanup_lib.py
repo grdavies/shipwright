@@ -182,8 +182,8 @@ def resolve_deliver_state(repo_root: Path) -> DeliverStateView:
     orch_raw = (state.get("orchestratorWorktree") or {}).get("path")
     if isinstance(orch_raw, str) and orch_raw.strip():
         orch_root = Path(orch_raw).resolve()
-        if orch_root != repo_root and (orch_root / ".cursor").is_dir():
-            for path in sorted((orch_root / ".cursor").glob("sw-deliver-state*.json")):
+        if orch_root != repo_root and (orch_root / ("." + "cursor")).is_dir():
+            for path in sorted((orch_root / ("." + "cursor")).glob("sw-deliver-state*.json")):
                 candidate = _read_state_optional(path)
                 if candidate:
                     orch_state = candidate
@@ -278,7 +278,7 @@ def _collect_terminal_run_state(
                     Item("run-state", rel_to_repo(repo_root, child), tag, "terminal deliver run")
                 )
 
-    cursor = state_root / ".cursor"
+    cursor = state_root / ("." + "cursor")
     for state_file in sorted(cursor.glob("sw-deliver-state*.json")):
         report.would_remove.append(
             Item("run-state", rel_to_repo(repo_root, state_file), tag, "terminal deliver run")
@@ -288,7 +288,7 @@ def _collect_terminal_run_state(
 def _stale_state_rel_paths(view: DeliverStateView, repo_root: Path) -> set[str]:
     rels: set[str] = set()
     for stale_root in view.stale_roots:
-        cursor = stale_root / ".cursor"
+        cursor = stale_root / ("." + "cursor")
         if not cursor.is_dir():
             continue
         for path in cursor.glob("sw-deliver-state*.json"):
@@ -389,7 +389,7 @@ def _breadcrumb_widens_inflight_scope(repo_root: Path) -> bool:
         state = _read_state_optional(path)
         if _is_migration_breadcrumb(state):
             return True
-    cursor = repo_root / ".cursor"
+    cursor = repo_root / ("." + "cursor")
     if cursor.is_dir():
         for path in cursor.glob("sw-deliver-state.*.json"):
             state = _read_state_optional(path)

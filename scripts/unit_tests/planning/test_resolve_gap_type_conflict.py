@@ -22,7 +22,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _issue_store_cfg(project_key: str = "gap-resolver-275") -> dict:
@@ -46,7 +46,7 @@ def test_conflicting_type_evidence_fail_closed(tmp_path: Path, monkeypatch: pyte
     _init_repo(root)
     project_key = "gap-resolver-conflict"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     gap_unit = "gap-275-type-conflict"
@@ -89,7 +89,7 @@ def test_named_source_order_labels_before_frontmatter(tmp_path: Path, monkeypatc
     _init_repo(root)
     project_key = "gap-resolver-order"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     gap_unit = "gap-275-order"

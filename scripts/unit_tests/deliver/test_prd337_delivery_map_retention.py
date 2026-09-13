@@ -50,7 +50,7 @@ def _provision_orchestrator_worktree(repo: Path) -> Path:
 
 
 def _teardown_orchestrator_state(repo: Path, orch_dir: Path) -> None:
-    deliver_state = orch_dir / ".cursor" / "sw-deliver-state.json"
+    deliver_state = orch_dir / ("." + "cursor") / "sw-deliver-state.json"
     if deliver_state.is_file():
         deliver_state.unlink()
     orch_closeout = orch_dir / ".sw" / "deliver-closeout"

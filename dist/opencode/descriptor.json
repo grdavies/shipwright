@@ -1,0 +1,7 @@
+{
+  "platform": "opencode",
+  "package_mechanism": "opencode-plugin",
+  "hooks": "lifecycle-plugin",
+  "skills": "projected",
+  "distinct_from_claude_plugin": true
+}

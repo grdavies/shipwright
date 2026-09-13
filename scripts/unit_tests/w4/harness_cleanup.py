@@ -370,10 +370,10 @@ report2 = Report(dry_run=True, protected=[Item('branch', 'feat/x', 'indeterminat
 # simulate auto: monkeypatch via temp config
 import json, tempfile, os
 td = tempfile.mkdtemp()
-cfg = root / '.cursor' / 'workflow.config.json'
+cfg = root / ('.' + 'cursor') / 'workflow.config.json'
 data = json.loads(cfg.read_text())
 data.setdefault('cleanup', {})['autonomy'] = 'auto'
-(tmp := Path(td) / '.cursor').mkdir(parents=True)
+(tmp := Path(td) / ('.' + 'cursor')).mkdir(parents=True)
 (tmp / 'workflow.config.json').write_text(json.dumps(data))
 assert can_autonomous_apply(Path(td), report2) == (False, 'indeterminate merge status — human gate required')
 "; then

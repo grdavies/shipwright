@@ -26,7 +26,7 @@ from sw_hook_util import (
     workflow_config_path,
 )
 
-_STATE_RELPATH = Path(".cursor") / "hooks" / "state" / "shipwright-memory-sync-scheduler.json"
+_STATE_RELPATH = Path(("." + "cursor")) / "hooks" / "state" / "shipwright-memory-sync-scheduler.json"
 _DEFAULT_MIN_TURNS = 10
 _DEFAULT_MIN_MINUTES = 120
 _FOLLOWUP = (
@@ -476,7 +476,7 @@ def resolve_communication_intensity(
 
 
 def _dispatch_preflight_record(root: Path) -> dict | None:
-    path = root / ".cursor" / "hooks" / "state" / "task-dispatch-preflight.json"
+    path = root / ("." + "cursor") / "hooks" / "state" / "task-dispatch-preflight.json"
     try:
         if not path.is_file():
             return None

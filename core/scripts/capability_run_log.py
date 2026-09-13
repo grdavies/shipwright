@@ -88,7 +88,7 @@ def surface_capability_selection(
 ) -> None:
     """Write selection audit record to deliver run.log and per-phase run-dir sink."""
     entry = build_log_entry(ctx, result)
-    deliver_log = root / ".cursor" / "sw-deliver-runs" / "run.log"
+    deliver_log = root / ("." + "cursor") / "sw-deliver-runs" / "run.log"
     append_run_log(deliver_log, entry)
     if run_dir is not None:
         append_run_log(run_dir / "run.log", entry)

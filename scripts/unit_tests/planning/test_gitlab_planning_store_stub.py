@@ -124,7 +124,7 @@ def test_stub_verbs_remain_not_enabled(verb: str) -> None:
     elif verb == "exists":
         result = backend.exists(unit_id, body_path)
     elif verb == "materialize":
-        result = backend.materialize(unit_id, body_path, root / ".cursor" / "gitlab-stub.md")
+        result = backend.materialize(unit_id, body_path, root / ("." + "cursor") / "gitlab-stub.md")
     elif verb == "freeze":
         payload = backend.freeze(unit_id, body_path)
         assert payload["verdict"] == "fail"

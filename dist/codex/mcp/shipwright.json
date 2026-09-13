@@ -1,0 +1,13 @@
+{
+  "adapter_id": "codex",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/impl-capture-and-gaps-orchestrator/.shipwright/mcp/codex.json",
+  "mcpServers": {
+    "shipwright-bounded": {
+      "command": "python3",
+      "args": [
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/impl-capture-and-gaps-orchestrator/core/mcp/server.py"
+      ],
+      "transport": "stdio"
+    }
+  }
+}

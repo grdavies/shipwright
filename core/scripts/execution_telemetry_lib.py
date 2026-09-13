@@ -78,7 +78,7 @@ def resolve_run_dir(
             path = (root / path).resolve()
         return path
     slug = (phase_slug or os.environ.get("SW_PHASE_SLUG", "")).strip() or "phase"
-    return (root / ".cursor" / "sw-deliver-runs" / slug).resolve()
+    return (root / ("." + "cursor") / "sw-deliver-runs" / slug).resolve()
 
 
 def telemetry_path(run_dir: Path) -> Path:

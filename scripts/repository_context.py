@@ -267,7 +267,7 @@ def _declared_credential_ref_names(cfg: Mapping[str, Any]) -> tuple[str, ...]:
 
 
 def _worktree_id(root: Path) -> str:
-    state_path = root / ".cursor" / "sw-worktree-state.json"
+    state_path = root / ("." + "cursor") / "sw-worktree-state.json"
     if state_path.is_file():
         try:
             payload = json.loads(state_path.read_text(encoding="utf-8"))

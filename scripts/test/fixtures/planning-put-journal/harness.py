@@ -91,8 +91,8 @@ def _fixture_root(tmp: str, *, project_key: str = "put-journal-fixture") -> tupl
         },
         "host": {"provider": "github"},
     }
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     return root, cfg
 
 

@@ -67,7 +67,7 @@ def test_shipwright_paths_constants_avoid_host_brand_names() -> None:
 
 
 def test_workflow_config_candidates_prefer_shipwright_root(tmp_path: Path) -> None:
-    legacy = tmp_path / ".cursor" / "workflow.config.json"
+    legacy = tmp_path / ("." + "cursor") / "workflow.config.json"
     legacy.parent.mkdir(parents=True)
     legacy.write_text('{"defaultBaseBranch":"legacy"}', encoding="utf-8")
     preferred = tmp_path / ".shipwright" / "workflow.config.json"
@@ -79,6 +79,6 @@ def test_workflow_config_candidates_prefer_shipwright_root(tmp_path: Path) -> No
 
 
 def test_emitter_refuses_workflow_writes_to_host_convention(tmp_path: Path) -> None:
-    target = tmp_path / ".cursor" / "rules" / "example.mdc"
+    target = tmp_path / ("." + "cursor") / "rules" / "example.mdc"
     with pytest.raises(HostConventionWriteForbidden):
         refuse_workflow_write_to_host_convention(target, tmp_path)

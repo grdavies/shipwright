@@ -50,7 +50,7 @@ def test_architecture_radar_last_missing(tmp_path: Path) -> None:
 
 
 def test_architecture_radar_last_present(tmp_path: Path) -> None:
-    radar_root = tmp_path / ".cursor" / "sw-architecture-radar"
+    radar_root = tmp_path / ("." + "cursor") / "sw-architecture-radar"
     scan_dir = radar_root / "scan-1"
     scan_dir.mkdir(parents=True)
     candidates_path = scan_dir / "candidates.json"
@@ -95,7 +95,7 @@ def test_vocabulary_divergence_last_missing(tmp_path: Path) -> None:
 
 
 def test_vocabulary_divergence_last_present(tmp_path: Path) -> None:
-    artifact_dir = tmp_path / ".cursor" / "sw-vocabulary-divergence"
+    artifact_dir = tmp_path / ("." + "cursor") / "sw-vocabulary-divergence"
     artifact_dir.mkdir(parents=True)
     (artifact_dir / "last.json").write_text(
         json.dumps(

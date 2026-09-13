@@ -1,0 +1,1 @@
+"""Shipwright core package root."""

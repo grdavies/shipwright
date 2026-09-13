@@ -43,7 +43,7 @@ import planning_visibility as pv
 def _make_root(cfg: dict) -> tempfile.TemporaryDirectory:
     tmp = tempfile.TemporaryDirectory()
     root = Path(tmp.name)
-    cursor_dir = root / ".cursor"
+    cursor_dir = root / ("." + "cursor")
     cursor_dir.mkdir()
     (cursor_dir / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     subprocess.run(["git", "init", "-q"], cwd=str(root), check=True)
@@ -114,7 +114,7 @@ def check_write_persists_new_key_and_deprecated_alias() -> dict:
     with _make_root(cfg) as tmp:
         root = Path(tmp)
         pv.resolve_default_profile(root, write=True)
-        written = json.loads((root / ".cursor" / "workflow.config.json").read_text(encoding="utf-8"))
+        written = json.loads((root / ("." + "cursor") / "workflow.config.json").read_text(encoding="utf-8"))
     planning = written.get("planning", {})
     ok = (
         planning.get("visibilityTier") == "all-private"

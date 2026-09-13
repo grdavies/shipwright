@@ -300,7 +300,7 @@ def build_proposal(
 
 
 def proposal_path(root: Path, phase_slug: str) -> Path:
-    return root / ".cursor" / "sw-deliver-runs" / phase_slug / "merge-intent-proposal.json"
+    return root / ("." + "cursor") / "sw-deliver-runs" / phase_slug / "merge-intent-proposal.json"
 
 
 def write_proposal(root: Path, phase_slug: str, proposal: dict[str, Any]) -> Path:

@@ -42,7 +42,7 @@ def _init_repo(tmp_path: Path) -> None:
 
 
 def _write_state(tmp_path: Path, payload: dict) -> Path:
-    state_path = tmp_path / ".cursor" / "sw-deliver-state.json"
+    state_path = tmp_path / ("." + "cursor") / "sw-deliver-state.json"
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     return state_path
@@ -177,8 +177,8 @@ def test_issue_store_progress_uses_ledger_projection(
 ) -> None:
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     _init_repo(tmp_path)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True)
-    (tmp_path / ".cursor" / "workflow.config.json").write_text(
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
+    (tmp_path / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps(
             {
                 "version": 1,

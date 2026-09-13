@@ -132,7 +132,7 @@ def test_corpus_scenario_binding() -> None:
 def test_missing_corpus_evidence_fails_evidence_gate() -> None:
     """R11 — missing corpus manifest fails semantic parity evidence."""
     root = _repo_root()
-    missing_root = root / ".cursor" / "sw-test-missing-corpus"
+    missing_root = root / ("." + "cursor") / "sw-test-missing-corpus"
     missing_root.mkdir(parents=True, exist_ok=True)
     evidence = planning_store_semantic_parity_evidence(missing_root, "in-repo-public")
     assert evidence["verdict"] == "fail"

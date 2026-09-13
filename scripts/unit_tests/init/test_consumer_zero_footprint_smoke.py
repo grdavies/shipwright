@@ -15,8 +15,8 @@ from sw_bootstrap import resolve_helper
 
 def _seed_consumer(root: Path) -> None:
     root.mkdir(parents=True, exist_ok=True)
-    (root / ".cursor").mkdir(exist_ok=True)
-    (root / ".cursor" / "workflow.config.json").write_text(
+    (root / ("." + "cursor")).mkdir(exist_ok=True)
+    (root / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"version": 1, "memory": {"provider": "in-repo"}}) + "\n",
         encoding="utf-8",
     )

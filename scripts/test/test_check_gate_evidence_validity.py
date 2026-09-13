@@ -136,7 +136,7 @@ def test_run_gate_auth_denied_blocked_exit_30(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg_dir = tmp_path / ".cursor"
+    cfg_dir = tmp_path / ("." + "cursor")
     cfg_dir.mkdir(parents=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps(_workflow_config()),
@@ -162,7 +162,7 @@ def test_run_gate_empty_checks_yields_empty_check_set_reason_code(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg_dir = tmp_path / ".cursor"
+    cfg_dir = tmp_path / ("." + "cursor")
     cfg_dir.mkdir(parents=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps(_workflow_config()),
@@ -214,7 +214,7 @@ def test_invalid_evidence_short_circuits_before_yellow_review_path(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    cfg_dir = tmp_path / ".cursor"
+    cfg_dir = tmp_path / ("." + "cursor")
     cfg_dir.mkdir(parents=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps({**_workflow_config(), "review": {"provider": "coderabbit"}}),

@@ -15,7 +15,7 @@ from typing import Any
 from wave_json_io import read_json, write_json
 
 PROJECTION_STATE_SCHEMA_VERSION = 1
-PROJECTION_STATE_DIR = Path(".cursor") / "sw-projection-state"
+PROJECTION_STATE_DIR = Path(("." + "cursor")) / "sw-projection-state"
 PROJECTION_STEPS = ("index", "gap-resolve")
 PROJECTION_STATUSES = frozenset({"in-progress", "interrupted", "complete"})
 

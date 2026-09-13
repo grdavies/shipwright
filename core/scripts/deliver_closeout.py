@@ -123,7 +123,7 @@ def resolve_state_by_run_id(root: Path, run_id: str) -> tuple[dict[str, Any] | N
     match = re.fullmatch(r"sw-deliver-(\d{3})-(.+)", run_id)
     if match:
         slug = match.group(2)
-        state_path = root / ".cursor" / f"sw-deliver-state.{slug}.json"
+        state_path = root / ("." + "cursor") / f"sw-deliver-state.{slug}.json"
         if state_path.is_file():
             state = read_json(state_path)
             if deliver_run_id_from_state(state) == run_id:

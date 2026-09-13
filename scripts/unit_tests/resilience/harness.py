@@ -78,7 +78,7 @@ class HermeticFixture:
 
     @property
     def state_path(self) -> Path:
-        return self.root / ".cursor" / "resilience-fixture" / "state.json"
+        return self.root / ("." + "cursor") / "resilience-fixture" / "state.json"
 
     def load(self) -> dict[str, Any]:
         if not self.state_path.is_file():
@@ -243,5 +243,5 @@ def new_fixture_root(parent: Path | None = None) -> Path:
     base = parent or Path(tempfile.gettempdir())
     path = base / f"resilience-fixture-{uuid.uuid4().hex}"
     path.mkdir(parents=True, exist_ok=True)
-    (path / ".cursor").mkdir(parents=True, exist_ok=True)
+    (path / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     return path

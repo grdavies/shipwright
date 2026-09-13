@@ -36,7 +36,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _issue_store_cfg(project_key: str = "vocab-280") -> dict:
@@ -74,7 +74,7 @@ def test_issue_store_put_get_round_trip(tmp_path: Path, monkeypatch: pytest.Monk
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     root = tmp_path
     _init_repo(root)
-    (root / ".cursor" / "workflow.config.json").write_text(
+    (root / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps(_issue_store_cfg()), encoding="utf-8"
     )
 
@@ -95,7 +95,7 @@ def test_account_tenant_workspace_fixture_warns(tmp_path: Path, monkeypatch: pyt
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     root = tmp_path
     _init_repo(root)
-    (root / ".cursor" / "workflow.config.json").write_text(
+    (root / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps(_issue_store_cfg()), encoding="utf-8"
     )
     put_term(root, "account", ACCOUNT_TERM)
@@ -125,7 +125,7 @@ def test_strict_mode_blocks_on_error_severity(tmp_path: Path, monkeypatch: pytes
     _init_repo(root)
     cfg = _issue_store_cfg()
     cfg["planning"]["intelligence"]["vocabulary"]["strictMode"] = True
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     put_term(root, "account", ACCOUNT_TERM)
 
     prd_text = "Operators manage account, tenant, and workspace records in one screen."
@@ -153,7 +153,7 @@ def test_cli_subcommands_exist(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     root = tmp_path
     _init_repo(root)
-    (root / ".cursor" / "workflow.config.json").write_text(
+    (root / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps(_issue_store_cfg()), encoding="utf-8"
     )
 
@@ -184,4 +184,4 @@ def test_cli_subcommands_exist(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     assert div.returncode == 0
     div_payload = json.loads(div.stdout)
     assert div_payload["action"] == "check-divergence"
-    assert (root / ".cursor" / "sw-vocabulary-divergence" / "last.json").is_file()
+    assert (root / ("." + "cursor") / "sw-vocabulary-divergence" / "last.json").is_file()

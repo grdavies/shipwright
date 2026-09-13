@@ -1,0 +1,7 @@
+{
+  "platform": "codex",
+  "hooks": "native",
+  "skills": "ref-index",
+  "commands": "projected",
+  "mcp": "optional"
+}

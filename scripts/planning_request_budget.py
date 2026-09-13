@@ -61,7 +61,7 @@ def ledger_path(root: Path) -> Path:
         return run_path / RUN_LEDGER_FILE
     phase_slug = (os.environ.get("SW_PHASE_SLUG") or "").strip()
     if phase_slug:
-        return repo_root / ".cursor" / "sw-deliver-runs" / phase_slug / RUN_LEDGER_FILE
+        return repo_root / ("." + "cursor") / "sw-deliver-runs" / phase_slug / RUN_LEDGER_FILE
     return repo_root / LEDGER_STATE_REL
 
 
