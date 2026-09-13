@@ -1,0 +1,13 @@
+{
+  "adapter_id": "opencode",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/platform-portability-phase-codex-and-opencode-adapters-and-unified-installer/.shipwright/mcp/opencode.json",
+  "mcpServers": {
+    "shipwright-bounded": {
+      "command": "python3",
+      "args": [
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/platform-portability-phase-codex-and-opencode-adapters-and-unified-installer/.shipwright/mcp/server.py"
+      ],
+      "transport": "stdio"
+    }
+  }
+}

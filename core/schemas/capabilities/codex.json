@@ -1,0 +1,284 @@
+[
+  {
+    "host": "codex",
+    "surface": "cli",
+    "version_range": ">=0.1.0",
+    "os_scope": [
+      "mac",
+      "linux",
+      "windows"
+    ],
+    "adapter_id": "codex",
+    "declared_at": "2026-09-12T00:00:00Z",
+    "trust_level": "declared",
+    "capabilities": {
+      "load_context": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "invoke_workflow": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "inspect_tool_call": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [
+          "tool permission model uses pre-approval, not Claude allowed-tools"
+        ],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "block_action": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "dispatch_reviewer": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "capture_progress": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "restore_state": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "emit_hook": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [
+          "Notification unsupported on Codex"
+        ],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "resolve_instruction": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      }
+    }
+  },
+  {
+    "host": "codex",
+    "surface": "desktop",
+    "version_range": ">=0.1.0",
+    "os_scope": [
+      "mac",
+      "linux",
+      "windows"
+    ],
+    "adapter_id": "codex",
+    "declared_at": "2026-09-12T00:00:00Z",
+    "trust_level": "declared",
+    "capabilities": {
+      "load_context": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "invoke_workflow": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "inspect_tool_call": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "block_action": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "dispatch_reviewer": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "capture_progress": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "restore_state": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "emit_hook": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [
+          "desktop hook surface parity pending independent observation"
+        ],
+        "failure_behavior": "halt with diagnostic"
+      },
+      "resolve_instruction": {
+        "implementation_mode": "adapted",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "halt with diagnostic"
+      }
+    }
+  },
+  {
+    "host": "codex",
+    "surface": "ide",
+    "version_range": ">=0.1.0",
+    "os_scope": [
+      "mac",
+      "linux",
+      "windows"
+    ],
+    "adapter_id": "codex",
+    "declared_at": "2026-09-12T00:00:00Z",
+    "trust_level": "declared",
+    "capabilities": {
+      "load_context": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "invoke_workflow": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "inspect_tool_call": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "block_action": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "dispatch_reviewer": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "capture_progress": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "restore_state": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "emit_hook": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "resolve_instruction": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      }
+    }
+  },
+  {
+    "host": "codex",
+    "surface": "cloud",
+    "version_range": ">=0.1.0",
+    "os_scope": [
+      "mac",
+      "linux",
+      "windows"
+    ],
+    "adapter_id": "codex",
+    "declared_at": "2026-09-12T00:00:00Z",
+    "trust_level": "declared",
+    "capabilities": {
+      "load_context": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "invoke_workflow": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "inspect_tool_call": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "block_action": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "dispatch_reviewer": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "capture_progress": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "restore_state": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "emit_hook": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      },
+      "resolve_instruction": {
+        "implementation_mode": "unsupported",
+        "evidence_required": "descriptor-declared",
+        "known_gaps": [],
+        "failure_behavior": "emit unsupported diagnostic"
+      }
+    }
+  }
+]

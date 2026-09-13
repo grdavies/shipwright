@@ -57,10 +57,30 @@ def _load_descriptor(path: Path) -> dict[str, Any] | None:
     return data if isinstance(data, dict) else None
 
 
+def _load_descriptor_entries(path: Path) -> list[tuple[Path, dict[str, Any]]]:
+    """Load one or more capability descriptors from a JSON object or array (R24)."""
+    if not path.is_file():
+        return []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if isinstance(data, dict):
+        return [(path, data)]
+    if isinstance(data, list):
+        return [(path, row) for row in data if isinstance(row, dict)]
+    return []
+
+
 def available_descriptors(
     capabilities_dir: Path | None = None,
 ) -> dict[str, tuple[Path, dict[str, Any]]]:
-    """Map adapter/host id → (path, descriptor) for JSON capability files."""
+    """Map adapter/host id → (path, descriptor) for JSON capability files.
+
+    Multi-surface files may be a JSON array (PRD 349 R24). Plain adapter/host
+    keys prefer the ``cli`` surface when present; every surface is also keyed as
+    ``{adapter_id}:{surface}``.
+    """
     root = capabilities_dir or _CAPABILITIES_DIR
     found: dict[str, tuple[Path, dict[str, Any]]] = {}
     if not root.is_dir():
@@ -68,15 +88,24 @@ def available_descriptors(
     for path in sorted(root.glob("*.json")):
         if path.name.endswith(".schema.json") or path.name == "capability.schema.json":
             continue
-        data = _load_descriptor(path)
-        if not data:
-            continue
-        adapter_id = str(data.get("adapter_id") or data.get("host") or path.stem).strip()
-        host_id = str(data.get("host") or adapter_id).strip()
-        if adapter_id:
-            found[adapter_id] = (path, data)
-        if host_id and host_id not in found:
-            found[host_id] = (path, data)
+        entries = _load_descriptor_entries(path)
+        # Prefer cli when assigning the bare adapter/host key.
+        ordered = sorted(
+            entries,
+            key=lambda item: 0 if str(item[1].get("surface") or "") == "cli" else 1,
+        )
+        for file_path, data in ordered:
+            adapter_id = str(data.get("adapter_id") or data.get("host") or path.stem).strip()
+            host_id = str(data.get("host") or adapter_id).strip()
+            surface = str(data.get("surface") or "").strip()
+            if adapter_id and adapter_id not in found:
+                found[adapter_id] = (file_path, data)
+            if host_id and host_id not in found:
+                found[host_id] = (file_path, data)
+            if adapter_id and surface:
+                found[f"{adapter_id}:{surface}"] = (file_path, data)
+            if host_id and surface and f"{host_id}:{surface}" not in found:
+                found[f"{host_id}:{surface}"] = (file_path, data)
     return found
 
 

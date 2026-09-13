@@ -1,0 +1,8 @@
+{
+  "agents": [
+    {
+      "id": "shipwright-default",
+      "source": "core/agents"
+    }
+  ]
+}

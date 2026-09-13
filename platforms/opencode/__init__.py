@@ -1,0 +1,1 @@
+"""OpenCode platform adapter package."""
