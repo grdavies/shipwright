@@ -345,12 +345,44 @@ def worktree_state_path(root: Path) -> Path:
 
 
 
+def runs_dir(root: Path) -> Path:
+    """Neutral per-repo runs directory (PRD 349 R36). Never global/cross-repo."""
+    preferred = root / ".shipwright" / "runs"
+    legacy = root / ".cursor" / "sw-runs"
+    if preferred.exists() or not legacy.exists():
+        return preferred
+    return legacy
+
+
+def run_dir(root: Path, run_id: str) -> Path:
+    rid = str(run_id or "").strip()
+    if not rid:
+        raise ValueError("run_id required")
+    return runs_dir(root) / rid
+
+
+def bundle_import_lock_path(root: Path, run_id: str) -> Path:
+    """CAS lock path for concurrent bundle import (PRD 349 R36). Repo-local only."""
+    return run_dir(root, run_id) / "bundle-import.lock"
+
+
+def destination_ack_path(root: Path, run_id: str, transition_id: str) -> Path:
+    """Sidecar destination acknowledgement for a transition (PRD 349 R35)."""
+    tid = str(transition_id or "").strip()
+    if not tid:
+        raise ValueError("transition_id required")
+    return run_dir(root, run_id) / "acks" / f"{tid}.json"
+
+
 def bounded_mcp_server_path(root: Path) -> Path:
     """Canonical on-disk path for the bounded MCP server entrypoint (PRD 349 R23/R30).
 
-    Task 4.7 owns the server implementation; adapters only reference this path.
-    Neutral layout preferred; legacy `.cursor` fallback retained inside this helper.
+    Prefer the in-repo implementation under core/mcp/; fall back to installed
+    neutral/legacy locations for generated adapter configs.
     """
+    core = root / "core" / "mcp" / "server.py"
+    if core.is_file():
+        return core
     preferred = root / ".shipwright" / "mcp" / "server.py"
     legacy = root / ".cursor" / "sw-mcp" / "server.py"
     if preferred.exists() or not legacy.exists():

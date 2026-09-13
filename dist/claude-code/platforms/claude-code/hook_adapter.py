@@ -179,3 +179,29 @@ def run_user_prompt_submit_from_payload(repo_root: Path, payload: dict) -> tuple
     if result.allow:
         return 0, json.dumps({"decision": "approve"})
     return 2, json.dumps({"decision": "block", "reason": result.message})
+
+
+def build_mcp_config(repo_root, *, enabled: bool = True):
+    """Per-adapter MCP config for Claude Code (PRD 349 R41) — distinct path from Codex/OpenCode."""
+    if not enabled:
+        return None
+    import sys
+    from pathlib import Path
+    repo_root = Path(repo_root)
+    scripts = repo_root / "scripts"
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    import shipwright_paths
+    server = shipwright_paths.bounded_mcp_server_path(repo_root)
+    config_path = shipwright_paths.bounded_mcp_config_path(repo_root, "claude-code")
+    return {
+        "adapter_id": "claude-code",
+        "config_path": str(config_path),
+        "mcpServers": {
+            "shipwright-bounded": {
+                "command": "python3",
+                "args": [str(server)],
+                "transport": "stdio",
+            }
+        },
+    }

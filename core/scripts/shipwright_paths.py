@@ -388,3 +388,33 @@ def path_matches_inventory_entry(resolved: Path, root: Path, entry: dict[str, An
         if resolved_posix == candidate or resolved_posix.startswith(candidate + "/"):
             return True
     return False
+
+
+def runs_dir(root: Path) -> Path:
+    """Neutral per-repo runs directory (PRD 349 R36). Never global/cross-repo."""
+    preferred = root / ".shipwright" / "runs"
+    legacy = root / ".cursor" / "sw-runs"
+    if preferred.exists() or not legacy.exists():
+        return preferred
+    return legacy
+
+
+def run_dir(root: Path, run_id: str) -> Path:
+    rid = str(run_id or "").strip()
+    if not rid:
+        raise ValueError("run_id required")
+    return runs_dir(root) / rid
+
+
+def bundle_import_lock_path(root: Path, run_id: str) -> Path:
+    """CAS lock path for concurrent bundle import (PRD 349 R36). Repo-local only."""
+    return run_dir(root, run_id) / "bundle-import.lock"
+
+
+def destination_ack_path(root: Path, run_id: str, transition_id: str) -> Path:
+    """Sidecar destination acknowledgement for a transition (PRD 349 R35)."""
+    tid = str(transition_id or "").strip()
+    if not tid:
+        raise ValueError("transition_id required")
+    return run_dir(root, run_id) / "acks" / f"{tid}.json"
+
