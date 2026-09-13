@@ -63,13 +63,48 @@ FUTURE_EXPLORE_HANDOFF = {
 }
 
 
-def packaged_init_steps() -> list[str]:
-    """Canonical packaged adopter steps — must match getting-started.md (PRD 345 R4)."""
+def packaged_init_steps() -> list[dict]:
+    """Canonical packaged adopter steps — single authority for init sequence (PRD 347 R1/R2).
+
+    Each step dict contains:
+        name (str): Step identifier
+        description (str): Human-readable description
+        required (bool): Whether the step is mandatory
+        params (dict, optional): Step-specific configuration parameters
+    """
     return [
-        "Install the packaged console entry point (`pip install shipwright-workflow`).",
-        "In the project repository, run `shipwright init --integration <host>`.",
-        "Reload the editor; run `/sw-init` only if priority-zero surfaces still need confirm.",
-        "Start a small loop (`/sw-doc` or `/sw-deliver run <frozen-task-list>`).",
+        {
+            "name": "install-console",
+            "description": (
+                "Install the packaged console entry point "
+                "(use `uv tool` or `pipx` — see below)."
+            ),
+            "required": True,
+        },
+        {
+            "name": "run-shipwright-init",
+            "description": (
+                "In the project repository, run "
+                "`shipwright init --integration <host>`."
+            ),
+            "required": True,
+        },
+        {
+            "name": "reload-and-confirm",
+            "description": (
+                "Reload the editor; run `/sw-init` only if priority-zero "
+                "surfaces still need confirm."
+            ),
+            "required": True,
+        },
+        {
+            "name": "start-small-loop",
+            "description": (
+                "Start a small loop (`/sw-doc` or "
+                "`/sw-deliver run <frozen-task-list>`)."
+            ),
+            "required": True,
+        },
     ]
 
 
