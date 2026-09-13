@@ -26,7 +26,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _issue_store_cfg(project_key: str = "closure-070") -> dict:
@@ -51,7 +51,7 @@ def test_prose_mention_not_absorbed(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     _init_repo(root)
     project_key = "closure-070-prose"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     prd_unit = "070-prd-closeout-anchored"
@@ -111,7 +111,7 @@ def test_schedule_label_without_anchor_not_absorbed(tmp_path: Path, monkeypatch:
     _init_repo(root)
     project_key = "closure-070-schedule"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     prd_unit = "070-prd-schedule-only"
@@ -169,7 +169,7 @@ def test_anchored_absorbs_marker_discovers_gap(tmp_path: Path, monkeypatch: pyte
     _init_repo(root)
     project_key = "closure-070-anchor"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     prd_unit = "070-prd-anchored-absorbs"
@@ -230,7 +230,7 @@ def test_audit_fail_closed_open_absorbed_gap(tmp_path: Path, monkeypatch: pytest
     _init_repo(root)
     project_key = "closure-070-audit"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     prd_unit = "070-prd-audit-open"
@@ -306,7 +306,7 @@ def test_yaml_only_frontmatter_absorbs_marker(tmp_path: Path, monkeypatch: pytes
     _init_repo(root)
     project_key = "closure-070-yaml-only"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     prd_unit = "070-prd-yaml-only-absorbs"
@@ -364,7 +364,7 @@ def test_ambiguous_duplicate_tasks_unit_resolves_canonical(
     _init_repo(root)
     project_key = "closure-070-dup-tasks"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     prd_unit = "070-prd-duplicate-tasks"
@@ -437,7 +437,7 @@ def test_ambiguous_tasks_unit_fail_closed_blocker(
     _init_repo(root)
     project_key = "closure-070-ambig-tasks"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     prd_unit = "070-prd-ambig-tasks"
@@ -510,7 +510,7 @@ def test_missing_marker_gap_not_in_expected_set(tmp_path: Path, monkeypatch: pyt
     _init_repo(root)
     project_key = "closure-070-missing-marker"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     prd_unit = "070-prd-missing-marker"
@@ -582,7 +582,7 @@ def test_validate_pin_requires_target_with_concurrent_states(tmp_path: Path) -> 
 
     root = tmp_path
     _init_repo(root)
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     (cursor / "sw-deliver-state.alpha.json").write_text(
         json.dumps({"target": {"branch": "feat/alpha"}, "verdict": "running"}),

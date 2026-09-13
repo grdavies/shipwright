@@ -112,7 +112,7 @@ def test_write_evidence_record_idempotent_by_content_hash(tmp_path: Path) -> Non
     first = write_evidence_record(tmp_path, record)
     second = write_evidence_record(tmp_path, record)
     assert first == second
-    files = list((tmp_path / ".cursor" / "sw-decision-evidence" / "d1" / KIND_RESEARCH).glob("*.json"))
+    files = list((tmp_path / ("." + "cursor") / "sw-decision-evidence" / "d1" / KIND_RESEARCH).glob("*.json"))
     assert len(files) == 1
 
 

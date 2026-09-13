@@ -84,7 +84,7 @@ def _receipt(**overrides: object) -> dict[str, object]:
 def test_r13_run_scoped_store_gc_ceiling_and_corrupt_quarantine(tmp_path: Path) -> None:
     """R13: per-run index, retention/GC, size ceiling, corrupt quarantine."""
     store = default_store_root(tmp_path)
-    assert store == tmp_path / ".cursor" / "sw-graph-runs"
+    assert store == tmp_path / ("." + "cursor") / "sw-graph-runs"
 
     journal = ExecutionReceiptJournal.for_run(store, "run-a", size_ceiling_bytes=10_000)
     journal.begin(

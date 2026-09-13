@@ -54,7 +54,7 @@ def test_non_delivery_merge_noops(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
 
 
 def test_batched_wave_closes_all_mapped_units(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    cfg_path = tmp_path / ".cursor"
+    cfg_path = tmp_path / ("." + "cursor")
     cfg_path.mkdir(parents=True, exist_ok=True)
     (cfg_path / "workflow.config.json").write_text(
         json.dumps(
@@ -116,7 +116,7 @@ def test_auth_failure_surfaces_resume_command(tmp_path: Path, monkeypatch: pytes
 
 
 def test_hostile_pr_title_cannot_alter_driver_calls(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    cfg_path = tmp_path / ".cursor"
+    cfg_path = tmp_path / ("." + "cursor")
     cfg_path.mkdir(parents=True, exist_ok=True)
     (cfg_path / "workflow.config.json").write_text(
         json.dumps(
@@ -166,7 +166,7 @@ def test_slo_breach_surfaces_owner(tmp_path: Path, monkeypatch: pytest.MonkeyPat
         return clock["t"]
 
     monkeypatch.setattr(ci, "run_closeout", lambda *a, **k: {"verdict": "ready"})
-    cfg_path = tmp_path / ".cursor"
+    cfg_path = tmp_path / ("." + "cursor")
     cfg_path.mkdir(parents=True, exist_ok=True)
     (cfg_path / "workflow.config.json").write_text(
         json.dumps(

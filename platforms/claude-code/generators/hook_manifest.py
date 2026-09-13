@@ -1,10 +1,38 @@
-"""Claude Code hook manifest builder (PRD 349 R1)."""
+"""Claude Code hook manifest builder (PRD 349 R1 / R19)."""
 
 from __future__ import annotations
 
 from typing import Any
 
+from event_registry import _load_events_document, unsupported_events
+
 _DEFAULT_COMMAND = 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/claude-hook.py"'
+
+
+def _unsupported_canonical_names(host: str = "claude-code") -> frozenset[str]:
+    names: set[str] = set()
+    for row in unsupported_events(host):
+        canonical = row.get("canonical")
+        if isinstance(canonical, str) and canonical.strip():
+            names.add(canonical.strip())
+    return frozenset(names)
+
+
+def _pre_tool_host_name(host: str = "claude-code") -> str:
+    """Resolve the host PreToolUse name from events.json via emitter_params."""
+    for entry in _load_events_document()["events"]:
+        if not isinstance(entry, dict):
+            continue
+        params = entry.get("emitter_params") or []
+        if "tool_name_map" not in params:
+            continue
+        hosts = entry.get("hosts") or {}
+        if not isinstance(hosts, dict):
+            continue
+        host_name = hosts.get(host)
+        if isinstance(host_name, str) and host_name.strip():
+            return host_name.strip()
+    raise RuntimeError("events.json missing tool_name_map emitter_params entry")
 
 
 def build_matcher_group(command: str, *, matcher: str = "") -> dict[str, Any]:
@@ -21,8 +49,9 @@ def build_hooks_manifest(
     pre_tool_matcher: str = "",
 ) -> dict[str, Any]:
     hooks_by_event: dict[str, list[dict[str, Any]]] = {}
+    pre_tool = _pre_tool_host_name()
     for event in events:
-        matcher = pre_tool_matcher if event == "PreToolUse" else ""
+        matcher = pre_tool_matcher if event == pre_tool else ""
         hooks_by_event[event] = [build_matcher_group(command, matcher=matcher)]
     return {"hooks": hooks_by_event}
 
@@ -57,9 +86,10 @@ def validate_native_hooks_manifest(document: dict[str, Any]) -> list[str]:
         return errors
     if is_legacy_event_command_form(document):
         errors.append("legacy Event:[{command}] form is forbidden")
+    blocked = _unsupported_canonical_names()
     for event, groups in hooks.items():
-        if event == "ContextSwitch":
-            errors.append("ContextSwitch must not be registered")
+        if event in blocked:
+            errors.append(f"{event} must not be registered")
         if not isinstance(groups, list):
             errors.append(f"{event}: matcher groups must be an array")
             continue
@@ -79,6 +109,6 @@ def validate_native_hooks_manifest(document: dict[str, Any]) -> list[str]:
                     continue
                 if handler.get("type") != "command":
                     errors.append(f"{event}[{idx}].hooks[{h_idx}]: type must be 'command'")
-                if not isinstance(handler.get("command"), str) or not handler.get("command"):
-                    errors.append(f"{event}[{idx}].hooks[{h_idx}]: command required")
+                if "command" not in handler:
+                    errors.append(f"{event}[{idx}].hooks[{h_idx}]: missing command")
     return errors

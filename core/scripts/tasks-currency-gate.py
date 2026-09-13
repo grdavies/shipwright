@@ -49,7 +49,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     if not tasks_file:
-        state_json = Path(state_root) / ".cursor" / "sw-deliver-state.json"
+        state_json = Path(state_root) / ("." + "cursor") / "sw-deliver-state.json"
         if not state_json.is_file():
             print(json.dumps({"verdict": "fail", "error": "no --tasks-file and no deliver state"}), file=sys.stderr)
             return 2

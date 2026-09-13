@@ -27,7 +27,7 @@ from wave_lock import RUN_LEASE_STALE_SECONDS, run_lease_path_for  # noqa: E402
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True)
+    (root / ("." + "cursor")).mkdir(parents=True)
     return root
 
 

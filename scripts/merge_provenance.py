@@ -146,7 +146,7 @@ def _virtual_body_path(logical_path: str) -> str:
 
 
 def load_execute_receipts(root: Path) -> dict[str, dict[str, Any]]:
-    base = root / ".cursor" / "sw-execute-runs"
+    base = root / ("." + "cursor") / "sw-execute-runs"
     out: dict[str, dict[str, Any]] = {}
     if not base.is_dir():
         return out

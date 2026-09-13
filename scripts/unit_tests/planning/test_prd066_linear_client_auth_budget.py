@@ -232,7 +232,7 @@ def test_r23_doctor_refuses_shared_ci_oauth_without_exception(
     """R23 — doctor refuses authMode oauth via shared CI secret absent exception."""
     monkeypatch.setenv("CI", "true")
     monkeypatch.setenv("ISSUES_LINEAR_TOKEN", "oauth-access-from-ci")
-    cfg_path = tmp_git_repo / ".cursor" / "workflow.config.json"
+    cfg_path = tmp_git_repo / ("." + "cursor") / "workflow.config.json"
     cfg_path.parent.mkdir(parents=True, exist_ok=True)
     cfg_path.write_text(json.dumps(_cfg(auth_mode="oauth")), encoding="utf-8")
 

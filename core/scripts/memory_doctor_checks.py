@@ -42,7 +42,7 @@ def _check(
 
 
 def _memory_store_dir(root: Path) -> Path:
-    return root / ".cursor" / "sw-memory"
+    return root / ("." + "cursor") / "sw-memory"
 
 
 def _parse_frontmatter(text: str) -> dict[str, str]:

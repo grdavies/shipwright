@@ -32,7 +32,7 @@ def _init_repo(tmp_path: Path) -> Path:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
     return tmp_path
 
 
@@ -61,7 +61,7 @@ def _write_cfg(root: Path, *, extensions: dict[str, bool] | None = None) -> dict
             }
         },
     }
-    path = root / ".cursor" / "workflow.config.json"
+    path = root / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
     return cfg
@@ -155,7 +155,7 @@ def test_deliver_entry_materialize_only(ext_repo: Path, monkeypatch: pytest.Monk
 
     out = ensure_run_entry_materialized(ext_repo, task_rel)
     assert out.get("action") == "run-entry-materialize" or out.get("verdict") in {"ok", "pass"}, out
-    dest = ext_repo / ".cursor" / "planning-materialized" / task_rel
+    dest = ext_repo / ("." + "cursor") / "planning-materialized" / task_rel
     assert dest.is_file(), out
     # Still no authoritative write under docs/prds in the code repo.
     assert not (ext_repo / task_rel).exists()

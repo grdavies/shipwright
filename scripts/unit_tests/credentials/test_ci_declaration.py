@@ -38,7 +38,7 @@ def _init_git_remote(root: Path, remote: str = "https://github.com/owner/repo.gi
 
 
 def _write_config(root: Path, payload: dict[str, object]) -> None:
-    path = root / ".cursor" / "workflow.config.json"
+    path = root / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 

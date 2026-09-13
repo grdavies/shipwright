@@ -21,7 +21,7 @@ def _seed_trusted_scripts(path: Path) -> None:
 
 
 def _write_workflow_config(repo: Path) -> None:
-    cursor = repo / ".cursor"
+    cursor = repo / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     payload = {
         "host": {"provider": "github", "remote": "origin"},

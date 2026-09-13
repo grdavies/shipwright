@@ -48,7 +48,7 @@ def _legacy_fixture(tmp_path: Path, slug: str = "alpha") -> dict:
         "planHash": plan_hash,
         "runId": f"deliver-{slug}",
     }
-    scoped = tmp_path / ".cursor" / f"sw-deliver-state.{slug}.json"
+    scoped = tmp_path / ("." + "cursor") / f"sw-deliver-state.{slug}.json"
     scoped.parent.mkdir(parents=True, exist_ok=True)
     write_json(scoped, state)
     write_json(global_plan_path(tmp_path), plan)

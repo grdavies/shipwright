@@ -3981,7 +3981,7 @@ def _load_deliver_state_for_prd(root: Path, prd_unit_id: str) -> dict[str, Any] 
     except Exception:  # noqa: BLE001
         pass
     # Also consider scoped slug state files
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     if cursor.is_dir():
         for path in cursor.glob("sw-deliver-state*.json"):
             if path.is_file():

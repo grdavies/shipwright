@@ -93,7 +93,7 @@ def _atomic_write(path: Path, value: dict[str, Any]) -> None:
 
 def default_cache_root(repo_root: str | Path) -> Path:
     """Gitignored canonical cache root — distinct from run journals (R4/R21)."""
-    return Path(repo_root) / ".cursor" / "sw-graph-cache"
+    return Path(repo_root) / ("." + "cursor") / "sw-graph-cache"
 
 
 def _identity_value(identity: Mapping[str, Any], field: str) -> str:

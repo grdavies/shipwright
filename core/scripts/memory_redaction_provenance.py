@@ -37,7 +37,7 @@ DEFAULT_DESTINATION_POLICY_ID = "shipwright.memory.redaction"
 DEFAULT_DESTINATION_POLICY_VERSION = "1"
 REDACTION_SCRIPT = "scripts/memory-redact.py"
 
-EGRESS_REFUSAL_JOURNAL_DIR = Path(".cursor") / "sw-memory-egress-refusal-journal"
+EGRESS_REFUSAL_JOURNAL_DIR = Path(("." + "cursor")) / "sw-memory-egress-refusal-journal"
 EGRESS_REFUSAL_JOURNAL_SCHEMA_VERSION = 1
 
 

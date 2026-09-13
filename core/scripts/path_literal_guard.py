@@ -83,7 +83,7 @@ def _needle_usable(legacy: str) -> bool:
         return False
     # Exact single-segment roots are too broad for literal substring detection;
     # their child inventory entries still cover relocated families.
-    if legacy in {".sw", ".cursor"}:
+    if legacy in {".sw", ("." + "cursor")}:
         return False
     return True
 

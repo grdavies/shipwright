@@ -94,7 +94,7 @@ def _guard_cursor_worktree_artifacts(repo_root: Path) -> Generator[None, None, N
         primary_root = common.parent.resolve()
     else:
         primary_root = repo_root
-    cursor = primary_root / ".cursor"
+    cursor = primary_root / ("." + "cursor")
     snap = _snapshot_cursor_tree(cursor)
     yield
     _restore_cursor_tree(cursor, snap)

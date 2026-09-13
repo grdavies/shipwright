@@ -10,7 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 README = REPO_ROOT / "core" / "sw-reference" / "README.md"
 TASKS_ARTIFACT = (
     REPO_ROOT
-    / ".cursor"
+    / ("." + "cursor")
     / "planning-materialized"
     / "docs"
     / "prds"

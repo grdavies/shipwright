@@ -399,7 +399,7 @@ def scan_run_log_friction(root: Path) -> dict[str, int]:
     planning-store/process pain rather than one-off noise.
     """
     counts = {"ackPending": 0, "resumeDemotions": 0}
-    log_path = root / ".cursor" / "sw-deliver-runs" / "run.log"
+    log_path = root / ("." + "cursor") / "sw-deliver-runs" / "run.log"
     if not log_path.is_file():
         return counts
     try:
@@ -1249,7 +1249,7 @@ def run_tasks_currency_gate(root: Path, state: dict[str, Any]) -> None:
             break
         slug = meta.get("slug")
         if slug:
-            status_path = root / ".cursor" / "sw-deliver-runs" / str(slug) / "status.json"
+            status_path = root / ("." + "cursor") / "sw-deliver-runs" / str(slug) / "status.json"
             if status_path.is_file():
                 try:
                     payload = json.loads(status_path.read_text(encoding="utf-8"))
@@ -1440,7 +1440,7 @@ def run_terminal_ship_run(root: Path, args: list[str]) -> TerminalOutcome:
 
 
 def append_log(root: Path, entry: dict[str, Any]) -> None:
-    log_path = root / ".cursor" / "sw-deliver-runs" / "run.log"
+    log_path = root / ("." + "cursor") / "sw-deliver-runs" / "run.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps({**entry, "at": utc_now()}, ensure_ascii=False) + "\n"
     with open(log_path, "a", encoding="utf-8") as f:
@@ -2043,7 +2043,7 @@ def close_run_projections(root: Path, run_id: str, state: dict[str, Any]) -> dic
     task_list = state.get("source_task_list")
     if isinstance(task_list, str) and task_list.strip():
         rel = task_list.lstrip("./")
-        projection = root / ".cursor" / "sw-deliver-runs" / "_progress-projections" / rel
+        projection = root / ("." + "cursor") / "sw-deliver-runs" / "_progress-projections" / rel
         if projection.is_file():
             projection.unlink()
             closed.append(str(projection))

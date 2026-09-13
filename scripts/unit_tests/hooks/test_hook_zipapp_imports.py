@@ -124,7 +124,7 @@ def test_submit_guard_zipapp_plugin_without_cwd_no_module_error(
 ) -> None:
     """Regression: beforeSubmitPrompt payload often omits cwd; must not ModuleNotFoundError."""
     workspace = tmp_path / "consumer"
-    cursor = workspace / ".cursor"
+    cursor = workspace / ("." + "cursor")
     cursor.mkdir(parents=True)
     (cursor / "workflow.config.json").write_text(
         json.dumps(

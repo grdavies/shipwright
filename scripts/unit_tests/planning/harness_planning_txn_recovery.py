@@ -17,7 +17,7 @@ from planning_txn_recovery import JournalCorruptError, replay_journal, startup_r
 
 
 def _fixture_root(tmp: Path) -> Path:
-    (tmp / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
     return tmp
 
 

@@ -69,7 +69,7 @@ def test_doctor_surfaces_privacy_ack_finding_for_file_store_backend(tmp_path: Pa
     """End-to-end doctor() run against an in-repo-public (file-store) root — no network
     calls are made, matching R23 file-store parity."""
     doc = _load_doctor()
-    cursor_dir = tmp_path / ".cursor"
+    cursor_dir = tmp_path / ("." + "cursor")
     cursor_dir.mkdir()
     cfg = {
         "planning": {

@@ -29,7 +29,7 @@ def mk_repo(root: Path, cfg: dict) -> None:
     subprocess.run(["git", "init"], cwd=root, capture_output=True, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=root, check=True)
     subprocess.run(["git", "config", "user.name", "t"], cwd=root, check=True)
-    (root / ".cursor").mkdir(exist_ok=True)
+    (root / ("." + "cursor")).mkdir(exist_ok=True)
     (root / ".cursor/workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
 

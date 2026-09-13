@@ -26,7 +26,7 @@ def _load_doctor():
 
 
 def _write_cfg(repo: Path, cfg: dict) -> None:
-    path = repo / ".cursor" / "workflow.config.json"
+    path = repo / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
 
@@ -90,7 +90,7 @@ class TestLedgerDoctorChecks:
 
     def test_non_gitignored_ledger_fails_with_stable_code(self, tmp_git_repo: Path) -> None:
         _write_cfg(tmp_git_repo, _ledger_cfg())
-        ledger_dir = tmp_git_repo / ".cursor" / "sw-refusal-ledger"
+        ledger_dir = tmp_git_repo / ("." + "cursor") / "sw-refusal-ledger"
         ledger_dir.mkdir(parents=True, exist_ok=True)
         check = pdl.check_refusal_ledger(tmp_git_repo, _ledger_cfg())
         assert check["status"] == "fail"
@@ -100,7 +100,7 @@ class TestLedgerDoctorChecks:
 
 class TestMemoryDoctorChecks:
     def test_alias_collision_fails_with_stable_code(self, tmp_git_repo: Path) -> None:
-        store = tmp_git_repo / ".cursor" / "sw-memory" / "memories"
+        store = tmp_git_repo / ("." + "cursor") / "sw-memory" / "memories"
         store.mkdir(parents=True)
         first = store / "alpha.md"
         second = store / "beta.md"

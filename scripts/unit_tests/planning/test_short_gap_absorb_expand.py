@@ -23,7 +23,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _issue_store_cfg(project_key: str = "short-gap-absorb") -> dict:
@@ -56,7 +56,7 @@ def _fixture_short_gap_absorb_repo(
     _init_repo(root)
     project_key = "short-gap-absorb"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     gap_unit = "gap-323-external-issue-intake-and-triage-lifecycle"
@@ -141,7 +141,7 @@ def test_short_gap_unresolved_fails_closed(
     _init_repo(root)
     project_key = "short-gap-absorb"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     prd_unit = "280-prd-missing-short-gap"
@@ -185,7 +185,7 @@ def test_short_gap_ambiguous_fails_closed(
     _init_repo(root)
     project_key = "short-gap-absorb"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     gap_a = "gap-316-architecture-health-refactoring-radar"

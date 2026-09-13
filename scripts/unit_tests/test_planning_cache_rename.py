@@ -57,7 +57,7 @@ def test_legacy_cache_dir_migrates_to_planning_cache(tmp_path: Path) -> None:
     ReplicatedPlanningCacheBackend = backends.ReplicatedPlanningCacheBackend
 
     cfg = {"version": 1, "planning": {"store": {"backend": "planning-cache"}}, "memory": {"project": "proj"}}
-    legacy = tmp_path / ".cursor" / "sw-memory" / "planning-bodies" / "proj" / "unit.md"
+    legacy = tmp_path / ("." + "cursor") / "sw-memory" / "planning-bodies" / "proj" / "unit.md"
     legacy.parent.mkdir(parents=True)
     legacy.write_text("legacy-body", encoding="utf-8")
 

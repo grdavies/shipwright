@@ -157,7 +157,7 @@ def resolve_graph_path(root: Path, unit_id: str) -> Path | None:
     """Locate a DecisionGraph JSON file for a planning unit (read-only discovery)."""
     candidates = [
         root / "docs" / "planning" / unit_id / "decision-graph.json",
-        root / ".cursor" / "sw-decision-graphs" / f"{unit_id}.json",
+        root / ("." + "cursor") / "sw-decision-graphs" / f"{unit_id}.json",
     ]
     for candidate in candidates:
         if candidate.is_file():

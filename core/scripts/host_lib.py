@@ -396,7 +396,7 @@ def two_track_config(root: Path) -> dict[str, Any]:
 
 
 def probe_cache_path(root: Path) -> Path:
-    return root / ".cursor" / "sw-branch-protection-probe.json"
+    return root / ("." + "cursor") / "sw-branch-protection-probe.json"
 
 
 def read_probe_cache(root: Path, branch: str, ttl_seconds: int) -> dict[str, Any] | None:

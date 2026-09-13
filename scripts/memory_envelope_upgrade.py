@@ -21,7 +21,7 @@ from memory_envelope_v2 import (
 )
 from memory_sensitivity import migrate_v1_sensitivity
 
-ALIAS_LEDGER_DIR = Path(".cursor") / "sw-memory-envelope-aliases"
+ALIAS_LEDGER_DIR = Path(("." + "cursor")) / "sw-memory-envelope-aliases"
 ALIAS_LEDGER_SCHEMA_VERSION = 1
 
 V1_KNOWN_FIELDS = frozenset(

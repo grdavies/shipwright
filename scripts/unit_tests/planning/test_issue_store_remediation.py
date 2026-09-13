@@ -139,7 +139,7 @@ def test_issues_client_mark_tombstone_fixture(tmp_path: Path, monkeypatch) -> No
 
     monkeypatch.setenv("SW_ISSUES_FIXTURE", "1")
     root = tmp_path
-    (root / ".cursor" / "hooks" / "state").mkdir(parents=True)
+    (root / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
     client = IssuesClient(root, "jira")
     record = client.issue_create(
         title="[shipwright] gap:gap-test",

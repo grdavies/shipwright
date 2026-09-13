@@ -27,7 +27,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _issue_store_cfg(project_key: str = "closure-325") -> dict:
@@ -74,7 +74,7 @@ def _fixture_prd325_repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tup
     _init_repo(root)
     project_key = "closure-325"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
 
     prd_body = compose_issue_body(
@@ -198,7 +198,7 @@ def test_unresolvable_numeric_absorb_raises_not_ready(
     _init_repo(root)
     project_key = "closure-325-missing"
     cfg = _issue_store_cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     store = FixtureIssuesStore(root / ".cursor/hooks/state/issue-store-fixture.json")
     prd_body = compose_issue_body(
         project_key,

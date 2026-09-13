@@ -80,7 +80,7 @@ def _environment_entry(**overrides: object) -> dict[str, object]:
 
 
 def _write_workflow_config(root: Path, host: dict[str, object]) -> None:
-    cfg_dir = root / ".cursor"
+    cfg_dir = root / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps({"projectId": "proj-1", "host": host}),

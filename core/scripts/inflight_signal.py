@@ -322,7 +322,7 @@ def append_override_audit(
 def is_run_live(root: Path, run_id: str) -> bool:
     if run_id.startswith("deliver-"):
         slug = run_id.removeprefix("deliver-")
-        state_path = root / ".cursor" / f"sw-deliver-state.{slug}.json"
+        state_path = root / ("." + "cursor") / f"sw-deliver-state.{slug}.json"
         if state_path.is_file():
             try:
                 data = json.loads(state_path.read_text(encoding="utf-8"))

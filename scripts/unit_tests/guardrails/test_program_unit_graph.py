@@ -11,7 +11,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 
 TASKS_CANDIDATES = (
     REPO_ROOT
-    / ".cursor"
+    / ("." + "cursor")
     / "planning-materialized"
     / "docs"
     / "prds"

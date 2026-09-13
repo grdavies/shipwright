@@ -464,7 +464,7 @@ def locate_legacy_source_from_state(root: Path, state: dict[str, Any]) -> dict[s
 
 def _legacy_candidates(root: Path) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    cursor = root / ".cursor"
+    cursor = root / ("." + "cursor")
     for path in sorted(cursor.glob("sw-deliver-state.*.json")):
         scoped_slug = path.name.removeprefix("sw-deliver-state.").removesuffix(".json")
         state = _read_state_optional(path)

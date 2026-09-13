@@ -17,7 +17,7 @@ def _init_repo(tmp_path: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp_path, check=True)
     subprocess.run(["git", "config", "user.name", "T"], cwd=tmp_path, check=True)
-    (tmp_path / ".cursor" / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
 
 
 def _cfg(project_key: str) -> dict:
@@ -90,7 +90,7 @@ def test_partial_apply_append_timeout_conflict_faults(
     _init_repo(root)
     project_key = f"close-partial-{fault}-275"
     cfg = _cfg(project_key)
-    (root / ".cursor" / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
+    (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
 
     tasks_unit = f"tasks-275-partial-{fault}"
     backend = IssueStoreBackend(root, cfg)

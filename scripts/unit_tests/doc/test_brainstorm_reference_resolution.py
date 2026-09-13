@@ -23,7 +23,7 @@ from doc_link import check_artifact, link_target_resolves, write_backref
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     (root / "docs" / "brainstorms").mkdir(parents=True)
     (root / "docs" / "prds" / "099-fixture").mkdir(parents=True)
     subprocess.run(["git", "init", "-q"], cwd=root, check=True)

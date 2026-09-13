@@ -107,7 +107,7 @@ def test_assert_entry_auto_provisions_from_bare_main(git_repo: Path) -> None:
     subprocess.run(["git", "checkout", "-qb", "feat/demo"], cwd=git_repo, check=True)
     subprocess.run(["git", "commit", "--allow-empty", "-qm", "demo"], cwd=git_repo, check=True)
     subprocess.run(["git", "checkout", "-q", "main"], cwd=git_repo, check=True)
-    (git_repo / ".cursor").mkdir(parents=True, exist_ok=True)
+    (git_repo / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     plan = {
         "mode": "phase",
         "target": {"type": "feat", "slug": "demo", "branch": "feat/demo"},

@@ -20,7 +20,7 @@ import planning_store as ps
 
 
 def _write_cfg(repo: Path, cfg: dict[str, Any]) -> None:
-    path = repo / ".cursor" / "workflow.config.json"
+    path = repo / ("." + "cursor") / "workflow.config.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
 

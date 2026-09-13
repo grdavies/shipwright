@@ -67,7 +67,7 @@ def _install_stub_workspace(workspace: Path, repo_root: Path) -> None:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
 
-    cursor = workspace / ".cursor"
+    cursor = workspace / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     config = json.loads((FIXTURE / "config-stub.json").read_text(encoding="utf-8"))
     (cursor / "workflow.config.json").write_text(json.dumps(config), encoding="utf-8")

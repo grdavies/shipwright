@@ -16,7 +16,7 @@ from wave_target_lock import acquire_target_lock, reclaim_stale_target_lock
 def repo(tmp_path: Path) -> Path:
     root = tmp_path / "repo"
     root.mkdir()
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     return root
 
 
@@ -120,7 +120,7 @@ def test_orphan_lock_recoverable_before_run_directory(repo: Path) -> None:
     meta["pid"] = 999999
     lock_path.write_text(json.dumps(meta) + "\n", encoding="utf-8")
 
-    run_dir = repo / ".cursor" / "sw-deliver-runs" / run_id
+    run_dir = repo / ("." + "cursor") / "sw-deliver-runs" / run_id
     assert not run_dir.exists()
 
     recovered = acquire_target_lock(repo, target, "run-successor")

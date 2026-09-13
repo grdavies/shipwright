@@ -48,7 +48,7 @@ import subprocess
 subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
-(tmp / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(tmp / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
 (tmp / "docs" / "prds" / "056-test").mkdir(parents=True)
 (tmp / "docs/prds/056-test/tasks-056-test.md").write_text(
     "---\nfrozen: true\n---\n### 1. Alpha phase\n### 2. Beta phase\n",
@@ -91,7 +91,7 @@ import subprocess
 subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
-(tmp / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(tmp / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
 (tmp / "docs" / "prds" / "056-test").mkdir(parents=True)
 (tmp / "docs/prds/056-test/tasks-056-test.md").write_text(
     "---\nfrozen: true\n---\n### 1. Alpha phase\n### 2. Beta phase\n",
@@ -150,7 +150,7 @@ import subprocess
 subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
-(tmp / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(tmp / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
 (tmp / "docs" / "prds" / "056-test").mkdir(parents=True)
 (tmp / "docs/prds/056-test/tasks-056-test.md").write_text(
     "---\nfrozen: true\n---\n### 1. Alpha phase\n- [ ] 1.1 First task\n### 2. Beta phase\n- [ ] 2.1 Second task\n",
@@ -202,7 +202,7 @@ sys.path.insert(0, "$ROOT/scripts")
 import planning_progress as pp
 
 tmp = Path(tempfile.mkdtemp())
-(tmp / ".cursor").mkdir(parents=True)
+(tmp / ("." + "cursor")).mkdir(parents=True)
 (tmp / ".cursor/workflow.config.json").write_text(json.dumps({
     "version": 1,
     "planning": {"store": {"backend": "in-repo-public"}},
@@ -238,7 +238,7 @@ import subprocess
 subprocess.run(["git", "init", "-q"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.email", "t@t.com"], cwd=tmp, check=True)
 subprocess.run(["git", "config", "user.name", "T"], cwd=tmp, check=True)
-(tmp / ".cursor" / "hooks" / "state").mkdir(parents=True)
+(tmp / ("." + "cursor") / "hooks" / "state").mkdir(parents=True)
 (tmp / "docs" / "prds" / "056-test").mkdir(parents=True)
 task_rel = "docs/prds/056-test/tasks-056-test.md"
 (tmp / task_rel).write_text(

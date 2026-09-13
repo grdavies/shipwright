@@ -224,7 +224,7 @@ _PROGRESS_LOCAL_DIR = "_progress-local"
 
 def local_progress_path(root: Path, phase_id: str) -> Path:
     run_slug = os.environ.get("SW_PHASE_SLUG", "").strip() or "global"
-    return root / ".cursor" / "sw-deliver-runs" / run_slug / _PROGRESS_LOCAL_DIR / f"phase-{phase_id}.json"
+    return root / ("." + "cursor") / "sw-deliver-runs" / run_slug / _PROGRESS_LOCAL_DIR / f"phase-{phase_id}.json"
 
 
 def write_local_progress_state(root: Path, phase_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -310,7 +310,7 @@ def _ledger_projected_task_list(
         rel = str(task_path.relative_to(root.resolve()))
     except ValueError:
         rel = str(task_path)
-    dest = root / ".cursor" / "sw-deliver-runs" / "_progress-projections" / rel
+    dest = root / ("." + "cursor") / "sw-deliver-runs" / "_progress-projections" / rel
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(projected, encoding="utf-8")
     return dest

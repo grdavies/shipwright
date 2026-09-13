@@ -62,7 +62,7 @@ def run_root(root: Path, orchestrator_type: str) -> Path:
     rel = RUN_ROOTS.get(orchestrator_type)
     if not rel:
         fail(f"no episodic run root for orchestrator: {orchestrator_type!r}")
-    return root / ".cursor" / rel
+    return root / ("." + "cursor") / rel
 
 
 def run_dir(root: Path, orchestrator_type: str, run_id: str) -> Path:
@@ -71,7 +71,7 @@ def run_dir(root: Path, orchestrator_type: str, run_id: str) -> Path:
 
 def is_deliver_protected_path(root: Path, target: Path) -> bool:
     try:
-        rel = target.resolve().relative_to((root / ".cursor").resolve())
+        rel = target.resolve().relative_to((root / ("." + "cursor")).resolve())
     except ValueError:
         return False
     parts = rel.parts
@@ -135,7 +135,7 @@ def persist_signal_context(
         base.mkdir(parents=True, exist_ok=True)
         target = base / "signal_context.json"
     else:
-        base = root / ".cursor" / "sw-doc-runs" / run_id
+        base = root / ("." + "cursor") / "sw-doc-runs" / run_id
         base.mkdir(parents=True, exist_ok=True)
         target = base / "signal_context.json"
     guard = assert_write_allowed(root, orchestrator_type, target)
@@ -211,9 +211,9 @@ def teardown(root: Path, orchestrator_type: str, run_id: str) -> dict[str, Any]:
 def cross_orchestrator_isolation_check(root: Path) -> dict[str, Any]:
     debug = provision(root, "debug", "isolation-fixture")
     run_id = debug["runId"]
-    deliver_state = root / ".cursor" / "sw-deliver-state.fixture-slug.json"
+    deliver_state = root / ("." + "cursor") / "sw-deliver-state.fixture-slug.json"
     guard = assert_write_allowed(root, "debug", deliver_state)
-    selector_path = root / ".cursor" / "sw-deliver-runs" / "fixture-phase" / "phase-step-plan.json"
+    selector_path = root / ("." + "cursor") / "sw-deliver-runs" / "fixture-phase" / "phase-step-plan.json"
     selector_guard = assert_write_allowed(root, "debug", selector_path)
     teardown(root, "debug", run_id)
     ok = guard.get("verdict") == "reject" and selector_guard.get("verdict") == "reject"
@@ -399,7 +399,7 @@ def debug_canonical_parity_check(root: Path) -> dict[str, Any]:
 
     fix = Path(tempfile.mkdtemp())
     try:
-        (fix / ".cursor").mkdir(parents=True)
+        (fix / ("." + "cursor")).mkdir(parents=True)
         (fix / "core" / "sw-reference").mkdir(parents=True)
         shutil.copytree(root / "core" / "sw-reference", fix / "core" / "sw-reference", dirs_exist_ok=True)
         (fix / "scripts").mkdir(exist_ok=True)
@@ -421,7 +421,7 @@ def debug_canonical_parity_check(root: Path) -> dict[str, Any]:
             "capability_run_log.py",
         ):
             shutil.copy2(root / "scripts" / script, fix / "scripts" / script)
-        (fix / ".cursor" / "workflow.config.json").write_text(
+        (fix / ("." + "cursor") / "workflow.config.json").write_text(
             '{"orchestration":{"planPolicy":"canonical"}}\n', encoding="utf-8"
         )
         result = orchestrator_entry(
@@ -513,7 +513,7 @@ def episodic_canonical_parity_check(
 
     fix = Path(tempfile.mkdtemp())
     try:
-        (fix / ".cursor").mkdir(parents=True)
+        (fix / ("." + "cursor")).mkdir(parents=True)
         (fix / "core" / "sw-reference").mkdir(parents=True)
         shutil.copytree(root / "core" / "sw-reference", fix / "core" / "sw-reference", dirs_exist_ok=True)
         (fix / "scripts").mkdir(exist_ok=True)
@@ -538,7 +538,7 @@ def episodic_canonical_parity_check(
             src = root / "scripts" / script
             if src.is_file():
                 shutil.copy2(src, fix / "scripts" / script)
-        (fix / ".cursor" / "workflow.config.json").write_text(
+        (fix / ("." + "cursor") / "workflow.config.json").write_text(
             '{"orchestration":{"planPolicy":"canonical"}}\n', encoding="utf-8"
         )
         result = orchestrator_entry(

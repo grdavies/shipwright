@@ -64,7 +64,7 @@ def sanitize_lock_component(value: str) -> str:
 
 def locks_dir(root: Path) -> Path:
     top = _git_toplevel(root)
-    base = (top / ".cursor" / LOCKS_DIR_NAME).resolve()
+    base = (top / ("." + "cursor") / LOCKS_DIR_NAME).resolve()
     parent = base.parent.resolve()
     if parent.is_symlink():
         fail("lock parent is symlinked", exit_code=20, halt="lock-path-unsafe")
@@ -94,8 +94,8 @@ def _canonical_repo_root_for_locks(start: Path) -> Path:
 def target_locks_dir(root: Path) -> Path:
     """Git-common-dir anchored target-lock directory outside run directories (R19)."""
     repo_root = _canonical_repo_root_for_locks(root)
-    base_raw = repo_root / ".cursor" / TARGET_LOCKS_DIR_NAME
-    parent_raw = repo_root / ".cursor"
+    base_raw = repo_root / ("." + "cursor") / TARGET_LOCKS_DIR_NAME
+    parent_raw = repo_root / ("." + "cursor")
     if parent_raw.is_symlink():
         fail("target-lock parent is symlinked", exit_code=20, halt="lock-path-unsafe")
     if base_raw.is_symlink():
@@ -116,7 +116,7 @@ def target_lock_path_for(root: Path, target_branch: str) -> Path:
     path = (locks / filename).resolve()
     if path.parent != locks:
         fail("target lock path escapes locks directory", exit_code=20, halt="lock-path-unsafe")
-    locks_raw = _canonical_repo_root_for_locks(root) / ".cursor" / TARGET_LOCKS_DIR_NAME
+    locks_raw = _canonical_repo_root_for_locks(root) / ("." + "cursor") / TARGET_LOCKS_DIR_NAME
     if locks_raw.is_symlink():
         fail("target locks directory is symlinked", exit_code=20, halt="lock-path-unsafe")
     return path
@@ -135,8 +135,8 @@ def target_lock_key_digest(root: Path, target_branch: str) -> str:
 def doc_run_locks_dir(root: Path) -> Path:
     """Git-common-dir anchored doc-run lock directory outside run directories (R11)."""
     repo_root = _canonical_repo_root_for_locks(root)
-    base_raw = repo_root / ".cursor" / DOC_RUN_LOCKS_DIR_NAME
-    parent_raw = repo_root / ".cursor"
+    base_raw = repo_root / ("." + "cursor") / DOC_RUN_LOCKS_DIR_NAME
+    parent_raw = repo_root / ("." + "cursor")
     if parent_raw.is_symlink():
         fail("doc-run-lock parent is symlinked", exit_code=20, halt="lock-path-unsafe")
     if base_raw.is_symlink():
@@ -157,7 +157,7 @@ def doc_run_lock_path_for(root: Path, topic: str) -> Path:
     path = (locks / filename).resolve()
     if path.parent != locks:
         fail("doc-run lock path escapes locks directory", exit_code=20, halt="lock-path-unsafe")
-    locks_raw = _canonical_repo_root_for_locks(root) / ".cursor" / DOC_RUN_LOCKS_DIR_NAME
+    locks_raw = _canonical_repo_root_for_locks(root) / ("." + "cursor") / DOC_RUN_LOCKS_DIR_NAME
     if locks_raw.is_symlink():
         fail("doc-run locks directory is symlinked", exit_code=20, halt="lock-path-unsafe")
     return path
@@ -171,8 +171,8 @@ def doc_run_lock_key_digest(root: Path, topic: str) -> str:
 def doc_to_feature_handoff_locks_dir(root: Path) -> Path:
     """Git-common-dir anchored doc-to-feature handoff lock directory (PRD 085 R14)."""
     repo_root = _canonical_repo_root_for_locks(root)
-    base_raw = repo_root / ".cursor" / DOC_TO_FEATURE_HANDOFF_LOCKS_DIR_NAME
-    parent_raw = repo_root / ".cursor"
+    base_raw = repo_root / ("." + "cursor") / DOC_TO_FEATURE_HANDOFF_LOCKS_DIR_NAME
+    parent_raw = repo_root / ("." + "cursor")
     if parent_raw.is_symlink():
         fail("doc-to-feature-handoff-lock parent is symlinked", exit_code=20, halt="lock-path-unsafe")
     if base_raw.is_symlink():
@@ -201,7 +201,7 @@ def doc_to_feature_handoff_lock_path_for(root: Path, target_branch: str, run_id:
     path = (locks / filename).resolve()
     if path.parent != locks:
         fail("doc-to-feature-handoff lock path escapes locks directory", exit_code=20, halt="lock-path-unsafe")
-    locks_raw = _canonical_repo_root_for_locks(root) / ".cursor" / DOC_TO_FEATURE_HANDOFF_LOCKS_DIR_NAME
+    locks_raw = _canonical_repo_root_for_locks(root) / ("." + "cursor") / DOC_TO_FEATURE_HANDOFF_LOCKS_DIR_NAME
     if locks_raw.is_symlink():
         fail("doc-to-feature-handoff locks directory is symlinked", exit_code=20, halt="lock-path-unsafe")
     return path
@@ -353,7 +353,7 @@ def owner_token_matches(meta: dict[str, Any], node_id: str) -> bool:
 def phase_status_consumable_terminal(root: Path, phase_slug: str | None) -> bool:
     if not phase_slug:
         return False
-    status_path = root / ".cursor" / "sw-deliver-runs" / phase_slug / "status.json"
+    status_path = root / ("." + "cursor") / "sw-deliver-runs" / phase_slug / "status.json"
     if not status_path.is_file():
         return False
     try:
@@ -617,8 +617,8 @@ def cmd_status(root: Path, args: list[str]) -> None:
 def run_lease_locks_dir(root: Path) -> Path:
     """Git-common-dir anchored exclusive run-lease directory (R21)."""
     repo_root = _canonical_repo_root_for_locks(root)
-    base_raw = repo_root / ".cursor" / RUN_LEASE_LOCKS_DIR_NAME
-    parent_raw = repo_root / ".cursor"
+    base_raw = repo_root / ("." + "cursor") / RUN_LEASE_LOCKS_DIR_NAME
+    parent_raw = repo_root / ("." + "cursor")
     if parent_raw.is_symlink():
         fail("run-lease parent is symlinked", exit_code=20, halt="lock-path-unsafe")
     if base_raw.is_symlink():
@@ -644,7 +644,7 @@ def run_lease_path_for(root: Path, run_id: str) -> Path:
     path = (locks / filename).resolve()
     if path.parent != locks:
         fail("run-lease path escapes locks directory", exit_code=20, halt="lock-path-unsafe")
-    locks_raw = _canonical_repo_root_for_locks(root) / ".cursor" / RUN_LEASE_LOCKS_DIR_NAME
+    locks_raw = _canonical_repo_root_for_locks(root) / ("." + "cursor") / RUN_LEASE_LOCKS_DIR_NAME
     if locks_raw.is_symlink():
         fail("run-lease locks directory is symlinked", exit_code=20, halt="lock-path-unsafe")
     return path

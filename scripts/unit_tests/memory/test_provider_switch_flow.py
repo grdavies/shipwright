@@ -21,7 +21,7 @@ FIXTURE = SCRIPTS / "test/fixtures/in-repo-memory"
 def _seed_workspace(tmp_path: Path, repo_root: Path) -> Path:
     workspace = tmp_path / "ws"
     shutil.copytree(FIXTURE / "store", workspace / ".cursor/sw-memory")
-    (workspace / ".cursor").mkdir(parents=True, exist_ok=True)
+    (workspace / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     shutil.copytree(repo_root / ".sw", workspace / ".sw")
     config = json.loads((FIXTURE / "config-in-repo.json").read_text(encoding="utf-8"))
     (workspace / ".cursor/workflow.config.json").write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")

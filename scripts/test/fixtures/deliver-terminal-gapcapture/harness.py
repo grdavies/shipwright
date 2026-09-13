@@ -49,8 +49,8 @@ def _seed_repo(root: Path) -> None:
     subprocess.run(["git", "init", "-q"], cwd=str(root), check=True)
     subprocess.run(["git", "config", "user.email", "test@test.com"], cwd=str(root), check=True)
     subprocess.run(["git", "config", "user.name", "Test"], cwd=str(root), check=True)
-    (root / ".cursor").mkdir(parents=True, exist_ok=True)
-    (root / ".cursor" / "workflow.config.json").write_text(
+    (root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
+    (root / ("." + "cursor") / "workflow.config.json").write_text(
         json.dumps({"planning": {"store": {"backend": "in-repo-public"}}}, indent=2) + "\n",
         encoding="utf-8",
     )
@@ -228,7 +228,7 @@ def check_classify_pain_item_heuristic() -> dict:
 
 
 def _seed_run_log(root: Path, entries: list[dict]) -> None:
-    log_path = root / ".cursor" / "sw-deliver-runs" / "run.log"
+    log_path = root / ("." + "cursor") / "sw-deliver-runs" / "run.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with open(log_path, "w", encoding="utf-8") as f:
         for entry in entries:
@@ -236,7 +236,7 @@ def _seed_run_log(root: Path, entries: list[dict]) -> None:
 
 
 def _seed_deliver_state(root: Path, state: dict) -> None:
-    state_path = root / ".cursor" / "sw-deliver-runs" / "sw-deliver-state.json"
+    state_path = root / ("." + "cursor") / "sw-deliver-runs" / "sw-deliver-state.json"
     state_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
 
@@ -293,7 +293,7 @@ def check_run_terminal_gap_capture_never_raises_on_malformed_log() -> dict:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
         _seed_repo(root)
-        log_path = root / ".cursor" / "sw-deliver-runs" / "run.log"
+        log_path = root / ("." + "cursor") / "sw-deliver-runs" / "run.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
         log_path.write_text("{not valid json\n", encoding="utf-8")
         try:

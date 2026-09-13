@@ -60,7 +60,7 @@ def _write_scoped_state(
     verdict: str,
     target: object,
 ) -> Path:
-    path = root / ".cursor" / f"sw-deliver-state.{slug}.json"
+    path = root / ("." + "cursor") / f"sw-deliver-state.{slug}.json"
     _write_json(path, {"verdict": verdict, "updatedAt": "2026-08-12T00:00:00Z", "target": target})
     return path
 
@@ -102,7 +102,7 @@ def test_cleanup_breadcrumb_inflight_protect(tmp_git_repo: Path) -> None:
         check=True,
         capture_output=True,
     )
-    stale_a = tmp_git_repo / ".cursor" / "sw-deliver-state.stale-a.json"
+    stale_a = tmp_git_repo / ("." + "cursor") / "sw-deliver-state.stale-a.json"
     _write_json(
         stale_a,
         {
@@ -112,7 +112,7 @@ def test_cleanup_breadcrumb_inflight_protect(tmp_git_repo: Path) -> None:
         },
     )
     _write_json(
-        tmp_git_repo / ".cursor" / "sw-deliver-state.json",
+        tmp_git_repo / ("." + "cursor") / "sw-deliver-state.json",
         {
             "migrated": True,
             "migratedAt": "2026-08-12T00:00:00Z",
@@ -145,7 +145,7 @@ def test_breadcrumb_scoped_file_fail_closed(tmp_git_repo: Path) -> None:
         capture_output=True,
     )
     _write_json(
-        tmp_git_repo / ".cursor" / "sw-deliver-state.breadcrumb-only.json",
+        tmp_git_repo / ("." + "cursor") / "sw-deliver-state.breadcrumb-only.json",
         {
             "migrated": True,
             "migratedAt": "2026-08-12T00:00:00Z",

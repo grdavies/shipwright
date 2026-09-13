@@ -39,7 +39,7 @@ def plugin_root(repo_root: Path) -> Path:
 
 
 def _write_config(workspace: Path, provider: str, **guardrails: object) -> None:
-    cursor = workspace / ".cursor"
+    cursor = workspace / ("." + "cursor")
     cursor.mkdir(parents=True, exist_ok=True)
     payload = {
         "memory": {

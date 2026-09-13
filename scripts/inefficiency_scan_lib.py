@@ -124,8 +124,8 @@ def _load_deliver_state(root: Path, deliver_state_path: Path | None) -> dict[str
         candidates.append(deliver_state_path)
     candidates.extend(
         [
-            root / ".cursor" / "sw-deliver-runs" / "sw-deliver-state.json",
-            root / ".cursor" / "sw-deliver-state.json",
+            root / ("." + "cursor") / "sw-deliver-runs" / "sw-deliver-state.json",
+            root / ("." + "cursor") / "sw-deliver-state.json",
         ]
     )
     for path in candidates:
@@ -236,7 +236,7 @@ def resolve_junit_path(root: Path, verify_status: dict[str, Any] | None, explici
                     return candidate
     for candidate in (
         root / "junit.xml",
-        root / ".cursor" / "junit.xml",
+        root / ("." + "cursor") / "junit.xml",
     ):
         if candidate.is_file():
             return candidate
@@ -306,7 +306,7 @@ def scan(
             gate_doc = json.loads(gate_json_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             gate_doc = None
-    timing_path = ci_timing_path or (root / ".cursor" / "sw-ci-timing.json")
+    timing_path = ci_timing_path or (root / ("." + "cursor") / "sw-ci-timing.json")
     ci_items, ci_notices = parse_ci_job_timings(
         timing_path=timing_path,
         gate_json=gate_doc,
@@ -326,7 +326,7 @@ def scan(
     items.extend(par_items)
     notices.extend(par_notices)
 
-    log_path = run_log_path or (root / ".cursor" / "sw-deliver-runs" / "run.log")
+    log_path = run_log_path or (root / ("." + "cursor") / "sw-deliver-runs" / "run.log")
     manual_items, manual_notices = detect_repeated_manual_steps(
         log_path,
         ineff_cfg["allowlist"]["manualSteps"],

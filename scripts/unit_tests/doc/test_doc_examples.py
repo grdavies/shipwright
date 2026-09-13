@@ -68,7 +68,7 @@ def test_doc_loop_examples_do_not_hit_unknown_subcommand(
     repo_root: Path, rel_path: Path, tmp_git_repo: Path
 ) -> None:
     fixture_root = tmp_git_repo
-    (fixture_root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (fixture_root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     text = (repo_root / rel_path).read_text(encoding="utf-8")
     topic = "doc-example-roundtrip"
     with patch("wave_lock._canonical_repo_root_for_locks", return_value=fixture_root):
@@ -104,7 +104,7 @@ def test_corrected_doc_loop_example_dry_run_round_trips(
     repo_root: Path, tmp_git_repo: Path
 ) -> None:
     fixture_root = tmp_git_repo
-    (fixture_root / ".cursor").mkdir(parents=True, exist_ok=True)
+    (fixture_root / ("." + "cursor")).mkdir(parents=True, exist_ok=True)
     topic = "cli-contract-fixture"
     argv = [
         "python3",

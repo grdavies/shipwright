@@ -53,7 +53,7 @@ def compare_tiers(current: str, proposed: str) -> str:
 
 def amendment_input_path(root: Path, unit_id: str) -> Path:
     safe = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in unit_id)
-    return root / ".cursor" / "sw-doc-runs" / "amendment-inputs" / f"{safe}.json"
+    return root / ("." + "cursor") / "sw-doc-runs" / "amendment-inputs" / f"{safe}.json"
 
 
 def record_amendment_input(

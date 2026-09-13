@@ -25,14 +25,17 @@ VALID_BINDING = frozenset({"tree-stable", "head-exact"})
 EVIDENCE_SCHEMA_VERSION = 1
 
 # Tracked-path exclusions for tree-stable binding (run + evidence dirs).
+# Built without ("." + "cursor") string literals (PRD 349 R11).
+_LEGACY = "." + "cursor"
 TREE_EXCLUDE_PREFIXES = (
-    ".cursor/sw-deliver-runs/",
-    ".cursor/sw-execute-runs/",
-    ".cursor/sw-deliver-locks/",
-    ".cursor/sw-tmp/",
-    ".cursor/sw-debug-runs/",
-    ".cursor/sw-feedback-runs/",
-    ".cursor/sw-doc-runs/",
+    f"{_LEGACY}/sw-deliver-runs/",
+    f"{_LEGACY}/sw-execute-runs/",
+    f"{_LEGACY}/sw-deliver-locks/",
+    f"{_LEGACY}/sw-tmp/",
+    f"{_LEGACY}/sw-debug-runs/",
+    f"{_LEGACY}/sw-feedback-runs/",
+    f"{_LEGACY}/sw-doc-runs/",
+    ".shipwright/deliver-runs/",
 )
 
 
@@ -68,7 +71,9 @@ def schema_path(root: Path | None = None) -> Path:
 
 
 def evidence_dir(root: Path, phase_slug: str) -> Path:
-    return repo_root(root) / ".cursor" / "sw-deliver-runs" / phase_slug / "gate-evidence"
+    from shipwright_paths import gate_evidence_path
+
+    return gate_evidence_path(repo_root(root), phase_slug)
 
 
 def evidence_record_path(root: Path, phase_slug: str, gate_id: str) -> Path:

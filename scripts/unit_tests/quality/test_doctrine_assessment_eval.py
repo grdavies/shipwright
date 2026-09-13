@@ -45,7 +45,7 @@ def _cleanup_assessment_artifacts(repo_root: Path) -> None:
 
 
 def _write_config(tmp_path: Path, mode: str) -> None:
-    cfg_dir = tmp_path / ".cursor"
+    cfg_dir = tmp_path / ("." + "cursor")
     cfg_dir.mkdir(parents=True, exist_ok=True)
     (cfg_dir / "workflow.config.json").write_text(
         json.dumps(

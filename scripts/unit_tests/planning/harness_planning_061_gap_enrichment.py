@@ -66,7 +66,7 @@ sys.path.insert(0, '$ROOT/scripts')
 import planning_gap_capture as pgc
 root = Path(tempfile.mkdtemp())
 subprocess.run(['git','init','-q'], cwd=root, check=True)
-(root / '.cursor').mkdir(parents=True, exist_ok=True)
+(root / ('.' + 'cursor')).mkdir(parents=True, exist_ok=True)
 (root / 'docs' / 'prds').mkdir(parents=True, exist_ok=True)
 calls = []
 class FakeBackend:
@@ -105,7 +105,7 @@ sys.path.insert(0, '$ROOT/scripts')
 import planning_gap_capture as pgc
 root = Path(tempfile.mkdtemp())
 subprocess.run(['git','init','-q'], cwd=root, check=True)
-(root / '.cursor').mkdir(parents=True, exist_ok=True)
+(root / ('.' + 'cursor')).mkdir(parents=True, exist_ok=True)
 (root / 'docs' / 'prds').mkdir(parents=True, exist_ok=True)
 draft = pgc.capture_gap(root, signal_id='sig-draft', title='Needs enrichment', dry_run=False)
 assert draft.get('action') == 'draft-inbox'

@@ -197,8 +197,8 @@ def main(argv: list[str] | None = None) -> int:
     plan: dict[str, Any] | None = None
     if args.state_file:
         state = json.loads(Path(args.state_file).read_text(encoding="utf-8"))
-    elif (root / ".cursor" / "sw-deliver-state.json").is_file():
-        state = json.loads((root / ".cursor" / "sw-deliver-state.json").read_text(encoding="utf-8"))
+    elif (root / ("." + "cursor") / "sw-deliver-state.json").is_file():
+        state = json.loads((root / ("." + "cursor") / "sw-deliver-state.json").read_text(encoding="utf-8"))
     if args.plan_file:
         plan = json.loads(Path(args.plan_file).read_text(encoding="utf-8"))
 

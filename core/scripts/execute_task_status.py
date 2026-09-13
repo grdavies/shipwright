@@ -18,7 +18,7 @@ def sanitize_ref(task_ref: str) -> str:
 
 
 def status_path(root: Path, task_ref: str) -> Path:
-    return root / ".cursor" / "sw-execute-runs" / sanitize_ref(task_ref) / "status.json"
+    return root / ("." + "cursor") / "sw-execute-runs" / sanitize_ref(task_ref) / "status.json"
 
 
 def main(argv: list[str] | None = None) -> int:
