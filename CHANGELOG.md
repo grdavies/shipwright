@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.14.0](https://github.com/grdavies/shipwright/compare/v2.13.0...v2.14.0) (2026-09-13)
+
+
+### Features
+
+* **attribution:** model attribution stack (prd 351) ([#1175](https://github.com/grdavies/shipwright/issues/1175)) ([1b2673f](https://github.com/grdavies/shipwright/commit/1b2673f658facfa5db9f5d71c496031dfbc2ddb1))
+* **capture:** impl capture and gaps stack (prd 350) ([#1174](https://github.com/grdavies/shipwright/issues/1174)) ([dbb4091](https://github.com/grdavies/shipwright/commit/dbb4091a89c77149b3a0f002360f6061452bc19e))
+* **portability:** platform portability stack (prd 349) ([#1173](https://github.com/grdavies/shipwright/issues/1173)) ([d112745](https://github.com/grdavies/shipwright/commit/d112745075b952d0206173dcc008a3c754011bf6))
+
 ## [2.13.0](https://github.com/grdavies/shipwright/compare/v2.12.0...v2.13.0) (2026-09-13)
 
 
