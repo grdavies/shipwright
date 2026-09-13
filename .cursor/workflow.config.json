@@ -22,7 +22,7 @@
     "neutralAllowlist": []
   },
   "capture": {
-    "enabled": false,
+    "enabled": true,
     "gapKeywords": [
       "missing documented",
       "undocumented",
