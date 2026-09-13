@@ -1,0 +1,73 @@
+{
+  "host": "opencode",
+  "surface": "cli",
+  "version_range": ">=0.1.0",
+  "os_scope": [
+    "mac",
+    "linux",
+    "windows"
+  ],
+  "adapter_id": "opencode",
+  "declared_at": "2026-09-12T00:00:00Z",
+  "trust_level": "declared",
+  "capabilities": {
+    "load_context": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt with diagnostic"
+    },
+    "invoke_workflow": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt with diagnostic"
+    },
+    "inspect_tool_call": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt with diagnostic"
+    },
+    "block_action": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [
+        "tool permissions require explicit user confirmation"
+      ],
+      "failure_behavior": "halt with diagnostic"
+    },
+    "dispatch_reviewer": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt with diagnostic"
+    },
+    "capture_progress": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt with diagnostic"
+    },
+    "restore_state": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt with diagnostic"
+    },
+    "emit_hook": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [
+        "Notification unsupported on OpenCode; lifecycle_plugin emits structured diagnostic"
+      ],
+      "failure_behavior": "halt with diagnostic"
+    },
+    "resolve_instruction": {
+      "implementation_mode": "adapted",
+      "evidence_required": "descriptor-declared",
+      "known_gaps": [],
+      "failure_behavior": "halt with diagnostic"
+    }
+  }
+}

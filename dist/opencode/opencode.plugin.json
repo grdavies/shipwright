@@ -1,0 +1,322 @@
+{
+  "name": "shipwright-opencode",
+  "version": "2.13.0",
+  "package_mechanism": "opencode-plugin",
+  "main": "lifecycle_plugin.ts",
+  "shipwright": {
+    "skills": [
+      {
+        "id": "brainstorm",
+        "source": "core/skills/brainstorm"
+      },
+      {
+        "id": "calibration-loop",
+        "source": "core/skills/calibration-loop"
+      },
+      {
+        "id": "checks-gate",
+        "source": "core/skills/checks-gate"
+      },
+      {
+        "id": "compound",
+        "source": "core/skills/compound"
+      },
+      {
+        "id": "conductor",
+        "source": "core/skills/conductor"
+      },
+      {
+        "id": "debug",
+        "source": "core/skills/debug"
+      },
+      {
+        "id": "deliver",
+        "source": "core/skills/deliver"
+      },
+      {
+        "id": "doc-review",
+        "source": "core/skills/doc-review"
+      },
+      {
+        "id": "execute-discipline",
+        "source": "core/skills/execute-discipline"
+      },
+      {
+        "id": "explore",
+        "source": "core/skills/explore"
+      },
+      {
+        "id": "feedback",
+        "source": "core/skills/feedback"
+      },
+      {
+        "id": "feedback-closure",
+        "source": "core/skills/feedback-closure"
+      },
+      {
+        "id": "gap-check",
+        "source": "core/skills/gap-check"
+      },
+      {
+        "id": "git-workflow",
+        "source": "core/skills/git-workflow"
+      },
+      {
+        "id": "living-status",
+        "source": "core/skills/living-status"
+      },
+      {
+        "id": "memory",
+        "source": "core/skills/memory"
+      },
+      {
+        "id": "parallelism",
+        "source": "core/skills/parallelism"
+      },
+      {
+        "id": "prd",
+        "source": "core/skills/prd"
+      },
+      {
+        "id": "rca-core",
+        "source": "core/skills/rca-core"
+      },
+      {
+        "id": "retro",
+        "source": "core/skills/retro"
+      },
+      {
+        "id": "ship",
+        "source": "core/skills/ship"
+      },
+      {
+        "id": "shipwright-state",
+        "source": "core/skills/shipwright-state"
+      },
+      {
+        "id": "simplify",
+        "source": "core/skills/simplify"
+      },
+      {
+        "id": "spec-rigor",
+        "source": "core/skills/spec-rigor"
+      },
+      {
+        "id": "spec-union",
+        "source": "core/skills/spec-union"
+      },
+      {
+        "id": "stabilize-loop",
+        "source": "core/skills/stabilize-loop"
+      },
+      {
+        "id": "tasks",
+        "source": "core/skills/tasks"
+      },
+      {
+        "id": "tournament",
+        "source": "core/skills/tournament"
+      },
+      {
+        "id": "triage",
+        "source": "core/skills/triage"
+      },
+      {
+        "id": "verification-gate",
+        "source": "core/skills/verification-gate"
+      },
+      {
+        "id": "worktree",
+        "source": "core/skills/worktree"
+      }
+    ],
+    "commands": [
+      {
+        "id": "sw",
+        "source": "core/commands/sw.md"
+      },
+      {
+        "id": "sw-amend",
+        "source": "core/commands/sw-amend.md"
+      },
+      {
+        "id": "sw-ask",
+        "source": "core/commands/sw-ask.md"
+      },
+      {
+        "id": "sw-become",
+        "source": "core/commands/sw-become.md"
+      },
+      {
+        "id": "sw-brainstorm",
+        "source": "core/commands/sw-brainstorm.md"
+      },
+      {
+        "id": "sw-caveman",
+        "source": "core/commands/sw-caveman.md"
+      },
+      {
+        "id": "sw-cleanup",
+        "source": "core/commands/sw-cleanup.md"
+      },
+      {
+        "id": "sw-commit",
+        "source": "core/commands/sw-commit.md"
+      },
+      {
+        "id": "sw-compound",
+        "source": "core/commands/sw-compound.md"
+      },
+      {
+        "id": "sw-compound-ship",
+        "source": "core/commands/sw-compound-ship.md"
+      },
+      {
+        "id": "sw-debug",
+        "source": "core/commands/sw-debug.md"
+      },
+      {
+        "id": "sw-deliver",
+        "source": "core/commands/sw-deliver.md"
+      },
+      {
+        "id": "sw-doc",
+        "source": "core/commands/sw-doc.md"
+      },
+      {
+        "id": "sw-doc-review",
+        "source": "core/commands/sw-doc-review.md"
+      },
+      {
+        "id": "sw-execute",
+        "source": "core/commands/sw-execute.md"
+      },
+      {
+        "id": "sw-explore",
+        "source": "core/commands/sw-explore.md"
+      },
+      {
+        "id": "sw-feedback",
+        "source": "core/commands/sw-feedback.md"
+      },
+      {
+        "id": "sw-feedback-close",
+        "source": "core/commands/sw-feedback-close.md"
+      },
+      {
+        "id": "sw-freeze",
+        "source": "core/commands/sw-freeze.md"
+      },
+      {
+        "id": "sw-gaps",
+        "source": "core/commands/sw-gaps.md"
+      },
+      {
+        "id": "sw-guide",
+        "source": "core/commands/sw-guide.md"
+      },
+      {
+        "id": "sw-init",
+        "source": "core/commands/sw-init.md"
+      },
+      {
+        "id": "sw-memory-audit",
+        "source": "core/commands/sw-memory-audit.md"
+      },
+      {
+        "id": "sw-memory-export",
+        "source": "core/commands/sw-memory-export.md"
+      },
+      {
+        "id": "sw-memory-import",
+        "source": "core/commands/sw-memory-import.md"
+      },
+      {
+        "id": "sw-memory-sync",
+        "source": "core/commands/sw-memory-sync.md"
+      },
+      {
+        "id": "sw-migrate",
+        "source": "core/commands/sw-migrate.md"
+      },
+      {
+        "id": "sw-note",
+        "source": "core/commands/sw-note.md"
+      },
+      {
+        "id": "sw-pr",
+        "source": "core/commands/sw-pr.md"
+      },
+      {
+        "id": "sw-prd",
+        "source": "core/commands/sw-prd.md"
+      },
+      {
+        "id": "sw-ready",
+        "source": "core/commands/sw-ready.md"
+      },
+      {
+        "id": "sw-retro",
+        "source": "core/commands/sw-retro.md"
+      },
+      {
+        "id": "sw-retrospective",
+        "source": "core/commands/sw-retrospective.md"
+      },
+      {
+        "id": "sw-review",
+        "source": "core/commands/sw-review.md"
+      },
+      {
+        "id": "sw-setup",
+        "source": "core/commands/sw-setup.md"
+      },
+      {
+        "id": "sw-ship",
+        "source": "core/commands/sw-ship.md"
+      },
+      {
+        "id": "sw-simplify",
+        "source": "core/commands/sw-simplify.md"
+      },
+      {
+        "id": "sw-stabilize",
+        "source": "core/commands/sw-stabilize.md"
+      },
+      {
+        "id": "sw-start",
+        "source": "core/commands/sw-start.md"
+      },
+      {
+        "id": "sw-status",
+        "source": "core/commands/sw-status.md"
+      },
+      {
+        "id": "sw-tasks",
+        "source": "core/commands/sw-tasks.md"
+      },
+      {
+        "id": "sw-triage",
+        "source": "core/commands/sw-triage.md"
+      },
+      {
+        "id": "sw-verify",
+        "source": "core/commands/sw-verify.md"
+      },
+      {
+        "id": "sw-watch-ci",
+        "source": "core/commands/sw-watch-ci.md"
+      },
+      {
+        "id": "sw-worktree",
+        "source": "core/commands/sw-worktree.md"
+      }
+    ],
+    "agents": [
+      {
+        "id": "shipwright-default",
+        "source": "core/agents"
+      }
+    ]
+  }
+}

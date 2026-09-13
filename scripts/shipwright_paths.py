@@ -344,6 +344,33 @@ def worktree_state_path(root: Path) -> Path:
     )
 
 
+
+def bounded_mcp_server_path(root: Path) -> Path:
+    """Canonical on-disk path for the bounded MCP server entrypoint (PRD 349 R23/R30).
+
+    Task 4.7 owns the server implementation; adapters only reference this path.
+    Neutral layout preferred; legacy `.cursor` fallback retained inside this helper.
+    """
+    preferred = root / ".shipwright" / "mcp" / "server.py"
+    legacy = root / ".cursor" / "sw-mcp" / "server.py"
+    if preferred.exists() or not legacy.exists():
+        return preferred
+    return legacy
+
+
+def bounded_mcp_config_path(root: Path, adapter_id: str) -> Path:
+    """Per-adapter MCP config path — adapters never share a config file (R30/R41)."""
+    adapter = str(adapter_id or "").strip()
+    if not adapter:
+        raise ValueError("adapter_id required for MCP config path")
+    preferred = root / ".shipwright" / "mcp" / f"{adapter}.json"
+    legacy = root / ".cursor" / "sw-mcp" / f"{adapter}.json"
+    if preferred.exists() or not legacy.exists():
+        return preferred
+    return legacy
+
+
+
 INVENTORY_ACCESSORS: dict[str, Callable[[Path], Path]] = {
     "workflow_config_path": workflow_config_path,
     "deliver_runs_dir": deliver_runs_dir,

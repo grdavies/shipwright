@@ -32,6 +32,8 @@ _CATALOG_SW_REL = Path(".sw/memory-provider-catalog.json")
 INTEGRATION_DIST: dict[str, str] = {
     "cursor": "dist/cursor",
     "claude-code": "dist/claude-code",
+    "codex": "dist/codex",
+    "opencode": "dist/opencode",
 }
 
 # Paths preserved across refresh — operator-owned state under the machine install root.
@@ -44,7 +46,15 @@ def repo_root() -> Path:
 
 def plugin_root_env_for(integration: str) -> str:
     norm = normalize_integration(integration)
-    return "CURSOR_PLUGIN_ROOT" if norm == "cursor" else "CLAUDE_PLUGIN_ROOT"
+    if norm == "cursor":
+        return "CURSOR_PLUGIN_ROOT"
+    if norm == "claude-code":
+        return "CLAUDE_PLUGIN_ROOT"
+    if norm == "codex":
+        return "CODEX_PLUGIN_ROOT"
+    if norm == "opencode":
+        return "OPENCODE_PLUGIN_ROOT"
+    raise ValueError(f"unsupported integration: {integration}")
 
 
 def package_root(integration: str = "cursor") -> Path:
@@ -62,7 +72,13 @@ def is_packaged_install_root(root: Path, integration: str) -> bool:
     resolved = root.resolve()
     if norm == "cursor":
         return (resolved / ".cursor-plugin" / "plugin.json").is_file()
-    return (resolved / ".claude-plugin" / "plugin.json").is_file()
+    if norm == "claude-code":
+        return (resolved / ".claude-plugin" / "plugin.json").is_file()
+    if norm == "codex":
+        return (resolved / ".codex-plugin" / "plugin.json").is_file()
+    if norm == "opencode":
+        return (resolved / "opencode.plugin.json").is_file()
+    return False
 
 
 def mirror_excludes() -> list[str]:
@@ -104,6 +120,10 @@ def normalize_integration(integration: str) -> str:
         return "cursor"
     if key in {"claude-code", "claude", "anthropic"}:
         return "claude-code"
+    if key in {"codex", "openai-codex"}:
+        return "codex"
+    if key in {"opencode", "open-code"}:
+        return "opencode"
     raise ValueError(f"unsupported integration: {integration}")
 
 
@@ -112,7 +132,13 @@ def default_dest_for(integration: str) -> Path:
     norm = normalize_integration(integration)
     if norm == "cursor":
         return default_dest()
-    return Path.home() / ".claude" / "plugins" / "local" / "shipwright"
+    if norm == "claude-code":
+        return Path.home() / ".claude" / "plugins" / "local" / "shipwright"
+    if norm == "codex":
+        return Path.home() / ".codex" / "plugins" / "shipwright"
+    if norm == "opencode":
+        return Path.home() / ".config" / "opencode" / "plugins" / "shipwright"
+    raise ValueError(f"unsupported integration: {integration}")
 
 
 def dist_source_for(integration: str, *, root: Path | None = None) -> Path:
@@ -439,7 +465,7 @@ def build_parser_install() -> argparse.ArgumentParser:
     parser.add_argument(
         "--integration",
         default="cursor",
-        choices=["cursor", "claude-code"],
+        choices=["cursor", "claude-code", "codex", "opencode"],
         help="Target host integration (default: cursor)",
     )
     parser.add_argument("--no-hooks", action="store_true", help="Skip hook installation")
