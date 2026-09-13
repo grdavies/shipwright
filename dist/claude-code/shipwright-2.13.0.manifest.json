@@ -525,6 +525,7 @@
     "memory_import_resolve.py",
     "memory_key_collision.py",
     "memory_lib.py",
+    "memory_observation_gate.py",
     "memory_playbook.py",
     "memory_playbook_lib.py",
     "memory_preflight.py",
@@ -707,6 +708,7 @@
     "resolve_base_branch.py",
     "retro_candidates.py",
     "retro_gap_capture.py",
+    "retrospective_evidence.py",
     "review-local-resolve.py",
     "review_synthesize.py",
     "reviewer-dispatch-check.py",
@@ -840,6 +842,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 837,
+  "moduleCount": 839,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

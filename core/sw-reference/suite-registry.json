@@ -2315,6 +2315,26 @@
         "scripts/unit_tests/init/test_project_baseline_synthesis.py",
         "scripts/unit_tests/init/test_init_project_doctrine.py"
       ]
+    },
+    {
+      "id": "capture-event-schema-conformance",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "ci-yml",
+        "pr-ci",
+        "verify"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-1",
+      "pytestPath": "tests/conformance/test_event_schema_conformance.py",
+      "pathTriggers": [
+        "scripts/_sw/capture-event-schema.json",
+        "scripts/_sw/capture_schema_lib.py",
+        "tests/fixtures/capture-events/",
+        "tests/conformance/test_event_schema_conformance.py",
+        "scripts/wave_journal.py"
+      ],
+      "verifyOrder": 5
     }
   ],
   "plans": {
@@ -2351,7 +2371,7 @@
       "triageOwner": "platform-ops"
     },
     "minimum-python": {
-      "description": "Minimum supported Python matrix leg — core guard suites only.",
+      "description": "Minimum supported Python matrix leg \u2014 core guard suites only.",
       "inherits": "pull-request-core"
     }
   },
