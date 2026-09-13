@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1",
+  "runId": "deliver-fixture-run-001",
+  "phaseId": "phase-1",
+  "agentId": "agent-parent",
+  "provenanceKind": "tool_output",
+  "provenanceRef": "tool-call-fixture-1",
+  "pendingState": null,
+  "eventType": "milestone",
+  "timestamp": "2026-09-12T10:05:00Z",
+  "summary": "Phase boundary crossed into schema work",
+  "eventId": "4cf0856e9d938e17"
+}

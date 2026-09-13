@@ -96,6 +96,22 @@ items to `python3 scripts/sw_bootstrap.py planning_gap_capture.py -- retro-captu
 Confirm and materialize are separate operator steps with digest-bound ack (see `references/output-contract.md`
 and `/sw-retrospective` PRD 275 section). Default config leaves this path disabled.
 
+
+
+## Capture evidence (PRD 350 R25–R28)
+
+Primary evidence for implementation retrospectives comes from the capture journal
+via the typed API — **never** open `events.jsonl` directly:
+
+```bash
+PYTHONPATH=scripts python3 scripts/retrospective_evidence.py --run-id <runId> --root .
+```
+
+Contract:
+- Load with `wave_journal.read_events(run_id, event_types=["blocker","milestone","discovery"], root=...)`.
+- Include a `### Unresolved Blockers` section (blocker with no later milestone summary containing `"blocker resolved"`; mark `provenanceKind: inferred` as lower confidence).
+- Memory candidates MUST be observation-only (`status: pending_human_review`) under `## Memory Candidates (pending_human_review)`. Do **not** synthesise rules/policy from event summaries — route through `memory-preflight --mode observation`.
+
 ## Guardrails
 
 - Report-only — no `agentsFile`/doctrine edits without approval.

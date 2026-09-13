@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1",
+  "runId": "deliver-fixture-run-001",
+  "phaseId": "phase-1",
+  "agentId": "agent-parent",
+  "provenanceKind": "tool_output",
+  "provenanceRef": "dispatch-9",
+  "pendingState": null,
+  "delegationTarget": "sw-conformance-runner:validate fixtures",
+  "eventType": "delegation",
+  "timestamp": "2026-09-12T10:25:00Z",
+  "summary": "Dispatching schema conformance sub-agent",
+  "eventId": "f9d16bab2a848a7e"
+}

@@ -4,6 +4,8 @@
   "modules": [
     "_planning_pkg_loader.py",
     "_sw/__init__.py",
+    "_sw/capture-event-schema.json",
+    "_sw/capture_schema_lib.py",
     "_sw/cli.py",
     "_sw/completion_log.py",
     "_sw/credential-migration-release.json",
@@ -525,6 +527,7 @@
     "memory_import_resolve.py",
     "memory_key_collision.py",
     "memory_lib.py",
+    "memory_observation_gate.py",
     "memory_playbook.py",
     "memory_playbook_lib.py",
     "memory_preflight.py",
@@ -707,6 +710,7 @@
     "resolve_base_branch.py",
     "retro_candidates.py",
     "retro_gap_capture.py",
+    "retrospective_evidence.py",
     "review-local-resolve.py",
     "review_synthesize.py",
     "reviewer-dispatch-check.py",
@@ -803,6 +807,7 @@
     "wave_failure.py",
     "wave_finalize.py",
     "wave_finalize_completion.py",
+    "wave_journal.py",
     "wave_json_io.py",
     "wave_lifecycle.py",
     "wave_living_doc_lock.py",
@@ -839,6 +844,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 836,
+  "moduleCount": 841,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

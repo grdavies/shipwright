@@ -445,7 +445,7 @@
       "sourcePath": "core/commands/sw-retro.md"
     },
     {
-      "bodyDigest": "bd9fbb595349f640e933b85c6e3baf8f7b53c67e47f7fa3830be9c77bb2cbcb9",
+      "bodyDigest": "5dec8dd62cd020445bc4e956713108fb342a7a84160d664e2c9c909990db6e76",
       "capabilities": [],
       "description": "Consolidated post-delivery retrospective (retro \u2192 compound write \u2192 memory-sync \u2192 status). Supports --pre-merge/--post-merge phase dispatch; does not merge or auto-promote rules.",
       "id": "sw-retrospective",
@@ -743,7 +743,7 @@
       "sourcePath": "core/skills/rca-core/SKILL.md"
     },
     {
-      "bodyDigest": "1806de8e5dc14867a5e099aa1313a9d73a2372ddca3bd735035c89aeb4ded2fe",
+      "bodyDigest": "bc7547eef7f14f7a523c82dd663e1d4c840629f5653ba88380b1a3bfe10f5284",
       "capabilities": [],
       "description": "Post-ship retrospective \u2014 what went well, painful, and should change; learning candidates for compounding. Use when running /sw-retrospective after phase or merge milestones. Report-only by default; does not auto-apply rules.",
       "id": "retro",

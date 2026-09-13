@@ -26,6 +26,14 @@ merge is detected or no deliver context applies.
 
 Driver env (pre-merge): `python3 scripts/wave.py retrospective premerge-env`
 
+
+## Capture journal evidence (PRD 350)
+
+When a deliver run id is available, load implementation evidence through
+`scripts/retrospective_evidence.py` (wraps `wave_journal.read_events`) before
+compounding. Do not read `events.jsonl` directly. Memory candidates stay
+`pending_human_review` observations only.
+
 ## Chain
 
 ```

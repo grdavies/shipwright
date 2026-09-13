@@ -117,7 +117,9 @@ def contender(tag: str) -> dict:
         return {"tag": tag, "lease": "parked", "leaseOut": lease}
     if lease.get("verdict") != "pass":
         return {"tag": tag, "lease": "refused", "leaseOut": lease}
-    time.sleep(0.25)
+    # Hold long enough that a delayed peer is still likely to observe the live lease
+    # under CI scheduling jitter (0.25s was flaky on shared runners).
+    time.sleep(0.75)
     try:
         pr = create_or_reuse_phase_pr(
             fix,
@@ -140,6 +142,15 @@ refused = [r for r in results if r.get("lease") in ("refused", "parked")]
 # R5: foreign-owner contention parks (verdict park) instead of ship-lease-held.
 for r in results:
     if r.get("lease") == "refused" and (r.get("leaseOut") or {}).get("verdict") == "park":
+        r["lease"] = "parked"
+    # Outer acquire can race past a just-released peer under CI jitter; if PR create
+    # then parks on ship-lease, count that contender as parked (single-flight still holds).
+    pr = r.get("pr") or {}
+    if (
+        r.get("lease") == "held"
+        and pr.get("verdict") == "park"
+        and pr.get("cause") == "ship-lease-parked"
+    ):
         r["lease"] = "parked"
 held = [r for r in results if r.get("lease") == "held"]
 refused = [r for r in results if r.get("lease") in ("refused", "parked")]

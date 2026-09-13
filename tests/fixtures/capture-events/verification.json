@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1",
+  "runId": "deliver-fixture-run-001",
+  "phaseId": "phase-1",
+  "agentId": "agent-parent",
+  "provenanceKind": "test_result",
+  "provenanceRef": "pytest-run-1",
+  "pendingState": null,
+  "verificationOutcome": "partial",
+  "verificationEvidence": "test_capture_schema_lib,test_wave_journal_capture",
+  "eventType": "verification",
+  "timestamp": "2026-09-12T10:15:00Z",
+  "summary": "Unit gate partial for capture schema",
+  "eventId": "f083698c7ca5eed1"
+}
