@@ -14,6 +14,8 @@ from typing import Any, Mapping, MutableMapping, Sequence
 from .validate_bundle import digest_payload, validate_bundle  # noqa: F401 — digest_payload used below
 
 TRANSITION_SCHEMA_VERSION = "cross-host-handoff@v1"
+CHECKPOINT_SCHEMA_VERSION = "handoff-checkpoint@v1"
+CHECKPOINT_DIR_NAME = "sw-handoff-checkpoints"
 _CREDENTIAL_KEY_RE = re.compile(
     r"(password|secret|token|credential|api[_-]?key|authorization|private[_-]?key)",
     re.IGNORECASE,
@@ -205,6 +207,57 @@ def neutralize_checkpoint_paths(
     return out
 
 
+def durable_checkpoint_path(root: Path, transition_id: str) -> Path:
+    """Return durable checkpoint location under operator-local state (PRD 352 R16)."""
+    safe = str(transition_id or "").strip()
+    if not safe or "/" in safe or "\\" in safe or ".." in safe:
+        raise BundleBuildError(f"invalid transition_id for checkpoint: {transition_id!r}")
+    return Path(root).resolve() / ".cursor" / CHECKPOINT_DIR_NAME / f"{safe}.json"
+
+
+def write_durable_checkpoint(
+    root: Path,
+    *,
+    transition_id: str,
+    continuation_payload: Mapping[str, Any],
+    bundle_digest: str = "",
+    source_host: str = "",
+    destination_host: str = "",
+) -> dict[str, Any]:
+    """Persist continuation checkpoint before source completion signal (PRD 352 R16)."""
+    normalized = neutralize_checkpoint_paths(dict(continuation_payload), root=Path(root))
+    record: dict[str, Any] = {
+        "schemaVersion": CHECKPOINT_SCHEMA_VERSION,
+        "transitionId": str(transition_id),
+        "status": "checkpointed",
+        "continuationPayload": normalized,
+    }
+    if bundle_digest:
+        record["bundleDigest"] = str(bundle_digest)
+    if source_host:
+        record["sourceHost"] = str(source_host)
+    if destination_host:
+        record["destinationHost"] = str(destination_host)
+    _reject_credential_material(record)
+    path = durable_checkpoint_path(root, transition_id)
+    atomic_write_json(path, record)
+    return {"verdict": "pass", "path": str(path), "transitionId": str(transition_id)}
+
+
+def read_durable_checkpoint(root: Path, transition_id: str) -> dict[str, Any]:
+    """Load a durable checkpoint written before source completion (PRD 352 R16)."""
+    path = durable_checkpoint_path(root, transition_id)
+    if not path.is_file():
+        raise BundleBuildError(f"durable checkpoint missing at {path} (R16)")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise BundleBuildError(f"durable checkpoint invalid at {path} (R16)") from exc
+    if not isinstance(payload, dict):
+        raise BundleBuildError(f"durable checkpoint must be an object at {path} (R16)")
+    return payload
+
+
 def atomic_write_json(path: Path, document: Mapping[str, Any], *, mode: int = 0o600) -> None:
     """Crash-safe JSON write via temp + os.replace (TR5)."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -251,5 +304,15 @@ def export_cross_host_bundle(
     verdict = validate_bundle(enriched)
     if verdict.get("verdict") != "pass":
         raise BundleBuildError(f"cross-host bundle failed validation: {verdict}")
+    tid = str(enriched.get("transition_id") or transition_id or "").strip()
+    if root is not None and tid:
+        write_durable_checkpoint(
+            Path(root),
+            transition_id=tid,
+            continuation_payload=continuation_payload,
+            bundle_digest=str(enriched.get("bundleDigest") or ""),
+            source_host=str(source_host),
+            destination_host=str(destination_host),
+        )
     atomic_write_json(Path(destination), enriched)
     return enriched

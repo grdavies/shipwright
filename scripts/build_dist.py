@@ -47,6 +47,39 @@ def build_wheel(root: Path, *, out_dir: Path) -> dict[str, object]:
     return {"verdict": "pass", "wheel": wheels[-1].as_posix()}
 
 
+def verify_handoff_release_gate(root: Path) -> dict[str, object]:
+    """Fail closed when handoff deps or manifest completeness drift (PRD 352 R14/TR6)."""
+    from handoff_bundle import (
+        verify_dependencies,
+        verify_handoff_manifest,
+        write_handoff_manifest,
+    )
+
+    deps = verify_dependencies(root)
+    if deps.get("verdict") != "pass":
+        return {
+            "verdict": "error",
+            "error": str(deps.get("error") or "handoff:missing-dependency"),
+            "missing": list(deps.get("missing") or []),
+            "remediation": deps.get("remediation"),
+        }
+    write_handoff_manifest(root)
+    manifest = verify_handoff_manifest(root)
+    if manifest.get("verdict") != "pass":
+        return {
+            "verdict": "error",
+            "error": str(manifest.get("error") or "handoff:manifest-mismatch"),
+            "missing": list(manifest.get("missing") or []),
+            "mismatched": list(manifest.get("mismatched") or []),
+            "remediation": manifest.get("remediation"),
+        }
+    return {
+        "verdict": "pass",
+        "handoffManifest": manifest.get("path"),
+        "modules": list(manifest.get("modules") or []),
+    }
+
+
 def build_dist(
     root: Path,
     *,
@@ -75,6 +108,12 @@ def build_dist(
     bundle = None
     if sync_runtime:
         bundle = sync_runtime_bundle(root)
+        if bundle.get("verdict") != "pass":
+            return bundle
+
+    handoff_gate = verify_handoff_release_gate(root)
+    if handoff_gate.get("verdict") != "pass":
+        return handoff_gate
 
     wheel = None
     if build_wheel_flag:
@@ -84,6 +123,7 @@ def build_dist(
         "verdict": "pass",
         "transformed": transformed,
         "runtimeBundle": bundle,
+        "handoffGate": handoff_gate,
     }
     if wheel is not None:
         result["wheel"] = wheel
