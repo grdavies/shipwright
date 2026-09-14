@@ -86,19 +86,14 @@ def digest_payload(payload: Mapping[str, Any]) -> str:
 
 
 def detect_harness() -> str:
-    """Detect the active harness (cursor | claude-code | unknown)."""
-    explicit = os.environ.get("SW_SETUP_PLATFORM", "").strip()
-    if explicit in SUPPORTED_HARNESSES:
-        return explicit
-    if os.environ.get("CURSOR_AGENT") or os.environ.get("CURSOR_PLUGIN_ROOT"):
-        return "cursor"
-    if (
-        os.environ.get("CLAUDE_CODE")
-        or os.environ.get("CLAUDE_CODE_SSE_PORT")
-        or os.environ.get("CLAUDE_PLUGIN_ROOT")
-    ):
-        return "claude-code"
-    return "unknown"
+    """Detect the active harness via unified host resolver (PRD 352 R11)."""
+    repo = Path(__file__).resolve().parents[1]
+    if str(repo) not in sys.path:
+        sys.path.insert(0, str(repo))
+    from core.adapters.host_resolver import detect_runtime_host_id
+
+    host = detect_runtime_host_id()
+    return host if host in SUPPORTED_HARNESSES else "unknown"
 
 
 def detect_model_id() -> str:
@@ -1306,6 +1301,30 @@ def cmd_resume(args: argparse.Namespace) -> int:
         print(json.dumps(deps, ensure_ascii=False, indent=2, sort_keys=True))
         return 20
 
+    try:
+        from core.adapters.host_resolver import DestinationValidationError, requalify
+    except ImportError as exc:
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "error": "handoff:missing-dependency",
+                    "missing": ["core/adapters/host_resolver.py"],
+                    "remediation": HANDOFF_INSTALLER_REPAIR,
+                    "detail": str(exc),
+                },
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 20
+    try:
+        qualified = requalify(repo_root=root)
+    except DestinationValidationError as exc:
+        print(json.dumps(exc.as_dict(), ensure_ascii=False, indent=2, sort_keys=True))
+        return 20
+
     transition_id = str(record.get("transition_id") or transition_id or "imported")
     session_id = os.environ.get("SW_SESSION_ID", f"{os.getpid()}")
     ownership_generation = int(record.get("ownershipGeneration") or 0)
@@ -1350,7 +1369,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
             run_id=run_id,
             transition_id=transition_id,
             next_eligible_action="deliver-loop",
-            host_adapter_id=os.environ.get("SW_HOST_ADAPTER_ID", "destination"),
+            host_adapter_id=qualified.surface_adapter,
         )
         advance_transition(root, transition_id, "resumed")
         release_source_lease(root, run_id, session_id)
@@ -1361,6 +1380,12 @@ def cmd_resume(args: argparse.Namespace) -> int:
         "transitionId": transition_id,
         "ownershipGeneration": ownership_generation,
         "dispatched": True,
+        "qualifiedHost": {
+            "host_id": qualified.host_id,
+            "surface_adapter": qualified.surface_adapter,
+            "installed_version": qualified.installed_version,
+            "auth_status": qualified.auth_status,
+        },
         **{k: v for k, v in result.items() if k != "verdict"},
     }
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
