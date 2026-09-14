@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.0](https://github.com/grdavies/shipwright/compare/v2.15.0...v2.16.0) (2026-09-14)
+
+
+### Features
+
+* **prd-352:** reliable host switching ([#1192](https://github.com/grdavies/shipwright/issues/1192)) ([ea0b236](https://github.com/grdavies/shipwright/commit/ea0b23610964f68d218e8af47a6100268bfad7a5))
+
 ## [2.15.0](https://github.com/grdavies/shipwright/compare/v2.14.0...v2.15.0) (2026-09-14)
 
 
