@@ -126,6 +126,11 @@ def test_duplicate_event_id_first_write_wins(tmp_path: Path) -> None:
     lines = events_path(tmp_path, run_id).read_text(encoding="utf-8").strip().splitlines()
     assert len(lines) == 1
     assert json.loads(lines[0])["summary"] == "first"
+    errors = (
+        tmp_path / ".cursor" / "sw-deliver-runs" / run_id / "capture-errors.jsonl"
+    ).read_text(encoding="utf-8")
+    assert "duplicate_event_id" in errors
+    assert "duplicate_skipped" in errors
 
 
 def test_storage_limit_raises_and_logs(tmp_path: Path) -> None:

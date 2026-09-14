@@ -125,12 +125,68 @@ def detect_duplicate_skills(adapter_dists: dict[str, Path]) -> dict[str, list[st
     return {sid: ads for sid, ads in owners.items() if len(ads) > 1}
 
 
+def load_adapter_descriptor(repo: Path, adapter: str) -> dict[str, Any]:
+    """Load ``platforms/<adapter>/descriptor.json`` when present."""
+    path = repo / "platforms" / adapter / "descriptor.json"
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def adapter_skills_mode(repo: Path, adapter: str) -> str | None:
+    """Return descriptor ``skills`` mode (e.g. ``native``, ``ref-index``)."""
+    value = load_adapter_descriptor(repo, adapter).get("skills")
+    return str(value) if isinstance(value, str) and value.strip() else None
+
+
+def required_artifact_paths(repo: Path, adapter: str, dist: Path) -> set[Path]:
+    """Resolve per-adapter required artifacts that must not be deleted (R8).
+
+    Reads ``platforms/<adapter>/required-artifacts.json`` glob patterns when
+    present, and always treats native skill bodies (``skills/*/SKILL.md``) as
+    required for ``skills: native`` adapters.
+    """
+    required: set[Path] = set()
+    manifest = repo / "platforms" / adapter / "required-artifacts.json"
+    if manifest.is_file():
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            data = {}
+        patterns = []
+        if isinstance(data, dict):
+            raw = data.get("paths") if data.get("paths") is not None else data.get("artifacts")
+            if isinstance(raw, list):
+                patterns = [str(p) for p in raw if str(p).strip()]
+        for pattern in patterns:
+            for match in dist.glob(pattern):
+                if match.is_file():
+                    required.add(match.resolve())
+    if adapter_skills_mode(repo, adapter) == "native":
+        skills_root = dist / "skills"
+        if skills_root.is_dir():
+            for skill_md in skills_root.glob("*/SKILL.md"):
+                if skill_md.is_file():
+                    required.add(skill_md.resolve())
+    return required
+
+
 def resolve_duplicate_skills(
     repo: Path,
     adapter_dists: dict[str, Path],
 ) -> list[dict[str, Any]]:
-    """Keep canonical core projection; remove stale duplicate bodies (R45)."""
+    """Keep canonical core projection; remove stale duplicate bodies (R45).
+
+    PRD 352 R7: skip ``unlink()`` for adapters whose descriptor declares
+    ``skills: native``. PRD 352 R8: refuse (InstallerError) when a planned
+    deletion would remove a required artifact from the per-adapter manifest.
+    """
     actions: list[dict[str, Any]] = []
+    planned: list[tuple[str, str, Path, str]] = []
     duplicates = detect_duplicate_skills(adapter_dists)
     for skill_id, adapters in sorted(duplicates.items()):
         core_skill = repo / "core" / "skills" / skill_id / "SKILL.md"
@@ -139,17 +195,20 @@ def resolve_duplicate_skills(
             dist = adapter_dists[adapter]
             body = dist / "skills" / skill_id / "SKILL.md"
             if body.is_file():
-                body.unlink()
-                actions.append(
-                    {
-                        "skill_id": skill_id,
-                        "adapter": adapter,
-                        "action": "removed_stale_body",
-                        "kept": canonical,
-                    }
-                )
+                if adapter_skills_mode(repo, adapter) == "native":
+                    actions.append(
+                        {
+                            "skill_id": skill_id,
+                            "adapter": adapter,
+                            "action": "preserved_native_body",
+                            "kept": canonical,
+                        }
+                    )
+                else:
+                    planned.append((skill_id, adapter, body, canonical))
             ref = dist / "skills" / skill_id / "SKILL.ref.json"
             skill_dir = dist / "skills" / skill_id
+            # Native adapters keep their bodies; still allow a core ref marker.
             if skill_dir.is_dir() and not ref.is_file():
                 ref.write_text(
                     json.dumps({"id": skill_id, "source": f"core/skills/{skill_id}"}, indent=2)
@@ -164,6 +223,35 @@ def resolve_duplicate_skills(
                         "kept": canonical,
                     }
                 )
+
+    violations: list[dict[str, str]] = []
+    for skill_id, adapter, body, _canonical in planned:
+        required = required_artifact_paths(repo, adapter, adapter_dists[adapter])
+        if body.resolve() in required:
+            violations.append(
+                {
+                    "skill_id": skill_id,
+                    "adapter": adapter,
+                    "path": str(body),
+                }
+            )
+    if violations:
+        raise InstallerError(
+            "required artifact would be removed by duplicate-skill resolution (R8): "
+            + json.dumps(violations)
+        )
+
+    for skill_id, adapter, body, canonical in planned:
+        if body.is_file():
+            body.unlink()
+            actions.append(
+                {
+                    "skill_id": skill_id,
+                    "adapter": adapter,
+                    "action": "removed_stale_body",
+                    "kept": canonical,
+                }
+            )
     return actions
 
 
@@ -231,7 +319,19 @@ def install_adapters(
 
     all_dists = {a: install_root / a for a in ADAPTER_CHOICES if (install_root / a).is_dir()}
     all_dists.update(generated)
-    dedupe_actions = resolve_duplicate_skills(repo, all_dists)
+    try:
+        dedupe_actions = resolve_duplicate_skills(repo, all_dists)
+    except InstallerError as exc:
+        # R8: required-artifact preservation failure is a fail verdict, not a crash.
+        return {
+            "verdict": "fail",
+            "error": str(exc),
+            "installed": sorted(generated),
+            "paths": {k: str(v) for k, v in generated.items()},
+            "choices": list(ADAPTER_CHOICES),
+            "duplicate_skill_actions": [],
+            "settings_preserved": True,
+        }
 
     return {
         "verdict": "pass",
