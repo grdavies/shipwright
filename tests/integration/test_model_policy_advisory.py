@@ -188,3 +188,42 @@ def test_model_policy_advisory_enforcement_under_load() -> None:
 
     # SC-M3 proxy — fewer than 2% UnresolvableIdentity across the 50 calls.
     assert (unresolvable / 50) < 0.02
+
+
+def test_prd352_r26_advisory_hydrates_in_fresh_subprocess(tmp_path: Path) -> None:
+    """PRD 352 R26 — fresh process must hydrate advisory from durable observations.
+
+    In-process replace_advisory_snapshot is insufficient; a new interpreter must
+    see get_current_advisory() non-None after durable write. Expected red until R22.
+    """
+    import json
+    import subprocess
+    import sys
+    from pathlib import Path as P
+
+    store = tmp_path / "observations"
+    store.mkdir()
+    (store / "advisory.json").write_text(
+        json.dumps(
+            {
+                "recommended_model": "claude-opus-4",
+                "confidence_score": 0.9,
+                "sample_count": 20,
+            }
+        ),
+        encoding="utf-8",
+    )
+    repo = P(__file__).resolve().parents[2]
+    script = "\n".join(
+        [
+            "import os, sys",
+            f"sys.path.insert(0, {str(repo / 'scripts')!r})",
+            f"sys.path.insert(0, {str(repo)!r})",
+            "from graph.learning_consumers import get_current_advisory",
+            f"os.environ['SW_ADVISORY_STORE'] = {str(store)!r}",
+            "adv = get_current_advisory('implement', {})",
+            "assert adv is not None, f'expected hydrated advisory, got {adv!r}'",
+        ]
+    )
+    proc = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stderr + proc.stdout

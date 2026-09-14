@@ -73,3 +73,29 @@ def test_r45_duplicate_skill_keeps_core_projection(tmp_path: Path) -> None:
     assert not (install_root / "codex" / "skills" / "memory" / "SKILL.md").exists()
     assert not (install_root / "opencode" / "skills" / "memory" / "SKILL.md").exists()
     assert (install_root / "codex" / "skills" / "memory" / "SKILL.ref.json").is_file()
+
+
+def test_prd352_r9_native_claude_skill_survives_codex_install(tmp_path: Path) -> None:
+    """PRD 352 R9 — native claude-code SKILL.md must survive a later codex install.
+
+    Pins the defect where resolve_duplicate_skills during install_adapters(['codex'])
+    unlinks native skill bodies under claude-code/skills/<id>/ when the skill id
+    overlaps a core skill (e.g. memory). Expected red until R7/R8 land.
+    """
+    install_root = tmp_path / "adapters"
+    skill_id = "memory"
+    native = install_root / "claude-code" / "skills" / skill_id
+    native.mkdir(parents=True)
+    body = "# Native Claude skill body — must survive codex install\n"
+    (native / "SKILL.md").write_text(body, encoding="utf-8")
+
+    result = installer.install_adapters(
+        ["codex"],
+        repo=_REPO,
+        install_root=install_root,
+    )
+    assert result["verdict"] == "pass"
+    assert (native / "SKILL.md").is_file(), (
+        "native claude-code SKILL.md was removed during codex install/dedupe"
+    )
+    assert (native / "SKILL.md").read_text(encoding="utf-8") == body
