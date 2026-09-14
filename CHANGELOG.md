@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.0](https://github.com/grdavies/shipwright/compare/v2.14.0...v2.15.0) (2026-09-14)
+
+
+### Features
+
+* **portability:** platform portability packaging and conformance (prd 352) ([#1183](https://github.com/grdavies/shipwright/issues/1183)) ([c8b0c6c](https://github.com/grdavies/shipwright/commit/c8b0c6c69ffabd5852f6dcecbb6a46f9fcd66d35))
+
 ## [2.14.0](https://github.com/grdavies/shipwright/compare/v2.13.0...v2.14.0) (2026-09-13)
 
 
