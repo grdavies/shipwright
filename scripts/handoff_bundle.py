@@ -42,6 +42,7 @@ REQUIRED_HANDOFF_MODULES: tuple[str, ...] = (
     "core/handoff/bundle.py",
     "core/handoff/validate_bundle.py",
     "core/handoff/acknowledgement.py",
+    "core/handoff/transition.py",
     "scripts/handoff_bundle.py",
 )
 HANDOFF_INSTALLER_REPAIR = (
@@ -1229,7 +1230,16 @@ def cmd_resume(args: argparse.Namespace) -> int:
             ImportValidationError,
             validate_import_record,
             write_import_record_from_bundle,
+            write_resume_evidence,
         )
+        from core.handoff.transition import (
+            TransitionError,
+            advance_transition,
+            create_transition,
+            load_transition,
+        )
+        from wave_lock import fence_source_lease, release_source_lease
+        from wave_state import adopt_run_lease, assert_ownership_before_dispatch
     except ImportError as exc:
         print(
             json.dumps(
@@ -1295,13 +1305,61 @@ def cmd_resume(args: argparse.Namespace) -> int:
     if deps.get("verdict") != "pass":
         print(json.dumps(deps, ensure_ascii=False, indent=2, sort_keys=True))
         return 20
+
+    transition_id = str(record.get("transition_id") or transition_id or "imported")
+    session_id = os.environ.get("SW_SESSION_ID", f"{os.getpid()}")
+    ownership_generation = int(record.get("ownershipGeneration") or 0)
+    try:
+        transition = load_transition(root, transition_id)
+    except TransitionError:
+        transition = create_transition(
+            root,
+            transition_id=transition_id,
+            run_id=run_id,
+            session_id=session_id,
+            ownership_generation=ownership_generation,
+        )
+    if transition.get("state") == "requested":
+        advance_transition(root, transition_id, "checkpointed")
+        advance_transition(root, transition_id, "destination_validated")
+    fence = fence_source_lease(root, run_id, session_id, transition_id=transition_id)
+    if fence.get("verdict") != "pass":
+        print(json.dumps(fence, ensure_ascii=False, indent=2, sort_keys=True))
+        return 20
+
+    dispatch_state: dict[str, Any] = {"runLease": {"ownershipGeneration": ownership_generation}}
+    assert_ownership_before_dispatch(dispatch_state, ownership_generation)
+    adopt_run_lease(
+        dispatch_state,
+        run_id=run_id,
+        generation=max(1, ownership_generation),
+        ownership_generation=ownership_generation,
+    )
+
     argv = deliver_scheduler_argv(run_id, root=root)
     result = dispatch_deliver_scheduler(argv, cwd=root)
+    if result.get("verdict") == "pass":
+        advance_transition(
+            root,
+            transition_id,
+            "ownership_transferred",
+            ownership_generation=ownership_generation + 1,
+        )
+        write_resume_evidence(
+            root,
+            run_id=run_id,
+            transition_id=transition_id,
+            next_eligible_action="deliver-loop",
+            host_adapter_id=os.environ.get("SW_HOST_ADAPTER_ID", "destination"),
+        )
+        advance_transition(root, transition_id, "resumed")
+        release_source_lease(root, run_id, session_id)
     payload = {
         "verdict": result.get("verdict"),
         "action": "resume",
         "runId": run_id,
-        "transitionId": record.get("transition_id"),
+        "transitionId": transition_id,
+        "ownershipGeneration": ownership_generation,
         "dispatched": True,
         **{k: v for k, v in result.items() if k != "verdict"},
     }
