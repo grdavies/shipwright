@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.1](https://github.com/grdavies/shipwright/compare/v2.16.0...v2.16.1) (2026-09-14)
+
+
+### Bug Fixes
+
+* **planning:** reassemble chunked doc-review issue bodies ([#1194](https://github.com/grdavies/shipwright/issues/1194)) ([fcba399](https://github.com/grdavies/shipwright/commit/fcba399b01218989e0b58c9c8096ebca67bc882b))
+
 ## [2.16.0](https://github.com/grdavies/shipwright/compare/v2.15.0...v2.16.0) (2026-09-14)
 
 
