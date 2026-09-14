@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "HandoffTransition@v1",
+  "transitionId": "tid-as5-crash",
+  "runId": "run-as5",
+  "state": "ownership_transferred",
+  "ownershipGeneration": 1,
+  "createdAt": "2026-09-14T00:00:00Z",
+  "updatedAt": "2026-09-14T00:00:03Z",
+  "previousState": "destination_validated",
+  "crashScenario": "AS5",
+  "note": "Process crashed after ownership transfer persist; resume must announce from durable record."
+}

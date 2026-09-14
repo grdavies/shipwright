@@ -1,0 +1,9 @@
+{
+  "schemaVersion": "HandoffTransition@v1",
+  "transitionId": "tid-as6-crash",
+  "runId": "run-as6",
+  "state": null,
+  "ownershipGeneration": 0,
+  "crashScenario": "AS6",
+  "note": "Crash before first persist; absence of a record means restart from create_transition, not a fabricated resumed state."
+}
