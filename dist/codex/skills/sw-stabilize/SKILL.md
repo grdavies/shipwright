@@ -1,0 +1,211 @@
+---
+name: sw-stabilize
+description: Sync merge-base when the PR conflicts, then consume failing checks and unresolved threads before the next push. Does not merge the PR to main.
+alwaysApply: false
+trigger: "/sw-stabilize" or "stabilize the current PR"
+---
+
+# `/sw-stabilize`
+
+Post-PR stabilization for the current branch. Prefer honest incremental progress over "clearing" large
+automated-review thread lists. **Merge conflicts, failing checks, and unresolved review threads** are
+**one** triangulation surface — conflicts are evaluated first because they block CI from running.
+
+This is the single-pass stabilizer. The opt-in goal-loop wrapper (keep stabilizing until the gate is
+green) is the `stabilize-loop` skill, added in a later phase.
+
+## Config
+
+Read `.cursor/workflow.config.json`:
+
+- `checks` — drives the gate via the `checks-gate` skill (all checks by default).
+- `coderabbit.noDefer` — when `true`, **no deferrals**: every blocker is `fix-now`,
+  `resolve-with-evidence`, or `already-fixed-with-evidence`. Do not use `defer-*` buckets.
+- `verify` — the verification commands to re-run after fixes.
+- `agentsFile`, `prdsDir`, `tasksDir` — for context and (when deferrals are allowed) issue cross-refs.
+
+## Preconditions
+
+```bash
+PR_JSON=$(python3 scripts/sw_bootstrap.py host.py -- pr-view --number "$PR_NUMBER" )
+PR_NUMBER=$(Python json -r .number <<<"$PR_JSON")
+HEAD_SHA=$(Python json -r .headRefOid <<<"$PR_JSON")
+```
+
+Stop if no PR exists.
+
+### 0. Merge-base sync (pre-CI)
+
+GitHub will not run required checks while `mergeable == CONFLICTING`. Resolve this **before** harvesting
+threads or interpreting a vacuous gate.
+
+```bash
+python3 scripts/stabilize-merge-sync.py fetch-base
+STATUS=$(python3 scripts/stabilize-merge-sync.py status)
+echo "$STATUS" | Python json .
+```
+
+When `verdict` is `conflicting`:
+
+1. Classify every path in `conflictingFiles` as ledger bucket **`fix-now`** (blocks all other work).
+2. Merge the PR base into the current branch — default `git merge origin/<baseRefName>` (preserve branch
+   history; do not rebase unless repo policy requires it).
+3. Resolve conflicts with minimal, correctness-first edits:
+   - **`docs/prds/INDEX.md`** — union PRD rows from both sides; never drop a numbered entry.
+   - **`core/**` command/skill/rule sources** — keep both sides' intent; prefer the branch's feature work
+     plus main's additive changes.
+   - **`dist/**`** — do not hand-merge emitted copies; resolve `core/` then run
+     `python3 -m sw generate --all`.
+4. Re-run scoped `verify` on the touched surface; one focused commit; `python3 scripts/sw_bootstrap.py git-push.py` once.
+5. Re-run `stabilize-merge-sync.py status` — must be `mergeable` before step 1 below.
+
+When `verdict` is `mergeable`, continue to harvest.
+
+Build the blocker surface for **this** `HEAD_SHA` before changing code (after any merge-base sync).
+
+1. Fetch review-thread summary via `python3 scripts/sw_bootstrap.py host.py -- review-threads --number "$PR_NUMBER"`
+   (paginate `reviewThreads` with `after` until `hasNextPage` is false). Write each GraphQL response to
+   a temp **file** before `Python json` — multiline thread bodies break naive stdin pipelines.
+2. **Harvest non-inline review findings** (the surface that has no thread to reply/resolve). CodeRabbit
+   posts actionable findings inside collapsible `<details>` sections of its **review summary body** and
+   its **PR-level walkthrough comment**, not only as inline threads. These never appear in
+   `reviewThreads`, so fetch the bodies too:
+
+   ```bash
+   OWNER_REPO=$(python3 scripts/sw_bootstrap.py host.py -- repo-meta | Python json -r '.data.nameWithOwner' )
+   # optional supplemental review/issue comment harvest via host REST when needed
+   ```
+
+   From the bot-authored bodies, extract every finding under sections such as **"Outside diff range
+   comments"**, **"Additional comments"**, and **"Nitpick comments"** into `/tmp/sw-stabilize-noninline.md`,
+   keyed by `path:line` + the suggested change. Treat each as a first-class blocker — identical priority
+   to an inline thread — the **only** difference is there is no reply/resolve handle (see the ledger).
+3. Compute the check gate with **`scripts/check-gate.py`** (canonical — do not hand-roll host verdicts).
+   Tee stdout to `/tmp/sw-stabilize-gate.json` for the RCA pass. Consume its JSON + exit code via the
+   **`checks-gate`** skill (all checks, neutral allowlist applied). Pull failure logs for failing checks.
+
+## RCA pass (R35)
+
+After harvest, before the blocker ledger, run **one** bounded analysis step via
+`skills/rca-core/SKILL.md` (**stabilize entry**). It consumes the artifacts above — it does **not**
+re-fetch threads, reviews, or the gate.
+
+- Inputs: `/tmp/sw-stabilize-threads.json`, `/tmp/sw-stabilize-noninline.md`, `/tmp/sw-stabilize-gate.json`
+- Output: ranked hypotheses + causal chain for **`fix-now`** candidates only
+- **Not a nested loop** — `stabilize-loop` owns the R29 iteration budget; this pass runs once per
+  `/sw-stabilize` invocation
+- **Bypass:** `resolve-with-evidence`, `already-fixed-with-evidence`, and defer buckets skip the
+  causal-chain gate — classify them straight into the ledger
+
+## Blocker ledger
+
+Classify **each** item — inline thread **and** non-inline finding — into exactly one bucket:
+
+- `fix-now` — valid, reproducible, feasible in this pass (prefer a small subset if the surface is large).
+- `resolve-with-evidence` — invalid/stale/not-applicable; cite code, policy, or a prior commit.
+- `already-fixed-with-evidence` — fixed on current `HEAD`; cite file/lines or commit.
+- `defer-with-reason` — **only when `coderabbit.noDefer` is false.** Requires an inline rationale; sub-classify
+  as `defer-inline` (non-extensive, reply-only) or `defer-issue` (extensive rework → GitHub issue).
+
+### Inline threads vs non-inline findings
+
+The bucket logic is the same for both, but the resolution mechanism differs:
+
+- **Inline threads** have a thread ID → reply-before-resolve via GraphQL (below).
+- **Non-inline findings** (`/tmp/sw-stabilize-noninline.md`: "Outside diff range comments", etc.) have
+  **no thread ID** — they cannot be replied to or resolved. Triage and **fix them in code** exactly like
+  threads, verify, then record their disposition in the pass summary (path:line → fixed-in `<sha>` /
+  resolved-with-evidence / deferred-with-reason). Never skip a finding solely because it lacks a
+  reply/resolve handle.
+
+### Deferral issue threshold (only relevant when deferrals are allowed)
+
+Create a tracking issue only for genuine extensive rework: cross-PR/cross-module refactor, new
+component/schema/migration/API-contract change, architectural/pattern/doctrine decision, work owned by a
+different unit of work, or coordinated multi-commit scope. Never open issues for nits, micro-refactors,
+or trivial follow-ups — those are `defer-inline` (reply + resolve) or `resolve-with-evidence`.
+
+## Procedure
+
+0. **Merge-base sync** — `stabilize-merge-sync.py status`; when `conflicting`, merge base, resolve,
+   verify, push, re-probe. Do not harvest checks/threads until `mergeable`.
+1. **Pre-work search (mandatory)** — before the first substantive mutation this pass, run `memory-preflight`
+   **pre-work search** per `skills/memory/SKILL.md` **Pre-work search (mandatory)** (scoped to PR paths;
+   classes `rule`, `decision`, `learning`, `code-context`, `design` plus known CI failures and review-bot
+   patterns via `providers/<memory.provider>.md` — no direct provider call). Surface hits and reconcile
+   applicable rules/contradicting decisions before triage/fixes. Memory informs triage; it never replaces
+   verification against current code.
+2. **RCA pass** — `Load skills/rca-core/SKILL.md` (stabilize entry) on the harvested artifacts; use its
+   output to inform triage. Then classify every item into the ledger (below).
+3. Triage all **unresolved** threads, all **non-inline findings** (`/tmp/sw-stabilize-noninline.md`), and
+   all **failing** checks (under the gate) into exactly one ledger bucket.
+4. **Verify** every item you intend to resolve against current code — no exceptions. Unverified items
+   stay unresolved.
+5. Implement `fix-now` items for this pass only. Do not expand scope to "finish the bot."
+6. When deferrals are allowed and an item is `defer-issue`: search existing issues
+   (host issue search when available), then create one with a `## Relationships` section (`Blocked by:` /
+   `Blocks:` / `Related:`, using `none` where empty) and mirror the dependency on referenced issues.
+   Add the issue number to the ledger before replying to those threads.
+7. **Threads (strict):** reply before resolve, with specific evidence (commit SHA, file paths, behavior).
+   Use thread-level GraphQL only: `addPullRequestReviewThreadReply(input: { pullRequestReviewThreadId, body })`
+   then `resolveReviewThread(input: { threadId })`. Resolve **only** verified `resolve-with-evidence`,
+   `already-fixed-with-evidence`, or (when allowed) `defer-inline`/`defer-issue` items. Never mass-resolve.
+   For multi-line reply bodies, pass the body via a file — inline shell heredocs with backticks break
+   `python3 scripts/sw_bootstrap.py host.py -- review-threads`.
+8. **Non-inline findings:** apply the `fix-now` code changes the same as for threads. There is no
+   reply/resolve API, so do **not** attempt one — instead record each finding's disposition in the pass
+   summary (and `memory-preflight` write where durable). Their "resolution" is the verified code change
+   landing on `HEAD`; the next pass re-harvests the bodies and confirms the section no longer recurs.
+9. Re-run `verify` commands from config across the touched surface; log to `/tmp/sw-stabilize-verify.log`.
+10. If fixes were made: stage, create **one** focused commit for this pass, `python3 scripts/sw_bootstrap.py git-push.py`
+    once (never raw `git push`; secret scan runs pre-push — R41/R50).
+11. Store concise `memory-preflight` writes for durable learnings (recurring bot false positives, accepted
+   review patterns, non-obvious CI fixes, file-specific debug context) with `relatedFiles`. No raw thread
+   dumps, secrets, or routine pass/fail logs.
+12. **Execution telemetry (R29)** — before returning, record one stabilize pass:
+
+   ```bash
+   python3 scripts/execution_telemetry.py record --command sw-stabilize      --iteration-count "$STABILIZE_ITERATION"      --blocker-ledger-size "$BLOCKER_LEDGER_SIZE"      --time-to-green-ms "$TIME_TO_GREEN_MS"      --rca-triggered-count 1      [--green]
+   ```
+
+   Use `1` for `--rca-triggered-count` when the RCA pass (R35) ran; `0` when bypassed. Persist under
+   `$SW_RUN_DIR/execution-telemetry.json` in phase-mode dispatch.
+13. Return the PR URL, the ledger summary (counts of still-unresolved threads **and** still-open
+    non-inline findings, and — when deferrals are allowed — `defer-inline` vs `defer-issue` with issue
+    links), the gate verdict, and hand off to `/sw-watch-ci`.
+
+**Communication intensity:** full
+
+**Model tier:** build — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-stabilize`.
+
+
+## Deliver-loop remediation (PRD 036 R6–R8)
+
+When `/sw-deliver` routes a post-merge `verify:failed` regression from `merge-run-next` (exit 20), the
+conductor dispatches `/sw-stabilize` on the phase branch within `deliver.remediation.maxAttempts`
+(**regression budget**, separate from `verifyRemediationAttempts` for environmental flakes).
+
+- **Regression path** — `verify:failed` → `remediate` → `/sw-stabilize` on the phase head; merge is retained.
+- **Environmental path** — `verify:environmental` (exit 10) uses `verifyRemediationAttempts` only.
+- **No-progress breaker** — durable state signature includes `remediationAttempts`, `lastRemediationAt`, and
+  `stabilizePassId` so a freshly-`blocked` phase with budget does not trip `conductor:no-progress` before
+  the first remediation attempt.
+- **Budget exhaustion** — emits one consolidated halt with `resumeCommand`; repeated identical verify causes
+  escalate early as `remediation-non-converging` even when budget remains.
+
+## Guardrails
+
+- Merge conflicts are **fix-now** and block check/thread triage until `mergeable` — never interpret
+  "checks awaiting conflict resolution" as green or yellow.
+- Failing checks, unresolved threads, non-inline review findings, and merge conflicts are **one**
+  triangulation surface, evaluated in that order.
+- Non-inline findings have no reply/resolve API — never invent one; their resolution is the verified code
+  change on `HEAD`, confirmed by re-harvesting the review bodies on the next pass.
+- When `coderabbit.noDefer` is true, do not defer — resolve with evidence or fix.
+- Never resolve a thread you did not verify against current code (or tie to a concrete rationale/issue).
+- Never mass-resolve to "clear the queue" or hit a thread-count target.
+- Use thread-level reply APIs only (not `/pulls/comments/{id}/replies`, `addPullRequestReviewComment`,
+  or top-level PR comment via host REST). Resolve only after the reply succeeds.
+- Do not rerun workflows, merge, or dismiss failures automatically.
+- Do not push without re-running verification on the fixes made this pass.
+- Expect multiple passes to drain a large bot thread list — that is normal.

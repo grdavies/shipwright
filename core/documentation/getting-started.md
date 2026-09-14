@@ -15,7 +15,7 @@ Initialization steps (canonical — must match `packaged_init_steps()` in
 
 1. Install the packaged console entry point (use `uv tool` or `pipx` — see below).
 2. In the project repository, run `shipwright init --integration <host>`.
-3. Reload the editor; run `/sw-init` only if priority-zero surfaces still need confirm.
+3. Reload the editor. On Cursor/Claude Code run `/sw-init` only if priority-zero surfaces still need confirm. On Codex invoke `$sw-init` (no slash-command palette) after fully quitting ChatGPT/Codex.
 4. Start a small loop (`/sw-doc` or `/sw-deliver run <frozen-task-list>`).
 
 **Install options** (use isolated environments to avoid PEP 668 conflicts on modern systems):
@@ -46,12 +46,20 @@ cd /path/to/your-project
 shipwright init --integration cursor
 # or
 shipwright init --integration claude-code
+# or
+shipwright init --integration codex
 ```
 
 That single invocation mirrors the host plugin onto the machine and configures the repository
 (`.shipwright/` state root, host files, optional CI stub). Prefer `--dry-run` first to enumerate
 every path the real run would touch. For many repos the packaged init already leaves a workable
 baseline; `/sw-init` is only needed when priority-zero surfaces still require confirm.
+
+**Codex:** there is no `/sw-init` slash command. `shipwright init --integration codex` registers the
+personal marketplace, enables `shipwright@personal` in `~/.codex/config.toml`, and projects `$sw-init`
+as a plugin skill. Fully quit ChatGPT/Codex, start a **new** chat, then invoke `$sw-init` (or ask
+Shipwright to run the init interview) if you still need the guided doctor. Trust plugin hooks if
+prompted.
 
 ### Self-check and self-upgrade
 
@@ -83,13 +91,14 @@ Use the clone path when you are developing Shipwright itself or need a working t
 ```bash
 git clone https://github.com/grdavies/shipwright
 cd shipwright
-python3 scripts/install.py
-/sw-init
+python3 scripts/install.py --integration cursor   # or --integration codex
+/sw-init   # Cursor/Claude Code. On Codex: $sw-init after restarting ChatGPT.
 ```
 
-Run **Developer: Reload Window** in Cursor after install. The installer mirrors the plugin locally and
-installs the editable `shipwright` console entry point. `/sw-init` is the contributor configure step after
-clone — not the packaged `shipwright init` adopter path.
+Run **Developer: Reload Window** in Cursor after install (or fully quit ChatGPT/Codex). The installer
+mirrors the plugin locally and installs the editable `shipwright` console entry point. `/sw-init` (or
+`$sw-init` on Codex) is the contributor configure step after clone — not the packaged `shipwright init`
+adopter path.
 
 This path remains fully supported; it is the **contributor** path, not the default adopter path.
 The installer never configures projects for you automatically — `/sw-init` completes repo setup.
@@ -110,8 +119,8 @@ Shipwright optimizes for **repeatable delivery**, not for skipping human merge j
 ### First session (packaged default)
 
 1. Install via `uv tool` or `pipx` (see install options above).
-2. In your project repo: `shipwright init --integration cursor` (or `claude-code`).
-3. Reload the editor; run a small `/sw-doc` or `/sw-deliver run …` loop.
+2. In your project repo: `shipwright init --integration cursor` (or `claude-code` / `codex`).
+3. Reload the editor (Codex: fully quit ChatGPT, then `$sw-init` / `$sw-doc`); run a small loop.
 4. Stop at the merge gate — do not force-merge to the default branch from the agent.
 
 ### Week two

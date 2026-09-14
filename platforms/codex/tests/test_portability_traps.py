@@ -73,10 +73,18 @@ def test_r20_r21_generator_manifest_and_no_skill_body_duplication(tmp_path: Path
     out = _gen.generate(tmp_path / "codex", repo_root=_REPO, core_root=_REPO / "core")
     manifest = json.loads((out / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
     assert _manifest.validate_codex_plugin_manifest(manifest) == []
+    assert manifest["skills"] == "./skills/"
+    assert (out / "skills" / "sw-init" / "SKILL.md").is_file()
+    assert (out / "hooks" / "hooks.json").is_file()
+    native_hooks = json.loads((out / "hooks" / "hooks.json").read_text(encoding="utf-8"))
+    assert "SessionStart" in native_hooks["hooks"]
+    index = json.loads((out / "skills" / "index.json").read_text(encoding="utf-8"))
+    skill_ids = [s["id"] for s in index["skills"]]
     assert list(out.rglob("SKILL.md")), "PRD 352 R4 requires shipped skill bodies"
     out2 = _gen.generate(tmp_path / "codex2", repo_root=_REPO, core_root=_REPO / "core")
-    m2 = json.loads((out2 / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
-    assert [s["id"] for s in manifest["skills"]] == [s["id"] for s in m2["skills"]]
+    index2 = json.loads((out2 / "skills" / "index.json").read_text(encoding="utf-8"))
+    assert skill_ids == [s["id"] for s in index2["skills"]]
+    assert [c["id"] for c in index["commands"]] == [c["id"] for c in index2["commands"]]
 
 
 def test_r23_mcp_config_uses_shipwright_paths(tmp_path: Path) -> None:

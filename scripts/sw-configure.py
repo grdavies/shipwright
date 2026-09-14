@@ -94,8 +94,9 @@ def packaged_init_steps() -> list[dict]:
         {
             "name": "reload-and-confirm",
             "description": (
-                "Reload the editor; run `/sw-init` only if priority-zero "
-                "surfaces still need confirm."
+                "Reload the editor. On Cursor/Claude Code run `/sw-init` only if "
+                "priority-zero surfaces still need confirm. On Codex invoke `$sw-init` "
+                "(no slash-command palette) after fully quitting ChatGPT/Codex."
             ),
             "required": True,
         },
@@ -1059,6 +1060,7 @@ def enumerate_write_scope(
     machine_dest: Path,
     dist_source: Path,
     accept_ci_stub: bool = True,
+    home: Path | None = None,
 ) -> dict[str, Any]:
     """Enumerate repo-scope and machine-scope writes before any write (R22).
 
@@ -1084,7 +1086,12 @@ def enumerate_write_scope(
         if plan.get("needed"):
             repo_ci = [STUB_WORKFLOW_REL.as_posix()]
 
-    machine_paths = install_mod.plan_machine_write_paths(dist_source, machine_dest)
+    machine_paths = install_mod.plan_machine_write_paths(
+        dist_source,
+        machine_dest,
+        integration=integration,
+        home=home,
+    )
 
     return {
         "repoScope": {

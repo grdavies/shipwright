@@ -5,6 +5,8 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
+from _sw.mirror import iter_tree_files
+
 # Repo-root trees mirrored under ``sw/`` for wheel-only installs.
 RUNTIME_TREE_NAMES: tuple[str, ...] = ("scripts", "dist")
 
@@ -40,9 +42,7 @@ def _copy_tree(src: Path, dest: Path, *, filter_rel: callable | None = None) -> 
     if not src.is_dir():
         return 0
     count = 0
-    for path in sorted(src.rglob("*")):
-        if not path.is_file():
-            continue
+    for path in iter_tree_files(src):
         rel = path.relative_to(src)
         if filter_rel is not None and not filter_rel(rel):
             continue

@@ -8,6 +8,16 @@ import shutil
 from pathlib import Path
 
 
+def iter_tree_files(root: Path):
+    """Yield files under *root*, including hidden names ``Path.rglob('*')`` skips."""
+    if not root.is_dir():
+        return
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        dirnames.sort()
+        for name in sorted(filenames):
+            yield Path(dirpath) / name
+
+
 def _matches_excludes(rel_posix: str, excludes: list[str]) -> bool:
     for pattern in excludes:
         pat = pattern.rstrip("/")

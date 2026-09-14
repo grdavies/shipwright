@@ -106,7 +106,7 @@ pipx install git+https://github.com/grdavies/shipwright.git@vX.Y.Z
 
 # Then configure each project
 cd /path/to/your-project
-shipwright init --integration cursor   # or claude-code
+shipwright init --integration cursor   # or claude-code | codex
 ```
 
 See [releases](https://github.com/grdavies/shipwright/releases) for available versions.
