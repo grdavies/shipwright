@@ -1301,6 +1301,7 @@
 * merge phase implement-test-document into feat/init-step-authority-single-source (07b9be6) <!-- sw-deliver:implement-test-document -->
 * merge phase connect-import-to-executable-resume-slice-1 into feat/reliable-host-switching (285b22a) <!-- sw-deliver:connect-import-to-executable-resume-slice-1 -->
 * merge phase execution-ownership-and-lease-fencing-slice-2 into feat/reliable-host-switching (557602c) <!-- sw-deliver:execution-ownership-and-lease-fencing-slice-2 -->
+* merge phase package-completeness-and-durable-checkpoint-slice-1 into feat/reliable-host-switching (bdc7a82) <!-- sw-deliver:package-completeness-and-durable-checkpoint-slice-1 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
