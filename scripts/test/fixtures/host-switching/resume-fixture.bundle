@@ -1,0 +1,25 @@
+{
+  "activeNode": null,
+  "blockers": [],
+  "bundleDigest": "sha256:61ad2ad3bc431ce3333a445f66364a70fa30c1812fbea8f3acf8101eaaaf4617",
+  "changedFiles": [
+    "scripts/handoff_bundle.py"
+  ],
+  "currentState": {
+    "phaseStatus": "in-progress",
+    "summary": "imported"
+  },
+  "evidence": [],
+  "expiresAt": "2099-01-01T00:00:00Z",
+  "exportedAt": "2026-09-14T00:00:00Z",
+  "goal": "PRD 352 resume fixture",
+  "nextAction": {
+    "action": "resume",
+    "detail": "python3 scripts/handoff_bundle.py resume --run-id <id>"
+  },
+  "relevantRules": [],
+  "resolvedDecisions": [],
+  "schemaVersion": "HandoffBundle@v1",
+  "unresolvedDecisions": [],
+  "workflowDigest": "sha256:505b9451d6326856a4ed2d55483ae39376ff076b47ea3e74d4073071a9455438"
+}

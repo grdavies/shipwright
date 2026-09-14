@@ -93,11 +93,14 @@ def attach_cross_host_transition(
     source_head: str | None = None,
     transition_id: str | None = None,
     transition_schema_version: str = TRANSITION_SCHEMA_VERSION,
+    root: Path | None = None,
 ) -> dict[str, Any]:
     """Add optional cross-host fields; same-host bundles may omit this entirely."""
     updated = deepcopy(dict(bundle))
     tid = transition_id or str(uuid.uuid4())
     payload = dict(continuation_payload)
+    if root is not None:
+        payload = neutralize_checkpoint_paths(payload, root=Path(root))
     captures = [dict(item) for item in (pending_captures or ())]
     _reject_credential_material(payload)
     _reject_credential_material(captures)
@@ -138,6 +141,70 @@ def source_repo_id_for_remote(remote_url: str) -> str:
     return f"sha256:{digest}"
 
 
+def _is_host_absolute(value: str) -> bool:
+    """True for POSIX, Windows drive, or UNC paths regardless of this host's OS."""
+    text = str(value or "")
+    if not text:
+        return False
+    if Path(text).is_absolute() or text.startswith(("/", "\\")):
+        return True
+    return len(text) >= 3 and text[1] == ":" and text[0].isalpha() and text[2] in "/\\"
+
+
+def repo_relative_checkpoint_path(root: Path, raw: str) -> str:
+    """Return a repo-relative POSIX path; refuse paths that escape root (R15)."""
+    value = str(raw or "").strip()
+    if not value:
+        raise BundleBuildError("checkpoint path is empty (R15)")
+    if value in {".", "./"}:
+        return "."
+    root_r = Path(root).resolve()
+    path = Path(value)
+    if ".." in path.parts:
+        raise BundleBuildError(
+            f"checkpoint path {value!r} is not inside repo {root_r} (R15)"
+        )
+    candidate = path if _is_host_absolute(value) else (root_r / path)
+    try:
+        rel = candidate.resolve().relative_to(root_r)
+    except ValueError as exc:
+        raise BundleBuildError(
+            f"checkpoint path {value!r} is not inside repo {root_r} (R15)"
+        ) from exc
+    posix = rel.as_posix()
+    return "." if posix in {"", "."} else posix
+
+
+def neutralize_checkpoint_paths(
+    payload: Mapping[str, Any], *, root: Path
+) -> dict[str, Any]:
+    """Rewrite continuation checkpoint paths to repo-relative form (PRD 352 R15)."""
+    out = deepcopy(dict(payload))
+    if "repo" in out:
+        repo_raw = out.get("repo")
+        if not isinstance(repo_raw, Mapping):
+            raise BundleBuildError("continuation repo must be an object (R15)")
+        repo = dict(repo_raw)
+        worktree = str(repo.get("worktree") or "").strip()
+        if not worktree:
+            raise BundleBuildError("repo.worktree is required (R15)")
+        repo["worktree"] = repo_relative_checkpoint_path(root, worktree)
+        out["repo"] = repo
+    evidence: list[dict[str, Any]] = []
+    if "evidenceReferences" in out:
+        for entry in out.get("evidenceReferences") or []:
+            if not isinstance(entry, Mapping):
+                raise BundleBuildError("evidenceReferences entries must be objects (R15)")
+            item = dict(entry)
+            path = str(item.get("path") or "").strip()
+            if not path:
+                raise BundleBuildError("evidenceReferences.path is required (R15)")
+            item["path"] = repo_relative_checkpoint_path(root, path)
+            evidence.append(item)
+        out["evidenceReferences"] = evidence
+    return out
+
+
 def atomic_write_json(path: Path, document: Mapping[str, Any], *, mode: int = 0o600) -> None:
     """Crash-safe JSON write via temp + os.replace (TR5)."""
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -167,6 +234,7 @@ def export_cross_host_bundle(
     source_repo_id: str | None = None,
     source_head: str | None = None,
     transition_id: str | None = None,
+    root: Path | None = None,
 ) -> dict[str, Any]:
     """Validate and atomically write a cross-host continuation bundle."""
     enriched = attach_cross_host_transition(
@@ -178,6 +246,7 @@ def export_cross_host_bundle(
         source_repo_id=source_repo_id,
         source_head=source_head,
         transition_id=transition_id,
+        root=root,
     )
     verdict = validate_bundle(enriched)
     if verdict.get("verdict") != "pass":
