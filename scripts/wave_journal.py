@@ -17,6 +17,7 @@ from __future__ import annotations
 import fcntl
 import json
 import os
+import time
 import re
 from datetime import datetime, timezone
 from pathlib import Path
@@ -179,6 +180,19 @@ def record_event(
     path = events_path(root, journal_run_id)
     event_id = str(event.get("eventId") or "")
     if event_id in _existing_event_ids(path):
+        # PRD 352 R12 — surface duplicate skips instead of silent drop.
+        _append_error(
+            root,
+            journal_run_id,
+            {
+                "at": _utc_now(),
+                "kind": "duplicate_event_id",
+                "message": f"skipping duplicate eventId {event_id}",
+                "eventId": event_id,
+                "eventType": event.get("eventType"),
+                "status": "duplicate_skipped",
+            },
+        )
         return
 
     limit = max_file_size_bytes(root)
@@ -215,6 +229,18 @@ def record_event(
             raise err
         try:
             if event_id in _existing_event_ids(path):
+                _append_error(
+                    root,
+                    journal_run_id,
+                    {
+                        "at": _utc_now(),
+                        "kind": "duplicate_event_id",
+                        "message": f"skipping duplicate eventId {event_id}",
+                        "eventId": event_id,
+                        "eventType": event.get("eventType"),
+                        "status": "duplicate_skipped",
+                    },
+                )
                 return
             handle.write(payload)
             handle.flush()
@@ -436,8 +462,16 @@ def _build_event(
 ) -> dict[str, Any]:
     ts = timestamp or _utc_now()
     phase_for_id = id_phase_id or phase_id
+    dedup_salt = optional.pop("dedupSalt", None)
+    if dedup_salt is None:
+        # PRD 352 R10 — monotonic component so same-second events stay distinct.
+        dedup_salt = f"m{time.monotonic_ns()}"
+    elif not isinstance(dedup_salt, str):
+        dedup_salt = str(dedup_salt)
     event: dict[str, Any] = {
-        "eventId": compute_event_id(run_id, phase_for_id, event_type, ts),
+        "eventId": compute_event_id(
+            run_id, phase_for_id, event_type, ts, dedup_salt=dedup_salt
+        ),
         "schemaVersion": SCHEMA_VERSION,
         "eventType": event_type,
         "runId": run_id,
@@ -448,6 +482,7 @@ def _build_event(
         "provenanceRef": provenance_ref,
         "summary": summary,
         "pendingState": pending_state,
+        "dedupSalt": dedup_salt,
     }
     resume_id = _RESUME_EVENT_ID.get(run_id)
     if resume_id and "resumedFromEventId" not in optional:
@@ -593,13 +628,8 @@ def _emit_milestone(
         return None
     if sub_trigger not in MILESTONE_SUB_TRIGGERS:
         raise ValueError(f"invalid milestone sub_trigger: {sub_trigger!r}")
-    # Deterministic timestamp per sub-trigger so the same (phaseId, sub_trigger)
-    # composite yields a stable eventId and dedups via R3 (R7).
-    stable_ts = {
-        "phase_boundary": "1970-01-01T00:00:01Z",
-        "decision_recorded": "1970-01-01T00:00:02Z",
-        "blocker_resolved": "1970-01-01T00:00:03Z",
-    }[sub_trigger]
+    # PRD 352 R11 — wall-clock timestamp for the event; stable dedupSalt keeps
+    # (phaseId, sub_trigger) identity for first-write-wins dedup (R3/R7).
     event = _build_event(
         run_id=run_id,
         phase_id=phase_id,
@@ -609,7 +639,8 @@ def _emit_milestone(
         provenance_ref=f"milestone:{sub_trigger}",
         agent_id=agent_id,
         pending_state=None,
-        timestamp=stable_ts,
+        timestamp=_utc_now(),
+        dedupSalt=f"milestone:{sub_trigger}",
     )
     return _safe_record(event, root=root, run_id=run_id)
 
@@ -644,9 +675,11 @@ def emit_discovery(
     if len(summary) > 500:
         raise CaptureSchemaError("summary exceeds 500 characters")
     if not capture_enabled(root):
-        # Still allocate a deterministic id for callers when disabled.
+        # Still allocate an id for callers when disabled (monotonic salt → unique).
         ts = _utc_now()
-        return compute_event_id(run_id, phase_id, "discovery", ts)
+        return compute_event_id(
+            run_id, phase_id, "discovery", ts, dedup_salt=f"m{time.monotonic_ns()}"
+        )
 
     matched = match_gap_keywords(summary, gap_keywords(root))
     draft_gap_ref = None

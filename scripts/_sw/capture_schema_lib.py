@@ -58,6 +58,7 @@ OPTIONAL_STRING_FIELDS = (
     "blockerCondition",
     "verificationEvidence",
     "resumedFromEventId",
+    "dedupSalt",
 )
 
 MAX_SUMMARY_LENGTH = 500
@@ -114,9 +115,26 @@ def load_schema() -> dict[str, Any]:
     return json.loads(schema_path().read_text(encoding="utf-8"))
 
 
-def compute_event_id(run_id: str, phase_id: str, event_type: str, timestamp: str) -> str:
-    """Deterministic 16-char hex event id (R3, TR4)."""
-    material = f"{run_id}:{phase_id}:{event_type}:{timestamp}".encode("utf-8")
+def compute_event_id(
+    run_id: str,
+    phase_id: str,
+    event_type: str,
+    timestamp: str,
+    *,
+    dedup_salt: str = "",
+) -> str:
+    """Deterministic 16-char hex event id (R3, TR4; PRD 352 R10/TR3).
+
+    ``dedup_salt`` carries a microsecond/monotonic (or stable milestone) component
+    so two same-second events can receive distinct ids. When ``dedup_salt`` is
+    non-empty, identity is ``runId:phaseId:eventType:dedup_salt`` (timestamp
+    excluded) so callers can pair wall-clock timestamps with stable dedup keys
+    (PRD 352 R11). When empty, identity includes ``timestamp`` for compatibility.
+    """
+    if dedup_salt:
+        material = f"{run_id}:{phase_id}:{event_type}:{dedup_salt}".encode("utf-8")
+    else:
+        material = f"{run_id}:{phase_id}:{event_type}:{timestamp}".encode("utf-8")
     return hashlib.sha256(material).hexdigest()[:EVENT_ID_HEX_LEN]
 
 
@@ -208,7 +226,14 @@ def validate_event(event: dict[str, Any] | Mapping[str, Any]) -> None:
     event_id = _require_str(event, "eventId")
     if len(event_id) != EVENT_ID_HEX_LEN or any(c not in "0123456789abcdef" for c in event_id):
         raise CaptureSchemaError("eventId must be 16 lowercase hex characters")
-    expected = compute_event_id(run_id, phase_id, event_type, timestamp)
+    dedup_salt = ""
+    if "dedupSalt" in event and event["dedupSalt"] is not None:
+        if not isinstance(event["dedupSalt"], str):
+            raise CaptureSchemaError("dedupSalt must be a string when present")
+        dedup_salt = event["dedupSalt"]
+    expected = compute_event_id(
+        run_id, phase_id, event_type, timestamp, dedup_salt=dedup_salt
+    )
     if event_id != expected:
         raise CaptureSchemaError(
             f"eventId mismatch: got {event_id!r}, expected {expected!r}"
