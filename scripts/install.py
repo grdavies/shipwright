@@ -250,9 +250,13 @@ def init_packaged(
             "scope": scope,
         }
 
+    extra_roots = tuple(
+        path for path in (machine_dest, dist_src) if path is not None
+    )
     configure_result = configure.apply_packaged_configure(
         repo,
         accept_ci_stub=accept_ci_stub,
+        extra_roots=extra_roots,
     )
     if configure_result.get("verdict") != "pass":
         return {

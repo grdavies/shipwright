@@ -7,10 +7,11 @@ import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Sequence
 
 from _sw.cli import run_module_main
 from host_lib import default_base_branch
+from init_profile_report import resolve_sw_reference_file
 from wave_preflight import (
     CI_PRESENCE_NO_WORKFLOWS,
     CI_PRESENCE_RESTRICTED,
@@ -80,19 +81,24 @@ def record_decline(root: Path, *, reason: str = "operator-decline") -> dict[str,
     }
 
 
-def template_path(root: Path) -> Path:
+def template_path(root: Path, extra_roots: Sequence[Path] = ()) -> Path:
+    found = resolve_sw_reference_file(root, TEMPLATE_REL, extra_roots=extra_roots)
+    if found is not None:
+        return found
     return root / TEMPLATE_REL
 
 
-def load_template(root: Path) -> str:
-    path = template_path(root)
+def load_template(root: Path, extra_roots: Sequence[Path] = ()) -> str:
+    path = template_path(root, extra_roots=extra_roots)
     if not path.is_file():
         raise FileNotFoundError(f"missing CI stub template: {TEMPLATE_REL}")
     return path.read_text(encoding="utf-8")
 
 
-def render_stub_body(root: Path, *, wire_verify: WireVerify) -> str:
-    body = load_template(root)
+def render_stub_body(
+    root: Path, *, wire_verify: WireVerify, extra_roots: Sequence[Path] = ()
+) -> str:
+    body = load_template(root, extra_roots=extra_roots)
     if wire_verify != "on":
         return body if body.endswith("\n") else body + "\n"
     verify_block = """
@@ -123,6 +129,7 @@ def plan_ci_stub(
     root: Path,
     *,
     wire_verify: WireVerify = "off",
+    extra_roots: Sequence[Path] = (),
 ) -> dict[str, Any]:
     root = repo_root(root)
     default_branch = default_base_branch(root)
@@ -132,7 +139,11 @@ def plan_ci_stub(
     reason = plan_reason(ci_scan, declined)
     needed = reason in ("no-workflows", "restricted-PR-trigger")
     target = STUB_WORKFLOW_REL
-    body = render_stub_body(root, wire_verify=wire_verify) if needed else ""
+    body = (
+        render_stub_body(root, wire_verify=wire_verify, extra_roots=extra_roots)
+        if needed
+        else ""
+    )
     payload: dict[str, Any] = {
         "verdict": "pass",
         "action": "plan",
@@ -163,6 +174,7 @@ def apply_ci_stub(
     *,
     confirm: bool,
     wire_verify: WireVerify = "off",
+    extra_roots: Sequence[Path] = (),
 ) -> dict[str, Any]:
     root = repo_root(root)
     if not confirm:
@@ -174,7 +186,7 @@ def apply_ci_stub(
             "remediation": "python3 scripts/init_ci_stub.py apply --confirm",
         }
 
-    plan = plan_ci_stub(root, wire_verify=wire_verify)
+    plan = plan_ci_stub(root, wire_verify=wire_verify, extra_roots=extra_roots)
     target = root / STUB_WORKFLOW_REL
     if plan.get("declined"):
         return {
@@ -201,7 +213,10 @@ def apply_ci_stub(
             "message": "Workflow file already exists — preserving operator edits (idempotent no-op)",
         }
 
-    body = str(plan.get("body") or render_stub_body(root, wire_verify=wire_verify))
+    body = str(
+        plan.get("body")
+        or render_stub_body(root, wire_verify=wire_verify, extra_roots=extra_roots)
+    )
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(body, encoding="utf-8")
     return {
