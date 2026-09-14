@@ -184,4 +184,4 @@ Re-run the matching doctor after remediation; codes are designed for CI log grep
 
 Open a [discussion](https://github.com/grdavies/shipwright/discussions) or file an issue if something is
 unclear before starting large changes.
-<!-- currency: refreshed 2026-09-14T19:50:00Z — PRD 352 terminal docs-currency after suite-registry / host-switch closeout -->
+<!-- currency: refreshed 2026-09-14T20:02:00Z — terminal docs-currency after suite-registry / host-switch closeout -->

@@ -1895,7 +1895,7 @@ see [decision tree](decision-tree.md#adoption-and-provider-readiness).
 
 ### Host switch spending and retry (`host.switch`)
 
-Runtime host-switch boundaries for HandoffBundle `switch` transitions (PRD 352 R22–R25). Policy is
+Runtime host-switch boundaries for HandoffBundle `switch` transitions. Policy is
 fail-closed and **only applies when a quota or spending observation exists** — absence of an observation
 must not block retry.
 
@@ -2544,4 +2544,4 @@ Shipwright `2.15.0` · schema `config.schema.json`
 | `worktree.scaffold.portRangeEnd` | `9199` | `9199` | `9199` | `9199` | `—` | `—` |
 | `worktree.scaffold.portRangeStart` | `9100` | `9100` | `9100` | `9100` | `—` | `—` |
 <!-- effective-config:end generated -->
-<!-- currency: refreshed 2026-09-14T19:50:00Z — PRD 352 host.switch spending/retry + workflow.extensions / handoff_bundle -->
+<!-- currency: refreshed 2026-09-14T20:02:00Z — host.switch spending/retry + workflow.extensions / handoff_bundle -->
