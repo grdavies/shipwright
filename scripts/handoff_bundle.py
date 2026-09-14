@@ -1398,7 +1398,7 @@ def enforce_spending_policy_on_fallback(
     resolved = dict(config or load_host_switch_config(root))
     policy = resolved.get("spendingPolicy") if isinstance(resolved.get("spendingPolicy"), dict) else {}
     observation = observation if observation is not None else read_spending_observation()
-    if not automatic_fallback:
+    if not automatic_fallback or observation is None:
         return None
     if not _fallback_authorized(resolved, destination_host=destination_host, observation=observation):
         return emit_spending_policy_halt(
