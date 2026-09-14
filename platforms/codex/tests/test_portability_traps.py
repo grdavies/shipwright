@@ -73,7 +73,7 @@ def test_r20_r21_generator_manifest_and_no_skill_body_duplication(tmp_path: Path
     out = _gen.generate(tmp_path / "codex", repo_root=_REPO, core_root=_REPO / "core")
     manifest = json.loads((out / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
     assert _manifest.validate_codex_plugin_manifest(manifest) == []
-    assert not list(out.rglob("SKILL.md"))
+    assert list(out.rglob("SKILL.md")), "PRD 352 R4 requires shipped skill bodies"
     out2 = _gen.generate(tmp_path / "codex2", repo_root=_REPO, core_root=_REPO / "core")
     m2 = json.loads((out2 / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
     assert [s["id"] for s in manifest["skills"]] == [s["id"] for s in m2["skills"]]
