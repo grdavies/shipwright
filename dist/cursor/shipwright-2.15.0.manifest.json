@@ -249,6 +249,7 @@
     "core/handoff/bundle.py",
     "core/handoff/importer.py",
     "core/handoff/readers.py",
+    "core/handoff/transition.py",
     "core/handoff/validate_bundle.py",
     "core/mcp/__init__.py",
     "core/mcp/jsonrpc.py",
@@ -882,6 +883,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 879,
+  "moduleCount": 880,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

@@ -1378,6 +1378,36 @@ def load_state(root: Path, task_list: str | None = None) -> dict[str, Any]:
     return load_deliver_state(root, task_list=task_list)
 
 
+def assert_handoff_resume_not_duplicate(
+    root: Path,
+    run_id: str,
+    *,
+    session_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Typed halt when a second resume dispatch hits a live foreign lease (PRD 352 R8)."""
+    from wave_lock import run_lease_owner_live, status_run_lease
+
+    status = status_run_lease(root, run_id)
+    if not status.get("held"):
+        return None
+    meta = status.get("meta") if isinstance(status.get("meta"), dict) else {}
+    if not run_lease_owner_live(meta):
+        return None
+    owner_session = str(meta.get("sessionId") or meta.get("owner") or "")
+    caller_session = str(session_id or os.environ.get("SW_SESSION_ID", "")).strip()
+    if caller_session and owner_session and caller_session == owner_session:
+        return None
+    return {
+        "verdict": "halt",
+        "error": "handoff:duplicate-dispatch",
+        "halt": "handoff:duplicate-dispatch",
+        "cause": "handoff:duplicate-dispatch",
+        "ownerSessionId": owner_session or meta.get("owner"),
+        "runId": run_id,
+        "resumeCommand": f"python3 scripts/handoff_bundle.py resume --run-id {run_id}",
+    }
+
+
 def ensure_exclusive_run_lease(
     root: Path,
     state: dict[str, Any],
@@ -1429,13 +1459,16 @@ def ensure_exclusive_run_lease(
                 run_id, source_task_list=task_list_arg
             )
             if acquired.get("verdict") == "pass":
-                state["runLease"] = {
-                    "runId": run_id,
-                    "generation": acquired["generation"],
-                    "lockPath": acquired.get("lockPath"),
-                    "acquiredAt": utc_now(),
-                    "reclaimed": bool(acquired.get("reclaimed")),
-                }
+                from wave_state import adopt_run_lease
+
+                adopt_run_lease(
+                    state,
+                    run_id=run_id,
+                    generation=int(acquired["generation"]),
+                    ownership_generation=int(acquired["generation"]),
+                    lock_path=str(acquired.get("lockPath") or ""),
+                    reclaimed=bool(acquired.get("reclaimed")),
+                )
                 return {**acquired, "beforeMutation": before_mutation}
             out = acquired
         fail(
@@ -1461,13 +1494,16 @@ def ensure_exclusive_run_lease(
             holder=acquired.get("holder"),
             lockPath=acquired.get("lockPath"),
         )
-    state["runLease"] = {
-        "runId": run_id,
-        "generation": acquired["generation"],
-        "lockPath": acquired.get("lockPath"),
-        "acquiredAt": utc_now(),
-        "reclaimed": bool(acquired.get("reclaimed")),
-    }
+    from wave_state import adopt_run_lease
+
+    adopt_run_lease(
+        state,
+        run_id=run_id,
+        generation=int(acquired["generation"]),
+        ownership_generation=int(acquired["generation"]),
+        lock_path=str(acquired.get("lockPath") or ""),
+        reclaimed=bool(acquired.get("reclaimed")),
+    )
     return {**acquired, "beforeMutation": before_mutation}
 
 
@@ -4865,6 +4901,22 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
 
     assert_run_identity(root, state, task_list, args)
     assert_driver_adopt_gate(state, args)
+
+    run_id_for_resume = parse_kv(args, "--run-id") or str(state.get("runId") or "")
+    if run_id_for_resume:
+        duplicate = assert_handoff_resume_not_duplicate(root, run_id_for_resume)
+        if duplicate:
+            fail(
+                str(duplicate.get("error") or "handoff:duplicate-dispatch"),
+                exit_code=20,
+                halt=duplicate.get("halt"),
+                cause=duplicate.get("cause"),
+                ownerSessionId=duplicate.get("ownerSessionId"),
+                resumeCommand=duplicate.get("resumeCommand"),
+            )
+        from wave_state import reconcile_uncertain_in_flight
+
+        reconcile_uncertain_in_flight(state)
 
     if task_list and not state.get("source_task_list"):
         state["source_task_list"] = task_list

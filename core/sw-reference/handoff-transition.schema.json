@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/grdavies/shipwright/core/sw-reference/handoff-transition.schema.json",
+  "title": "HandoffTransition@v1",
+  "description": "Durable host-switch transition record under .cursor/sw-handoff-transitions/ (PRD 352 TR5).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "transitionId",
+    "runId",
+    "state",
+    "updatedAt"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "HandoffTransition@v1"
+    },
+    "transitionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "checkpointed",
+        "destination_validated",
+        "ownership_transferred",
+        "resumed",
+        "waiting",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "previousState": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "checkpointed",
+        "destination_validated",
+        "ownership_transferred",
+        "resumed",
+        "waiting",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "ownershipGeneration": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "sessionId": {
+      "type": "string"
+    },
+    "sourceHost": {
+      "type": "string"
+    },
+    "destinationHost": {
+      "type": "string"
+    },
+    "resumeEvidence": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "recordedAt": {
+          "type": "string"
+        },
+        "nextEligibleAction": {
+          "type": "string"
+        },
+        "hostAdapterId": {
+          "type": "string"
+        }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "updatedAt": {
+      "type": "string",
+      "minLength": 1
+    },
+    "createdAt": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

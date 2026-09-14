@@ -478,19 +478,45 @@ def write_import_record_from_bundle(
 
 
 class ImportLock:
-    """Single-node filesystem CAS lock via O_CREAT|O_EXCL (R36). Not fcntl.flock."""
+    """Single-node filesystem CAS lock via O_CREAT|O_EXCL (R36/R7).
+
+    Covers validation through ownership-transfer — not just filesystem import.
+    """
 
     def __init__(self, root: Path, run_id: str, *, agent_identity: str) -> None:
         self.root = root
         self.run_id = run_id
         self.agent_identity = agent_identity
         self.path = bundle_import_lock_path(root, run_id)
+        self._phase = "idle"
+        self._held = False
 
-    def acquire(self) -> None:
+    def _write_meta(self, phase: str) -> None:
+        meta = {
+            "agentIdentity": self.agent_identity,
+            "pid": os.getpid(),
+            "phase": phase,
+            "runId": self.run_id,
+        }
+        self.path.write_text(json.dumps(meta) + "\n", encoding="utf-8")
+
+    def acquire(self, *, phase: str = "validation") -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        if self._held:
+            self._phase = phase
+            self._write_meta(phase)
+            return
         flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
         payload = (
-            json.dumps({"agentIdentity": self.agent_identity, "pid": os.getpid()}) + "\n"
+            json.dumps(
+                {
+                    "agentIdentity": self.agent_identity,
+                    "pid": os.getpid(),
+                    "phase": phase,
+                    "runId": self.run_id,
+                }
+            )
+            + "\n"
         ).encode()
         try:
             fd = os.open(str(self.path), flags, 0o600)
@@ -505,18 +531,92 @@ class ImportLock:
                 "bundle import lock held by another agent",
                 holder=(holder.get("agentIdentity") if isinstance(holder, dict) else holder),
                 lockPath=str(self.path),
+                lockPhase=(holder.get("phase") if isinstance(holder, dict) else None),
             ) from exc
         try:
             os.write(fd, payload)
             os.fsync(fd)
         finally:
             os.close(fd)
+        self._held = True
+        self._phase = phase
+
+    def enter_ownership_transfer(self) -> None:
+        if not self._held:
+            self.acquire(phase="ownership_transfer")
+            return
+        self._phase = "ownership_transfer"
+        self._write_meta("ownership_transfer")
 
     def release(self) -> None:
         try:
             self.path.unlink(missing_ok=True)
         except OSError:
             pass
+        self._held = False
+        self._phase = "idle"
+
+
+def write_resume_evidence(
+    root: Path,
+    *,
+    run_id: str,
+    transition_id: str,
+    next_eligible_action: str,
+    host_adapter_id: str,
+) -> dict[str, Any]:
+    """Prove destination began the next eligible action — distinct from import-ack (R21)."""
+    from datetime import datetime, timezone
+
+    from .bundle import atomic_write_json
+
+    try:
+        from shipwright_paths import resume_evidence_path
+    except ImportError:  # pragma: no cover
+        import sys
+
+        _SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
+        if str(_SCRIPTS) not in sys.path:
+            sys.path.insert(0, str(_SCRIPTS))
+        from shipwright_paths import resume_evidence_path
+
+    record = {
+        "transitionId": str(transition_id),
+        "runId": str(run_id),
+        "recordedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "nextEligibleAction": str(next_eligible_action),
+        "hostAdapterId": str(host_adapter_id),
+    }
+    path = resume_evidence_path(root, run_id, transition_id)
+    atomic_write_json(path, record)
+    import_path = _state_path(root, run_id, transition_id)
+    if import_path.is_file():
+        try:
+            import_record = json.loads(import_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            import_record = {}
+        if isinstance(import_record, dict):
+            import_record["resumeEvidence"] = record
+            atomic_write_json(import_path, import_record)
+    return record
+
+
+def read_resume_evidence(root: Path, *, run_id: str, transition_id: str) -> dict[str, Any] | None:
+    try:
+        from shipwright_paths import resume_evidence_path
+    except ImportError:  # pragma: no cover
+        import sys
+
+        _SCRIPTS = Path(__file__).resolve().parents[2] / "scripts"
+        if str(_SCRIPTS) not in sys.path:
+            sys.path.insert(0, str(_SCRIPTS))
+        from shipwright_paths import resume_evidence_path
+
+    path = resume_evidence_path(root, run_id, transition_id)
+    if not path.is_file():
+        return None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return data if isinstance(data, dict) else None
 
 
 def import_bundle(
@@ -571,7 +671,7 @@ def import_bundle(
         )
 
     lock = ImportLock(root, run_id, agent_identity=agent_identity)
-    lock.acquire()
+    lock.acquire(phase="validation")
     try:
         existing_ack = read_destination_ack(root, run_id=run_id, transition_id=transition_id)
         if existing_ack and state_file.is_file():
@@ -586,6 +686,7 @@ def import_bundle(
 
         state = _materialize_run_state(root, run_id, bundle)
         import_digest = str(state.get("bundleDigest") or digest_payload(bundle))
+        lock.enter_ownership_transfer()
         ack = write_destination_ack(
             root,
             run_id=run_id,
@@ -608,6 +709,7 @@ def import_bundle(
                 },
                 "evidenceCount": len(state["evidence"]),
                 "gapCount": len(state["gapItems"]),
+                "lockPhase": "ownership_transfer",
             },
         )
     finally:

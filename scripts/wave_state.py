@@ -11,7 +11,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from plan_persist import ROLE_PHASE, caller_role, empty_lifecycle
 from pilot_dependency_gate import proposed_pilot_enabled
@@ -1175,6 +1175,109 @@ def ensure_run_scoped_state_mirrored(
     return payload
 
 
+def _ownership_generation_from_lease(lease: Mapping[str, Any] | None) -> int:
+    if not isinstance(lease, dict):
+        return 0
+    raw = lease.get("ownershipGeneration")
+    if raw is None:
+        raw = lease.get("generation")
+    try:
+        gen = int(raw) if raw is not None else 0
+    except (TypeError, ValueError):
+        return 0
+    return gen if gen >= 0 else 0
+
+
+def adopt_run_lease(
+    state: dict[str, Any],
+    *,
+    run_id: str,
+    generation: int,
+    ownership_generation: int | None = None,
+    lock_path: str | None = None,
+    reclaimed: bool = False,
+) -> dict[str, Any]:
+    """Persist run lease with ownership generation fencing (PRD 352 R5)."""
+    owner_gen = ownership_generation if ownership_generation is not None else generation
+    lease = {
+        "runId": run_id,
+        "generation": int(generation),
+        "ownershipGeneration": int(owner_gen),
+        "acquiredAt": utc_now(),
+        "reclaimed": bool(reclaimed),
+    }
+    if lock_path:
+        lease["lockPath"] = lock_path
+    state["runLease"] = lease
+    return lease
+
+
+def assert_ownership_before_dispatch(state: dict[str, Any], expected_generation: int) -> None:
+    """Fail closed when lease ownership generation is stale (PRD 352 R5)."""
+    lease = state.get("runLease") if isinstance(state.get("runLease"), dict) else {}
+    current = _ownership_generation_from_lease(lease)
+    if int(expected_generation) != current:
+        fail(
+            "run ownership generation stale before dispatch",
+            exit_code=20,
+            halt="ownership-generation-stale",
+            cause="ownership-generation-stale",
+            expectedGeneration=int(expected_generation),
+            currentGeneration=current,
+            ownerSessionId=lease.get("sessionId"),
+        )
+
+
+def assert_ownership_before_result(state: dict[str, Any], expected_generation: int) -> None:
+    """Fence result acceptance on matching ownership generation (PRD 352 R5)."""
+    assert_ownership_before_dispatch(state, expected_generation)
+
+
+def mark_in_flight_uncertain(
+    state: dict[str, Any],
+    work_id: str,
+    *,
+    reason: str = "no-authoritative-result",
+) -> None:
+    """Mark in-flight work uncertain when no authoritative result exists (PRD 352 R17)."""
+    bucket = state.setdefault("uncertainInFlight", {})
+    if not isinstance(bucket, dict):
+        bucket = {}
+        state["uncertainInFlight"] = bucket
+    bucket[str(work_id)] = {
+        "status": "uncertain",
+        "reason": reason,
+        "markedAt": utc_now(),
+    }
+
+
+def reconcile_uncertain_in_flight(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Reconcile uncertain in-flight work before retry/resume (PRD 352 R17)."""
+    bucket = state.get("uncertainInFlight")
+    if not isinstance(bucket, dict) or not bucket:
+        return []
+    reconciled: list[dict[str, Any]] = []
+    remaining: dict[str, Any] = {}
+    for work_id, entry in bucket.items():
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("status") == "uncertain":
+            reconciled.append(
+                {
+                    "workId": work_id,
+                    "prior": dict(entry),
+                    "reconciledAt": utc_now(),
+                    "action": "reconcile-before-retry",
+                }
+            )
+            continue
+        remaining[work_id] = entry
+    if reconciled:
+        state["uncertainInFlight"] = remaining
+        state["uncertainReconciledAt"] = utc_now()
+    return reconciled
+
+
 def write_run_local_lease(
     root: Path,
     run_id: str,
@@ -1195,10 +1298,13 @@ def write_run_local_lease(
         "runId": run_id,
         "targetBranch": target_branch,
         "lockKeyDigest": digest,
+        "ownershipGeneration": 0,
         "recordedAt": utc_now(),
     }
     if extra:
         lease.update(extra)
+    if "ownershipGeneration" not in lease:
+        lease["ownershipGeneration"] = _ownership_generation_from_lease(lease)
     write_json(path, lease)
     try:
         from wave_journal import ensure_capture_files
