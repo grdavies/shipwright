@@ -23,6 +23,7 @@ from typing import Any
 
 from _sw import hook_launcher, logging_setup, mirror
 from _sw.cli import build_parser, run_module_main
+import codex_host_enable
 
 # Keep in sync with memory_provider_catalog.CATALOG_* (hook trust after install).
 _CATALOG_EMIT_REL = Path("core/sw-reference/memory-provider-catalog.json")
@@ -152,15 +153,19 @@ def dist_source_for(integration: str, *, root: Path | None = None) -> Path:
     return nested
 
 
-def plan_machine_write_paths(source: Path, dest: Path) -> list[str]:
+def plan_machine_write_paths(
+    source: Path,
+    dest: Path,
+    *,
+    integration: str | None = None,
+    home: Path | None = None,
+) -> list[str]:
     """Enumerate every destination path a mirror would write (R22 machine scope)."""
     paths: list[str] = []
     if not source.is_dir():
         return paths
     skip = {".git", "node_modules", "__pycache__"}
-    for path in sorted(source.rglob("*")):
-        if not path.is_file():
-            continue
+    for path in sorted(mirror.iter_tree_files(source), key=lambda p: p.as_posix()):
         rel = path.relative_to(source)
         if any(part in skip for part in rel.parts):
             continue
@@ -169,6 +174,14 @@ def plan_machine_write_paths(source: Path, dest: Path) -> list[str]:
         catalog = str((dest / _CATALOG_SW_REL).resolve())
         if catalog not in paths:
             paths.append(catalog)
+    if integration:
+        try:
+            if normalize_integration(integration) == "codex":
+                for extra in codex_host_enable.plan_enablement_paths(home):
+                    if extra not in paths:
+                        paths.append(extra)
+        except ValueError:
+            pass
     return sorted(set(paths))
 
 
@@ -196,6 +209,7 @@ def init_packaged(
     accept_ci_stub: bool = True,
     dry_run: bool = False,
     install_hooks: bool = False,
+    home: Path | None = None,
 ) -> dict[str, Any]:
     """Chain machine mirror then repository configure (R18).
 
@@ -214,6 +228,7 @@ def init_packaged(
         machine_dest=machine_dest,
         dist_source=dist_src,
         accept_ci_stub=accept_ci_stub,
+        home=home,
     )
 
     if dry_run:
@@ -240,6 +255,7 @@ def init_packaged(
         src=dist_src,
         integration=norm,
         install_hooks=install_hooks,
+        home=home,
     )
     if rc != 0:
         return {
@@ -372,6 +388,7 @@ def install(
     src: Path | None = None,
     integration: str = "cursor",
     install_hooks: bool = True,
+    home: Path | None = None,
 ) -> int:
     norm = normalize_integration(integration)
     root = package_root(norm)
@@ -434,7 +451,18 @@ def install(
                         repo_root=root,
                     )
 
-    if norm == "cursor":
+    if norm == "codex":
+        enablement = codex_host_enable.enable_codex_host(home=home)
+        logging_setup.info(
+            "Registered Codex personal marketplace and enabled "
+            f"shipwright@personal ({enablement.get('marketplaceAction')}/"
+            f"{enablement.get('configAction')})."
+        )
+        logging_setup.info(
+            "Fully quit and reopen ChatGPT/Codex, then start a new chat. "
+            "Trust plugin hooks if prompted. Invoke $sw-init (Codex has no /sw-init slash command)."
+        )
+    elif norm == "cursor":
         logging_setup.info("Done. Run 'Developer: Reload Window' in Cursor to pick up changes.")
     else:
         logging_setup.info("Done. Restart Claude Code to pick up plugin changes.")

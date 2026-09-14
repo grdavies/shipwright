@@ -1,51 +1,81 @@
 {
-  "handlers": [
-    {
-      "canonical": "SessionStart",
-      "host_event": "session.start",
-      "handler": "hooks/codex-hook.py"
-    },
-    {
-      "canonical": "UserPromptSubmit",
-      "host_event": "prompt.submit",
-      "handler": "hooks/codex-hook.py"
-    },
-    {
-      "canonical": "PreToolUse",
-      "host_event": "tool.pre",
-      "handler": "hooks/codex-hook.py"
-    },
-    {
-      "canonical": "PostToolUse",
-      "host_event": "tool.post",
-      "handler": "hooks/codex-hook.py"
-    },
-    {
-      "canonical": "Stop",
-      "host_event": "session.stop",
-      "handler": "hooks/codex-hook.py"
-    },
-    {
-      "canonical": "SubagentStart",
-      "host_event": "agent.start",
-      "handler": "hooks/codex-hook.py"
-    },
-    {
-      "canonical": "SubagentStop",
-      "host_event": "agent.stop",
-      "handler": "hooks/codex-hook.py"
-    }
-  ],
-  "unsupportedEvents": [
-    {
-      "canonical": "Notification",
-      "unsupported_flag": true,
-      "host": "codex"
-    },
-    {
-      "canonical": "ContextSwitch",
-      "unsupported_flag": true,
-      "host": "codex"
-    }
-  ]
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "statusMessage": "Shipwright SessionStart"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "statusMessage": "Shipwright UserPromptSubmit"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "statusMessage": "Shipwright PreToolUse"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "statusMessage": "Shipwright PostToolUse"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "statusMessage": "Shipwright Stop"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "statusMessage": "Shipwright SubagentStart"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "statusMessage": "Shipwright SubagentStop"
+          }
+        ]
+      }
+    ]
+  }
 }

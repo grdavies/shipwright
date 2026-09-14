@@ -2,8 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
+
+# This module is loaded via importlib in ``sw/build_support.py`` during PEP 517
+# wheel builds, when ``_sw`` is not on ``sys.path``. Walk the tree here instead
+# of importing ``iter_tree_files`` — ``Path.rglob("*")`` skips hidden names.
 
 # Repo-root trees mirrored under ``sw/`` for wheel-only installs.
 RUNTIME_TREE_NAMES: tuple[str, ...] = ("scripts", "dist")
@@ -40,16 +45,17 @@ def _copy_tree(src: Path, dest: Path, *, filter_rel: callable | None = None) -> 
     if not src.is_dir():
         return 0
     count = 0
-    for path in sorted(src.rglob("*")):
-        if not path.is_file():
-            continue
-        rel = path.relative_to(src)
-        if filter_rel is not None and not filter_rel(rel):
-            continue
-        target = dest / rel
-        target.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(path, target)
-        count += 1
+    for dirpath, dirnames, filenames in os.walk(src, followlinks=False):
+        dirnames.sort()
+        for name in sorted(filenames):
+            path = Path(dirpath) / name
+            rel = path.relative_to(src)
+            if filter_rel is not None and not filter_rel(rel):
+                continue
+            target = dest / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, target)
+            count += 1
     return count
 
 

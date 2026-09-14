@@ -1,0 +1,565 @@
+---
+name: sw-init
+description: Initialize and validate repo-local Shipwright config through a guided interview — scan, confirm, ask only unresolved choices — plus doctor/repair. Does not scaffold CI or migrate existing memories.
+alwaysApply: false
+---
+
+# `/sw-init`
+
+Take a repo from **installed** to **configured and working** via a guided interview, not a wall of
+prompts. Re-runs as a **doctor** against an existing config — validate, report, and offer targeted repair
+without a full rescaffold.
+
+All configuration logic runs through **`scripts/sw-configure.py`** (single configurator — R29). The command
+orchestrates interactive choices; the script holds detection, drift checks, and draft assembly.
+
+## Scope
+
+**Does:** guided scan → confirm → unresolved-choices-only interview; memory-provider selection,
+review-provider selection, project-type detection + verify configuration, guardrail knobs, store
+init/validate, portability self-check, version-drift notice, write schema-valid
+`.cursor/workflow.config.json`; retains doctor and repair modes on re-run.
+
+**Does NOT:** scaffold CI workflows, migrate ambient Recallium (or other provider) data into a bound project,
+auto-install MemPalace (or any memory provider package), auto-install Obsidian or the Local REST API community
+plugin, auto-seed rule files, or write global (user-level) config — repo-local only. Unbound operators must
+bind explicitly before `/sw-memory-sync`; there is no ambient write default and no soft-warn migration window.
+
+## Flags
+
+- `--accept-defaults` — non-interactive: records detection + `verifyGaps[]` without writing derived verify
+  (R4). Use `--write-verify` with explicit confirm to write verify commands.
+- `--write-verify` — with interactive confirm (or scripted `--accept-defaults --write-verify`), writes real
+  `verify.*` from fixed presets.
+
+## Procedure
+
+### 0. Guided interview (scan → confirm → unresolved only)
+
+Before any per-key prompting, run the interview shape that keeps `/sw-init` fast on a well-detected repo and
+verbose only where the operator's input actually changes the outcome:
+
+1. **Scan** — run a read-only reconnaissance pass over the repo (language/framework signals, existing
+   `.cursor/workflow.config.json`, `AGENTS.md`, CI files, remote visibility) via
+   `python3 scripts/detect-project-type.py --propose` and `python3 scripts/sw-configure.py detect --propose`.
+   A subagent MAY perform the scan when the repo is large; the scan is always read-only (no writes).
+2. **Present findings** — summarize detected project type(s), proposed verify commands, memory/review
+   provider defaults, and any existing config drift as one consolidated findings report — not a sequence of
+   yes/no prompts.
+3. **Confirm/correct** — the operator confirms the findings wholesale or corrects individual fields; corrected
+   fields are recorded and never re-asked in the same run.
+4. **Ask only unresolved choices** — every field the scan resolved with a documented default and no drift
+   signal is **not** re-prompted; only genuinely unresolved choices (ambiguous project-type, no detected
+   memory/review preference, first-run repo) surface as an explicit question, each with a **recommended
+   default** stated up front so the operator can accept with one word.
+5. **Optional project-intent and working-style capture** — after the resolved-choice interview, offer (never
+   force) one short optional capture: a one-paragraph project intent (what this repo is for, who it serves)
+   and a working-style note (e.g. preferred ceremony level, review posture). Skip silently on decline.
+   When provided, redact via `python3 scripts/sw_bootstrap.py memory-redact.py` and persist to
+   `.cursor/sw-context/project-intent.md` (repo-local, not the planning store) for later `/sw-brainstorm` and
+   `/sw-prd` consumption — those skills read this file opportunistically when present; its absence changes
+   nothing.
+6. **Doctor/repair retained** — steps 1–6 below (memory, review, doc boundary, guardrails, verify, drift
+   repair) are unchanged; the guided interview only changes *how* they are surfaced (findings-first,
+   unresolved-only) — never what they configure.
+
+### 1. Detect mode
+
+```bash
+CONFIG=".cursor/workflow.config.json"
+if [ -f "$CONFIG" ]; then
+  MODE=doctor
+else
+  MODE=scaffold
+fi
+python3 scripts/sw-configure.py drift-check --config "$CONFIG"
+```
+
+When drift-check reports `stale: true`, surface: **"config may be stale; run `/sw-init` to refresh"** and offer
+additive, consent-gated refresh (never auto-merge `verify.*`, user-set `defaultBaseBranch`, memory/review, or
+model tiers).
+
+### 2. Memory provider (interactive)
+
+Offer:
+
+| Choice | `memory.provider` | Notes |
+| --- | --- | --- |
+| **in-repo** (default) | `in-repo` | Zero-dependency; committed markdown store |
+| recallium | `recallium` | Requires local Recallium at `memory.connection.restBaseUrl` |
+| mempalace | `mempalace` | Local palace directory + MemPalace MCP; see `docs/guides/configuration.md` **MemPalace memory provider** |
+| basic-memory | `basic-memory` | Dual-mode local MCP or Basic Memory Cloud; see `docs/guides/configuration.md` **Basic Memory provider** |
+| obsidian | `obsidian` | Obsidian vault + Local REST API on loopback; see `docs/guides/configuration.md` **Obsidian memory provider** |
+
+For **in-repo**:
+
+- Write `.cursor/sw-memory.provider` containing `in-repo` (per-repo marker for zero-config guardrails).
+- Ensure store layout exists (empty — no auto-seed):
+
+  ```bash
+  mkdir -p .cursor/sw-memory/memories .cursor/sw-memory/rules
+  ```
+
+- Ask **commit mode**: `committed` (default, PR-reviewable) or `local` (gitignore `.cursor/sw-memory-local/`).
+
+For **recallium**: require non-empty `memory.project` (no basename inference for remote providers). Verify
+reachability (`host HTTP transport -fsS --max-time 3 <restBaseUrl>/health` or equivalent); warn if unreachable
+but still allow save. Do **not** import or remap existing ambient Recallium projects automatically.
+
+### Bind before sync (write binding hard-cut)
+
+`/sw-memory-sync` and other mutating store paths refuse when the repo has no explicit binding. During init and
+doctor repair, tell unbound operators how to bind **before** sync:
+
+| Binding | What to write |
+| --- | --- |
+| Config | `memory.provider` **and** non-empty `memory.project` in `.cursor/workflow.config.json` |
+| Marker | `.cursor/sw-memory.provider` containing literal `in-repo` (project = workspace basename) |
+
+Remote/external markers without `memory.project` refuse. Assert locally:
+`python3 scripts/sw_bootstrap.py memory_preflight.py -- assert-sync-store`. Hard cut: no ambient Recallium
+write default and no auto-migration of machine-local MCP data into the bound project.
+
+For **mempalace**:
+
+- **Catalog-detect only** — offer when `mempalace` is registered in `.sw/memory-provider-catalog.json`; **never
+  auto-install** the package (`uv tool install 'mempalace>=3.6.0,<4.0.0'` is documented in
+  `docs/guides/configuration.md`; operator runs it manually).
+- Collect `memory.mempalace.palacePath` (local filesystem path; reject remote URLs) and `memory.project` (wing name).
+- Seed schema defaults: `rulesRoom: "rules"`, `searchExcludeRooms: ["transcripts"]`, `failClosed: true`,
+  `redactOnWrite: true`, `supportedPackage: "mempalace>=3.6.0,<4.0.0"`.
+- **Doctor / validate when configured:** probe `python -c "import mempalace"` (warn with install recipe on failure);
+  verify `palacePath` exists and is a directory; optional hook smoke:
+  `python3 providers/mempalace-rules.py` with `SW_WORKSPACE_ROOT` set — warn on failure, do not block scaffold
+  unless the operator opts into hard-fail. Link remediation to `docs/guides/configuration.md` **MemPalace memory
+  provider** (hook recipes, break-glass, live-smoke checklist).
+
+For **basic-memory**:
+
+- **Catalog-detect only** — offer when `basic-memory` is registered in `.sw/memory-provider-catalog.json`; **never
+  auto-install** the package and **never create** a Basic Memory Cloud account or workspace (`uv tool install
+  'basic-memory>=0.22.0,<1.0.0'` and cloud signup are documented in `docs/guides/configuration.md`; operator
+  runs them manually).
+- Require explicit `memory.basicMemory.mode` (`local` | `cloud`) — no silent cross-mode defaulting beyond the
+  schema default of `local` when the operator confirms local.
+- **Local:** collect `memory.basicMemory.projectPath` (local filesystem path; reject remote URLs) and
+  `memory.project`. Seed defaults: `memoriesDirectory: "memories"`, `rulesDirectory: "rules"`,
+  `failClosed: true`, `redactOnWrite: true`, `supportedPackage: "basic-memory>=0.22.0,<1.0.0"`.
+- **Cloud:** collect optional `apiBase` (default `https://cloud.basicmemory.com`), `tokenEnv` (default
+  `BASIC_MEMORY_API_KEY`), and optional `workspace` / `projectId`. Confirm the token is present in the
+  environment or secret store — never write the token into config.
+- **Doctor / validate when configured:** for local, probe package import (warn with install recipe on failure)
+  and verify `projectPath` is a directory; for cloud, verify `tokenEnv` is set (never print the value) and
+  `apiBase` host is allowlisted. Optional hook smoke: `python3 providers/basic-memory-rules.py` with
+  `SW_WORKSPACE_ROOT` set — warn on failure, do not block scaffold unless the operator opts into hard-fail.
+  Link remediation to `docs/guides/configuration.md` **Basic Memory provider** (mode selection, SSRF,
+  break-glass, live-smoke checklist).
+
+For **obsidian**:
+
+- **Catalog-detect only** — offer when `obsidian` is registered in `.sw/memory-provider-catalog.json`; **never
+  auto-install** Obsidian, the Local REST API community plugin, or an API key (enablement + `OBSIDIAN_API_KEY`
+  are documented in `docs/guides/configuration.md`; operator completes them manually).
+- Collect `memory.obsidian.vaultPath` (absolute local filesystem path; reject remote URLs) and `memory.project`
+  (folder name under `memoriesDirectory`).
+- Seed schema defaults: `mcpBaseUrl: "http://127.0.0.1:27123"`, `tokenEnv: "OBSIDIAN_API_KEY"`,
+  `memoriesDirectory: "memories"`, `rulesDirectory: "rules"`, `failClosed: true`, `redactOnWrite: true`.
+- **Doctor / validate when configured:** verify `vaultPath` exists and is a directory; confirm `tokenEnv` is set
+  in the environment or secret store (never print the value); optional loopback reachability probe against
+  `memory.obsidian.mcpBaseUrl` (HTTP on loopback by default — warn when Obsidian is closed or the plugin is
+  disabled); optional hook smoke: `python3 providers/obsidian-rules.py` with `SW_WORKSPACE_ROOT` set — warn on
+  failure, do not block scaffold unless the operator opts into hard-fail. Link remediation to
+  `docs/guides/configuration.md` **Obsidian memory provider** (HTTP vs HTTPS, unreachable degrade, rules folder,
+  live-smoke checklist).
+
+### 3. Review provider
+
+Offer: `coderabbit` | `none` (default **`none`**). Canonical opt-out is `review.provider: "none"`.
+
+Do **not** offer a separate `disabled` choice — `review.enabled: false` is deprecated (honored with a warning;
+point users to `review.provider: "none"`).
+
+### 3b. Doc→implementation boundary
+
+Write `doc.afterTasks` (default **`confirm`**): `stop` | `confirm` | `auto`. Explain: `confirm` shows the frozen
+task list and requires `proceed`/`yes` before dispatch; `auto` dispatches the implementation loop on a
+worktree without a second prompt.
+
+### 3c. Deliver autonomy (conductor)
+
+Seed `deliver.autonomy` (default **`autonomous`** hands-off to terminal-PR gate; `supervised` adds
+acknowledgement halts). Include run-level budgets:
+
+```json
+"deliver": {
+  "autonomy": {
+    "mode": "autonomous",
+    "maxRunMinutes": 1440,
+    "maxIterations": 500
+  }
+}
+```
+
+### 3d. Retrospective autonomy (`compound.autonomy`)
+
+Seed `compound.autonomy` (default **`supervised`**).
+
+### 3e. Delegation mode
+
+Seed (curated greenfield default from `init_profile_report`):
+
+```json
+"delegation": { "mode": "heuristic" }
+```
+
+`bind-only` and `default` remain available when you need stricter ceremony; `default` mode stays gated
+until Phase-2 live acceptance (DL-9).
+
+### 3f. Orchestration plan policy (PRD 022 R29)
+
+Seed `orchestration.planPolicy` (curated default **`proposed`** — live on `/sw-deliver` within the kernel
+envelope; `canonical` preserves byte-identical legacy behavior). Orthogonal to `deliver.autonomy.mode` and
+`deliver.phaseAckCadence`.
+
+```json
+"orchestration": { "planPolicy": "proposed" }
+```
+
+**Doctor:** surface current `orchestration.planPolicy` vs curated default (`proposed`). On re-run,
+never overwrite an explicit operator value without user confirm — same consent gate as `verify.*` and model
+tiers.
+
+Canonical seed set (write-draft + docs): `python3 scripts/sw_bootstrap.py init_profile_report.py -- list`.
+
+### 4. Guardrail knobs
+
+Defaults (greenfield-friendly; nested under `memory`):
+
+```json
+"memory": {
+  "guardrails": {
+    "enforceBeforeSubmit": true,
+    "requireRuleClass": false
+  }
+}
+```
+
+### 4b. Model tier defaults
+
+```bash
+python3 scripts/detect-platform.py
+python3 scripts/seed-model-config.py --platform "$(python3 scripts/detect-platform.py)" --repair all
+```
+
+### 4c. Project-type detection + verify proposals (R1/R20/R23)
+
+After platform/models:
+
+```bash
+python3 scripts/detect-project-type.py --propose
+python3 scripts/sw-configure.py detect --propose
+```
+
+Present a **verify proposal table** (lint / typecheck / test / build). For each key: **edit** | **keep** |
+**skip**. Multiple project types → disambiguation menu. Flag unsafe proposals (shell metacharacters,
+destructive patterns) — never auto-write.
+
+Show diff of proposed `verify.*` vs current config. Require explicit **`write`** or **`cancel`**. Re-running
+`/sw-init` is the documented edit path (doctor shows current vs proposed; overwrites only on confirm).
+
+Non-interactive:
+
+```bash
+python3 scripts/sw-configure.py write-draft --accept-defaults          # gaps only, no verify write
+python3 scripts/sw-configure.py write-draft --accept-defaults --write-verify  # explicit verify write
+```
+
+### 5. Environment doctor
+
+Detect and recommend (never hard-fail scaffold):
+
+- CodeRabbit CLI on `PATH` when `review.provider` is `coderabbit`.
+- CodeRabbit CLI present but `review.provider` unset → surface **migration notice** (implicit default flipped to
+  `none`; set `review.provider` explicitly if review gating is desired).
+- `review.enabled: false` in existing config → warn deprecated; suggest `review.provider: "none"`.
+- Recallium reachable when `memory.provider` is `recallium`.
+- **Write binding:** when neither config (`memory.provider` + `memory.project`) nor an `in-repo` marker is
+  present, warn that `/sw-memory-sync` will refuse writes and print the bind-before-sync table above — do
+  **not** auto-migrate ambient Recallium data or invent a project.
+- MemPalace package import + `memory.mempalace.palacePath` directory probe when `memory.provider` is `mempalace`
+  (install recipe + live-smoke checklist: `docs/guides/configuration.md` **MemPalace memory provider**; no
+  auto-install).
+- Basic Memory mode + local package/`projectPath` or cloud `tokenEnv` presence (+ allowlisted `apiBase`) when
+  `memory.provider` is `basic-memory` (install recipe + live-smoke checklist: `docs/guides/configuration.md`
+  **Basic Memory provider**; no auto-install / no cloud account create).
+- Obsidian vault path + `tokenEnv` presence + loopback reachability when `memory.provider` is `obsidian`
+  (install/enable recipe + live-smoke checklist: `docs/guides/configuration.md` **Obsidian memory provider**;
+  no auto-install of Obsidian or the Local REST API plugin).
+- **`orchestration.planPolicy`:** surface current value vs curated default (`proposed`); note when set to
+  `canonical` (legacy byte-identical path — kernel envelope unchanged).
+- **`verify-unconfigured`** via `python3 scripts/verify-unconfigured.py` — CTA: run `/sw-init`.
+- Config drift vs schema → `python3 scripts/sw-configure.py drift-check`.
+- Missing in-repo store dir → offer `mkdir -p` repair.
+
+- **Host provider doctor** via `python3 scripts/host-doctor.py` — validates `host.provider`, configured remote, token env presence (never prints token), rate-limit config, and **CI-status capability** (`ciStatus.capability`: `capable` | `denied` | `inconclusive`) via the same checks path the gate uses (PRD 079 R11). Warns when capability is degraded (missing token, missing remote, `ci-status-denied`, `ci-status-inconclusive`) without blocking scaffold; inconclusive is **not** treated as capable. Run once per init; probe cache TTL is advisory only.
+- Seed `host` config on greenfield: `provider` auto-detected, `remote: origin`, `tokenEnv` per provider (`GITHUB_TOKEN` default for GitHub). Existing GitHub repos need only `GITHUB_TOKEN` set (R33).
+- **Jira issue-store init probes (PRD 047 R101/R105/R108/R109):** when `planning.store.issuesProvider` is `jira`, run `python3 scripts/planning_store.py probe-jira-init` — auth (Cloud email+token / DC PAT), per-issue privacy classification, createmeta required fields, and label-write permission (fail-closed).
+- **Planning store doctor** via `python3 scripts/planning-doctor.py` — validates `planning.store` backend reachability (degrade-open when `memory` is configured but no memory provider is present), sweeps orphaned `.cursor/planning-materialized/` trees, and never prints provider tokens (R27).
+
+### 5c. Guided credential setup (PRD 080 R1/R2/R6)
+
+After host provider detection and before portability self-check, run the **guided single-identity**
+credential path for the common case (one detected account). This is the one guided action that writes
+**both** the repository `credentialRef` fields and the matching machine-local selector entry.
+
+```bash
+python3 scripts/sw-configure.py credential plan
+python3 scripts/sw-configure.py credential apply --confirm
+```
+
+**Ordered credential checklist (single guidance surface):** `credential plan` emits one checklist in
+fixed order — the same sequence `credentials-doctor` reports on verification. Do not surface parallel
+ad-hoc credential prompts outside this list:
+
+| Step | Id | What it covers |
+| --- | --- | --- |
+| 1 | `identity-source` | Identity backend — `github_cli` when authenticated, else a declared `environment` or `keystore` backend entry |
+| 2 | `credential-ref-binding` | `host` / `planning` / `memory` `credentialRef` fields in `.cursor/workflow.config.json` |
+| 3 | `selector-allowlists` | Machine-local selector entry with `allowedRepos`, `allowedProjectIds`, and `allowedEndpoints` |
+| 4 | `verification` | Resolution probe via `python3 scripts/credentials-doctor.py` |
+
+The selector holds **metadata and allowlists only — never secret material**. Tokens stay in env,
+keystore, or `github_cli` — not in the selector file or repo config.
+
+**Named `tokenEnv` (multi-repo / multi-account):** when `credential plan` reports
+`multiAccountRisk: true` (more than one distinct remote owner, or selector entries for a different
+account), the guided apply offers a **named** `tokenEnv` (for example `SW_GITHUB_TOKEN_<ACCOUNT>`)
+bound through a declared `environment` backend instead of ambient `GITHUB_TOKEN`. Single-account
+authenticated `github_cli` remains the default and is not outranked automatically by keystore.
+
+**`.env` is never the primary path:** init does not create or load `.env` as the primary credential
+path. An optional `.env.example` is written only on explicit operator request, appended to
+`.gitignore`, and consumable solely through an explicitly declared `environment` backend entry.
+Undeclared ambient token load is refused with a typed cause naming the missing backend declaration.
+
+**Progressive disclosure:** when `credential plan` reports `disclosure: multi` (many detected accounts),
+do **not** run the guided apply — surface keystore and multi-principal configuration instead. Keystore
+options appear only when multiple accounts are detected or the operator explicitly opts in.
+
+**Repository-local vs user-level write exception:** `/sw-init` is repo-local only, but the selector
+file is the documented exception — it lives at `~/.config/shipwright/credential-selector.json`
+(user-level, mode `0600`, directory mode `0700`). Repository config still receives `projectId` and
+`credentialRef` values only.
+
+**Legacy token-variable migration:** when an existing config uses `host.tokenEnv`, offer consent-gated
+migration before cutover. Dry-run prints the exact selector command; confirm writes `credentialRef` and
+the user-level selector entry:
+
+```bash
+python3 scripts/sw-configure.py credential migrate          # prints selectorCommand
+python3 scripts/sw-configure.py credential migrate --confirm
+```
+
+**Actions env-backend declaration:** offer a repository CI selector so fresh runners resolve without a
+machine-local file:
+
+```bash
+python3 scripts/sw-configure.py credential declare-ci          # offer only
+python3 scripts/sw-configure.py credential declare-ci --confirm  # writes .sw/credential-ci-selector.json
+```
+
+Never print token values — reference env var names only.
+
+### 5e. Consent-gated CI stub (PRD 324 R5)
+
+When the repo has no PR workflow or only a default-branch-restricted `pull_request` trigger,
+offer a consent-gated stub so `base-preflight:ci-or-review` can satisfy CI presence without
+softening the gate. **Plan is read-only; apply requires explicit confirmation.**
+
+```bash
+python3 scripts/sw-configure.py ci-stub plan
+python3 scripts/sw-configure.py ci-stub apply --confirm
+```
+
+`ci-stub plan` (default safe action) prints whether a stub is needed, the target path
+(`.github/workflows/shipwright-ci-stub.yml`), and the rendered body when seeding is required.
+`ci-stub apply` without `--confirm` exits non-zero with the consent message. On write, output names
+the workflow path and reminds the operator the file is theirs to edit — Shipwright will not rewrite
+it after apply. Re-running apply when the workflow already exists is an idempotent no-op that
+preserves operator edits. Explicit decline is recorded at `.cursor/sw-init-ci-stub.json` so
+base-preflight reports decline rather than a silent gap.
+
+Optional `--wire-verify` on plan/apply opts into wiring `python3 scripts/check-gate.py` into the
+stub job; default placeholder body cannot be mistaken for a Shipwright verify gate.
+
+### 5f. Consent-gated ProjectDoctrine adoption (PRD 330 R6, R11, R12, R14)
+
+After credential/CI surfaces (or on doctor re-run), offer **opt-in** consumer ProjectDoctrine adoption.
+Repo-local `.sw/project-doctrine.json` is the sole authority; issue-store projections are never read as
+law. Brownfield synthesis emits **draft-only** `ProjectBaseline@v1` facts; only explicit operator
+confirmation can promote to doctrine. Acceptance requires a **leakage-green** verdict from
+`project_doctrine_leakage.py` on the repo-local SoT.
+
+**Discovery (read-only — never writes doctrine):**
+
+```bash
+python3 scripts/sw-configure.py doctrine plan
+python3 scripts/sw-configure.py doctrine review
+```
+
+**Operator choices (each decline path is non-authoritative):**
+
+| Choice | Command | Writes doctrine? |
+| --- | --- | --- |
+| Skip | `python3 scripts/sw-configure.py doctrine skip` | No — durable decline record only |
+| Decline | `python3 scripts/sw-configure.py doctrine decline` | No — removes draft/doctrine + decline record |
+| Greenfield scaffold | `python3 scripts/sw-configure.py doctrine greenfield-scaffold --confirm` | Yes — opt-in empty scaffold |
+| Brownfield synthesize | `python3 scripts/sw-configure.py doctrine brownfield-synthesize --confirm` | No — draft baseline only |
+| Accept promote | `python3 scripts/sw-configure.py doctrine accept-promote --confirm` | Yes — explicit baseline→doctrine |
+| Accept doctrine | `python3 scripts/sw-configure.py doctrine accept-doctrine --confirm` | Yes — reviewed doctrine into SoT |
+| Reject | `python3 scripts/sw-configure.py doctrine reject` | No — clears draft/doctrine |
+
+Brownfield draft synthesis uses the stable `project-baseline-synthesis@v1` interface
+(`scripts/project_baseline.py`). Future PRD 331 `/sw-explore` is the documented consumer — **this
+release does not register** `/sw-explore`, `/sw-codebase-design`, or any `/sw-graph-*` command.
+
+Greenfield scaffold and brownfield synthesis both require `--confirm`; without it the configurator
+returns `confirm-required` and performs no promotion.
+
+### 5d. Portability self-check (R24/R25)
+
+Before first `/sw-ship`:
+
+```bash
+python3 scripts/sw-configure.py portability-check
+```
+
+Summarize: verify configured (real vs gaps), base resolvable, `gh`/Actions availability, `sw-reference` paths
+present, no dev-harness refs, web knobs off. Warn when `gh` or GitHub Actions unavailable (CI-readiness gate
+requires them — DL-7).
+
+### 6. Write config
+
+Assemble draft via configurator; validate against `.sw/config.schema.json`; stamp `configuredWith`:
+
+```json
+"configuredWith": {
+  "shipwrightVersion": "<from scripts/sw-configure.py shipwright-version>",
+  "schemaVersion": "<from scripts/sw-configure.py schema-version>"
+}
+```
+
+Write `.cursor/workflow.config.json`. Merge `models` from `scripts/seed-model-config.py` unless user opts out.
+Seed `communication` from `core/sw-reference/communication-routing.defaults.json` (commands + skills + agents maps).
+
+### 6b. Planning profile + store seeding (PRD 034 R21)
+
+After the config file exists, seed the public-repo-aware visibility profile, default store backend, and
+first-run privacy notice:
+
+```bash
+python3 scripts/sw_bootstrap.py planning-init-seed.py -- --config "$CONFIG"
+```
+
+This:
+
+- Sets `planning.store.backend` to `in-repo-public` when unset (draft also seeds this key).
+- Probes `origin` via `scripts/planning_visibility.py resolve-default-profile --write` — a **public**
+  remote selects `all-private` and sets `planning.privacyAck.required: true`; private/absent remotes
+  select `specs-public`.
+- Copies `core/sw-reference/planning-privacy-notice.md` to
+  `.cursor/hooks/state/planning-privacy-notice.md` and mirrors profile + ack into
+  `.cursor/hooks/state/planning-visibility.json`.
+
+Then auto-configure `.gitignore` for planning-store paths from the resolved visibility profile:
+
+```bash
+python3 scripts/gitignore-generate.py generate --write
+```
+
+This regenerates the `# BEGIN visibility-generated … # END visibility-generated` block (private/memory unit
+bodies) plus the static `.cursor/hooks/state/` local-hook-state exclusion — the same directory that holds
+`.cursor/hooks/state/planning-cutover-gate.json` (PRD 057 R5). That gate file is a **local override only**;
+the CI-authoritative cutover signal is derived at read time from committed `workflow.config.json`
+(`planning.store.backend`) + structural markers (see `docs/guides/configuration.md`), so its absence in a
+fresh, gitignored checkout never causes a false "file mode" default.
+
+**Doctor re-run:** `python3 scripts/planning-doctor.py` validates store reachability, degrade-opens when the
+memory backend has no provider (actionable remediation, no hard-fail), sweeps orphaned materialized trees,
+and references env-var names only — never token values (R27).
+
+
+### 6c. Scripts resolution (zero-footprint — PRD 078 R1/R2)
+
+After config + planning seed, **do not** write repo-local Shipwright scripts in consumer repos.
+`/sw-init` never creates `scripts/sw`, `.cursor/sw-scripts-facade.json`, or deliver forwarders under
+`scripts/`. **Skip** when the target is the Shipwright plugin source repo itself (full `scripts/` tree
+already present).
+
+**Resolution:** deliver helpers resolve via the installed Shipwright plugin using the canonical bootstrap
+CLI — no consumer-resident façade files required:
+
+```bash
+python3 scripts/sw_bootstrap.py --print wave_deliver.py
+python3 scripts/sw_bootstrap.py wave_deliver.py -- --help
+```
+
+**Precedence:** self-repo working-tree → validated `SHIPWRIGHT_SCRIPTS` → plugin install
+(`sw_scripts_resolve.py`). Consumer repos stay zero-footprint; bootstrap argv is the documented copy-paste
+entrypoint.
+
+**Legacy façades:** repos that previously ran `/sw-init` emit may still have forwarders under `scripts/`.
+Doctor detects residual façade files and offers confirm-gated removal — never auto-deletes unmarked scripts.
+
+Detect residual façade files (read-only; legacy manifests are migration metadata only):
+
+```bash
+python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . detect
+```
+
+Review `facadeFiles`, `refused`, and `clobber` in the JSON output. Clobber entries report modified
+templates or git-history overwrite signals — **no restore is offered**.
+
+Remove identity-verified façade files only after explicit operator confirm:
+
+```bash
+python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . remove # dry-run: wouldRemove
+python3 scripts/sw_bootstrap.py init_scripts_facade.py -- . remove --confirm
+```
+
+Doctor re-runs surface the same `detect` payload; interactive `/sw-init` offers the confirm step when
+`verdict` is `found`.
+
+**Agent guardrail:** do **not** hand-author forwarders mid-deliver; use bootstrap argv for deliver entrypoints.
+
+### 7. Report
+
+Print summary: providers, verify status, portability self-check, drift notice, config path.
+
+**Communication intensity:** ultra
+
+**Model tier:** cheap — resolve via `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command sw-init`.
+
+## Guardrails
+
+- Never auto-seed `category: rule` files (R42).
+- Never write vacuous verify placeholders — real commands or explicit gaps only.
+- Redaction chokepoint applies to all in-repo writes.
+- Never ambient-default memory writes to Recallium when unbound; doctor must instruct bind-before-sync (R17).
+
+## Absorb acceptance map (#733 → R9–R12, R15–R17)
+
+| Source issue | Requirement cluster | Init / doctor scope |
+| --- | --- | --- |
+| #733 per-repo memory binding | R9–R12 | Unbound sync/store refuse; marker=`in-repo` only; remote needs `memory.project`; PRD 277 rule dual-home unchanged |
+| #733 | R15–R16 | Refused writes emit typed audit/log; refuse reasons avoid secret paths |
+| #733 | R17 | Hard cut on ship; `/sw-init` / doctor tell unbound operators how to bind; no ambient auto-migration |
+
+**Decision stance (D1):** write-binding ships as its own PRD (not bundled with deliver closeout). **Decision
+stance (D3):** absorb #733 here after amendment #735 cancellation — do not amend closed PRD 277.
+
+## Fresh-install zero-config path
+
+A repo can commit only `.cursor/sw-memory.provider` + empty store dirs without `workflow.config.json`. That
+marker is an explicit `in-repo` write binding (basename project). Run `/sw-init` to customize provider +
+project; until then, remote/unbound writes refuse.

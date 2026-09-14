@@ -235,6 +235,7 @@
     "code-review-select.py",
     "code_review_normalize_lib.py",
     "codebase_intelligence_signals.py",
+    "codex_host_enable.py",
     "commit-msg-guard.py",
     "communication-resolve.py",
     "config-at-entry.py",
@@ -883,6 +884,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 880,
+  "moduleCount": 881,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
