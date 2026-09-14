@@ -1,0 +1,27 @@
+{
+  "handoff": {
+    "modules": [
+      {
+        "path": "core/handoff/importer.py",
+        "sha256": "660600574d56d6d809551e4ba016c42b0c2e952d91ee137093e73eb51e748ed2"
+      },
+      {
+        "path": "core/handoff/bundle.py",
+        "sha256": "f4c499c2fb07e3b71708a3c6b48a05b449867f749f0f0f1673eabc9417f118b6"
+      },
+      {
+        "path": "core/handoff/validate_bundle.py",
+        "sha256": "3043f0d1bacfeaa4c6a3612457cf73c7e61e3ba6cd443a4817f8a3d80f0bdfcc"
+      },
+      {
+        "path": "core/handoff/acknowledgement.py",
+        "sha256": "b657d64c00c6198c4e396f2b3319d08c6e3e6dfceacbc358f5d26af755a0fd35"
+      },
+      {
+        "path": "scripts/handoff_bundle.py",
+        "sha256": "5fc103a885b8a209ddbad0c6a9aad4759c0982087fa6863be86fdb573f989d78"
+      }
+    ]
+  },
+  "schemaVersion": "shipwright-dist-manifest@v1"
+}

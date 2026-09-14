@@ -25,6 +25,10 @@ from shipwright_paths import (  # noqa: E402
     gate_evidence_path,
 )
 
+_CORE_ROOT = SCRIPT_DIR.parent
+if str(_CORE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_CORE_ROOT))
+
 SCHEMA_REL = Path("core/sw-reference/handoff-bundle.schema.json")
 SCHEMA_VERSION = "HandoffBundle@v1"
 DEFAULT_FRESHNESS_TTL_SECONDS = 86400
@@ -33,6 +37,17 @@ UNRESOLVED_STATUSES = frozenset({"open", "blocked", "unknown"})
 SUPPORTED_HARNESSES = frozenset({"cursor", "claude-code"})
 SESSION_TRANSITIONS = frozenset({"resume", "switch"})
 MODEL_TRANSITIONS = frozenset({"same", "changed", "unknown"})
+REQUIRED_HANDOFF_MODULES: tuple[str, ...] = (
+    "core/handoff/importer.py",
+    "core/handoff/bundle.py",
+    "core/handoff/validate_bundle.py",
+    "core/handoff/acknowledgement.py",
+    "scripts/handoff_bundle.py",
+)
+HANDOFF_INSTALLER_REPAIR = (
+    "Re-run the installer or regenerate the release package "
+    "(python3 -m sw generate --all) so packaged handoff modules are present."
+)
 
 
 def repo_root(start: Path | None = None) -> Path:
@@ -950,7 +965,7 @@ def import_bundle(
         "verdict": "pass",
         "bundle": clean,
         "foreignHarnessResumeForbidden": True,
-        "detail": "Bundle import is informational only; /sw-deliver resume requires materialize + dependency-gate.",
+        "detail": "Bundle import is informational only unless --run-id materializes a resume ticket.",
     }
 
 
@@ -995,6 +1010,24 @@ def cmd_export(args: argparse.Namespace) -> int:
 def cmd_import(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve() if args.root else repo_root()
     result = import_bundle(root, Path(args.path), allow_stale=bool(args.allow_stale))
+    run_id = str(getattr(args, "run_id", "") or "").strip()
+    if result.get("verdict") == "pass" and run_id and isinstance(result.get("bundle"), dict):
+        try:
+            from core.handoff.importer import write_import_record_from_bundle
+
+            record = write_import_record_from_bundle(root, run_id, result["bundle"])
+            result = {
+                **result,
+                "runId": run_id,
+                "transitionId": record.get("transition_id"),
+                "importRecord": True,
+            }
+        except Exception as exc:
+            result = {
+                "verdict": "fail",
+                "error": "handoff:import-record-write-failed",
+                "detail": str(exc),
+            }
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     verdict = str(result.get("verdict") or "")
     if verdict == "pass":
@@ -1066,6 +1099,216 @@ def cmd_import_exploration(args: argparse.Namespace) -> int:
     return 20
 
 
+def handoff_module_hashes(root: Path) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    for rel in REQUIRED_HANDOFF_MODULES:
+        path = Path(root) / rel
+        if not path.is_file():
+            raise FileNotFoundError(rel)
+        hashes[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return hashes
+
+
+def write_handoff_manifest(root: Path) -> dict[str, Any]:
+    modules = [
+        {"path": rel, "sha256": digest}
+        for rel, digest in handoff_module_hashes(root).items()
+    ]
+    doc = {
+        "schemaVersion": "shipwright-dist-manifest@v1",
+        "handoff": {"modules": modules},
+    }
+    path = Path(root) / "dist" / "manifest.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return doc
+
+
+def verify_handoff_manifest(root: Path) -> dict[str, Any]:
+    path = Path(root) / "dist" / "manifest.json"
+    if not path.is_file():
+        return {
+            "verdict": "fail",
+            "error": "handoff:manifest-missing",
+            "path": str(path),
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {
+            "verdict": "fail",
+            "error": "handoff:manifest-invalid",
+            "path": str(path),
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    if not isinstance(doc, dict) or doc.get("schemaVersion") != "shipwright-dist-manifest@v1":
+        return {
+            "verdict": "fail",
+            "error": "handoff:manifest-invalid",
+            "path": str(path),
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    rows = ((doc.get("handoff") or {}) if isinstance(doc, dict) else {}).get("modules") or []
+    try:
+        expected = handoff_module_hashes(root)
+    except FileNotFoundError:
+        return {
+            "verdict": "fail",
+            "error": "handoff:missing-dependency",
+            "path": str(path),
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    actual = {
+        str(row.get("path")): str(row.get("sha256"))
+        for row in rows
+        if isinstance(row, dict)
+    }
+    missing = [rel for rel in REQUIRED_HANDOFF_MODULES if rel not in actual]
+    mismatched = [rel for rel, digest in expected.items() if actual.get(rel) != digest]
+    if missing or mismatched:
+        return {
+            "verdict": "fail",
+            "error": "handoff:manifest-mismatch",
+            "missing": missing,
+            "mismatched": mismatched,
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    return {"verdict": "pass", "path": str(path), "modules": list(REQUIRED_HANDOFF_MODULES)}
+
+
+def verify_dependencies(root: Path) -> dict[str, Any]:
+    """Confirm packaged handoff modules exist before resume dispatch (PRD 352 R3)."""
+    missing = [rel for rel in REQUIRED_HANDOFF_MODULES if not (Path(root) / rel).is_file()]
+    if missing:
+        return {
+            "verdict": "fail",
+            "error": "handoff:missing-dependency",
+            "missing": missing,
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    return {"verdict": "pass", "modules": list(REQUIRED_HANDOFF_MODULES)}
+
+
+def deliver_scheduler_argv(run_id: str, *, root: Path) -> list[str]:
+    driver = Path(root) / "scripts" / "wave.py"
+    if not driver.is_file():
+        driver = SCRIPT_DIR / "wave.py"
+    return [
+        sys.executable,
+        str(driver),
+        "deliver-loop",
+        "--self-wake",
+        "--run-id",
+        run_id,
+    ]
+
+
+def dispatch_deliver_scheduler(argv: list[str], *, cwd: Path) -> dict[str, Any]:
+    proc = subprocess.run(argv, capture_output=True, text=True, check=False, cwd=str(cwd))
+    payload: dict[str, Any] = {
+        "verdict": "pass" if proc.returncode == 0 else "fail",
+        "exitCode": proc.returncode,
+        "argv": argv,
+    }
+    stdout = (proc.stdout or "").strip()
+    if stdout:
+        try:
+            payload["scheduler"] = json.loads(stdout)
+        except json.JSONDecodeError:
+            payload["stdout"] = stdout
+    if proc.returncode != 0:
+        payload["stderr"] = (proc.stderr or "").strip()
+    return payload
+
+
+def cmd_resume(args: argparse.Namespace) -> int:
+    """Validate import record + packaged deps, then dispatch deliver-loop (PRD 352 R1)."""
+    try:
+        from core.handoff.importer import (
+            ImportValidationError,
+            validate_import_record,
+            write_import_record_from_bundle,
+        )
+    except ImportError as exc:
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "error": "handoff:missing-dependency",
+                    "missing": ["core/handoff/importer.py"],
+                    "remediation": HANDOFF_INSTALLER_REPAIR,
+                    "detail": str(exc),
+                },
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 20
+
+    root = Path(args.root).resolve() if args.root else repo_root()
+    run_id = str(getattr(args, "run_id", "") or "").strip()
+    transition_id = str(getattr(args, "transition_id", "") or "").strip()
+    bundle_path = str(getattr(args, "path", "") or "").strip()
+    if bundle_path:
+        loaded = import_bundle(root, Path(bundle_path), allow_stale=True)
+        if loaded.get("verdict") != "pass" or not isinstance(loaded.get("bundle"), dict):
+            print(json.dumps(loaded, ensure_ascii=False, indent=2, sort_keys=True))
+            return 20 if str(loaded.get("verdict") or "") != "halt" else 21
+        if not run_id:
+            print(
+                json.dumps(
+                    {
+                        "verdict": "fail",
+                        "error": "handoff:resume-run-id-required",
+                        "remediation": "Pass --run-id when resuming from a bundle path.",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            return 20
+        try:
+            write_import_record_from_bundle(root, run_id, loaded["bundle"])
+        except Exception as exc:
+            print(
+                json.dumps(
+                    {
+                        "verdict": "fail",
+                        "error": "handoff:import-record-write-failed",
+                        "detail": str(exc),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            return 20
+    try:
+        record = validate_import_record(root, run_id, transition_id or None)
+    except ImportValidationError as exc:
+        print(json.dumps(exc.as_dict(), ensure_ascii=False, indent=2, sort_keys=True))
+        return 20
+    deps = verify_dependencies(root)
+    if deps.get("verdict") != "pass":
+        print(json.dumps(deps, ensure_ascii=False, indent=2, sort_keys=True))
+        return 20
+    argv = deliver_scheduler_argv(run_id, root=root)
+    result = dispatch_deliver_scheduler(argv, cwd=root)
+    payload = {
+        "verdict": result.get("verdict"),
+        "action": "resume",
+        "runId": run_id,
+        "transitionId": record.get("transition_id"),
+        "dispatched": True,
+        **{k: v for k, v in result.items() if k != "verdict"},
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0 if result.get("verdict") == "pass" else 20
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="HandoffBundle@v1 export/import (PRD 280 gap-324)")
     parser.add_argument("--root", default="", help="Repository root (default: git root from cwd)")
@@ -1090,6 +1333,7 @@ def main(argv: list[str] | None = None) -> int:
     import_cmd = sub.add_parser("import", help="Import bundle with freshness TTL + redaction")
     import_cmd.add_argument("path")
     import_cmd.add_argument("--allow-stale", action="store_true")
+    import_cmd.add_argument("--run-id", default="", help="Materialize a resume ticket for this run id")
     import_cmd.set_defaults(func=cmd_import)
 
     export_exploration = sub.add_parser(
@@ -1114,6 +1358,20 @@ def main(argv: list[str] | None = None) -> int:
     import_exploration.add_argument("--allow-stale", action="store_true")
     import_exploration.add_argument("--expected-revision", default="")
     import_exploration.set_defaults(func=cmd_import_exploration)
+
+    resume = sub.add_parser(
+        "resume",
+        help="Validate an import record (or bundle path) and dispatch the delivery scheduler",
+    )
+    resume.add_argument(
+        "path",
+        nargs="?",
+        default="",
+        help="Optional bundle to materialize before resume; otherwise selected via --run-id",
+    )
+    resume.add_argument("--run-id", default="", help="Imported run id (required)")
+    resume.add_argument("--transition-id", default="")
+    resume.set_defaults(func=cmd_resume)
 
     args = parser.parse_args(list(sys.argv[1:] if argv is None else argv))
     if getattr(args, "self_test", False):

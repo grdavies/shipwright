@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -57,6 +58,26 @@ class ImportError_(RuntimeError):
 
     def as_dict(self) -> dict[str, Any]:
         return {"error": self.code, "message": self.message, **self.details}
+
+
+class ImportValidationError(ImportError_):
+    """Import record is absent, incomplete, or invalid (PRD 352 R2)."""
+
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        remediation: str,
+        **details: Any,
+    ) -> None:
+        super().__init__(code, message, remediation=remediation, **details)
+        self.remediation = remediation
+
+    def as_dict(self) -> dict[str, Any]:
+        payload = super().as_dict()
+        payload["remediation"] = self.remediation
+        return payload
 
 
 @dataclass
@@ -232,6 +253,153 @@ def _state_path(root: Path, run_id: str, transition_id: str) -> Path:
     return run_dir(root, run_id) / "imports" / f"{transition_id}.json"
 
 
+_IMPORT_RECORD_REQUIRED = ("transition_id", "bundleDigest", "taskRows")
+_SAFE_HANDOFF_ID_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$")
+_BUNDLE_DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
+_REIMPORT_REMEDIATION = (
+    "Re-import the handoff bundle with `python3 scripts/handoff_bundle.py import "
+    "<bundle> --run-id <id>` then retry `resume`."
+)
+
+
+def _require_safe_handoff_id(value: str, *, field: str) -> str:
+    text = str(value or "").strip()
+    if not text or not _SAFE_HANDOFF_ID_RE.match(text):
+        raise ImportValidationError(
+            "import_record_invalid",
+            f"{field} is not a safe identifier",
+            remediation=_REIMPORT_REMEDIATION,
+            field=field,
+        )
+    return text
+
+
+def validate_import_record(
+    root: Path,
+    run_id: str,
+    transition_id: str | None = None,
+) -> dict[str, Any]:
+    """Load and validate a materialized import record (PRD 352 R2)."""
+    rid = _require_safe_handoff_id(run_id, field="run_id")
+    try:
+        imports_dir = run_dir(root, rid) / "imports"
+    except ValueError as exc:
+        raise ImportValidationError(
+            "import_record_absent",
+            str(exc),
+            remediation=_REIMPORT_REMEDIATION,
+        ) from exc
+    imports_root = imports_dir.resolve()
+    tid = str(transition_id or "").strip()
+    if tid:
+        tid = _require_safe_handoff_id(tid, field="transition_id")
+        path = (imports_dir / f"{tid}.json").resolve()
+        try:
+            path.relative_to(imports_root)
+        except ValueError as exc:
+            raise ImportValidationError(
+                "import_record_invalid",
+                "import record path escapes the imports directory",
+                remediation=_REIMPORT_REMEDIATION,
+                path=str(path),
+            ) from exc
+        if not path.is_file():
+            raise ImportValidationError(
+                "import_record_absent",
+                f"no import record for transition {tid!r}",
+                remediation=_REIMPORT_REMEDIATION,
+                path=str(path),
+            )
+    else:
+        files = sorted(imports_dir.glob("*.json")) if imports_dir.is_dir() else []
+        if not files:
+            raise ImportValidationError(
+                "import_record_absent",
+                "no import record on disk",
+                remediation=_REIMPORT_REMEDIATION,
+                path=str(imports_dir),
+            )
+        if len(files) > 1:
+            raise ImportValidationError(
+                "import_record_incomplete",
+                "multiple import records; pass --transition-id",
+                remediation="Retry resume with --transition-id <id>.",
+                candidates=[p.stem for p in files],
+            )
+        path = files[0].resolve()
+        try:
+            path.relative_to(imports_root)
+        except ValueError as exc:
+            raise ImportValidationError(
+                "import_record_invalid",
+                "import record path escapes the imports directory",
+                remediation=_REIMPORT_REMEDIATION,
+                path=str(path),
+            ) from exc
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ImportValidationError(
+            "import_record_invalid",
+            "import record is not valid JSON",
+            remediation=_REIMPORT_REMEDIATION,
+            path=str(path),
+        ) from exc
+    if not isinstance(record, dict):
+        raise ImportValidationError(
+            "import_record_invalid",
+            "import record must be a JSON object",
+            remediation=_REIMPORT_REMEDIATION,
+            path=str(path),
+        )
+    missing = [
+        key
+        for key in _IMPORT_RECORD_REQUIRED
+        if key not in record or record.get(key) in (None, "")
+    ]
+    if missing:
+        raise ImportValidationError(
+            "import_record_incomplete",
+            "import record is missing required fields",
+            remediation=_REIMPORT_REMEDIATION,
+            missing=missing,
+            path=str(path),
+        )
+    record_tid = str(record.get("transition_id") or "").strip()
+    if record_tid != path.stem:
+        raise ImportValidationError(
+            "import_record_invalid",
+            "import record transition_id does not match file stem",
+            remediation=_REIMPORT_REMEDIATION,
+            path=str(path),
+        )
+    digest = str(record.get("bundleDigest") or "")
+    if not _BUNDLE_DIGEST_RE.match(digest):
+        raise ImportValidationError(
+            "import_record_invalid",
+            "import record bundleDigest is not a sha256 digest",
+            remediation=_REIMPORT_REMEDIATION,
+            path=str(path),
+        )
+    task_rows = record.get("taskRows")
+    if not isinstance(task_rows, dict):
+        raise ImportValidationError(
+            "import_record_invalid",
+            "import record taskRows must be an object",
+            remediation=_REIMPORT_REMEDIATION,
+            path=str(path),
+        )
+    record_run = str(record.get("run_id") or "").strip()
+    if record_run and record_run != rid:
+        raise ImportValidationError(
+            "import_record_invalid",
+            "import record run_id does not match --run-id",
+            remediation=_REIMPORT_REMEDIATION,
+            path=str(path),
+        )
+    return record
+
+
 def _dedupe(rows: list[Any], key_fields: tuple[str, ...]) -> list[Any]:
     seen: set[str] = set()
     out: list[Any] = []
@@ -254,6 +422,7 @@ def _materialize_run_state(
     continuation = dict(bundle.get("continuation_payload") or {})
     state = {
         "transition_id": bundle.get("transition_id"),
+        "run_id": run_id,
         "source_host": bundle.get("source_host"),
         "destination_host": bundle.get("destination_host"),
         "continuation_payload": continuation,
@@ -280,6 +449,31 @@ def _materialize_run_state(
     }
     path = _state_path(root, run_id, str(bundle["transition_id"]))
     atomic_write_json(path, state)
+    return state
+
+
+def write_import_record_from_bundle(
+    root: Path, run_id: str, bundle: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Materialize a resume ticket from a validated bundle (informational or cross-host)."""
+    rid = _require_safe_handoff_id(run_id, field="run_id")
+    raw_tid = str(bundle.get("transition_id") or "").strip()
+    if raw_tid and bundle.get("continuation_payload"):
+        _require_safe_handoff_id(raw_tid, field="transition_id")
+        return _materialize_run_state(root, rid, bundle)
+    tid = raw_tid if _SAFE_HANDOFF_ID_RE.match(raw_tid) else "imported"
+    digest = str(bundle.get("bundleDigest") or digest_payload(bundle))
+    task_rows = bundle.get("taskRows")
+    if not isinstance(task_rows, dict):
+        task_rows = {"completed": [], "remaining": []}
+    state = {
+        "transition_id": tid,
+        "run_id": rid,
+        "bundleDigest": digest,
+        "taskRows": task_rows,
+        "continuation_payload": dict(bundle.get("continuation_payload") or {}),
+    }
+    atomic_write_json(_state_path(root, rid, tid), state)
     return state
 
 
