@@ -1299,6 +1299,7 @@
 * merge phase finalize-stall-recovery into feat/deliver-pipeline-ops (885f4f4) <!-- sw-deliver:finalize-stall-recovery -->
 * merge phase layout-dual-home-sync into feat/deliver-pipeline-ops (9664441) <!-- sw-deliver:layout-dual-home-sync -->
 * merge phase implement-test-document into feat/init-step-authority-single-source (07b9be6) <!-- sw-deliver:implement-test-document -->
+* merge phase connect-import-to-executable-resume-slice-1 into feat/reliable-host-switching (285b22a) <!-- sw-deliver:connect-import-to-executable-resume-slice-1 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
