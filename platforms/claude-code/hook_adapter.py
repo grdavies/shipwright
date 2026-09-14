@@ -14,7 +14,37 @@ from guardrail_core import (
 )
 from sw_hook_util import read_stdin_json, workspace_root
 
-# core/ is on sys.path via claude-hook.py (exposes ``adapters``).
+
+def _ensure_core_on_path() -> None:
+    """Make ``adapters.*`` / ``core.adapters.*`` importable from repo or dist layouts.
+
+    ``claude-hook.py`` usually inserts ``core/`` onto ``sys.path``. Fixture drivers
+    (``scripts/test/claude-*-case.py``) only add ``platforms/claude-code`` — bootstrap
+    here so module import does not fail closed with empty stdout (CI hook harness).
+    """
+    here = Path(__file__).resolve().parent
+    candidates = (
+        here.parent.parent,  # platforms/claude-code → repo root
+        here.parent,  # dist/claude-code/hooks → dist/claude-code
+        here.parents[2] if len(here.parents) > 2 else here,
+    )
+    for root in candidates:
+        core = root / "core"
+        adapters = core / "adapters" / "pre_tool_evaluator.py"
+        if not adapters.is_file():
+            continue
+        core_s = str(core)
+        root_s = str(root)
+        if core_s not in sys.path:
+            sys.path.insert(0, core_s)
+        if root_s not in sys.path:
+            sys.path.insert(0, root_s)
+        return
+
+
+_ensure_core_on_path()
+
+# Prefer ``adapters.*`` when ``core/`` is on sys.path; fall back to package import.
 try:
     from adapters.pre_tool_evaluator import (  # type: ignore
         _emit_submit_result as submit_result_payload,
