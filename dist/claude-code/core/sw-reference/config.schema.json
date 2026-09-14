@@ -1484,6 +1484,50 @@
               "default": 1000
             }
           }
+        },
+        "switch": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Runtime host-switch spending and retry boundaries (PRD 352 R22–R25).",
+          "properties": {
+            "maxRetries": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 3,
+              "description": "Maximum host-switch attempts per run before cooldown halt."
+            },
+            "cooldownSeconds": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 300,
+              "description": "Minimum seconds between host-switch attempts."
+            },
+            "spendingPolicy": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Fail-closed spending policy for automatic fallback (PRD 352 D3).",
+              "properties": {
+                "allowAutomaticFallback": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When true, configured authorized destinations may fall back without per-switch user instruction."
+                },
+                "allowPaidFallback": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "When false, subscription exhaustion never silently becomes paid usage."
+                },
+                "authorizedDestinations": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": "Destination host ids pre-authorized for automatic fallback."
+                }
+              }
+            }
+          }
         }
       },
       "x-sw-interviewPriority": 1
