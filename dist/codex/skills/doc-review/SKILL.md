@@ -1,0 +1,305 @@
+---
+name: doc-review
+description: Review PRD drafts with parallel persona sub-agents and a synthesizer that auto-applies safe fixes. Use when Standard or Full tier needs persona panel review before freeze. Quick tier skips; does not generate tasks.
+metadata:
+  shipwright-capability:
+    version: 1
+    triggers:
+      -
+        type: phase_default
+        selectionFamily: doc-review
+        command: sw-doc-review
+    metadata:
+      skill: doc-review
+      selectionFamily: doc-review
+---
+# Document review (`/sw-doc-review`)
+
+Multi-persona review for PRDs and decision records. Pattern borrowed from compound-engineering `ce-doc-review` (slim vendored adaptation).
+
+
+**Model tier:** inherit — runtime parent floor (R9); `resolve-model-tier.py --skill doc-review` returns inherit with `modelId: null`. When using the Task tool for subagent dispatch, resolve concrete model IDs from `models.tiers` in config (never semantic tier names in subagent `model:` frontmatter).
+
+## Transport (PRD 045 R24/R69; PRD 341 R33)
+
+| `planning.store.backend` | Findings transport |
+| --- | --- |
+| `issue-store` | Facade review-round ops (`post` → `open` → `verify` → `complete`) via marker-delimited `sw-doc-review` comments (GitHub; PRD 341) |
+| default (file-store) | In-IDE parallel sub-agent panel + JSON synthesis |
+
+Under issue-store, persona **selection** and **dispatch binding** are identical to file-store; only the
+**transport** changes. Human review feedback uses a separate comment channel (no `sw-doc-review` marker).
+
+### File-store byte-identical path (R33)
+
+When the effective backend is **not** `issue-store`, document review must keep the existing in-IDE persona
+JSON transport with **byte-identical** selection, dispatch, synthesis, bounded-loop, and autofix behavior.
+PRD 341 issue-store facade work must not alter file-store goldens, selector outputs for identical
+`signal_context`, or the file-store procedure below. Regression lock:
+`scripts/unit_tests/doc/test_doc_loop_state.py` (persona-selection + findings-schema hashes).
+
+**Provider gate:** issue-store review transport is **GitHub issue-store only** today. Jira, Linear, Notion,
+file-store, and other backends return `doc-review-provider-unsupported` / transport refusal — halt; do not
+fall back to in-IDE transport from an issue-store session, and do not route file-store reviews through the
+GitHub facade.
+
+**IDE fallback:** when `backend != issue-store`, the procedure under **Selection** / parallel panel + JSON
+synthesis is the sole transport — byte-identical to the pre-341 file-store path.
+
+### Issue-store transport (`sw-doc-review` marker)
+
+Prose label: “doc-review marker”; **implementation marker string:** `sw-doc-review` (HTML comment
+`<!-- sw-doc-review -->` … `<!-- /sw-doc-review -->`).
+PRD 045's legacy transport spelling `sw:doc-review` refers to this same marker family.
+
+**Five facade ops only** (no public `issue-comment` for review): `post_review_finding`,
+`open_review_manifest`, `read_review_manifest`, `verify_review_manifest`, `complete_review_round`
+(CLI verbs `doc-review-round-{post,open,read,verify,close}`).
+
+**New rounds — post-then-open / complete (PRD 341):**
+
+1. Resolve the PRD artifact issue ref from the planning store (`planning_store` + PRD 043 identification).
+2. For each selected persona, dispatch the review Task (binding unchanged), then **post** findings
+   (`doc-review-round-post` / `post_review_finding`) — brokered principal id; `sw-doc-review` marker;
+   JSON per `references/findings-schema.json`. Posts do not yet pin the body witness.
+3. **Open round** after posts — `doc-review-round-open` / `open_review_manifest` writes the etag-guarded
+   review-round manifest (body witness) with exhaustive pins. **Marker:** `sw-doc-review` delimits persona
+   payload — **excluded** from PRD 043 R35 canonicalization. **Stripped-hash:** live `sw-doc-review-round`
+   witness stays on the body but is excluded from `body-sha256/v1` / frozen canonical hash (never strip the
+   live witness from body).
+4. **Human channel:** operator notes as plain comments without the `sw-doc-review` marker.
+5. **Read / verify** before synthesis (`doc-review-round-read` / `doc-review-round-verify`). Fail closed on
+   drift, body-drift, or OCC `revision-conflict` (re-run the whole verb after refresh — no in-verb retry).
+6. Synthesize (`references/synthesis.md`) only when verify returns `verdict: ok`.
+7. **Complete** — `doc-review-round-close` / `complete_review_round` (completion receipt).
+8. Apply `safe_auto` / gate `gated_auto` / `manual` identically to file-store synthesis.
+
+**Bootstrap in-flight (#1070):** open-then-post / `close` remains for rounds opened before facade mapping
+— see `references/synthesis.md`. Do not mix bootstrap envelopes into a new-round open.
+
+**Cache-only:** `.cursor/doc-review-runs/` (and related prompt/scratch paths) are gitignored,
+non-authoritative cache — never treat them as store truth.
+
+## Doc types
+
+| Doc type | Path pattern | Panel |
+|----------|--------------|-------|
+| PRD draft | `docs/prds/<n>-<slug>/<n>-prd-<slug>.md` | Signal-driven (see Selection) |
+| Decision-record draft | `docs/decisions/<n>-<slug>.md` | **Full** — all eight personas |
+| PRD amendment | `docs/prds/<n>-<slug>/amendments/A<k>-*.md` | Coherence + scope-guardian + docs-currency |
+| Decision amendment | `docs/decisions/<n>-<slug>.amendments/A<k>-*.md` | Raised floor (see Decision amendment review) |
+
+## Tier gate (review runs or not)
+
+| Tier | Panel |
+|------|-------|
+| Quick | None — do not invoke |
+| Standard / Full | Per doc type above |
+
+**PRD tier no longer selects personas** — only whether review runs. Quick skips; PRD reviews use the
+capability selector (`doc-review` family). **Decision-record drafts always use the Full panel** (all eight)
+regardless of tier, because they govern multiple plans by definition.
+
+## Selection
+
+Deterministic — same inputs → same panel. Not model judgment. **Authoritative algorithm:** per-persona
+`capability` frontmatter on `core/agents/sw-*-reviewer.md` aggregated into
+`core/sw-reference/capability-index.json`, resolved by `python3 scripts/doc-review-select.py` (wraps
+`capability-select.py` for the `doc-review` selection family). Contract:
+`core/sw-reference/capability-manifest.md` (triggers, precedence, trust boundary).
+
+**Model tier is orthogonal** — persona dispatch tiers resolve via `resolve-model-tier.py --agent <id>`;
+capability selection does not choose models.
+
+### Tier gate (selector input)
+
+Quick tier → empty panel; selector is not invoked. Non-Quick PRD drafts build a versioned `signal_context`
+(`tier`, `doc_path`, `body_snapshot`, `derived_tags` from triage, `overrides` for CLI flags) and call
+`doc-review-select.py`. Decision-record and amendment paths use **floor rules** below (not the PRD selector).
+
+### Always-on core (manifest)
+
+Six personas carry explicit `always_on` triggers (`selectionFamily: doc-review`):
+
+- `sw-coherence-reviewer`, `sw-feasibility-reviewer`, `sw-scope-guardian-reviewer`
+- `sw-product-reviewer`, `sw-adversarial-reviewer`, `sw-docs-currency-reviewer`
+
+**Living-doc complementarity:** `sw-docs-currency-reviewer` explicitly scopes out
+`docs/prds/INDEX.md`, `docs/prds/COMPLETION-LOG.md`, and `docs/prds/GAP-BACKLOG.md` — those three
+living indexes are owned by the PRD 009 living-doc currency gate. This persona must not re-gate or
+duplicate that gate; its scope is arbitrary documentation artifacts at spec-time.
+
+### Signal-gated specialists (manifest)
+
+| Persona | Manifest trigger summary |
+| --- | --- |
+| `sw-security-reviewer` | `text_token` over **`security`-tagged** keywords (sync with `skills/triage/SKILL.md` risk triggers). Tags `data-migration` and `billing-routing` floor triage tier but do **not** fire security. |
+| `sw-design-reviewer` | `any_of` unambiguous UI terms (`wireframe`, `modal`, `navigation`, `responsive`, `accessibility`, `user flow`, …), structural headings (`UI` / `UX` / `Screens` / `Mockups`), or design-tool links (e.g. Figma). Heading triggers use **whole-token** or **exact** match on stripped heading text — not substring containment (so `## Requirements` does not fire on embedded `ui`). Bare **polysemous** tokens (`component`, `view`, `page`, `form`) do **not** count alone. |
+
+**Security signal enumeration** (must stay in sync with triage `security` tags and manifest `text_token` triggers):
+
+`auth`, `authn`, `authz`, `authentication`, `authorization`, `login`, `session`, `oauth`, `jwt`, `payment`,
+`payments`, `billing`, `PII`, `credentials`, `token`, `encryption`, `public api`, `public endpoint`,
+`external api`, `webhook`
+
+Keyword-gated security accepts deliberate false-negative cost on novel phrasing; use `--personas security` for
+audits when wording dodges the list.
+
+### Selector invocation
+
+```bash
+python3 scripts/doc-review-select.py --context-json '<signal_context>'
+```
+
+Returns canonical JSON: resolved persona ids, matched signals, and activation-record fields. Identical
+`signal_context` ⇒ byte-identical output. Overrides (`--personas`, `--all`) are carried in
+`signal_context.overrides` at selection time.
+
+### Overrides
+
+- `--personas <comma-separated>` — force-add named personas (e.g. `security,design`). Record
+  `override: personas <list>` with reason.
+- `--all` — run all eight personas (deep audit). Record `override: all`.
+
+Mirrors `sw-triage` `--tier` override recording.
+
+### Vocabulary divergence signal (PRD 280 R10, D7)
+
+When `.cursor/sw-vocabulary-divergence/last.json` exists from a prior `/sw-prd` run and `divergence` is
+non-empty:
+
+1. **Load artifact** at dispatch prep (read-only — do not re-run `check-divergence` during review).
+2. **Coherence persona only** — inject the divergence summary into the coherence dispatch prompt via
+   `CONTEXT_BLOCKS` (or equivalent `dispatch_prompt.py build --context-json` block):
+   - `maxSeverity`, each `divergence[]` entry (`concept`, `occurrences`, `severity`, `note`)
+   - `humanGated: true` and `registryTermCount` when present
+3. Coherence must surface terminology drift against the artifact; treat `severity: error` items as **hard**
+   coherence findings when `strictMode` was active at check time.
+4. **No auto canonical promotion** — personas and synthesizer must **not** call `put-term`, edit vocabulary
+   registry units, or apply `safe_auto` rewrites that impose canonical names. Route vocabulary alignment to
+   `manual` (or `gated_auto` when operator confirms).
+
+Other personas do not receive the artifact unless an explicit `--personas` override expands scope.
+
+### Activation record
+
+Emit at start of every review (inline in the review report):
+
+```text
+Persona activation:
+  core: coherence, feasibility, scope-guardian, product, adversarial, docs-currency
+  gated:
+    - security: matched "<signal>" (if fired)
+    - design: matched "<signal>" (if fired)
+  skipped_gated: [list gated personas not fired] (optional)
+  override: <none|personas <list>|all>
+```
+
+## Dispatch
+
+**Binding (R2–R4, R14):** before each persona Task spawn, resolve, preflight, embed the intensity
+directive, validate the constructed prompt, then spawn:
+
+```bash
+PARENT_MODEL="<concrete platform model id of the dispatching agent session>"
+AGENT="sw-coherence-reviewer"   # example persona id
+PROMPT_PATH=".cursor/sw-doc-review-runs/${DISPATCH_ID}-prompt.md"
+
+RESOLVED=$(python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --agent "$AGENT" )
+MODEL_ID=$(echo "$RESOLVED" | python3 -c "import json,sys; print(json.load(sys.stdin)['modelId'])")
+python3 scripts/wave.py dispatch preflight --dispatch-id "$DISPATCH_ID" --agent "$AGENT" --command sw-doc-review --skill doc-review
+
+INTENSITY_JSON=$(python3 scripts/resolve-intensity.py --agent "$AGENT" --command sw-doc-review --skill doc-review)
+INTENSITY=$(echo "$INTENSITY_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['intensity'])")
+INTENSITY_SOURCE=$(echo "$INTENSITY_JSON" | python3 -c "import json,sys; print(json.load(sys.stdin)['source'])")
+# After redacting persona context into TASK_BODY (memory-redact + untrusted_payload fence):
+printf '%s' "$TASK_BODY" > "${PROMPT_PATH}.body"
+python3 scripts/dispatch_prompt.py build \
+  --intensity "$INTENSITY" \
+  --intensity-source "$INTENSITY_SOURCE" \
+  --body-file "${PROMPT_PATH}.body" \
+  --context-json "${CONTEXT_BLOCKS_JSON:-[]}" \
+  --out "$PROMPT_PATH"
+
+python3 scripts/dispatch-check.py --agent "$AGENT" --command sw-doc-review --skill doc-review \
+  --parent-model "$PARENT_MODEL" --dispatch-id "$DISPATCH_ID" --prompt "$PROMPT_PATH"
+# Task spawn MUST use model: <MODEL_ID> and tool_input.prompt = contents of $PROMPT_PATH — not inherit
+```
+
+For **N parallel persona Tasks**, run **N independent preflights** with **unique** `--dispatch-id` values
+(one record per persona under `.cursor/hooks/state/task-dispatch-preflight/<dispatch-id>.json`);
+consuming one record leaves the others valid (R38). Repeat for every selected persona. Halt on preflight
+exit 20; do not spawn on unresolved `inherit`.
+
+1. Detect doc type from path (see Doc types).
+2. **Decision-record draft** (`docs/decisions/<n>-<slug>.md`): run all eight personas (`--all` equivalent); record
+   `override: decision-record full panel` in the activation record.
+3. **Decision amendment** (`docs/decisions/...amendments/A<k>-*.md`): run Decision amendment review floor — skip
+   full selection unless `--personas` / `--all` override.
+4. **PRD amendment** (`docs/prds/.../amendments/A<k>-*.md`): run **coherence** + **scope-guardian** +
+   **docs-currency** per Amendment review (U7) — skip the full selection algorithm unless `--personas` / `--all`
+   override.
+5. Resolve tier — if Quick, report "no panel for Quick" and stop.
+6. **PRD draft:** run `python3 scripts/doc-review-select.py --context-json '<signal_context>'`; announce activation record (core + any fired gates + matched signals).
+7. **Parallel panel (R38/R14):** for each selected persona, run a **unique** `dispatch preflight` → assemble via
+   `scripts/dispatch_prompt.py build` → `dispatch-check --prompt` (see Dispatch binding) **before** spawning
+   that persona Task — never reuse a single preflight across N spawns.
+8. Read full document (no section splitting) — each selected persona is a parallel sub-agent (R28/R31).
+9. Each agent returns JSON per `references/findings-schema.json`.
+10. Synthesizer follows `references/synthesis.md`.
+11. Apply `safe_auto` silently; gate `gated_auto` and `manual`.
+
+## Invariants (non-negotiable constraint class)
+
+When `invariantsFile` is configured:
+
+- Load the file relative to the **ref under review** (not always `main`).
+- Pass content to every dispatched persona as a flagged non-negotiable block.
+- Findings that violate an invariant are **hard** issues, not advisory.
+- Missing/unreadable on the ref → block **this review only** with a config error (fail-closed).
+- `--no-invariants` or `invariantsOptional: true` logs an override so fix-PRs are not deadlocked.
+
+## Decision-record draft review
+
+When reviewing `docs/decisions/<n>-<slug>.md` drafts (pre-freeze, not under `.amendments/`):
+
+- Dispatch **all eight** personas: coherence, feasibility, scope-guardian, product, adversarial, docs-currency,
+  security, design.
+- Treat as top blast-radius by definition — floor-only relative to PRD signal-driven selection; never subtracts
+  personas plan 004 would add on a PRD.
+- Quick tier: no panel (parity with PRD Quick behavior).
+
+## Decision amendment review
+
+When reviewing `docs/decisions/<n>-<slug>.amendments/A<k>-*.md` drafts:
+
+- **Always run:** coherence, scope-guardian, adversarial, feasibility, docs-currency against the frozen parent
+  (read-only).
+- **Additionally run security** when the decision touches auth, data, or migrations (same security signal
+  enumeration as PRD selection).
+- This is a **raised floor** above the generic PRD amendment path (coherence + scope-guardian + docs-currency) —
+  applies **only** when the frozen parent lives under `docs/decisions/`.
+- Verify every `supersedes`/`retracts` target exists; record-level supersede must carry a `replacement:` forward
+  pointer to a frozen target.
+- Never edit the parent file — fixes apply only to the amendment draft.
+
+## Amendment review (U7)
+
+When reviewing `docs/prds/<n>-<slug>/amendments/A<k>-*.md` drafts:
+
+- **coherence** + **scope-guardian** + **docs-currency** always run against the frozen parent (read-only) — not
+  the full signal-driven panel.
+- Verify every `supersedes`/`retracts` target exists in the parent effective spec.
+- Reject targets already retracted; require rationale for each retract.
+- Flag undeclared contradictions with parent requirements; declared directives are the sanctioned path.
+- Never edit the parent file — fixes apply only to the amendment draft.
+
+## Disposition disputes
+
+Persona-vs-persona or operator-vs-synthesizer disagreement on a finding's `autofix_class` routes through
+`skills/calibration-loop/SKILL.md` rather than a silent pick or a repeated abstract prompt — see
+`references/synthesis.md` **Disposition disputes**.
+
+## Handoff
+
+→ `/sw-freeze` when no blocking manual trade-offs remain.
