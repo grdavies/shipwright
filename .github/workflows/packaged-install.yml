@@ -48,6 +48,26 @@ jobs:
       - name: Fixture descriptor+emitter pair (zero installer-core changes)
         run: python scripts/packaged_install_ga_smoke.py --fixture-pair
 
+      # PRD 352 R3 — packaged zipapp self-test from a copied dist/ tree.
+      # Fails red until R1/R2 stage core runtime trees into the zipapp
+      # (currently ModuleNotFoundError: core from handoff_bundle --self-test).
+      - name: Packaged zipapp handoff self-test (PRD 352 R3)
+        run: |
+          set -euo pipefail
+          python scripts/build_zipapp.py build
+          test -d dist
+          STAGE="$(mktemp -d)"
+          # Copy zipapp artifacts only (dist/ also holds adapter trees).
+          cp -R dist/shipwright*.pyz "${STAGE}/"
+          cp -R dist/shipwright*.manifest.json "${STAGE}/" 2>/dev/null || true
+          cp -R dist/shipwright-distribution-stamp.json "${STAGE}/" 2>/dev/null || true
+          PYZ="${STAGE}/shipwright.pyz"
+          if [ ! -e "${PYZ}" ]; then
+            PYZ="$(find "${STAGE}" -name 'shipwright-*.pyz' | head -1)"
+          fi
+          test -n "${PYZ}" && test -e "${PYZ}"
+          python "${PYZ}" handoff_bundle --self-test
+
   # Local/CI wiring surface for check-gate (R19): ensures the GA workflow file
   # and smoke entrypoint remain discoverable even when GH check polling is offline.
   packaged-install-gate-wiring:

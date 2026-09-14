@@ -15,6 +15,62 @@ from guardrail_core import (
 from sw_hook_util import read_stdin_json, workspace_root
 
 
+def _ensure_core_on_path() -> None:
+    """Make ``adapters.*`` / ``core.adapters.*`` importable from repo or dist layouts.
+
+    ``claude-hook.py`` usually inserts ``core/`` onto ``sys.path``. Fixture drivers
+    (``scripts/test/claude-*-case.py``) only add ``platforms/claude-code`` — bootstrap
+    here so module import does not fail closed with empty stdout (CI hook harness).
+    """
+    here = Path(__file__).resolve().parent
+    candidates = (
+        here.parent.parent,  # platforms/claude-code → repo root
+        here.parent,  # dist/claude-code/hooks → dist/claude-code
+        here.parents[2] if len(here.parents) > 2 else here,
+    )
+    for root in candidates:
+        core = root / "core"
+        adapters = core / "adapters" / "pre_tool_evaluator.py"
+        if not adapters.is_file():
+            continue
+        core_s = str(core)
+        root_s = str(root)
+        if core_s not in sys.path:
+            sys.path.insert(0, core_s)
+        if root_s not in sys.path:
+            sys.path.insert(0, root_s)
+        return
+
+
+_ensure_core_on_path()
+
+# Prefer ``adapters.*`` when ``core/`` is on sys.path; fall back to package import.
+try:
+    from adapters.pre_tool_evaluator import (  # type: ignore
+        _emit_submit_result as submit_result_payload,
+        _session_start_payload,
+        fail_closed_pretool_deny,
+    )
+except ImportError:  # pragma: no cover - package-style import
+    from core.adapters.pre_tool_evaluator import (  # type: ignore
+        _emit_submit_result as submit_result_payload,
+        _session_start_payload,
+        fail_closed_pretool_deny,
+    )
+
+# Re-export for golden harness / historical imports.
+__all__ = [
+    "build_mcp_config",
+    "dispatch",
+    "plugin_root",
+    "run_session_start",
+    "run_stop",
+    "run_user_prompt_submit",
+    "run_user_prompt_submit_from_payload",
+    "_session_start_payload",
+]
+
+
 def plugin_root(repo_root: Path) -> Path:
     return repo_root
 
@@ -31,16 +87,6 @@ def _session_context_template(repo_root: Path) -> Path:
     return repo_root / "core" / "hooks" / "session-context.md"
 
 
-def _session_start_payload(context: str) -> dict:
-    """Claude SessionStart structured output — includes event_name (R5)."""
-    return {
-        "event_name": "SessionStart",
-        "hookSpecificOutput": {
-            "additionalContext": context,
-        },
-    }
-
-
 def run_session_start(repo_root: Path) -> int:
     payload = read_stdin_json()
     root = workspace_root(payload)
@@ -49,12 +95,8 @@ def run_session_start(repo_root: Path) -> int:
         context = build_session_context(root, plugin_root(repo_root), template)
         print(json.dumps(_session_start_payload(context), ensure_ascii=False))
         return 0
-    except Exception as exc:  # noqa: BLE001 — session hook is fail-open
-        print(
-            json.dumps(
-                _session_start_payload(f"(Shipwright hook degraded: {exc})")
-            )
-        )
+    except Exception as exc:  # noqa: BLE001 — session context still emitted when degraded
+        print(json.dumps(_session_start_payload(f"(Shipwright hook degraded: {exc})")))
         return 0
 
 
@@ -139,6 +181,7 @@ def _run_pre_tool_use_with_payload(repo_root: Path, payload: dict) -> int:
     try:
         # core/ is on sys.path via claude-hook.py wrapper; adapters/ too.
         import importlib
+
         pre_mod = importlib.import_module("adapters.pre_tool_evaluator")
         map_mod = importlib.import_module("tool_name_map")
         result = pre_mod.evaluate_pre_tool(
@@ -155,18 +198,18 @@ def _run_pre_tool_use_with_payload(repo_root: Path, payload: dict) -> int:
             )
         print(json.dumps(result.to_claude_hook_output(), ensure_ascii=False))
         return 0
-    except Exception as exc:  # noqa: BLE001 — fail-open outside directive enforcement
-        print(json.dumps({"decision": "approve"}))
-        print(f"Shipwright before-task-dispatch hook degraded: {exc}", file=sys.stderr)
+    except Exception as exc:  # noqa: BLE001 — PRD 352 R17 fail-closed deny
+        deny = fail_closed_pretool_deny(f"Shipwright before-task-dispatch hook error: {exc}")
+        print(json.dumps(deny, ensure_ascii=False))
+        print(f"Shipwright before-task-dispatch hook denied on error: {exc}", file=sys.stderr)
         return 0
 
 
 def _emit_submit_result(result: SubmitGuardResult) -> int:
-    if result.allow:
-        print(json.dumps({"decision": "approve"}))
-        return 0
-    print(json.dumps({"decision": "block", "reason": result.message}))
-    return 2
+    """Emit UserPromptSubmit JSON (R16) and return process exit code."""
+    payload = submit_result_payload(result)
+    print(json.dumps(payload, ensure_ascii=False))
+    return 0 if result.allow else 2
 
 
 def run_user_prompt_submit_from_payload(repo_root: Path, payload: dict) -> tuple[int, str]:
@@ -176,22 +219,20 @@ def run_user_prompt_submit_from_payload(repo_root: Path, payload: dict) -> tuple
         result = evaluate_submit_guard(root, plugin_root(repo_root))
     except Exception as exc:  # noqa: BLE001
         result = SubmitGuardResult(allow=False, message=f"Shipwright guardrail hook error: {exc}")
-    if result.allow:
-        return 0, json.dumps({"decision": "approve"})
-    return 2, json.dumps({"decision": "block", "reason": result.message})
+    body = json.dumps(submit_result_payload(result), ensure_ascii=False)
+    return (0 if result.allow else 2), body
 
 
 def build_mcp_config(repo_root, *, enabled: bool = True):
     """Per-adapter MCP config for Claude Code (PRD 349 R41) — distinct path from Codex/OpenCode."""
     if not enabled:
         return None
-    import sys
-    from pathlib import Path
     repo_root = Path(repo_root)
     scripts = repo_root / "scripts"
     if str(scripts) not in sys.path:
         sys.path.insert(0, str(scripts))
-    import shipwright_paths
+    import shipwright_paths  # noqa: PLC0415 — scripts path injected above
+
     server = shipwright_paths.bounded_mcp_server_path(repo_root)
     config_path = shipwright_paths.bounded_mcp_config_path(repo_root, "claude-code")
     return {

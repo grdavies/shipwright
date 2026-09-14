@@ -60,18 +60,25 @@ def generate(
     )
     write_manifest(out / ".codex-plugin" / "plugin.json", manifest)
 
-    # Stable skill identity index — references only, no body duplication (R21).
+    # PRD 352 R4: ship full skill bodies (option a) via hook_adapter.copy_emittable_content.
+    from hook_adapter import copy_emittable_content
+
+    written_skills = copy_emittable_content(core, out)
     skills_dir = out / "skills"
     skills_dir.mkdir(parents=True, exist_ok=True)
-    index = {"skills": [{"id": sid, "source": f"core/skills/{sid}"} for sid in skill_ids]}
+    index = {
+        "skills": [
+            {
+                "id": sid,
+                "source": f"core/skills/{sid}",
+                "body": f"skills/{sid}/SKILL.md",
+            }
+            for sid in skill_ids
+        ]
+    }
     (skills_dir / "index.json").write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
-    for sid in skill_ids:
-        ref_dir = skills_dir / sid
-        ref_dir.mkdir(parents=True, exist_ok=True)
-        (ref_dir / "SKILL.ref.json").write_text(
-            json.dumps({"id": sid, "source": f"core/skills/{sid}"}, indent=2) + "\n",
-            encoding="utf-8",
-        )
+    if skill_ids and not written_skills:
+        raise RuntimeError("expected skill bodies to be copied for Codex package")
 
     hooks_dir = out / "hooks"
     hooks_dir.mkdir(parents=True, exist_ok=True)
@@ -86,16 +93,31 @@ def generate(
         + "\n",
         encoding="utf-8",
     )
+    # Ship lifecycle + adapter so registered events process stdin (PRD 352 R5).
+    adapter_src = Path(__file__).resolve().parent
+    for name in ("hook_adapter.py", "lifecycle.py"):
+        shutil.copy2(adapter_src / name, hooks_dir / name)
+    # Core hook module needed by lifecycle shim when running from the package tree.
+    core_hooks_src = core / "hooks"
+    core_hooks_dest = out / "core" / "hooks"
+    if core_hooks_src.is_dir():
+        if core_hooks_dest.exists():
+            shutil.rmtree(core_hooks_dest)
+        shutil.copytree(
+            core_hooks_src,
+            core_hooks_dest,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "tests", "test"),
+        )
     (hooks_dir / "codex-hook.py").write_text(
         "#!/usr/bin/env python3\n"
-        '"""Thin Codex hook entry — delegates to core hook runtime."""\n'
+        '"""Codex hook entry — processes stdin via lifecycle (PRD 352 R5)."""\n'
         "from __future__ import annotations\n"
         "import sys\n"
         "from pathlib import Path\n"
-        "_ROOT = Path(__file__).resolve().parent.parent\n"
-        "sys.path.insert(0, str(_ROOT / 'core' / 'hooks'))\n"
-        "print('codex-hook: ok')\n"
-        "raise SystemExit(0)\n",
+        "_HERE = Path(__file__).resolve().parent\n"
+        "sys.path.insert(0, str(_HERE))\n"
+        "import lifecycle  # noqa: E402\n"
+        "raise SystemExit(lifecycle.main(sys.argv[1:]))\n",
         encoding="utf-8",
     )
 
@@ -120,6 +142,7 @@ def generate(
             {
                 "platform": "codex",
                 "hooks": "native",
+                # Bodies shipped (R4); index retained for ref-index hosts.
                 "skills": "ref-index",
                 "commands": "projected",
                 "mcp": "optional",
@@ -140,9 +163,9 @@ def generate(
                 json.dumps(mcp, indent=2) + "\n", encoding="utf-8"
             )
 
-    # Prove no skill bodies leaked into adapter output (R21).
-    for path in out.rglob("SKILL.md"):
-        raise RuntimeError(f"skill body must not appear in Codex output: {path}")
+    # PRD 352 R4: skill bodies are required in packaged Codex output.
+    if skill_ids and not any(out.rglob("SKILL.md")):
+        raise RuntimeError("Codex package missing skill bodies after emit")
 
     return out
 

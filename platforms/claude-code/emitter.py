@@ -269,6 +269,9 @@ if __name__ == "__main__":
             dest_core_adapters.mkdir(parents=True, exist_ok=True)
             (dest_core_adapters / "__init__.py").write_text("", encoding="utf-8")
             shutil.copy2(pre_tool_src, dest_core_adapters / "pre_tool_evaluator.py")
+        helpers_src = repo_root / "core" / "adapters" / "claude_hook_helpers.py"
+        if helpers_src.is_file():
+            shutil.copy2(helpers_src, dest_core_adapters / "claude_hook_helpers.py")
         wrapper = (
             "#!/usr/bin/env python3\n"
             "import sys\n"

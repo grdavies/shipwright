@@ -11,6 +11,7 @@ import hashlib
 import json
 import re
 import sys
+import zipfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -242,6 +243,29 @@ def _fixtures_dir() -> Path:
     return Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "bundle_self_test"
 
 
+def _read_fixture_text(name: str) -> str | None:
+    """Load a self-test fixture from the filesystem or the enclosing zipapp."""
+    path = _fixtures_dir() / name
+    if path.is_file():
+        return path.read_text(encoding="utf-8")
+    # Zipapp: Path(__file__) looks like ``…/shipwright.pyz/core/handoff/validate_bundle.py``
+    # but sibling zip members are not visible via pathlib — read them via ZipFile.
+    file_s = str(Path(__file__).resolve())
+    marker = ".pyz/"
+    if marker not in file_s:
+        return None
+    pyz_path = Path(file_s.split(marker, 1)[0] + ".pyz")
+    member = f"core/tests/fixtures/bundle_self_test/{name}"
+    if not pyz_path.is_file():
+        return None
+
+    try:
+        with zipfile.ZipFile(pyz_path, "r") as zf:
+            return zf.read(member).decode("utf-8")
+    except KeyError:
+        return None
+
+
 def run_self_test() -> dict[str, Any]:
     cases = (
         ("digest_failure.json", "digest_failure"),
@@ -253,14 +277,14 @@ def run_self_test() -> dict[str, Any]:
     results: list[dict[str, Any]] = []
     unexpected = 0
     for name, expected in cases:
-        path = _fixtures_dir() / name
-        if not path.is_file():
+        raw = _read_fixture_text(name)
+        if raw is None:
             results.append(
                 {"fixture": name, "expected": expected, "actual": "missing-fixture", "ok": False}
             )
             unexpected += 1
             continue
-        document = json.loads(path.read_text(encoding="utf-8"))
+        document = json.loads(raw)
         actual = str(validate_bundle(document).get("verdict") or "")
         ok = actual == expected
         if not ok:

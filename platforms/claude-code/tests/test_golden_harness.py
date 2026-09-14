@@ -89,8 +89,9 @@ def test_r5_stop_and_session_start_schemas() -> None:
     import hook_adapter
 
     session = hook_adapter._session_start_payload("hello")
-    assert session.get("event_name") == "SessionStart"
-    assert "hookSpecificOutput" in session
+    assert "event_name" not in session
+    assert session.get("hookSpecificOutput", {}).get("hookEventName") == "SessionStart"
+    assert session["hookSpecificOutput"].get("additionalContext") == "hello"
     # Stop must omit followup_message — empty object is the conforming shape.
     stop_doc = {}
     assert "followup_message" not in stop_doc

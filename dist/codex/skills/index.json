@@ -2,127 +2,158 @@
   "skills": [
     {
       "id": "brainstorm",
-      "source": "core/skills/brainstorm"
+      "source": "core/skills/brainstorm",
+      "body": "skills/brainstorm/SKILL.md"
     },
     {
       "id": "calibration-loop",
-      "source": "core/skills/calibration-loop"
+      "source": "core/skills/calibration-loop",
+      "body": "skills/calibration-loop/SKILL.md"
     },
     {
       "id": "checks-gate",
-      "source": "core/skills/checks-gate"
+      "source": "core/skills/checks-gate",
+      "body": "skills/checks-gate/SKILL.md"
     },
     {
       "id": "compound",
-      "source": "core/skills/compound"
+      "source": "core/skills/compound",
+      "body": "skills/compound/SKILL.md"
     },
     {
       "id": "conductor",
-      "source": "core/skills/conductor"
+      "source": "core/skills/conductor",
+      "body": "skills/conductor/SKILL.md"
     },
     {
       "id": "debug",
-      "source": "core/skills/debug"
+      "source": "core/skills/debug",
+      "body": "skills/debug/SKILL.md"
     },
     {
       "id": "deliver",
-      "source": "core/skills/deliver"
+      "source": "core/skills/deliver",
+      "body": "skills/deliver/SKILL.md"
     },
     {
       "id": "doc-review",
-      "source": "core/skills/doc-review"
+      "source": "core/skills/doc-review",
+      "body": "skills/doc-review/SKILL.md"
     },
     {
       "id": "execute-discipline",
-      "source": "core/skills/execute-discipline"
+      "source": "core/skills/execute-discipline",
+      "body": "skills/execute-discipline/SKILL.md"
     },
     {
       "id": "explore",
-      "source": "core/skills/explore"
+      "source": "core/skills/explore",
+      "body": "skills/explore/SKILL.md"
     },
     {
       "id": "feedback",
-      "source": "core/skills/feedback"
+      "source": "core/skills/feedback",
+      "body": "skills/feedback/SKILL.md"
     },
     {
       "id": "feedback-closure",
-      "source": "core/skills/feedback-closure"
+      "source": "core/skills/feedback-closure",
+      "body": "skills/feedback-closure/SKILL.md"
     },
     {
       "id": "gap-check",
-      "source": "core/skills/gap-check"
+      "source": "core/skills/gap-check",
+      "body": "skills/gap-check/SKILL.md"
     },
     {
       "id": "git-workflow",
-      "source": "core/skills/git-workflow"
+      "source": "core/skills/git-workflow",
+      "body": "skills/git-workflow/SKILL.md"
     },
     {
       "id": "living-status",
-      "source": "core/skills/living-status"
+      "source": "core/skills/living-status",
+      "body": "skills/living-status/SKILL.md"
     },
     {
       "id": "memory",
-      "source": "core/skills/memory"
+      "source": "core/skills/memory",
+      "body": "skills/memory/SKILL.md"
     },
     {
       "id": "parallelism",
-      "source": "core/skills/parallelism"
+      "source": "core/skills/parallelism",
+      "body": "skills/parallelism/SKILL.md"
     },
     {
       "id": "prd",
-      "source": "core/skills/prd"
+      "source": "core/skills/prd",
+      "body": "skills/prd/SKILL.md"
     },
     {
       "id": "rca-core",
-      "source": "core/skills/rca-core"
+      "source": "core/skills/rca-core",
+      "body": "skills/rca-core/SKILL.md"
     },
     {
       "id": "retro",
-      "source": "core/skills/retro"
+      "source": "core/skills/retro",
+      "body": "skills/retro/SKILL.md"
     },
     {
       "id": "ship",
-      "source": "core/skills/ship"
+      "source": "core/skills/ship",
+      "body": "skills/ship/SKILL.md"
     },
     {
       "id": "shipwright-state",
-      "source": "core/skills/shipwright-state"
+      "source": "core/skills/shipwright-state",
+      "body": "skills/shipwright-state/SKILL.md"
     },
     {
       "id": "simplify",
-      "source": "core/skills/simplify"
+      "source": "core/skills/simplify",
+      "body": "skills/simplify/SKILL.md"
     },
     {
       "id": "spec-rigor",
-      "source": "core/skills/spec-rigor"
+      "source": "core/skills/spec-rigor",
+      "body": "skills/spec-rigor/SKILL.md"
     },
     {
       "id": "spec-union",
-      "source": "core/skills/spec-union"
+      "source": "core/skills/spec-union",
+      "body": "skills/spec-union/SKILL.md"
     },
     {
       "id": "stabilize-loop",
-      "source": "core/skills/stabilize-loop"
+      "source": "core/skills/stabilize-loop",
+      "body": "skills/stabilize-loop/SKILL.md"
     },
     {
       "id": "tasks",
-      "source": "core/skills/tasks"
+      "source": "core/skills/tasks",
+      "body": "skills/tasks/SKILL.md"
     },
     {
       "id": "tournament",
-      "source": "core/skills/tournament"
+      "source": "core/skills/tournament",
+      "body": "skills/tournament/SKILL.md"
     },
     {
       "id": "triage",
-      "source": "core/skills/triage"
+      "source": "core/skills/triage",
+      "body": "skills/triage/SKILL.md"
     },
     {
       "id": "verification-gate",
-      "source": "core/skills/verification-gate"
+      "source": "core/skills/verification-gate",
+      "body": "skills/verification-gate/SKILL.md"
     },
     {
       "id": "worktree",
-      "source": "core/skills/worktree"
+      "source": "core/skills/worktree",
+      "body": "skills/worktree/SKILL.md"
     }
   ]
 }

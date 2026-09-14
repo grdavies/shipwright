@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "tournament-result",
+  "type": "object",
+  "required": ["writtenAt", "winner", "rationale"],
+  "properties": {
+    "writtenAt": { "type": "string" },
+    "mode": { "type": "string" },
+    "winner": {
+      "type": "object",
+      "required": ["attemptId"],
+      "properties": {
+        "attemptId": { "type": "string" },
+        "candidateId": { "type": "string" },
+        "label": { "type": "string" },
+        "summary": { "type": "string" }
+      }
+    },
+    "rationale": { "type": "string" },
+    "attemptCount": { "type": "integer" },
+    "bracket": { "type": "object" }
+  }
+}

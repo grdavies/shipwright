@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "refactor-step status",
+  "type": "object",
+  "required": ["taskRef", "refactor"],
+  "properties": {
+    "taskRef": { "type": "string" },
+    "refactor": {
+      "type": "object",
+      "required": ["ran", "skipped"],
+      "properties": {
+        "ran": { "type": "boolean" },
+        "skipped": { "type": "boolean" },
+        "skipReason": { "type": "string" },
+        "signalRef": { "type": "string" },
+        "verdict": { "type": "string", "enum": ["clean", "advise", "poor", "regressed", "skipped", "none"] },
+        "metricDelta": { "type": "object" }
+      }
+    }
+  }
+}

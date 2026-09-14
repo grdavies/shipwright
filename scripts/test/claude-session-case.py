@@ -9,6 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "core" / "hooks"))
+sys.path.insert(0, str(ROOT / "core"))  # exposes ``adapters.*``
+sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "platforms" / "claude-code"))
 
 import hook_adapter  # noqa: E402

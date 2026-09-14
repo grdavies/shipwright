@@ -44,8 +44,8 @@ def test_r27_lifecycle_plugin_is_thin_shim(tmp_path: Path) -> None:
     out = _gen.generate(tmp_path / "opencode", repo_root=_REPO, core_root=_REPO / "core")
     shim = (out / "lifecycle_plugin.ts").read_text(encoding="utf-8")
     assert "registerLifecycleHooks" in shim
-    assert "hook-registration shim" in shim
-    assert not list(out.rglob("SKILL.md"))
+    assert "dispatchLifecycleStdin" in shim
+    assert list(out.rglob("SKILL.md")), "PRD 352 R4 requires shipped skill bodies"
 
 
 def test_r28_handlers_and_unsupported_diagnostics() -> None:

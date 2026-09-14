@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "rca-fanout-status",
+  "type": "object",
+  "required": [
+    "mode",
+    "d5Gate",
+    "writtenAt"
+  ],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [
+        "single-context",
+        "fan-out"
+      ]
+    },
+    "d5Gate": {
+      "type": "string"
+    },
+    "useFanout": {
+      "type": "boolean"
+    },
+    "generatorCount": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 4
+    },
+    "hypothesisCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "survivorCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "routeReady": {
+      "type": "boolean"
+    },
+    "writtenAt": {
+      "type": "string"
+    }
+  }
+}
