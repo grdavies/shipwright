@@ -7,7 +7,7 @@
       },
       {
         "path": "core/handoff/bundle.py",
-        "sha256": "f4c499c2fb07e3b71708a3c6b48a05b449867f749f0f0f1673eabc9417f118b6"
+        "sha256": "739c86ef3c4faac80bf13d5e50a46ad359a0b1be274f4dc25050346bc6767007"
       },
       {
         "path": "core/handoff/validate_bundle.py",

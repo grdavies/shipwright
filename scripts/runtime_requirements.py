@@ -8,6 +8,15 @@ from pathlib import Path
 # Repo-root trees mirrored under ``sw/`` for wheel-only installs.
 RUNTIME_TREE_NAMES: tuple[str, ...] = ("scripts", "dist")
 
+# Handoff validation modules mirrored under ``sw/`` (PRD 352 R14 / TR6).
+HANDOFF_RUNTIME_MODULES: tuple[str, ...] = (
+    "core/handoff/importer.py",
+    "core/handoff/bundle.py",
+    "core/handoff/validate_bundle.py",
+    "core/handoff/acknowledgement.py",
+    "scripts/handoff_bundle.py",
+)
+
 # Skip test-only subtrees from the packaged scripts mirror.
 SCRIPT_EXCLUDE_PARTS: frozenset[str] = frozenset({"unit_tests", "test", "__pycache__"})
 
@@ -44,9 +53,45 @@ def _copy_tree(src: Path, dest: Path, *, filter_rel: callable | None = None) -> 
     return count
 
 
+def sync_handoff_runtime_modules(root: Path) -> dict[str, object]:
+    """Mirror handoff validation modules into ``sw/`` preserving repo-relative paths."""
+    root = root.resolve()
+    missing: list[str] = []
+    synced: list[str] = []
+    for rel in HANDOFF_RUNTIME_MODULES:
+        src = root / rel
+        if not src.is_file():
+            missing.append(rel)
+            continue
+        dest = root / "sw" / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        synced.append(rel)
+    if missing:
+        return {
+            "verdict": "fail",
+            "error": "handoff:missing-dependency",
+            "missing": missing,
+        }
+    core_init = root / "sw" / "core" / "__init__.py"
+    if not core_init.is_file():
+        core_init.parent.mkdir(parents=True, exist_ok=True)
+        core_init.write_text('"""Shipwright core runtime mirror."""\n', encoding="utf-8")
+        synced.append("core/__init__.py")
+    handoff_init = root / "sw" / "core" / "handoff" / "__init__.py"
+    if not handoff_init.is_file():
+        handoff_init.parent.mkdir(parents=True, exist_ok=True)
+        handoff_init.write_text('"""Handoff runtime mirror."""\n', encoding="utf-8")
+        synced.append("core/handoff/__init__.py")
+    return {"verdict": "pass", "synced": synced}
+
+
 def sync_runtime_bundle(root: Path) -> dict[str, object]:
     """Mirror runtime requirement trees into ``sw/`` for wheel packaging."""
     root = root.resolve()
+    handoff = sync_handoff_runtime_modules(root)
+    if handoff.get("verdict") != "pass":
+        return handoff
     targets = bundle_targets(root)
     copied: dict[str, int | str] = {}
 
@@ -71,7 +116,12 @@ def sync_runtime_bundle(root: Path) -> dict[str, object]:
     else:
         copied["version.txt"] = "missing"
 
-    return {"verdict": "pass", "copied": copied, "targets": {k: v.as_posix() for k, v in targets.items()}}
+    return {
+        "verdict": "pass",
+        "copied": copied,
+        "handoff": handoff,
+        "targets": {k: v.as_posix() for k, v in targets.items()},
+    }
 
 
 def runtime_requirements_present(root: Path) -> list[str]:
@@ -83,4 +133,7 @@ def runtime_requirements_present(root: Path) -> list[str]:
             missing.append(name)
     if not (root / "version.txt").is_file():
         missing.append("version.txt")
+    for rel in HANDOFF_RUNTIME_MODULES:
+        if not (root / rel).is_file():
+            missing.append(rel)
     return missing
