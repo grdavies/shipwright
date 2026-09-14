@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "HandoffTransition@v1",
+  "transitionId": "tid-as4-crash",
+  "runId": "run-as4",
+  "state": "checkpointed",
+  "ownershipGeneration": 0,
+  "createdAt": "2026-09-14T00:00:00Z",
+  "updatedAt": "2026-09-14T00:00:01Z",
+  "previousState": "requested",
+  "crashScenario": "AS4",
+  "note": "Process crashed after checkpoint persist; resume must continue from checkpointed."
+}
