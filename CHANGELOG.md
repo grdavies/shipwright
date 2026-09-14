@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.17.0](https://github.com/grdavies/shipwright/compare/v2.16.2...v2.17.0) (2026-09-14)
+
+
+### Features
+
+* **codex:** enable the plugin from shipwright init ([#1198](https://github.com/grdavies/shipwright/issues/1198)) ([fa8c388](https://github.com/grdavies/shipwright/commit/fa8c388c4147912b3a809160e90bb22622bb3920))
+
 ## [2.16.2](https://github.com/grdavies/shipwright/compare/v2.16.1...v2.16.2) (2026-09-14)
 
 
