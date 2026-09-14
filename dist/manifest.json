@@ -19,11 +19,15 @@
       },
       {
         "path": "core/handoff/transition.py",
-        "sha256": "daa537ddc31c2770a47367a4dcdf650e6f4e863504bbbaad3a5044f5e84b4dc8"
+        "sha256": "4ad6d6bdfa9504ec0803e01fdbf63bd1ad1353e5f34276a133bbff70716a6405"
       },
       {
         "path": "scripts/handoff_bundle.py",
+<<<<<<< HEAD
         "sha256": "bd07874c8cd3f7ab1af73ed262d56d35f4393b6b573b7950ddcc600004517983"
+=======
+        "sha256": "f57d50a1d95118eafc31e19b37b74915834411d7729381de63856b7099973c3e"
+>>>>>>> feat/reliable-host-switching-phase-spending-and-retry-boundaries-slice-3
       }
     ]
   },

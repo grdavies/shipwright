@@ -2376,6 +2376,10 @@ Shipwright `2.15.0` · schema `config.schema.json`
 | `host.rateLimit.mutatingMinDelayMs` | `1000` | `1000` | `1000` | `1000` | `—` | `—` |
 | `host.rateLimit.nearLimitThreshold` | `5` | `5` | `5` | `5` | `—` | `—` |
 | `host.remote` | `origin` | `origin` | `origin` | `origin` | `—` | `—` |
+| `host.switch.cooldownSeconds` | `300` | `300` | `300` | `300` | `—` | `—` |
+| `host.switch.maxRetries` | `3` | `3` | `3` | `3` | `—` | `—` |
+| `host.switch.spendingPolicy.allowAutomaticFallback` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `host.switch.spendingPolicy.allowPaidFallback` | `false` | `false` | `false` | `false` | `—` | `—` |
 | `host.tokenEnv` | `—` | `—` | `—` | `—` | `legacy` | `—` |
 | `inefficiency.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
 | `inefficiency.thresholds.slowCiJobSeconds` | `300` | `300` | `300` | `300` | `—` | `—` |

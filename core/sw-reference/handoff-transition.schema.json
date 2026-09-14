@@ -90,6 +90,28 @@
         },
         "message": {
           "type": "string"
+        },
+        "source": {
+          "type": "string"
+        }
+      }
+    },
+    "spendingObservation": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Observed quota failure or user instruction without fabricated allowance (PRD 352 R23).",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "recordedAt": {
+          "type": "string"
         }
       }
     },
