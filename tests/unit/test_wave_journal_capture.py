@@ -205,3 +205,42 @@ def test_read_events_filters(tmp_path: Path) -> None:
         root=tmp_path,
     )
     assert [e["summary"] for e in by_time] == ["b"]
+
+
+def test_prd352_r13_same_second_emit_discovery_both_persist(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PRD 352 R13 — two same-second emit_discovery calls must both persist.
+
+    Current compute_event_id is second-granular, so same-second discoveries
+    collide and first-write-wins drops the second. Expected red until R10.
+    """
+    from wave_journal import emit_discovery, read_events, ensure_capture_files
+
+    _write_enabled_config(tmp_path, enabled=True)
+    run_id = "run-collision"
+    ensure_capture_files(tmp_path, run_id)
+    frozen = "2026-09-14T04:00:00Z"
+    monkeypatch.setattr("wave_journal._utc_now", lambda: frozen)
+
+    first = emit_discovery(
+        "first discovery",
+        "phase-1",
+        run_id,
+        "tool_output",
+        "tool-a",
+        root=tmp_path,
+    )
+    second = emit_discovery(
+        "second discovery",
+        "phase-1",
+        run_id,
+        "tool_output",
+        "tool-b",
+        root=tmp_path,
+    )
+    events = read_events(run_id, event_types=["discovery"], root=tmp_path)
+    summaries = {e.get("summary") for e in events}
+    assert first != second, "same-second discoveries must receive distinct eventIds"
+    assert summaries == {"first discovery", "second discovery"}
+    assert len(events) == 2
