@@ -1305,6 +1305,7 @@
 * merge phase host-resolution-and-qualification-slice-2 into feat/reliable-host-switching (8c5385f) <!-- sw-deliver:host-resolution-and-qualification-slice-2 -->
 * merge phase evidence-and-reconciliation-slice-2 into feat/reliable-host-switching (4d72eca) <!-- sw-deliver:evidence-and-reconciliation-slice-2 -->
 * merge phase spending-and-retry-boundaries-slice-3 into feat/reliable-host-switching (2f02db1) <!-- sw-deliver:spending-and-retry-boundaries-slice-3 -->
+* merge phase test-harness-and-acceptance-slice-1-3 into feat/reliable-host-switching (487df41) <!-- sw-deliver:test-harness-and-acceptance-slice-1-3 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
