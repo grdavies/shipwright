@@ -6,6 +6,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -14,10 +15,16 @@ from typing import Any
 from issues_broker import IssueCommentAuthorshipMismatch
 from issues_lib import IssueRevisionConflict, IssuesClient
 from planning_canonical import (
+    BODY_SIZE_LIMIT,
+    CHUNK_TOKEN_MARKER_PREFIX,
     DOC_REVIEW_MARKER,
     MARKER_UNIT_ID,
     CommentRecord,
+    append_chunk_manifest_marker,
+    chunk_body_if_needed,
     parse_body_marker,
+    reassemble_body,
+    rewrite_chunk_manifest_ids,
     verify_unit_id,
 )
 
@@ -759,6 +766,21 @@ def render_review_round_block(block: dict[str, Any]) -> str:
     )
 
 
+def logical_issue_body(record: Any) -> str:
+    """Reassemble provider-chunked issue bodies before marker inspection.
+
+    Oversized review-round fences are split across ``record.body`` and
+    ``sw-chunk-overflow`` comments. Inspecting the persisted head alone
+    reports ``unbalanced-round-block``.
+    """
+    comments = list(getattr(record, "comments", None) or [])
+    return reassemble_body(getattr(record, "body", None) or "", comments)
+
+
+def inspect_review_round_record(record: Any) -> tuple[dict[str, Any], str | None]:
+    return inspect_review_round_block(logical_issue_body(record))
+
+
 def inspect_review_round_block(body: str) -> tuple[dict[str, Any], str | None]:
     text = body or ""
     if LEGACY_INLINE_ROUND_MARKER.search(text):
@@ -1342,6 +1364,68 @@ def manifest_malformed_result(*, action: str, issue_id: str, detail: str) -> dic
     }
 
 
+def _line_aligned_cut(text: str, *, limit: int = BODY_SIZE_LIMIT) -> int:
+    """Character index at or before ``limit`` bytes, preferring a newline boundary.
+
+    Generic byte-offset cuts can land mid-word. ``reassemble_body`` then inserts
+    a newline between head and overflow, which changes stripped artifact bytes.
+    """
+    encoded = text.encode("utf-8")
+    if len(encoded) <= limit:
+        return len(text)
+    head = encoded[:limit].decode("utf-8", errors="ignore")
+    nl = head.rfind("\n")
+    if nl >= 0:
+        return nl + 1
+    return len(head)
+
+
+def chunk_review_round_body(
+    body: str,
+    *,
+    provider: str | None = None,
+) -> tuple[str, list[CommentRecord]]:
+    """Chunk an upserted review body without bisecting the JSON fence.
+
+    Generic byte-offset chunking can insert a newline before the chunk
+    manifest in the middle of a JSON string. Prefer keeping the entire
+    ``sw-doc-review-round`` fence in overflow when the prefix fits. When the
+    prefix itself exceeds the limit, keep a line-aligned prefix in the head
+    and put the remaining prefix plus the fence in one overflow comment so
+    reassembly does not rewrite PRD bytes.
+    """
+    if provider in {"jira", "notion"}:
+        return chunk_body_if_needed(body, [], provider=provider)
+    if len(body.encode("utf-8")) <= BODY_SIZE_LIMIT:
+        return body, []
+    fence_at = body.find("<!-- sw-doc-review-round -->")
+    if fence_at > 0:
+        prefix = body[:fence_at]
+        overflow = body[fence_at:]
+        if len(prefix.encode("utf-8")) > BODY_SIZE_LIMIT:
+            cut = _line_aligned_cut(prefix)
+            overflow = prefix[cut:] + overflow
+            prefix = prefix[:cut]
+        write_token = uuid.uuid4().hex[:12]
+        chunk_id = "chunk-0"
+        extra = CommentRecord(
+            id=chunk_id,
+            body=f"<!-- sw-chunk-overflow -->\n{overflow}",
+            markers=["sw-chunk-overflow", f"{CHUNK_TOKEN_MARKER_PREFIX}{write_token}"],
+        )
+        manifest = {
+            "version": 1,
+            "chunks": [{"index": 0, "commentId": chunk_id}],
+            "writeToken": write_token,
+        }
+        marker = (
+            "<!-- sw-chunk-manifest: "
+            f"{json.dumps(manifest, sort_keys=True, ensure_ascii=False)} -->"
+        )
+        return append_chunk_manifest_marker(prefix, marker), [extra]
+    return chunk_body_if_needed(body, [], provider=provider)
+
+
 def apply_manifest_update(
     client: IssuesClient,
     *,
@@ -1352,11 +1436,34 @@ def apply_manifest_update(
     manifest_block: dict[str, Any],
 ) -> dict[str, Any] | None:
     body = upsert_review_round_block(record_body, manifest_block)
+    provider = getattr(client, "provider", None)
+    head, extras = chunk_review_round_body(body, provider=provider)
     try:
-        client.issue_update(str(issue_id), body=body, if_match=etag)
-        return None
+        updated = client.issue_update(str(issue_id), body=head, if_match=etag)
     except IssueRevisionConflict as exc:
         return revision_conflict_result(action=verb, issue_id=str(issue_id), exc=exc)
+    if not extras:
+        return None
+    posted_ids: list[str] = []
+    for extra in extras:
+        posted = client.issue_comment(
+            str(issue_id),
+            extra.body,
+            markers=list(extra.markers or []),
+        )
+        posted_ids.append(str(posted.id))
+    rewritten = rewrite_chunk_manifest_ids(head, posted_ids)
+    if rewritten == head:
+        return None
+    try:
+        # Overflow comments bump etag; re-read before the real-id rewrite (GitHub
+        # drops write-token markers, so the rewrite is what reassembly needs).
+        refreshed = client.issue_get(str(issue_id))
+        next_etag = getattr(refreshed, "etag", None) or getattr(updated, "etag", None) or etag
+        client.issue_update(str(issue_id), body=rewritten, if_match=next_etag)
+    except IssueRevisionConflict as exc:
+        return revision_conflict_result(action=verb, issue_id=str(issue_id), exc=exc)
+    return None
 
 
 def execute_doc_review_txn(
@@ -1380,12 +1487,13 @@ def execute_doc_review_txn(
     except Exception as exc:  # noqa: BLE001
         return {"verdict": "fail", "action": verb, "error": str(exc), "issueId": issue_id}
 
-    unit_err = verify_issue_unit(record.body, unit_id=unit_id, issue_id=str(issue_id))
+    logical_body = logical_issue_body(record)
+    unit_err = verify_issue_unit(logical_body, unit_id=unit_id, issue_id=str(issue_id))
     if unit_err is not None:
         unit_err["action"] = verb
         return unit_err
 
-    manifest, manifest_err = inspect_review_round_block(record.body)
+    manifest, manifest_err = inspect_review_round_block(logical_body)
     if manifest_err:
         return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
 
@@ -1464,7 +1572,7 @@ def execute_doc_review_txn(
             issue_id=str(issue_id),
             manifest_key=manifest_key,
             etag=str(record.etag or ""),
-            body=record.body,
+            body=logical_body,
             pins=pins,
             body_path=body_path,
             opened_at=str(manifest.get("openedAt") or "") or None,
@@ -1523,7 +1631,7 @@ def execute_doc_review_txn(
             issue_id=str(issue_id),
             manifest_key=manifest_key,
             etag=str(record.etag or ""),
-            body=record.body,
+            body=logical_body,
             pins=pins,
             body_path=body_path,
         )
@@ -1533,7 +1641,7 @@ def execute_doc_review_txn(
             client,
             issue_id=str(issue_id),
             verb=verb,
-            record_body=record.body,
+            record_body=logical_body,
             etag=record.etag,
             manifest_block=opened,
         )
@@ -1562,7 +1670,8 @@ def execute_doc_review_txn(
                 "issueId": issue_id,
                 "roundId": round_id,
             }
-        manifest, manifest_err = inspect_review_round_block(refreshed.body)
+        close_body = logical_issue_body(refreshed)
+        manifest, manifest_err = inspect_review_round_block(close_body)
         if manifest_err:
             return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
         bind_err = _binding_for_round(manifest)
@@ -1613,7 +1722,7 @@ def execute_doc_review_txn(
                 manifest=manifest,
                 comments=list(refreshed.comments),
                 expected_author_id=author_id,
-                body=refreshed.body,
+                body=close_body,
             )
             if drift is not None:
                 drift["action"] = verb
@@ -1679,7 +1788,7 @@ def execute_doc_review_txn(
             manifest=manifest,
             comments=list(refreshed.comments),
             expected_author_id=author_id,
-            body=refreshed.body,
+            body=close_body,
         )
         if drift is not None:
             drift["action"] = verb
@@ -1705,7 +1814,7 @@ def execute_doc_review_txn(
             client,
             issue_id=str(issue_id),
             verb=verb,
-            record_body=refreshed.body,
+            record_body=close_body,
             etag=refreshed.etag,
             manifest_block=closed,
         )
@@ -1786,7 +1895,7 @@ def execute_doc_review_txn(
                 "issueId": issue_id,
                 "roundId": round_id,
             }
-        manifest, manifest_err = inspect_review_round_block(record.body)
+        manifest, manifest_err = inspect_review_round_record(record)
         if manifest_err:
             return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
         bind_err = _binding_for_round(manifest)
@@ -1954,7 +2063,8 @@ def execute_doc_review_txn(
             }
             # Comment write bumps etag — re-read before OCC pin append.
             fresh = client.issue_get(str(issue_id))
-            fresh_manifest, fresh_err = inspect_review_round_block(fresh.body)
+            fresh_body = logical_issue_body(fresh)
+            fresh_manifest, fresh_err = inspect_review_round_block(fresh_body)
             if fresh_err:
                 return manifest_malformed_result(
                     action=verb, issue_id=str(issue_id), detail=fresh_err
@@ -1971,7 +2081,7 @@ def execute_doc_review_txn(
                 client,
                 issue_id=str(issue_id),
                 verb=verb,
-                record_body=fresh.body,
+                record_body=fresh_body,
                 etag=fresh.etag,
                 manifest_block=updated_manifest,
             )
@@ -2002,7 +2112,7 @@ def execute_doc_review_txn(
 
     if verb == "doc-review-round-read":
         refreshed = client.issue_get(str(issue_id))
-        manifest, manifest_err = inspect_review_round_block(refreshed.body)
+        manifest, manifest_err = inspect_review_round_record(refreshed)
         if manifest_err:
             return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
         bind_err = _binding_for_round(manifest)
@@ -2023,7 +2133,8 @@ def execute_doc_review_txn(
                 "issueId": issue_id,
                 "roundId": round_id,
             }
-        manifest, manifest_err = inspect_review_round_block(refreshed.body)
+        verify_body = logical_issue_body(refreshed)
+        manifest, manifest_err = inspect_review_round_block(verify_body)
         if manifest_err:
             return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
         bind_err = _binding_for_round(manifest)
@@ -2033,7 +2144,7 @@ def execute_doc_review_txn(
             manifest=manifest,
             comments=list(refreshed.comments),
             expected_author_id=author_id,
-            body=refreshed.body,
+            body=verify_body,
         )
         if drift is not None:
             drift["action"] = verb

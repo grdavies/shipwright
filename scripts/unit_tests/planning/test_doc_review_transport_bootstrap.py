@@ -14,20 +14,25 @@ import pytest
 from credentials.model import CredentialRef, Principal, Resolution, ResolvedToken, Secret
 from issues_broker import IssueCommentAuthorshipMismatch
 from issues_lib import FIXTURE_GITHUB_PRINCIPAL_ID, FixtureIssuesStore, IssueRevisionConflict, IssuesClient, get_fixture_store
-from planning_canonical import CommentRecord, IssueSnapshot, canonical_hash
+from planning_canonical import BODY_SIZE_LIMIT, CommentRecord, IssueSnapshot, canonical_hash, reassemble_body
 from planning_doc_review_transport import (
     DOC_REVIEW_COMMENT_DRIFT,
     DOC_REVIEW_PROVIDER_UNSUPPORTED,
     DOC_REVIEW_ROUND_MALFORMED,
     DOC_REVIEW_TRANSPORT_UNAVAILABLE,
     build_doc_review_comment_body,
+    chunk_review_round_body,
     idempotency_key,
     inspect_review_round_block,
+    inspect_review_round_record,
+    logical_issue_body,
     normalize_finding_envelope,
     parse_doc_review_comment,
     parse_review_round_block,
     payload_hash,
     render_review_round_block,
+    strip_review_round_blocks,
+    stripped_artifact_hash,
     upsert_review_round_block,
     validate_doc_review_envelope,
 )
@@ -1280,6 +1285,167 @@ class TestReviewRoundBlockParsing:
         body = '# PRD\n<!-- sw-doc-review-round: {"roundId":"legacy"} -->'
         _manifest, err = inspect_review_round_block(body)
         assert err == "legacy-inline-round-block"
+
+
+def _seed_chunked_closed_round(store: FixtureIssuesStore, *, unit_id: str, issue_id: str = "887") -> None:
+    _seed_issue(store, unit_id=unit_id, issue_id=issue_id)
+    block = {
+        "roundId": "r1",
+        "status": "closed",
+        "unitId": unit_id,
+        "issueId": issue_id,
+        "pins": [],
+    }
+    full = f"<!-- sw-unit-id: {unit_id} -->\n# PRD\n\n{render_review_round_block(block)}"
+    split_at = full.index("{") + 24
+    head = full[:split_at]
+    tail = full[split_at:]
+    manifest = {"version": 1, "chunks": [{"commentId": "overflow-r1", "index": 0}]}
+    head = f"{head}\n<!-- sw-chunk-manifest: {json.dumps(manifest, sort_keys=True)} -->\n"
+    record = store.get(issue_id)
+    record.body = head
+    record.comments.append(
+        CommentRecord(
+            id="overflow-r1",
+            body=f"<!-- sw-chunk-overflow -->\n{tail}",
+            markers=["sw-chunk-overflow"],
+            created_at="1",
+        )
+    )
+    store._persist()
+
+
+class TestChunkedReviewRoundReassembly:
+    def test_raw_head_is_unbalanced_but_record_inspect_succeeds(
+        self, transport_repo: Path
+    ) -> None:
+        store = get_fixture_store(transport_repo)
+        unit_id = "341-prd-doc-review-transport"
+        _seed_chunked_closed_round(store, unit_id=unit_id)
+        record = store.get("887")
+        _parsed, err = inspect_review_round_block(record.body)
+        assert err == "unbalanced-round-block"
+        manifest, assembled_err = inspect_review_round_record(record)
+        assert assembled_err is None
+        assert manifest["roundId"] == "r1"
+        assert manifest["status"] == "closed"
+        assert "<!-- sw-doc-review-round -->" in logical_issue_body(record)
+        assert "<!-- /sw-doc-review-round -->" in logical_issue_body(record)
+
+    def test_post_succeeds_on_chunked_closed_round(self, transport_repo: Path) -> None:
+        cfg = load_workflow_config(transport_repo)
+        store = get_fixture_store(transport_repo)
+        unit_id = "341-prd-doc-review-transport"
+        _seed_chunked_closed_round(store, unit_id=unit_id)
+        out = _doc_review(
+            transport_repo,
+            cfg,
+            verb="doc-review-round-post",
+            issue_id="887",
+            unit_id=unit_id,
+            round_id="r2",
+            persona="coherence",
+            payload=_sample_payload("coherence"),
+        )
+        assert out["verdict"] == "ok", out
+        assert out.get("idempotent") is False
+        assert out.get("commentId")
+
+    def test_open_after_post_rewrites_logical_body(self, transport_repo: Path) -> None:
+        cfg = load_workflow_config(transport_repo)
+        store = get_fixture_store(transport_repo)
+        unit_id = "341-prd-doc-review-transport"
+        _seed_chunked_closed_round(store, unit_id=unit_id)
+        opened, comment_ids = _post_then_open(
+            transport_repo,
+            cfg,
+            unit_id=unit_id,
+            round_id="r2",
+        )
+        assert opened["verdict"] == "ok", opened
+        assert opened["roundId"] == "r2"
+        assert opened["status"] == "open"
+        record = get_fixture_store(transport_repo).get("887")
+        manifest, err = inspect_review_round_record(record)
+        assert err is None
+        assert manifest["roundId"] == "r2"
+        assert [p.get("commentId") for p in (manifest.get("pins") or [])] == comment_ids
+
+    def test_open_rewrites_chunk_ids_after_overflow_etag_bump(self, transport_repo: Path) -> None:
+        cfg = load_workflow_config(transport_repo)
+        store = get_fixture_store(transport_repo)
+        unit_id = "341-prd-doc-review-transport"
+        _seed_issue(store, unit_id=unit_id, issue_id="887")
+        record = store.get("887")
+        padding = "x" * (BODY_SIZE_LIMIT + 2048)
+        record.body = f"<!-- sw-unit-id: {unit_id} -->\n# PRD\n\n{padding}\n"
+        store._persist()
+        opened, comment_ids = _post_then_open(
+            transport_repo,
+            cfg,
+            unit_id=unit_id,
+            round_id="r-chunk-rewrite",
+        )
+        assert opened["verdict"] == "ok", opened
+        record = get_fixture_store(transport_repo).get("887")
+        assert "sw-chunk-manifest" in record.body
+        assert '"commentId": "chunk-0"' not in record.body
+        manifest, err = inspect_review_round_record(record)
+        assert err is None, err
+        assert manifest["roundId"] == "r-chunk-rewrite"
+        assert manifest["status"] == "open"
+        logical = reassemble_body(record.body, list(record.comments))
+        assert "<!-- /sw-doc-review-round -->" in logical
+        assert [p.get("commentId") for p in (manifest.get("pins") or [])] == comment_ids
+
+    def test_chunk_keeps_review_fence_intact(self) -> None:
+        block = {
+            "roundId": "r-fence",
+            "status": "open",
+            "unitId": "u",
+            "issueId": "1",
+            "pins": [{"persona": "security", "commentId": "c1"}],
+            "note": "n" * (BODY_SIZE_LIMIT - 100),
+        }
+        prefix = "<!-- sw-unit-id: u -->\n# PRD\n\nShort body.\n"
+        full = upsert_review_round_block(prefix, block)
+        assert len(full.encode("utf-8")) > BODY_SIZE_LIMIT
+        assert len(prefix.encode("utf-8")) <= BODY_SIZE_LIMIT
+        head, extras = chunk_review_round_body(full)
+        assert extras
+        assert "<!-- sw-doc-review-round -->" not in head
+        assert "<!-- sw-doc-review-round -->" in extras[0].body
+        logical = reassemble_body(head, extras)
+        manifest, err = inspect_review_round_block(logical)
+        assert err is None, err
+        assert manifest["roundId"] == "r-fence"
+
+    def test_chunk_oversized_prefix_preserves_stripped_bytes(self) -> None:
+        prefix = (
+            "<!-- sw-unit-id: u -->\n# PRD\n\n"
+            + ("alpha passes beta\n" * ((BODY_SIZE_LIMIT // 16) + 8))
+        )
+        block = {
+            "roundId": "r-oversize-prefix",
+            "status": "open",
+            "unitId": "u",
+            "issueId": "1",
+            "pins": [{"persona": "security", "commentId": "c1"}],
+        }
+        full = upsert_review_round_block(prefix, block)
+        assert len(prefix.encode("utf-8")) > BODY_SIZE_LIMIT
+        assert len(full.encode("utf-8")) > BODY_SIZE_LIMIT
+        expected = stripped_artifact_hash(full)
+        head, extras = chunk_review_round_body(full)
+        assert extras
+        assert "<!-- sw-doc-review-round -->" not in head
+        assert "<!-- sw-doc-review-round -->" in extras[0].body
+        logical = reassemble_body(head, extras)
+        manifest, err = inspect_review_round_block(logical)
+        assert err is None, err
+        assert manifest["roundId"] == "r-oversize-prefix"
+        assert stripped_artifact_hash(logical) == expected
+        assert "p\nasses" not in strip_review_round_blocks(logical)
 
 
 class TestIdempotencyRefresh:
