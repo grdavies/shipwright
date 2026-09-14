@@ -50,6 +50,8 @@ SW_REFERENCE_CLOSED_EMIT = (
     "guidelines.md",
     # Hook trust + adapter registration (PRD 071) — required in plugin installs
     "memory-provider-catalog.json",
+    # Packaged handoff self-test schema (PRD 352 R2)
+    "handoff-bundle.schema.json",
 )
 EXCLUDE_SUFFIXES = (".pyc",)
 

@@ -88,6 +88,28 @@ def generate(
     }
     (out / "hooks.json").write_text(json.dumps(hooks_meta, indent=2) + "\n", encoding="utf-8")
 
+    # PRD 352 R4: ship full skill bodies via hook_adapter.copy_emittable_content.
+    from hook_adapter import copy_emittable_content
+
+    written_skills = copy_emittable_content(core, out)
+    if skill_ids and not written_skills:
+        raise RuntimeError("expected skill bodies to be copied for OpenCode package")
+
+    # Lifecycle Python handler (R5) alongside the TS registration shim.
+    adapter_src = Path(__file__).resolve().parent
+    for name in ("hook_adapter.py", "lifecycle.py"):
+        shutil.copy2(adapter_src / name, out / name)
+    core_hooks_src = core / "hooks"
+    core_hooks_dest = out / "core" / "hooks"
+    if core_hooks_src.is_dir():
+        if core_hooks_dest.exists():
+            shutil.rmtree(core_hooks_dest)
+        shutil.copytree(
+            core_hooks_src,
+            core_hooks_dest,
+            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "tests", "test"),
+        )
+
     proj = out / "projections"
     proj.mkdir(parents=True, exist_ok=True)
     (proj / "skills.json").write_text(
@@ -130,8 +152,9 @@ def generate(
 
     if (out / ".claude-plugin").exists() or (out / "CLAUDE.md").exists():
         raise RuntimeError("OpenCode package must not reuse Claude plugin paths (R26)")
-    for path in out.rglob("SKILL.md"):
-        raise RuntimeError(f"skill body must not appear in OpenCode output: {path}")
+    # PRD 352 R4: skill bodies are required in packaged OpenCode output.
+    if skill_ids and not any(out.rglob("SKILL.md")):
+        raise RuntimeError("OpenCode package missing skill bodies after emit")
 
     return out
 

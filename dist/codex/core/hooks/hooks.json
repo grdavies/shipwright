@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "contextSwitch": {
+    "trigger": "context-switch",
+    "implementation": "core/hooks/context_switch_handoff.py",
+    "readOnly": true,
+    "resumeForbidden": true
+  },
+  "registrations": {
+    "cursor": {
+      "slot": "contextSwitch",
+      "trigger": "context-switch",
+      "command": "python3 \"${CURSOR_PLUGIN_ROOT}/hooks/context-switch-handoff.py\" --trigger context-switch"
+    },
+    "claude-code": {
+      "slot": "ContextSwitch",
+      "trigger": "context-switch",
+      "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/context-switch-handoff.py\" --trigger context-switch"
+    }
+  }
+}

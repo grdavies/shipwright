@@ -23,27 +23,27 @@
     },
     "hooks": {
       "type": "string",
-      "enum": ["native", "none"]
+      "enum": ["native", "none", "lifecycle-plugin"]
     },
     "skills": {
       "type": "string",
-      "enum": ["native", "none"]
+      "enum": ["native", "none", "ref-index", "projected"]
     },
     "commands": {
       "type": "string",
-      "enum": ["slash-md", "none"]
+      "enum": ["slash-md", "none", "projected"]
     },
     "rules": {
       "type": "string",
-      "enum": ["mdc", "claude-md", "none"]
+      "enum": ["mdc", "claude-md", "none", "adapter-resolved"]
     },
     "subagents": {
       "type": "string",
-      "enum": ["native", "none"]
+      "enum": ["native", "none", "projected"]
     },
     "mcp": {
       "type": "string",
-      "enum": ["yes", "no"]
+      "enum": ["yes", "no", "optional"]
     },
     "memoryXport": {
       "type": "string",

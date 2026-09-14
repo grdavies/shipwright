@@ -154,6 +154,62 @@ def stage_scripts_tree(scripts_src: Path, staging: Path) -> list[str]:
     return written
 
 
+# PRD 352 R1/TR1 — runtime package trees required by packaged handoff self-test.
+CORE_RUNTIME_SUBTREES = ("handoff", "schemas", "mcp")
+# Self-test fixtures live under core/tests/ (resolved relative to core/handoff/).
+CORE_RUNTIME_EXTRA_PATHS = (
+    "tests/fixtures/bundle_self_test",
+)
+
+
+def stage_core_runtime_tree(core_src: Path, staging: Path) -> list[str]:
+    """Copy ``core/{handoff,schemas,mcp}`` (+ package inits) into zipapp staging.
+
+    Paths are preserved under the ``core/`` package prefix so
+    ``from core.handoff.validate_bundle import …`` resolves inside the pyz.
+    """
+    if not core_src.is_dir():
+        raise FileNotFoundError(f"missing core tree: {core_src}")
+    written: list[str] = []
+    init_py = core_src / "__init__.py"
+    if init_py.is_file():
+        out = staging / "core" / "__init__.py"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(init_py, out)
+        written.append("core/__init__.py")
+    for subtree in CORE_RUNTIME_SUBTREES:
+        src_root = core_src / subtree
+        if not src_root.is_dir():
+            raise FileNotFoundError(f"missing core runtime subtree: {src_root}")
+        for path in sorted(src_root.rglob("*")):
+            if not path.is_file():
+                continue
+            if path.suffix in EXCLUDE_SUFFIXES:
+                continue
+            rel = path.relative_to(core_src)
+            rel_posix = rel.as_posix()
+            out_path = staging / "core" / rel_posix
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, out_path)
+            written.append(f"core/{rel_posix}")
+    for extra in CORE_RUNTIME_EXTRA_PATHS:
+        src_root = core_src / extra
+        if not src_root.is_dir():
+            raise FileNotFoundError(f"missing core runtime fixture tree: {src_root}")
+        for path in sorted(src_root.rglob("*")):
+            if not path.is_file():
+                continue
+            if path.suffix in EXCLUDE_SUFFIXES:
+                continue
+            rel = path.relative_to(core_src)
+            rel_posix = rel.as_posix()
+            out_path = staging / "core" / rel_posix
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, out_path)
+            written.append(f"core/{rel_posix}")
+    return written
+
+
 def list_staged_modules(staging: Path) -> list[str]:
     return sorted(
         path.relative_to(staging).as_posix()
@@ -345,6 +401,7 @@ def build_archive(
     with tempfile.TemporaryDirectory(prefix="sw-zipapp-stage-") as tmp:
         staging = Path(tmp)
         stage_scripts_tree(scripts_src, staging)
+        stage_core_runtime_tree(root / "core", staging)
         patch_planning_store_shim(staging, root)
         write_zipapp_launcher(staging)
         embed_distribution_stamp(staging, embedded_stamp)
