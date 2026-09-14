@@ -31,6 +31,7 @@ TARGET_LOCKS_DIR_NAME = "sw-target-locks"
 DOC_RUN_LOCKS_DIR_NAME = "sw-doc-run-locks"
 DOC_TO_FEATURE_HANDOFF_LOCKS_DIR_NAME = "sw-doc-to-feature-handoff-locks"
 RUN_LEASE_LOCKS_DIR_NAME = "sw-deliver-run-locks"
+SOURCE_LEASE_LOCKS_DIR_NAME = "sw-source-leases"
 TARGET_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
 DOC_RUN_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
 DOC_TO_FEATURE_HANDOFF_LOCK_JOURNAL_NAME = "reclaim-journal.jsonl"
@@ -85,10 +86,24 @@ def lock_path_for(root: Path, integration_branch: str, phase_branch: str) -> Pat
     return path
 
 
-def _canonical_repo_root_for_locks(start: Path) -> Path:
-    from wave_state import canonical_repo_root
+def _lock_anchor_root(root: Path) -> Path:
+    import subprocess
 
-    return canonical_repo_root(start)
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--git-common-dir"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return root.resolve()
+    common = Path(proc.stdout.strip())
+    if not common.is_absolute():
+        common = (root / common).resolve()
+    return common.parent.resolve()
+
+
+def _canonical_repo_root_for_locks(start: Path) -> Path:
+    return _lock_anchor_root(start)
 
 
 def target_locks_dir(root: Path) -> Path:
@@ -123,7 +138,7 @@ def target_lock_path_for(root: Path, target_branch: str) -> Path:
 
 
 def repository_identity(root: Path) -> str:
-    repo = _canonical_repo_root_for_locks(root)
+    repo = _lock_anchor_root(root)
     return hashlib.sha256(str(repo.resolve()).encode("utf-8")).hexdigest()[:32]
 
 
@@ -616,7 +631,7 @@ def cmd_status(root: Path, args: list[str]) -> None:
 
 def run_lease_locks_dir(root: Path) -> Path:
     """Git-common-dir anchored exclusive run-lease directory (R21)."""
-    repo_root = _canonical_repo_root_for_locks(root)
+    repo_root = _lock_anchor_root(root)
     base_raw = repo_root / ("." + "cursor") / RUN_LEASE_LOCKS_DIR_NAME
     parent_raw = repo_root / ("." + "cursor")
     if parent_raw.is_symlink():
@@ -776,20 +791,26 @@ def _run_lease_meta(
     generation: int,
     host: str | None = None,
     pid: int | None = None,
+    session_id: str | None = None,
 ) -> dict[str, Any]:
     now = utc_now()
     host_val = host or lock_host()
     pid_val = pid if pid is not None else os.getpid()
-    return {
+    session_val = session_id or os.environ.get("SW_SESSION_ID", "")
+    meta = {
         "kind": "deliver-run-lease",
         "runId": run_id,
         "generation": int(generation),
+        "ownershipGeneration": int(generation),
         "owner": f"{host_val}:{pid_val}",
         "host": host_val,
         "pid": pid_val,
         "acquiredAt": now,
         "heartbeatAt": now,
     }
+    if session_val:
+        meta["sessionId"] = session_val
+    return meta
 
 
 def acquire_run_lease(
@@ -1071,6 +1092,122 @@ def status_run_lease(root: Path, run_id: str) -> dict[str, Any]:
     }
 
 
+def source_leases_dir(root: Path) -> Path:
+    """Git-common-dir anchored source lease directory for host-switch fencing (PRD 352 R6)."""
+    repo_root = _lock_anchor_root(root)
+    base_raw = repo_root / ("." + "cursor") / SOURCE_LEASE_LOCKS_DIR_NAME
+    parent_raw = repo_root / ("." + "cursor")
+    if parent_raw.is_symlink():
+        fail("source-lease parent is symlinked", exit_code=20, halt="lock-path-unsafe")
+    if base_raw.is_symlink():
+        fail("source-lease directory is symlinked", exit_code=20, halt="lock-path-unsafe")
+    base = base_raw.resolve()
+    parent = base.parent.resolve()
+    if parent.is_symlink():
+        fail("source-lease parent is symlinked", exit_code=20, halt="lock-path-unsafe")
+    base.mkdir(parents=True, exist_ok=True)
+    return base
+
+
+def source_lease_path_for(root: Path, run_id: str) -> Path:
+    locks = source_leases_dir(root)
+    safe_run = sanitize_lock_component(run_id.replace(":", "-"))
+    digest = hashlib.sha256(f"{repository_identity(root)}\0source-lease\0{run_id}".encode("utf-8")).hexdigest()[:32]
+    filename = f"{digest}-{safe_run}.fence"
+    path = (locks / filename).resolve()
+    if path.parent != locks:
+        fail("source-lease path escapes locks directory", exit_code=20, halt="lock-path-unsafe")
+    return path
+
+
+def fence_source_lease(
+    root: Path,
+    run_id: str,
+    session_id: str,
+    *,
+    transition_id: str | None = None,
+) -> dict[str, Any]:
+    """Explicitly fence the source host lease during handoff (PRD 352 R6)."""
+    if not run_id.strip() or not session_id.strip():
+        return {
+            "verdict": "fail",
+            "error": "source-lease-missing-identity",
+            "halt": "source-lease-missing-identity",
+        }
+    path = source_lease_path_for(root, run_id.strip())
+    now = utc_now()
+    meta = {
+        "kind": "source-lease-fence",
+        "runId": run_id.strip(),
+        "sessionId": session_id.strip(),
+        "transitionId": transition_id,
+        "fencedAt": now,
+        "host": lock_host(),
+        "pid": os.getpid(),
+        "explicitReleaseRequired": True,
+    }
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+
+    def try_fence() -> bool:
+        try:
+            fd = os.open(path, flags, 0o600)
+        except FileExistsError:
+            return False
+        os.write(fd, (json.dumps(meta) + "\n").encode("utf-8"))
+        os.close(fd)
+        return True
+
+    if not try_fence():
+        existing = read_lock_meta(path)
+        if (
+            existing.get("runId") == run_id.strip()
+            and existing.get("sessionId") == session_id.strip()
+        ):
+            return {
+                "verdict": "pass",
+                "action": "source-lease-fence",
+                "reentrant": True,
+                "lockPath": str(path),
+                "meta": existing,
+            }
+        return {
+            "verdict": "fail",
+            "error": "source-lease-fenced",
+            "halt": "source-lease-fenced",
+            "holder": existing,
+            "lockPath": str(path),
+        }
+    append_log(root, {"event": "source-lease-fence", "runId": run_id, "sessionId": session_id})
+    return {
+        "verdict": "pass",
+        "action": "source-lease-fence",
+        "lockPath": str(path),
+        "meta": meta,
+    }
+
+
+def release_source_lease(
+    root: Path,
+    run_id: str,
+    session_id: str,
+) -> dict[str, Any]:
+    """Explicitly release a fenced source lease — no timeout-only release (PRD 352 R6)."""
+    path = source_lease_path_for(root, run_id.strip())
+    if not path.is_file():
+        return {"verdict": "pass", "action": "source-lease-release", "note": "no fence file"}
+    meta = read_lock_meta(path)
+    if meta.get("sessionId") != session_id.strip():
+        return {
+            "verdict": "fail",
+            "error": "source-lease-owner-mismatch",
+            "halt": "source-lease-owner-mismatch",
+            "holder": meta,
+        }
+    path.unlink(missing_ok=True)
+    append_log(root, {"event": "source-lease-release", "runId": run_id, "sessionId": session_id})
+    return {"verdict": "pass", "action": "source-lease-release", "runId": run_id}
+
+
 def cmd_run_lease(root: Path, args: list[str]) -> None:
     if not args:
         fail(
@@ -1160,6 +1297,31 @@ def main() -> None:
         cmd_status(root, rest)
     elif sub == "run-lease":
         cmd_run_lease(root, rest)
+    elif sub == "source-lease":
+        if not rest:
+            fail("source-lease subcommand required: fence|release")
+        action = rest[0]
+        srest = rest[1:]
+        run_id = parse_kv(srest, "--run-id") or ""
+        session_id = parse_kv(srest, "--session-id") or os.environ.get("SW_SESSION_ID", "")
+        transition_id = parse_kv(srest, "--transition-id")
+        if action == "fence":
+            out = fence_source_lease(root, run_id, session_id, transition_id=transition_id)
+            if out.get("verdict") != "pass":
+                fail(
+                    str(out.get("error") or "source-lease-fence-failed"),
+                    exit_code=20,
+                    halt=out.get("halt") or out.get("error"),
+                    holder=out.get("holder"),
+                )
+            emit(out)
+        elif action == "release":
+            out = release_source_lease(root, run_id, session_id)
+            if out.get("verdict") != "pass":
+                fail(str(out.get("error") or "source-lease-release-failed"), exit_code=20, holder=out.get("holder"))
+            emit(out)
+        else:
+            fail(f"unknown source-lease subcommand: {action}")
     else:
         fail(f"unknown ship-lease subcommand: {sub}")
 

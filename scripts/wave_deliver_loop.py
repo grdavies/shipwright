@@ -1378,6 +1378,199 @@ def load_state(root: Path, task_list: str | None = None) -> dict[str, Any]:
     return load_deliver_state(root, task_list=task_list)
 
 
+def assert_handoff_resume_not_duplicate(
+    root: Path,
+    run_id: str,
+    *,
+    session_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Typed halt when a second resume dispatch hits a live foreign lease (PRD 352 R8)."""
+    from wave_lock import run_lease_owner_live, status_run_lease
+
+    status = status_run_lease(root, run_id)
+    if not status.get("held"):
+        return None
+    meta = status.get("meta") if isinstance(status.get("meta"), dict) else {}
+    if not run_lease_owner_live(meta):
+        return None
+    owner_session = str(meta.get("sessionId") or meta.get("owner") or "")
+    caller_session = str(session_id or os.environ.get("SW_SESSION_ID", "")).strip()
+    if caller_session and owner_session and caller_session == owner_session:
+        return None
+    return {
+        "verdict": "halt",
+        "error": "handoff:duplicate-dispatch",
+        "halt": "handoff:duplicate-dispatch",
+        "cause": "handoff:duplicate-dispatch",
+        "ownerSessionId": owner_session or meta.get("owner"),
+        "runId": run_id,
+        "resumeCommand": f"python3 scripts/handoff_bundle.py resume --run-id {run_id}",
+    }
+
+
+EXTERNAL_RETRY_OPERATIONS = frozenset({"commit", "pr-create", "issue-mutate"})
+
+
+def _git_resolve_ref(root: Path, ref: str) -> str | None:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", ref],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return None
+    return proc.stdout.strip().lower()
+
+
+def _probe_remote_operation(root: Path, operation: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Check remote state when a local receipt is absent (PRD 352 R29)."""
+    kind = str(operation.get("kind") or "")
+    identity = operation.get("identity") if isinstance(operation.get("identity"), dict) else {}
+    if kind == "commit":
+        branch = str(identity.get("branch") or "")
+        expected = str(identity.get("commitSha") or "").strip().lower()
+        if not branch:
+            return None
+        actual = _git_resolve_ref(root, branch)
+        if not actual:
+            return None
+        if expected and actual != expected:
+            merge_base = _git_resolve_ref(root, f"{expected}^{{commit}}")
+            if merge_base != expected:
+                return None
+        return {"branch": branch, "commit": actual, "observedVia": "git-rev-parse"}
+    if kind == "pr-create":
+        head = str(identity.get("head") or identity.get("branch") or "")
+        pr_number = identity.get("prNumber")
+        if pr_number is not None:
+            return {"head": head, "prNumber": pr_number, "observedVia": "identity-pr-number"}
+        if head:
+            proc = subprocess.run(
+                [
+                    "gh",
+                    "pr",
+                    "list",
+                    "--head",
+                    head,
+                    "--json",
+                    "number,state,headRefName",
+                    "--limit",
+                    "1",
+                ],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                try:
+                    rows = json.loads(proc.stdout)
+                except json.JSONDecodeError:
+                    rows = []
+                if isinstance(rows, list) and rows:
+                    row = rows[0]
+                    if isinstance(row, dict):
+                        return {
+                            "head": head,
+                            "prNumber": row.get("number"),
+                            "state": row.get("state"),
+                            "observedVia": "gh-pr-list",
+                        }
+        return None
+    if kind == "issue-mutate":
+        issue_id = identity.get("issueId") or identity.get("issueNumber")
+        if issue_id is None:
+            return None
+        return {"issueId": issue_id, "observedVia": "identity-issue-id"}
+    return None
+
+
+def reconcile_receipts_before_retry(
+    root: Path,
+    state: dict[str, Any],
+    run_id: str,
+) -> dict[str, Any]:
+    """Reconcile receipts and remote results before retrying external ops (R28, R29)."""
+    from wave_transition_receipt import persist_external_mutation_receipt, read_receipt
+
+    reconciled: list[dict[str, Any]] = []
+    pending: list[dict[str, Any]] = []
+    bucket = state.get("uncertainInFlight")
+    if not isinstance(bucket, dict):
+        bucket = {}
+    pending_ops = state.get("pendingExternalMutations")
+    if isinstance(pending_ops, list):
+        for item in pending_ops:
+            if isinstance(item, dict):
+                pending.append(dict(item))
+
+    for work_id, entry in bucket.items():
+        if not isinstance(entry, dict):
+            continue
+        op = entry.get("externalOp")
+        if isinstance(op, dict):
+            pending.append({**op, "workId": work_id})
+
+    for op in pending:
+        kind = str(op.get("kind") or "")
+        if kind not in EXTERNAL_RETRY_OPERATIONS:
+            continue
+        idempotency_key = str(op.get("idempotencyKey") or op.get("workId") or kind)
+        existing = read_receipt(root, run_id, idempotency_key)
+        if existing and existing.get("status") in {"complete", "failed"}:
+            reconciled.append(
+                {
+                    "kind": kind,
+                    "idempotencyKey": idempotency_key,
+                    "action": "local-receipt-present",
+                    "status": existing.get("status"),
+                }
+            )
+            continue
+        remote_state = _probe_remote_operation(root, op)
+        if remote_state is None:
+            reconciled.append(
+                {
+                    "kind": kind,
+                    "idempotencyKey": idempotency_key,
+                    "action": "remote-not-observed",
+                    "note": "absence-of-receipt-does-not-prove-never-happened",
+                }
+            )
+            continue
+        receipt = persist_external_mutation_receipt(
+            root,
+            run_id,
+            kind,
+            idempotency_key=idempotency_key,
+            input_revisions={"operation": {"label": kind, "hash": idempotency_key}},
+            output_revision={"reconciled": True, "remoteState": remote_state},
+            exit_status=0,
+            remote_state=remote_state,
+        )
+        reconciled.append(
+            {
+                "kind": kind,
+                "idempotencyKey": idempotency_key,
+                "action": "receipt-reconstructed",
+                "remoteState": remote_state,
+                "receiptStatus": receipt.get("status"),
+            }
+        )
+
+    if reconciled:
+        state["externalMutationsReconciledAt"] = utc_now()
+        state["externalMutationsReconciled"] = reconciled
+    return {
+        "verdict": "pass",
+        "action": "reconcile-receipts-before-retry",
+        "runId": run_id,
+        "reconciledCount": len(reconciled),
+        "reconciled": reconciled,
+    }
+
+
 def ensure_exclusive_run_lease(
     root: Path,
     state: dict[str, Any],
@@ -1429,13 +1622,16 @@ def ensure_exclusive_run_lease(
                 run_id, source_task_list=task_list_arg
             )
             if acquired.get("verdict") == "pass":
-                state["runLease"] = {
-                    "runId": run_id,
-                    "generation": acquired["generation"],
-                    "lockPath": acquired.get("lockPath"),
-                    "acquiredAt": utc_now(),
-                    "reclaimed": bool(acquired.get("reclaimed")),
-                }
+                from wave_state import adopt_run_lease
+
+                adopt_run_lease(
+                    state,
+                    run_id=run_id,
+                    generation=int(acquired["generation"]),
+                    ownership_generation=int(acquired["generation"]),
+                    lock_path=str(acquired.get("lockPath") or ""),
+                    reclaimed=bool(acquired.get("reclaimed")),
+                )
                 return {**acquired, "beforeMutation": before_mutation}
             out = acquired
         fail(
@@ -1461,13 +1657,16 @@ def ensure_exclusive_run_lease(
             holder=acquired.get("holder"),
             lockPath=acquired.get("lockPath"),
         )
-    state["runLease"] = {
-        "runId": run_id,
-        "generation": acquired["generation"],
-        "lockPath": acquired.get("lockPath"),
-        "acquiredAt": utc_now(),
-        "reclaimed": bool(acquired.get("reclaimed")),
-    }
+    from wave_state import adopt_run_lease
+
+    adopt_run_lease(
+        state,
+        run_id=run_id,
+        generation=int(acquired["generation"]),
+        ownership_generation=int(acquired["generation"]),
+        lock_path=str(acquired.get("lockPath") or ""),
+        reclaimed=bool(acquired.get("reclaimed")),
+    )
     return {**acquired, "beforeMutation": before_mutation}
 
 
@@ -4865,6 +5064,24 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
 
     assert_run_identity(root, state, task_list, args)
     assert_driver_adopt_gate(state, args)
+
+    run_id_for_resume = parse_kv(args, "--run-id") or str(state.get("runId") or "")
+    if run_id_for_resume:
+        duplicate = assert_handoff_resume_not_duplicate(root, run_id_for_resume)
+        if duplicate:
+            fail(
+                str(duplicate.get("error") or "handoff:duplicate-dispatch"),
+                exit_code=20,
+                halt=duplicate.get("halt"),
+                cause=duplicate.get("cause"),
+                ownerSessionId=duplicate.get("ownerSessionId"),
+                resumeCommand=duplicate.get("resumeCommand"),
+            )
+        from wave_state import reconcile_uncertain_in_flight
+
+        reconcile_uncertain_in_flight(state)
+        reconcile_receipts_before_retry(root, state, run_id_for_resume)
+        save_state(root, state)
 
     if task_list and not state.get("source_task_list"):
         state["source_task_list"] = task_list

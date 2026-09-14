@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timedelta, timezone
@@ -25,6 +26,10 @@ from shipwright_paths import (  # noqa: E402
     gate_evidence_path,
 )
 
+_CORE_ROOT = SCRIPT_DIR.parent
+if str(_CORE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_CORE_ROOT))
+
 SCHEMA_REL = Path("core/sw-reference/handoff-bundle.schema.json")
 SCHEMA_VERSION = "HandoffBundle@v1"
 DEFAULT_FRESHNESS_TTL_SECONDS = 86400
@@ -33,6 +38,28 @@ UNRESOLVED_STATUSES = frozenset({"open", "blocked", "unknown"})
 SUPPORTED_HARNESSES = frozenset({"cursor", "claude-code"})
 SESSION_TRANSITIONS = frozenset({"resume", "switch"})
 MODEL_TRANSITIONS = frozenset({"same", "changed", "unknown"})
+REQUIRED_HANDOFF_MODULES: tuple[str, ...] = (
+    "core/handoff/importer.py",
+    "core/handoff/bundle.py",
+    "core/handoff/validate_bundle.py",
+    "core/handoff/acknowledgement.py",
+    "core/handoff/transition.py",
+    "scripts/handoff_bundle.py",
+)
+HANDOFF_INSTALLER_REPAIR = (
+    "Re-run the installer or regenerate the release package "
+    "(python3 -m sw generate --all) so packaged handoff modules are present."
+)
+DEFAULT_HOST_SWITCH_MAX_RETRIES = 3
+DEFAULT_HOST_SWITCH_COOLDOWN_SECONDS = 300
+HOST_SWITCH_RETRY_DIR_NAME = "sw-handoff-switch-retry"
+SUBSCRIPTION_EXHAUSTED_CODES = frozenset(
+    {
+        "subscription_exhausted",
+        "quota:subscription-exhausted",
+        "subscription-exhausted",
+    }
+)
 
 
 def repo_root(start: Path | None = None) -> Path:
@@ -70,19 +97,14 @@ def digest_payload(payload: Mapping[str, Any]) -> str:
 
 
 def detect_harness() -> str:
-    """Detect the active harness (cursor | claude-code | unknown)."""
-    explicit = os.environ.get("SW_SETUP_PLATFORM", "").strip()
-    if explicit in SUPPORTED_HARNESSES:
-        return explicit
-    if os.environ.get("CURSOR_AGENT") or os.environ.get("CURSOR_PLUGIN_ROOT"):
-        return "cursor"
-    if (
-        os.environ.get("CLAUDE_CODE")
-        or os.environ.get("CLAUDE_CODE_SSE_PORT")
-        or os.environ.get("CLAUDE_PLUGIN_ROOT")
-    ):
-        return "claude-code"
-    return "unknown"
+    """Detect the active harness via unified host resolver (PRD 352 R11)."""
+    repo = Path(__file__).resolve().parents[1]
+    if str(repo) not in sys.path:
+        sys.path.insert(0, str(repo))
+    from core.adapters.host_resolver import detect_runtime_host_id
+
+    host = detect_runtime_host_id()
+    return host if host in SUPPORTED_HARNESSES else "unknown"
 
 
 def detect_model_id() -> str:
@@ -588,6 +610,18 @@ def export_for_transition(
     if session_transition not in SESSION_TRANSITIONS:
         return {"verdict": "fail", "error": "handoff:invalid-session-transition", "transition": session_transition}
     root = repo_root(root)
+    if session_transition == "switch":
+        switch_halt = guard_host_switch(
+            root,
+            run_id=run_id,
+            source_host=source_harness,
+            destination_host=destination_harness,
+            transition_id=run_id,
+            destination_model=destination_model,
+            record_attempt=bool(run_id),
+        )
+        if switch_halt is not None:
+            return switch_halt
     if not root.is_dir():
         return {"verdict": "fail", "error": "handoff:missing-durable-state"}
     ship_state = _shipwright_state(root)
@@ -950,7 +984,7 @@ def import_bundle(
         "verdict": "pass",
         "bundle": clean,
         "foreignHarnessResumeForbidden": True,
-        "detail": "Bundle import is informational only; /sw-deliver resume requires materialize + dependency-gate.",
+        "detail": "Bundle import is informational only unless --run-id materializes a resume ticket.",
     }
 
 
@@ -995,6 +1029,24 @@ def cmd_export(args: argparse.Namespace) -> int:
 def cmd_import(args: argparse.Namespace) -> int:
     root = Path(args.root).resolve() if args.root else repo_root()
     result = import_bundle(root, Path(args.path), allow_stale=bool(args.allow_stale))
+    run_id = str(getattr(args, "run_id", "") or "").strip()
+    if result.get("verdict") == "pass" and run_id and isinstance(result.get("bundle"), dict):
+        try:
+            from core.handoff.importer import write_import_record_from_bundle
+
+            record = write_import_record_from_bundle(root, run_id, result["bundle"])
+            result = {
+                **result,
+                "runId": run_id,
+                "transitionId": record.get("transition_id"),
+                "importRecord": True,
+            }
+        except Exception as exc:
+            result = {
+                "verdict": "fail",
+                "error": "handoff:import-record-write-failed",
+                "detail": str(exc),
+            }
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     verdict = str(result.get("verdict") or "")
     if verdict == "pass":
@@ -1066,6 +1118,603 @@ def cmd_import_exploration(args: argparse.Namespace) -> int:
     return 20
 
 
+def handoff_module_hashes(root: Path) -> dict[str, str]:
+    hashes: dict[str, str] = {}
+    for rel in REQUIRED_HANDOFF_MODULES:
+        path = Path(root) / rel
+        if not path.is_file():
+            raise FileNotFoundError(rel)
+        hashes[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return hashes
+
+
+def write_handoff_manifest(root: Path) -> dict[str, Any]:
+    modules = [
+        {"path": rel, "sha256": digest}
+        for rel, digest in handoff_module_hashes(root).items()
+    ]
+    doc = {
+        "schemaVersion": "shipwright-dist-manifest@v1",
+        "handoff": {"modules": modules},
+    }
+    path = Path(root) / "dist" / "manifest.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return doc
+
+
+def verify_handoff_manifest(root: Path) -> dict[str, Any]:
+    path = Path(root) / "dist" / "manifest.json"
+    if not path.is_file():
+        return {
+            "verdict": "fail",
+            "error": "handoff:manifest-missing",
+            "path": str(path),
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {
+            "verdict": "fail",
+            "error": "handoff:manifest-invalid",
+            "path": str(path),
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    if not isinstance(doc, dict) or doc.get("schemaVersion") != "shipwright-dist-manifest@v1":
+        return {
+            "verdict": "fail",
+            "error": "handoff:manifest-invalid",
+            "path": str(path),
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    rows = ((doc.get("handoff") or {}) if isinstance(doc, dict) else {}).get("modules") or []
+    try:
+        expected = handoff_module_hashes(root)
+    except FileNotFoundError:
+        return {
+            "verdict": "fail",
+            "error": "handoff:missing-dependency",
+            "path": str(path),
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    actual = {
+        str(row.get("path")): str(row.get("sha256"))
+        for row in rows
+        if isinstance(row, dict)
+    }
+    missing = [rel for rel in REQUIRED_HANDOFF_MODULES if rel not in actual]
+    mismatched = [rel for rel, digest in expected.items() if actual.get(rel) != digest]
+    if missing or mismatched:
+        return {
+            "verdict": "fail",
+            "error": "handoff:manifest-mismatch",
+            "missing": missing,
+            "mismatched": mismatched,
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    return {"verdict": "pass", "path": str(path), "modules": list(REQUIRED_HANDOFF_MODULES)}
+
+
+def verify_dependencies(root: Path) -> dict[str, Any]:
+    """Confirm packaged handoff modules exist before resume dispatch (PRD 352 R3)."""
+    missing = [rel for rel in REQUIRED_HANDOFF_MODULES if not (Path(root) / rel).is_file()]
+    if missing:
+        return {
+            "verdict": "fail",
+            "error": "handoff:missing-dependency",
+            "missing": missing,
+            "remediation": HANDOFF_INSTALLER_REPAIR,
+        }
+    return {"verdict": "pass", "modules": list(REQUIRED_HANDOFF_MODULES)}
+
+
+def load_host_switch_config(root: Path) -> dict[str, Any]:
+    """Resolve host.switch spending and retry settings (PRD 352 R24)."""
+    from shipwright_paths import load_workflow_config
+
+    cfg = load_workflow_config(root)
+    host = cfg.get("host") if isinstance(cfg, dict) else {}
+    host = host if isinstance(host, dict) else {}
+    switch = host.get("switch") if isinstance(host.get("switch"), dict) else {}
+    policy = switch.get("spendingPolicy") if isinstance(switch.get("spendingPolicy"), dict) else {}
+    return {
+        "maxRetries": int(switch.get("maxRetries", DEFAULT_HOST_SWITCH_MAX_RETRIES)),
+        "cooldownSeconds": int(switch.get("cooldownSeconds", DEFAULT_HOST_SWITCH_COOLDOWN_SECONDS)),
+        "spendingPolicy": dict(policy),
+    }
+
+
+def host_switch_retry_dir(root: Path) -> Path:
+    return repo_root(root) / ".cursor" / HOST_SWITCH_RETRY_DIR_NAME
+
+
+def host_switch_retry_path(root: Path, run_id: str) -> Path:
+    safe = re.sub(r"[^a-zA-Z0-9._-]+", "-", str(run_id or "unknown")).strip("-") or "unknown"
+    return host_switch_retry_dir(root) / f"{safe}.json"
+
+
+def read_host_switch_retry_state(root: Path, run_id: str) -> dict[str, Any]:
+    path = host_switch_retry_path(root, run_id)
+    if not path.is_file():
+        return {"runId": run_id, "attempts": []}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"runId": run_id, "attempts": []}
+    if not isinstance(payload, dict):
+        return {"runId": run_id, "attempts": []}
+    attempts = payload.get("attempts")
+    if not isinstance(attempts, list):
+        attempts = []
+    return {"runId": run_id, "attempts": [row for row in attempts if isinstance(row, dict)]}
+
+
+def record_host_switch_attempt(
+    root: Path,
+    run_id: str,
+    *,
+    source_host: str,
+    destination_host: str,
+    transition_id: str | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    state = read_host_switch_retry_state(root, run_id)
+    attempts = list(state.get("attempts") or [])
+    attempts.append(
+        {
+            "at": (now or datetime.now(timezone.utc)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "sourceHost": source_host,
+            "destinationHost": destination_host,
+            "transitionId": transition_id or "",
+        }
+    )
+    payload = {"runId": run_id, "attempts": attempts}
+    path = host_switch_retry_path(root, run_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return payload
+
+
+def read_spending_observation(environ: Mapping[str, str] | None = None) -> dict[str, Any] | None:
+    """Read injected or ambient quota observation without fabrication (PRD 352 R23)."""
+    env = environ if environ is not None else os.environ
+    inject_code = str(env.get("SW_HOST_SWITCH_QUOTA_INJECT") or "").strip()
+    if inject_code:
+        payload: dict[str, Any] = {
+            "source": "injection",
+            "code": inject_code,
+            "message": str(env.get("SW_HOST_SWITCH_QUOTA_MESSAGE") or inject_code).strip(),
+        }
+        observed_at = str(env.get("SW_HOST_SWITCH_QUOTA_OBSERVED_AT") or "").strip()
+        if observed_at:
+            payload["observedAt"] = observed_at
+        return payload
+    user_instruction = str(env.get("SW_HOST_SWITCH_USER_INSTRUCTION") or "").strip()
+    if user_instruction:
+        return {
+            "source": "user_instruction",
+            "code": "user:instruction",
+            "message": user_instruction,
+        }
+    return None
+
+
+def _is_subscription_exhausted(observation: Mapping[str, Any] | None) -> bool:
+    if observation is None:
+        return False
+    code = str(observation.get("code") or "").strip().lower()
+    return code in {item.lower() for item in SUBSCRIPTION_EXHAUSTED_CODES}
+
+
+def _fallback_authorized(
+    config: Mapping[str, Any],
+    *,
+    destination_host: str,
+    observation: Mapping[str, Any] | None,
+) -> bool:
+    if observation is not None and str(observation.get("source") or "") == "user_instruction":
+        return True
+    policy = config.get("spendingPolicy") if isinstance(config.get("spendingPolicy"), dict) else {}
+    if policy.get("allowAutomaticFallback"):
+        return True
+    authorized = policy.get("authorizedDestinations") or []
+    return destination_host in {str(item).strip() for item in authorized if str(item).strip()}
+
+
+def emit_spending_policy_halt(
+    *,
+    constraint: str,
+    alternatives: list[str],
+    observation: Mapping[str, Any] | None = None,
+    destination_host: str | None = None,
+) -> dict[str, Any]:
+    """Typed halt for spending-policy violations (PRD 352 R25)."""
+    payload: dict[str, Any] = {
+        "verdict": "halt",
+        "error": "handoff:spending-policy-violation",
+        "halt": "handoff:spending-policy-violation",
+        "constraint": constraint,
+        "alternatives": alternatives,
+        "foreignHarnessResumeForbidden": True,
+    }
+    if destination_host:
+        payload["destinationHost"] = destination_host
+    if observation is not None:
+        payload["spendingObservation"] = dict(observation)
+    return payload
+
+
+def check_switch_retry_bounds(
+    root: Path,
+    run_id: str,
+    config: Mapping[str, Any] | None = None,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any] | None:
+    """Return a typed halt when retry count or cooldown is exceeded (PRD 352 R24)."""
+    resolved = dict(config or load_host_switch_config(root))
+    state = read_host_switch_retry_state(root, run_id)
+    attempts = list(state.get("attempts") or [])
+    max_retries = max(0, int(resolved.get("maxRetries", DEFAULT_HOST_SWITCH_MAX_RETRIES)))
+    if max_retries and len(attempts) >= max_retries:
+        return emit_spending_policy_halt(
+            constraint=f"host.switch.maxRetries={max_retries}",
+            alternatives=[
+                "Wait for cooldown then retry with explicit user instruction",
+                "Resume on the current host without switching",
+                "Authorize destination in host.switch.spendingPolicy.authorizedDestinations",
+            ],
+        )
+    cooldown = max(0, int(resolved.get("cooldownSeconds", DEFAULT_HOST_SWITCH_COOLDOWN_SECONDS)))
+    if cooldown and attempts:
+        last_at = _parse_iso8601(str(attempts[-1].get("at") or ""))
+        current = now or datetime.now(timezone.utc)
+        if last_at is not None:
+            if last_at.tzinfo is None:
+                last_at = last_at.replace(tzinfo=timezone.utc)
+            elapsed = (current - last_at).total_seconds()
+            if elapsed < cooldown:
+                return emit_spending_policy_halt(
+                    constraint=f"host.switch.cooldownSeconds={cooldown}",
+                    alternatives=[
+                        f"Retry after {int(cooldown - elapsed)} seconds",
+                        "Provide SW_HOST_SWITCH_USER_INSTRUCTION to authorize an immediate switch",
+                    ],
+                )
+    return None
+
+
+def enforce_spending_policy_on_fallback(
+    root: Path,
+    *,
+    destination_host: str,
+    destination_model: str | None = None,
+    observation: Mapping[str, Any] | None = None,
+    config: Mapping[str, Any] | None = None,
+    automatic_fallback: bool = True,
+) -> dict[str, Any] | None:
+    """Fail closed on unauthorized or paid fallback (PRD 352 R22)."""
+    resolved = dict(config or load_host_switch_config(root))
+    policy = resolved.get("spendingPolicy") if isinstance(resolved.get("spendingPolicy"), dict) else {}
+    observation = observation if observation is not None else read_spending_observation()
+    if not automatic_fallback or observation is None:
+        return None
+    if not _fallback_authorized(resolved, destination_host=destination_host, observation=observation):
+        return emit_spending_policy_halt(
+            constraint="automatic fallback requires prior authorization",
+            alternatives=[
+                "Set host.switch.spendingPolicy.authorizedDestinations",
+                "Export SW_HOST_SWITCH_USER_INSTRUCTION with explicit operator approval",
+                "Continue on the current host without switching",
+            ],
+            observation=observation,
+            destination_host=destination_host,
+        )
+    if _is_subscription_exhausted(observation) and not bool(policy.get("allowPaidFallback")):
+        return emit_spending_policy_halt(
+            constraint="subscription exhaustion does not silently become paid usage",
+            alternatives=[
+                "Wait for subscription reset and retry without paid fallback",
+                "Set host.switch.spendingPolicy.allowPaidFallback after explicit operator approval",
+                "Provide SW_HOST_SWITCH_USER_INSTRUCTION authorizing paid continuation",
+            ],
+            observation=observation,
+            destination_host=destination_host,
+        )
+    if destination_model and _is_subscription_exhausted(observation):
+        # Destination model change during exhaustion is treated as paid fallback unless authorized.
+        if not bool(policy.get("allowPaidFallback")) and str(observation.get("source") or "") != "user_instruction":
+            return emit_spending_policy_halt(
+                constraint="paid model fallback blocked while subscription is exhausted",
+                alternatives=[
+                    "Stay on the current model until quota resets",
+                    "Authorize paid fallback in workflow config",
+                ],
+                observation=observation,
+                destination_host=destination_host,
+            )
+    return None
+
+
+def guard_host_switch(
+    root: Path,
+    *,
+    run_id: str | None,
+    source_host: str,
+    destination_host: str,
+    transition_id: str | None = None,
+    destination_model: str | None = None,
+    observation: Mapping[str, Any] | None = None,
+    automatic_fallback: bool = True,
+    record_attempt: bool = True,
+) -> dict[str, Any] | None:
+    """Apply retry bounds and spending policy before a host switch (PRD 352 R22–R25)."""
+    config = load_host_switch_config(root)
+    if run_id:
+        retry_halt = check_switch_retry_bounds(root, run_id, config)
+        if retry_halt is not None:
+            return retry_halt
+    spending_halt = enforce_spending_policy_on_fallback(
+        root,
+        destination_host=destination_host,
+        destination_model=destination_model,
+        observation=observation,
+        config=config,
+        automatic_fallback=automatic_fallback,
+    )
+    if spending_halt is not None:
+        return spending_halt
+    if run_id and record_attempt:
+        record_host_switch_attempt(
+            root,
+            run_id,
+            source_host=source_host,
+            destination_host=destination_host,
+            transition_id=transition_id,
+        )
+    return None
+
+
+def deliver_scheduler_argv(run_id: str, *, root: Path) -> list[str]:
+    driver = Path(root) / "scripts" / "wave.py"
+    if not driver.is_file():
+        driver = SCRIPT_DIR / "wave.py"
+    return [
+        sys.executable,
+        str(driver),
+        "deliver-loop",
+        "--self-wake",
+        "--run-id",
+        run_id,
+    ]
+
+
+def dispatch_deliver_scheduler(argv: list[str], *, cwd: Path) -> dict[str, Any]:
+    proc = subprocess.run(argv, capture_output=True, text=True, check=False, cwd=str(cwd))
+    payload: dict[str, Any] = {
+        "verdict": "pass" if proc.returncode == 0 else "fail",
+        "exitCode": proc.returncode,
+        "argv": argv,
+    }
+    stdout = (proc.stdout or "").strip()
+    if stdout:
+        try:
+            payload["scheduler"] = json.loads(stdout)
+        except json.JSONDecodeError:
+            payload["stdout"] = stdout
+    if proc.returncode != 0:
+        payload["stderr"] = (proc.stderr or "").strip()
+    return payload
+
+
+def cmd_resume(args: argparse.Namespace) -> int:
+    """Validate import record + packaged deps, then dispatch deliver-loop (PRD 352 R1)."""
+    try:
+        from core.handoff.importer import (
+            ImportValidationError,
+            validate_evidence_on_resume,
+            validate_import_record,
+            write_import_record_from_bundle,
+            write_resume_evidence,
+        )
+        from core.handoff.transition import (
+            TransitionError,
+            advance_transition,
+            create_transition,
+            load_transition,
+            record_observed_failure,
+        )
+        from wave_lock import fence_source_lease, release_source_lease
+        from wave_state import adopt_run_lease, assert_ownership_before_dispatch
+    except ImportError as exc:
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "error": "handoff:missing-dependency",
+                    "missing": ["core/handoff/importer.py"],
+                    "remediation": HANDOFF_INSTALLER_REPAIR,
+                    "detail": str(exc),
+                },
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 20
+
+    root = Path(args.root).resolve() if args.root else repo_root()
+    run_id = str(getattr(args, "run_id", "") or "").strip()
+    transition_id = str(getattr(args, "transition_id", "") or "").strip()
+    bundle_path = str(getattr(args, "path", "") or "").strip()
+    if bundle_path:
+        loaded = import_bundle(root, Path(bundle_path), allow_stale=True)
+        if loaded.get("verdict") != "pass" or not isinstance(loaded.get("bundle"), dict):
+            print(json.dumps(loaded, ensure_ascii=False, indent=2, sort_keys=True))
+            return 20 if str(loaded.get("verdict") or "") != "halt" else 21
+        if not run_id:
+            print(
+                json.dumps(
+                    {
+                        "verdict": "fail",
+                        "error": "handoff:resume-run-id-required",
+                        "remediation": "Pass --run-id when resuming from a bundle path.",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            return 20
+        try:
+            write_import_record_from_bundle(root, run_id, loaded["bundle"])
+        except Exception as exc:
+            print(
+                json.dumps(
+                    {
+                        "verdict": "fail",
+                        "error": "handoff:import-record-write-failed",
+                        "detail": str(exc),
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            return 20
+    try:
+        record = validate_import_record(root, run_id, transition_id or None)
+    except ImportValidationError as exc:
+        print(json.dumps(exc.as_dict(), ensure_ascii=False, indent=2, sort_keys=True))
+        return 20
+    deps = verify_dependencies(root)
+    if deps.get("verdict") != "pass":
+        print(json.dumps(deps, ensure_ascii=False, indent=2, sort_keys=True))
+        return 20
+
+    evidence = validate_evidence_on_resume(root, record)
+    if evidence.get("verdict") != "pass":
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "error": "handoff:evidence-digest-invalid",
+                    "evidence": evidence,
+                    "remediation": evidence.get("explanation"),
+                    "rerunChecks": evidence.get("rerunChecks") or [],
+                },
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 20
+
+    try:
+        from core.adapters.host_resolver import DestinationValidationError, requalify
+    except ImportError as exc:
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "error": "handoff:missing-dependency",
+                    "missing": ["core/adapters/host_resolver.py"],
+                    "remediation": HANDOFF_INSTALLER_REPAIR,
+                    "detail": str(exc),
+                },
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 20
+    try:
+        qualified = requalify(repo_root=root)
+    except DestinationValidationError as exc:
+        print(json.dumps(exc.as_dict(), ensure_ascii=False, indent=2, sort_keys=True))
+        return 20
+
+    transition_id = str(record.get("transition_id") or transition_id or "imported")
+    session_id = os.environ.get("SW_SESSION_ID", f"{os.getpid()}")
+    ownership_generation = int(record.get("ownershipGeneration") or 0)
+    observation = read_spending_observation()
+    try:
+        transition = load_transition(root, transition_id)
+    except TransitionError:
+        transition = create_transition(
+            root,
+            transition_id=transition_id,
+            run_id=run_id,
+            session_id=session_id,
+            ownership_generation=ownership_generation,
+        )
+    if observation is not None:
+        user_instruction = (
+            str(observation.get("message") or "").strip()
+            if str(observation.get("source") or "") == "user_instruction"
+            else None
+        )
+        record_observed_failure(
+            root,
+            transition_id,
+            observation if user_instruction is None else None,
+            user_instruction=user_instruction,
+        )
+    if transition.get("state") == "requested":
+        advance_transition(root, transition_id, "checkpointed")
+        advance_transition(root, transition_id, "destination_validated")
+    fence = fence_source_lease(root, run_id, session_id, transition_id=transition_id)
+    if fence.get("verdict") != "pass":
+        print(json.dumps(fence, ensure_ascii=False, indent=2, sort_keys=True))
+        return 20
+
+    dispatch_state: dict[str, Any] = {"runLease": {"ownershipGeneration": ownership_generation}}
+    assert_ownership_before_dispatch(dispatch_state, ownership_generation)
+    adopt_run_lease(
+        dispatch_state,
+        run_id=run_id,
+        generation=max(1, ownership_generation),
+        ownership_generation=ownership_generation,
+    )
+
+    argv = deliver_scheduler_argv(run_id, root=root)
+    result = dispatch_deliver_scheduler(argv, cwd=root)
+    if result.get("verdict") == "pass":
+        advance_transition(
+            root,
+            transition_id,
+            "ownership_transferred",
+            ownership_generation=ownership_generation + 1,
+        )
+        write_resume_evidence(
+            root,
+            run_id=run_id,
+            transition_id=transition_id,
+            next_eligible_action="deliver-loop",
+            host_adapter_id=qualified.surface_adapter,
+        )
+        advance_transition(root, transition_id, "resumed")
+        release_source_lease(root, run_id, session_id)
+    payload = {
+        "verdict": result.get("verdict"),
+        "action": "resume",
+        "runId": run_id,
+        "transitionId": transition_id,
+        "ownershipGeneration": ownership_generation,
+        "dispatched": True,
+        "qualifiedHost": {
+            "host_id": qualified.host_id,
+            "surface_adapter": qualified.surface_adapter,
+            "installed_version": qualified.installed_version,
+            "auth_status": qualified.auth_status,
+        },
+        **{k: v for k, v in result.items() if k != "verdict"},
+    }
+    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+    return 0 if result.get("verdict") == "pass" else 20
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="HandoffBundle@v1 export/import (PRD 280 gap-324)")
     parser.add_argument("--root", default="", help="Repository root (default: git root from cwd)")
@@ -1090,6 +1739,7 @@ def main(argv: list[str] | None = None) -> int:
     import_cmd = sub.add_parser("import", help="Import bundle with freshness TTL + redaction")
     import_cmd.add_argument("path")
     import_cmd.add_argument("--allow-stale", action="store_true")
+    import_cmd.add_argument("--run-id", default="", help="Materialize a resume ticket for this run id")
     import_cmd.set_defaults(func=cmd_import)
 
     export_exploration = sub.add_parser(
@@ -1114,6 +1764,20 @@ def main(argv: list[str] | None = None) -> int:
     import_exploration.add_argument("--allow-stale", action="store_true")
     import_exploration.add_argument("--expected-revision", default="")
     import_exploration.set_defaults(func=cmd_import_exploration)
+
+    resume = sub.add_parser(
+        "resume",
+        help="Validate an import record (or bundle path) and dispatch the delivery scheduler",
+    )
+    resume.add_argument(
+        "path",
+        nargs="?",
+        default="",
+        help="Optional bundle to materialize before resume; otherwise selected via --run-id",
+    )
+    resume.add_argument("--run-id", default="", help="Imported run id (required)")
+    resume.add_argument("--transition-id", default="")
+    resume.set_defaults(func=cmd_resume)
 
     args = parser.parse_args(list(sys.argv[1:] if argv is None else argv))
     if getattr(args, "self_test", False):

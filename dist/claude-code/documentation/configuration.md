@@ -1893,6 +1893,24 @@ document). See [glossary](glossary.md) for **corpus** and **holdout** definition
 missing durable state, and partial import failures are all covered by conformance tests. Recovery routing:
 see [decision tree](decision-tree.md#adoption-and-provider-readiness).
 
+### Host switch spending and retry (`host.switch`)
+
+Runtime host-switch boundaries for HandoffBundle `switch` transitions. Policy is
+fail-closed and **only applies when a quota or spending observation exists** — absence of an observation
+must not block retry.
+
+| Key | Default | Role |
+| --- | --- | --- |
+| `host.switch.maxRetries` | `3` | Maximum switch attempts per run before a cooldown halt |
+| `host.switch.cooldownSeconds` | `300` | Minimum seconds between attempts |
+| `host.switch.spendingPolicy.allowAutomaticFallback` | `false` | When true, `authorizedDestinations` may fall back without per-switch instruction |
+| `host.switch.spendingPolicy.allowPaidFallback` | `false` | When false, subscription exhaustion never silently becomes paid usage |
+| `host.switch.spendingPolicy.authorizedDestinations` | *(empty)* | Destination host ids pre-authorized for automatic fallback |
+
+Runtime: `scripts/handoff_bundle.py` (`guard_host_switch`, `load_host_switch_config`). Incomplete
+transition receipts leftover as `.json.pending` after a complete receipt must be sealed via
+`complete_transition` — do not hand-delete pending files.
+
 ### Program priority authority
 
 | Surface | Path | Role |
@@ -2376,6 +2394,10 @@ Shipwright `2.15.0` · schema `config.schema.json`
 | `host.rateLimit.mutatingMinDelayMs` | `1000` | `1000` | `1000` | `1000` | `—` | `—` |
 | `host.rateLimit.nearLimitThreshold` | `5` | `5` | `5` | `5` | `—` | `—` |
 | `host.remote` | `origin` | `origin` | `origin` | `origin` | `—` | `—` |
+| `host.switch.cooldownSeconds` | `300` | `300` | `300` | `300` | `—` | `—` |
+| `host.switch.maxRetries` | `3` | `3` | `3` | `3` | `—` | `—` |
+| `host.switch.spendingPolicy.allowAutomaticFallback` | `false` | `false` | `false` | `false` | `—` | `—` |
+| `host.switch.spendingPolicy.allowPaidFallback` | `false` | `false` | `false` | `false` | `—` | `—` |
 | `host.tokenEnv` | `—` | `—` | `—` | `—` | `legacy` | `—` |
 | `inefficiency.enabled` | `true` | `true` | `true` | `true` | `—` | `—` |
 | `inefficiency.thresholds.slowCiJobSeconds` | `300` | `300` | `300` | `300` | `—` | `—` |
@@ -2522,4 +2544,4 @@ Shipwright `2.15.0` · schema `config.schema.json`
 | `worktree.scaffold.portRangeEnd` | `9199` | `9199` | `9199` | `9199` | `—` | `—` |
 | `worktree.scaffold.portRangeStart` | `9100` | `9100` | `9100` | `9100` | `—` | `—` |
 <!-- effective-config:end generated -->
-<!-- currency: refreshed 2026-08-27T15:30:00Z for workflow.extensions / handoff_bundle bindings -->
+<!-- currency: refreshed 2026-09-14T20:02:00Z — host.switch spending/retry + workflow.extensions / handoff_bundle -->

@@ -1,0 +1,35 @@
+{
+  "handoff": {
+    "modules": [
+      {
+        "path": "core/handoff/importer.py",
+        "sha256": "94dad97012b6236779df2a0a8bec311369d861ca699297819f80249fb29f8299"
+      },
+      {
+        "path": "core/handoff/bundle.py",
+        "sha256": "836ab8cd0948516fddd846ad7cb232bf26c0fde93c4ac9d62f29add57117fd54"
+      },
+      {
+        "path": "core/handoff/validate_bundle.py",
+        "sha256": "3043f0d1bacfeaa4c6a3612457cf73c7e61e3ba6cd443a4817f8a3d80f0bdfcc"
+      },
+      {
+        "path": "core/handoff/acknowledgement.py",
+        "sha256": "b657d64c00c6198c4e396f2b3319d08c6e3e6dfceacbc358f5d26af755a0fd35"
+      },
+      {
+        "path": "core/handoff/transition.py",
+        "sha256": "4ad6d6bdfa9504ec0803e01fdbf63bd1ad1353e5f34276a133bbff70716a6405"
+      },
+      {
+        "path": "scripts/handoff_bundle.py",
+<<<<<<< HEAD
+        "sha256": "bd07874c8cd3f7ab1af73ed262d56d35f4393b6b573b7950ddcc600004517983"
+=======
+        "sha256": "f57d50a1d95118eafc31e19b37b74915834411d7729381de63856b7099973c3e"
+>>>>>>> feat/reliable-host-switching-phase-spending-and-retry-boundaries-slice-3
+      }
+    ]
+  },
+  "schemaVersion": "shipwright-dist-manifest@v1"
+}

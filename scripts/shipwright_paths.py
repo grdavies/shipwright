@@ -374,6 +374,14 @@ def destination_ack_path(root: Path, run_id: str, transition_id: str) -> Path:
     return run_dir(root, run_id) / "acks" / f"{tid}.json"
 
 
+def resume_evidence_path(root: Path, run_id: str, transition_id: str) -> Path:
+    """Execution-resumed evidence distinct from import-ack (PRD 352 R21)."""
+    tid = str(transition_id or "").strip()
+    if not tid:
+        raise ValueError("transition_id required")
+    return run_dir(root, run_id) / "resume-evidence" / f"{tid}.json"
+
+
 def bounded_mcp_server_path(root: Path) -> Path:
     """Canonical on-disk path for the bounded MCP server entrypoint (PRD 349 R23/R30).
 

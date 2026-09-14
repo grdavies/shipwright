@@ -1450,4 +1450,4 @@ byte-identical; `scripts/layout_sync_check.py` enforces that contract in pre-com
 backend and authority prose stays on the facade boundary (`planning_store_facade`) — callers must not
 bypass it when documenting store mutations.
 
-<!-- currency: refreshed 2026-09-12T22:12:00Z — PRD 348 terminal docs-currency; planning_store_facade / layout dual-home -->
+<!-- currency: refreshed 2026-09-14T20:02:00Z — terminal docs-currency; planning_store_facade / layout dual-home -->

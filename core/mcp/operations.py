@@ -256,6 +256,7 @@ def handoff_export(
         source_repo_id=source_repo_id_for_remote(remote) if remote else None,
         source_head=head,
         transition_id=kwargs.get("transition_id") or str(uuid.uuid4()),
+        root=root,
     )
     return {
         "ok": True,

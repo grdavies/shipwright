@@ -810,6 +810,15 @@ def apply_resume_entry(root: Path, state: dict[str, Any], plan: dict[str, Any], 
         adopt = try_adopt_recorded_orchestrator_worktree(
             root, state, plan, loop_args=args, perform_reentry=True
         )
+    # PRD 350 R12/R17 — synthesize interruption when resume lacks trailing event.
+    try:
+        import wave_journal as capture
+
+        run_id = capture.resolve_capture_run_id(state)
+        if run_id and capture.capture_enabled(root):
+            capture.ensure_interruption_on_resume(run_id, root=root, state=state)
+    except Exception:
+        pass
     return {"resume": resume, "orchestratorAdopt": adopt}
 
 def fixture_tree_clean_or_halt(root: Path, state: dict[str, Any]) -> None:
@@ -1369,6 +1378,199 @@ def load_state(root: Path, task_list: str | None = None) -> dict[str, Any]:
     return load_deliver_state(root, task_list=task_list)
 
 
+def assert_handoff_resume_not_duplicate(
+    root: Path,
+    run_id: str,
+    *,
+    session_id: str | None = None,
+) -> dict[str, Any] | None:
+    """Typed halt when a second resume dispatch hits a live foreign lease (PRD 352 R8)."""
+    from wave_lock import run_lease_owner_live, status_run_lease
+
+    status = status_run_lease(root, run_id)
+    if not status.get("held"):
+        return None
+    meta = status.get("meta") if isinstance(status.get("meta"), dict) else {}
+    if not run_lease_owner_live(meta):
+        return None
+    owner_session = str(meta.get("sessionId") or meta.get("owner") or "")
+    caller_session = str(session_id or os.environ.get("SW_SESSION_ID", "")).strip()
+    if caller_session and owner_session and caller_session == owner_session:
+        return None
+    return {
+        "verdict": "halt",
+        "error": "handoff:duplicate-dispatch",
+        "halt": "handoff:duplicate-dispatch",
+        "cause": "handoff:duplicate-dispatch",
+        "ownerSessionId": owner_session or meta.get("owner"),
+        "runId": run_id,
+        "resumeCommand": f"python3 scripts/handoff_bundle.py resume --run-id {run_id}",
+    }
+
+
+EXTERNAL_RETRY_OPERATIONS = frozenset({"commit", "pr-create", "issue-mutate"})
+
+
+def _git_resolve_ref(root: Path, ref: str) -> str | None:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", ref],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return None
+    return proc.stdout.strip().lower()
+
+
+def _probe_remote_operation(root: Path, operation: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Check remote state when a local receipt is absent (PRD 352 R29)."""
+    kind = str(operation.get("kind") or "")
+    identity = operation.get("identity") if isinstance(operation.get("identity"), dict) else {}
+    if kind == "commit":
+        branch = str(identity.get("branch") or "")
+        expected = str(identity.get("commitSha") or "").strip().lower()
+        if not branch:
+            return None
+        actual = _git_resolve_ref(root, branch)
+        if not actual:
+            return None
+        if expected and actual != expected:
+            merge_base = _git_resolve_ref(root, f"{expected}^{{commit}}")
+            if merge_base != expected:
+                return None
+        return {"branch": branch, "commit": actual, "observedVia": "git-rev-parse"}
+    if kind == "pr-create":
+        head = str(identity.get("head") or identity.get("branch") or "")
+        pr_number = identity.get("prNumber")
+        if pr_number is not None:
+            return {"head": head, "prNumber": pr_number, "observedVia": "identity-pr-number"}
+        if head:
+            proc = subprocess.run(
+                [
+                    "gh",
+                    "pr",
+                    "list",
+                    "--head",
+                    head,
+                    "--json",
+                    "number,state,headRefName",
+                    "--limit",
+                    "1",
+                ],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if proc.returncode == 0 and proc.stdout.strip():
+                try:
+                    rows = json.loads(proc.stdout)
+                except json.JSONDecodeError:
+                    rows = []
+                if isinstance(rows, list) and rows:
+                    row = rows[0]
+                    if isinstance(row, dict):
+                        return {
+                            "head": head,
+                            "prNumber": row.get("number"),
+                            "state": row.get("state"),
+                            "observedVia": "gh-pr-list",
+                        }
+        return None
+    if kind == "issue-mutate":
+        issue_id = identity.get("issueId") or identity.get("issueNumber")
+        if issue_id is None:
+            return None
+        return {"issueId": issue_id, "observedVia": "identity-issue-id"}
+    return None
+
+
+def reconcile_receipts_before_retry(
+    root: Path,
+    state: dict[str, Any],
+    run_id: str,
+) -> dict[str, Any]:
+    """Reconcile receipts and remote results before retrying external ops (R28, R29)."""
+    from wave_transition_receipt import persist_external_mutation_receipt, read_receipt
+
+    reconciled: list[dict[str, Any]] = []
+    pending: list[dict[str, Any]] = []
+    bucket = state.get("uncertainInFlight")
+    if not isinstance(bucket, dict):
+        bucket = {}
+    pending_ops = state.get("pendingExternalMutations")
+    if isinstance(pending_ops, list):
+        for item in pending_ops:
+            if isinstance(item, dict):
+                pending.append(dict(item))
+
+    for work_id, entry in bucket.items():
+        if not isinstance(entry, dict):
+            continue
+        op = entry.get("externalOp")
+        if isinstance(op, dict):
+            pending.append({**op, "workId": work_id})
+
+    for op in pending:
+        kind = str(op.get("kind") or "")
+        if kind not in EXTERNAL_RETRY_OPERATIONS:
+            continue
+        idempotency_key = str(op.get("idempotencyKey") or op.get("workId") or kind)
+        existing = read_receipt(root, run_id, idempotency_key)
+        if existing and existing.get("status") in {"complete", "failed"}:
+            reconciled.append(
+                {
+                    "kind": kind,
+                    "idempotencyKey": idempotency_key,
+                    "action": "local-receipt-present",
+                    "status": existing.get("status"),
+                }
+            )
+            continue
+        remote_state = _probe_remote_operation(root, op)
+        if remote_state is None:
+            reconciled.append(
+                {
+                    "kind": kind,
+                    "idempotencyKey": idempotency_key,
+                    "action": "remote-not-observed",
+                    "note": "absence-of-receipt-does-not-prove-never-happened",
+                }
+            )
+            continue
+        receipt = persist_external_mutation_receipt(
+            root,
+            run_id,
+            kind,
+            idempotency_key=idempotency_key,
+            input_revisions={"operation": {"label": kind, "hash": idempotency_key}},
+            output_revision={"reconciled": True, "remoteState": remote_state},
+            exit_status=0,
+            remote_state=remote_state,
+        )
+        reconciled.append(
+            {
+                "kind": kind,
+                "idempotencyKey": idempotency_key,
+                "action": "receipt-reconstructed",
+                "remoteState": remote_state,
+                "receiptStatus": receipt.get("status"),
+            }
+        )
+
+    if reconciled:
+        state["externalMutationsReconciledAt"] = utc_now()
+        state["externalMutationsReconciled"] = reconciled
+    return {
+        "verdict": "pass",
+        "action": "reconcile-receipts-before-retry",
+        "runId": run_id,
+        "reconciledCount": len(reconciled),
+        "reconciled": reconciled,
+    }
+
+
 def ensure_exclusive_run_lease(
     root: Path,
     state: dict[str, Any],
@@ -1420,13 +1622,16 @@ def ensure_exclusive_run_lease(
                 run_id, source_task_list=task_list_arg
             )
             if acquired.get("verdict") == "pass":
-                state["runLease"] = {
-                    "runId": run_id,
-                    "generation": acquired["generation"],
-                    "lockPath": acquired.get("lockPath"),
-                    "acquiredAt": utc_now(),
-                    "reclaimed": bool(acquired.get("reclaimed")),
-                }
+                from wave_state import adopt_run_lease
+
+                adopt_run_lease(
+                    state,
+                    run_id=run_id,
+                    generation=int(acquired["generation"]),
+                    ownership_generation=int(acquired["generation"]),
+                    lock_path=str(acquired.get("lockPath") or ""),
+                    reclaimed=bool(acquired.get("reclaimed")),
+                )
                 return {**acquired, "beforeMutation": before_mutation}
             out = acquired
         fail(
@@ -1452,13 +1657,16 @@ def ensure_exclusive_run_lease(
             holder=acquired.get("holder"),
             lockPath=acquired.get("lockPath"),
         )
-    state["runLease"] = {
-        "runId": run_id,
-        "generation": acquired["generation"],
-        "lockPath": acquired.get("lockPath"),
-        "acquiredAt": utc_now(),
-        "reclaimed": bool(acquired.get("reclaimed")),
-    }
+    from wave_state import adopt_run_lease
+
+    adopt_run_lease(
+        state,
+        run_id=run_id,
+        generation=int(acquired["generation"]),
+        ownership_generation=int(acquired["generation"]),
+        lock_path=str(acquired.get("lockPath") or ""),
+        reclaimed=bool(acquired.get("reclaimed")),
+    )
     return {**acquired, "beforeMutation": before_mutation}
 
 
@@ -2621,13 +2829,38 @@ def execute_dispatch_ship(
     lease_ec, lease_data = acquire_inline_dispatch_lease(root, state, pid, meta)
     if lease_ec != 0:
         fail_payload(lease_data, "dispatch-ship lease acquire failed", lease_ec)
-    mark_phases_in_flight(state, [pid], background=False)
+    # PRD 350 R11/R15 — delegation + capture env before ship Task dispatch.
+    try:
+        import uuid as _uuid
+
+        import wave_journal as capture
+
+        run_id = capture.resolve_capture_run_id(state)
+        if run_id and capture.capture_enabled(root):
+            dispatch_id = f"ship-{pid}-{_uuid.uuid4().hex[:8]}"
+            files = list(meta.get("files") or meta.get("paths") or [])
+            capture._emit_delegation(
+                f"ship-loop:{slug}", pid, files, run_id, root=root
+            )
+            state.setdefault("_captureDispatch", {})[pid] = dispatch_id
+            state.setdefault("_captureEnv", {})[pid] = capture.capture_dispatch_env(
+                run_id, dispatch_id
+            )
+    except Exception:
+        pass
+    mark_phases_in_flight(state, [pid], background=False, root=root)
     wt = _ensure_phase_worktree_for_dispatch(root, state, pid)
     try:
         scripts_root = _resolve_ship_scripts_root(wt)
     except ScriptsResolveError as exc:
         fail_payload(_ship_loop_resolve_blocked(exc), "ship-loop blocked", 20, phaseId=pid)
     env = ship_loop_env_for_phase(state, pid, slug, scripts_root=scripts_root)
+    try:
+        extra = (state.get("_captureEnv") or {}).get(pid) or {}
+        if isinstance(extra, dict):
+            env.update({str(k): str(v) for k, v in extra.items()})
+    except Exception:
+        pass
     max_rounds = int(os.environ.get("SW_INLINE_SHIP_MAX_ROUNDS", "32"))
     drive_history: list[dict[str, Any]] = []
     last_drive: dict[str, Any] = {}
@@ -2671,6 +2904,17 @@ def execute_dispatch_ship(
             }
         if last_drive.get("complete"):
             clear_ship_loop_await(state, pid)
+            try:
+                import wave_journal as capture
+
+                run_id = capture.resolve_capture_run_id(state)
+                dispatch_id = (state.get("_captureDispatch") or {}).get(pid)
+                if run_id and dispatch_id and capture.capture_enabled(root):
+                    capture.consolidate_sub_agent_events(
+                        run_id, str(dispatch_id), root=root
+                    )
+            except Exception:
+                pass
             save_state(root, state)
             return {
                 "executed": "dispatch-ship",
@@ -2702,7 +2946,26 @@ def execute_dispatch_batch(
     step: dict[str, Any],
 ) -> dict[str, Any]:
     phase_ids = [str(p) for p in step.get("phaseIds") or []]
-    mark_phases_in_flight(state, phase_ids, background=True)
+    # PRD 350 R11/R15 batch — delegation markers for background Tasks.
+    try:
+        import uuid as _uuid
+
+        import wave_journal as capture
+
+        run_id = capture.resolve_capture_run_id(state)
+        if run_id and capture.capture_enabled(root):
+            for pid in phase_ids:
+                dispatch_id = f"batch-{pid}-{_uuid.uuid4().hex[:8]}"
+                capture._emit_delegation(
+                    f"background-task:{pid}", pid, [], run_id, root=root
+                )
+                state.setdefault("_captureDispatch", {})[pid] = dispatch_id
+                state.setdefault("_captureEnv", {})[pid] = capture.capture_dispatch_env(
+                    run_id, dispatch_id
+                )
+    except Exception:
+        pass
+    mark_phases_in_flight(state, phase_ids, background=True, root=root)
     save_state(root, state)
     return {
         "executed": "dispatch-batch",
@@ -2713,7 +2976,7 @@ def execute_dispatch_batch(
 
 
 def mark_phases_in_flight(
-    state: dict[str, Any], phase_ids: list[str], *, background: bool = False
+    state: dict[str, Any], phase_ids: list[str], *, background: bool = False, root: Path | None = None
 ) -> None:
     phases = state.setdefault("phases", {})
     now = utc_now()
@@ -2721,6 +2984,7 @@ def mark_phases_in_flight(
         meta = phases.get(pid)
         if not isinstance(meta, dict):
             continue
+        meta["_priorStatus"] = meta.get("status")
         meta["status"] = "in-flight"
         meta["startedAt"] = meta.get("startedAt") or now
         if background:
@@ -2729,6 +2993,34 @@ def mark_phases_in_flight(
             meta.pop("backgroundDispatchedAt", None)
             meta["inlineDispatchedAt"] = now
         phases[pid] = meta
+        # PRD 350 R6/R7 — task_start + phase_boundary on pending→in-flight.
+        prior = str(meta.get("_priorStatus") or "")
+        try:
+            import wave_journal as capture
+        
+            repo = root or Path(state.get("root") or state.get("repoRoot") or Path.cwd())
+            run_id = capture.resolve_capture_run_id(state)
+            if run_id and capture.capture_enabled(repo):
+                task_row = {
+                    "id": pid,
+                    "title": str(meta.get("title") or meta.get("slug") or pid),
+                    "phaseId": pid,
+                    "files": list(meta.get("files") or meta.get("paths") or []),
+                    "acceptance": meta.get("acceptance") or meta.get("acceptanceCriteria"),
+                    "body": meta.get("body") or meta.get("description"),
+                }
+                capture.transition_task_to_in_progress(
+                    task_row, run_id, root=repo, phase_id=pid
+                )
+                capture._emit_milestone(
+                    "phase_boundary",
+                    pid,
+                    run_id,
+                    f"phase_boundary: {pid} entered in-flight",
+                    root=repo,
+                )
+        except Exception:
+            pass
 
 
 def phase_lease_branches(
@@ -3616,6 +3908,36 @@ def persist_cursor(root: Path, state: dict[str, Any], action: str, **extra: Any)
 
 
 def write_blocker_report(root: Path, state: dict[str, Any], cause: str) -> Path:
+    # PRD 350 R10/R12 — blocker + interruption before halt surfaces to operator.
+    try:
+        import wave_journal as capture
+
+        run_id = capture.resolve_capture_run_id(state)
+        if run_id and capture.capture_enabled(root):
+            phases = state.get("phases") or {}
+            in_flight = [
+                pid
+                for pid, meta in phases.items()
+                if isinstance(meta, dict) and meta.get("status") == "in-flight"
+            ]
+            phase_id = in_flight[0] if in_flight else "session"
+            pending = {
+                "tasks": [
+                    {
+                        "id": pid,
+                        "status": str((phases.get(pid) or {}).get("status") or ""),
+                    }
+                    for pid in sorted(phases)
+                    if isinstance(phases.get(pid), dict)
+                    and str((phases.get(pid) or {}).get("status") or "")
+                    in {"in-flight", "blocked", "in_progress", "in-progress"}
+                ]
+            }
+            capture._emit_blocker(str(cause), pending, phase_id, run_id, root=root)
+            capture._emit_interruption(pending, run_id, root=root, phase_id=phase_id)
+    except Exception:
+        pass
+
     from wave_failure import resume_deliver_command
 
     ec, report_payload = run_wave(root, "report", "blockers")
@@ -4194,6 +4516,20 @@ def _execute_mechanical_inner(
                 meta.pop("verifyEnvironmental", None)
                 meta.pop("cause", None)
                 meta["status"] = "green-merged"
+                try:
+                    import wave_journal as capture
+
+                    run_id = capture.resolve_capture_run_id(state)
+                    if run_id and capture.capture_enabled(root):
+                        capture._emit_milestone(
+                            "phase_boundary",
+                            str(pid),
+                            run_id,
+                            f"phase_boundary: {pid} green-merged",
+                            root=root,
+                        )
+                except Exception:
+                    pass
                 meta["updatedAt"] = utc_now()
                 save_state(root, state)
             persist_cursor(root, state, compute_next_action(root, state, plan)["action"])
@@ -4728,6 +5064,24 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
 
     assert_run_identity(root, state, task_list, args)
     assert_driver_adopt_gate(state, args)
+
+    run_id_for_resume = parse_kv(args, "--run-id") or str(state.get("runId") or "")
+    if run_id_for_resume:
+        duplicate = assert_handoff_resume_not_duplicate(root, run_id_for_resume)
+        if duplicate:
+            fail(
+                str(duplicate.get("error") or "handoff:duplicate-dispatch"),
+                exit_code=20,
+                halt=duplicate.get("halt"),
+                cause=duplicate.get("cause"),
+                ownerSessionId=duplicate.get("ownerSessionId"),
+                resumeCommand=duplicate.get("resumeCommand"),
+            )
+        from wave_state import reconcile_uncertain_in_flight
+
+        reconcile_uncertain_in_flight(state)
+        reconcile_receipts_before_retry(root, state, run_id_for_resume)
+        save_state(root, state)
 
     if task_list and not state.get("source_task_list"):
         state["source_task_list"] = task_list
