@@ -1,10 +1,15 @@
-"""Shared pre-tool evaluator with adapter-level tool-name mapping (PRD 349 R3)."""
+"""Shared pre-tool evaluator with adapter-level tool-name mapping (PRD 349 R3).
+
+PRD 352 R14–R17: Claude hook payloads go through ``build_claude_hook_response``.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Mapping
+
+from .claude_hook_helpers import build_claude_hook_response
 
 
 @dataclass(frozen=True)
@@ -21,30 +26,83 @@ class PreToolVerdict:
     host_tool: str | None = None
 
     def to_claude_hook_output(self) -> dict[str, Any]:
+        """Claude Code PreToolUse shape — ``hookSpecificOutput.permissionDecision`` (R14/R18)."""
         match self.verdict:
             case "pass":
-                out: dict[str, Any] = {"decision": "approve"}
+                updated: dict[str, Any] | None = None
                 if self.model_id:
-                    out["updatedInput"] = {
+                    updated = {
                         "model": self.model_id,
                         "metadata": {
                             "dispatchId": self.dispatch_id,
                             "intensity": self.intensity,
                         },
                     }
-                return out
+                return build_claude_hook_response(
+                    hook_event_name="PreToolUse",
+                    permission_decision="allow",
+                    updated_input=updated,
+                )
             case "fail":
-                return {
-                    "decision": "block",
-                    "reason": f"Shipwright model-tier binding: {self.cause or 'no-model-resolved'}",
-                }
+                return build_claude_hook_response(
+                    hook_event_name="PreToolUse",
+                    permission_decision="deny",
+                    permission_decision_reason=(
+                        f"Shipwright model-tier binding: {self.cause or 'no-model-resolved'}"
+                    ),
+                )
             case "unrecognised":
-                return {
-                    "decision": "block",
-                    "reason": f"Shipwright pre-tool: unrecognised tool {self.host_tool!r}",
-                }
+                return build_claude_hook_response(
+                    hook_event_name="PreToolUse",
+                    permission_decision="deny",
+                    permission_decision_reason=(
+                        f"Shipwright pre-tool: unrecognised tool {self.host_tool!r}"
+                    ),
+                )
             case _:
                 raise NotImplementedError(self.verdict)
+
+
+def _session_start_payload(context: str) -> dict[str, Any]:
+    """Claude SessionStart structured output (PRD 352 R15).
+
+    Emits ``hookSpecificOutput.hookEventName: \"SessionStart\"`` and nests
+    ``additionalContext``. Does **not** invent a top-level ``event_name``.
+    """
+    return build_claude_hook_response(
+        hook_event_name="SessionStart",
+        additional_context=context,
+    )
+
+
+def _submit_result_payload(*, allow: bool, message: str = "") -> dict[str, Any]:
+    """UserPromptSubmit payload (PRD 352 R16).
+
+    Allow path omits ``decision`` entirely. Block path uses ``decision: \"block\"`` only.
+    """
+    if allow:
+        return build_claude_hook_response(hook_event_name="UserPromptSubmit")
+    return build_claude_hook_response(
+        hook_event_name="UserPromptSubmit",
+        decision="block",
+        reason=message or "blocked",
+    )
+
+
+def _emit_submit_result(result: Any) -> dict[str, Any]:
+    """Map a submit-guard result object to a Claude UserPromptSubmit payload (R16)."""
+    allow = bool(getattr(result, "allow", False))
+    message = str(getattr(result, "message", "") or "")
+    return _submit_result_payload(allow=allow, message=message)
+
+
+def fail_closed_pretool_deny(message: str) -> dict[str, Any]:
+    """Fail-closed PreToolUse deny used when the hook itself crashes (PRD 352 R17)."""
+    return build_claude_hook_response(
+        hook_event_name="PreToolUse",
+        permission_decision="deny",
+        permission_decision_reason=message,
+    )
 
 
 def evaluate_pre_tool(
