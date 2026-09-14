@@ -1304,6 +1304,7 @@
 * merge phase package-completeness-and-durable-checkpoint-slice-1 into feat/reliable-host-switching (bdc7a82) <!-- sw-deliver:package-completeness-and-durable-checkpoint-slice-1 -->
 * merge phase host-resolution-and-qualification-slice-2 into feat/reliable-host-switching (8c5385f) <!-- sw-deliver:host-resolution-and-qualification-slice-2 -->
 * merge phase evidence-and-reconciliation-slice-2 into feat/reliable-host-switching (4d72eca) <!-- sw-deliver:evidence-and-reconciliation-slice-2 -->
+* merge phase spending-and-retry-boundaries-slice-3 into feat/reliable-host-switching (2f02db1) <!-- sw-deliver:spending-and-retry-boundaries-slice-3 -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
