@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.2](https://github.com/grdavies/shipwright/compare/v2.16.1...v2.16.2) (2026-09-14)
+
+
+### Bug Fixes
+
+* **init:** resolve packaged config schema outside consumer repos ([#1196](https://github.com/grdavies/shipwright/issues/1196)) ([18316a2](https://github.com/grdavies/shipwright/commit/18316a2b02d326c934bca947cbf487bd79a3b6fe))
+
 ## [2.16.1](https://github.com/grdavies/shipwright/compare/v2.16.0...v2.16.1) (2026-09-14)
 
 
