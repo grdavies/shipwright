@@ -1,6 +1,6 @@
 {
   "name": "shipwright",
-  "version": "2.15.0",
+  "version": "2.16.0",
   "description": "Shipwright for Claude Code (generated)",
   "installer": "./scripts/install.py"
 }
