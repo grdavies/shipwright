@@ -1238,17 +1238,21 @@ def mark_in_flight_uncertain(
     work_id: str,
     *,
     reason: str = "no-authoritative-result",
+    externalOp: Mapping[str, Any] | None = None,
 ) -> None:
     """Mark in-flight work uncertain when no authoritative result exists (PRD 352 R17)."""
     bucket = state.setdefault("uncertainInFlight", {})
     if not isinstance(bucket, dict):
         bucket = {}
         state["uncertainInFlight"] = bucket
-    bucket[str(work_id)] = {
+    entry: dict[str, Any] = {
         "status": "uncertain",
         "reason": reason,
         "markedAt": utc_now(),
     }
+    if externalOp is not None:
+        entry["externalOp"] = dict(externalOp)
+    bucket[str(work_id)] = entry
 
 
 def reconcile_uncertain_in_flight(state: dict[str, Any]) -> list[dict[str, Any]]:

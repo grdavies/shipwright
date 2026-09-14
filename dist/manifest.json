@@ -3,11 +3,11 @@
     "modules": [
       {
         "path": "core/handoff/importer.py",
-        "sha256": "cd993d4bde67a7c5a55d0bab1527b103ee4b40b2b92db8576df3686f90f6b5cb"
+        "sha256": "94dad97012b6236779df2a0a8bec311369d861ca699297819f80249fb29f8299"
       },
       {
         "path": "core/handoff/bundle.py",
-        "sha256": "739c86ef3c4faac80bf13d5e50a46ad359a0b1be274f4dc25050346bc6767007"
+        "sha256": "836ab8cd0948516fddd846ad7cb232bf26c0fde93c4ac9d62f29add57117fd54"
       },
       {
         "path": "core/handoff/validate_bundle.py",
@@ -23,7 +23,7 @@
       },
       {
         "path": "scripts/handoff_bundle.py",
-        "sha256": "68d51796b5c84b4d42cff626f8f9de0d81a9bde998b43a46089f91fd76fb19e3"
+        "sha256": "bd07874c8cd3f7ab1af73ed262d56d35f4393b6b573b7950ddcc600004517983"
       }
     ]
   },

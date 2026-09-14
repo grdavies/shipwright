@@ -9,7 +9,7 @@ import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from .acknowledgement import read_destination_ack, write_destination_ack
 from .bundle import atomic_write_json, canonical_remote_url, source_repo_id_for_remote
@@ -162,6 +162,131 @@ def _file_digest(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return f"sha256:{digest.hexdigest()}"
+
+
+def _evidence_recovery_action(code: str, rel: str) -> str:
+    if code == "evidence_missing":
+        return (
+            f"Restore evidence file {rel!r} from checkpoint export or re-run the "
+            "verification step that produced it; then retry resume."
+        )
+    if code == "evidence_digest_mismatch":
+        return (
+            f"Evidence at {rel!r} changed since checkpoint; re-run verification for "
+            "that artifact or refresh the handoff bundle export."
+        )
+    if code == "evidence_path_escape":
+        return f"Evidence path {rel!r} escapes the repository; fix bundle paths (R15)."
+    return f"Fix evidence reference {rel!r} and retry resume."
+
+
+def validate_evidence_digests(
+    root: Path,
+    evidence_refs: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Validate evidence digests on resume; explain issues; rerun only failed checks (R26)."""
+    root_r = Path(root).resolve()
+    issues: list[dict[str, Any]] = []
+    rerun_checks: list[str] = []
+    checked = 0
+    for entry in evidence_refs:
+        if not isinstance(entry, Mapping):
+            issues.append(
+                {
+                    "path": "",
+                    "code": "evidence_entry_invalid",
+                    "message": "evidence reference must be an object",
+                    "recovery": "Fix evidenceReferences entries in the import record.",
+                }
+            )
+            continue
+        rel = str(entry.get("path") or "").strip()
+        expected = str(entry.get("digest") or "").strip()
+        if not rel:
+            issues.append(
+                {
+                    "path": "",
+                    "code": "evidence_path_missing",
+                    "message": "evidence reference missing path",
+                    "recovery": "Add repo-relative path and digest to evidenceReferences.",
+                }
+            )
+            continue
+        checked += 1
+        path = (root_r / rel).resolve()
+        if not str(path).startswith(str(root_r)):
+            issues.append(
+                {
+                    "path": rel,
+                    "code": "evidence_path_escape",
+                    "message": f"evidence path escapes repository: {rel}",
+                    "recovery": _evidence_recovery_action("evidence_path_escape", rel),
+                }
+            )
+            rerun_checks.append(rel)
+            continue
+        if not path.is_file():
+            issues.append(
+                {
+                    "path": rel,
+                    "code": "evidence_missing",
+                    "message": f"evidence file missing: {rel}",
+                    "recovery": _evidence_recovery_action("evidence_missing", rel),
+                }
+            )
+            rerun_checks.append(rel)
+            continue
+        if expected:
+            actual = _file_digest(path)
+            if actual != expected:
+                issues.append(
+                    {
+                        "path": rel,
+                        "code": "evidence_digest_mismatch",
+                        "message": f"evidence digest stale for {rel}",
+                        "expectedDigest": expected,
+                        "actualDigest": actual,
+                        "recovery": _evidence_recovery_action("evidence_digest_mismatch", rel),
+                    }
+                )
+                rerun_checks.append(rel)
+    verdict = "pass" if not issues else "fail"
+    return {
+        "verdict": verdict,
+        "checked": checked,
+        "issueCount": len(issues),
+        "issues": issues,
+        "rerunChecks": rerun_checks,
+        "explanation": (
+            "All evidence digests match."
+            if verdict == "pass"
+            else f"{len(issues)} evidence issue(s); rerun checks only for: {', '.join(rerun_checks) or 'none'}"
+        ),
+    }
+
+
+def validate_evidence_on_resume(
+    root: Path,
+    import_record: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Validate import-record evidence references before resume dispatch (PRD 352 R26)."""
+    refs: list[Any] = []
+    if isinstance(import_record.get("evidence"), list):
+        refs.extend(import_record["evidence"])
+    continuation = import_record.get("continuation_payload") or {}
+    if isinstance(continuation, Mapping):
+        refs.extend(list(continuation.get("evidenceReferences") or []))
+    deduped: list[Mapping[str, Any]] = []
+    seen: set[tuple[str, str]] = set()
+    for entry in refs:
+        if not isinstance(entry, Mapping):
+            continue
+        key = (str(entry.get("path") or ""), str(entry.get("digest") or ""))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(entry)
+    return validate_evidence_digests(root, deduped)
 
 
 def verify_bundle_context(
