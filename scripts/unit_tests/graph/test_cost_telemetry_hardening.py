@@ -86,7 +86,9 @@ def test_split_verified_aggregate_shape() -> None:
         }
     )
     plain = aggregate(split_verified=False)
-    assert set(plain) == {"cost_per_task_all", "cost_per_task_all_count"}
+    assert "cost_per_task_all" in plain and "cost_per_task_all_count" in plain
+    assert "cost_per_task_all_confidence" in plain
+    assert "cost_failed_attempts" in plain
     split = aggregate(split_verified=True)
     assert "cost_per_verified_successful_task" in split
     assert "cost_per_verified_successful_task_count" in split
@@ -106,3 +108,39 @@ def test_never_infer_verification_from_acceptance() -> None:
     assert record["verification_result"] == "unknown"
     result = aggregate(split_verified=True)
     assert result["cost_per_verified_successful_task_count"] == 0
+
+
+def test_unknown_cost_not_coerced_to_zero() -> None:
+    """PRD 352 R24 — unknown costs stay None; confidence marker emitted."""
+    ingest_record(
+        {
+            "tokens_input": None,
+            "tokens_output": None,
+            "verification_result": "pass",
+            "rework_required": False,
+        }
+    )
+    result = aggregate(split_verified=False)
+    assert result["cost_per_task_all"] is None
+    assert result["cost_per_task_all_confidence"] == "unknown"
+    assert result["cost_per_task_all"] != 0.0
+
+
+def test_failed_attempt_count_emits_bucket() -> None:
+    """PRD 352 R25 — failed_attempt_count contributes cost_failed_attempts bucket."""
+    ingest_record(
+        {
+            "tokens_input": 10,
+            "tokens_output": 10,
+            "cost": 8.0,
+            "attempt_count": 2,
+            "failed_attempt_count": 1,
+            "zero_tokens_attested": True,
+            "verification_result": "pass",
+            "rework_required": False,
+        }
+    )
+    result = aggregate(split_verified=False)
+    assert result["cost_failed_attempts"] == 4.0
+    assert result["cost_failed_attempts_confidence"] == "estimated"
+

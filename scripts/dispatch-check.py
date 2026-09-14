@@ -21,7 +21,11 @@ from dispatch_reader_lib import evaluate_reader_role, validate_reader_tool_log_f
 from dispatch_complexity_lib import probe_complexity
 from dispatch_budget_lib import resolve_token_budget
 from graph.cost_telemetry import aggregate
-from graph.learning_consumers import get_current_advisory
+from graph.reviewer_metrics.selection import load_harvest_record
+from graph.learning_consumers import (
+    get_current_advisory,
+    hydrate_advisory_snapshot_from_store,
+)
 from model_policy_lib import ModelPolicy, ensure_mid_tier, preflight_missing_mid, tier_rank
 from task_model_allowlist_lib import enforce_task_model_allowlist
 from workflow_intelligence import AdvisoryRecommendation, InsufficientSampleError
@@ -122,6 +126,8 @@ def run_preflight(
     Advisory lookup is bounded by ``advisoryRouting.lookupTimeoutMs`` (default 200ms).
     """
     dimension_record = dict(dimension_record or {})
+    # PRD 352 R22/TR6 — hydrate durable advisory observations on startup.
+    hydrate_advisory_snapshot_from_store(task_type)
     routing = _advisory_routing_config(config)
     allowed, excluded = _model_allow_deny(config)
     policy = ModelPolicy.from_config(config if isinstance(config, Mapping) else {})
@@ -198,11 +204,20 @@ def run_preflight(
                     effective_model = model
                     applied = True
 
+    harvest_bounded = False
+    try:
+        # PRD 352 R23 — selection reads persist_harvest output when available.
+        harvest = load_harvest_record(Path.cwd())
+        harvest_bounded = bool(harvest and harvest.reviewers)
+    except Exception:
+        harvest_bounded = False
+
     return {
         "advisory_lines": lines,
         "advisory": advisory,
         "selected_model": effective_model,
         "advisory_applied": applied,
+        "harvest_bounded": harvest_bounded,
         "autoApply": bool(routing["autoApply"]),
         "generated_at": now_ts or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
@@ -536,6 +551,8 @@ def _main_legacy_positional(argv: list[str]) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # PRD 352 R22/TR6 — hydrate advisory snapshot before preflight work.
+    hydrate_advisory_snapshot_from_store()
     raw = list(argv if argv is not None else sys.argv[1:])
     # PRD 351 R23 — named consumer for cost_telemetry aggregate --split-verified.
     if "--split-verified" in raw and "--agent" not in raw:

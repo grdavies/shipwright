@@ -156,58 +156,35 @@ def ingest_record(record: MutableMapping[str, Any]) -> None:
     _ingested_records.append(dict(record))
 
 
-def _record_cost(record: Mapping[str, Any]) -> float:
-    tokens_input = _token_value(record, "tokens_input") or 0
-    tokens_output = _token_value(record, "tokens_output") or 0
-    explicit = record.get("cost")
-    if explicit is not None:
-        return float(explicit)
-    return float(tokens_input + tokens_output)
+def _record_cost(record: Mapping[str, Any]) -> float | None:
+    """Return record cost or None when unknown — never coerce unknown to 0.0 (PRD 352 R24)."""
+    from graph.reviewer_metrics.cost import _record_cost_with_confidence
+
+    amount, _confidence = _record_cost_with_confidence(record)
+    return amount
 
 
 def aggregate(split_verified: bool = False) -> dict[str, Any]:
-    """Aggregate cost metrics over ingested attribution records (R23).
+    """Aggregate cost metrics over ingested attribution records (R23 / PRD 352 R24–R25).
 
-    When ``split_verified`` is True, also emit cost-per-verified-successful-task
-    using only ``verification_result == "pass"`` and ``rework_required is False``.
-    Records with ``verification_result == "unknown"`` are excluded from the
-    verified metric and counted in ``_unverified_exclusion_count``.
+    Delegates confidence markers and failed-attempt bucketing to
+    ``graph.reviewer_metrics.cost.aggregate``. Unknown costs are not coerced to
+    ``0.0``. When ``split_verified`` is True, also emit verified metrics.
     # NEVER infer verification_result from acceptance — R22
     """
     global _unverified_exclusion_count
 
+    from graph.reviewer_metrics.cost import aggregate as aggregate_records
+
     eligible = [r for r in _ingested_records if not r.get("telemetry_suspect")]
-    all_count = len(eligible)
-    all_cost = sum(_record_cost(r) for r in eligible)
-    cost_per_task_all = (all_cost / all_count) if all_count else 0.0
-
-    result: dict[str, Any] = {
-        "cost_per_task_all": cost_per_task_all,
-        "cost_per_task_all_count": all_count,
-    }
-
-    if not split_verified:
-        return result
-
-    verified: list[dict[str, Any]] = []
-    for record in eligible:
-        verification = record.get("verification_result")
-        # # NEVER infer verification_result from acceptance — R22
-        if verification == "unknown" or verification is None:
-            _unverified_exclusion_count += 1
-            continue
-        if verification == "pass" and record.get("rework_required") is False:
-            verified.append(record)
-
-    verified_count = len(verified)
-    if verified_count:
-        verified_cost = sum(_record_cost(r) for r in verified)
-        cost_per_verified: float | None = verified_cost / verified_count
-    else:
-        cost_per_verified = None
-
-    result["cost_per_verified_successful_task"] = cost_per_verified
-    result["cost_per_verified_successful_task_count"] = verified_count
+    result = aggregate_records(eligible, split_verified=split_verified)
+    if split_verified:
+        _unverified_exclusion_count = int(result.get("unverified_exclusion_count") or 0)
+    # Preserve legacy keys expected by PRD 351 consumers.
+    if "cost_per_task_all" not in result:
+        result["cost_per_task_all"] = None
+    if "cost_per_task_all_count" not in result:
+        result["cost_per_task_all_count"] = len(eligible)
     return result
 
 
@@ -226,12 +203,13 @@ def health_snapshot() -> dict[str, Any]:
         if r.get("verification_result") == "pass" and r.get("rework_required") is False
     )
     # Derive costs from in-memory records only — no aggregate() side effects.
-    all_cost = sum(_record_cost(r) for r in eligible)
+    all_cost = sum(value for r in eligible if (value := _record_cost(r)) is not None)
     cost_per_task_all: float | None = (all_cost / len(eligible)) if eligible else 0.0
     if verified_count:
         verified_cost = sum(
-            _record_cost(r)
+            value
             for r in eligible
+            if (value := _record_cost(r)) is not None
             if r.get("verification_result") == "pass" and r.get("rework_required") is False
         )
         cost_per_verified: float | None = verified_cost / verified_count
