@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from types import MappingProxyType
+from typing import Any, Mapping, Sequence
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CAPABILITIES_DIR = _REPO_ROOT / "core" / "schemas" / "capabilities"
@@ -173,3 +175,183 @@ def dispatch_host_adapter(host_id: str) -> str:
             return "opencode"
         case _:
             raise NotImplementedError(host)
+
+
+AUTH_VALID = "valid"
+AUTH_REVOKED = "revoked"
+AUTH_UNKNOWN = "unknown"
+AUTH_STATUSES = frozenset({AUTH_VALID, AUTH_REVOKED, AUTH_UNKNOWN})
+
+MISSING_CAPABILITY_ERROR = "destination:missing-capability"
+AUTH_REVOKED_ERROR = "destination:auth-revoked"
+
+
+@dataclass(frozen=True)
+class QualifiedHost:
+    """Live destination qualification (PRD 352 R10 / TR3)."""
+
+    host_id: str
+    surface_adapter: str
+    installed_version: str
+    capabilities: Mapping[str, Any]
+    auth_status: str
+
+
+class DestinationValidationError(RuntimeError):
+    """Fail-closed destination qualification (PRD 352 R12)."""
+
+    def __init__(
+        self,
+        code: str,
+        *,
+        remediation: str,
+        host_id: str = "",
+        detail: str = "",
+    ) -> None:
+        super().__init__(code)
+        self.code = code
+        self.remediation = remediation
+        self.host_id = host_id
+        self.detail = detail
+
+    def as_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "verdict": "fail",
+            "error": self.code,
+            "remediation": self.remediation,
+        }
+        if self.host_id:
+            payload["host_id"] = self.host_id
+        if self.detail:
+            payload["detail"] = self.detail
+        return payload
+
+
+def detect_runtime_host_id(environ: Mapping[str, str] | None = None) -> str:
+    """Detect the current host id from process environment (legacy detect-platform)."""
+    env = environ if environ is not None else os.environ
+    platform = str(env.get("SW_SETUP_PLATFORM") or "").strip()
+    if not platform:
+        if env.get("CURSOR_AGENT") or env.get("CURSOR_PLUGIN_ROOT"):
+            platform = "cursor"
+        elif (
+            env.get("CLAUDE_CODE")
+            or env.get("CLAUDE_CODE_SSE_PORT")
+            or env.get("CLAUDE_PLUGIN_ROOT")
+        ):
+            platform = "claude-code"
+        else:
+            platform = "cursor"
+    return platform
+
+
+def _read_installed_version(repo_root: Path | None = None) -> str:
+    root = repo_root or _REPO_ROOT
+    for rel in (
+        Path("dist/cursor/.cursor-plugin/plugin.json"),
+        Path("dist/claude-code/.claude-plugin/plugin.json"),
+        Path(".cursor-plugin/plugin.json"),
+    ):
+        path = root / rel
+        if not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if isinstance(data, dict) and data.get("version"):
+            return str(data["version"]).strip()
+    return "unknown"
+
+
+def _capability_supported(entry: Any) -> bool:
+    if not isinstance(entry, dict):
+        return False
+    mode = str(entry.get("implementation_mode") or "").strip()
+    return mode not in {"", "unsupported"}
+
+
+def _read_auth_status(environ: Mapping[str, str] | None = None) -> str:
+    env = environ if environ is not None else os.environ
+    raw = str(env.get("SW_HOST_AUTH_STATUS") or AUTH_VALID).strip().lower()
+    if raw in AUTH_STATUSES:
+        return raw
+    return AUTH_UNKNOWN
+
+
+def resolve(
+    host_id: str | None = None,
+    *,
+    required_capabilities: Sequence[str] | None = None,
+    environ: Mapping[str, str] | None = None,
+    capabilities_dir: Path | None = None,
+    installed_version: str | None = None,
+    repo_root: Path | None = None,
+) -> QualifiedHost:
+    """Qualify the destination host from live inputs — never a cached session snapshot (R10/R13)."""
+    env = environ if environ is not None else os.environ
+    detected = str(host_id or "").strip() or detect_runtime_host_id(env)
+    try:
+        binding = resolve_host(detected, capabilities_dir=capabilities_dir)
+    except UnknownHostError as exc:
+        raise DestinationValidationError(
+            "destination:unknown-host",
+            host_id=detected,
+            detail=exc.diagnostic.message,
+            remediation="Install a capability descriptor for the destination host or pass a known host id.",
+        ) from exc
+
+    caps = dict(binding.descriptor.get("capabilities") or {})
+    required = [str(item).strip() for item in (required_capabilities or ()) if str(item).strip()]
+    missing = [
+        name
+        for name in required
+        if name not in caps or not _capability_supported(caps.get(name))
+    ]
+    if missing:
+        raise DestinationValidationError(
+            MISSING_CAPABILITY_ERROR,
+            host_id=binding.host_id,
+            detail=",".join(missing),
+            remediation=(
+                f"Enable capability {missing[0]!r} on host {binding.host_id!r} "
+                "or pick a destination whose descriptor declares it."
+            ),
+        )
+
+    auth = _read_auth_status(env)
+    if auth == AUTH_REVOKED:
+        raise DestinationValidationError(
+            AUTH_REVOKED_ERROR,
+            host_id=binding.host_id,
+            remediation=(
+                "Re-authenticate the destination host adapter, then re-run host qualification "
+                "(auth is never reused from a prior session)."
+            ),
+        )
+
+    version = str(
+        installed_version
+        if installed_version is not None
+        else env.get("SW_HOST_INSTALLED_VERSION") or _read_installed_version(repo_root)
+    ).strip() or "unknown"
+    surface = str(
+        binding.descriptor.get("adapter_id")
+        or binding.adapter_id
+        or binding.host_id
+    )
+    return QualifiedHost(
+        host_id=binding.host_id,
+        surface_adapter=surface,
+        installed_version=version,
+        capabilities=MappingProxyType(caps),
+        auth_status=auth,
+    )
+
+
+def requalify(
+    host_id: str | None = None,
+    **kwargs: Any,
+) -> QualifiedHost:
+    """Re-evaluate destination qualification at switch time (PRD 352 R13)."""
+    return resolve(host_id, **kwargs)
