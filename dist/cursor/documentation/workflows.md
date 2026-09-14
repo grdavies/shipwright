@@ -1562,5 +1562,5 @@ Deliver driver resilience clusters finalize, orch cwd adopt, and exclusive run l
   (`.cursor/sw-deliver-run-locks/`). Uncertain ownership and cross-clone reclaim fail closed — they are
   not remote `wave_remote_lease` CAS locks.
 
-<!-- currency: refreshed 2026-08-30T01:55:00Z for terminal prepare (doc_loop + publication sequencing) -->
+<!-- currency: refreshed 2026-09-14T19:50:00Z — PRD 352 terminal docs-currency (doc_loop + publication sequencing) -->
 
