@@ -1223,6 +1223,7 @@ def cmd_resume(args: argparse.Namespace) -> int:
     try:
         from core.handoff.importer import (
             ImportValidationError,
+            validate_evidence_on_resume,
             validate_import_record,
             write_import_record_from_bundle,
             write_resume_evidence,
@@ -1299,6 +1300,24 @@ def cmd_resume(args: argparse.Namespace) -> int:
     deps = verify_dependencies(root)
     if deps.get("verdict") != "pass":
         print(json.dumps(deps, ensure_ascii=False, indent=2, sort_keys=True))
+        return 20
+
+    evidence = validate_evidence_on_resume(root, record)
+    if evidence.get("verdict") != "pass":
+        print(
+            json.dumps(
+                {
+                    "verdict": "fail",
+                    "error": "handoff:evidence-digest-invalid",
+                    "evidence": evidence,
+                    "remediation": evidence.get("explanation"),
+                    "rerunChecks": evidence.get("rerunChecks") or [],
+                },
+                ensure_ascii=False,
+                indent=2,
+                sort_keys=True,
+            )
+        )
         return 20
 
     try:

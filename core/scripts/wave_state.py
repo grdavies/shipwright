@@ -11,7 +11,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from plan_persist import ROLE_PHASE, caller_role, empty_lifecycle
 from pilot_dependency_gate import proposed_pilot_enabled
@@ -89,6 +89,46 @@ def phase_complete(status: str | None) -> bool:
     return status in TERMINAL_PHASE_STATUSES
 
 
+def record_blast_radius(
+    state: dict[str, Any],
+    *,
+    applied: list[dict[str, str]],
+    cleared: list[dict[str, str]],
+    predicate: str,
+    at: str,
+) -> None:
+    """Persist blast-radius apply outcome on run-scoped state (idempotent, PRD 325 R4/R5)."""
+    existing = state.get("blastRadius") if isinstance(state.get("blastRadius"), dict) else {}
+    prev_applied = {
+        str(entry.get("phaseId")): entry
+        for entry in (existing.get("applied") or [])
+        if isinstance(entry, dict) and entry.get("phaseId")
+    }
+    prev_cleared = {
+        str(entry.get("phaseId")): entry
+        for entry in (existing.get("cleared") or [])
+        if isinstance(entry, dict) and entry.get("phaseId")
+    }
+    for entry in cleared:
+        pid = str(entry.get("phaseId"))
+        if not pid:
+            continue
+        prev_cleared[pid] = dict(entry)
+        prev_applied.pop(pid, None)
+    for entry in applied:
+        pid = str(entry.get("phaseId"))
+        if not pid or pid in prev_cleared:
+            continue
+        prev_applied[pid] = dict(entry)
+    sort_key = lambda e: (0, int(e["phaseId"])) if str(e.get("phaseId", "")).isdigit() else (1, str(e.get("phaseId", "")))
+    state["blastRadius"] = {
+        "applied": sorted(prev_applied.values(), key=sort_key),
+        "cleared": sorted(prev_cleared.values(), key=sort_key),
+        "predicate": predicate,
+        "at": at,
+    }
+
+
 LOCK_STALE_SECONDS = int(os.environ.get("SW_LOCK_STALE_SECONDS", "3600"))
 CANONICAL_STATE_SKEW_SECONDS = 300
 
@@ -150,6 +190,33 @@ def slug_from_target(target_branch: str) -> str:
     if "/" not in target_branch:
         fail(f"invalid target branch: {target_branch!r}")
     return target_branch.split("/", 1)[1]
+
+
+def run_slug_from_state(state: dict[str, Any]) -> str | None:
+    target = state.get("target")
+    if isinstance(target, dict):
+        slug = target.get("slug")
+        if isinstance(slug, str) and slug.strip():
+            return slug.strip()
+    return None
+
+
+def branch_slug_from_target(target_branch: str) -> str:
+    return slug_from_target(target_branch)
+
+
+def slug_drift_payload(
+    run_slug: str | None,
+    target_branch: str | None,
+    *,
+    source: str,
+) -> dict[str, Any] | None:
+    if not run_slug or not target_branch or not is_feature_target(target_branch):
+        return None
+    branch_slug = branch_slug_from_target(target_branch)
+    if run_slug == branch_slug:
+        return None
+    return {"runSlug": run_slug, "branchSlug": branch_slug, "source": source}
 
 
 def target_branch_from_state(state: dict[str, Any]) -> str | None:
@@ -1108,6 +1175,113 @@ def ensure_run_scoped_state_mirrored(
     return payload
 
 
+def _ownership_generation_from_lease(lease: Mapping[str, Any] | None) -> int:
+    if not isinstance(lease, dict):
+        return 0
+    raw = lease.get("ownershipGeneration")
+    if raw is None:
+        raw = lease.get("generation")
+    try:
+        gen = int(raw) if raw is not None else 0
+    except (TypeError, ValueError):
+        return 0
+    return gen if gen >= 0 else 0
+
+
+def adopt_run_lease(
+    state: dict[str, Any],
+    *,
+    run_id: str,
+    generation: int,
+    ownership_generation: int | None = None,
+    lock_path: str | None = None,
+    reclaimed: bool = False,
+) -> dict[str, Any]:
+    """Persist run lease with ownership generation fencing (PRD 352 R5)."""
+    owner_gen = ownership_generation if ownership_generation is not None else generation
+    lease = {
+        "runId": run_id,
+        "generation": int(generation),
+        "ownershipGeneration": int(owner_gen),
+        "acquiredAt": utc_now(),
+        "reclaimed": bool(reclaimed),
+    }
+    if lock_path:
+        lease["lockPath"] = lock_path
+    state["runLease"] = lease
+    return lease
+
+
+def assert_ownership_before_dispatch(state: dict[str, Any], expected_generation: int) -> None:
+    """Fail closed when lease ownership generation is stale (PRD 352 R5)."""
+    lease = state.get("runLease") if isinstance(state.get("runLease"), dict) else {}
+    current = _ownership_generation_from_lease(lease)
+    if int(expected_generation) != current:
+        fail(
+            "run ownership generation stale before dispatch",
+            exit_code=20,
+            halt="ownership-generation-stale",
+            cause="ownership-generation-stale",
+            expectedGeneration=int(expected_generation),
+            currentGeneration=current,
+            ownerSessionId=lease.get("sessionId"),
+        )
+
+
+def assert_ownership_before_result(state: dict[str, Any], expected_generation: int) -> None:
+    """Fence result acceptance on matching ownership generation (PRD 352 R5)."""
+    assert_ownership_before_dispatch(state, expected_generation)
+
+
+def mark_in_flight_uncertain(
+    state: dict[str, Any],
+    work_id: str,
+    *,
+    reason: str = "no-authoritative-result",
+    externalOp: Mapping[str, Any] | None = None,
+) -> None:
+    """Mark in-flight work uncertain when no authoritative result exists (PRD 352 R17)."""
+    bucket = state.setdefault("uncertainInFlight", {})
+    if not isinstance(bucket, dict):
+        bucket = {}
+        state["uncertainInFlight"] = bucket
+    entry: dict[str, Any] = {
+        "status": "uncertain",
+        "reason": reason,
+        "markedAt": utc_now(),
+    }
+    if externalOp is not None:
+        entry["externalOp"] = dict(externalOp)
+    bucket[str(work_id)] = entry
+
+
+def reconcile_uncertain_in_flight(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """Reconcile uncertain in-flight work before retry/resume (PRD 352 R17)."""
+    bucket = state.get("uncertainInFlight")
+    if not isinstance(bucket, dict) or not bucket:
+        return []
+    reconciled: list[dict[str, Any]] = []
+    remaining: dict[str, Any] = {}
+    for work_id, entry in bucket.items():
+        if not isinstance(entry, dict):
+            continue
+        if entry.get("status") == "uncertain":
+            reconciled.append(
+                {
+                    "workId": work_id,
+                    "prior": dict(entry),
+                    "reconciledAt": utc_now(),
+                    "action": "reconcile-before-retry",
+                }
+            )
+            continue
+        remaining[work_id] = entry
+    if reconciled:
+        state["uncertainInFlight"] = remaining
+        state["uncertainReconciledAt"] = utc_now()
+    return reconciled
+
+
 def write_run_local_lease(
     root: Path,
     run_id: str,
@@ -1128,13 +1302,22 @@ def write_run_local_lease(
         "runId": run_id,
         "targetBranch": target_branch,
         "lockKeyDigest": digest,
+        "ownershipGeneration": 0,
         "recordedAt": utc_now(),
     }
     if extra:
         lease.update(extra)
+    if "ownershipGeneration" not in lease:
+        lease["ownershipGeneration"] = _ownership_generation_from_lease(lease)
     write_json(path, lease)
-    return path
+    try:
+        from wave_journal import ensure_capture_files
 
+        ensure_capture_files(root, run_id)
+    except (OSError, ImportError):
+        # Capture init must not block lease recording when journal is unavailable.
+        pass
+    return path
 
 def read_run_local_lease(root: Path, run_id: str) -> dict[str, Any]:
     from wave_run_paths import lease_path as run_lease_path
@@ -1360,7 +1543,13 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
     plan_path = parse_kv(args, "--plan")
     if not plan_path:
         fail("--plan required")
-    plan_file = (root / plan_path).resolve()
+    # R28: run-scoped plans live under primary `.cursor/` — resolve against
+    # path_normalize_anchor so orchestrator-cwd deliver-loop finds them.
+    candidate = Path(plan_path)
+    if candidate.is_absolute():
+        plan_file = candidate.resolve()
+    else:
+        plan_file = (path_normalize_anchor(root) / plan_path).resolve()
     if not plan_file.is_file():
         fail(f"plan not found: {plan_path}")
     plan = json.loads(plan_file.read_text(encoding="utf-8"))
@@ -1381,30 +1570,55 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
             "updatedAt": utc_now(),
         }
 
+    target_branch = (plan.get("target") or {}).get("branch")
+    task_list = plan.get("source_task_list")
+    state_path = resolve_state_path(root, task_list=task_list, target=target_branch)
+    # Merge into existing scoped state so deliver-loop identity (runId, locks,
+    # planHash) survives init. A full overwrite left the loop reloading an
+    # empty breadcrumb path and re-entering state-init forever.
+    existing: dict[str, Any] = {}
+    if state_path.is_file():
+        try:
+            loaded = json.loads(state_path.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict) and not loaded.get("migrated"):
+                existing = loaded
+        except json.JSONDecodeError:
+            existing = {}
+    preserve_keys = (
+        "runId",
+        "targetLock",
+        "runLease",
+        "planHash",
+        "planPath",
+        "planRevision",
+        "planCommitSha",
+        "orchestratorWorktree",
+        "driverIterationCount",
+        "budgetCounters",
+        "source_task_list",
+    )
     state = {
+        **existing,
         "verdict": "running",
-        "target": plan.get("target"),
-        "source_task_list": plan.get("source_task_list"),
-        "prd_number": plan.get("prd_number"),
+        "target": plan.get("target") or existing.get("target"),
+        "source_task_list": task_list or existing.get("source_task_list"),
+        "prd_number": plan.get("prd_number") or existing.get("prd_number"),
         "phases": phases,
-        "mergeJournal": None,
-        "completedMerges": [],
-        "currentWave": 1,
+        "mergeJournal": existing.get("mergeJournal"),
+        "completedMerges": existing.get("completedMerges") or [],
+        "currentWave": int(existing.get("currentWave") or 1),
         "nextAction": "base-capture",
-        "remediationAttempts": {},
-        "phaseWorktrees": {},
+        "remediationAttempts": existing.get("remediationAttempts") or {},
+        "phaseWorktrees": existing.get("phaseWorktrees") or {},
         "driverHeartbeatAt": utc_now(),
         "updatedAt": utc_now(),
     }
-    cfg: dict = {}
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        p = root / rel
-        if p.is_file():
-            try:
-                cfg = json.loads(p.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                cfg = {}
-            break
+    for key in preserve_keys:
+        if key in existing and existing[key] not in (None, "", {}, []):
+            state[key] = existing[key]
+    from shipwright_paths import load_workflow_config
+
+    cfg = load_workflow_config(root)
     state[PIN_STATE_KEY] = pin_from_config(cfg)
     if read_config_plan_policy(root) == "proposed":
         if not proposed_pilot_enabled(root):
@@ -1421,9 +1635,9 @@ def cmd_state_init(root: Path, args: list[str]) -> None:
                     }
                 ),
             )
-        state["twoTierLifecycle"] = empty_lifecycle()
-        state["planRejectionLog"] = empty_rejection_log()
-    write_json(resolve_state_path(root, task_list=plan.get("source_task_list"), target=(plan.get("target") or {}).get("branch")), state)
+        state["twoTierLifecycle"] = existing.get("twoTierLifecycle") or empty_lifecycle()
+        state["planRejectionLog"] = existing.get("planRejectionLog") or empty_rejection_log()
+    write_json(state_path, state)
     append_log(
         root,
         {

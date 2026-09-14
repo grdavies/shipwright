@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import uuid
 from copy import deepcopy
 from pathlib import Path
@@ -16,6 +17,9 @@ from .validate_bundle import digest_payload, validate_bundle  # noqa: F401 — d
 TRANSITION_SCHEMA_VERSION = "cross-host-handoff@v1"
 CHECKPOINT_SCHEMA_VERSION = "handoff-checkpoint@v1"
 CHECKPOINT_DIR_NAME = "sw-handoff-checkpoints"
+UNCOMMITTED_CHECKPOINT_DIR = "sw-handoff-uncommitted"
+UNCOMMITTED_POLICY_PRESERVE = "preserve"
+UNCOMMITTED_POLICY_REQUIRE_DISCARD = "require_discard_confirm"
 _CREDENTIAL_KEY_RE = re.compile(
     r"(password|secret|token|credential|api[_-]?key|authorization|private[_-]?key)",
     re.IGNORECASE,
@@ -256,6 +260,147 @@ def read_durable_checkpoint(root: Path, transition_id: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise BundleBuildError(f"durable checkpoint must be an object at {path} (R16)")
     return payload
+
+
+def uncommitted_checkpoint_path(root: Path, transition_id: str) -> Path:
+    """Return durable uncommitted-changes checkpoint location (PRD 352 R27)."""
+    safe = str(transition_id or "").strip()
+    if not safe or "/" in safe or "\\" in safe or ".." in safe:
+        raise BundleBuildError(f"invalid transition_id for uncommitted checkpoint: {transition_id!r}")
+    return Path(root).resolve() / ".cursor" / UNCOMMITTED_CHECKPOINT_DIR / f"{safe}.json"
+
+
+def _git_porcelain(root: Path) -> str:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "status", "--porcelain"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise BundleBuildError(f"git status failed: {proc.stderr.strip()}")
+    return proc.stdout
+
+
+def _git_diff_patch(root: Path) -> str:
+    proc = subprocess.run(
+        ["git", "-C", str(root), "diff", "HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise BundleBuildError(f"git diff failed: {proc.stderr.strip()}")
+    patch = proc.stdout
+    untracked_proc = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "--others", "--exclude-standard"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if untracked_proc.returncode == 0:
+        for rel in untracked_proc.stdout.splitlines():
+            rel = rel.strip()
+            if not rel:
+                continue
+            path = root / rel
+            if path.is_file():
+                patch += f"\n# untracked:{rel}\n"
+                patch += path.read_text(encoding="utf-8", errors="replace")
+    return patch
+
+
+def worktree_has_uncommitted_changes(root: Path) -> bool:
+    """True when the worktree has staged or unstaged changes."""
+    return bool(_git_porcelain(root).strip())
+
+
+def capture_uncommitted_changes_checkpoint(
+    root: Path,
+    transition_id: str,
+    *,
+    policy: str = UNCOMMITTED_POLICY_PRESERVE,
+) -> dict[str, Any]:
+    """Persist uncommitted worktree state before handoff; never silent discard (R27)."""
+    if policy not in {UNCOMMITTED_POLICY_PRESERVE, UNCOMMITTED_POLICY_REQUIRE_DISCARD}:
+        raise BundleBuildError(f"unknown uncommitted policy: {policy!r}")
+    porcelain = _git_porcelain(root)
+    if not porcelain.strip():
+        return {
+            "verdict": "pass",
+            "action": "uncommitted-checkpoint",
+            "skipped": True,
+            "reason": "worktree-clean",
+            "policy": policy,
+        }
+    record: dict[str, Any] = {
+        "schemaVersion": "handoff-uncommitted@v1",
+        "transitionId": str(transition_id),
+        "policy": policy,
+        "status": "preserved",
+        "porcelain": porcelain,
+        "patch": _git_diff_patch(root),
+    }
+    path = uncommitted_checkpoint_path(root, transition_id)
+    atomic_write_json(path, record)
+    return {
+        "verdict": "pass",
+        "action": "uncommitted-checkpoint",
+        "path": str(path),
+        "transitionId": str(transition_id),
+        "policy": policy,
+        "patchBytes": len(record["patch"].encode("utf-8")),
+    }
+
+
+def read_uncommitted_changes_checkpoint(root: Path, transition_id: str) -> dict[str, Any] | None:
+    path = uncommitted_checkpoint_path(root, transition_id)
+    if not path.is_file():
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return payload if isinstance(payload, dict) else None
+
+
+def resolve_uncommitted_changes_policy(
+    root: Path,
+    transition_id: str,
+    *,
+    policy: str = UNCOMMITTED_POLICY_PRESERVE,
+    confirm_discard: bool = False,
+) -> dict[str, Any]:
+    """Apply explicit uncommitted-changes policy at switch/resume (PRD 352 R27)."""
+    if not worktree_has_uncommitted_changes(root):
+        return {"verdict": "pass", "action": "uncommitted-policy", "worktreeClean": True}
+    existing = read_uncommitted_changes_checkpoint(root, transition_id)
+    if existing and existing.get("status") == "preserved":
+        return {
+            "verdict": "pass",
+            "action": "uncommitted-policy",
+            "worktreeClean": False,
+            "checkpointPath": str(uncommitted_checkpoint_path(root, transition_id)),
+            "policy": existing.get("policy") or policy,
+            "note": "checkpoint-already-preserved",
+        }
+    if policy == UNCOMMITTED_POLICY_REQUIRE_DISCARD:
+        if not confirm_discard:
+            return {
+                "verdict": "halt",
+                "action": "uncommitted-policy",
+                "error": "handoff:uncommitted-changes-require-discard",
+                "policy": policy,
+                "recovery": (
+                    "Re-run with explicit discard confirmation or apply preserved patch "
+                    f"from {uncommitted_checkpoint_path(root, transition_id)}"
+                ),
+            }
+        return {
+            "verdict": "pass",
+            "action": "uncommitted-policy",
+            "policy": policy,
+            "discarded": True,
+            "note": "explicit-discard-confirmed",
+        }
+    return capture_uncommitted_changes_checkpoint(root, transition_id, policy=policy)
 
 
 def atomic_write_json(path: Path, document: Mapping[str, Any], *, mode: int = 0o600) -> None:
