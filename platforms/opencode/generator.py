@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 from pathlib import Path
 
 from hook_registry import (
@@ -12,6 +13,11 @@ from hook_registry import (
     registered_handlers,
     unsupported_events,
 )
+
+_SW = Path(__file__).resolve().parents[2] / "sw"
+if str(_SW) not in sys.path:
+    sys.path.insert(0, str(_SW))
+from emitter_base import copy_closed_sw_reference_files
 
 
 def _repo_root() -> Path:
@@ -140,6 +146,7 @@ def generate(
         encoding="utf-8",
     )
     (out / "version.txt").write_text(version + "\n", encoding="utf-8")
+    copy_closed_sw_reference_files(core, out)
 
     if enable_mcp:
         mcp = build_mcp_config(repo, enabled=True)

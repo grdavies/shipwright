@@ -149,6 +149,26 @@ def read_version(repo_root: Path) -> str:
     return version
 
 
+def copy_closed_sw_reference_files(core_root: Path, dest: Path) -> None:
+    """Emit the closed sw-reference set for user installs (PRD 018 R12/TR8)."""
+    ref_src = core_root / "sw-reference"
+    if not ref_src.is_dir():
+        return
+    ref_dir = dest / "core" / "sw-reference"
+    ref_dir.mkdir(parents=True, exist_ok=True)
+    for name in SW_REFERENCE_CLOSED_EMIT:
+        src = ref_src / name
+        if src.is_file():
+            shutil.copy2(src, ref_dir / name)
+    templates_src = ref_src / "templates"
+    if templates_src.is_dir():
+        templates_dest = ref_dir / "templates"
+        templates_dest.mkdir(parents=True, exist_ok=True)
+        for src in templates_src.iterdir():
+            if src.is_file():
+                shutil.copy2(src, templates_dest / src.name)
+
+
 class EmitterBase(ABC):
     """Copy emittable core/ content and apply platform-specific wiring."""
 
@@ -268,16 +288,7 @@ if __name__ == "__main__":
         return text.encode("utf-8")
 
     def copy_closed_sw_reference(self, core_root: Path, dest: Path) -> None:
-        """Emit the closed sw-reference set for user installs (PRD 018 R12/TR8)."""
-        ref_src = core_root / "sw-reference"
-        if not ref_src.is_dir():
-            return
-        ref_dir = dest / "core" / "sw-reference"
-        ref_dir.mkdir(parents=True, exist_ok=True)
-        for name in SW_REFERENCE_CLOSED_EMIT:
-            src = ref_src / name
-            if src.is_file():
-                shutil.copy2(src, ref_dir / name)
+        copy_closed_sw_reference_files(core_root, dest)
 
     def copy_install_root_documentation(self, core_root: Path, dest: Path) -> None:
         """Copy canonical adopter docs to install-root documentation/ (PRD 338 R23)."""

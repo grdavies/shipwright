@@ -13,7 +13,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
@@ -35,12 +35,14 @@ from init_credential_migration import (
 from host_lib import default_base_branch
 from init_ci_stub import STUB_WORKFLOW_REL, apply_ci_stub, plan_ci_stub
 from init_profile_report import (
+    COMM_DEFAULTS_REL,
     SCHEMA_REL,
     classify_profile,
     greenfield_curated_patch,
     load_json,
     load_workflow_config,
     render_classification_markdown,
+    resolve_sw_reference_file,
     strip_invalid_top_level_keys,
 )
 import project_baseline as _project_baseline
@@ -121,32 +123,42 @@ def _plugin_root() -> Path:
     return Path(resolve_plugin_root(SCRIPT_DIR))
 
 
-def schema_path(root: Path) -> Path:
-    plugin_root = _plugin_root()
-    for candidate in (
-        root / ".sw/config.schema.json",
-        root / "core/sw-reference/config.schema.json",
-        plugin_root / "core/sw-reference/config.schema.json",
-        Path(os.environ.get("CURSOR_PLUGIN_ROOT", "")) / "core/sw-reference/config.schema.json",
-        Path(os.environ.get("CURSOR_PLUGIN_ROOT", "")) / ".sw/config.schema.json",
-    ):
-        if candidate.is_file():
-            return candidate
+def schema_path(root: Path, extra_roots: Sequence[Path] = ()) -> Path:
+    found = resolve_sw_reference_file(root, SCHEMA_REL, extra_roots=extra_roots)
+    if found is not None:
+        return found
     return root / ".sw/config.schema.json"
 
 
-def shipwright_version(root: Path) -> str:
-    for candidate in (
+def shipwright_version(root: Path, extra_roots: Sequence[Path] = ()) -> str:
+    plugin_root = _plugin_root()
+    package = SCRIPT_DIR.parent
+    candidates = [
         root / "version.txt",
-        Path(os.environ.get("CURSOR_PLUGIN_ROOT", "")) / "version.txt",
+        plugin_root / "version.txt",
+        package / "version.txt",
+    ]
+    for extra in extra_roots:
+        candidates.append(Path(extra) / "version.txt")
+    for env in (
+        "CURSOR_PLUGIN_ROOT",
+        "CLAUDE_PLUGIN_ROOT",
+        "CODEX_PLUGIN_ROOT",
+        "OPENCODE_PLUGIN_ROOT",
     ):
+        val = os.environ.get(env, "").strip()
+        if val:
+            candidates.append(Path(val).expanduser() / "version.txt")
+    for dist_id in ("cursor", "claude-code", "codex", "opencode"):
+        candidates.append(package / "dist" / dist_id / "version.txt")
+    for candidate in candidates:
         if candidate.is_file():
             return candidate.read_text(encoding="utf-8").strip()
     return "unknown"
 
 
-def schema_version(root: Path) -> str:
-    path = schema_path(root)
+def schema_version(root: Path, extra_roots: Sequence[Path] = ()) -> str:
+    path = schema_path(root, extra_roots=extra_roots)
     if not path.is_file():
         return "unknown"
     return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
@@ -353,30 +365,40 @@ def _strip_draft_side_channel(draft: dict) -> dict:
     return {key: value for key, value in draft.items() if key not in DRAFT_SIDE_CHANNEL_KEYS}
 
 
-def _load_config_schema(root: Path) -> dict[str, Any]:
-    return load_json(root / SCHEMA_REL)
+def _load_config_schema(root: Path, extra_roots: Sequence[Path] = ()) -> dict[str, Any]:
+    path = schema_path(root, extra_roots=extra_roots)
+    if not path.is_file():
+        raise FileNotFoundError(
+            "config schema not found for packaged configure; "
+            f"looked for {SCHEMA_REL} under the consumer repo, plugin roots, and packaged dist trees"
+        )
+    return load_json(path)
 
 
-def _build_curated_seed_draft(root: Path) -> dict[str, Any]:
+def _build_curated_seed_draft(root: Path, extra_roots: Sequence[Path] = ()) -> dict[str, Any]:
     """Schema-valid curated seeds — sole write-draft seed source (PRD 338 R30)."""
     draft: dict[str, Any] = greenfield_curated_patch()
     draft["configuredWith"] = {
-        "shipwrightVersion": shipwright_version(root),
-        "schemaVersion": schema_version(root),
+        "shipwrightVersion": shipwright_version(root, extra_roots=extra_roots),
+        "schemaVersion": schema_version(root, extra_roots=extra_roots),
     }
     return draft
 
 
-def _finalize_persistable_draft(root: Path, draft: dict) -> dict[str, Any]:
+def _finalize_persistable_draft(
+    root: Path, draft: dict, extra_roots: Sequence[Path] = ()
+) -> dict[str, Any]:
     persistable = _strip_draft_side_channel(draft)
-    schema = _load_config_schema(root)
+    schema = _load_config_schema(root, extra_roots=extra_roots)
     cleaned, _rejected = strip_invalid_top_level_keys(persistable, schema)
     return cleaned
 
 
-def _validate_config_document(root: Path, document: dict) -> list[str]:
+def _validate_config_document(
+    root: Path, document: dict, extra_roots: Sequence[Path] = ()
+) -> list[str]:
     """Validate against config.schema.json when jsonschema is available."""
-    path = schema_path(root)
+    path = schema_path(root, extra_roots=extra_roots)
     if not path.is_file():
         return []
     try:
@@ -1087,13 +1109,15 @@ def enumerate_write_scope(
     }
 
 
-def _build_packaged_draft(root: Path) -> dict[str, Any]:
+def _build_packaged_draft(root: Path, extra_roots: Sequence[Path] = ()) -> dict[str, Any]:
     """Build an accept-defaults draft matching write-draft --accept-defaults --write-verify."""
     detect = _detect_project_type(root)
-    draft = _build_curated_seed_draft(root)
+    draft = _build_curated_seed_draft(root, extra_roots=extra_roots)
     draft = _deep_merge(draft, credential_patch_for_draft(root))
-    comm_defaults_path = root / "core/sw-reference/communication-routing.defaults.json"
-    if comm_defaults_path.is_file():
+    comm_defaults_path = resolve_sw_reference_file(
+        root, COMM_DEFAULTS_REL, extra_roots=extra_roots
+    )
+    if comm_defaults_path is not None:
         try:
             comm_defaults = json.loads(comm_defaults_path.read_text(encoding="utf-8"))
             if isinstance(comm_defaults, dict):
@@ -1106,20 +1130,28 @@ def _build_packaged_draft(root: Path) -> dict[str, Any]:
             verify[key] = meta["command"]
     if verify:
         draft["verify"] = verify
-    return _finalize_persistable_draft(root, draft)
+    return _finalize_persistable_draft(root, draft, extra_roots=extra_roots)
 
 
 def apply_packaged_configure(
     root: Path,
     *,
     accept_ci_stub: bool = True,
+    extra_roots: Sequence[Path] = (),
 ) -> dict[str, Any]:
     """Write repo-scope configuration for packaged init (existing spine only)."""
     from shipwright_paths import workflow_config_write_path
 
     root = root.resolve()
-    draft = _build_packaged_draft(root)
-    validation_errors = _validate_config_document(root, draft)
+    try:
+        draft = _build_packaged_draft(root, extra_roots=extra_roots)
+    except FileNotFoundError as exc:
+        return {
+            "verdict": "fail",
+            "error": "config-schema-missing",
+            "message": str(exc),
+        }
+    validation_errors = _validate_config_document(root, draft, extra_roots=extra_roots)
     if validation_errors:
         return {
             "verdict": "fail",
@@ -1134,7 +1166,9 @@ def apply_packaged_configure(
 
     ci_payload: dict[str, Any] | None = None
     if accept_ci_stub:
-        ci_payload = apply_ci_stub(root, confirm=True, wire_verify="off")
+        ci_payload = apply_ci_stub(
+            root, confirm=True, wire_verify="off", extra_roots=extra_roots
+        )
         if ci_payload.get("written"):
             written.append(STUB_WORKFLOW_REL.as_posix())
 

@@ -1,0 +1,404 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/grdavies/shipwright/core/sw-reference/capability-manifest.schema.json",
+  "title": "Shipwright capability manifest frontmatter block",
+  "description": "YAML frontmatter block named `capability` on per-capability source files under core/. Executable kind is derived from the canonical source path prefix at index time (providers/**, hooks/**) — not author-declared. Absence of the block means not signal-selected (back-compat).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "triggers"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Manifest schema version."
+    },
+    "triggers": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/trigger" },
+      "description": "Ordered trigger predicates; at least one required when the capability block is present."
+    },
+    "precedence": {
+      "$ref": "#/definitions/precedence",
+      "description": "Optional explicit precedence tier for conflict resolution (R11)."
+    },
+    "metadata": {
+      "$ref": "#/definitions/metadata",
+      "description": "Selection presentation metadata (orthogonal to model-tier binding)."
+    }
+  },
+  "definitions": {
+    "trigger": {
+      "oneOf": [
+        { "$ref": "#/definitions/alwaysOnTrigger" },
+        { "$ref": "#/definitions/phaseDefaultTrigger" },
+        { "$ref": "#/definitions/triageTagTrigger" },
+        { "$ref": "#/definitions/textTokenTrigger" },
+        { "$ref": "#/definitions/headingTrigger" },
+        { "$ref": "#/definitions/linkPatternTrigger" },
+        { "$ref": "#/definitions/pathGlobTrigger" },
+        { "$ref": "#/definitions/changeDigestTrigger" },
+        { "$ref": "#/definitions/configFlagTrigger" },
+        { "$ref": "#/definitions/anyOfTrigger" },
+        { "$ref": "#/definitions/allOfTrigger" }
+      ]
+    },
+    "alwaysOnTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "always_on" },
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "scope": {
+          "type": "string",
+          "description": "Optional human scope label (e.g. doc-review-core)."
+        }
+      }
+    },
+    "phaseDefaultTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "phase_default" },
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "command": {
+          "type": "string",
+          "pattern": "^sw-[a-z0-9-]+$",
+          "description": "Orchestrator or atomic command slug when the capability is the phase default binding."
+        },
+        "scope": { "type": "string" }
+      }
+    },
+    "triageTagTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "tags"],
+      "properties": {
+        "type": { "const": "triage_tag" },
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "tags": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "match": {
+          "type": "string",
+          "enum": ["any", "all"],
+          "default": "any"
+        }
+      }
+    },
+    "textTokenTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "tokens"],
+      "properties": {
+        "type": { "const": "text_token" },
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "source": {
+          "type": "string",
+          "enum": ["body_snapshot", "derived_tags", "change_digest"],
+          "default": "body_snapshot"
+        },
+        "tokens": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "match": {
+          "type": "string",
+          "enum": ["whole_token", "substring"],
+          "default": "whole_token"
+        },
+        "case_insensitive": {
+          "type": "boolean",
+          "default": true
+        },
+        "exclude_polysemous": {
+          "type": "boolean",
+          "default": false,
+          "description": "When true, bare polysemous tokens (component, view, page, form) do not match alone."
+        }
+      }
+    },
+    "headingTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "headings"],
+      "properties": {
+        "type": { "const": "heading" },
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "source": {
+          "type": "string",
+          "enum": ["body_snapshot"],
+          "default": "body_snapshot"
+        },
+        "headings": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "case_insensitive": {
+          "type": "boolean",
+          "default": true
+        },
+        "match": {
+          "type": "string",
+          "enum": ["whole_token", "exact"],
+          "default": "whole_token",
+          "description": "whole_token uses word-boundary matching on heading text; exact requires normalized heading equality."
+        }
+      }
+    },
+    "linkPatternTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "patterns"],
+      "properties": {
+        "type": { "const": "link_pattern" },
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "source": {
+          "type": "string",
+          "enum": ["body_snapshot"],
+          "default": "body_snapshot"
+        },
+        "patterns": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "Substring patterns matched against URLs in the frozen body snapshot."
+        }
+      }
+    },
+    "pathGlobTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "globs"],
+      "properties": {
+        "type": { "const": "path_glob" },
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "source": {
+          "type": "string",
+          "enum": ["file_paths", "doc_path", "change_digest"],
+          "default": "file_paths"
+        },
+        "globs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "changeDigestTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "predicate"],
+      "properties": {
+        "type": { "const": "change_digest" },
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "predicate": {
+          "type": "string",
+          "enum": [
+            "executable_lines_gte",
+            "added_lines_match",
+            "path_match",
+            "keyword_in_added_lines"
+          ]
+        },
+        "threshold": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Numeric threshold for predicates such as executable_lines_gte."
+        },
+        "keywords": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "globs": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "configFlagTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "key"],
+      "properties": {
+        "type": { "const": "config_flag" },
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Dotted workflow.config.json key (e.g. review.provider)."
+        },
+        "equals": {
+          "description": "Exact string match against the resolved config value."
+        },
+        "notEquals": {
+          "description": "Config value must differ from this literal."
+        },
+        "absent": {
+          "type": "boolean",
+          "description": "When true, fires when the key is unset."
+        },
+        "configured": {
+          "type": "boolean",
+          "description": "When true, fires when the provider adapter is configured (not none/unconfigured)."
+        }
+      },
+      "anyOf": [
+        { "required": ["equals"] },
+        { "required": ["notEquals"] },
+        { "required": ["absent"] },
+        { "required": ["configured"] }
+      ]
+    },
+    "anyOfTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "triggers"],
+      "properties": {
+        "type": { "const": "any_of" },
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "triggers": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "oneOf": [
+              { "$ref": "#/definitions/textTokenTrigger" },
+              { "$ref": "#/definitions/headingTrigger" },
+              { "$ref": "#/definitions/linkPatternTrigger" },
+              { "$ref": "#/definitions/pathGlobTrigger" },
+              { "$ref": "#/definitions/triageTagTrigger" },
+              { "$ref": "#/definitions/changeDigestTrigger" },
+              { "$ref": "#/definitions/configFlagTrigger" }
+            ]
+          }
+        }
+      }
+    },
+    "allOfTrigger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "triggers"],
+      "properties": {
+        "type": { "const": "all_of" },
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "triggers": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "oneOf": [
+              { "$ref": "#/definitions/textTokenTrigger" },
+              { "$ref": "#/definitions/headingTrigger" },
+              { "$ref": "#/definitions/linkPatternTrigger" },
+              { "$ref": "#/definitions/pathGlobTrigger" },
+              { "$ref": "#/definitions/triageTagTrigger" },
+              { "$ref": "#/definitions/changeDigestTrigger" },
+              { "$ref": "#/definitions/configFlagTrigger" },
+              { "$ref": "#/definitions/configFlagTrigger" }
+            ]
+          }
+        }
+      }
+    },
+    "precedence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tier": {
+          "type": "string",
+          "enum": ["override", "signal", "default"],
+          "description": "config override > signal match > default (R11)."
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000,
+          "description": "Optional numeric tie-break within the same tier; lower wins before capability-id lexicographic order."
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "selectionFamily": { "$ref": "#/definitions/selectionFamily" },
+        "personaId": { "type": "string" },
+        "specialistId": { "type": "string" },
+        "providerFamily": {
+          "type": "string",
+          "enum": ["review", "review.local", "memory", "verify", "code-review"]
+        },
+        "adapterId": { "type": "string" },
+        "skill": { "type": "string" },
+        "command": { "type": "string" },
+        "gated": {
+          "type": "boolean",
+          "description": "True for signal-gated personas/specialists."
+        },
+        "modelTierRef": {
+          "type": "string",
+          "description": "Reference to models.routing entry; resolution stays in resolve-model-tier.py (not re-encoded here)."
+        },
+        "gateRef": {
+          "type": "string",
+          "description": "Named execution gate for executable capabilities (e.g. check-gate.py, memory-preflight)."
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "selectionFamily": {
+      "type": "string",
+      "enum": [
+        "doc-review",
+        "code-review",
+        "providers",
+        "subagent-dispatch",
+        "workflow",
+        "memory",
+        "verify",
+        "hooks"
+      ]
+    },
+    "derivedKind": {
+      "type": "string",
+      "enum": ["skill", "persona", "rule", "provider", "hook"],
+      "description": "Derived at index time from canonical source path — not author-declared in frontmatter."
+    },
+    "indexEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "sourcePath", "capability"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "description": "Stable capability id (emitter-assigned from source path + metadata)."
+        },
+        "kind": { "$ref": "#/definitions/derivedKind" },
+        "sourcePath": {
+          "type": "string",
+          "pattern": "^core/",
+          "description": "Repo-relative path to the canonical source artifact."
+        },
+        "capability": { "$ref": "#" },
+        "executable": {
+          "type": "boolean",
+          "description": "True when kind is provider or hook."
+        }
+      },
+      "description": "Emitter-generated index row shape (TR2). Lint rejects kind/path mismatch and phantom sourcePath entries."
+    }
+  }
+}

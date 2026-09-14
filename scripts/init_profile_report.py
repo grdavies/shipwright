@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -16,6 +18,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from sw_resolve_plugin_root import resolve_plugin_root
+
 OPERATOR_CHOICE = "operator choice"
 Tier = Literal["curated", "advanced"]
 Status = Literal["present", "defaulted", "unset", "deprecated"]
@@ -24,6 +28,97 @@ EXAMPLE_CONFIG_REL = Path("core/sw-reference/workflow.config.example.json")
 SCHEMA_REL = Path("core/sw-reference/config.schema.json")
 COMM_DEFAULTS_REL = Path("core/sw-reference/communication-routing.defaults.json")
 LEAF_TYPES = frozenset({"string", "number", "integer", "boolean", "array", "null"})
+PLUGIN_ROOT_ENVS = (
+    "CURSOR_PLUGIN_ROOT",
+    "CLAUDE_PLUGIN_ROOT",
+    "CODEX_PLUGIN_ROOT",
+    "OPENCODE_PLUGIN_ROOT",
+)
+PACKAGED_DIST_IDS = ("cursor", "claude-code", "codex", "opencode")
+
+
+def iter_sw_reference_candidates(
+    root: Path,
+    rel: Path,
+    *,
+    extra_roots: Sequence[Path] = (),
+    script_dir: Path | None = None,
+) -> list[Path]:
+    """Candidate paths for a closed sw-reference file in consumer, plugin, and packaged trees.
+
+    Packaged ``shipwright init`` must not require a Shipwright source tree inside the
+    consumer repository (zero-footprint configure).
+    """
+    script_dir = (script_dir or SCRIPT_DIR).resolve()
+    package = script_dir.parent
+    plugin_root = Path(resolve_plugin_root(script_dir))
+    name = rel.name
+    under_sw_reference = (
+        rel.parts[:2] == ("core", "sw-reference") and len(rel.parts) > 2
+    )
+    nested = rel.parts[2:] if under_sw_reference else (name,)
+    raw: list[Path] = [
+        root / rel,
+        root / ".sw" / name,
+        plugin_root / rel,
+        plugin_root / "core" / "sw-reference" / name,
+        plugin_root / "sw-reference" / name,
+        plugin_root.joinpath(*nested),
+        package / rel,
+        package / "core" / "sw-reference" / name,
+        package.joinpath(*rel.parts) if rel.parts else package / name,
+    ]
+    for extra in extra_roots:
+        extra_path = Path(extra)
+        raw.extend(
+            [
+                extra_path / rel,
+                extra_path / "core" / "sw-reference" / name,
+                extra_path.joinpath("core", "sw-reference", *nested),
+                extra_path / ".sw" / name,
+            ]
+        )
+    for env in PLUGIN_ROOT_ENVS:
+        val = os.environ.get(env, "").strip()
+        if not val:
+            continue
+        env_root = Path(val).expanduser()
+        raw.extend(
+            [
+                env_root / rel,
+                env_root / "core" / "sw-reference" / name,
+                env_root.joinpath("core", "sw-reference", *nested),
+                env_root / ".sw" / name,
+            ]
+        )
+    for dist_id in PACKAGED_DIST_IDS:
+        dist_ref = package / "dist" / dist_id / "core" / "sw-reference"
+        raw.append(dist_ref / name)
+        raw.append(dist_ref.joinpath(*nested))
+    seen: set[str] = set()
+    out: list[Path] = []
+    for path in raw:
+        key = str(path)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(path)
+    return out
+
+
+def resolve_sw_reference_file(
+    root: Path,
+    rel: Path,
+    *,
+    extra_roots: Sequence[Path] = (),
+    script_dir: Path | None = None,
+) -> Path | None:
+    for candidate in iter_sw_reference_candidates(
+        root, rel, extra_roots=extra_roots, script_dir=script_dir
+    ):
+        if candidate.is_file():
+            return candidate
+    return None
 
 
 @dataclass(frozen=True, slots=True)

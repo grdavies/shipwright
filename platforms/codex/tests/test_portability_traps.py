@@ -87,3 +87,10 @@ def test_r23_mcp_config_uses_shipwright_paths(tmp_path: Path) -> None:
     assert mcp["adapter_id"] == "codex"
     assert "codex" in mcp["config_path"]
     assert "/.codex/" not in mcp["config_path"]
+
+
+def test_generator_emits_closed_sw_reference(tmp_path: Path) -> None:
+    out = _gen.generate(tmp_path / "codex", repo_root=_REPO, core_root=_REPO / "core")
+    assert (out / "core" / "sw-reference" / "config.schema.json").is_file()
+    assert (out / "core" / "sw-reference" / "memory-provider-catalog.json").is_file()
+    assert (out / "core" / "sw-reference" / "templates" / "ci-stub-pull-request.yml").is_file()

@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "description": "Harness scan roots for isolation lint (PRD 063 R10).",
+  "roots": [
+    "scripts/unit_tests/**"
+  ]
+}

@@ -188,3 +188,48 @@ def test_console_init_dry_run_roundtrip(
         ]
     )
     assert rc == 0
+
+
+def test_packaged_configure_consumer_without_schema_succeeds(tmp_path: Path) -> None:
+    """Consumer repos are not Shipwright source trees — schema must come from the package."""
+    configure = install_mod._load_sw_configure()
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+    assert not (consumer / "core" / "sw-reference" / "config.schema.json").is_file()
+
+    result = configure.apply_packaged_configure(consumer, accept_ci_stub=False)
+    assert result["verdict"] == "pass", result
+    assert (consumer / ".shipwright" / "workflow.config.json").is_file()
+    assert not (consumer / "core" / "sw-reference").exists()
+
+
+def test_schema_resolves_from_packaged_dist_when_consumer_empty(
+    repo_root: Path, tmp_path: Path
+) -> None:
+    from init_profile_report import SCHEMA_REL, resolve_sw_reference_file
+
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+    fake_pkg = tmp_path / "sw-pkg"
+    dist_schema = fake_pkg / "dist" / "codex" / "core" / "sw-reference"
+    dist_schema.mkdir(parents=True)
+    (fake_pkg / "scripts").mkdir()
+    schema_src = repo_root / SCHEMA_REL
+    (dist_schema / "config.schema.json").write_text(
+        schema_src.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    found = resolve_sw_reference_file(
+        consumer, SCHEMA_REL, script_dir=fake_pkg / "scripts"
+    )
+    assert found is not None
+    assert found == dist_schema / "config.schema.json"
+
+
+def test_packaged_configure_ci_stub_without_consumer_template(tmp_git_repo: Path) -> None:
+    configure = install_mod._load_sw_configure()
+    assert not (tmp_git_repo / "core" / "sw-reference" / "templates").exists()
+    result = configure.apply_packaged_configure(tmp_git_repo, accept_ci_stub=True)
+    assert result["verdict"] == "pass", result
+    assert (tmp_git_repo / ".github" / "workflows" / "shipwright-ci-stub.yml").is_file()
+    assert not (tmp_git_repo / "core" / "sw-reference").exists()
