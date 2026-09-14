@@ -27,6 +27,12 @@ from graph.reviewer_metrics.independence import ReviewerAxisIdentity  # noqa: E4
 from graph.reviewer_metrics.persistence import build_metadata_record  # noqa: E402
 from graph.reviewer_metrics.provenance import ActorClass, ProvenanceRecord, label_with_provenance  # noqa: E402
 from graph.reviewer_metrics.store_adapter import ReviewerMetricsStoreAdapter  # noqa: E402
+from graph.reviewer_metrics.harvest import (  # noqa: E402
+    HarvestFindingInput,
+    harvest_reviewers,
+)
+from graph.reviewer_metrics.provenance import HarvestFindingProvenance  # noqa: E402
+from graph.reviewer_metrics.surviving import CouplingEvidence  # noqa: E402
 
 
 def utc_now() -> str:
@@ -259,6 +265,79 @@ def cmd_ci_hook(_args: argparse.Namespace) -> int:
     )
 
 
+
+def cmd_harvest(args: argparse.Namespace) -> int:
+    """Run harvest and persist via persist_harvest so selection reads real data (PRD 352 R23)."""
+    findings_path = Path(args.findings)
+    payload = json.loads(findings_path.read_text(encoding="utf-8"))
+    raw_findings = payload.get("findings") or []
+    findings: list[HarvestFindingInput] = []
+    for item in raw_findings:
+        evidence_raw = item.get("evidence") or []
+        evidence = []
+        for row in evidence_raw:
+            if isinstance(row, dict):
+                evidence.append(
+                    CouplingEvidence(
+                        str(row.get("match_reason", row.get("source", row.get("kind", "exogenous-ci")))),
+                        str(row.get("terminal_status", row.get("status", row.get("verdict", "confirmed")))),
+                    )
+                )
+            else:
+                evidence.append(row)
+        findings.append(
+            HarvestFindingInput(
+                finding_id=str(item["finding_id"]),
+                run_id=str(item.get("run_id", item.get("runId", "run"))),
+                reviewer_id=str(item["reviewer_id"]),
+                confidence=float(item.get("confidence", 0.0)),
+                attribution_window=str(
+                    item.get("attribution_window", item.get("attributionWindow", "window"))
+                ),
+                evidence=evidence,
+            )
+        )
+    cohort_payload = payload.get("cohort") or {}
+    cohort = CohortIdentity(
+        persona_version=str(cohort_payload.get("personaVersion", cohort_payload.get("persona_version", "persona-v1"))),
+        prompt_version=str(cohort_payload.get("promptVersion", cohort_payload.get("prompt_version", "prompt-v1"))),
+        model_version=str(cohort_payload.get("modelVersion", cohort_payload.get("model_version", "model-v1"))),
+        schema_version=int(cohort_payload.get("schemaVersion", cohort_payload.get("schema_version", 1))),
+        policy_version=str(cohort_payload.get("policyVersion", cohort_payload.get("policy_version", "policy-v1"))),
+    )
+    harvested_at = str(payload.get("harvested_at") or payload.get("harvestedAt") or utc_now())
+    harvest = harvest_reviewers(findings, cohort=cohort, harvested_at=harvested_at)
+    provenance = tuple(
+        HarvestFindingProvenance(
+            finding_id=item.finding_id,
+            reviewer_id=item.reviewer_id,
+            run_id=item.run_id,
+            recorded_at=harvested_at,
+        )
+        for item in findings
+    )
+    repo_root = Path(args.repo).resolve() if args.repo else _repo_root()
+    adapter = ReviewerMetricsStoreAdapter(repo_root, may_egress=False)
+    event = adapter.persist_harvest(
+        harvest,
+        provenance_rows=provenance,
+        journal_entry={
+            "runId": payload.get("run_id") or payload.get("runId") or "harvest",
+            "verdict": "harvest",
+        },
+        recorded_at=harvested_at,
+    )
+    return _emit(
+        {
+            "verdict": "pass",
+            "action": "harvest",
+            "eventId": getattr(event, "event_id", None),
+            "reviewerCount": len(harvest.reviewers),
+            "harvest": harvest.to_dict(),
+        }
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Reviewer effectiveness metrics CLI")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -301,6 +380,12 @@ def build_parser() -> argparse.ArgumentParser:
     ci_sub = ci.add_subparsers(dest="ci_cmd", required=True)
     hook = ci_sub.add_parser("hook", help="Non-gating CI hook stub")
     hook.set_defaults(func=cmd_ci_hook)
+
+
+    harvest = sub.add_parser("harvest", help="Harvest reviewer effectiveness and persist")
+    harvest.add_argument("--findings", required=True, help="JSON file with findings + cohort")
+    harvest.add_argument("--repo", default="", help="Repository root for learning store")
+    harvest.set_defaults(func=cmd_harvest)
 
     return parser
 
