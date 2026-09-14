@@ -1,11 +1,11 @@
 {
   "adapter_id": "codex",
-  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/platform-portability-packaging-conformance-phase-installer-and-capture-fixes-size-medium/.shipwright/mcp/codex.json",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/platform-portability-packaging-conformance-phase-interface-conformance-size-large/.shipwright/mcp/codex.json",
   "mcpServers": {
     "shipwright-bounded": {
       "command": "python3",
       "args": [
-        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/platform-portability-packaging-conformance-phase-installer-and-capture-fixes-size-medium/core/mcp/server.py"
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/platform-portability-packaging-conformance-phase-interface-conformance-size-large/core/mcp/server.py"
       ],
       "transport": "stdio"
     }

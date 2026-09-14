@@ -1,7 +1,9 @@
 {
   "version": 1,
   "description": "Allowed non-stdlib Python imports beyond the standard library (R12).",
-  "allowed": [],
+  "allowed": [
+    "mcp"
+  ],
   "detectorIntakeSurfaces": {
     "description": "Declared supply-chain intake surfaces for workflow detectors (PRD 272 R2).",
     "surfaces": [
@@ -26,7 +28,7 @@
     "pytest": {
       "version": "8.3.5",
       "path": "scripts/_sw/vendor/pytest",
-      "justification": "PRD 054 R1 — sole test runner (amendment A1)"
+      "justification": "PRD 054 R1 \u2014 sole test runner (amendment A1)"
     },
     "pluggy": {
       "version": "1.6.0",
@@ -52,6 +54,12 @@
       "version": "4.14.1",
       "path": "scripts/_sw/vendor/typing_extensions",
       "justification": "exceptiongroup runtime dependency on Python < 3.11"
+    }
+  },
+  "declared": {
+    "mcp": {
+      "version": ">=1.0.0",
+      "justification": "PRD 352 TR5 \u2014 MCP Python SDK declared for stdio JSON-RPC server surface (runtime uses stdlib jsonrpc helpers)"
     }
   }
 }

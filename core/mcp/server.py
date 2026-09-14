@@ -1,6 +1,8 @@
 """Bounded local MCP server with connection isolation (PRD 349 R39–R42, R52).
 
-Transport options (exactly one required):
+Transport options:
+  - ``stdio`` (default) — real MCP JSON-RPC for ``initialize``, ``protocolVersion``,
+    ``notifications/initialized``, ``tools/list``, ``tools/call`` (PRD 352 R19/R20)
   - Unix domain socket with mode 0600, owned by the process user
   - Loopback TCP with a per-session random token (≥128 bits) stored at mode 0600
 
@@ -15,7 +17,6 @@ import os
 import secrets
 import socket
 import sys
-import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -26,15 +27,22 @@ for _p in (_REPO, _REPO / "scripts"):
 
 try:
     from core.mcp.operations import ALLOWED_OPERATIONS, dispatch  # noqa: E402
+    from core.mcp import jsonrpc as _jsonrpc  # noqa: E402
 except ImportError:  # script / path bootstrap
     from operations import ALLOWED_OPERATIONS, dispatch  # type: ignore # noqa: E402
+    import jsonrpc as _jsonrpc  # type: ignore # noqa: E402
 
 try:
     from memory_redact import redact as _redact
 except Exception:  # pragma: no cover - soft fallback
+
     def _redact(text: str, *, destination: str = "mcp") -> str:  # type: ignore[misc]
         del destination
         return text
+
+
+SERVER_NAME = "shipwright-bounded"
+SERVER_VERSION = "1.0.0"
 
 
 class BindError(RuntimeError):
@@ -95,7 +103,7 @@ def handle_request(
     expected_token: str | None,
     allow_unauthed_unix: bool = False,
 ) -> dict[str, Any]:
-    """Handle one JSON-RPC-ish request after auth + allowlist checks."""
+    """Handle one legacy JSON-RPC-ish request after auth + allowlist checks."""
     if expected_token is not None:
         provided = str(request.get("token") or request.get("auth") or "")
         if not secrets.compare_digest(provided, expected_token):
@@ -116,6 +124,175 @@ def handle_request(
     params = request.get("params") if isinstance(request.get("params"), dict) else {}
     result = dispatch(operation, params)
     return {"ok": True, "result": redact_payload(result)}
+
+
+def _tool_descriptors() -> list[dict[str, Any]]:
+    tools: list[dict[str, Any]] = []
+    for name in sorted(ALLOWED_OPERATIONS):
+        tools.append(
+            {
+                "name": name,
+                "description": f"Shipwright bounded operation: {name}",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "root": {"type": "string", "description": "Workspace root path"},
+                    },
+                    "additionalProperties": True,
+                },
+            }
+        )
+    return tools
+
+
+def handle_jsonrpc(message: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Handle one MCP JSON-RPC request/notification (PRD 352 R19).
+
+    Returns a response object, or ``None`` for notifications (no response).
+    """
+    method = _jsonrpc.method_name(message)
+    req_id = message.get("id")
+    params = message.get("params") if isinstance(message.get("params"), dict) else {}
+
+    if method == "initialize":
+        client_version = str(
+            params.get("protocolVersion") or _jsonrpc.DEFAULT_PROTOCOL_VERSION
+        )
+        return _jsonrpc.make_result(
+            req_id,
+            {
+                "protocolVersion": client_version or _jsonrpc.DEFAULT_PROTOCOL_VERSION,
+                "capabilities": {"tools": {"listChanged": False}},
+                "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
+            },
+        )
+
+    if method == "protocolVersion":
+        return _jsonrpc.make_result(
+            req_id,
+            {"protocolVersion": _jsonrpc.DEFAULT_PROTOCOL_VERSION},
+        )
+
+    if method in {"notifications/initialized", "initialized"}:
+        return None
+
+    if method == "tools/list":
+        return _jsonrpc.make_result(req_id, {"tools": _tool_descriptors()})
+
+    if method == "tools/call":
+        tool_name = str(params.get("name") or "").strip()
+        arguments = (
+            params.get("arguments") if isinstance(params.get("arguments"), dict) else {}
+        )
+        if tool_name not in ALLOWED_OPERATIONS:
+            return _jsonrpc.make_error(
+                req_id,
+                -32601,
+                f"Unknown tool: {tool_name}",
+                data={"allowed": sorted(ALLOWED_OPERATIONS)},
+            )
+        try:
+            result = dispatch(tool_name, arguments)
+            redacted = redact_payload(result)
+            return _jsonrpc.make_result(
+                req_id,
+                {
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": json.dumps(redacted, sort_keys=True, default=str),
+                        }
+                    ],
+                    "isError": (
+                        not bool(redacted.get("ok", True))
+                        if isinstance(redacted, dict)
+                        else False
+                    ),
+                    "structuredContent": (
+                        redacted if isinstance(redacted, dict) else {"result": redacted}
+                    ),
+                },
+            )
+        except Exception as exc:  # noqa: BLE001 — surface as tool error payload
+            return _jsonrpc.make_result(
+                req_id,
+                {
+                    "content": [{"type": "text", "text": f"tool error: {exc}"}],
+                    "isError": True,
+                },
+            )
+
+    if method == "ping":
+        return _jsonrpc.make_result(req_id, {})
+
+    if not method:
+        return _jsonrpc.make_error(req_id, -32600, "Invalid Request: missing method")
+    return _jsonrpc.make_error(req_id, -32601, f"Method not found: {method}")
+
+
+def _read_stdio_message(stdin_buffer: Any) -> dict[str, Any] | None:
+    """Read one MCP stdio message (Content-Length framing or newline-delimited JSON)."""
+    first = stdin_buffer.readline()
+    if not first:
+        return None
+    first_text = first.decode("utf-8") if isinstance(first, bytes) else first
+
+    if first_text.lower().startswith("content-length:"):
+        headers = first_text
+        while True:
+            line = stdin_buffer.readline()
+            if not line:
+                return None
+            text = line.decode("utf-8") if isinstance(line, bytes) else line
+            if text in ("\r\n", "\n", ""):
+                break
+            headers += text
+        length = 0
+        for header_line in headers.splitlines():
+            if header_line.lower().startswith("content-length:"):
+                length = int(header_line.split(":", 1)[1].strip())
+                break
+        body = stdin_buffer.read(length)
+        if isinstance(body, bytes):
+            body = body.decode("utf-8")
+        return _jsonrpc.parse_message(body)
+
+    return _jsonrpc.parse_message(first_text)
+
+
+def _write_stdio_message(
+    stdout_buffer: Any, message: Mapping[str, Any], *, framed: bool
+) -> None:
+    payload = json.dumps(message, sort_keys=True, default=str)
+    if framed:
+        encoded = payload.encode("utf-8")
+        header = f"Content-Length: {len(encoded)}\r\n\r\n".encode("ascii")
+        stdout_buffer.write(header + encoded)
+    else:
+        data = (payload + "\n").encode("utf-8")
+        stdout_buffer.write(data)
+    stdout_buffer.flush()
+
+
+def serve_stdio(*, max_requests: int | None = None, framed: bool = False) -> None:
+    """Serve MCP JSON-RPC over stdin/stdout (PRD 352 R20 / TR5)."""
+    stdin = sys.stdin.buffer if hasattr(sys.stdin, "buffer") else sys.stdin
+    stdout = sys.stdout.buffer if hasattr(sys.stdout, "buffer") else sys.stdout
+    handled = 0
+    while max_requests is None or handled < max_requests:
+        try:
+            message = _read_stdio_message(stdin)
+        except (ValueError, json.JSONDecodeError) as exc:
+            err = _jsonrpc.make_error(None, -32700, f"Parse error: {exc}")
+            _write_stdio_message(stdout, err, framed=framed)
+            handled += 1
+            continue
+        if message is None:
+            break
+        response = handle_jsonrpc(message)
+        if response is not None:
+            _write_stdio_message(stdout, response, framed=framed)
+        handled += 1
 
 
 def bind_unix(socket_path: Path) -> socket.socket:
@@ -226,16 +403,33 @@ def serve(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Shipwright bounded MCP server (PRD 349)")
-    parser.add_argument("--transport", choices=("unix", "tcp"), required=True)
-    parser.add_argument("--run-dir", type=Path, required=True)
+    parser = argparse.ArgumentParser(
+        description="Shipwright bounded MCP server (PRD 349 + PRD 352 R19/R20)"
+    )
+    parser.add_argument(
+        "--transport",
+        choices=("stdio", "unix", "tcp"),
+        default="stdio",
+        help="Transport (default: stdio — required by platforms/*/mcpServers launch)",
+    )
+    parser.add_argument("--run-dir", type=Path, default=None)
     parser.add_argument("--socket-path", type=Path, default=None)
     parser.add_argument("--token-path", type=Path, default=None)
     parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--max-requests", type=int, default=None)
     args = parser.parse_args(argv)
 
-    # Reject unauthenticated TCP explicitly even if caller omits token-path somehow.
+    if args.transport == "stdio":
+        serve_stdio(max_requests=args.max_requests)
+        return 0
+
+    if args.run_dir is None:
+        print(
+            json.dumps({"ok": False, "error": "run_dir_required_for_socket_transport"}),
+            file=sys.stderr,
+        )
+        return 20
+
     if args.transport == "tcp" and not args.token_path:
         print(json.dumps({"ok": False, "error": "tcp_requires_token"}), file=sys.stderr)
         return 20
