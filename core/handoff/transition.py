@@ -1,4 +1,4 @@
-"""Host-switch transition state machine with durable persistence (PRD 352 R18–R20, TR5)."""
+"""Host-switch transition state machine with durable persistence (PRD 352 R18–R20, R23, TR5)."""
 
 from __future__ import annotations
 
@@ -33,6 +33,16 @@ ORDERED_PROGRESSION = (
     "destination_validated",
     "ownership_transferred",
     "resumed",
+)
+FABRICATED_FAILURE_KEYS = frozenset(
+    {
+        "remainingAllowance",
+        "remaining_allowance",
+        "resetAt",
+        "resetTime",
+        "quotaRemaining",
+        "quotaResetAt",
+    }
 )
 
 
@@ -170,6 +180,57 @@ def advance_transition(
         record["resumeEvidence"] = dict(resume_evidence)
     if failure is not None:
         record["failure"] = dict(failure)
+    persist_transition(root, record)
+    return record
+
+
+def _sanitize_observation(observation: Mapping[str, Any]) -> dict[str, Any]:
+    fabricated = [key for key in observation if key in FABRICATED_FAILURE_KEYS]
+    if fabricated:
+        raise TransitionError(
+            "transition_failure_fabrication",
+            "cannot record fabricated allowance or reset time",
+            fabricated=fabricated,
+        )
+    payload = {key: value for key, value in dict(observation).items() if key not in FABRICATED_FAILURE_KEYS}
+    payload.setdefault("recordedAt", _utc_now())
+    return payload
+
+
+def record_observed_failure(
+    root: Path,
+    transition_id: str,
+    observation: Mapping[str, Any] | None = None,
+    *,
+    user_instruction: str | None = None,
+) -> dict[str, Any]:
+    """Record observed quota failure or user instruction without fabrication (PRD 352 R23)."""
+    if user_instruction and str(user_instruction).strip():
+        payload = {
+            "source": "user_instruction",
+            "code": "user:instruction",
+            "message": str(user_instruction).strip(),
+            "recordedAt": _utc_now(),
+        }
+    elif observation is not None:
+        payload = _sanitize_observation(observation)
+        payload.setdefault("source", str(observation.get("source") or "observed"))
+        if "code" not in payload and observation.get("code") is not None:
+            payload["code"] = str(observation.get("code"))
+        if "message" not in payload and observation.get("message") is not None:
+            payload["message"] = str(observation.get("message"))
+    else:
+        raise TransitionError(
+            "transition_failure_missing",
+            "observed failure or user instruction required",
+        )
+    record = load_transition(root, transition_id)
+    record["spendingObservation"] = payload
+    record["failure"] = {
+        "code": str(payload.get("code") or "observed"),
+        "message": str(payload.get("message") or ""),
+        "source": str(payload.get("source") or "observed"),
+    }
     persist_transition(root, record)
     return record
 

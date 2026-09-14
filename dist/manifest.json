@@ -19,11 +19,11 @@
       },
       {
         "path": "core/handoff/transition.py",
-        "sha256": "daa537ddc31c2770a47367a4dcdf650e6f4e863504bbbaad3a5044f5e84b4dc8"
+        "sha256": "4ad6d6bdfa9504ec0803e01fdbf63bd1ad1353e5f34276a133bbff70716a6405"
       },
       {
         "path": "scripts/handoff_bundle.py",
-        "sha256": "68d51796b5c84b4d42cff626f8f9de0d81a9bde998b43a46089f91fd76fb19e3"
+        "sha256": "f32c6a611fdf47df0256e2af4c09e893371173c659f444f84dfa33f6ceac2b77"
       }
     ]
   },
