@@ -1537,6 +1537,36 @@
       "ciShard": 2
     },
     {
+      "id": "planning-356-packaged-conformance-root-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_packaged_conformance_root.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "packaged-conformance-root",
+        "d3-host-search"
+      ],
+      "ciShard": 2
+    },
+    {
+      "id": "planning-356-packaged-conformance-present-fail-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_packaged_conformance_present_fail.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "scenarios": [
+        "packaged-conformance-present-fail",
+        "d3-sibling-fallthrough"
+      ],
+      "ciShard": 2
+    },
+    {
       "id": "planning-333-provider-semantic-parity-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
