@@ -198,8 +198,19 @@ DEFERRED_ISSUES_PROVIDERS = frozenset({"gitlab-issues"})
 _REPO_ROOT = SCRIPT_DIR.parent
 
 
-def resolve_shipped_issues_providers(root: Path | None = None) -> frozenset[str]:
-    return load_submodule("provider_conformance").providers_with_green_conformance(root or _REPO_ROOT)
+def resolve_shipped_issues_providers(
+    root: Path | None = None,
+    *,
+    package_root: Path | None = None,
+    active_host: str | None = None,
+) -> frozenset[str]:
+    """Return providers with present+valid conformance under D3 packaged host-search."""
+    pc = load_submodule("provider_conformance")
+    return pc.providers_with_green_conformance(
+        root or _REPO_ROOT,
+        package_root=package_root,
+        active_host=active_host,
+    )
 
 
 SHIPPED_ISSUES_PROVIDERS = resolve_shipped_issues_providers()

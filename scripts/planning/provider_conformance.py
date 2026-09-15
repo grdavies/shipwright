@@ -27,6 +27,21 @@ from issues_lib import (
 CONFORMANCE_FIXTURES_REL = Path("scripts/test/fixtures/planning-provider-conformance")
 PACKAGED_CONFORMANCE_REL = Path("core/sw-reference/provider-conformance")
 
+# PRD 356 D3 — packaged wheel host bundles under package_root/dist/<host>/.
+PACKAGED_DIST_IDS: tuple[str, ...] = ("cursor", "claude-code", "codex", "opencode")
+_HOST_ENV_KEYS: dict[str, str] = {
+    "cursor": "CURSOR_PLUGIN_ROOT",
+    "claude-code": "CLAUDE_PLUGIN_ROOT",
+    "codex": "CODEX_PLUGIN_ROOT",
+    "opencode": "OPENCODE_PLUGIN_ROOT",
+}
+_HOST_PLUGIN_MARKERS: dict[str, tuple[str, ...]] = {
+    "cursor": (".cursor-plugin/plugin.json",),
+    "claude-code": (".claude-plugin/plugin.json",),
+    "codex": (".codex-plugin/plugin.json",),
+    "opencode": ("opencode.plugin.json",),
+}
+
 CONFORMANCE_DIMENSIONS: tuple[str, ...] = (
     "auth-success",
     "auth-failure",
@@ -55,18 +70,137 @@ def provider_fixture_slug(provider: str) -> str:
     return provider.replace("-issues", "")
 
 
+def _normalize_host_id(host: str | None) -> str | None:
+    if not host:
+        return None
+    norm = host.strip().lower().replace("_", "-")
+    return norm if norm in PACKAGED_DIST_IDS else None
+
+
+def _host_id_from_bundle(bundle: Path) -> str | None:
+    resolved = bundle.resolve()
+    for host_id, markers in _HOST_PLUGIN_MARKERS.items():
+        if any((resolved / marker).is_file() for marker in markers):
+            return host_id
+    if resolved.parent.name == "dist" and resolved.name in PACKAGED_DIST_IDS:
+        return resolved.name
+    return None
+
+
+def _is_host_bundle(path: Path) -> bool:
+    resolved = path.resolve()
+    if (resolved / PACKAGED_CONFORMANCE_REL).is_dir():
+        return True
+    return _host_id_from_bundle(resolved) is not None
+
+
+def resolve_package_root(start: Path | None = None) -> Path:
+    """Resolve the Shipwright package root (wheel ``sw/`` tree or source checkout)."""
+    candidate = (start or Path(__file__).resolve().parent.parent).resolve()
+    if candidate.parent.name == "dist" and candidate.name in PACKAGED_DIST_IDS:
+        return candidate.parent.parent
+    dist = candidate / "dist"
+    if dist.is_dir() and any((dist / host_id).is_dir() for host_id in PACKAGED_DIST_IDS):
+        return candidate
+    for env_key in _HOST_ENV_KEYS.values():
+        val = os.environ.get(env_key, "").strip()
+        if not val:
+            continue
+        env_path = Path(val).expanduser().resolve()
+        if env_path.parent.name == "dist" and env_path.name in PACKAGED_DIST_IDS:
+            return env_path.parent.parent
+        if _is_host_bundle(env_path):
+            return env_path
+    return candidate
+
+
+def resolve_active_host_id(
+    package_root: Path,
+    *,
+    active_host: str | None = None,
+) -> str | None:
+    """Resolve the active integration host for D3 packaged conformance search."""
+    explicit = _normalize_host_id(active_host)
+    if explicit:
+        return explicit
+    pkg = package_root.resolve()
+    script_parent = Path(__file__).resolve().parent.parent
+    if script_parent.parent.name == "dist" and script_parent.name in PACKAGED_DIST_IDS:
+        if script_parent.parent.parent.resolve() == pkg or pkg == script_parent.resolve():
+            return script_parent.name
+    for host_id, env_key in _HOST_ENV_KEYS.items():
+        val = os.environ.get(env_key, "").strip()
+        if not val:
+            continue
+        env_path = Path(val).expanduser().resolve()
+        expected = (pkg / "dist" / host_id).resolve()
+        if env_path == expected:
+            return host_id
+        detected = _host_id_from_bundle(env_path)
+        if detected == host_id:
+            return host_id
+    return _host_id_from_bundle(pkg)
+
+
+def _conformance_record_in_bundle(bundle: Path, filename: str) -> Path | None:
+    candidate = (bundle / PACKAGED_CONFORMANCE_REL / filename).resolve()
+    return candidate if candidate.is_file() else None
+
+
+def _active_host_bundle(package_root: Path, host_id: str) -> Path | None:
+    pkg = package_root.resolve()
+    active = pkg / "dist" / host_id
+    if active.is_dir():
+        return active
+    if _host_id_from_bundle(pkg) == host_id:
+        return pkg
+    return None
+
+
 def conformance_fixture_path(root: Path, provider: str) -> Path:
     slug = provider_fixture_slug(provider)
     return (root / CONFORMANCE_FIXTURES_REL / f"{slug}.ok.json").resolve()
 
 
-def resolve_conformance_fixture_path(root: Path, provider: str) -> Path | None:
-    """Locate recorded evidence on the given root — test fixtures or packaged plugin copies."""
+def resolve_conformance_fixture_path(
+    root: Path,
+    provider: str,
+    *,
+    package_root: Path | None = None,
+    active_host: str | None = None,
+) -> Path | None:
+    """Locate recorded evidence — source checkout paths then D3 packaged host bundles."""
     slug = provider_fixture_slug(provider)
+    filename = f"{slug}.ok.json"
     for rel in (CONFORMANCE_FIXTURES_REL, PACKAGED_CONFORMANCE_REL):
-        candidate = (root / rel / f"{slug}.ok.json").resolve()
+        candidate = (root / rel / filename).resolve()
         if candidate.is_file():
             return candidate
+
+    pkg = (package_root or resolve_package_root(root)).resolve()
+    host = resolve_active_host_id(pkg, active_host=active_host)
+    if host is None:
+        if _is_host_bundle(pkg):
+            return _conformance_record_in_bundle(pkg, filename)
+        return None
+
+    active_bundle = _active_host_bundle(pkg, host)
+    if active_bundle is None:
+        return None
+
+    active_hit = _conformance_record_in_bundle(active_bundle, filename)
+    if active_hit is not None:
+        return active_hit
+
+    for host_id in PACKAGED_DIST_IDS:
+        if host_id == host:
+            continue
+        sibling = pkg / "dist" / host_id
+        if not sibling.is_dir():
+            continue
+        sibling_hit = _conformance_record_in_bundle(sibling, filename)
+        if sibling_hit is not None:
+            return sibling_hit
     return None
 
 
@@ -74,8 +208,19 @@ def conformance_dimensions_green(record: dict[str, Any]) -> bool:
     return record.get("verdict") == "ok" and _dimensions_all_green(record)
 
 
-def load_conformance_record(root: Path, provider: str) -> dict[str, Any]:
-    path = resolve_conformance_fixture_path(root, provider)
+def load_conformance_record(
+    root: Path,
+    provider: str,
+    *,
+    package_root: Path | None = None,
+    active_host: str | None = None,
+) -> dict[str, Any]:
+    path = resolve_conformance_fixture_path(
+        root,
+        provider,
+        package_root=package_root,
+        active_host=active_host,
+    )
     if path is None:
         path = conformance_fixture_path(root, provider)
     if not path.is_file():
@@ -123,10 +268,21 @@ def conformance_record_hash(record: dict[str, Any]) -> str:
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
-def providers_with_green_conformance(root: Path) -> frozenset[str]:
+def providers_with_green_conformance(
+    root: Path,
+    *,
+    package_root: Path | None = None,
+    active_host: str | None = None,
+) -> frozenset[str]:
+    pkg = package_root or resolve_package_root(root)
     shipped: set[str] = set()
     for provider in sorted(CONFORMANCE_GATED_PROVIDERS):
-        record = load_conformance_record(root, provider)
+        record = load_conformance_record(
+            root,
+            provider,
+            package_root=pkg,
+            active_host=active_host,
+        )
         if conformance_dimensions_green(record):
             if provider in DOCS_GATED_PROVIDERS and not _provider_docs_gate_green(root, provider):
                 continue
