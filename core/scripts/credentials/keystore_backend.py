@@ -60,6 +60,27 @@ def _active_bindings() -> KeystoreBindings:
     raise KeystoreServiceError(fc.UNAVAILABLE_BACKEND)
 
 
+def _darwin_dictionary_callbacks(core_foundation: ctypes.CDLL) -> tuple[int, int]:
+    """Return kCFType dictionary callback struct addresses (not NULL)."""
+    key_cb = ctypes.addressof(
+        ctypes.c_byte.in_dll(core_foundation, "kCFTypeDictionaryKeyCallBacks")
+    )
+    value_cb = ctypes.addressof(
+        ctypes.c_byte.in_dll(core_foundation, "kCFTypeDictionaryValueCallBacks")
+    )
+    return key_cb, value_cb
+
+
+def _darwin_cf_handle_value(handle: object) -> int | None:
+    if handle is None:
+        return None
+    if isinstance(handle, ctypes.c_void_p):
+        return handle.value
+    if isinstance(handle, int):
+        return handle
+    return None
+
+
 def _darwin_read_generic_secret(service: str, account: str) -> bytes | None:
     security_path = ctypes.util.find_library("Security")
     cf_path = ctypes.util.find_library("CoreFoundation")
@@ -117,9 +138,10 @@ def _darwin_read_generic_secret(service: str, account: str) -> bytes | None:
         _cfstr("genp"),
         _cfstr(service),
         _cfstr(account),
-        ctypes.c_void_p(k_cf_boolean_true),
+        k_cf_boolean_true,
         _cfstr("m_LimitOne"),
     ]
+    key_cb, value_cb = _darwin_dictionary_callbacks(core_foundation)
     key_array = (ctypes.c_void_p * len(keys))(*keys)
     value_array = (ctypes.c_void_p * len(values))(*values)
     query = core_foundation.CFDictionaryCreate(
@@ -127,14 +149,17 @@ def _darwin_read_generic_secret(service: str, account: str) -> bytes | None:
         key_array,
         value_array,
         len(keys),
-        None,
-        None,
+        key_cb,
+        value_cb,
     )
     result = ctypes.c_void_p()
     status = security.SecItemCopyMatching(query, ctypes.byref(result))
+    boolean_true_value = k_cf_boolean_true.value
     for handle in (*keys, *values, query):
-        if handle:
-            core_foundation.CFRelease(handle)
+        handle_value = _darwin_cf_handle_value(handle)
+        if not handle_value or handle_value == boolean_true_value:
+            continue
+        core_foundation.CFRelease(handle)
     if status == _ERR_SEC_ITEM_NOT_FOUND:
         return None
     if status != 0:
