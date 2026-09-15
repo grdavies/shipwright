@@ -1965,6 +1965,24 @@
       ]
     },
     {
+      "id": "planning-356-packaged-conformance-live-gate-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "pr-ci"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "verifyOrder": 67,
+      "pytestPath": "scripts/unit_tests/planning/test_packaged_conformance_live_gate.py",
+      "ciShard": 2,
+      "pathTriggers": [
+        "scripts/planning/packaged_conformance_roots.py",
+        "scripts/planning/provider_conformance.py",
+        "scripts/planning_store_facade.py",
+        "scripts/issues_lib.py"
+      ]
+    },
+    {
       "id": "planning-333-provider-semantic-parity-fixtures",
       "script": "scripts/test/run_pytest.py",
       "lanes": [

@@ -206,14 +206,77 @@ def resolve_shipped_issues_providers(
 ) -> frozenset[str]:
     """Return providers with present+valid conformance under D3 packaged host-search."""
     pc = load_submodule("provider_conformance")
-    return pc.providers_with_green_conformance(
+    return pc.live_shipped_providers(
         root or _REPO_ROOT,
         package_root=package_root,
         active_host=active_host,
     )
 
 
-SHIPPED_ISSUES_PROVIDERS = resolve_shipped_issues_providers()
+_shipped_providers_cache: dict[tuple[str, str, str | None], frozenset[str]] = {}
+
+
+def shipped_issues_providers(
+    root: Path | None = None,
+    *,
+    package_root: Path | None = None,
+    active_host: str | None = None,
+) -> frozenset[str]:
+    """Live shipped set with root-keyed cache — not frozen at import (PRD 356 R3)."""
+    from planning.packaged_conformance_roots import is_host_bundle, resolve_package_root
+
+    resolved_root = (root or _REPO_ROOT).resolve()
+    pkg = package_root
+    if pkg is None:
+        pkg = resolve_package_root(resolved_root)
+        if not is_host_bundle(pkg) and not (pkg / "dist").is_dir():
+            try:
+                resolved_root.relative_to(_REPO_ROOT)
+            except ValueError:
+                pass
+            else:
+                pkg = resolve_package_root(_REPO_ROOT)
+    pkg = pkg.resolve()
+    cache_key = (str(resolved_root), str(pkg), active_host)
+    cached = _shipped_providers_cache.get(cache_key)
+    if cached is not None:
+        return cached
+    result = resolve_shipped_issues_providers(
+        resolved_root,
+        package_root=pkg,
+        active_host=active_host,
+    )
+    _shipped_providers_cache[cache_key] = result
+    return result
+
+
+def clear_shipped_providers_cache() -> None:
+    """Clear the live shipped-providers cache (tests and hermetic harnesses)."""
+    _shipped_providers_cache.clear()
+
+
+class _ShippedIssuesProvidersLive:
+    """Backward-compat view — resolves live against ``_REPO_ROOT`` on each access."""
+
+    def __contains__(self, item: object) -> bool:
+        return item in shipped_issues_providers()
+
+    def __iter__(self):
+        return iter(shipped_issues_providers())
+
+    def __len__(self) -> int:
+        return len(shipped_issues_providers())
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, (set, frozenset, _ShippedIssuesProvidersLive)):
+            return shipped_issues_providers() == frozenset(other)  # type: ignore[arg-type]
+        return NotImplemented
+
+    def __repr__(self) -> str:
+        return repr(shipped_issues_providers())
+
+
+SHIPPED_ISSUES_PROVIDERS = _ShippedIssuesProvidersLive()
 
 MIN_ISSUES_SCOPES: dict[str, list[str]] = {
     "github-issues": ["repo"],
@@ -461,7 +524,7 @@ def contains_raw_transcript(content: str) -> bool:
     return any(marker.search(content) for marker in RAW_TRANSCRIPT_MARKERS)
 
 
-def resolve_issues_provider(cfg: dict[str, Any]) -> dict[str, Any]:
+def resolve_issues_provider(cfg: dict[str, Any], root: Path | None = None) -> dict[str, Any]:
     store = store_section(cfg)
     configured = store.get("issuesProvider")
     if not isinstance(configured, str) or not configured.strip():
@@ -474,7 +537,7 @@ def resolve_issues_provider(cfg: dict[str, Any]) -> dict[str, Any]:
         }
     provider = configured.strip()
     supported = provider in ISSUES_PROVIDERS
-    shipped = provider in SHIPPED_ISSUES_PROVIDERS
+    shipped = provider in shipped_issues_providers(root)
     if not supported:
         return {
             "verdict": "ok",
@@ -512,26 +575,26 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
         "verdict": "ok",
         "action": "issues-provider-registration",
         "issuesProviders": sorted(ISSUES_PROVIDERS),
-        "shippedIssuesProviders": sorted(SHIPPED_ISSUES_PROVIDERS),
+        "shippedIssuesProviders": sorted(shipped_issues_providers()),
         "deferredIssuesProviders": sorted(DEFERRED_ISSUES_PROVIDERS),
         "rateLimitMap": dict(issues_http.ISSUES_PROVIDER_TO_RATELIMIT),
         "capabilityIndexIds": dict(ISSUES_CAPABILITY_INDEX_IDS),
         "migrationHooks": list(ISSUES_MIGRATION_HOOKS),
         "linear": load_providers_package().linear.registration_footprint(
             recognized="linear" in ISSUES_PROVIDERS,
-            shipped="linear" in SHIPPED_ISSUES_PROVIDERS,
+            shipped="linear" in shipped_issues_providers(),
             live_client_wired=linear_wired,
         ),
         "linearSemanticCrud": _linear_semantic_crud_registration(),
         "notion": load_providers_package().notion.registration_footprint(
             recognized="notion" in ISSUES_PROVIDERS,
-            shipped="notion" in SHIPPED_ISSUES_PROVIDERS,
+            shipped="notion" in shipped_issues_providers(),
             live_client_wired=notion_wired,
         ),
         "recognitionVsShipped": {
             provider: {
                 "recognized": provider in ISSUES_PROVIDERS,
-                "shipped": provider in SHIPPED_ISSUES_PROVIDERS,
+                "shipped": provider in shipped_issues_providers(),
                 "deferred": provider in DEFERRED_ISSUES_PROVIDERS,
             }
             for provider in sorted(_BASE_ISSUES_PROVIDERS | live_recognized)
@@ -645,7 +708,7 @@ def doctor_issues_provider_stub(root: Path, cfg: dict[str, Any]) -> dict[str, An
             root,
             provider=provider,
             issues_providers=ISSUES_PROVIDERS,
-            shipped_providers=SHIPPED_ISSUES_PROVIDERS,
+            shipped_providers=shipped_issues_providers(_REPO_ROOT),
         )
         if linear_result is not None:
             return linear_result
@@ -656,7 +719,7 @@ def doctor_issues_provider_stub(root: Path, cfg: dict[str, Any]) -> dict[str, An
             root,
             provider=provider,
             issues_providers=ISSUES_PROVIDERS,
-            shipped_providers=SHIPPED_ISSUES_PROVIDERS,
+            shipped_providers=shipped_issues_providers(_REPO_ROOT),
         )
         if notion_result is not None:
             return notion_result
@@ -781,7 +844,7 @@ def issue_store_fallback_reason(root: Path, cfg: dict[str, Any], *, override: st
         if bitbucket_host_active(root, cfg):
             return "bitbucket-issues-unavailable"
         return "issues-provider-none-or-unsupported"
-    if issues["provider"] not in SHIPPED_ISSUES_PROVIDERS:
+    if issues["provider"] not in shipped_issues_providers(_REPO_ROOT):
         return "issues-provider-not-shipped"
     host = resolve_provider(root)
     if host.get("verdict") != "ok" or host.get("provider") == "none":
@@ -1036,7 +1099,7 @@ def probe_store_host_privacy(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         }
 
     provider = str(store.get("issuesProvider", "none")).strip().lower()
-    if provider not in SHIPPED_ISSUES_PROVIDERS:
+    if provider not in shipped_issues_providers(_REPO_ROOT):
         return {
             "verdict": "ok",
             "storeHostPrivacy": "public",
