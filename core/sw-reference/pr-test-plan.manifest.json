@@ -1582,6 +1582,17 @@
       "ciShard": 2
     },
     {
+      "id": "planning-356-packaged-consumer-conformance-fixtures",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_packaged_consumer_conformance.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-2",
+      "ciShard": 2
+    },
+    {
       "id": "planning-333-provider-semantic-parity-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [
