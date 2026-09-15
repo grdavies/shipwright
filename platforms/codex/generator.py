@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import shutil
 import sys
 from pathlib import Path
+from types import ModuleType
 
 from hook_registry import build_mcp_config, registered_handlers, unsupported_events
 from plugin_manifest import (
@@ -19,6 +21,20 @@ _SW = Path(__file__).resolve().parents[2] / "sw"
 if str(_SW) not in sys.path:
     sys.path.insert(0, str(_SW))
 from emitter_base import copy_closed_sw_reference_files
+
+
+def _load_sibling_module(mod_name: str, filename: str) -> ModuleType:
+    """Load a same-directory module without colliding on the shared ``hook_adapter`` name."""
+    path = Path(__file__).resolve().parent / filename
+    spec = importlib.util.spec_from_file_location(mod_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load {path}")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_hook_adapter = _load_sibling_module("codex_hook_adapter", "hook_adapter.py")
 
 
 def _repo_root() -> Path:
@@ -88,10 +104,8 @@ def generate(
     )
 
     # PRD 352 R4: ship full skill bodies (option a) via hook_adapter.copy_emittable_content.
-    from hook_adapter import copy_command_skills, copy_emittable_content
-
-    written_skills = copy_emittable_content(core, out)
-    written_commands = copy_command_skills(core, out)
+    written_skills = _hook_adapter.copy_emittable_content(core, out)
+    written_commands = _hook_adapter.copy_command_skills(core, out)
     skills_dir = out / "skills"
     skills_dir.mkdir(parents=True, exist_ok=True)
     index = {

@@ -2,6 +2,12 @@
 
 from __future__ import annotations
 
+import ctypes
+import ctypes.util
+import multiprocessing
+import os
+import sys
+import uuid
 from dataclasses import dataclass
 
 import pytest
@@ -10,6 +16,8 @@ from credentials import failure_codes as fc
 from credentials.keystore_backend import (
     KeystoreBackendAdapter,
     KeystoreServiceError,
+    _darwin_dictionary_callbacks,
+    _darwin_read_generic_secret,
     keystore_account_name,
     keystore_service_name,
     read_keystore_secret,
@@ -153,3 +161,216 @@ def _context() -> RepositoryContext:
         project_id="proj-1",
         destination_endpoint="https://api.github.com/user",
     )
+
+
+_DARWIN = sys.platform == "darwin"
+_CF_STRING_ENCODING_UTF8 = 0x08000100
+_ERR_SEC_DUPLICATE_ITEM = -25299
+_ERR_SEC_INTERACTION_NOT_ALLOWED = -25308
+_ERR_SEC_USER_CANCELED = -128
+
+
+def _core_foundation() -> ctypes.CDLL:
+    path = ctypes.util.find_library("CoreFoundation")
+    assert path, "CoreFoundation missing"
+    return ctypes.CDLL(path)
+
+
+def _load_darwin_libs() -> tuple[ctypes.CDLL, ctypes.CDLL]:
+    security_path = ctypes.util.find_library("Security")
+    cf_path = ctypes.util.find_library("CoreFoundation")
+    assert security_path and cf_path, "Security/CoreFoundation missing"
+    security = ctypes.CDLL(security_path)
+    core_foundation = ctypes.CDLL(cf_path)
+    core_foundation.CFStringCreateWithCString.restype = ctypes.c_void_p
+    core_foundation.CFStringCreateWithCString.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_char_p,
+        ctypes.c_uint32,
+    ]
+    core_foundation.CFDataCreate.restype = ctypes.c_void_p
+    core_foundation.CFDataCreate.argtypes = [
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+        ctypes.c_long,
+    ]
+    core_foundation.CFDictionaryCreate.restype = ctypes.c_void_p
+    core_foundation.CFDictionaryCreate.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.POINTER(ctypes.c_void_p),
+        ctypes.c_long,
+        ctypes.c_void_p,
+        ctypes.c_void_p,
+    ]
+    core_foundation.CFRelease.restype = None
+    core_foundation.CFRelease.argtypes = [ctypes.c_void_p]
+    security.SecItemAdd.restype = ctypes.c_int32
+    security.SecItemAdd.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    security.SecItemDelete.restype = ctypes.c_int32
+    security.SecItemDelete.argtypes = [ctypes.c_void_p]
+    return security, core_foundation
+
+
+def _cfstr(core_foundation: ctypes.CDLL, value: str) -> ctypes.c_void_p:
+    return ctypes.c_void_p(
+        core_foundation.CFStringCreateWithCString(
+            None,
+            value.encode("utf-8"),
+            _CF_STRING_ENCODING_UTF8,
+        )
+    )
+
+
+def _release_handles(core_foundation: ctypes.CDLL, *handles: object) -> None:
+    for handle in handles:
+        value = handle.value if isinstance(handle, ctypes.c_void_p) else handle
+        if value:
+            core_foundation.CFRelease(handle)
+
+
+def _darwin_item_query(
+    core_foundation: ctypes.CDLL,
+    service: str,
+    account: str,
+    payload: bytes | None = None,
+) -> tuple[ctypes.c_void_p, list[object]]:
+    keys = [_cfstr(core_foundation, "class"), _cfstr(core_foundation, "svce"), _cfstr(core_foundation, "acct")]
+    values: list[object] = [
+        _cfstr(core_foundation, "genp"),
+        _cfstr(core_foundation, service),
+        _cfstr(core_foundation, account),
+    ]
+    keys.append(_cfstr(core_foundation, "u_AuthUI"))
+    values.append(_cfstr(core_foundation, "u_AuthUIF"))
+    if payload is not None:
+        buf = ctypes.create_string_buffer(payload, len(payload))
+        data = core_foundation.CFDataCreate(None, buf, len(payload))
+        keys.append(_cfstr(core_foundation, "v_Data"))
+        values.append(data)
+    key_cb, value_cb = _darwin_dictionary_callbacks(core_foundation)
+    key_array = (ctypes.c_void_p * len(keys))(*keys)
+    value_array = (ctypes.c_void_p * len(values))(*values)
+    query = core_foundation.CFDictionaryCreate(
+        None,
+        key_array,
+        value_array,
+        len(keys),
+        key_cb,
+        value_cb,
+    )
+    return query, [*keys, *values, query]
+
+
+def _dummy_add_status(service: str, account: str, payload: bytes) -> int:
+    security, core_foundation = _load_darwin_libs()
+    query, handles = _darwin_item_query(core_foundation, service, account, payload)
+    try:
+        status = security.SecItemAdd(query, None)
+        if status == _ERR_SEC_DUPLICATE_ITEM:
+            security.SecItemDelete(query)
+            status = security.SecItemAdd(query, None)
+        return int(status)
+    finally:
+        _release_handles(core_foundation, *handles)
+
+
+def _dummy_delete_status(service: str, account: str) -> int:
+    security, core_foundation = _load_darwin_libs()
+    query, handles = _darwin_item_query(core_foundation, service, account)
+    try:
+        return int(security.SecItemDelete(query))
+    finally:
+        _release_handles(core_foundation, *handles)
+
+
+def _queue_call(queue: multiprocessing.Queue, fn, args: tuple[object, ...]) -> None:
+    try:
+        queue.put(("ok", fn(*args)))
+    except Exception as exc:  # noqa: BLE001 — isolate FFI from the pytest process
+        queue.put(("err", repr(exc)))
+
+
+def _run_with_timeout(fn, args: tuple[object, ...], timeout: float = 5.0) -> object:
+    ctx = multiprocessing.get_context("spawn")
+    queue = ctx.Queue()
+    proc = ctx.Process(target=_queue_call, args=(queue, fn, args))
+    proc.start()
+    proc.join(timeout)
+    if proc.is_alive():
+        proc.terminate()
+        proc.join(2)
+        pytest.skip("Keychain FFI hung waiting for UI")
+    if queue.empty():
+        pytest.skip("Keychain FFI returned no status")
+    kind, payload = queue.get()
+    if kind == "err":
+        pytest.skip(str(payload))
+    return payload
+
+
+def _darwin_add_dummy(service: str, account: str, payload: bytes) -> None:
+    status = int(_run_with_timeout(_dummy_add_status, (service, account, payload)))
+    if status in (_ERR_SEC_INTERACTION_NOT_ALLOWED, _ERR_SEC_USER_CANCELED):
+        pytest.skip(f"SecItemAdd requires Keychain UI (OSStatus {status})")
+    if status != 0:
+        pytest.skip(f"SecItemAdd OSStatus {status}")
+
+
+def _darwin_delete_dummy(service: str, account: str) -> None:
+    _run_with_timeout(_dummy_delete_status, (service, account))
+
+
+@pytest.mark.skipif(not _DARWIN, reason="darwin Security.framework FFI")
+class TestDarwinKeychainReader:
+    def test_query_construction_accepts_existing_c_void_p(self) -> None:
+        cf = _core_foundation()
+        boolean_true = ctypes.c_void_p.in_dll(cf, "kCFBooleanTrue")
+        with pytest.raises(TypeError, match="cannot be converted to pointer"):
+            (ctypes.c_void_p * 1)(ctypes.c_void_p(boolean_true))
+        array = (ctypes.c_void_p * 1)(boolean_true)
+        raw = array[0].value if isinstance(array[0], ctypes.c_void_p) else array[0]
+        assert raw == boolean_true.value
+
+    def test_dictionary_callbacks_are_cf_type_addresses(self) -> None:
+        cf = _core_foundation()
+        key_cb, value_cb = _darwin_dictionary_callbacks(cf)
+        assert key_cb != 0
+        assert value_cb != 0
+        assert key_cb != value_cb
+
+    def test_missing_item_returns_none_without_typeerror(self) -> None:
+        got = _darwin_read_generic_secret(
+            "shipwright.debug.repro.nonexistent",
+            "dummy-account",
+        )
+        assert got is None
+
+    def test_dummy_item_roundtrip_then_cleanup(self) -> None:
+        if os.environ.get("SW_KEYCHAIN_INTEGRATION") != "1":
+            pytest.skip("set SW_KEYCHAIN_INTEGRATION=1 to write a dummy Keychain item")
+        service = f"shipwright.debug.repro.{uuid.uuid4().hex}"
+        account = "dummy-account"
+        payload = _TEST_VALUE.encode("utf-8")
+        _darwin_add_dummy(service, account, payload)
+        try:
+            got = _darwin_read_generic_secret(service, account)
+            assert got == payload
+        finally:
+            _darwin_delete_dummy(service, account)
+            assert (
+                _darwin_read_generic_secret(service, account) is None
+            )
+
+    def test_diagnostics_never_include_secret_bytes(self, capsys: pytest.CaptureFixture[str]) -> None:
+        try:
+            _darwin_read_generic_secret(
+                "shipwright.debug.repro.nonexistent",
+                "dummy-account",
+            )
+        except KeystoreServiceError as exc:
+            blob = f"{exc} {exc.code}"
+            assert _TEST_VALUE not in blob
+        captured = capsys.readouterr()
+        assert _TEST_VALUE not in captured.out
+        assert _TEST_VALUE not in captured.err
