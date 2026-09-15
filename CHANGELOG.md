@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.17.1](https://github.com/grdavies/shipwright/compare/v2.17.0...v2.17.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* **planning:** resolve Linear live evidence outside consumer repos ([#1203](https://github.com/grdavies/shipwright/issues/1203)) ([17f5397](https://github.com/grdavies/shipwright/commit/17f53975cc0b8216d1020258baa2caceb9e262b6))
+* **prd-0:** macos keychain reader ([#1201](https://github.com/grdavies/shipwright/issues/1201)) ([55b2ac3](https://github.com/grdavies/shipwright/commit/55b2ac3c0688f039e70a8f16e9460955baab1362))
+
 ## [2.17.0](https://github.com/grdavies/shipwright/compare/v2.16.2...v2.17.0) (2026-09-14)
 
 
