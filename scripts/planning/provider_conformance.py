@@ -24,8 +24,13 @@ from issues_lib import (
     use_fixture_mode,
 )
 
-CONFORMANCE_FIXTURES_REL = Path("scripts/test/fixtures/planning-provider-conformance")
-PACKAGED_CONFORMANCE_REL = Path("core/sw-reference/provider-conformance")
+from planning.packaged_conformance_roots import (
+    conformance_fixture_path,
+    load_conformance_record,
+    provider_fixture_slug,
+    providers_with_green_conformance,
+    resolve_conformance_fixture_path,
+)
 
 CONFORMANCE_DIMENSIONS: tuple[str, ...] = (
     "auth-success",
@@ -51,60 +56,8 @@ DOCS_GATED_PROVIDERS: frozenset[str] = frozenset({"notion"})
 _SAMPLE_BODY = "---\nunitId: conf-sample\ntitle: Conformance\n---\n\n# conformance sample\n"
 
 
-def provider_fixture_slug(provider: str) -> str:
-    return provider.replace("-issues", "")
-
-
-def conformance_fixture_path(root: Path, provider: str) -> Path:
-    slug = provider_fixture_slug(provider)
-    return (root / CONFORMANCE_FIXTURES_REL / f"{slug}.ok.json").resolve()
-
-
-def resolve_conformance_fixture_path(root: Path, provider: str) -> Path | None:
-    """Locate recorded evidence on the given root — test fixtures or packaged plugin copies."""
-    slug = provider_fixture_slug(provider)
-    for rel in (CONFORMANCE_FIXTURES_REL, PACKAGED_CONFORMANCE_REL):
-        candidate = (root / rel / f"{slug}.ok.json").resolve()
-        if candidate.is_file():
-            return candidate
-    return None
-
-
 def conformance_dimensions_green(record: dict[str, Any]) -> bool:
     return record.get("verdict") == "ok" and _dimensions_all_green(record)
-
-
-def load_conformance_record(root: Path, provider: str) -> dict[str, Any]:
-    path = resolve_conformance_fixture_path(root, provider)
-    if path is None:
-        path = conformance_fixture_path(root, provider)
-    if not path.is_file():
-        return {
-            "verdict": "fail",
-            "provider": provider,
-            "error": "missing-conformance-record",
-            "fixturePath": str(path),
-        }
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        return {
-            "verdict": "fail",
-            "provider": provider,
-            "error": "invalid-conformance-record",
-            "fixturePath": str(path),
-            "message": str(exc),
-        }
-    if not isinstance(payload, dict):
-        return {
-            "verdict": "fail",
-            "provider": provider,
-            "error": "invalid-conformance-record",
-            "fixturePath": str(path),
-        }
-    payload.setdefault("provider", provider)
-    payload.setdefault("fixturePath", str(path))
-    return payload
 
 
 def conformance_record_hash(record: dict[str, Any]) -> str:
@@ -121,28 +74,6 @@ def conformance_record_hash(record: dict[str, Any]) -> str:
     }
     blob = json.dumps(canonical, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
-
-
-def providers_with_green_conformance(root: Path) -> frozenset[str]:
-    shipped: set[str] = set()
-    for provider in sorted(CONFORMANCE_GATED_PROVIDERS):
-        record = load_conformance_record(root, provider)
-        if conformance_dimensions_green(record):
-            if provider in DOCS_GATED_PROVIDERS and not _provider_docs_gate_green(root, provider):
-                continue
-            shipped.add(provider)
-    return frozenset(shipped)
-
-
-def _provider_docs_gate_green(root: Path, provider: str) -> bool:
-    if provider != "notion":
-        return True
-    try:
-        from planning_notion_client import docs_gate
-
-        return docs_gate(root).get("verdict") == "ok"
-    except Exception:  # noqa: BLE001 — fail closed; never break import-time shipped resolution
-        return False
 
 
 def _dimensions_all_green(record: dict[str, Any]) -> bool:
