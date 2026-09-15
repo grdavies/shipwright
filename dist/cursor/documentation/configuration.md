@@ -36,6 +36,30 @@ python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" init_scripts_facade.py -- . re
 `scripts/sw-run.py` (for example `~/.cursor/plugins/local/shipwright/scripts/sw-run.py`). Reinstall from
 the Shipwright source checkout with `python3 scripts/install.py` when the tree is missing.
 
+## Packaged provider conformance and config preserve (PRD 356)
+
+Packaged wheels record shipped issues-provider conformance under **host bundles**:
+
+```text
+<package-root>/dist/<host>/core/sw-reference/provider-conformance/
+```
+
+Resolution searches the configured/active host first; sibling hosts apply only when the active-host record
+is absent (never on present-and-fail). Package-root-only staging without `dist/<host>/…` yields an empty
+shipped set — Linear may appear as **recognized-but-not-shipped** even when credentials succeed.
+
+Live backend gating uses `shipped_issues_providers()` in `planning_store_facade.py` (root-keyed cache),
+shared by planning discovery and `gitignore-generate --write`.
+
+**Config preserve (D5):** when any workflow config candidate exists (`.shipwright/workflow.config.json`,
+legacy `.cursor/workflow.config.json`, or repo-root `workflow.config.json`), packaged init/configure
+writers skip overwrite. Credential/provider **references** are retained; secrets stay in the broker/selector.
+Greenfield repos still receive scaffold once. Optional doctor notice id: `config-preserved-on-upgrade`
+(keys-only, path-redacted).
+
+Dual-home layout contract for search roots: `core/sw-reference/layout.md` and `.shipwright/layout.md`
+(**PRD 356 packaged conformance surfaces**). `/sw-init` uses the same preserve policy on packaged reinstall.
+
 ## Credential references and machine-local selector
 
 Shipwright stores **non-secret credential references** in committed config and resolves secret material

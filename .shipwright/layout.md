@@ -778,6 +778,35 @@ not amend PRD 276 for the same behavior.
 Operator command detail: `core/commands/sw-deliver.md` **Closeout hardening**;
 `core/commands/sw-ship.md` **Phase-ship hygiene floors**.
 
+### PRD 356 packaged conformance surfaces (R1–R4, R7–R9, D3–D5)
+
+Packaged multi-root provider-conformance resolution, live shipped-provider gating, optional config
+preserve on reinstall, and R8 gap/signal closeout. Runtime modules mirrored under `core/scripts/` when
+touched (`core-scripts-parity`):
+
+| Module | Role | Regression |
+| --- | --- | --- |
+| `scripts/planning/packaged_conformance_roots.py` | D3 host-bundle search roots | `test_packaged_conformance_root.py` |
+| `scripts/planning/provider_conformance.py` | Conformance validation + fail-closed active host | `test_packaged_conformance_present_fail.py` |
+| `scripts/planning_store_facade.py` | Live shipped set + PRD 356 signal closeout | `test_packaged_conformance_live_gate.py`, `test_prd356_absorb_closeout.py` |
+| `scripts/sw-configure.py` | D5 skip-overwrite preserve | `test_config_preserve_on_upgrade.py` |
+| `scripts/test/fixtures/packaged-provider-conformance/` | D4 consumer fixture layout | `test_packaged_consumer_conformance.py` |
+
+**Provider-conformance search roots (dual-home):** prefer active-host
+`dist/<host>/core/sw-reference/provider-conformance/` under the installed package root; package-root-only
+`core/sw-reference/provider-conformance/` is documented as insufficient for packaged consumers.
+
+**Absorb acceptance map** (source gap → requirement cluster):
+
+| Gap | R-IDs | Acceptance |
+| --- | --- | --- |
+| `gap-465-packaged-runtime-misses-linear-conformance-under` | R1–R4, R7 | D3 resolution + live gating + D4 consumer test; evidence links in `verify_prd356_signal_closeout` |
+| (signals) `fb-20260915T051834Z-pack-conf`, `fb-6726286f-cfee-44a0-b075-f5ffe188ae68` | R8 | Resolved / superseded-partial disposition recorded at delivery closeout |
+| Config preserve (when co-shipped) | R5–R6 | D5 skip-overwrite across config candidates; credentialRef retained |
+
+Operator docs: `core/documentation/self-upgrade.md`, `configuration.md`, `troubleshooting.md`,
+`issue-store.md`; `docs/guides/*` remain redirect stubs only.
+
 ### PRD 279 write-binding surfaces (R13, R17, D1, D3)
 
 Per-repo memory write binding (absorb #733). Operator bind-before-sync guidance lives on

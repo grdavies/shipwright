@@ -132,6 +132,11 @@ Shipwright optimizes for **repeatable delivery**, not for skipping human merge j
 4. Run `shipwright self check` periodically; upgrade when available.
 5. Skim [workflows](workflows.md) for the doc → deliver → ship path you actually use.
 
+Packaged installs resolve shipped issues providers from `dist/<host>/core/sw-reference/provider-conformance/`
+under the installed wheel (see [self-upgrade](self-upgrade.md#packaged-provider-conformance-prd-356)). After
+`shipwright init`, operator workflow config is preserved across reinstall when any config candidate already
+exists — `/sw-init` adjacent packaged path uses the same skip-overwrite policy.
+
 ### After a month
 
 1. Use issue-store or file-store planning deliberately (configuration guide).

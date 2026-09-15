@@ -3640,6 +3640,25 @@ def main(argv: list[str] | None = None) -> None:
         out = verify_absorb_closeout_339(root)
         emit(out, 0 if out.get("verdict") == "ok" else 20)
 
+    if command == "verify-absorb-closeout-356":
+        from planning_store_facade import verify_prd356_signal_closeout
+
+        run_tests = str(flags.get("run_pytest") or os.environ.get("SW_PRD356_RUN_EVIDENCE", "")).strip().lower()
+        run_pytest = run_tests in {"1", "true", "yes", "on"}
+        out = verify_prd356_signal_closeout(root, run_pytest=run_pytest)
+        emit(out, 0 if out.get("verdict") == "ok" else 20)
+
+    if command == "record-absorb-linkage-356":
+        from planning_store_facade import record_absorb_linkage_356
+
+        prd_path = Path(flags["prd_path"]).resolve() if flags.get("prd_path") else None
+        out = record_absorb_linkage_356(
+            root,
+            prd_path=prd_path,
+            dry_run=bool(flags.get("dry_run")),
+        )
+        emit(out, 0 if out.get("verdict") in {"ok", "skipped"} else 20)
+
     if command == "record-absorb-linkage-339":
         prd_path = Path(flags["prd_path"]).resolve() if flags.get("prd_path") else None
         out = record_absorb_linkage_339(

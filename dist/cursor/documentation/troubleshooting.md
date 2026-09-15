@@ -3,6 +3,19 @@
 Operator diagnostics for common Shipwright failure modes. Prefer these recipes over
 ad-hoc retries when a command already emitted a typed halt and `resumeCommand`.
 
+## Linear recognized-but-not-shipped on packaged install (PRD 356)
+
+Symptom: planning discovery or `gitignore-generate --write` refuses Linear with
+**recognized-but-not-shipped** while doctor/credentials/schema succeed — common on consumer repos without
+a Shipwright source checkout.
+
+| Check | Action |
+| --- | --- |
+| Host bundle layout | Confirm `dist/<host>/core/sw-reference/provider-conformance/linear.ok.json` exists under the installed package (not only `core/sw-reference/…` at package root). |
+| Active host | Ensure the integration host env (`CURSOR_PLUGIN_ROOT`, `CODEX_PLUGIN_ROOT`, etc.) points at the expected `dist/<host>/` bundle. |
+| Present-and-fail | Corrupt active-host evidence stays fail-closed; sibling green does not override — fix or reinstall the active host bundle. |
+| Stale install | Run `shipwright self check` / upgrade; see [self-upgrade](self-upgrade.md#packaged-provider-conformance-prd-356). |
+
 ## Issue-store projection timeout and rate limits
 
 Post-merge living-doc projection (`wave living-docs reconcile`, including the path used by
