@@ -198,11 +198,91 @@ DEFERRED_ISSUES_PROVIDERS = frozenset({"gitlab-issues"})
 _REPO_ROOT = SCRIPT_DIR.parent
 
 
-def resolve_shipped_issues_providers(root: Path | None = None) -> frozenset[str]:
-    return load_submodule("provider_conformance").providers_with_green_conformance(root or _REPO_ROOT)
+def resolve_shipped_issues_providers(
+    root: Path | None = None,
+    *,
+    package_root: Path | None = None,
+    active_host: str | None = None,
+) -> frozenset[str]:
+    """Return providers with present+valid conformance under D3 packaged host-search."""
+    pc = load_submodule("provider_conformance")
+    return pc.live_shipped_providers(
+        root or _REPO_ROOT,
+        package_root=package_root,
+        active_host=active_host,
+    )
 
 
-SHIPPED_ISSUES_PROVIDERS = resolve_shipped_issues_providers()
+_shipped_providers_cache: dict[tuple[str, str, str | None], frozenset[str]] = {}
+
+
+def shipped_issues_providers(
+    root: Path | None = None,
+    *,
+    package_root: Path | None = None,
+    active_host: str | None = None,
+) -> frozenset[str]:
+    """Live shipped set with root-keyed cache — not frozen at import (PRD 356 R3)."""
+    from planning.packaged_conformance_roots import is_host_bundle, resolve_package_root
+
+    resolved_root = (root or _REPO_ROOT).resolve()
+    pkg = package_root
+    if pkg is None:
+        pkg = resolve_package_root(resolved_root)
+        if not is_host_bundle(pkg) and not (pkg / "dist").is_dir():
+            try:
+                resolved_root.relative_to(_REPO_ROOT)
+            except ValueError:
+                pass
+            else:
+                pkg = resolve_package_root(_REPO_ROOT)
+    pkg = pkg.resolve()
+    cache_key = (str(resolved_root), str(pkg), active_host)
+    cached = _shipped_providers_cache.get(cache_key)
+    if cached is not None:
+        return cached
+    result = resolve_shipped_issues_providers(
+        resolved_root,
+        package_root=pkg,
+        active_host=active_host,
+    )
+    _shipped_providers_cache[cache_key] = result
+    return result
+
+
+def clear_shipped_providers_cache() -> None:
+    """Clear the live shipped-providers cache (tests and hermetic harnesses)."""
+    _shipped_providers_cache.clear()
+
+
+class _ShippedIssuesProvidersLive:
+    """Backward-compat view — resolves live against ``_REPO_ROOT`` on each access."""
+
+    def __contains__(self, item: object) -> bool:
+        return item in shipped_issues_providers()
+
+    def __iter__(self):
+        return iter(shipped_issues_providers())
+
+    def __len__(self) -> int:
+        return len(shipped_issues_providers())
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, (set, frozenset, _ShippedIssuesProvidersLive)):
+            return shipped_issues_providers() == frozenset(other)  # type: ignore[arg-type]
+        return NotImplemented
+
+    def __or__(self, other: object) -> frozenset[str]:
+        return shipped_issues_providers() | frozenset(other)  # type: ignore[arg-type]
+
+    def __ror__(self, other: object) -> frozenset[str]:
+        return frozenset(other) | shipped_issues_providers()  # type: ignore[arg-type]
+
+    def __repr__(self) -> str:
+        return repr(shipped_issues_providers())
+
+
+SHIPPED_ISSUES_PROVIDERS = _ShippedIssuesProvidersLive()
 
 MIN_ISSUES_SCOPES: dict[str, list[str]] = {
     "github-issues": ["repo"],
@@ -450,7 +530,7 @@ def contains_raw_transcript(content: str) -> bool:
     return any(marker.search(content) for marker in RAW_TRANSCRIPT_MARKERS)
 
 
-def resolve_issues_provider(cfg: dict[str, Any]) -> dict[str, Any]:
+def resolve_issues_provider(cfg: dict[str, Any], root: Path | None = None) -> dict[str, Any]:
     store = store_section(cfg)
     configured = store.get("issuesProvider")
     if not isinstance(configured, str) or not configured.strip():
@@ -463,7 +543,7 @@ def resolve_issues_provider(cfg: dict[str, Any]) -> dict[str, Any]:
         }
     provider = configured.strip()
     supported = provider in ISSUES_PROVIDERS
-    shipped = provider in SHIPPED_ISSUES_PROVIDERS
+    shipped = provider in shipped_issues_providers(root)
     if not supported:
         return {
             "verdict": "ok",
@@ -501,26 +581,26 @@ def issues_provider_registration_footprint() -> dict[str, Any]:
         "verdict": "ok",
         "action": "issues-provider-registration",
         "issuesProviders": sorted(ISSUES_PROVIDERS),
-        "shippedIssuesProviders": sorted(SHIPPED_ISSUES_PROVIDERS),
+        "shippedIssuesProviders": sorted(shipped_issues_providers()),
         "deferredIssuesProviders": sorted(DEFERRED_ISSUES_PROVIDERS),
         "rateLimitMap": dict(issues_http.ISSUES_PROVIDER_TO_RATELIMIT),
         "capabilityIndexIds": dict(ISSUES_CAPABILITY_INDEX_IDS),
         "migrationHooks": list(ISSUES_MIGRATION_HOOKS),
         "linear": load_providers_package().linear.registration_footprint(
             recognized="linear" in ISSUES_PROVIDERS,
-            shipped="linear" in SHIPPED_ISSUES_PROVIDERS,
+            shipped="linear" in shipped_issues_providers(),
             live_client_wired=linear_wired,
         ),
         "linearSemanticCrud": _linear_semantic_crud_registration(),
         "notion": load_providers_package().notion.registration_footprint(
             recognized="notion" in ISSUES_PROVIDERS,
-            shipped="notion" in SHIPPED_ISSUES_PROVIDERS,
+            shipped="notion" in shipped_issues_providers(),
             live_client_wired=notion_wired,
         ),
         "recognitionVsShipped": {
             provider: {
                 "recognized": provider in ISSUES_PROVIDERS,
-                "shipped": provider in SHIPPED_ISSUES_PROVIDERS,
+                "shipped": provider in shipped_issues_providers(),
                 "deferred": provider in DEFERRED_ISSUES_PROVIDERS,
             }
             for provider in sorted(_BASE_ISSUES_PROVIDERS | live_recognized)
@@ -634,7 +714,7 @@ def doctor_issues_provider_stub(root: Path, cfg: dict[str, Any]) -> dict[str, An
             root,
             provider=provider,
             issues_providers=ISSUES_PROVIDERS,
-            shipped_providers=SHIPPED_ISSUES_PROVIDERS,
+            shipped_providers=shipped_issues_providers(_REPO_ROOT),
         )
         if linear_result is not None:
             return linear_result
@@ -645,7 +725,7 @@ def doctor_issues_provider_stub(root: Path, cfg: dict[str, Any]) -> dict[str, An
             root,
             provider=provider,
             issues_providers=ISSUES_PROVIDERS,
-            shipped_providers=SHIPPED_ISSUES_PROVIDERS,
+            shipped_providers=shipped_issues_providers(_REPO_ROOT),
         )
         if notion_result is not None:
             return notion_result
@@ -770,7 +850,7 @@ def issue_store_fallback_reason(root: Path, cfg: dict[str, Any], *, override: st
         if bitbucket_host_active(root, cfg):
             return "bitbucket-issues-unavailable"
         return "issues-provider-none-or-unsupported"
-    if issues["provider"] not in SHIPPED_ISSUES_PROVIDERS:
+    if issues["provider"] not in shipped_issues_providers(_REPO_ROOT):
         return "issues-provider-not-shipped"
     host = resolve_provider(root)
     if host.get("verdict") != "ok" or host.get("provider") == "none":
@@ -1025,7 +1105,7 @@ def probe_store_host_privacy(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
         }
 
     provider = str(store.get("issuesProvider", "none")).strip().lower()
-    if provider not in SHIPPED_ISSUES_PROVIDERS:
+    if provider not in shipped_issues_providers(_REPO_ROOT):
         return {
             "verdict": "ok",
             "storeHostPrivacy": "public",
@@ -7020,6 +7100,233 @@ def resolve_absorbed_gaps_061(
     ok = all(r.get("verdict") in {"pass", "dry-run"} for r in results)
     return {"verdict": "ok" if ok else "partial", "action": "resolve-absorbed-gaps-061", "dryRun": dry_run, "results": results}
 
+
+# PRD 356 R8 — packaged conformance gap + signal closeout
+PRD_356_UNIT_ID = "356-prd-packaged-provider-conformance-root"
+PRD_356_NUMBER = "356"
+PRD_356_GAP_UNIT_ID = "gap-465-packaged-runtime-misses-linear-conformance-under"
+PRD_356_SOURCE_SIGNAL_ID = "fb-20260915T051834Z-pack-conf"
+PRD_356_RELATED_SIGNAL_ID = "fb-6726286f-cfee-44a0-b075-f5ffe188ae68"
+PRD_356_ABSORB_GAP_UNITS: tuple[str, ...] = (PRD_356_GAP_UNIT_ID,)
+PRD_356_P0_EVIDENCE_TESTS: tuple[str, ...] = (
+    "scripts/unit_tests/planning/test_packaged_conformance_root.py",
+    "scripts/unit_tests/planning/test_packaged_conformance_present_fail.py",
+    "scripts/unit_tests/planning/test_packaged_conformance_live_gate.py",
+    "scripts/unit_tests/planning/test_packaged_consumer_conformance.py",
+)
+PRD_356_P1_EVIDENCE_TESTS: tuple[str, ...] = (
+    "scripts/unit_tests/init/test_packaged_install_scope.py",
+    "scripts/unit_tests/init/test_config_preserve_on_upgrade.py",
+)
+PRD_356_EVIDENCE_MODULES: tuple[str, ...] = (
+    "scripts/planning/packaged_conformance_roots.py",
+    "scripts/planning/provider_conformance.py",
+    "scripts/planning_store_facade.py",
+)
+
+
+def prd356_p1_shipped(root: Path) -> bool:
+    """True when P1 config-preserve acceptance tests and writer are present."""
+    return all((root / rel).is_file() for rel in PRD_356_P1_EVIDENCE_TESTS)
+
+
+def prd356_signal_disposition_plan(*, p1_shipped: bool) -> dict[str, Any]:
+    """R8 disposition plan for source + related feedback signals and P1 deferral."""
+    return {
+        "sourceSignal": {
+            "signalId": PRD_356_SOURCE_SIGNAL_ID,
+            "disposition": "resolved",
+            "reason": "PRD 356 P0 packaged conformance root delivery (R1–R4, R7)",
+        },
+        "relatedSignal": {
+            "signalId": PRD_356_RELATED_SIGNAL_ID,
+            "disposition": "superseded/partial",
+            "reason": (
+                "Shared recognized-but-not-shipped symptom addressed by D3 multi-root "
+                "resolution and live gating; partial where unrelated Linear meta scope remains"
+            ),
+        },
+        "p1Status": "shipped" if p1_shipped else "deferred",
+        "deferredRequirements": [] if p1_shipped else ["R5", "R6"],
+        "evidenceLinks": {
+            "p0Tests": list(PRD_356_P0_EVIDENCE_TESTS),
+            "p1Tests": list(PRD_356_P1_EVIDENCE_TESTS) if p1_shipped else [],
+            "modules": list(PRD_356_EVIDENCE_MODULES),
+            "gapUnitId": PRD_356_GAP_UNIT_ID,
+            "prdUnitId": PRD_356_UNIT_ID,
+        },
+    }
+
+
+def verify_prd356_packaged_evidence(
+    root: Path,
+    *,
+    run_pytest: bool = False,
+) -> dict[str, Any]:
+    """Verify R1–R4+R7 (+ optional P1) evidence artifacts exist; optionally run pytest."""
+    missing = [rel for rel in PRD_356_P0_EVIDENCE_TESTS if not (root / rel).is_file()]
+    missing.extend(rel for rel in PRD_356_EVIDENCE_MODULES if not (root / rel).is_file())
+    p1_shipped = prd356_p1_shipped(root)
+    if p1_shipped:
+        missing.extend(rel for rel in PRD_356_P1_EVIDENCE_TESTS if not (root / rel).is_file())
+    if missing:
+        return {
+            "verdict": "fail",
+            "action": "verify-prd356-packaged-evidence",
+            "error": "evidence-artifact-missing",
+            "missing": sorted(set(missing)),
+            "p1Shipped": p1_shipped,
+        }
+    if not run_pytest:
+        return {
+            "verdict": "ok",
+            "action": "verify-prd356-packaged-evidence",
+            "p1Shipped": p1_shipped,
+            "evidenceTests": list(PRD_356_P0_EVIDENCE_TESTS),
+        }
+    import subprocess
+    import sys
+    import tempfile
+
+    tests = list(PRD_356_P0_EVIDENCE_TESTS)
+    if p1_shipped:
+        tests.extend(PRD_356_P1_EVIDENCE_TESTS)
+    env = os.environ.copy()
+    env.pop("PYTEST_ADDOPTS", None)
+    env.pop("PYTEST_CURRENT_TEST", None)
+    path_parts = [str(root / "scripts")]
+    prev = env.get("PYTHONPATH", "")
+    if prev:
+        path_parts.append(prev)
+    env["PYTHONPATH"] = os.pathsep.join(path_parts)
+    with tempfile.TemporaryDirectory(prefix="prd356-evidence-") as td:
+        ini = Path(td) / "pytest.ini"
+        ini.write_text("[pytest]\npythonpath = scripts\n", encoding="utf-8")
+        proc = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                *[str(root / rel) for rel in tests],
+                "-q",
+                "--rootdir",
+                str(root),
+                "-c",
+                str(ini),
+                "-p",
+                "no:cacheprovider",
+            ],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+    if proc.returncode != 0:
+        detail = "\n".join(
+            part for part in ((proc.stdout or "").strip(), (proc.stderr or "").strip()) if part
+        )
+        return {
+            "verdict": "fail",
+            "action": "verify-prd356-packaged-evidence",
+            "error": "evidence-pytest-failed",
+            "exitCode": proc.returncode,
+            "stderr": detail[:4000] or None,
+            "p1Shipped": p1_shipped,
+        }
+    return {
+        "verdict": "ok",
+        "action": "verify-prd356-packaged-evidence",
+        "p1Shipped": p1_shipped,
+        "evidenceTests": tests,
+        "pytest": "green",
+    }
+
+
+def verify_absorb_closeout_356(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Verify PRD 356 close-out discovers the source gap (R8)."""
+    resolved_cfg = cfg if cfg is not None else load_workflow_config(root)
+    snap = resolve_delivery_linked_units(root, resolved_cfg, PRD_356_UNIT_ID)
+    if snap.get("verdict") == "fail":
+        return {
+            "verdict": "fail",
+            "action": "verify-absorb-closeout-356",
+            "error": snap.get("error"),
+            "prdUnitId": PRD_356_UNIT_ID,
+        }
+    gap_ids = [
+        item["unitId"]
+        for item in snap.get("snapshot", [])
+        if item.get("artifactType") == "gap"
+    ]
+    discovered = set(gap_ids)
+    from planning_gap_capture import gap_absorb_target_match
+
+    missing = [
+        gap_id
+        for gap_id in PRD_356_ABSORB_GAP_UNITS
+        if not any(gap_absorb_target_match(item, gap_id) for item in discovered)
+    ]
+    return {
+        "verdict": "ok" if not missing else "fail",
+        "action": "verify-absorb-closeout-356",
+        "prdUnitId": PRD_356_UNIT_ID,
+        "discovered": sorted(discovered),
+        "missing": missing,
+        "skipped": list(snap.get("skipped") or []),
+    }
+
+
+def record_absorb_linkage_356(
+    root: Path,
+    *,
+    prd_path: Path | None = None,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """Record PRD 356 absorb linkage for gap-465 (R8)."""
+    from planning_gap_capture import record_absorb_linkage
+
+    out = record_absorb_linkage(
+        root,
+        prd_unit_id=PRD_356_UNIT_ID,
+        prd_number=PRD_356_NUMBER,
+        gap_unit_ids=list(PRD_356_ABSORB_GAP_UNITS),
+        prd_path=prd_path,
+        dry_run=dry_run,
+    )
+    return {**out, "action": "record-absorb-linkage-356"}
+
+
+def verify_prd356_signal_closeout(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+    *,
+    run_pytest: bool = False,
+) -> dict[str, Any]:
+    """Authoritative R8 bundle: P0 evidence + absorb discovery + signal disposition plan."""
+    evidence = verify_prd356_packaged_evidence(root, run_pytest=run_pytest)
+    if evidence.get("verdict") != "ok":
+        return {
+            "verdict": "fail",
+            "action": "verify-prd356-signal-closeout",
+            "error": "evidence-not-verified",
+            "evidence": evidence,
+        }
+    p1_shipped = bool(evidence.get("p1Shipped"))
+    absorb = verify_absorb_closeout_356(root, cfg)
+    disposition = prd356_signal_disposition_plan(p1_shipped=p1_shipped)
+    ok = absorb.get("verdict") == "ok"
+    return {
+        "verdict": "ok" if ok else "fail",
+        "action": "verify-prd356-signal-closeout",
+        "prdUnitId": PRD_356_UNIT_ID,
+        "gapUnitId": PRD_356_GAP_UNIT_ID,
+        "evidence": evidence,
+        "absorb": absorb,
+        "signalDisposition": disposition,
+    }
 
 
 def main() -> None:

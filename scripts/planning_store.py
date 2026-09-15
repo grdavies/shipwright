@@ -194,6 +194,7 @@ _EXPORTED_NAMES = (
     'self_heal_unit_index',
     'serialize_comments_relations_facade',
     'set_projection_dirty',
+    'shipped_issues_providers',
     'store_section',
     'strip_markers_and_edges',
     'structural_labels_from_content',

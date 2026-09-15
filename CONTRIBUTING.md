@@ -160,6 +160,7 @@ integrated pytest wrapper — path-triggered when doctrine schemas, lifecycle, o
 <!-- suite-registry.json and ci_plan_gen.py are authoritative for plan names above. -->
 <!-- PRD 333: provider/parity stub suites may register in suite-registry without enabling remote/marketplace paths. -->
 <!-- PRD 338: absorb-closeout + bundle-acceptance fixtures register under pr-ci / verify; keep pr-test-plan.manifest.json aligned. -->
+<!-- PRD 356: packaged-provider conformance absorb-closeout pytest registers under pr-ci (shard 2); keep suite-registry + pr-test-plan.manifest.json aligned. -->
 
 ## Initialization and doctor checks
 
@@ -184,4 +185,4 @@ Re-run the matching doctor after remediation; codes are designed for CI log grep
 
 Open a [discussion](https://github.com/grdavies/shipwright/discussions) or file an issue if something is
 unclear before starting large changes.
-<!-- currency: refreshed 2026-09-14T20:02:00Z — terminal docs-currency after suite-registry / host-switch closeout -->
+<!-- currency: refreshed 2026-09-15T20:24:00Z — terminal docs-currency after PRD 356 suite-registry absorb closeout -->

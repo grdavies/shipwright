@@ -642,6 +642,7 @@
     "planning/identity.py",
     "planning/migrations.py",
     "planning/model.py",
+    "planning/packaged_conformance_roots.py",
     "planning/provider_conformance.py",
     "planning/providers/__init__.py",
     "planning/providers/_boundary.py",
@@ -890,6 +891,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 887,
+  "moduleCount": 888,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

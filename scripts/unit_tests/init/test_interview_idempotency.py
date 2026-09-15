@@ -35,14 +35,10 @@ def sw_configure():
     return _load_sw_configure()
 
 
-def test_second_run_reapplies_and_restores_stale_configure_stamp(
+def test_second_run_preserves_existing_operator_config_stamp(
     tmp_path: Path, sw_configure
 ) -> None:
-    """R28 (packaged path) — schema-backed re-apply restores drifted configure stamp.
-
-    Consent-gated delta proposal is not part of ``apply_packaged_configure`` today;
-    this covers the packaged spine that post-merge verify exercises.
-    """
+    """PRD 356 R5 — packaged re-apply preserves operator-owned config values."""
     schema_rel = Path(sw_configure.SCHEMA_REL)
     schema_dest = tmp_path / schema_rel.parent
     schema_dest.mkdir(parents=True)
@@ -60,12 +56,15 @@ def test_second_run_reapplies_and_restores_stale_configure_stamp(
     stamp = cfg.setdefault("configuredWith", {})
     stamp["shipwrightVersion"] = "0.0.0-stale"
     config_path.write_text(json.dumps(cfg, indent=2) + "\n", encoding="utf-8")
+    before = config_path.read_text(encoding="utf-8")
 
     second = sw_configure.apply_packaged_configure(tmp_path, accept_ci_stub=False)
     assert second["verdict"] == "pass"
-    assert second.get("written")
+    assert second.get("preserved") is True
+    assert second.get("written") == []
+    assert config_path.read_text(encoding="utf-8") == before
     after = json.loads(config_path.read_text(encoding="utf-8"))
-    assert after["configuredWith"]["shipwrightVersion"] != "0.0.0-stale"
+    assert after["configuredWith"]["shipwrightVersion"] == "0.0.0-stale"
 
 
 def test_out_of_scope_broker_reference_fails_before_success() -> None:
