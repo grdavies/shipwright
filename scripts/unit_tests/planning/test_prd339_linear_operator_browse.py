@@ -169,8 +169,13 @@ def test_assert_linear_not_lcd_labels_only_accepts_full_projection() -> None:
     assert out["verdict"] == "pass"
 
 
-def test_gap079_linear_ui_answerability_blocked_without_prd061(tmp_path: Path) -> None:
+def test_gap079_linear_ui_answerability_blocked_without_prd061(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """R34 — prerequisite readiness is required before browse answerability passes."""
+    import planning_linear_client as plc
+
+    monkeypatch.setattr(plc, "_plugin_source_root", lambda: tmp_path)
     out = facade.gap079_linear_ui_answerability(tmp_path, evidence=_r1_evidence_from_projection_specs())
     assert out["verdict"] == "fail"
     assert out["error"] == "prd061-prerequisite-blocked"

@@ -277,6 +277,12 @@
     "core/schemas/capabilities/opencode.json",
     "core/schemas/events.json",
     "core/schemas/handoff_bundle.json",
+    "core/sw-reference/linear-promotion/oauth-docs-gate.ok.json",
+    "core/sw-reference/linear-promotion/stage1-dogfood-gate.ok.json",
+    "core/sw-reference/provider-conformance/github.ok.json",
+    "core/sw-reference/provider-conformance/jira.ok.json",
+    "core/sw-reference/provider-conformance/linear.ok.json",
+    "core/sw-reference/provider-conformance/notion.ok.json",
     "core/tests/fixtures/bundle_self_test/digest_failure.json",
     "core/tests/fixtures/bundle_self_test/field_type_mismatch.json",
     "core/tests/fixtures/bundle_self_test/missing_required.json",
@@ -884,6 +890,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 881,
+  "moduleCount": 887,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

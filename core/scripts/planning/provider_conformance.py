@@ -25,6 +25,7 @@ from issues_lib import (
 )
 
 CONFORMANCE_FIXTURES_REL = Path("scripts/test/fixtures/planning-provider-conformance")
+PACKAGED_CONFORMANCE_REL = Path("core/sw-reference/provider-conformance")
 
 CONFORMANCE_DIMENSIONS: tuple[str, ...] = (
     "auth-success",
@@ -59,8 +60,24 @@ def conformance_fixture_path(root: Path, provider: str) -> Path:
     return (root / CONFORMANCE_FIXTURES_REL / f"{slug}.ok.json").resolve()
 
 
+def resolve_conformance_fixture_path(root: Path, provider: str) -> Path | None:
+    """Locate recorded evidence on the given root — test fixtures or packaged plugin copies."""
+    slug = provider_fixture_slug(provider)
+    for rel in (CONFORMANCE_FIXTURES_REL, PACKAGED_CONFORMANCE_REL):
+        candidate = (root / rel / f"{slug}.ok.json").resolve()
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def conformance_dimensions_green(record: dict[str, Any]) -> bool:
+    return record.get("verdict") == "ok" and _dimensions_all_green(record)
+
+
 def load_conformance_record(root: Path, provider: str) -> dict[str, Any]:
-    path = conformance_fixture_path(root, provider)
+    path = resolve_conformance_fixture_path(root, provider)
+    if path is None:
+        path = conformance_fixture_path(root, provider)
     if not path.is_file():
         return {
             "verdict": "fail",
@@ -110,7 +127,7 @@ def providers_with_green_conformance(root: Path) -> frozenset[str]:
     shipped: set[str] = set()
     for provider in sorted(CONFORMANCE_GATED_PROVIDERS):
         record = load_conformance_record(root, provider)
-        if record.get("verdict") == "ok" and _dimensions_all_green(record):
+        if conformance_dimensions_green(record):
             if provider in DOCS_GATED_PROVIDERS and not _provider_docs_gate_green(root, provider):
                 continue
             shipped.add(provider)

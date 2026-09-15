@@ -1,0 +1,78 @@
+{
+  "verdict": "ok",
+  "provider": "linear",
+  "action": "provider-conformance-record",
+  "dimensions": {
+    "auth-success": {
+      "verdict": "ok",
+      "dimension": "auth-success",
+      "issueId": "8a5927ff-55e9-4695-827f-773699be47a8"
+    },
+    "auth-failure": {
+      "verdict": "ok",
+      "dimension": "auth-failure",
+      "observed": "missing-token"
+    },
+    "identity-mismatch": {
+      "verdict": "ok",
+      "dimension": "identity-mismatch",
+      "issueId": "e749ff7b-0e82-4fea-9dc4-bbdad517513c"
+    },
+    "visibility": {
+      "verdict": "ok",
+      "dimension": "visibility"
+    },
+    "crud-lifecycle": {
+      "verdict": "ok",
+      "dimension": "crud-lifecycle",
+      "issueId": "b5307580-51b8-4a23-b6c3-89ad79b6532c",
+      "commentCount": 1
+    },
+    "optimistic-concurrency": {
+      "verdict": "ok",
+      "dimension": "optimistic-concurrency"
+    },
+    "idempotent-retries": {
+      "verdict": "ok",
+      "dimension": "idempotent-retries",
+      "attempts": 2,
+      "issueId": "c967112f-ca0f-4a51-ac62-2c3d5255a3fd"
+    },
+    "rate-limits": {
+      "verdict": "ok",
+      "dimension": "rate-limits"
+    },
+    "pagination": {
+      "verdict": "ok",
+      "dimension": "pagination",
+      "count": 3
+    },
+    "partial-outage": {
+      "verdict": "ok",
+      "dimension": "partial-outage",
+      "attempts": 2,
+      "issueId": "6e0be992-82eb-44dc-9e40-bebb0f02e7b1"
+    },
+    "redaction": {
+      "verdict": "ok",
+      "dimension": "redaction"
+    },
+    "concurrent-writes": {
+      "verdict": "ok",
+      "dimension": "concurrent-writes"
+    },
+    "timeout-recovery": {
+      "verdict": "ok",
+      "dimension": "timeout-recovery",
+      "attempts": 2,
+      "elapsedMs": 117,
+      "issueId": "97a7b6a7-ad0c-4340-802d-fb02c06d2e2b"
+    },
+    "archival": {
+      "verdict": "ok",
+      "dimension": "archival"
+    }
+  },
+  "recordHash": "74aa2a256b14ada12465eeca19041727d38023e1605e7be93ab36a47a1b15af6",
+  "writtenAt": 1786425360
+}

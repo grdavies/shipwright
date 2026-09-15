@@ -105,6 +105,8 @@
     "pr-test-plan.manifest.json",
     "project-baseline.schema.json",
     "project-doctrine.schema.json",
+    "provider-conformance/",
+    "linear-promotion/",
     "quality-signal.schema.json",
     "research-evidence.schema.json",
     "risk-class-floors.json",

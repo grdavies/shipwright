@@ -159,6 +159,8 @@ CORE_RUNTIME_SUBTREES = ("handoff", "schemas", "mcp")
 # Self-test fixtures live under core/tests/ (resolved relative to core/handoff/).
 CORE_RUNTIME_EXTRA_PATHS = (
     "tests/fixtures/bundle_self_test",
+    "sw-reference/provider-conformance",
+    "sw-reference/linear-promotion",
 )
 
 
