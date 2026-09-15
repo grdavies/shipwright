@@ -36,7 +36,7 @@ python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" init_scripts_facade.py -- . re
 `scripts/sw-run.py` (for example `~/.cursor/plugins/local/shipwright/scripts/sw-run.py`). Reinstall from
 the Shipwright source checkout with `python3 scripts/install.py` when the tree is missing.
 
-## Packaged provider conformance and config preserve 
+## Packaged provider conformance and config preserve
 
 Packaged wheels record shipped issues-provider conformance under **host bundles**:
 

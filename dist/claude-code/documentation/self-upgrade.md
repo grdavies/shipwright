@@ -22,7 +22,7 @@ yet:
 - `shipwright self upgrade` refuses with status `missing-assets` and names which files are absent.
  This is expected during rollout windows before the release job finishes uploading artifacts.
 
-## Packaged provider conformance 
+## Packaged provider conformance
 
 Installed wheels ship issues-provider conformance evidence under host bundles, not only at the
 package root:
@@ -42,7 +42,7 @@ Live planning and issue-store gating resolve the shipped provider set on each ca
 After `shipwright init` or reinstall, existing operator config under any config-preserve candidate
 (`.shipwright/workflow.config.json`, legacy `.cursor/workflow.config.json`, or repo-root
 `workflow.config.json`) is **preserved** (skip-overwrite). Greenfield repos still receive scaffold once.
-See [Configuration](configuration.md#packaged-provider-conformance-and-config-preserve-prd-356).
+See [Configuration](configuration.md#packaged-provider-conformance-and-config-preserve).
 
 `self check` remains **degraded** (not "up to date") when the distribution origin itself is
 unreachable. Missing assets on an otherwise reachable release are a separate, explicit condition —

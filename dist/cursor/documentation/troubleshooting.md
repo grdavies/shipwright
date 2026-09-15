@@ -14,7 +14,7 @@ a Shipwright source checkout.
 | Host bundle layout | Confirm `dist/<host>/core/sw-reference/provider-conformance/linear.ok.json` exists under the installed package (not only `core/sw-reference/…` at package root). |
 | Active host | Ensure the integration host env (`CURSOR_PLUGIN_ROOT`, `CODEX_PLUGIN_ROOT`, etc.) points at the expected `dist/<host>/` bundle. |
 | Present-and-fail | Corrupt active-host evidence stays fail-closed; sibling green does not override — fix or reinstall the active host bundle. |
-| Stale install | Run `shipwright self check` / upgrade; see [self-upgrade](self-upgrade.md#packaged-provider-conformance-prd-356). |
+| Stale install | Run `shipwright self check` / upgrade; see [self-upgrade](self-upgrade.md#packaged-provider-conformance). |
 
 ## Issue-store projection timeout and rate limits
 
