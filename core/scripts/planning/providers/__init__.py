@@ -111,7 +111,7 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
             "reason": "issues-provider-none-or-unsupported",
             "provider": provider,
         }
-    if provider not in ps.SHIPPED_ISSUES_PROVIDERS:
+    if provider not in ps.shipped_issues_providers(root):
         return {
             "verdict": "ok",
             "skipped": True,

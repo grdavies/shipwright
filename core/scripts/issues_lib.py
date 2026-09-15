@@ -321,6 +321,11 @@ class FixtureIssuesStore:
         return record
 
     def get(self, issue_id: str) -> IssueRecord:
+        record = self._issues.get(issue_id)
+        if record is None and issue_id.isdigit():
+            for candidate in self._issues.values():
+                if str(candidate.number) == issue_id:
+                    return self._resolve_get(candidate.id)
         return self._resolve_get(issue_id)
 
     def update(
@@ -529,8 +534,16 @@ def fixture_store_path(root: Path) -> Path:
     return root / ".cursor/hooks/state/issue-store-fixture.json"
 
 
+def host_fixture_store_path(root: Path) -> Path:
+    return root / ".cursor/hooks/state/host-issue-fixture.json"
+
+
 def use_fixture_mode() -> bool:
     return os.environ.get("SW_ISSUES_FIXTURE", "").strip() in {"1", "true", "yes"}
+
+
+def use_host_fixture_mode() -> bool:
+    return os.environ.get("SW_HOST_ISSUES_FIXTURE", "").strip() in {"1", "true", "yes"}
 
 
 def get_fixture_store(root: Path) -> FixtureIssuesStore:
@@ -569,9 +582,10 @@ class IssuesClient:
         if self.provider in DEFERRED_ISSUES_PROVIDERS:
             raise IssueCapabilityError(deferred_provider_message(self.provider))
         if self.provider in RECOGNIZED_NOT_SHIPPED_PROVIDERS:
-            from planning_store import SHIPPED_ISSUES_PROVIDERS
+            from planning_store_facade import _REPO_ROOT, shipped_issues_providers
 
-            if self.provider not in SHIPPED_ISSUES_PROVIDERS:
+            shipped = shipped_issues_providers(self.root) | shipped_issues_providers(_REPO_ROOT)
+            if self.provider not in shipped:
                 raise IssueCapabilityError(unshipped_provider_message(self.provider))
         if self.provider not in providers.PROVIDER_MODULES:
             raise IssueCapabilityError(
@@ -656,6 +670,16 @@ class IssuesClient:
         markers: list[str] | None = None,
         author_id: str = "",
     ) -> CommentRecord:
+        from planning.backends.issues import (
+            DocReviewCommentFacadeRequired,
+            assert_adapter_issue_comment_allowed,
+        )
+
+        try:
+            assert_adapter_issue_comment_allowed(body, markers)
+        except DocReviewCommentFacadeRequired as exc:
+            raise IssueCapabilityError(str(exc)) from exc
+
         def _run() -> CommentRecord:
             kwargs: dict[str, Any] = {}
             if markers is not None:
