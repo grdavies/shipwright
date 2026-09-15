@@ -1342,6 +1342,7 @@
 * merge phase evidence-and-reconciliation-slice-2 into feat/reliable-host-switching (4d72eca) <!-- sw-deliver:evidence-and-reconciliation-slice-2 -->
 * merge phase spending-and-retry-boundaries-slice-3 into feat/reliable-host-switching (2f02db1) <!-- sw-deliver:spending-and-retry-boundaries-slice-3 -->
 * merge phase test-harness-and-acceptance-slice-1-3 into feat/reliable-host-switching (487df41) <!-- sw-deliver:test-harness-and-acceptance-slice-1-3 -->
+* merge phase multi-root-conformance-resolution-p0 into feat/packaged-provider-conformance-root (842ad6d) <!-- sw-deliver:multi-root-conformance-resolution-p0 -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
