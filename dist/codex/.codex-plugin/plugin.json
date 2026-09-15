@@ -1,6 +1,6 @@
 {
   "name": "shipwright",
-  "version": "2.17.0",
+  "version": "2.17.1",
   "description": "Shipwright for Codex: frozen specs, a gated ship loop, and compounding memory.",
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json",
