@@ -3,6 +3,19 @@
 Operator diagnostics for common Shipwright failure modes. Prefer these recipes over
 ad-hoc retries when a command already emitted a typed halt and `resumeCommand`.
 
+## Linear recognized-but-not-shipped on packaged install 
+
+Symptom: planning discovery or `gitignore-generate --write` refuses Linear with
+**recognized-but-not-shipped** while doctor/credentials/schema succeed — common on consumer repos without
+a Shipwright source checkout.
+
+| Check | Action |
+| --- | --- |
+| Host bundle layout | Confirm `dist/<host>/core/sw-reference/provider-conformance/linear.ok.json` exists under the installed package (not only `core/sw-reference/…` at package root). |
+| Active host | Ensure the integration host env (`CURSOR_PLUGIN_ROOT`, `CODEX_PLUGIN_ROOT`, etc.) points at the expected `dist/<host>/` bundle. |
+| Present-and-fail | Corrupt active-host evidence stays fail-closed; sibling green does not override — fix or reinstall the active host bundle. |
+| Stale install | Run `shipwright self check` / upgrade; see [self-upgrade](self-upgrade.md#packaged-provider-conformance). |
+
 ## Issue-store projection timeout and rate limits
 
 Post-merge living-doc projection (`wave living-docs reconcile`, including the path used by
@@ -25,14 +38,14 @@ operator-facing `resumeCommand` on the halt payload (also echoed in deliver/livi
 1. Read `resumeCommand` from the halt report (do not invent a new reconcile invocation).
 2. Typical form:
 
-   ```bash
-   wave living-docs reconcile --commit
-   ```
+ ```bash
+ wave living-docs reconcile --commit
+ ```
 
-   When projection was scoped to a non-primary worktree, the command includes
-   `--orchestrator-worktree <path>`.
+ When projection was scoped to a non-primary worktree, the command includes
+ `--orchestrator-worktree <path>`.
 3. Re-run the printed command from the same worktree context. Completed steps (`index`, then
-   `gap-resolve`) are skipped; only pending work runs.
+ `gap-resolve`) are skipped; only pending work runs.
 4. On full success the projection state file is cleared automatically.
 
 ### Configuration knobs
