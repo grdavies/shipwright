@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.18.0](https://github.com/grdavies/shipwright/compare/v2.17.1...v2.18.0) (2026-09-15)
+
+
+### Features
+
+* **prd-356:** packaged provider conformance root ([#1209](https://github.com/grdavies/shipwright/issues/1209)) ([1e7b7d3](https://github.com/grdavies/shipwright/commit/1e7b7d3d734bece9fe3d69e747ad279a0c449c58))
+
 ## [2.17.1](https://github.com/grdavies/shipwright/compare/v2.17.0...v2.17.1) (2026-09-15)
 
 
