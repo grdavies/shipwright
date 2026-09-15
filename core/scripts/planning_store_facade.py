@@ -272,6 +272,12 @@ class _ShippedIssuesProvidersLive:
             return shipped_issues_providers() == frozenset(other)  # type: ignore[arg-type]
         return NotImplemented
 
+    def __or__(self, other: object) -> frozenset[str]:
+        return shipped_issues_providers() | frozenset(other)  # type: ignore[arg-type]
+
+    def __ror__(self, other: object) -> frozenset[str]:
+        return frozenset(other) | shipped_issues_providers()  # type: ignore[arg-type]
+
     def __repr__(self) -> str:
         return repr(shipped_issues_providers())
 
