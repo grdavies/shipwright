@@ -1345,6 +1345,7 @@
 * merge phase multi-root-conformance-resolution-p0 into feat/packaged-provider-conformance-root (842ad6d) <!-- sw-deliver:multi-root-conformance-resolution-p0 -->
 * merge phase config-preserve-spike-p1-co-ship-or-defer into feat/packaged-provider-conformance-root (625fb5b) <!-- sw-deliver:config-preserve-spike-p1-co-ship-or-defer -->
 * merge phase live-gating-without-import-time-freeze-p0 into feat/packaged-provider-conformance-root (9e609cb) <!-- sw-deliver:live-gating-without-import-time-freeze-p0 -->
+* merge phase packaged-consumer-fixture-and-ci-test-p0 into feat/packaged-provider-conformance-root (c5f6675) <!-- sw-deliver:packaged-consumer-fixture-and-ci-test-p0 -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
