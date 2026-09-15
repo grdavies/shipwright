@@ -319,7 +319,7 @@
       "sourcePath": "core/commands/sw-feedback-close.md"
     },
     {
-      "bodyDigest": "5f064a3b4fbf7674e674e01c00f835de7805abed9877b981c4243f79802e2a8e",
+      "bodyDigest": "c059ccbb4a71f178a8ce56b2c258ed57d52bd15afbd84e020de9098227c31cdd",
       "capabilities": [],
       "description": "Stamp frozen: true on an artifact, register in INDEX, and enforce immutability. Does not unfreeze or edit frozen parents.",
       "id": "sw-freeze",
