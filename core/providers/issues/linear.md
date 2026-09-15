@@ -142,25 +142,22 @@ recreate or bypass that surface.
 
 | Step | Action |
 | --- | --- |
-| 1 | Merge and green PRD 061 (`061-prd-planning-store-interface-architecture`) facade + projection acceptance tests |
-| 2 | Set `planning.store.issuesProvider: linear` with `teamKey` or `teamId` |
-| 3 | Configure `planning.store.operatorProjection.linear` (`enabled`, `initiativeSubstitute`, `budget`) |
-| 4 | Probe readiness: `python3 scripts/planning_linear_client.py . prd061-readiness-gate` |
-| 5 | Activate Team-scoped token via `planning.store.issues.credentialRef` (broker-only; never commit tokens) |
+| 1 | Set `planning.store.issuesProvider: linear` with `teamKey` or `teamId` |
+| 2 | Configure `planning.store.operatorProjection.linear` (`enabled`, `initiativeSubstitute`, `budget`) |
+| 3 | Probe readiness: `python3 scripts/planning_linear_client.py . prd061-readiness-gate` |
+| 4 | Activate Team-scoped token via `planning.store.issues.credentialRef` (broker-only; never commit tokens) |
 
-Preflight refuses live adapter activation until `prd061-readiness-gate` reports `verdict: ready`
-(`prd061-readiness-gate`). Hermetic fixture harnesses (`SW_ISSUES_FIXTURE=1` or injected fixture
+Preflight reports `prd061-readiness-gate` `verdict: ready` when plugin-owned PRD 061 tests pass **or** packaged Linear conformance is green. Consumer repos are not required to vendor Shipwright `unit_tests`. Hermetic fixture harnesses (`SW_ISSUES_FIXTURE=1` or injected fixture
 store) may skip the live gate for unit tests only.
 
 ### PRD 061 prerequisite (R34)
 
-| Gate | Acceptance test |
+| Gate | Acceptance test (plugin/source tree) |
 | --- | --- |
 | Facade contract | `scripts/unit_tests/planning/harness_planning_061_facade.py` |
 | Projection contract | `scripts/unit_tests/planning/test_planning_061_github_projects.py` |
 
-Both must exist in the repo and pass before Linear projection work ships. Partial readiness
-(one test missing or red) blocks adapter activation with `prd061-readiness-blocked`.
+In-repo Shipwright checkouts run those tests from the plugin/source tree. Packaged installs omit `unit_tests` and treat green Linear conformance (`core/sw-reference/provider-conformance/linear.ok.json`) as sufficient. Partial readiness (one test present and red) still blocks with `prd061-readiness-blocked`.
 
 ## Semantic entity mapping
 

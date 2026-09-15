@@ -1,0 +1,12 @@
+{
+  "verdict": "ok",
+  "gate": "stage1-dogfood-gate",
+  "markerCount": 7,
+  "checklist": {
+    "volumeFloors": true,
+    "r1SavedViews": true,
+    "namingArchival": true,
+    "coexistence": true,
+    "mvpAuthMode": "api-key"
+  }
+}

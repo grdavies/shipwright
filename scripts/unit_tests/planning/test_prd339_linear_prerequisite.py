@@ -30,8 +30,22 @@ def _copy_test(repo_root: Path, dest_root: Path, rel_test: str) -> None:
     dst.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
 
 
-def test_linear_blocked_until_prd061_absent(tmp_path: Path) -> None:
-    """R34 — absent prerequisites block linear activation."""
+def test_prd061_ready_when_plugin_has_tests_consumer_does_not(tmp_path: Path) -> None:
+    """Consumer repos must not be required to contain Shipwright PRD 061 tests."""
+    out = prd061_facade_projection_readiness(tmp_path)
+    assert out["verdict"] == "ready", out
+    checks = {item["test"]: item for item in out.get("checks") or []}
+    assert checks[PRD_061_FACADE_ACCEPTANCE_TEST]["verdict"] == "ready"
+    assert checks[PRD_061_PROJECTION_ACCEPTANCE_TEST]["verdict"] == "ready"
+
+
+def test_linear_blocked_until_prd061_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R34 — absent prerequisites in both consumer and plugin trees still block."""
+    import planning_linear_client as plc
+
+    monkeypatch.setattr(plc, "_plugin_source_root", lambda: tmp_path)
     out = prd061_facade_projection_readiness(tmp_path)
     assert out["verdict"] == "blocked"
     assert out["cause"] == "prd-061-facade-projection-not-merged-green"
@@ -40,8 +54,13 @@ def test_linear_blocked_until_prd061_absent(tmp_path: Path) -> None:
     assert PRD_061_PROJECTION_ACCEPTANCE_TEST in blocked_tests
 
 
-def test_linear_blocked_until_prd061_partial(tmp_path: Path, repo_root: Path) -> None:
+def test_linear_blocked_until_prd061_partial(
+    tmp_path: Path, repo_root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """R34 — partial prerequisites block until both facade and projection contracts are green."""
+    import planning_linear_client as plc
+
+    monkeypatch.setattr(plc, "_plugin_source_root", lambda: tmp_path)
     _copy_test(repo_root, tmp_path, PRD_061_FACADE_ACCEPTANCE_TEST)
     out = prd061_facade_projection_readiness(tmp_path)
     assert out["verdict"] == "blocked"
@@ -78,9 +97,12 @@ def test_linear_client_live_path_refuses_without_prd061(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """R34 — live LinearIssuesClient refuses activation when PRD 061 gate is blocked."""
+    import planning_linear_client as plc
+
     # CI suites often set SW_ISSUES_FIXTURE=1; that skips the live gate — clear it.
     monkeypatch.delenv("SW_ISSUES_FIXTURE", raising=False)
     monkeypatch.delenv("SW_HOST_ISSUES_FIXTURE", raising=False)
+    monkeypatch.setattr(plc, "_plugin_source_root", lambda: tmp_path)
     cfg = {
         "planning": {
             "store": {

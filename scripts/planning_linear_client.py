@@ -773,20 +773,50 @@ def _vendored_pytest_pythonpath(gate_repo: Path) -> list[str]:
         return []
 
 
+def _plugin_source_root() -> Path:
+    """Shipwright plugin/source tree that owns PRD 061 tests and packaged evidence."""
+    return Path(__file__).resolve().parent.parent
+
+
+def _resolve_acceptance_test(root: Path, rel_test: str) -> tuple[Path, Path] | None:
+    consumer = root / rel_test
+    if consumer.is_file():
+        return consumer, root
+    plugin = _plugin_source_root()
+    plugin_test = plugin / rel_test
+    if plugin_test.is_file():
+        return plugin_test, plugin
+    return None
+
+
+def _linear_conformance_green(root: Path) -> bool:
+    """True when recorded Linear conformance is green on the consumer or plugin tree."""
+    from _planning_pkg_loader import load_submodule
+
+    pc = load_submodule("provider_conformance")
+    for candidate in (root, _plugin_source_root()):
+        record = pc.load_conformance_record(candidate, "linear")
+        if pc.conformance_dimensions_green(record):
+            return True
+    return False
+
+
 def _acceptance_test_ready(root: Path, rel_test: str) -> dict[str, Any]:
-    test_path = root / rel_test
-    if not test_path.is_file():
+    resolved = _resolve_acceptance_test(root, rel_test)
+    if resolved is None:
         return {
             "verdict": "blocked",
             "test": rel_test,
             "reason": "acceptance-test-missing",
         }
-    gate_repo = Path(__file__).resolve().parent.parent
+    test_path, tree = resolved
+    gate_repo = _plugin_source_root()
     env = os.environ.copy()
     env.pop("PYTEST_ADDOPTS", None)
     env.pop("PYTEST_CURRENT_TEST", None)
     path_parts = [
-        str(root / "scripts"),
+        str(tree / "scripts"),
+        str(gate_repo / "scripts"),
         *_vendored_pytest_pythonpath(gate_repo),
     ]
     prev_pp = env.get("PYTHONPATH", "")
@@ -807,13 +837,13 @@ def _acceptance_test_ready(root: Path, rel_test: str) -> dict[str, Any]:
                 str(test_path),
                 "-q",
                 "--rootdir",
-                str(root),
+                str(tree),
                 "-c",
                 str(empty_ini),
                 "-p",
                 "no:cacheprovider",
             ],
-            cwd=str(root),
+            cwd=str(tree),
             capture_output=True,
             text=True,
             env=env,
@@ -835,11 +865,35 @@ def _acceptance_test_ready(root: Path, rel_test: str) -> dict[str, Any]:
 
 
 def prd061_facade_projection_readiness(root: Path | None = None) -> dict[str, Any]:
-    """Return ready when PRD 061 facade/projection contract acceptance tests are green (R34)."""
-    repo = root if root is not None else Path(__file__).resolve().parent.parent
+    """Return ready when PRD 061 facade/projection contract acceptance tests are green (R34).
+
+    Packaged installs omit ``unit_tests``; green Linear conformance on the plugin tree
+    is sufficient so consumer repos are not required to vendor Shipwright tests.
+    """
+    repo = root if root is not None else _plugin_source_root()
     facade = _acceptance_test_ready(repo, PRD_061_FACADE_ACCEPTANCE_TEST)
     projection = _acceptance_test_ready(repo, PRD_061_PROJECTION_ACCEPTANCE_TEST)
     blocked = [item for item in (facade, projection) if item.get("verdict") != "ready"]
+    missing_only = bool(blocked) and all(
+        item.get("reason") == "acceptance-test-missing" for item in blocked
+    )
+    if blocked and missing_only and _linear_conformance_green(repo):
+        packaged = [
+            {
+                "verdict": "ready",
+                "test": item["test"],
+                "reason": "packaged-runtime-conformance",
+            }
+            for item in (facade, projection)
+        ]
+        return {
+            "verdict": "ready",
+            "action": "linear-prd061-readiness-gate",
+            "prd061UnitId": PRD_061_UNIT_ID,
+            "requirements": ["facade-contract", "projection-contract"],
+            "reason": "packaged-runtime-conformance",
+            "checks": packaged,
+        }
     if blocked:
         return {
             "verdict": "blocked",
@@ -903,6 +957,7 @@ def _doc_marker_gate(
 
 
 LINEAR_PROMOTION_GATE_FIXTURES_REL = Path("scripts/test/fixtures/planning-linear-stage1-promotion")
+PACKAGED_PROMOTION_REL = Path("core/sw-reference/linear-promotion")
 LINEAR_PROMOTION_GATES: tuple[str, ...] = ("stage1-dogfood-gate", "oauth-docs-gate")
 
 
@@ -911,8 +966,19 @@ def linear_promotion_gate_fixture_path(root: Path, gate: str) -> Path:
     return (root / LINEAR_PROMOTION_GATE_FIXTURES_REL / f"{gate}.ok.json").resolve()
 
 
+def resolve_linear_promotion_gate_fixture(root: Path, gate: str) -> Path | None:
+    for candidate_root in (root, _plugin_source_root()):
+        for rel in (LINEAR_PROMOTION_GATE_FIXTURES_REL, PACKAGED_PROMOTION_REL):
+            candidate = (candidate_root / rel / f"{gate}.ok.json").resolve()
+            if candidate.is_file():
+                return candidate
+    return None
+
+
 def load_linear_promotion_gate_fixture(root: Path, gate: str) -> dict[str, Any]:
-    path = linear_promotion_gate_fixture_path(root, gate)
+    path = resolve_linear_promotion_gate_fixture(root, gate)
+    if path is None:
+        path = linear_promotion_gate_fixture_path(root, gate)
     if not path.is_file():
         return {
             "verdict": "fail",

@@ -1,0 +1,78 @@
+{
+  "verdict": "ok",
+  "provider": "jira",
+  "action": "provider-conformance-record",
+  "dimensions": {
+    "auth-success": {
+      "verdict": "ok",
+      "dimension": "auth-success",
+      "issueId": "a217b4b3-ef95-4073-b6b4-468b753d0c6e"
+    },
+    "auth-failure": {
+      "verdict": "ok",
+      "dimension": "auth-failure",
+      "observed": "missing-token"
+    },
+    "identity-mismatch": {
+      "verdict": "ok",
+      "dimension": "identity-mismatch",
+      "issueId": "cb43cbe7-5458-45ca-95a1-b7e5d452c446"
+    },
+    "visibility": {
+      "verdict": "ok",
+      "dimension": "visibility"
+    },
+    "crud-lifecycle": {
+      "verdict": "ok",
+      "dimension": "crud-lifecycle",
+      "issueId": "6918f63b-0ad0-43d9-b2f3-3791b20bc5be",
+      "commentCount": 1
+    },
+    "optimistic-concurrency": {
+      "verdict": "ok",
+      "dimension": "optimistic-concurrency"
+    },
+    "idempotent-retries": {
+      "verdict": "ok",
+      "dimension": "idempotent-retries",
+      "attempts": 2,
+      "issueId": "83c32864-f5b2-4894-b25b-e7615cf77314"
+    },
+    "rate-limits": {
+      "verdict": "ok",
+      "dimension": "rate-limits"
+    },
+    "pagination": {
+      "verdict": "ok",
+      "dimension": "pagination",
+      "count": 3
+    },
+    "partial-outage": {
+      "verdict": "ok",
+      "dimension": "partial-outage",
+      "attempts": 2,
+      "issueId": "a3cb4213-aa10-4e38-88f9-d973e29faf99"
+    },
+    "redaction": {
+      "verdict": "ok",
+      "dimension": "redaction"
+    },
+    "concurrent-writes": {
+      "verdict": "ok",
+      "dimension": "concurrent-writes"
+    },
+    "timeout-recovery": {
+      "verdict": "ok",
+      "dimension": "timeout-recovery",
+      "attempts": 2,
+      "elapsedMs": 121,
+      "issueId": "a420cdf5-e64b-426a-a593-e8a9c76cc2b0"
+    },
+    "archival": {
+      "verdict": "ok",
+      "dimension": "archival"
+    }
+  },
+  "recordHash": "e7d359eb51259b3fc9cfa2220e0d6bb5675ecdc7fecb40306df0403302aad52e",
+  "writtenAt": 1786425359
+}

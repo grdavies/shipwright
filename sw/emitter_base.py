@@ -53,6 +53,11 @@ SW_REFERENCE_CLOSED_EMIT = (
     # Packaged handoff self-test schema (PRD 352 R2)
     "handoff-bundle.schema.json",
 )
+SW_REFERENCE_CLOSED_DIRS = (
+    "templates",
+    "provider-conformance",
+    "linear-promotion",
+)
 EXCLUDE_SUFFIXES = (".pyc",)
 
 CURSOR_PLUGIN_ROOT = "${CURSOR_PLUGIN_ROOT}"
@@ -160,13 +165,15 @@ def copy_closed_sw_reference_files(core_root: Path, dest: Path) -> None:
         src = ref_src / name
         if src.is_file():
             shutil.copy2(src, ref_dir / name)
-    templates_src = ref_src / "templates"
-    if templates_src.is_dir():
-        templates_dest = ref_dir / "templates"
-        templates_dest.mkdir(parents=True, exist_ok=True)
-        for src in templates_src.iterdir():
-            if src.is_file():
-                shutil.copy2(src, templates_dest / src.name)
+    for dirname in SW_REFERENCE_CLOSED_DIRS:
+        src = ref_src / dirname
+        if not src.is_dir():
+            continue
+        dest_dir = ref_dir / dirname
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        for src_file in src.iterdir():
+            if src_file.is_file():
+                shutil.copy2(src_file, dest_dir / src_file.name)
 
 
 class EmitterBase(ABC):
