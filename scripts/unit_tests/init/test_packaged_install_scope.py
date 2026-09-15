@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import shutil
 import sys
 from pathlib import Path
@@ -14,6 +15,26 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import install as install_mod
 from init_ci_stub import STUB_WORKFLOW_REL, TEMPLATE_REL
+from shipwright_paths import (
+    WORKFLOW_CONFIG_LEGACY_RELS,
+    WORKFLOW_CONFIG_PREFERRED_REL,
+)
+
+# PRD 356 R5/D2 spike inventory — named clobber writers and D5 config candidates.
+CONFIG_CLOBBER_WRITERS: tuple[dict[str, str], ...] = (
+    {
+        "symbol": "apply_packaged_configure",
+        "module": "scripts/sw-configure.py",
+        "description": (
+            "Materializes packaged init scaffold via workflow_config_write_path; "
+            "overwrites operator config when no preserve guard is active"
+        ),
+    },
+)
+D5_CONFIG_CANDIDATE_RELS: tuple[str, ...] = (
+    WORKFLOW_CONFIG_PREFERRED_REL,
+    *WORKFLOW_CONFIG_LEGACY_RELS,
+)
 
 
 def _snapshot_files(root: Path) -> set[str]:
@@ -233,3 +254,55 @@ def test_packaged_configure_ci_stub_without_consumer_template(tmp_git_repo: Path
     assert result["verdict"] == "pass", result
     assert (tmp_git_repo / ".github" / "workflows" / "shipwright-ci-stub.yml").is_file()
     assert not (tmp_git_repo / "core" / "sw-reference").exists()
+
+
+def test_config_clobber_writers_are_named_and_callable() -> None:
+    """PRD 356 4.1 — spike names writers that materialize/overwrite operator config."""
+    configure = install_mod._load_sw_configure()
+    assert CONFIG_CLOBBER_WRITERS, "spike must name at least one clobber writer"
+    for entry in CONFIG_CLOBBER_WRITERS:
+        symbol = entry["symbol"]
+        assert symbol
+        assert callable(getattr(configure, symbol, None)), symbol
+        assert (SCRIPT_DIR.parent / entry["module"]).is_file(), entry["module"]
+
+
+def test_d5_config_candidates_match_path_helpers() -> None:
+    """PRD 356 4.1 — D5 candidates align with shipwright_paths resolution order."""
+    expected = (
+        ".shipwright/workflow.config.json",
+        ".cursor/workflow.config.json",
+        "workflow.config.json",
+    )
+    assert D5_CONFIG_CANDIDATE_RELS == expected
+
+
+def test_apply_packaged_configure_is_primary_named_clobber_writer(
+    tmp_path: Path,
+) -> None:
+    """PRD 356 4.1 — apply_packaged_configure is the packaged-init config writer."""
+    configure = install_mod._load_sw_configure()
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+    schema_rel = Path(configure.SCHEMA_REL)
+    schema_dest = consumer / schema_rel.parent
+    schema_dest.mkdir(parents=True)
+    schema_dest.joinpath(schema_rel.name).write_text(
+        (SCRIPT_DIR.parent / schema_rel).read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+    first = configure.apply_packaged_configure(consumer, accept_ci_stub=False)
+    assert first["verdict"] == "pass"
+    assert first.get("preserved") is False
+    assert first.get("written")
+
+    config_path = Path(first["configPath"])
+    before = config_path.read_text(encoding="utf-8")
+    config_path.write_text(before.replace("shipwrightVersion", "operatorMarker"), encoding="utf-8")
+    modified = config_path.read_text(encoding="utf-8")
+
+    second = configure.apply_packaged_configure(consumer, accept_ci_stub=False)
+    assert second.get("preserved") is True
+    assert config_path.read_text(encoding="utf-8") == modified
+    assert "operatorMarker" in config_path.read_text(encoding="utf-8")
