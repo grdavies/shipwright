@@ -1140,6 +1140,83 @@ def _build_packaged_draft(root: Path, extra_roots: Sequence[Path] = ()) -> dict[
     return _finalize_persistable_draft(root, draft, extra_roots=extra_roots)
 
 
+CONFIG_PRESERVE_META_REL = Path(".shipwright") / "init-meta.json"
+CONFIG_PRESERVE_NOTICE_ID = "config-preserved-on-upgrade"
+SENSITIVE_CONFIG_KEY_FRAGMENTS = (
+    "credentialref",
+    "selector",
+    "token",
+    "secret",
+    "password",
+)
+
+
+def _redact_config_path(root: Path, config_path: Path) -> str:
+    try:
+        return config_path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return config_path.name
+
+
+def _config_top_level_keys_only(config_path: Path) -> list[str]:
+    try:
+        payload = json.loads(config_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(payload, dict):
+        return []
+    return sorted(
+        key
+        for key in payload
+        if isinstance(key, str)
+        and not any(fragment in key.lower() for fragment in SENSITIVE_CONFIG_KEY_FRAGMENTS)
+    )
+
+
+def build_config_preserve_doctor_notice(root: Path, config_path: Path) -> dict[str, Any]:
+    """Keys-only doctor notice for preserved operator config (PRD 356 TR6)."""
+    return {
+        "id": CONFIG_PRESERVE_NOTICE_ID,
+        "configPath": _redact_config_path(root, config_path),
+        "topLevelKeys": _config_top_level_keys_only(config_path),
+    }
+
+
+def record_config_preserve_meta(root: Path, config_path: Path) -> None:
+    meta_path = root / CONFIG_PRESERVE_META_REL
+    meta_path.parent.mkdir(parents=True, exist_ok=True)
+    meta_path.write_text(
+        json.dumps(
+            {
+                "configPreservedOnUpgrade": True,
+                "configPath": _redact_config_path(root, config_path),
+                "topLevelKeys": _config_top_level_keys_only(config_path),
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+
+def config_preserve_upgrade_notice(root: Path) -> dict[str, Any] | None:
+    """Return the last preserve notice when init skipped overwrite (optional doctor surface)."""
+    meta_path = root / CONFIG_PRESERVE_META_REL
+    if not meta_path.is_file():
+        return None
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(meta, dict) or not meta.get("configPreservedOnUpgrade"):
+        return None
+    return {
+        "id": CONFIG_PRESERVE_NOTICE_ID,
+        "configPath": meta.get("configPath"),
+        "topLevelKeys": meta.get("topLevelKeys") or [],
+    }
+
+
 def apply_packaged_configure(
     root: Path,
     *,
@@ -1147,9 +1224,31 @@ def apply_packaged_configure(
     extra_roots: Sequence[Path] = (),
 ) -> dict[str, Any]:
     """Write repo-scope configuration for packaged init (existing spine only)."""
-    from shipwright_paths import workflow_config_write_path
+    from shipwright_paths import workflow_config_path, workflow_config_write_path
 
     root = root.resolve()
+    existing = workflow_config_path(root)
+    if existing is not None:
+        record_config_preserve_meta(root, existing)
+        notice = build_config_preserve_doctor_notice(root, existing)
+        ci_payload: dict[str, Any] | None = None
+        written: list[str] = []
+        if accept_ci_stub:
+            ci_payload = apply_ci_stub(
+                root, confirm=True, wire_verify="off", extra_roots=extra_roots
+            )
+            if ci_payload.get("written"):
+                written.append(STUB_WORKFLOW_REL.as_posix())
+        return {
+            "verdict": "pass",
+            "action": "preserve",
+            "configPath": str(existing),
+            "preserved": True,
+            "written": written,
+            "doctorNotice": notice,
+            "ciStub": ci_payload,
+        }
+
     try:
         draft = _build_packaged_draft(root, extra_roots=extra_roots)
     except FileNotFoundError as exc:
@@ -1171,7 +1270,7 @@ def apply_packaged_configure(
     config_path.write_text(json.dumps(draft, indent=2) + "\n", encoding="utf-8")
     written = [config_path.relative_to(root).as_posix()]
 
-    ci_payload: dict[str, Any] | None = None
+    ci_payload = None
     if accept_ci_stub:
         ci_payload = apply_ci_stub(
             root, confirm=True, wire_verify="off", extra_roots=extra_roots
@@ -1181,7 +1280,9 @@ def apply_packaged_configure(
 
     return {
         "verdict": "pass",
+        "action": "write",
         "configPath": str(config_path),
+        "preserved": False,
         "written": written,
         "ciStub": ci_payload,
     }

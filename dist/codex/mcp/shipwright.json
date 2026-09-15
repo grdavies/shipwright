@@ -1,11 +1,11 @@
 {
   "adapter_id": "codex",
-  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/packaged-provider-conformance-root-phase-multi-root-conformance-resolution-p0/.shipwright/mcp/codex.json",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/packaged-provider-conformance-root-orchestrator/.shipwright/mcp/codex.json",
   "mcpServers": {
     "shipwright-bounded": {
       "command": "python3",
       "args": [
-        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/packaged-provider-conformance-root-phase-multi-root-conformance-resolution-p0/core/mcp/server.py"
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/packaged-provider-conformance-root-orchestrator/core/mcp/server.py"
       ],
       "transport": "stdio"
     }
