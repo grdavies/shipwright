@@ -36,7 +36,7 @@ python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" init_scripts_facade.py -- . re
 `scripts/sw-run.py` (for example `~/.cursor/plugins/local/shipwright/scripts/sw-run.py`). Reinstall from
 the Shipwright source checkout with `python3 scripts/install.py` when the tree is missing.
 
-## Packaged provider conformance and config preserve (PRD 356)
+## Packaged provider conformance and config preserve 
 
 Packaged wheels record shipped issues-provider conformance under **host bundles**:
 
@@ -51,14 +51,14 @@ shipped set — Linear may appear as **recognized-but-not-shipped** even when cr
 Live backend gating uses `shipped_issues_providers()` in `planning_store_facade.py` (root-keyed cache),
 shared by planning discovery and `gitignore-generate --write`.
 
-**Config preserve (D5):** when any workflow config candidate exists (`.shipwright/workflow.config.json`,
+**Config preserve (config-preserve):** when any workflow config candidate exists (`.shipwright/workflow.config.json`,
 legacy `.cursor/workflow.config.json`, or repo-root `workflow.config.json`), packaged init/configure
 writers skip overwrite. Credential/provider **references** are retained; secrets stay in the broker/selector.
 Greenfield repos still receive scaffold once. Optional doctor notice id: `config-preserved-on-upgrade`
 (keys-only, path-redacted).
 
 Dual-home layout contract for search roots: `core/sw-reference/layout.md` and `.shipwright/layout.md`
-(**PRD 356 packaged conformance surfaces**). `/sw-init` uses the same preserve policy on packaged reinstall.
+(**packaged provider conformance packaged conformance surfaces**). `/sw-init` uses the same preserve policy on packaged reinstall.
 
 ## Credential references and machine-local selector
 
@@ -73,8 +73,8 @@ seeds `projectId` during guided credential migration.
 
 ```json
 {
-  "projectId": "my-app",
-  "host": { "credentialRef": "github-work" }
+ "projectId": "my-app",
+ "host": { "credentialRef": "github-work" }
 }
 ```
 
@@ -106,18 +106,18 @@ Secret backends and scope live in a **user-owned** selector document — never c
 
 ```json
 {
-  "version": 1,
-  "entries": {
-    "github-work": {
-      "backend": "environment",
-      "provider": "github",
-      "hostname": "github.com",
-      "account": "work",
-      "allowedRepos": ["my-org/my-app"],
-      "allowedProjectIds": ["my-app"],
-      "allowedEndpoints": ["https://api.github.com"]
-    }
-  }
+ "version": 1,
+ "entries": {
+ "github-work": {
+ "backend": "environment",
+ "provider": "github",
+ "hostname": "github.com",
+ "account": "work",
+ "allowedRepos": ["my-org/my-app"],
+ "allowedProjectIds": ["my-app"],
+ "allowedEndpoints": ["https://api.github.com"]
+ }
+ }
 }
 ```
 
@@ -135,10 +135,10 @@ Manage entries with `/sw-init` guided migration or:
 
 ```bash
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" sw-configure.py credential selector-add \
-  --ref github-work --backend environment --provider github \
-  --hostname github.com --account work \
-  --allowed-repo my-org/my-app --allowed-project-id my-app \
-  --allowed-endpoint https://api.github.com
+ --ref github-work --backend environment --provider github \
+ --hostname github.com --account work \
+ --allowed-repo my-org/my-app --allowed-project-id my-app \
+ --allowed-endpoint https://api.github.com
 ```
 
 **CI declaration:** GitHub Actions runners without a machine-local selector require an explicit repository
@@ -297,11 +297,11 @@ Example operator config:
 
 ```json
 {
-  "memory": {
-    "provider": "in-repo",
-    "project": "my-app",
-    "inRepo": { "commitMode": "committed" }
-  }
+ "memory": {
+ "provider": "in-repo",
+ "project": "my-app",
+ "inRepo": { "commitMode": "committed" }
+ }
 }
 ```
 
@@ -352,7 +352,7 @@ python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" memory-decision-snapshot.py ex
 
 # 2) Set the knob explicitly (example: keep auto semantics on Recallium)
 # Edit .cursor/workflow.config.json:
-#   "memory": { "sourceOfTruth": "auto", ... }
+# "memory": { "sourceOfTruth": "auto", ... }
 ```
 
 Shipwright’s own repo sets `"sourceOfTruth": "auto"` explicitly at migration so Recallium behavior is
@@ -383,20 +383,20 @@ Pin is also recorded as `memory.mempalace.supportedPackage` (default matches the
 
 ```json
 {
-  "memory": {
-    "provider": "mempalace",
-    "project": "my-app",
-    "sourceOfTruth": "auto",
-    "mempalace": {
-      "palacePath": "/home/you/.mempalace/my-app",
-      "rulesRoom": "rules",
-      "searchExcludeRooms": ["transcripts"],
-      "ruleCacheTtlSec": 300,
-      "failClosed": true,
-      "redactOnWrite": true,
-      "supportedPackage": "mempalace>=3.6.0,<4.0.0"
-    }
-  }
+ "memory": {
+ "provider": "mempalace",
+ "project": "my-app",
+ "sourceOfTruth": "auto",
+ "mempalace": {
+ "palacePath": "/home/you/.mempalace/my-app",
+ "rulesRoom": "rules",
+ "searchExcludeRooms": ["transcripts"],
+ "ruleCacheTtlSec": 300,
+ "failClosed": true,
+ "redactOnWrite": true,
+ "supportedPackage": "mempalace>=3.6.0,<4.0.0"
+ }
+ }
 }
 ```
 
@@ -414,10 +414,10 @@ Example Docker sketch (adjust image paths to your plugin install):
 
 ```bash
 docker run --rm \
-  -v /host/palace:/palace:ro \
-  -v /host/repo:/workspace:ro \
-  -e SW_WORKSPACE_ROOT=/workspace \
-  python:3.12 python /plugin/providers/mempalace-rules.py
+ -v /host/palace:/palace:ro \
+ -v /host/repo:/workspace:ro \
+ -e SW_WORKSPACE_ROOT=/workspace \
+ python:3.12 python /plugin/providers/mempalace-rules.py
 ```
 
 Rule cache: atomic TTL cache under `.cursor/` state, bound to `provider` + `palacePath` with checksum
@@ -500,21 +500,21 @@ local to cloud, degrade cloud to local, or rewrite mode when the configured endp
 
 ```json
 {
-  "memory": {
-    "provider": "basic-memory",
-    "project": "my-app",
-    "sourceOfTruth": "auto",
-    "basicMemory": {
-      "mode": "local",
-      "projectPath": "/home/you/basic-memory/my-app",
-      "memoriesDirectory": "memories",
-      "rulesDirectory": "rules",
-      "ruleCacheTtlSec": 300,
-      "failClosed": true,
-      "redactOnWrite": true,
-      "supportedPackage": "basic-memory>=0.22.0,<1.0.0"
-    }
-  }
+ "memory": {
+ "provider": "basic-memory",
+ "project": "my-app",
+ "sourceOfTruth": "auto",
+ "basicMemory": {
+ "mode": "local",
+ "projectPath": "/home/you/basic-memory/my-app",
+ "memoriesDirectory": "memories",
+ "rulesDirectory": "rules",
+ "ruleCacheTtlSec": 300,
+ "failClosed": true,
+ "redactOnWrite": true,
+ "supportedPackage": "basic-memory>=0.22.0,<1.0.0"
+ }
+ }
 }
 ```
 
@@ -522,18 +522,18 @@ local to cloud, degrade cloud to local, or rewrite mode when the configured endp
 
 ```json
 {
-  "memory": {
-    "provider": "basic-memory",
-    "project": "my-app",
-    "credentialRef": "memory-work",
-    "basicMemory": {
-      "mode": "cloud",
-      "apiBase": "https://cloud.basicmemory.com",
-      "failClosed": true,
-      "redactOnWrite": true,
-      "supportedPackage": "basic-memory>=0.22.0,<1.0.0"
-    }
-  }
+ "memory": {
+ "provider": "basic-memory",
+ "project": "my-app",
+ "credentialRef": "memory-work",
+ "basicMemory": {
+ "mode": "cloud",
+ "apiBase": "https://cloud.basicmemory.com",
+ "failClosed": true,
+ "redactOnWrite": true,
+ "supportedPackage": "basic-memory>=0.22.0,<1.0.0"
+ }
+ }
 }
 ```
 
@@ -616,22 +616,22 @@ Obsidian yourself before live use:
 
 1. Install [Obsidian](https://obsidian.md/) and open (or create) a vault at `memory.obsidian.vaultPath`.
 2. Settings → Community plugins → enable **Local REST API** (supported plugin range is pinned in
-   `scripts/test/fixtures/obsidian/compat-tool-schemas.json` at implement time).
+ `scripts/test/fixtures/obsidian/compat-tool-schemas.json` at implement time).
 3. Configure `memory.credentialRef` and add a selector entry (`environment` or `keystore` backend) — never
-   commit API keys:
+ commit API keys:
 
 ```json
 {
-  "memory": {
-    "provider": "obsidian",
-    "project": "my-app",
-    "credentialRef": "memory-work",
-    "obsidian": {
-      "vaultPath": "/home/you/vaults/my-app",
-      "mcpBaseUrl": "http://127.0.0.1:27123",
-      "failClosed": true
-    }
-  }
+ "memory": {
+ "provider": "obsidian",
+ "project": "my-app",
+ "credentialRef": "memory-work",
+ "obsidian": {
+ "vaultPath": "/home/you/vaults/my-app",
+ "mcpBaseUrl": "http://127.0.0.1:27123",
+ "failClosed": true
+ }
+ }
 }
 ```
 
@@ -655,20 +655,20 @@ bodies.
 
 ```json
 {
-  "memory": {
-    "provider": "obsidian",
-    "project": "my-app",
-    "sourceOfTruth": "auto",
-    "obsidian": {
-      "vaultPath": "/home/you/vaults/my-app",
-      "mcpBaseUrl": "http://127.0.0.1:27123",
-      "memoriesDirectory": "memories",
-      "rulesDirectory": "rules",
-      "ruleCacheTtlSec": 300,
-      "failClosed": true,
-      "redactOnWrite": true
-    }
-  }
+ "memory": {
+ "provider": "obsidian",
+ "project": "my-app",
+ "sourceOfTruth": "auto",
+ "obsidian": {
+ "vaultPath": "/home/you/vaults/my-app",
+ "mcpBaseUrl": "http://127.0.0.1:27123",
+ "memoriesDirectory": "memories",
+ "rulesDirectory": "rules",
+ "ruleCacheTtlSec": 300,
+ "failClosed": true,
+ "redactOnWrite": true
+ }
+ }
 }
 ```
 
@@ -1480,9 +1480,9 @@ Writable brainstorms may carry forward `prd:` references.
 - Recallium reachable when `memory.provider` is `recallium`
 - MemPalace palace path + package probe when `memory.provider` is `mempalace` (see **MemPalace memory provider** above; no auto-install)
 - Basic Memory mode + local package/`projectPath` or cloud token-env probe when `memory.provider` is
-  `basic-memory` (see **Basic Memory provider** above; no auto-install / no cloud account create)
+ `basic-memory` (see **Basic Memory provider** above; no auto-install / no cloud account create)
 - Obsidian vault path + `OBSIDIAN_API_KEY` / loopback reachability when `memory.provider` is `obsidian`
-  (see **Obsidian memory provider** above; no auto-install of Obsidian or the Local REST API plugin)
+ (see **Obsidian memory provider** above; no auto-install of Obsidian or the Local REST API plugin)
 - Placeholder `verify.*` commands → recommends configuring real lint/typecheck/test commands
 - Missing memory dirs → offers `mkdir -p` repair
 
@@ -1770,12 +1770,12 @@ Example (opt-in):
 
 ```json
 {
-  "retrospective": {
-    "gapCapture": {
-      "enabled": true,
-      "maxCapturesPerRun": 5
-    }
-  }
+ "retrospective": {
+ "gapCapture": {
+ "enabled": true,
+ "maxCapturesPerRun": 5
+ }
+ }
 }
 ```
 
@@ -1860,13 +1860,13 @@ Example (all off until cutover):
 
 ```json
 {
-  "workflow": {
-    "extensions": {
-      "externalIntake": false,
-      "handoffBundle": false,
-      "packageSdk": false
-    }
-  }
+ "workflow": {
+ "extensions": {
+ "externalIntake": false,
+ "handoffBundle": false,
+ "packageSdk": false
+ }
+ }
 }
 ```
 

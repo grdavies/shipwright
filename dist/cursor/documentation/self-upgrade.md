@@ -18,11 +18,11 @@ If a GitHub release (or other origin) exists but the zipapp or stamp asset has n
 yet:
 
 - `shipwright self check` reports the available release version but sets `assetsAvailable: false`
-  and explains that upgrade is blocked until the assets appear.
+ and explains that upgrade is blocked until the assets appear.
 - `shipwright self upgrade` refuses with status `missing-assets` and names which files are absent.
-  This is expected during rollout windows before the release job finishes uploading artifacts.
+ This is expected during rollout windows before the release job finishes uploading artifacts.
 
-## Packaged provider conformance (PRD 356)
+## Packaged provider conformance 
 
 Installed wheels ship issues-provider conformance evidence under host bundles, not only at the
 package root:
@@ -31,7 +31,7 @@ package root:
 dist/<host>/core/sw-reference/provider-conformance/<provider>.ok.json
 ```
 
-Runtime resolution (D3) searches the **active** host bundle first (`scripts/planning/packaged_conformance_roots.py`).
+Runtime resolution (host-bundle) searches the **active** host bundle first (`scripts/planning/packaged_conformance_roots.py`).
 Sibling `dist/<host>/` trees are used only when the active-host record is **absent** — never when
 present-and-fail. Staging `core/sw-reference/provider-conformance/` at the package root alone does not
 satisfy packaged installs.
@@ -39,7 +39,7 @@ satisfy packaged installs.
 Live planning and issue-store gating resolve the shipped provider set on each call (root-keyed cache in
 `planning_store_facade.py`) — not a one-time import from the wrong package root.
 
-After `shipwright init` or reinstall, existing operator config under any D5 candidate
+After `shipwright init` or reinstall, existing operator config under any config-preserve candidate
 (`.shipwright/workflow.config.json`, legacy `.cursor/workflow.config.json`, or repo-root
 `workflow.config.json`) is **preserved** (skip-overwrite). Greenfield repos still receive scaffold once.
 See [Configuration](configuration.md#packaged-provider-conformance-and-config-preserve-prd-356).
@@ -60,7 +60,7 @@ full threat model.
 
 1. Run `shipwright self check` and read `assetsAvailable`, `availableVersion`, and `message`.
 2. If assets are missing, wait for the maintainer release job or install from a checkout using the
-   contributor path in [Getting started](getting-started.md).
+ contributor path in [Getting started](getting-started.md).
 3. If integrity fails, delete the partial download under your install `dist/` tree and retry after
-   confirming the upstream release publishes both the zipapp and distribution stamp on the
-   distribution origin.
+ confirming the upstream release publishes both the zipapp and distribution stamp on the
+ distribution origin.

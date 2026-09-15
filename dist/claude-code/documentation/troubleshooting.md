@@ -3,7 +3,7 @@
 Operator diagnostics for common Shipwright failure modes. Prefer these recipes over
 ad-hoc retries when a command already emitted a typed halt and `resumeCommand`.
 
-## Linear recognized-but-not-shipped on packaged install (PRD 356)
+## Linear recognized-but-not-shipped on packaged install 
 
 Symptom: planning discovery or `gitignore-generate --write` refuses Linear with
 **recognized-but-not-shipped** while doctor/credentials/schema succeed — common on consumer repos without
@@ -38,14 +38,14 @@ operator-facing `resumeCommand` on the halt payload (also echoed in deliver/livi
 1. Read `resumeCommand` from the halt report (do not invent a new reconcile invocation).
 2. Typical form:
 
-   ```bash
-   wave living-docs reconcile --commit
-   ```
+ ```bash
+ wave living-docs reconcile --commit
+ ```
 
-   When projection was scoped to a non-primary worktree, the command includes
-   `--orchestrator-worktree <path>`.
+ When projection was scoped to a non-primary worktree, the command includes
+ `--orchestrator-worktree <path>`.
 3. Re-run the printed command from the same worktree context. Completed steps (`index`, then
-   `gap-resolve`) are skipped; only pending work runs.
+ `gap-resolve`) are skipped; only pending work runs.
 4. On full success the projection state file is cleared automatically.
 
 ### Configuration knobs

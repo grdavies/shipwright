@@ -11,10 +11,10 @@ live on issues rather than local `docs/prds/` files as authority.
 - **Cache-only** — `.cursor/doc-review-runs/` cannot authorize open or complete.
 - **Isolation** — `/sw-deliver` must not open/complete review rounds or treat doc-review cache as store truth.
 
-## Packaged shipped providers (PRD 356)
+## Packaged shipped providers 
 
 When `planning.store.backend` is `issue-store`, live selection consults shipped issues-provider
-conformance under the installed wheel layout (D3 host-bundle search). Packaged installs load evidence from
+conformance under the installed wheel layout (host-bundle host-bundle search). Packaged installs load evidence from
 `dist/<host>/core/sw-reference/provider-conformance/`; package-root-only staging is insufficient.
 
 Resolution and gating share `shipped_issues_providers()` in `planning_store_facade.py` (live, root-keyed cache).

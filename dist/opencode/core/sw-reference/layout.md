@@ -11,7 +11,7 @@
 > | Legacy `.sw/` operator inputs | `.sw/` → `.shipwright/sw-reference/` |
 > | Packaged reference mirror | `core/sw-reference/layout.md` |
 >
-> Runtime path resolution goes through `scripts/shipwright_paths.py` (R8). Do not
+> Runtime path resolution goes through `scripts/shipwright_paths.py` (closeout). Do not
 > hard-code either tree in skills, commands, or rules — point here instead.
 >
 > Legacy stub: `.sw/layout.md` redirects to this file.
@@ -307,11 +307,11 @@ Assessment YAML is opt-in via `architecture.assessment.mode` (`off` default). `w
 `waiver.{actor,reason,expires}`; expired waivers count as `fail`. Waivers cannot be authored on autonomous
 dispatch paths.
 
-Bundled `architecture-doctrine.md` is **Shipwright-self reference only** (PRD 330 R3/R8). It MUST NOT
+Bundled `architecture-doctrine.md` is **Shipwright-self reference only** (PRD 330 R3/closeout). It MUST NOT
 become consumer project law. Consumer architecture ownership lives under **Consumer ProjectDoctrine**
 below.
 
-### Consumer ProjectDoctrine and baseline (PRD 330 R8, R15)
+### Consumer ProjectDoctrine and baseline (PRD 330 closeout, R15)
 
 Repo-local consumer artifacts — not bundled `core/sw-reference` law. Issue-store mirrors are
 projection-only.
@@ -341,7 +341,7 @@ baseline→doctrine requires explicit operator `--confirm` promote and a leakage
 `done` state used by `planning_store.py materialize --resync`. Legacy slug-scoped
 `.cursor/sw-deliver-state.<slug>.json` mirrors remain readable during adoption only.
 
-### Slim gate manifest + request budget (PRD 062 R8, R12, R19)
+### Slim gate manifest + request budget (PRD 062 closeout, R12, R19)
 
 | Concern | Location | Semantics |
 | --- | --- | --- |
@@ -537,7 +537,7 @@ unaffected — local writes are retained exactly as before this guard existed.
 |----------|-------------------------------|----------------------------------|
 | `docs/prds/GAP-BACKLOG.md` | local write-through projection (R1) | write-through to the issue store only; local write skipped (sunset stub once no open gaps remain) |
 | `docs/prds/INDEX.md` (spec-seed) | `wave_spec_seed.ensure_redacted_index` writes it (R2) | skipped — deliver run-entry materialize + the issue store supply task content |
-| `docs/prds/INDEX.md` / `INDEX-archive.md` / `SUPERSEDED.md` / legacy projection (reconcile) | `planning_reconcile.reconcile_core` writes all four (R3) | none written; derived map projects to the store via `planning_index_issue.project_derived_map` (PRD 056 R8), additionally cached at the gitignored `.cursor/hooks/state/planning-index-derived.json` when the cutover `derived` region authority is issue |
+| `docs/prds/INDEX.md` / `INDEX-archive.md` / `SUPERSEDED.md` / legacy projection (reconcile) | `planning_reconcile.reconcile_core` writes all four (R3) | none written; derived map projects to the store via `planning_index_issue.project_derived_map` (PRD 056 closeout), additionally cached at the gitignored `.cursor/hooks/state/planning-index-derived.json` when the cutover `derived` region authority is issue |
 
 The two-track mechanical allowlist (see `core/rules/sw-git-conventions.mdc` **Two-track doc edits**) is
 clarified accordingly: under issue-store authority the mechanical write projects to the store rather than a
@@ -548,7 +548,7 @@ tracked local file.
 The scheduler frontier skips units that cannot run and can **park** units out of scheduling:
 
 - **`sw:parked` label** — under issue-store, a unit carrying this provider-native label is dropped from the
-  frontier so legacy migrated units no longer stall `next` (R16, D4).
+  frontier so legacy migrated units no longer stall `next` (R16, consumer-fixture).
 - **`.cursor/planning-parked.json`** — a local, backend-neutral, git-ignored park registry
   (`unit-id → {reason, actor, at}`) written only on an explicit `planning-graph.py park`/`unpark`. When
   empty, the file-store scheduling path is unchanged (R23). Parking is authorized only for actors in
@@ -717,7 +717,7 @@ conflict. Normative block shape and hash rules: `core/sw-reference/canonical-ser
 (`sw-edges` section). Gap-capture absorb linkage (`planning_gap_capture.record_absorb_linkage`) uses the
 same merge path — PRD-side absorbs put must not drop native links.
 
-### PRD 324 greenfield init surfaces (R1–R14, D1–D3)
+### PRD 324 greenfield init surfaces (R1–R14, D1–host-bundle)
 
 Greenfield credential UX, consent-gated CI stub, curated profile, and configuration discoverability.
 Runtime modules mirrored under `core/scripts/` (`core-scripts-parity` when touched):
@@ -743,13 +743,13 @@ Operator on-ramp: `docs/guides/configuration.md` **Greenfield on-ramp**;
 | Gap | R-IDs | Acceptance |
 | --- | --- | --- |
 | `gap-339-redesign-greenfield-credential-setup-ux-investig` | R1–R4 | Single ordered checklist; named `tokenEnv` under multi-account risk; no forced `.env`; broker-only resolution |
-| `gap-340-seed-consent-gated-pr-ci-stub-from-sw-init-when-` | R5–R8 | `ci-stub plan` read-only; `apply --confirm` consent gate; decline recorded; unrestricted `pull_request` stub |
+| `gap-340-seed-consent-gated-pr-ci-stub-from-sw-init-when-` | R5–closeout | `ci-stub plan` read-only; `apply --confirm` consent gate; decline recorded; unrestricted `pull_request` stub |
 | `gap-341-improve-sw-init-coverage-defaults-and-config-dis` | R9–R12 | Curated profile single-sourced; present/defaulted/unset classification; example-config link; consent-gated refresh |
 
 PRD `sw-edges` `absorbs` targets above must each resolve to exactly one open gap unit at delivery close
 (`planning_store_facade` numeric absorb parity).
 
-### PRD 278 closeout surfaces (R9, R11, D1, D3)
+### PRD 278 closeout surfaces (R9, R11, D1, host-bundle)
 
 Deliver/ship closeout hardening modules and their `core/scripts/` mirrors (required planning gate
 `core-scripts-parity` when touched):
@@ -769,28 +769,28 @@ Deliver/ship closeout hardening modules and their `core/scripts/` mirrors (requi
 | --- | --- | --- |
 | #730 | R1–R2 | Hygiene auto-repair without operator file surgery; forged gap-check refused; frozen-ledger mutation refused |
 | #731 | R3–R5 | Prefer run-scoped plan under foreign global `planHashMismatch`; concurrent lock/CAS |
-| #739 | R6–R8 | Numeric absorb resolves to exactly one eligible open gap; 0/N>1/provider fault → not-ready |
+| #739 | R6–closeout | Numeric absorb resolves to exactly one eligible open gap; 0/N>1/provider fault → not-ready |
 
 **Decision stance (D1):** PRD 278 is a focused closeout-hardening PRD — two-PRD packaging; no mega-PRD
-delivery bundling unrelated surfaces. **Decision stance (D3):** PRD 278 absorbs #731 dogfood closeout; do
+delivery bundling unrelated surfaces. **Decision stance (host-bundle):** PRD 278 absorbs #731 dogfood closeout; do
 not amend PRD 276 for the same behavior.
 
 Operator command detail: `core/commands/sw-deliver.md` **Closeout hardening**;
 `core/commands/sw-ship.md` **Phase-ship hygiene floors**.
 
-### PRD 356 packaged conformance surfaces (R1–R4, R7–R9, D3–D5)
+### Packaged conformance surfaces (multi-root resolution and config preserve)
 
 Packaged multi-root provider-conformance resolution, live shipped-provider gating, optional config
-preserve on reinstall, and R8 gap/signal closeout. Runtime modules mirrored under `core/scripts/` when
+preserve on reinstall, and closeout gap/signal closeout. Runtime modules mirrored under `core/scripts/` when
 touched (`core-scripts-parity`):
 
 | Module | Role | Regression |
 | --- | --- | --- |
-| `scripts/planning/packaged_conformance_roots.py` | D3 host-bundle search roots | `test_packaged_conformance_root.py` |
+| `scripts/planning/packaged_conformance_roots.py` | host-bundle host-bundle search roots | `test_packaged_conformance_root.py` |
 | `scripts/planning/provider_conformance.py` | Conformance validation + fail-closed active host | `test_packaged_conformance_present_fail.py` |
-| `scripts/planning_store_facade.py` | Live shipped set + PRD 356 signal closeout | `test_packaged_conformance_live_gate.py`, `test_prd356_absorb_closeout.py` |
-| `scripts/sw-configure.py` | D5 skip-overwrite preserve | `test_config_preserve_on_upgrade.py` |
-| `scripts/test/fixtures/packaged-provider-conformance/` | D4 consumer fixture layout | `test_packaged_consumer_conformance.py` |
+| `scripts/planning_store_facade.py` | Live shipped set + packaged conformance signal closeout | `test_packaged_conformance_live_gate.py`, `test_prd356_absorb_closeout.py` |
+| `scripts/sw-configure.py` | config-preserve skip-overwrite preserve | `test_config_preserve_on_upgrade.py` |
+| `scripts/test/fixtures/packaged-provider-conformance/` | consumer-fixture consumer fixture layout | `test_packaged_consumer_conformance.py` |
 
 **Provider-conformance search roots (dual-home):** prefer active-host
 `dist/<host>/core/sw-reference/provider-conformance/` under the installed package root; package-root-only
@@ -800,14 +800,14 @@ touched (`core-scripts-parity`):
 
 | Gap | R-IDs | Acceptance |
 | --- | --- | --- |
-| `gap-465-packaged-runtime-misses-linear-conformance-under` | R1–R4, R7 | D3 resolution + live gating + D4 consumer test; evidence links in `verify_prd356_signal_closeout` |
-| (signals) `fb-20260915T051834Z-pack-conf`, `fb-6726286f-cfee-44a0-b075-f5ffe188ae68` | R8 | Resolved / superseded-partial disposition recorded at delivery closeout |
-| Config preserve (when co-shipped) | R5–R6 | D5 skip-overwrite across config candidates; credentialRef retained |
+| packaged-runtime Linear conformance gap | resolution + fail-closed | host-bundle resolution + live gating + consumer-fixture consumer test; evidence links in `verify_prd356_signal_closeout` |
+| (signals) `fb-20260915T051834Z-pack-conf`, `fb-6726286f-cfee-44a0-b075-f5ffe188ae68` | closeout | Resolved / superseded-partial disposition recorded at delivery closeout |
+| Config preserve (when co-shipped) | preserve | config-preserve skip-overwrite across config candidates; credentialRef retained |
 
 Operator docs: `core/documentation/self-upgrade.md`, `configuration.md`, `troubleshooting.md`,
 `issue-store.md`; `docs/guides/*` remain redirect stubs only.
 
-### PRD 279 write-binding surfaces (R13, R17, D1, D3)
+### PRD 279 write-binding surfaces (R13, R17, D1, host-bundle)
 
 Per-repo memory write binding (absorb #733). Operator bind-before-sync guidance lives on
 `core/commands/sw-init.md` (**Bind before sync**, **Absorb acceptance map**). Runtime assert:
@@ -821,7 +821,7 @@ Per-repo memory write binding (absorb #733). Operator bind-before-sync guidance 
 | #733 | R15–R16 | Typed audit on refuse; secrets omitted from refuse reasons |
 | #733 | R17 | Hard cut; `/sw-init` / doctor instruct bind-before-sync; no ambient auto-migration |
 
-**Decision stance (D1):** separate PRD from deliver closeout cluster. **Decision stance (D3):** new PRD
+**Decision stance (D1):** separate PRD from deliver closeout cluster. **Decision stance (host-bundle):** new PRD
 absorbs #733 after amendment #735 cancellation — do not amend closed PRD 277.
 
 ### Codebase Intelligence surfaces (PRD 280 R1–R17, D1–D7)
@@ -835,7 +835,7 @@ invoke the CLIs below.
 | Radar artifacts | `.cursor/sw-architecture-radar/` | `scripts/architecture_radar.py` | Read-only scan output; `last.json` + per-`scanId/` dirs |
 | Divergence artifacts | `.cursor/sw-vocabulary-divergence/` | `scripts/domain_vocabulary.py` | Read-only `check-divergence` summary at `last.json` |
 | Shared signals | `scripts/codebase_intelligence_signals.py` | collectors (read-only git/planning reads) | Mirrored to `core/scripts/`; feeds radar + vocabulary |
-| Vocabulary authority | issue-store `vocab-<slug>` units | `domain_vocabulary.py put-term` | No local `docs/` writes (D3) |
+| Vocabulary authority | issue-store `vocab-<slug>` units | `domain_vocabulary.py put-term` | No local `docs/` writes (host-bundle) |
 
 Runtime modules mirrored under `core/scripts/` (`core-scripts-parity` when touched):
 `codebase_intelligence_signals.py`, `architecture_radar.py`, `domain_vocabulary.py`.
