@@ -582,9 +582,10 @@ class IssuesClient:
         if self.provider in DEFERRED_ISSUES_PROVIDERS:
             raise IssueCapabilityError(deferred_provider_message(self.provider))
         if self.provider in RECOGNIZED_NOT_SHIPPED_PROVIDERS:
-            from planning_store import SHIPPED_ISSUES_PROVIDERS
+            from planning_store_facade import _REPO_ROOT, shipped_issues_providers
 
-            if self.provider not in SHIPPED_ISSUES_PROVIDERS:
+            shipped = shipped_issues_providers(self.root) | shipped_issues_providers(_REPO_ROOT)
+            if self.provider not in shipped:
                 raise IssueCapabilityError(unshipped_provider_message(self.provider))
         if self.provider not in providers.PROVIDER_MODULES:
             raise IssueCapabilityError(

@@ -30,6 +30,7 @@ from planning.packaged_conformance_roots import (
     provider_fixture_slug,
     providers_with_green_conformance,
     resolve_conformance_fixture_path,
+    resolve_package_root,
 )
 
 CONFORMANCE_DIMENSIONS: tuple[str, ...] = (
@@ -52,6 +53,33 @@ CONFORMANCE_DIMENSIONS: tuple[str, ...] = (
 # Providers that may appear in SHIPPED_ISSUES_PROVIDERS only with green conformance evidence.
 CONFORMANCE_GATED_PROVIDERS: frozenset[str] = frozenset({"github-issues", "jira", "linear", "notion"})
 DOCS_GATED_PROVIDERS: frozenset[str] = frozenset({"notion"})
+
+
+def live_shipped_providers(
+    root: Path,
+    *,
+    package_root: Path | None = None,
+    active_host: str | None = None,
+) -> frozenset[str]:
+    """R3/R7 — live shipped set; active-host present-and-fail stays fail-closed."""
+    from planning.packaged_conformance_roots import is_host_bundle
+
+    _repo_root = Path(__file__).resolve().parent.parent.parent
+    pkg = package_root
+    if pkg is None:
+        pkg = resolve_package_root(root)
+        if not is_host_bundle(pkg) and not (pkg / "dist").is_dir():
+            try:
+                root.resolve().relative_to(_repo_root)
+            except ValueError:
+                pass
+            else:
+                pkg = resolve_package_root(_repo_root)
+    return providers_with_green_conformance(
+        root,
+        package_root=pkg,
+        active_host=active_host,
+    )
 
 _SAMPLE_BODY = "---\nunitId: conf-sample\ntitle: Conformance\n---\n\n# conformance sample\n"
 
