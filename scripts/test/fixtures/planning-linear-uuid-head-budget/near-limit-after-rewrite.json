@@ -1,0 +1,6 @@
+{
+  "name": "near-limit-after-rewrite",
+  "prefix": "# PRD 358 UUID head budget\n\n",
+  "paddingChar": "m",
+  "paddingLength": 60000
+}
