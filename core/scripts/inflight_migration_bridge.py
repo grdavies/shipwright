@@ -28,7 +28,7 @@ from inflight_signal import (  # noqa: E402
     write_tuples,
 )
 from wave_json_io import read_json, write_json  # noqa: E402
-from wave_state import TERMINAL_VERDICTS, enumerate_scoped_runs  # noqa: E402
+from wave_state import TERMINAL_VERDICTS, enumerate_scoped_runs, target_branch_from_state  # noqa: E402
 
 BRIDGE_RECORD = ".cursor/inflight-migration-bridge.json"
 LIVE_VERDICTS = frozenset({"running", "in-flight"})
@@ -116,7 +116,7 @@ def _marker_from_state(
     if isinstance(explicit, dict):
         unit_id = explicit.get("unitId") or explicit.get("unit")
         run_id = str(explicit.get("runId") or run_id_from_slug(slug))
-        branch = explicit.get("branch") or (state.get("target") or {}).get("branch")
+        branch = explicit.get("branch") or target_branch_from_state(state)
         epoch = int(explicit.get("epoch") or 1)
         source = "legacyInFlightMarker"
     else:
@@ -125,7 +125,7 @@ def _marker_from_state(
             return None
         lease = state.get("inflightLease") or {}
         run_id = str(lease.get("runId") or run_id_from_slug(slug))
-        branch = (state.get("target") or {}).get("branch")
+        branch = target_branch_from_state(state)
         epoch = int(lease.get("epoch") or 1)
         source = "deliver-run-state"
 
