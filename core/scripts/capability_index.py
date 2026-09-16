@@ -46,7 +46,13 @@ def capability_scan_root(repo_root: Path) -> Path:
 
 def default_capability_index_path(repo_root: Path) -> Path:
     repo = normalize_capability_repo_root(repo_root)
-    return (repo / CAPABILITY_INDEX_REL).resolve()
+    installed = repo / CAPABILITY_INDEX_REL
+    if installed.is_file():
+        return installed.resolve()
+    legacy = repo / "sw-reference" / "capability-index.json"
+    if legacy.is_file():
+        return legacy.resolve()
+    return installed.resolve()
 
 
 def derive_kind(source_path: str) -> str:
