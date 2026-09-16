@@ -13,6 +13,9 @@ from pathlib import Path
 from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+from wave_state import target_branch_from_state
 
 from wave_post_merge import run_post_merge_verify
 FLAKY_DEFAULT_RETRIES = 1
@@ -764,7 +767,7 @@ def resume_deliver_command(
 
 def cmd_stabilize_route(root: Path, args: list[str]) -> None:
     state = load_state(root)
-    target = (state.get("target") or {}).get("branch", "")
+    target = (target_branch_from_state(state) or "")
     scope = parse_kv(args, "--scope", "phase") or "phase"
     if scope == "whole-feature":
         emit(
@@ -796,7 +799,7 @@ def cmd_stabilize_route(root: Path, args: list[str]) -> None:
 def cmd_report_blockers(root: Path, _args: list[str]) -> None:
     state = load_state(root)
     phases = state.get("phases") or {}
-    target = (state.get("target") or {}).get("branch", "")
+    target = (target_branch_from_state(state) or "")
     blockers: list[dict[str, Any]] = []
     blocked_dependents: list[dict[str, str]] = []
     merged_green: list[dict[str, str]] = []
@@ -972,7 +975,7 @@ def cmd_revert_phase(root: Path, args: list[str]) -> None:
             "revertCommit": revert_sha,
             "bookkeeping": bookkeeping,
             "blastRadius": blast,
-            "recommendedCommand": stabilize_command_for_phase(meta, (state.get("target") or {}).get("branch", "")),
+            "recommendedCommand": stabilize_command_for_phase(meta, (target_branch_from_state(state) or "")),
         }
     )
 
@@ -1014,7 +1017,7 @@ def cmd_terminal_deny(root: Path, args: list[str]) -> None:
         state = load_state(root)
         state["terminalRejected"] = True
         state["verdict"] = "rejected"
-    target = (state.get("target") or {}).get("branch", "")
+    target = (target_branch_from_state(state) or "")
     state["recommendedCommand"] = (
         f"/sw-stabilize  # target {target}"
         if scope == "whole-feature"

@@ -26,7 +26,7 @@ from wave_errors import fail_from_payload
 from host_lib import load_workflow_config, remote_name, remote_ref, resolve_provider
 from host import probe_remote_ref_exists
 from host_ratelimit import HostProbeInconclusive, HostRateLimited
-from wave_state import phase_complete
+from wave_state import phase_complete, target_branch_from_state
 import loop_health_lib
 import planning_gap_capture as pgc
 
@@ -721,7 +721,7 @@ def _cmd_terminal_retro_run_body(root: Path, args: list[str]) -> None:
     state = load_state(root)
     if not all_phases_green(state):
         fail("retrospective requires all phases green-merged", exit_code=20)
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not target:
         fail("target branch missing in run-state")
     top = git_top(root)
@@ -834,7 +834,7 @@ def _cmd_terminal_ship_run_body(root: Path, args: list[str], *, dry_run: bool) -
         if retro.exit_code != 0:
             emit_outcome(retro)
         state = load_state(root)
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not target:
         fail("target branch missing")
     if dry_run:
@@ -1516,7 +1516,7 @@ def cmd_resume_reconcile(root: Path, args: list[str]) -> None:
     state = load_state(root)
     if not state:
         fail("run state missing")
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not target:
         fail("target branch missing in run-state")
     top = git_top(root)
@@ -1758,7 +1758,7 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
 
 def _cmd_terminal_pr_prepare_body(root: Path, args: list[str], *, dry_run: bool) -> None:
     state = load_state(root)
-    target = (state.get("target") or {}).get("branch", "")
+    target = (target_branch_from_state(state) or "")
     slug = (state.get("target") or {}).get("slug", target.split("/")[-1] if target else "feature")
     commit_type = (state.get("target") or {}).get("type", "feat")
     base = default_base_branch(root)
@@ -2144,7 +2144,8 @@ def finalize_run(
         load_run_scoped_state,
         run_finalize_authorization,
         save_run_scoped_state,
-    )
+    target_branch_from_state,
+)
     from wave_transition_receipt import (
         build_terminal_receipt,
         default_actor,

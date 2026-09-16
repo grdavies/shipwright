@@ -12,6 +12,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from wave_state import target_branch_from_state
+
 REQUIRED_FIELDS = ("resumeCommand", "haltCause", "autonomyDirective", "runId")
 
 
@@ -20,15 +22,9 @@ def utc_now() -> str:
 
 
 def _load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                return data if isinstance(data, dict) else {}
-            except json.JSONDecodeError:
-                return {}
-    return {}
+    from shipwright_paths import load_workflow_config
+
+    return load_workflow_config(root)
 
 
 def resolve_autonomy_directive(root: Path) -> str:
@@ -44,7 +40,7 @@ def resolve_run_id(state: dict[str, Any] | None) -> str:
         run_id = state.get("runId") or state.get("scopedRunId")
         if run_id:
             return str(run_id)
-        branch = (state.get("target") or {}).get("branch") or ""
+        branch = target_branch_from_state(state) or ""
         slug = branch.split("/", 1)[1] if "/" in branch else branch or "unknown"
         from inflight_signal import run_id_from_slug
 

@@ -15,6 +15,8 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from wave_state import target_branch_from_state
+
 import planning_index_issue as pii
 import planning_paths
 from planning_artifact_handle import issue_store_is_effective
@@ -233,7 +235,7 @@ def cmd_phase_status_live(root: Path, args: list[str]) -> None:
         {
             "verdict": "pass",
             "action": "phase-status-live",
-            "target": (state.get("target") or {}).get("branch"),
+            "target": target_branch_from_state(state),
             "verdictRun": state.get("verdict"),
             "livePhaseStatus": rows,
         }
@@ -255,7 +257,7 @@ def cmd_regenerate_index(root: Path, args: list[str]) -> None:
     import planning_index_gen as pig
 
     state = load_state(root)
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     dry_run = has_flag(args, "--dry-run")
     with living_doc_write_lock(root, target=target, holder="planning-index-generator"):
         content = pig.generate_index(root, writer="generator")
@@ -734,7 +736,7 @@ def cmd_reconcile(root: Path, args: list[str]) -> None:
     if not prd:
         fail("prd_number missing from deliver state/plan")
 
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     with living_doc_write_lock(root, target=target, holder="living-docs-reconcile"):
         _cmd_reconcile_locked(root, args, state, plan, prd)
 
@@ -924,7 +926,7 @@ def cmd_append_terminal(root: Path, args: list[str]) -> None:
     from wave_living_doc_lock import living_doc_write_lock
 
     state = load_state(root)
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     with living_doc_write_lock(root, target=target, holder="living-docs-append-terminal"):
         _cmd_append_terminal_locked(root, args, state)
 

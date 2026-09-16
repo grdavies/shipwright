@@ -283,7 +283,7 @@ def cmd_record(root: Path, args: list[str]) -> None:
     if not section:
         fail(f"commit type {commit_type!r} has no visible changelog section")
 
-    from wave_state import load_deliver_state, resolve_state_path
+    from wave_state import load_deliver_state, resolve_state_path, target_branch_from_state
 
     state_path = resolve_state_path(root)
     state = load_deliver_state(root)
@@ -318,7 +318,7 @@ def cmd_record(root: Path, args: list[str]) -> None:
 
     from wave_living_doc_lock import living_doc_write_lock
 
-    target_branch = (state.get("target") or {}).get("branch")
+    target_branch = target_branch_from_state(state)
     manifest_version_before = read_manifest_version(worktree)
     bookkeeping_sha = None
     with living_doc_write_lock(root, target=target_branch, holder=f"bookkeeping-record:{phase_slug}"):
@@ -376,7 +376,7 @@ def cmd_revert(root: Path, args: list[str]) -> None:
     if not changelog_path.is_file():
         fail(f"CHANGELOG.md not found in {worktree}")
 
-    from wave_state import load_deliver_state, resolve_state_path
+    from wave_state import load_deliver_state, resolve_state_path, target_branch_from_state
 
     state_path = resolve_state_path(root)
     state = load_deliver_state(root)
@@ -406,7 +406,7 @@ def cmd_revert(root: Path, args: list[str]) -> None:
 
     from wave_living_doc_lock import living_doc_write_lock
 
-    target_branch = (state.get("target") or {}).get("branch")
+    target_branch = target_branch_from_state(state)
     manifest_version_before = read_manifest_version(worktree)
     bookkeeping_sha = None
     with living_doc_write_lock(root, target=target_branch, holder=f"bookkeeping-revert:{phase_slug}"):

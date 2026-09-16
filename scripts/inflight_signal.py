@@ -27,6 +27,7 @@ from wave_state import (  # noqa: E402
     enumerate_scoped_runs,
     load_deliver_state,
     resolve_state_path,
+    target_branch_from_state,
 )
 from wave_json_io import write_json  # noqa: E402
 
@@ -484,7 +485,7 @@ def cmd_write(root: Path, args: list[str]) -> None:
 
     state, state_path, slug, unit_id = resolve_run_context(root, args)
     run_id = parse_kv(args, "--run-id") or run_id_from_slug(slug)
-    branch = parse_kv(args, "--branch") or (state.get("target") or {}).get("branch")
+    branch = parse_kv(args, "--branch") or target_branch_from_state(state)
     branch_token = parse_kv(args, "--branch-token")
     epoch_raw = parse_kv(args, "--epoch")
     takeover = parse_kv(args, "--takeover")
@@ -510,7 +511,7 @@ def cmd_write(root: Path, args: list[str]) -> None:
     new_tuple = redact_tuple_for_visibility(root, unit_id, new_tuple)
     new_tuple.validate_shape()
 
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     with living_doc_write_lock(root, target=target, holder="inflight-signal-writer"):
         tuples = read_tuples(root)
         prior = tuples.get(unit_id)
@@ -562,7 +563,7 @@ def cmd_clear(root: Path, args: list[str]) -> None:
     reason = parse_kv(args, "--reason") or "run-complete"
     dry_run = has_flag(args, "--dry-run")
     do_commit = has_flag(args, "--commit")
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
 
     with living_doc_write_lock(root, target=target, holder="inflight-signal-clear"):
         tuples = read_tuples(root)

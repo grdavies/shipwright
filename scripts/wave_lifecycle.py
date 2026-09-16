@@ -762,7 +762,9 @@ def cmd_phase_teardown_run(root: Path, args: list[str]) -> None:
             exit_code=20,
         )
 
-    target_branch = (state.get("target") or {}).get("branch")
+    from wave_state import target_branch_from_state
+
+    target_branch = target_branch_from_state(state)
     if not target_branch:
         fail("run-state missing target branch")
 
