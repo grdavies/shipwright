@@ -694,6 +694,7 @@
     "planning_lifecycle.py",
     "planning_linear_canonical.py",
     "planning_linear_client.py",
+    "planning_linear_facade_pilot.py",
     "planning_linear_projection.py",
     "planning_materialize.py",
     "planning_migrate.py",
@@ -891,6 +892,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 888,
+  "moduleCount": 889,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

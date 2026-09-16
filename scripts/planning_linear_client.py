@@ -1922,7 +1922,7 @@ class LinearIssuesClient:
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
-        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|promotion-gate-evidence|docs-currency-gate|prd061-readiness-gate|operator-browse-checklist-gate|comments-relations-surface>"}))
+        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|promotion-gate-evidence|docs-currency-gate|prd061-readiness-gate|operator-browse-checklist-gate|comments-relations-surface|live-facade-pilot-gate [receipt-path]>"}))
         raise SystemExit(2)
     root = Path(args[0]).resolve()
     cfg = load_workflow_config(root)
@@ -1957,6 +1957,18 @@ def main(argv: list[str] | None = None) -> None:
             raise SystemExit(2)
         client = LinearIssuesClient(root, cfg=cfg)
         print(json.dumps(client.comments_relations_surface(issue_id), indent=2))
+    elif cmd == "live-facade-pilot-gate":
+        from planning_linear_facade_pilot import live_facade_pilot_gate
+
+        receipt_arg = args[2] if len(args) > 2 else ""
+        receipt_path = Path(receipt_arg).resolve() if receipt_arg else None
+        out = live_facade_pilot_gate(root, cfg, receipt_path=receipt_path)
+        print(json.dumps(out, indent=2))
+        if out.get("verdict") == "ok":
+            raise SystemExit(0)
+        if out.get("verdict") == "blocked":
+            raise SystemExit(20)
+        raise SystemExit(2)
     else:
         print(json.dumps({"verdict": "fail", "error": f"unknown command: {cmd}"}))
         raise SystemExit(2)

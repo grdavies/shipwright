@@ -76,6 +76,28 @@ MARKER_CHUNK_MANIFEST = re.compile(
     re.DOTALL,
 )
 
+
+def decode_linear_public_markdown_json(raw: str) -> str:
+    """Undo Linear Public Markdown escapes inside HTML-comment JSON payloads.
+
+    Linear backslash-escapes ``[`` / ``]`` / ``(`` / ``)`` when persisting
+    Public Markdown, which otherwise makes ``json.loads`` fail closed on a
+    valid ``sw-chunk-manifest``.
+    """
+    text = raw.replace("\\[", "[").replace("\\]", "]")
+    return text.replace("\\(", "(").replace("\\)", ")")
+
+
+def load_chunk_manifest(body: str) -> dict[str, Any] | None:
+    match = MARKER_CHUNK_MANIFEST.search(body)
+    if not match:
+        return None
+    try:
+        parsed = json.loads(decode_linear_public_markdown_json(match.group(1)))
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
+
 SW_EDGES_FENCE = re.compile(
     r"```sw-edges\s*\n(.*?)\n```",
     re.DOTALL,
@@ -1166,14 +1188,10 @@ def _manifest_write_token(body: str) -> str | None:
     embedded in ``body``, so a manifest rewrite (real ids replacing synthetic
     placeholders) preserves the write-session token instead of dropping it
     (R27)."""
-    match = MARKER_CHUNK_MANIFEST.search(body)
-    if not match:
+    existing = load_chunk_manifest(body)
+    if existing is None:
         return None
-    try:
-        existing = json.loads(match.group(1))
-    except json.JSONDecodeError:
-        return None
-    token = existing.get("writeToken") if isinstance(existing, dict) else None
+    token = existing.get("writeToken")
     return token if isinstance(token, str) and token else None
 
 
@@ -1409,14 +1427,10 @@ def reassemble_body(
     linear_author_id: str | None = None,
 ) -> str:
     text = normalize_body(body)
-    manifest_match = MARKER_CHUNK_MANIFEST.search(text)
-    if not manifest_match:
+    manifest = load_chunk_manifest(text)
+    if manifest is None:
         return text
-    try:
-        manifest = json.loads(manifest_match.group(1))
-    except json.JSONDecodeError:
-        return text
-    chunks = manifest.get("chunks") if isinstance(manifest, dict) else None
+    chunks = manifest.get("chunks")
     if not isinstance(chunks, list):
         return text
     if linear_author_id is not None:
