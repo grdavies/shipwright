@@ -1,0 +1,19 @@
+---
+name: installed-demo
+capability:
+  version: 1
+  triggers:
+    - type: text_token
+      selectionFamily: doc-review
+      source: body_snapshot
+      match: whole_token
+      tokens:
+        - installed-cap-marker
+  metadata:
+    skill: installed-demo
+    selectionFamily: doc-review
+---
+
+# Installed bundle demo skill
+
+Fixture token: installed-cap-marker
