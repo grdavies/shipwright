@@ -28,7 +28,9 @@ DOC_REVIEW_CONFORMANCE_DIMENSIONS: tuple[str, ...] = (
     "hash-isolation",
 )
 
-DOC_REVIEW_ENABLED_PROVIDERS: frozenset[str] = frozenset({"github-issues", "linear"})
+DOC_REVIEW_ENABLED_PROVIDERS: frozenset[str] = frozenset(
+    {"github-issues", "linear", "jira", "notion"}
+)
 
 
 def _doc_review_cfg(provider: str = "github-issues") -> dict[str, Any]:
@@ -80,7 +82,7 @@ def _seed_doc_review_issue(store: FixtureIssuesStore, *, unit_id: str, issue_id:
 
 
 def run_doc_review_conformance_suite(provider: str, root: Path) -> dict[str, Any]:
-    """Fixture GitHub/Linear doc-review open/verify/complete suite (PRD 341 R30 / PRD 357 R6)."""
+    """Fixture GitHub/Linear/Jira/Notion doc-review open/verify/complete suite (PRD 341 R30 / PRD 357 R6)."""
     if provider not in DOC_REVIEW_ENABLED_PROVIDERS:
         dims = {
             name: _dimension_ok(name, posture="disabled", reason="doc-review-provider-unsupported")

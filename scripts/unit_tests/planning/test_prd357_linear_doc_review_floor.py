@@ -280,7 +280,7 @@ class TestLinearR6Enablement:
         assert "linear" in DOC_REVIEW_ENABLED_PROVIDERS
 
     def test_unshipped_providers_stay_unsupported(self) -> None:
-        for provider in ("gitlab-issues", "jira", "notion", "none"):
+        for provider in ("gitlab-issues", "none"):
             assert provider not in DOC_REVIEW_ENABLED_PROVIDERS
             assert missing_doc_review_capabilities(provider)
 

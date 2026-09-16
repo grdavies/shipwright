@@ -66,6 +66,7 @@ LIFECYCLE_HOOKS = (
 LOCK_CAPABILITY = "degraded"
 NATIVE_ISSUE_LOCK = False
 SEARCH_PAGE_SIZE = 100
+MAX_COMMENT_PAGES = 10
 NOTION_LABEL_DEGRADATION_LADDER = ("multi_select", "select", "customField")
 DEFAULT_PARENT_RELATION_PROPERTY = "Parent"
 SW_LABEL_MARKERS = frozenset({
@@ -214,6 +215,50 @@ def overflow_chunk_policy() -> dict[str, Any]:
             "<!-- sw-chunk-manifest --> plus <!-- sw-chunk-overflow --> comments."
         ),
     }
+
+
+def notion_r15_floor_present() -> bool:
+    """True when whoami, comment author_id, and comment pagination exist (PRD 357 R15)."""
+    add_comment = getattr(NotionIssuesClient, "add_comment", None)
+    varnames = getattr(getattr(add_comment, "__code__", None), "co_varnames", ())
+    parse_tokens = _parse_comment.__code__.co_names + _parse_comment.__code__.co_consts
+    list_tokens = (
+        NotionIssuesClient._list_comments.__code__.co_names
+        + NotionIssuesClient._list_comments.__code__.co_consts
+    )
+    return bool(
+        callable(getattr(NotionIssuesClient, "authenticated_principal_id", None))
+        and "author_id" in varnames
+        and "created_by" in parse_tokens
+        and "has_more" in list_tokens
+    )
+
+
+def notion_doc_review_capabilities() -> dict[str, bool]:
+    """Advertise doc-review caps only when the R15 floor is present."""
+    ready = notion_r15_floor_present()
+    return {
+        "post": ready,
+        "stableIds": ready,
+        "verifiableAuthorPrincipal": ready,
+        "stableApplicationId": False,
+        "nativeRevision": False,
+        "completeFullBody": ready,
+        "completePagination": ready,
+    }
+
+
+def encode_doc_review_marker_family_for_discussion(markdown: str) -> list[dict[str, Any]]:
+    """Persist ``sw-doc-review`` HTML-comment family as Notion discussion rich_text (TR5).
+
+    Notion blocks/comments have no HTML-comment node. The same marker family is
+    stored as discussion rich_text — not a second protocol.
+    """
+    chunks = split_rich_text_chunks(markdown)
+    out: list[dict[str, Any]] = []
+    for chunk in chunks:
+        out.extend(_rich_text_payload(chunk))
+    return out
 
 
 NOTION_PROVIDER_DOC_REL = Path("core/providers/issues/notion.md")
@@ -701,11 +746,14 @@ def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
     ):
         if f"<!-- {marker} -->" in body or f"<!--{marker}-->" in body:
             markers.append(marker)
+    created_by = raw.get("created_by") if isinstance(raw.get("created_by"), dict) else {}
+    author_id = str(created_by.get("id") or "")
     return CommentRecord(
         id=str(raw.get("id") or ""),
         body=body,
         created_at=str(raw.get("created_time") or ""),
         markers=markers,
+        author_id=author_id,
     )
 
 
@@ -1015,10 +1063,11 @@ class NotionIssuesClient:
             )
             _json_response(status, resp, token=self._token or "")
 
-    def _list_comments(self, block_id: str) -> list[CommentRecord]:
+    def _list_comments(self, block_id: str) -> tuple[list[CommentRecord], bool]:
         comments: list[CommentRecord] = []
         cursor = ""
-        while True:
+        complete = True
+        for _ in range(max(1, MAX_COMMENT_PAGES)):
             path = f"/comments?block_id={block_id}&page_size={SEARCH_PAGE_SIZE}"
             if cursor:
                 path += f"&start_cursor={cursor}"
@@ -1037,12 +1086,14 @@ class NotionIssuesClient:
                     [_parse_comment(item) for item in results if isinstance(item, dict)]
                 )
             if not data.get("has_more"):
+                complete = True
                 break
+            complete = False
             cursor = str(data.get("next_cursor") or "")
             if not cursor:
                 break
         comments.sort(key=lambda c: (c.created_at, c.id))
-        return comments
+        return comments, complete
 
     def _post_overflow_comments(
         self,
@@ -1181,9 +1232,11 @@ class NotionIssuesClient:
         page = _json_response(status, body, token=self._token or "")
         body_blocks = self._fetch_block_children(issue_id)
         body_md = blocks_to_markdown(body_blocks)
-        comments = self._list_comments(issue_id)
+        comments, complete = self._list_comments(issue_id)
         full_body = reassemble_body(body_md, comments)
-        return self._record_from_current(page, body_md=full_body, comments=comments)
+        record = self._record_from_current(page, body_md=full_body, comments=comments)
+        record.comments_complete = complete
+        return record
 
     def update(
         self,
@@ -1256,39 +1309,75 @@ class NotionIssuesClient:
                     self._append_block_children(issue_id, manifest_blocks[:1])
         return self.get(issue_id)
 
-    def add_comment(
-        self, issue_id: str, body: str, *, markers: list[str] | None = None
-    ) -> CommentRecord:
+    def authenticated_principal_id(self) -> str:
+        """Brokered Notion whoami — /users/me id, never a payload-claimed author (R15)."""
         if self._fixture is not None:
-            return self._fixture.add_comment(issue_id, body, markers=markers)
+            return str(self._fixture.authenticated_principal_id())
+        status, _, body = notion_request(
+            self.root,
+            self.cfg,
+            "GET",
+            "/users/me",
+            token=self._token,
+            credential=self._credential,
+        )
+        data = _json_response(status, body, token=self._token or "")
+        user_id = str(data.get("id") or "").strip() if isinstance(data, dict) else ""
+        if not user_id:
+            raise NotionClientError("Notion /users/me whoami missing", code="whoami-unavailable")
+        return user_id
+
+    def add_comment(
+        self,
+        issue_id: str,
+        body: str,
+        *,
+        markers: list[str] | None = None,
+        author_id: str = "",
+    ) -> CommentRecord:
+        from issues_broker import IssueCommentAuthorshipMismatch
+
+        if self._fixture is not None:
+            kwargs: dict[str, Any] = {}
+            if markers is not None:
+                kwargs["markers"] = markers
+            if author_id:
+                kwargs["author_id"] = author_id
+            return self._fixture.add_comment(issue_id, body, **kwargs)
         marker_prefix = ""
         if markers:
             marker_prefix = "".join(f"<!-- {marker} -->\n" for marker in markers)
         full_body = f"{marker_prefix}{body}" if marker_prefix else body
-        chunks = split_rich_text_chunks(full_body)
+        rich_text = encode_doc_review_marker_family_for_discussion(full_body)
         created: CommentRecord | None = None
-        for chunk in chunks:
-            payload = {
-                "parent": {"page_id": issue_id},
-                "rich_text": _rich_text_payload(chunk),
-            }
-            status, _, resp = notion_request(
-                self.root,
-                self.cfg,
-                "POST",
-                "/comments",
-                payload=payload,
-                token=self._token,
-                credential=self._credential,
+        # Notion comments accept a rich_text array; keep one discussion id for pins (R15).
+        payload = {
+            "parent": {"page_id": issue_id},
+            "rich_text": rich_text or _rich_text_payload(full_body),
+        }
+        status, _, resp = notion_request(
+            self.root,
+            self.cfg,
+            "POST",
+            "/comments",
+            payload=payload,
+            token=self._token,
+            credential=self._credential,
+        )
+        data = _json_response(status, resp, token=self._token or "")
+        created = _parse_comment(data if isinstance(data, dict) else {})
+        if not created.body:
+            created.body = full_body
+        if markers:
+            created.markers = list(markers)
+        if author_id and created.author_id != author_id:
+            raise IssueCommentAuthorshipMismatch(
+                "doc-review authorship mismatch",
+                expected=author_id,
+                actual=created.author_id,
+                comment_id=created.id,
             )
-            data = _json_response(status, resp, token=self._token or "")
-            created = CommentRecord(
-                id=str(data.get("id") or ""),
-                body=full_body,
-                created_at=str(data.get("created_time") or ""),
-                markers=list(markers or []),
-            )
-        if created is None:
+        if not created.id:
             raise NotionClientError("comment create returned no payload", code="comment-failed")
         return created
 

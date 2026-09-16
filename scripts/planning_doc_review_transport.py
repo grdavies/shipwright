@@ -60,8 +60,8 @@ DOC_REVIEW_MANDATORY_CAPABILITIES = (
 )
 
 # Adapter-owned capability floor. github-issues + fixture advertise after conformance (R27/R30).
-# Linear advertises only when the R15 whoami/author_id/pagination floor is present (PRD 357 R15/R6).
-# Other providers default unsupported until individually enabled (R28/D6).
+# Linear/Jira/Notion advertise only when the R15 whoami/author_id/pagination floor is present
+# (PRD 357 R15/R6). Other providers default unsupported until individually enabled (R28/D6).
 DOC_REVIEW_CAPABILITIES_BY_PROVIDER: dict[str, dict[str, bool]] = {
     "github-issues": {
         "post": True,
@@ -1066,13 +1066,22 @@ def drift_failure(*, kind: str, detail: str = "", **extra: Any) -> dict[str, Any
 def doc_review_capabilities_for(provider: str) -> dict[str, bool]:
     """Return adapter-owned ``docReviewComments`` record (defaults all false).
 
-    Linear is resolved from the live R15 floor so missing whoami/author_id/pagination
-    keeps every mandatory capability false (``doc-review-provider-unsupported``).
+    Linear/Jira/Notion resolve from the live R15 floor so missing
+    whoami/author_id/pagination keeps every mandatory capability false
+    (``doc-review-provider-unsupported``).
     """
     if provider == "linear":
         from planning_linear_client import linear_doc_review_capabilities
 
         declared = linear_doc_review_capabilities()
+    elif provider == "jira":
+        from planning_jira_client import jira_doc_review_capabilities
+
+        declared = jira_doc_review_capabilities()
+    elif provider == "notion":
+        from planning_notion_client import notion_doc_review_capabilities
+
+        declared = notion_doc_review_capabilities()
     else:
         declared = DOC_REVIEW_CAPABILITIES_BY_PROVIDER.get(provider)
     if isinstance(declared, dict):
@@ -1086,6 +1095,19 @@ def doc_review_capabilities_for(provider: str) -> dict[str, bool]:
             "completePagination": bool(declared.get("completePagination")),
         }
     return {name: False for name in (*DOC_REVIEW_MANDATORY_CAPABILITIES, "stableApplicationId", "nativeRevision")}
+
+
+def post_review_finding_size_limit_for(provider: str | None) -> int:
+    """Provider comment cap for findings posts (PRD 341 R39 / PRD 357 R15)."""
+    if provider == "linear":
+        from planning_canonical import LINEAR_SIZE_PIN
+
+        return int(LINEAR_SIZE_PIN["commentLimit"])
+    if provider == "jira":
+        from planning_jira_canonical import JIRA_CLOUD_DESCRIPTION_LIMIT
+
+        return int(JIRA_CLOUD_DESCRIPTION_LIMIT)
+    return DOC_REVIEW_COMMENT_SIZE_CAP
 
 
 def missing_doc_review_capabilities(provider: str) -> list[str]:
@@ -2013,12 +2035,8 @@ def execute_doc_review_txn(
                 unit_id=unit_id,
                 body_path=body_path,
             )
-        limit = DOC_REVIEW_COMMENT_SIZE_CAP
         provider = getattr(client, "provider", None)
-        if provider == "linear":
-            from planning_canonical import LINEAR_SIZE_PIN
-
-            limit = int(LINEAR_SIZE_PIN["commentLimit"])
+        limit = post_review_finding_size_limit_for(provider)
         if len(body) > limit:
             return {
                 "verdict": "fail",
