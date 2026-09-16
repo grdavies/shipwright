@@ -462,7 +462,7 @@ def cmd_verify_run(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     flaky_retries = int(parse_kv(args, "--flaky-retries", str(FLAKY_DEFAULT_RETRIES)) or "1")
     wt = resolve_orchestrator_worktree(root, args)
-    target = (load_state(root).get("target") or {}).get("branch", "")
+    target = target_branch_from_state(load_state(root)) or ""
     if dry_run:
         emit(
             {
@@ -502,7 +502,7 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
     if not phase_slug:
         fail("--phase-slug required")
     state_hint = load_state(root)
-    target_branch = (state_hint.get("target") or {}).get("branch")
+    target_branch = target_branch_from_state(state_hint)
     if not (state_hint.get("phases") or {}):
         fail(
             "deliver state missing phases; fix .cursor/sw-deliver-state.json breadcrumb",
