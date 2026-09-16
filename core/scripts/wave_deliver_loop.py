@@ -1233,9 +1233,7 @@ def clean_consolidated_halt(
     state["cause"] = cause
     save_state(root, state)
 
-    target = (state.get("target") or {}).get("branch") or (plan.get("target") or {}).get(
-        "branch"
-    )
+    target = loop_target_branch(state, plan)
     lock_released = False
     if target:
         lock_path = scoped_paths(root, str(target))["lock"]
@@ -2329,8 +2327,27 @@ def batch_in_flight_all_terminal(
     return all(phase_has_validated_terminal(root, state, plan, pid) for pid in in_flight)
 
 
+def loop_target_branch(
+    state: dict[str, Any], plan: dict[str, Any] | None = None
+) -> str | None:
+    """Resolve integration branch from string or dict `target` (run-scoped state)."""
+    branch = target_branch_from_state(state)
+    if branch:
+        return branch
+    if not isinstance(plan, dict):
+        return None
+    raw = plan.get("target")
+    if isinstance(raw, str) and raw:
+        return raw
+    if isinstance(raw, dict):
+        nested = raw.get("branch")
+        if isinstance(nested, str) and nested:
+            return nested
+    return None
+
+
 def integration_branch_head(root: Path, state: dict[str, Any]) -> str | None:
-    target = (state.get("target") or {}).get("branch")
+    target = loop_target_branch(state)
     if not target:
         return None
     orch = state.get("orchestratorWorktree") or {}
@@ -3026,7 +3043,7 @@ def mark_phases_in_flight(
 def phase_lease_branches(
     state: dict[str, Any], meta: dict[str, Any]
 ) -> tuple[str, str] | None:
-    integration = (state.get("target") or {}).get("branch")
+    integration = loop_target_branch(state)
     phase_branch = meta.get("branch")
     if not integration or not phase_branch:
         return None
@@ -3446,9 +3463,7 @@ def compute_next_action(
     if plan.get("mode") != "phase":
         fail("deliver-loop requires phase-mode plan", exit_code=2)
 
-    target = (plan.get("target") or {}).get("branch") or (state.get("target") or {}).get(
-        "branch"
-    )
+    target = loop_target_branch(state, plan)
 
     if not state.get("targetLock") and not state.get("orchestratorWorktree"):
         if not target:
@@ -4138,9 +4153,7 @@ def _execute_mechanical_inner(
                     fail("state-init requires validated plan")
             run_plan.persist_plan(root, run_id, pending_plan, state)
             save_state(root, state)
-        target_branch = (plan.get("target") or {}).get("branch") or (
-            (state.get("target") or {}).get("branch")
-        )
+        target_branch = loop_target_branch(state, plan)
         if target_branch:
             from wave_state import write_run_local_lease
 
@@ -4361,7 +4374,7 @@ def _execute_mechanical_inner(
         phase_branch = meta.get("branch")
         if not phase_branch:
             fail("canonical-reemit missing phase branch", exit_code=2)
-        integration = (state.get("target") or {}).get("branch")
+        integration = loop_target_branch(state)
         if not integration:
             fail("canonical-reemit missing integration branch", exit_code=2)
         if meta.get("backgroundDispatchedAt"):
@@ -4732,7 +4745,7 @@ def _execute_mechanical_inner(
         orch = orchestrator_worktree_path(root, state)
         # R1: reconcile owns the living-doc lock via living_doc_write_lock — do not
         # outer-acquire here (nested acquire deadlocks against the reconcile subprocess).
-        target = (state.get("target") or {}).get("branch")
+        target = loop_target_branch(state, plan)
         living_args = ["living-docs", "reconcile", "--commit"]
         if orch is not None:
             living_args.extend(["--orchestrator-worktree", str(orch)])
@@ -4764,7 +4777,11 @@ def _execute_mechanical_inner(
 
         cfg = load_workflow_config(root)
         prd = prd_number_from_state(state, plan)
-        slug = str((state.get("target") or {}).get("slug") or plan.get("slug") or "")
+        raw_target = state.get("target")
+        slug = ""
+        if isinstance(raw_target, dict):
+            slug = str(raw_target.get("slug") or "")
+        slug = slug or str(plan.get("slug") or "")
         prd_unit_id = pii.resolve_prd_unit_id(root, prd, slug=slug or None) if prd else None
         closure: dict[str, Any] | None = None
         if prd_unit_id:
@@ -4796,7 +4813,7 @@ def _execute_mechanical_inner(
                     20,
                     remediation=str(closure.get("resumeCommand") or ""),
                 )
-        target = (state.get("target") or {}).get("branch")
+        target = loop_target_branch(state, plan)
         task_list = task_list_from(state, plan)
         clear_args = ["run-complete"]
         if target:
