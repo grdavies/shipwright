@@ -38,10 +38,13 @@ PRD 341 issue-store facade work must not alter file-store goldens, selector outp
 `signal_context`, or the file-store procedure below. Regression lock:
 `scripts/unit_tests/doc/test_doc_loop_state.py` (persona-selection + findings-schema hashes).
 
-**Provider gate:** issue-store review transport is **GitHub issue-store only** today. Jira, Linear, Notion,
-file-store, and other backends return `doc-review-provider-unsupported` / transport refusal — halt; do not
-fall back to in-IDE transport from an issue-store session, and do not route file-store reviews through the
-GitHub facade.
+**Provider gate (PRD 341 floor):** under `planning.store.backend: issue-store`, **GitHub** (`github-issues`) is
+the only **live** document-review transport today — facade ops after `docReviewComments` conformance.
+**Linear, Jira, Notion**, and other non-GitHub issues providers remain `doc-review-provider-unsupported`
+until Phases 4–5 land the full PRD 341 provider floor (see `core/providers/issues/CAPABILITIES.md` matrix).
+Do not claim Linear/Jira/Notion review is enabled before that promotion. **File-store** sessions use the
+in-IDE panel only — halt on transport refusal; do not fall back to in-IDE transport from an issue-store
+session, and do not route file-store reviews through the GitHub facade.
 
 **IDE fallback:** when `backend != issue-store`, the procedure under **Selection** / parallel panel + JSON
 synthesis is the sole transport — byte-identical to the pre-341 file-store path.
