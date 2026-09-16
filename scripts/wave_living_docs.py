@@ -15,7 +15,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from wave_state import target_branch_from_state
+from wave_state import run_slug_from_state, target_branch_from_state
 
 import planning_index_issue as pii
 import planning_paths
@@ -751,7 +751,7 @@ def _cmd_reconcile_locked(
     dry_run = has_flag(args, "--dry-run")
     do_commit = has_flag(args, "--commit")
 
-    slug = str((state.get("target") or {}).get("slug") or plan.get("slug") or "")
+    slug = str(run_slug_from_state(state) or plan.get("slug") or "")
     scope = projection_state.projection_scope(prd=prd, slug=slug, action="reconcile")
     proj_state = projection_state.load_projection_state(worktree, scope)
     if not proj_state.get("prd"):
@@ -973,7 +973,7 @@ def _cmd_append_terminal_locked(root: Path, args: list[str], state: dict[str, An
     if head:
         append_args.extend(["--sha", head])
 
-    slug = str((state.get("target") or {}).get("slug") or plan.get("slug") or "")
+    slug = str(run_slug_from_state(state) or plan.get("slug") or "")
     unit_id = pii.resolve_prd_unit_id(worktree, prd, slug=slug or None) or f"prd-{prd}"
     if living_doc_write_banned(worktree):
         out = facade_append_completion(

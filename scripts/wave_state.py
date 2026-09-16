@@ -198,6 +198,12 @@ def run_slug_from_state(state: dict[str, Any]) -> str | None:
         slug = target.get("slug")
         if isinstance(slug, str) and slug.strip():
             return slug.strip()
+        branch = target.get("branch")
+        if isinstance(branch, str) and "/" in branch:
+            return branch.split("/", 1)[1]
+        return None
+    if isinstance(target, str) and "/" in target:
+        return target.split("/", 1)[1]
     return None
 
 
