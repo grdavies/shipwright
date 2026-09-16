@@ -214,6 +214,12 @@ def snapshot_from_fixture(data: dict[str, Any]) -> IssueSnapshot:
 
 CHUNK_OVERFLOW_MARKER = "<!-- sw-chunk-overflow -->\n"
 _LINEAR_CHUNK_LIMIT = BODY_SIZE_LIMIT
+# PRD 358 D4 — Linear overflow comment ids are 36-char UUID strings after post.
+LINEAR_OVERFLOW_COMMENT_ID_UTF8_LEN = 36
+
+
+class LinearChunkHeadBudgetError(RuntimeError):
+    """No description head fits within the limit after UUID manifest rewrite (PRD 358 R2)."""
 
 
 def _utf8_byte_len(text: str) -> int:
@@ -360,6 +366,26 @@ def _split_overflow_comments(
     return new_comments
 
 
+def _worst_case_linear_overflow_comment_ids(count: int) -> list[str]:
+    """Worst-case UTF-8 length for post-posting Linear overflow comment ids."""
+    if count <= 0:
+        return []
+    pad = "a" * LINEAR_OVERFLOW_COMMENT_ID_UTF8_LEN
+    return [pad for _ in range(count)]
+
+
+def _head_fits_after_uuid_manifest_rewrite(head: str, overflow_chunk_count: int) -> bool:
+    """True when rewrite_chunk_manifest_ids cannot push the head over the Linear limit."""
+    if overflow_chunk_count <= 0:
+        return _utf8_byte_len(head) <= _LINEAR_CHUNK_LIMIT
+    from planning_canonical import rewrite_chunk_manifest_ids
+
+    rewritten = rewrite_chunk_manifest_ids(
+        head, _worst_case_linear_overflow_comment_ids(overflow_chunk_count)
+    )
+    return _utf8_byte_len(rewritten) <= _LINEAR_CHUNK_LIMIT
+
+
 def _attach_chunk_manifest(
     head: str,
     chunk_comments: list[CommentRecord],
@@ -403,13 +429,17 @@ def chunk_body_for_linear(
         )
         chunk_only = extra[len(comments) :]
         candidate = _attach_chunk_manifest(body[:head_len], chunk_only, write_token=write_token)
-        if _utf8_byte_len(candidate) <= _LINEAR_CHUNK_LIMIT:
+        if _utf8_byte_len(candidate) <= _LINEAR_CHUNK_LIMIT and _head_fits_after_uuid_manifest_rewrite(
+            candidate, len(chunk_only)
+        ):
             best = (candidate, extra)
             lo = mid + 1
         else:
             hi = mid - 1
     if best is None:
-        raise RuntimeError("Linear body chunking failed: no description prefix fits with manifest")
+        raise LinearChunkHeadBudgetError(
+            "Linear body chunking failed: no description head fits after UUID manifest rewrite"
+        )
     return best
 
 
