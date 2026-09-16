@@ -109,6 +109,49 @@ def _active_host_bundle(package_root: Path, host_id: str) -> Path | None:
     return None
 
 
+PACKAGED_CONFORMANCE_RECOVERY = (
+    "Upgrade or rebuild Shipwright so Linear provider-conformance evidence is present "
+    "under core/sw-reference/provider-conformance/ and "
+    "dist/<host>/core/sw-reference/provider-conformance/. Do not copy Shipwright tests "
+    "into the consumer repo. Do not retarget consumer Linear team, project, or credentials."
+)
+
+
+def _dist_host_bundles(package_root: Path) -> list[Path]:
+    """Present ``dist/<host>/`` bundles in ``PACKAGED_DIST_IDS`` order (PRD 357 R2)."""
+    pkg = package_root.resolve()
+    bundles: list[Path] = []
+    for host_id in PACKAGED_DIST_IDS:
+        bundle = pkg / "dist" / host_id
+        if bundle.is_dir():
+            bundles.append(bundle)
+    return bundles
+
+
+def packaged_conformance_search_roots(
+    root: Path,
+    filename: str,
+    *,
+    package_root: Path | None = None,
+    active_host: str | None = None,
+) -> list[str]:
+    """Named roots consulted for packaged conformance evidence (PRD 357 R3)."""
+    roots: list[str] = []
+    for rel in (CONFORMANCE_FIXTURES_REL, PACKAGED_CONFORMANCE_REL):
+        roots.append(str((root / rel / filename).resolve()))
+    pkg = (package_root or resolve_package_root(root)).resolve()
+    roots.append(str((pkg / PACKAGED_CONFORMANCE_REL / filename).resolve()))
+    host = resolve_active_host_id(pkg, active_host=active_host)
+    if host is None:
+        for bundle in _dist_host_bundles(pkg):
+            roots.append(str((bundle / PACKAGED_CONFORMANCE_REL / filename).resolve()))
+        return roots
+    active_bundle = _active_host_bundle(pkg, host)
+    if active_bundle is not None:
+        roots.append(str((active_bundle / PACKAGED_CONFORMANCE_REL / filename).resolve()))
+    return roots
+
+
 def resolve_conformance_fixture_path(
     root: Path,
     filename: str,
@@ -139,6 +182,13 @@ def _resolve_packaged_conformance_fixture_path(
     pkg = (package_root or resolve_package_root(root)).resolve()
     host = resolve_active_host_id(pkg, active_host=active_host)
     if host is None:
+        # PRD 357 R2/R3: no-active-host searches present dist/<host>/ bundles in
+        # PACKAGED_DIST_IDS order. A present record (green or fail) wins — never
+        # skip a present-and-fail host A to pick up host B green.
+        for bundle in _dist_host_bundles(pkg):
+            hit = _conformance_record_in_bundle(bundle, filename)
+            if hit is not None:
+                return hit
         return _conformance_record_in_bundle(pkg, filename) if is_host_bundle(pkg) else None
 
     active_bundle = _active_host_bundle(pkg, host)
@@ -187,12 +237,21 @@ def load_conformance_record(
     if path is None:
         path = conformance_fixture_path(root, provider)
     if not path.is_file():
-        return {
+        missing: dict[str, Any] = {
             "verdict": "fail",
             "provider": provider,
             "error": "missing-conformance-record",
             "fixturePath": str(path),
+            "searchedRoots": packaged_conformance_search_roots(
+                root,
+                f"{slug}.ok.json",
+                package_root=package_root,
+                active_host=active_host,
+            ),
         }
+        if slug == "linear":
+            missing["recoveryAction"] = PACKAGED_CONFORMANCE_RECOVERY
+        return missing
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
