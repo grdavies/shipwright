@@ -17,6 +17,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import doc_format
 import planning_artifact_handle as pah
+from repository_context import POSTURE_PLUGIN_SELF, detect_repository_posture
 
 # PRD 358 R7 — R/D bullet grammar is single-sourced in doc_format (spec-rigor and
 # doc-format-normalize must not duplicate those patterns).
@@ -32,6 +33,29 @@ PRD_BODY_CONTRACT_V2 = "v2"
 PRD_V2_REQUIRED_SECTIONS = ("Acceptance Scenarios", "Success Criteria")
 PRD_BASE_REQUIRED_SECTIONS = ("Overview", "Goals", "Non-Goals", "Requirements", "Testing Strategy")
 
+PACKAGE_ROOT = SCRIPT_DIR.parent
+
+
+def _resolve_consumer_root(raw: str | None) -> tuple[Path | None, str | None]:
+    """PRD 358 R8 — consumer workspace root; not implicit SCRIPT_DIR.parent."""
+    if raw is None or not str(raw).strip():
+        return None, "missing required --root"
+    root = Path(raw).expanduser().resolve()
+    if not root.is_dir():
+        return None, f"--root is not a directory: {root}"
+    scripts_at_root = root / "scripts"
+    try:
+        if scripts_at_root.resolve() == SCRIPT_DIR.resolve():
+            if detect_repository_posture(root) != POSTURE_PLUGIN_SELF:
+                return None, "consumer --root must not be the package scripts/ parent"
+    except (OSError, RuntimeError, ValueError):
+        return None, "consumer --root must not be the package scripts/ parent"
+    return root, None
+
+
+def _fail_root(message: str) -> int:
+    print(json.dumps({"verdict": "fail", "error": message, "gate": "root"}))
+    return 20
 
 
 def _run(
@@ -230,7 +254,10 @@ def _run(
             print(json.dumps({"verdict": "fail", "artifact": "tasks", "findings": findings}))
             return 20
         union = json.loads(
-            subprocess.check_output([sys.executable, str(root / "scripts/spec-union.py"), str(prd_file)], text=True)
+            subprocess.check_output(
+                [sys.executable, str(SCRIPT_DIR / "spec-union.py"), str(prd_file)],
+                text=True,
+            )
         )
         union_ids = [r["id"] for r in union.get("requirements", [])]
         if not re.search(r"^##\s+Traceability\s*$", text, re.M | re.I):
@@ -311,8 +338,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prd", default="")
     parser.add_argument("--unit-id", default="")
     parser.add_argument("--prd-unit-id", default="")
+    parser.add_argument(
+        "--root",
+        required=True,
+        help="Consumer repository root for workflow config and issue-store artifact resolve (PRD 358 R8)",
+    )
     args = parser.parse_args(argv)
-    root = SCRIPT_DIR.parent
+    root, root_error = _resolve_consumer_root(args.root)
+    if root is None:
+        return _fail_root(root_error or "invalid --root")
     return _run(
         root,
         args.artifact,

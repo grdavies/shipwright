@@ -1,0 +1,6 @@
+{
+  "name": "spec-rigor-consumer-root",
+  "bodyPath": "docs/prds/023-application-shell-admin-experience/023-prd-application-shell-admin-experience.md",
+  "unitId": "023-prd-application-shell-admin-experience",
+  "prdBody": "---\ndate: 2026-01-01\nunit-id: 023-prd-application-shell-admin-experience\nvisibility: public\n---\n# Application shell admin experience\n\n## Overview\n\nConsumer virtual-handle fixture for PRD 358 R8.\n\n## Goals\n\n- Resolve planning bodies from issue-store handles.\n\n## Non-Goals\n\n- Local docs/prds materialization in the consumer repo.\n\n## Requirements\n\n- **R1** Installed spec-rigor must resolve virtual handles with explicit consumer --root.\n\n## Technical Requirements\n\nIssue-store fixture backend only.\n\n## Security & Compliance\n\nNo secrets in fixture bodies.\n\n## Testing Strategy\n\nNamed fixture spec-rigor-consumer-root.\n\n## Rollout Plan\n\nShip with PRD 358 phase 10.\n\n## Decision Log\n\n- 2026-09-16: R8 consumer root contract.\n\n## Open Questions\n\n(none)\n"
+}
