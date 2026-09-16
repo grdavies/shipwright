@@ -188,7 +188,7 @@ def _tokenize_frontmatter(fm: str, line_offset: int = 1) -> list[Token]:
     return tokens
 
 
-RID_BULLET = re.compile(r"^- \*\*([RD]\d+)\*\*\s*(.*)$", re.I)
+RID_BULLET = re.compile(r"^([-*]) \*\*([RD]\d+)\*\*\s*(.*)$", re.I)
 RID_BULLET_ALT = re.compile(r"^\*\*([RD]\d+)\*\*\s*(.*)$", re.I)
 RID_SECTION = re.compile(r"^##\s+([RD]\d+)\b(?:\s*\((.*)\))?\s*$", re.I)
 SECTION_HEADING = re.compile(r"^(##\s+.+)$")
@@ -386,12 +386,17 @@ def tokenize(source: str) -> Document:
                     line=line_no,
                     column=1,
                     text=line,
-                    data={"id": norm_id(m.group(1)), "body": m.group(2).strip(), "form": "bullet"},
+                    data={
+                        "id": norm_id(m.group(2)),
+                        "body": m.group(3).strip(),
+                        "form": "bullet",
+                        "marker": m.group(1),
+                    },
                 )
             )
             continue
         m = RID_BULLET_ALT.match(line)
-        if m and not line.startswith("- "):
+        if m and not line.startswith(("- ", "* ")):
             tokens.append(
                 Token(
                     kind=TokenKind.RD_ID_BULLET,
@@ -445,7 +450,8 @@ def emit_canonical(document: Document) -> str:
         if idx < 0 or idx >= len(out_lines):
             continue
         if tok.kind == TokenKind.RD_ID_BULLET and tok.data.get("form") == "bullet":
-            out_lines[idx] = f"- **{tok.data['id']}** {tok.data.get('body', '')}\n"
+            marker = tok.data.get("marker") or "-"
+            out_lines[idx] = f"{marker} **{tok.data['id']}** {tok.data.get('body', '')}\n"
         elif tok.kind == TokenKind.PHASE_HEADING:
             out_lines[idx] = f"### {tok.data.get('phase', '')}. {tok.data.get('title', '')}\n"
         elif tok.kind == TokenKind.SECTION_HEADING:
@@ -460,7 +466,7 @@ EXCEPTION_MANIFEST_REL = (
 EXCEPTION_MANIFEST_CAP = 64
 
 RID_BULLET_NONCANON = re.compile(
-    r"^- \*\*([RD]\d+)[.:]+\*\*\s*(.*)$", re.I
+    r"^([-*]) \*\*([RD]\d+)[.:]+\*\*\s*(.*)$", re.I
 )
 PHASE_HEADING_NONCANON = re.compile(
     r"^###\s+(?:Phase\s+)?(\d+)\s*(?:[.:—\-]|$)", re.I
@@ -644,12 +650,13 @@ def structural_check(text: str, path: str = "") -> list[Finding]:
         line_no = body_start + idx
         m = RID_BULLET_NONCANON.match(line)
         if m:
-            rid = norm_id(m.group(1))
+            rid = norm_id(m.group(2))
+            marker = m.group(1)
             findings.append(
                 Finding(
                     file=file_ref,
                     line=line_no,
-                    expected=f"- **{rid}** …",
+                    expected=f"{marker} **{rid}** …",
                     found=line.strip(),
                     klass="rid-bullet-variant",
                 )
@@ -696,9 +703,10 @@ def write_document(text: str) -> str:
         newline = line[len(raw):] if len(line) > len(raw) else "\n"
         m = RID_BULLET_NONCANON.match(raw)
         if m:
-            rid = norm_id(m.group(1))
-            body_text = m.group(2).strip()
-            new_line = f"- **{rid}** {body_text}{newline}"
+            marker = m.group(1)
+            rid = norm_id(m.group(2))
+            body_text = m.group(3).strip()
+            new_line = f"{marker} **{rid}** {body_text}{newline}"
             if new_line != line:
                 changed = True
             new_body_lines.append(new_line)

@@ -17,6 +17,9 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import doc_format
 import planning_artifact_handle as pah
+
+# PRD 358 R7 — R/D bullet grammar is single-sourced in doc_format (spec-rigor and
+# doc-format-normalize must not duplicate those patterns).
 import wave_deliver as wd
 from phase_sizing import evaluate_freeze_gate, has_advisory_block
 from _sw.cli import run_module_main
