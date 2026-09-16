@@ -65,8 +65,17 @@ class TestCapabilityFloor:
         assert caps["stableApplicationId"] is False
         assert missing_doc_review_capabilities("github-issues") == []
 
+    def test_linear_advertises_doc_review_comments_after_r15_floor(self) -> None:
+        caps = doc_review_capabilities_for("linear")
+        assert caps["post"] is True
+        assert caps["stableIds"] is True
+        assert caps["verifiableAuthorPrincipal"] is True
+        assert caps["completeFullBody"] is True
+        assert caps["completePagination"] is True
+        assert missing_doc_review_capabilities("linear") == []
+
     def test_non_github_preflight_unsupported(self) -> None:
-        for provider in ("gitlab-issues", "jira", "linear", "notion", "none"):
+        for provider in ("gitlab-issues", "jira", "notion", "none"):
             missing = missing_doc_review_capabilities(provider)
             assert missing
             out = provider_unsupported(provider=provider)
@@ -79,10 +88,30 @@ class TestCapabilityFloor:
             assert blocked is not None
             assert blocked["error"] == DOC_REVIEW_PROVIDER_UNSUPPORTED
 
-    def test_facade_refuses_linear_before_write(self, facade_repo: Path) -> None:
+    def test_facade_accepts_linear_after_r15_floor(self, facade_repo: Path) -> None:
         cfg_path = facade_repo / ("." + "cursor") / "workflow.config.json"
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         cfg["planning"]["store"]["issuesProvider"] = "linear"
+        cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+        store = get_fixture_store(facade_repo)
+        unit_id = "341-prd-doc-review-transport"
+        _seed_issue(store, unit_id=unit_id)
+        loaded = load_workflow_config(facade_repo)
+        out = post_review_finding(
+            facade_repo,
+            loaded,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id="round-1",
+            persona="product",
+            payload=_sample_payload("product"),
+        )
+        assert out["verdict"] == "ok", out
+
+    def test_facade_refuses_gitlab_before_write(self, facade_repo: Path) -> None:
+        cfg_path = facade_repo / ("." + "cursor") / "workflow.config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        cfg["planning"]["store"]["issuesProvider"] = "gitlab-issues"
         cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
         loaded = load_workflow_config(facade_repo)
         out = post_review_finding(
