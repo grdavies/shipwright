@@ -1,11 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-<<<<<<< HEAD
-  "generatedAt": "2026-09-16T02:49:29Z",
-=======
-  "generatedAt": "2026-09-16T03:30:32Z",
->>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
+  "generatedAt": "2026-09-16T04:54:25Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -4415,161 +4411,91 @@
       "classification": "self-repo-only"
     },
     {
-<<<<<<< HEAD
-      "id": "core/providers/issues/linear.md:157:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:156:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 157,
-=======
-      "id": "core/providers/issues/linear.md:162:planning_linear_client.py",
-      "tree": "core/providers",
-      "file": "core/providers/issues/linear.md",
-      "line": 162,
->>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
+      "line": 156,
       "column": 32,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-<<<<<<< HEAD
-      "id": "core/providers/issues/linear.md:215:planning_store.py",
+      "id": "core/providers/issues/linear.md:214:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 215,
-=======
-      "id": "core/providers/issues/linear.md:220:planning_store.py",
-      "tree": "core/providers",
-      "file": "core/providers/issues/linear.md",
-      "line": 220,
->>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
+      "line": 214,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-<<<<<<< HEAD
-      "id": "core/providers/issues/linear.md:216:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:215:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 216,
-=======
-      "id": "core/providers/issues/linear.md:221:planning_linear_client.py",
-      "tree": "core/providers",
-      "file": "core/providers/issues/linear.md",
-      "line": 221,
->>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
+      "line": 215,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-<<<<<<< HEAD
-      "id": "core/providers/issues/linear.md:253:test/run_pytest.py",
+      "id": "core/providers/issues/linear.md:252:test/run_pytest.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 253,
-=======
-      "id": "core/providers/issues/linear.md:258:test/run_pytest.py",
-      "tree": "core/providers",
-      "file": "core/providers/issues/linear.md",
-      "line": 258,
->>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
+      "line": 252,
       "column": 8,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-<<<<<<< HEAD
-      "id": "core/providers/issues/linear.md:259:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:258:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 259,
-=======
-      "id": "core/providers/issues/linear.md:264:planning_linear_client.py",
-      "tree": "core/providers",
-      "file": "core/providers/issues/linear.md",
-      "line": 264,
->>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
+      "line": 258,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-<<<<<<< HEAD
-      "id": "core/providers/issues/linear.md:265:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:264:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 265,
-=======
-      "id": "core/providers/issues/linear.md:270:planning_linear_client.py",
-      "tree": "core/providers",
-      "file": "core/providers/issues/linear.md",
-      "line": 270,
->>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
+      "line": 264,
       "column": 28,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-<<<<<<< HEAD
-      "id": "core/providers/issues/linear.md:329:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:328:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 329,
-=======
-      "id": "core/providers/issues/linear.md:334:planning_linear_client.py",
-      "tree": "core/providers",
-      "file": "core/providers/issues/linear.md",
-      "line": 334,
->>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
+      "line": 328,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-<<<<<<< HEAD
-      "id": "core/providers/issues/linear.md:349:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:348:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 349,
-=======
-      "id": "core/providers/issues/linear.md:354:planning_linear_client.py",
-      "tree": "core/providers",
-      "file": "core/providers/issues/linear.md",
-      "line": 354,
->>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
+      "line": 348,
       "column": 10,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-<<<<<<< HEAD
-      "id": "core/providers/issues/linear.md:378:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:377:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 378,
-=======
-      "id": "core/providers/issues/linear.md:383:planning_linear_client.py",
-      "tree": "core/providers",
-      "file": "core/providers/issues/linear.md",
-      "line": 383,
->>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
+      "line": 377,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-<<<<<<< HEAD
-      "id": "core/providers/issues/linear.md:379:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:378:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 379,
-=======
-      "id": "core/providers/issues/linear.md:384:planning_linear_client.py",
-      "tree": "core/providers",
-      "file": "core/providers/issues/linear.md",
-      "line": 384,
->>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
+      "line": 378,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
