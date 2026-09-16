@@ -38,15 +38,19 @@ the Shipwright source checkout with `python3 scripts/install.py` when the tree i
 
 ## Packaged provider conformance and config preserve
 
-Packaged wheels record shipped issues-provider conformance under **host bundles**:
+Packaged wheels record shipped issues-provider conformance under **dual roots**:
 
 ```text
-<package-root>/dist/<host>/core/sw-reference/provider-conformance/
+<package-root>/core/sw-reference/provider-conformance/          # source / dev tree
+<package-root>/dist/<host>/core/sw-reference/provider-conformance/   # per-host bundle
 ```
 
 Resolution searches the configured/active host first; sibling hosts apply only when the active-host record
-is absent (never on present-and-fail). Package-root-only staging without `dist/<host>/…` yields an empty
-shipped set — Linear may appear as **recognized-but-not-shipped** even when credentials succeed.
+is absent (never on present-and-fail). With no active host, `packaged_conformance_roots` walks present
+`dist/<host>/` bundles in `PACKAGED_DIST_IDS` order (`cursor`, `claude-code`, `codex`, `opencode`). Named
+recovery: `PACKAGED_CONFORMANCE_RECOVERY` in `scripts/planning/packaged_conformance_roots.py`. Package-root-only
+staging without `dist/<host>/…` yields an empty shipped set — Linear may appear as **recognized-but-not-shipped**
+even when credentials succeed.
 
 Live backend gating uses `shipped_issues_providers()` in `planning_store_facade.py` (root-keyed cache),
 shared by planning discovery and `gitignore-generate --write`.
