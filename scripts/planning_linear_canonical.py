@@ -12,15 +12,20 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import uuid
 from pathlib import Path
 from typing import Any
 
 from planning_canonical import (
+    BODY_SIZE_LIMIT,
+    CHUNK_TOKEN_MARKER_PREFIX,
     CommentRecord,
     IssueSnapshot,
+    MARKER_CHUNK_MANIFEST,
     canonical_form,
     canonical_hash,
     normalize_body,
+    require_linear_size_pin,
 )
 
 SUPPORTED_CONTRACT = "public-markdown"
@@ -205,6 +210,207 @@ def snapshot_from_fixture(data: dict[str, Any]) -> IssueSnapshot:
         labels=list(data.get("labels") or []),
         comments=list(data.get("comments") or []),
     )
+
+
+CHUNK_OVERFLOW_MARKER = "<!-- sw-chunk-overflow -->\n"
+_LINEAR_CHUNK_LIMIT = BODY_SIZE_LIMIT
+
+
+def _utf8_byte_len(text: str) -> int:
+    return len(text.encode("utf-8"))
+
+
+def _is_gfm_table_line(line: str) -> bool:
+    stripped = line.strip()
+    if not stripped or "|" not in stripped:
+        return False
+    if stripped.startswith("|") and stripped.endswith("|"):
+        return True
+    if re.match(r"^[\s|:-]+$", stripped.replace("|", "")):
+        return True
+    parts = [p.strip() for p in stripped.split("|") if p.strip()]
+    return len(parts) >= 2 and "|" in stripped
+
+
+def _split_positions(text: str) -> list[int]:
+    """Split points outside fenced code blocks and GFM tables (R9).
+
+    Prefer newline boundaries; allow Unicode character boundaries on plain lines.
+    """
+    positions: set[int] = {0}
+    in_fence = False
+    in_table = False
+    index = 0
+    length = len(text)
+    while index < length:
+        newline = text.find("\n", index)
+        line_end = length if newline == -1 else newline
+        line = text[index:line_end]
+        line_start = index
+        if line.strip().startswith("```"):
+            in_fence = not in_fence
+            in_table = False
+            if not in_fence and newline != -1:
+                positions.add(newline + 1)
+        elif in_fence:
+            pass
+        else:
+            if not line.strip():
+                in_table = False
+                if newline != -1:
+                    positions.add(newline + 1)
+            elif _is_gfm_table_line(line):
+                if not in_table:
+                    positions.add(line_start)
+                in_table = True
+            else:
+                if in_table:
+                    in_table = False
+                if newline != -1:
+                    positions.add(newline + 1)
+                if not in_table:
+                    for cut in range(line_start + 1, line_end + 1):
+                        positions.add(cut)
+        if newline == -1:
+            break
+        index = newline + 1
+    positions.add(length)
+    return sorted(positions)
+
+
+def _max_prefix_chars(text: str, max_bytes: int) -> int:
+    """Largest prefix length (Unicode code points) whose UTF-8 encoding fits max_bytes."""
+    if not text:
+        return 0
+    lo, hi = 0, len(text)
+    best = 0
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if _utf8_byte_len(text[:mid]) <= max_bytes:
+            best = mid
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return best
+
+
+def _max_prefix_bytes(text: str, *, limit: int, positions: list[int] | None = None) -> int:
+    if not text:
+        return 0
+    if _utf8_byte_len(text) <= limit:
+        return len(text)
+    cuts = positions if positions is not None else _split_positions(text)
+    lo, hi = 0, len(cuts) - 1
+    best = 0
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        pos = cuts[mid]
+        if _utf8_byte_len(text[:pos]) <= limit:
+            best = pos
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return best
+
+
+def _overflow_comment_prefix(write_token: str) -> str:
+    return (
+        f"{CHUNK_OVERFLOW_MARKER}"
+        f"<!-- {CHUNK_TOKEN_MARKER_PREFIX}{write_token} -->\n"
+    )
+
+
+def _overflow_comment_markers(write_token: str) -> list[str]:
+    return [
+        "sw-chunk-overflow",
+        f"{CHUNK_TOKEN_MARKER_PREFIX}{write_token}",
+    ]
+
+
+def _split_overflow_comments(
+    overflow: str,
+    comments: list[CommentRecord],
+    *,
+    write_token: str,
+) -> list[CommentRecord]:
+    new_comments = list(comments)
+    prefix = _overflow_comment_prefix(write_token)
+    remaining = overflow
+    prefix_bytes = _utf8_byte_len(prefix)
+    max_piece_bytes = _LINEAR_CHUNK_LIMIT - prefix_bytes
+    if max_piece_bytes <= 0:
+        raise RuntimeError("Linear body chunking failed: overflow marker exceeds comment limit")
+    while remaining:
+        positions = _split_positions(remaining)
+        chunk_len = _max_prefix_bytes(remaining, limit=max_piece_bytes, positions=positions)
+        if chunk_len <= 0:
+            chunk_len = _max_prefix_chars(remaining, max_piece_bytes)
+        if chunk_len <= 0:
+            raise RuntimeError("Linear body chunking failed: overflow fragment exceeds comment limit")
+        chunk_id = f"chunk-{len(new_comments)}"
+        piece = remaining[:chunk_len]
+        remaining = remaining[chunk_len:]
+        new_comments.append(
+            CommentRecord(
+                id=chunk_id,
+                body=f"{prefix}{piece}",
+                markers=_overflow_comment_markers(write_token),
+            )
+        )
+    return new_comments
+
+
+def _attach_chunk_manifest(
+    head: str,
+    chunk_comments: list[CommentRecord],
+    *,
+    write_token: str,
+) -> str:
+    if not chunk_comments:
+        return head
+    manifest = {
+        "version": 1,
+        "chunks": [{"index": idx, "commentId": c.id} for idx, c in enumerate(chunk_comments)],
+        "writeToken": write_token,
+    }
+    marker = f"<!-- sw-chunk-manifest: {json.dumps(manifest, sort_keys=True, ensure_ascii=False)} -->"
+    if MARKER_CHUNK_MANIFEST.search(head):
+        return MARKER_CHUNK_MANIFEST.sub(marker, head)
+    return head + marker
+
+
+def chunk_body_for_linear(
+    body: str,
+    comments: list[CommentRecord],
+) -> tuple[str, list[CommentRecord]]:
+    """Split markdown for Linear description/comment UTF-8 byte limits (PRD 357 R8–R11)."""
+    require_linear_size_pin()
+    if _utf8_byte_len(body) <= _LINEAR_CHUNK_LIMIT:
+        return body, comments
+
+    write_token = uuid.uuid4().hex[:12]
+    positions = _split_positions(body)
+    lo, hi = 0, len(positions) - 1
+    best: tuple[str, list[CommentRecord]] | None = None
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        head_len = positions[mid]
+        overflow = body[head_len:]
+        extra = (
+            _split_overflow_comments(overflow, list(comments), write_token=write_token)
+            if overflow
+            else list(comments)
+        )
+        chunk_only = extra[len(comments) :]
+        candidate = _attach_chunk_manifest(body[:head_len], chunk_only, write_token=write_token)
+        if _utf8_byte_len(candidate) <= _LINEAR_CHUNK_LIMIT:
+            best = (candidate, extra)
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    if best is None:
+        raise RuntimeError("Linear body chunking failed: no description prefix fits with manifest")
+    return best
 
 
 def normalize_fixture(path: Path) -> dict[str, Any]:

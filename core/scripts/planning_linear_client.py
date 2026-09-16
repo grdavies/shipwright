@@ -33,6 +33,7 @@ from planning_canonical import (
     build_comment_threads,
     chunk_body_if_needed,
     compute_etag,
+    rewrite_chunk_manifest_ids,
     parse_body_marker,
     project_label,
     serialize_comment_facade,
@@ -681,13 +682,16 @@ def lock_capability() -> dict[str, Any]:
     }
 
 
+LINEAR_CHUNK_COMMENT_MAX_RETRIES = 3
+
+
 def overflow_chunk_policy() -> dict[str, Any]:
-    """R10 — body overflow uses generic BODY_SIZE_LIMIT + sw-chunk-overflow comments."""
+    """R10 — body overflow uses Linear-aware splitter + sw-chunk-overflow comments."""
     return {
         "provider": "linear",
         "bodySizeLimitBytes": BODY_SIZE_LIMIT,
         "chunkMarker": "sw-chunk-overflow",
-        "chunkVia": "planning_canonical.chunk_body_if_needed",
+        "chunkVia": "planning_linear_canonical.chunk_body_for_linear",
         "notes": (
             "Oversized bodies are split with <!-- sw-chunk-overflow --> comments and a "
             "sw-chunk-manifest marker. Linear GraphQL String fields are character-counted "
@@ -1156,6 +1160,8 @@ def _comment_resolving_id(raw: dict[str, Any]) -> str:
 
 
 def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
+    from planning_canonical import CHUNK_TOKEN_MARKER_PREFIX, chunk_token_from_comment
+
     body = str(raw.get("body") or "")
     markers: list[str] = []
     for marker_name in (
@@ -1166,11 +1172,21 @@ def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
     ):
         if f"<!-- {marker_name} -->" in body or f"<!--{marker_name}-->" in body:
             markers.append(marker_name)
+    token = chunk_token_from_comment(CommentRecord(id="", body=body, markers=markers))
+    if token:
+        token_marker = f"{CHUNK_TOKEN_MARKER_PREFIX}{token}"
+        if token_marker not in markers:
+            markers.append(token_marker)
+    author_id = ""
+    user = raw.get("user")
+    if isinstance(user, dict):
+        author_id = str(user.get("id") or "")
     return CommentRecord(
         id=str(raw.get("id", "")),
         body=body,
         created_at=str(raw.get("createdAt") or raw.get("created_at") or ""),
         markers=markers,
+        author_id=author_id,
         parent_id=_comment_parent_id(raw),
         resolved_at=str(raw.get("resolvedAt") or raw.get("resolved_at") or ""),
         resolving_comment_id=_comment_resolving_id(raw),
@@ -1491,6 +1507,35 @@ class LinearIssuesClient:
             raise IssueNotFound(f"issue not found: {issue_id}")
         return issue
 
+    def _post_overflow_comments(
+        self,
+        issue_id: str,
+        extra: list[CommentRecord],
+        *,
+        head: str,
+    ) -> None:
+        """Post overflow comments; bounded RATELIMITED retry; rewrite manifest ids (R11)."""
+        if not extra:
+            return
+        posted_ids: list[str] = []
+        for comment in extra:
+            attempts = 0
+            while True:
+                try:
+                    posted = self.add_comment(issue_id, comment.body, markers=list(comment.markers))
+                    posted_ids.append(posted.id)
+                    break
+                except LinearRateLimited:
+                    attempts += 1
+                    if attempts >= LINEAR_CHUNK_COMMENT_MAX_RETRIES:
+                        raise LinearClientError(
+                            "linear-chunk-post-dirty: overflow comment post exhausted RATELIMITED retries",
+                            code="linear-chunk-post-dirty",
+                        ) from None
+        rewritten = rewrite_chunk_manifest_ids(head, posted_ids)
+        if rewritten != head:
+            self._gql(ISSUE_UPDATE_MUTATION, {"id": issue_id, "input": {"description": rewritten}})
+
     def create(
         self,
         *,
@@ -1532,8 +1577,7 @@ class LinearIssuesClient:
         if not isinstance(issue, dict) or not issue.get("id"):
             raise LinearClientError("issueCreate returned no issue", code="create-failed")
         issue_id = str(issue["id"])
-        for comment in extra:
-            self.add_comment(issue_id, comment.body, markers=list(comment.markers))
+        self._post_overflow_comments(issue_id, extra, head=head)
         if native_links:
             for link in native_links:
                 if not isinstance(link, dict):
@@ -1605,8 +1649,15 @@ class LinearIssuesClient:
             patch["state"] = "unstarted"
         if patch:
             self._gql(ISSUE_UPDATE_MUTATION, {"id": issue_id, "input": patch})
-        for comment in extra_comments:
-            self.add_comment(issue_id, comment.body, markers=list(comment.markers))
+        if extra_comments and body is not None:
+            self._post_overflow_comments(
+                issue_id,
+                extra_comments,
+                head=str(patch.get("description") or ""),
+            )
+        elif extra_comments:
+            for comment in extra_comments:
+                self.add_comment(issue_id, comment.body, markers=list(comment.markers))
         if native_links is not None:
             for link in native_links:
                 if not isinstance(link, dict):

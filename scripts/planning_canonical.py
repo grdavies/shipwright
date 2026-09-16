@@ -1204,7 +1204,9 @@ def chunk_body_if_needed(
 
         return chunk_body_for_notion(body, comments)
     if provider == "linear":
-        require_linear_size_pin()
+        from planning_linear_canonical import chunk_body_for_linear
+
+        return chunk_body_for_linear(body, comments)
     if len(body.encode("utf-8")) <= BODY_SIZE_LIMIT:
         return body, comments
     encoded = body.encode("utf-8")
@@ -1267,10 +1269,26 @@ def rewrite_chunk_manifest_ids(body: str, comment_ids: list[str]) -> str:
     return append_chunk_manifest_marker(body, marker)
 
 
+def chunk_token_from_comment(comment: CommentRecord) -> str | None:
+    """Extract write-session token from markers or persisted overflow body (R11)."""
+    for marker in comment.markers:
+        if marker.startswith(CHUNK_TOKEN_MARKER_PREFIX):
+            token = marker[len(CHUNK_TOKEN_MARKER_PREFIX) :]
+            return token if token else None
+    match = re.search(
+        rf"<!--\s*{CHUNK_TOKEN_MARKER_PREFIX}([^\s>]+)\s*-->",
+        comment.body or "",
+    )
+    if match:
+        return match.group(1)
+    return None
+
+
 def overflow_chunk_comments(
     comments: list[CommentRecord],
     *,
     token: str | None = None,
+    expected_author_id: str | None = None,
 ) -> list[CommentRecord]:
     """Overflow comments eligible for positional-fallback reassembly.
 
@@ -1291,7 +1309,17 @@ def overflow_chunk_comments(
     ]
     if token:
         token_marker = f"{CHUNK_TOKEN_MARKER_PREFIX}{token}"
-        candidates = [c for c in candidates if token_marker in c.markers]
+        candidates = [
+            c
+            for c in candidates
+            if token_marker in c.markers
+            or token_marker in (c.body or "")
+            or chunk_token_from_comment(c) == token
+        ]
+    if expected_author_id is not None:
+        expected = expected_author_id.strip()
+        if expected:
+            candidates = [c for c in candidates if c.author_id.strip() == expected]
     ordered = sorted(candidates, key=lambda c: (c.created_at, c.id))
     unique: list[CommentRecord] = []
     seen: set[str] = set()
@@ -1339,7 +1367,47 @@ def _append_reassembled_part(merged: str, part: str) -> str:
     merged += stripped
     return merged
 
-def reassemble_body(body: str, comments: list[CommentRecord]) -> str:
+class LinearChunkAuthorshipError(ValueError):
+    """R11 — overflow comment authorship or actor binding failed."""
+
+
+def assert_linear_overflow_authorship(
+    manifest: dict[str, Any],
+    comments: list[CommentRecord],
+    *,
+    expected_author_id: str,
+) -> None:
+    """Fail closed when manifest overflow comments lack provider author_id (R11)."""
+    expected = expected_author_id.strip()
+    if not expected:
+        raise LinearChunkAuthorshipError("linear-chunk-author-expected-missing")
+    comment_by_id = {c.id: c for c in comments}
+    chunks = manifest.get("chunks")
+    if not isinstance(chunks, list):
+        return
+    for entry in chunks:
+        if not isinstance(entry, dict):
+            continue
+        cid = entry.get("commentId")
+        if not isinstance(cid, str):
+            continue
+        comment = comment_by_id.get(cid)
+        if comment is None:
+            continue
+        if "sw-chunk-overflow" not in comment.markers and "<!-- sw-chunk-overflow -->" not in (
+            comment.body or ""
+        ):
+            continue
+        if not comment.author_id.strip():
+            raise LinearChunkAuthorshipError("linear-chunk-author-missing")
+
+
+def reassemble_body(
+    body: str,
+    comments: list[CommentRecord],
+    *,
+    linear_author_id: str | None = None,
+) -> str:
     text = normalize_body(body)
     manifest_match = MARKER_CHUNK_MANIFEST.search(text)
     if not manifest_match:
@@ -1351,6 +1419,12 @@ def reassemble_body(body: str, comments: list[CommentRecord]) -> str:
     chunks = manifest.get("chunks") if isinstance(manifest, dict) else None
     if not isinstance(chunks, list):
         return text
+    if linear_author_id is not None:
+        assert_linear_overflow_authorship(
+            manifest if isinstance(manifest, dict) else {},
+            comments,
+            expected_author_id=linear_author_id,
+        )
     write_token = manifest.get("writeToken") if isinstance(manifest, dict) else None
     comment_by_id = {c.id: c for c in comments}
     # R27: direct commentId matches below are unambiguous regardless of
@@ -1358,7 +1432,11 @@ def reassemble_body(body: str, comments: list[CommentRecord]) -> str:
     # fallback is the only path a stray concurrent/superseded write session's
     # overflow comment could leak into, so scope that list to this
     # manifest's own write-token.
-    overflow_comments = overflow_chunk_comments(comments, token=write_token)
+    overflow_comments = overflow_chunk_comments(
+        comments,
+        token=write_token,
+        expected_author_id=linear_author_id,
+    )
     overflow_parts: list[str] = []
     for entry in sorted(chunks, key=lambda x: x.get("index", 0) if isinstance(x, dict) else 0):
         if not isinstance(entry, dict):
@@ -1373,11 +1451,14 @@ def reassemble_body(body: str, comments: list[CommentRecord]) -> str:
             continue
         chunk_text = comment.body
         chunk_text = re.sub(r"<!--\s*sw-chunk-overflow\s*-->\n?", "", chunk_text)
+        chunk_text = re.sub(
+            rf"<!--\s*{CHUNK_TOKEN_MARKER_PREFIX}[^\s>]+\s*-->\n?",
+            "",
+            chunk_text,
+        )
         overflow_parts.append(chunk_text)
     base = MARKER_CHUNK_MANIFEST.sub("", text)
-    merged = base
-    for part in overflow_parts:
-        merged = _append_reassembled_part(merged, part)
+    merged = base + "".join(overflow_parts)
     return normalize_body(merged)
 
 

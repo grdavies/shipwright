@@ -120,11 +120,13 @@ length for either field ([GraphQL getting started](https://linear.app/developers
 (60_000 UTF-8 bytes) for **both** description and comment until a live-probe receipt
 records a tighter distinct cap. Linear-aware splitter work must not ship without this pin.
 
-Linear descriptions currently chunk via `planning_canonical.chunk_body_if_needed(provider="linear")`
-after `require_linear_size_pin()`. Oversized bodies are split into:
+Linear descriptions chunk via `planning_canonical.chunk_body_if_needed(provider="linear")`,
+which delegates to `planning_linear_canonical.chunk_body_for_linear` after
+`require_linear_size_pin()`. Oversized bodies are split into:
 
 1. Head description with `<!-- sw-chunk-manifest: … -->`
-2. Ordered overflow comments marked `<!-- sw-chunk-overflow -->`
+2. Ordered overflow comments marked `<!-- sw-chunk-overflow -->` plus
+   `<!-- sw-chunk-token:<writeToken> -->` in the comment body (R11 actor binding)
 
 There is no ADF-style tighter cap (unlike Jira Cloud). Reassembly uses immutable comment IDs in the
 manifest (positional fallback only when ids are synthetic placeholders).
