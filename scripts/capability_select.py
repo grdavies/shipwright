@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from capability_index import check_freshness
+from capability_index import check_freshness, default_capability_index_path
 from capability_precedence import effective_tier, total_order_key
 from capability_run_log import surface_capability_selection
 from capability_trust import authorize_executable, is_kernel_hook_source
@@ -571,13 +571,12 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     root = args.root.resolve()
-    core_root = root / "core"
-    index_path = args.index or (core_root / "sw-reference" / "capability-index.json")
+    index_path = args.index or default_capability_index_path(root)
     if not index_path.is_file():
         fail(f"missing capability index: {index_path}", cause="capability-index:missing")
 
     if not args.skip_freshness:
-        ok, message = check_freshness(core_root, index_path)
+        ok, message = check_freshness(root, index_path)
         if not ok:
             fail(message, exit_code=20, cause="capability-index:stale")
 
