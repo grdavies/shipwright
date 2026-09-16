@@ -1354,6 +1354,7 @@
 * merge phase live-gating-without-import-time-freeze-p0 into feat/packaged-provider-conformance-root (9e609cb) <!-- sw-deliver:live-gating-without-import-time-freeze-p0 -->
 * merge phase packaged-consumer-fixture-and-ci-test-p0 into feat/packaged-provider-conformance-root (c5f6675) <!-- sw-deliver:packaged-consumer-fixture-and-ci-test-p0 -->
 * merge phase documentation-and-signal-closeout into feat/packaged-provider-conformance-root (78ae2c0) <!-- sw-deliver:documentation-and-signal-closeout -->
+* merge phase packaged-linear-discovery-and-r10-limit-pin into feat/linear-issue-store-production-readiness (3343812) <!-- sw-deliver:packaged-linear-discovery-and-r10-limit-pin -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
