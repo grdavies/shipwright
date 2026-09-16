@@ -2,8 +2,8 @@
 
 When `planning.store.backend` is `issue-store`, planning artifacts live on issues rather than local
 `docs/prds/` files as authority. Document-review rounds use the issue-store facade on **GitHub** today;
-Linear/Jira/Notion doc-review transport is documented in the provider matrix but not enabled until PRD 341
-Phases 4–5.
+Linear/Jira/Notion doc-review transport is documented in the provider matrix but not enabled until
+those providers ship the same `docReviewComments` floor.
 
 ## Document-review transport
 

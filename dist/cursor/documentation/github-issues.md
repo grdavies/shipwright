@@ -7,7 +7,7 @@ document-review transport.
 
 | Topic | Rule |
 | --- | --- |
-| Enablement | **GitHub** issue-store live today after `docReviewComments` preflight; Linear/Jira/Notion issue-store doc-review remain unsupported until PRD 341 Phases 4–5 |
+| Enablement | **GitHub** issue-store live today after `docReviewComments` preflight; Linear/Jira/Notion issue-store doc-review remain unsupported until those providers ship the same `docReviewComments` floor |
 | Public API | Five facade ops: `post_review_finding`, `open_review_manifest`, `read_review_manifest`, `verify_review_manifest`, `complete_review_round` |
 | Sequence (new rounds) | **post-then-open** → verify → synthesize → **complete** |
 | `issue-comment` | Adapter-internal only — not a public review verb |
