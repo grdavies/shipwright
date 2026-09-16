@@ -71,7 +71,17 @@ NATIVE_ISSUE_LOCK = False
 IDENTIFIER_NUM = re.compile(r"-(\d+)$")
 NATIVE_LINK_MARKER = re.compile(r"<!--\s*sw-native-link:([^:\s]+):([^\s]+)\s*-->")
 
-ISSUE_FIELDS = """
+COMMENT_NODE_FIELDS = """
+id
+body
+createdAt
+user { id }
+parent { id }
+resolvedAt
+resolvingComment { id }
+""".strip()
+
+ISSUE_FIELDS = f"""
 id
 identifier
 title
@@ -79,11 +89,11 @@ description
 url
 updatedAt
 priority
-state { id name type }
-labels { nodes { id name } }
-comments { nodes { id body createdAt parent { id } resolvedAt resolvingComment { id } } }
-relations { nodes { id type relatedIssue { id identifier } } }
-inverseRelations { nodes { id type issue { id identifier } } }
+state {{ id name type }}
+labels {{ nodes {{ id name }} }}
+comments {{ nodes {{ {COMMENT_NODE_FIELDS} }} }}
+relations {{ nodes {{ id type relatedIssue {{ id identifier }} }} }}
+inverseRelations {{ nodes {{ id type issue {{ id identifier }} }} }}
 """.strip()
 
 ISSUE_CREATE_MUTATION = f"""
@@ -110,12 +120,29 @@ query IssueGet($id: String!) {{
 }}
 """.strip()
 
+ISSUE_COMMENTS_PAGE_QUERY = f"""
+query IssueComments($id: String!, $first: Int, $after: String) {{
+  issue(id: $id) {{
+    comments(first: $first, after: $after) {{
+      nodes {{ {COMMENT_NODE_FIELDS} }}
+      pageInfo {{ hasNextPage endCursor }}
+    }}
+  }}
+}}
+""".strip()
+
 COMMENT_CREATE_MUTATION = """
 mutation CommentCreate($input: CommentCreateInput!) {
   commentCreate(input: $input) {
     success
-    comment { id body createdAt }
+    comment { id body createdAt user { id } }
   }
+}
+""".strip()
+
+WHOAMI_QUERY = """
+query LinearWhoami {
+  viewer { id }
 }
 """.strip()
 
@@ -170,6 +197,34 @@ query TeamProbe($filter: TeamFilter) {
   viewer { id }
 }
 """.strip()
+
+
+def linear_r15_floor_present() -> bool:
+    """True when whoami, comment author_id, and comment pagination exist (PRD 357 R15)."""
+    return bool(
+        callable(getattr(LinearIssuesClient, "authenticated_principal_id", None))
+        and "user { id }" in COMMENT_CREATE_MUTATION
+        and "user { id }" in COMMENT_NODE_FIELDS
+        and "hasNextPage" in ISSUE_COMMENTS_PAGE_QUERY
+        and "viewer { id }" in WHOAMI_QUERY
+    )
+
+
+def linear_doc_review_capabilities() -> dict[str, bool]:
+    """Advertise doc-review caps only when the R15 floor is present.
+
+    Degraded Linear lock is not a substitute for authorship or body-drift detect.
+    """
+    ready = linear_r15_floor_present()
+    return {
+        "post": ready,
+        "stableIds": ready,
+        "verifiableAuthorPrincipal": ready,
+        "stableApplicationId": False,
+        "nativeRevision": False,
+        "completeFullBody": ready,
+        "completePagination": ready,
+    }
 
 
 class LinearClientError(Exception):
@@ -1347,6 +1402,18 @@ def _record_from_issue(
         unit_id=unit_id,
     )
     record.etag = compute_etag(updated, body, title, record.labels)
+    if "_comments_complete" in payload:
+        record.comments_complete = bool(payload.get("_comments_complete"))
+    else:
+        comments_block = payload.get("comments")
+        if isinstance(comments_block, dict):
+            page_info = comments_block.get("pageInfo")
+            if isinstance(page_info, dict) and page_info.get("hasNextPage"):
+                record.comments_complete = False
+            else:
+                record.comments_complete = True
+        else:
+            record.comments_complete = True
     return record
 
 
@@ -1505,7 +1572,43 @@ class LinearIssuesClient:
             from issues_lib import IssueNotFound
 
             raise IssueNotFound(f"issue not found: {issue_id}")
+        nodes, complete = self._paginated_comment_nodes(issue_id)
+        issue["comments"] = {"nodes": nodes}
+        issue["_comments_complete"] = complete
         return issue
+
+    def _paginated_comment_nodes(
+        self,
+        issue_id: str,
+        *,
+        seed: Any = None,
+    ) -> tuple[list[dict[str, Any]], bool]:
+        """Page comments; comments_complete is false while hasNextPage remains (R15)."""
+        del seed  # ISSUE_FIELDS comments omit pageInfo; always page via comments query.
+        nodes: list[dict[str, Any]] = []
+        after: str | None = None
+        complete = True
+        for _ in range(max(1, MAX_SEARCH_PAGES)):
+            variables: dict[str, Any] = {"id": issue_id, "first": DEFAULT_PAGE_SIZE}
+            if after:
+                variables["after"] = after
+            payload = self._gql(ISSUE_COMMENTS_PAGE_QUERY, variables)
+            connection = (((payload.get("data") or {}).get("issue") or {}).get("comments")) or {}
+            batch = connection.get("nodes") or []
+            if isinstance(batch, list):
+                nodes.extend(item for item in batch if isinstance(item, dict))
+            page_info = (
+                connection.get("pageInfo") if isinstance(connection.get("pageInfo"), dict) else {}
+            )
+            if not page_info.get("hasNextPage"):
+                complete = True
+                break
+            complete = False
+            cursor = page_info.get("endCursor")
+            after = str(cursor) if cursor else None
+            if not after:
+                break
+        return nodes, complete
 
     def _post_overflow_comments(
         self,
@@ -1595,9 +1698,26 @@ class LinearIssuesClient:
                     )
         return self.get(issue_id)
 
+    def authenticated_principal_id(self) -> str:
+        """Brokered Linear whoami — viewer.id only, never a payload-claimed author (R15)."""
+        if self._fixture is not None:
+            return str(self._fixture.authenticated_principal_id())
+        payload = self._gql(WHOAMI_QUERY, None)
+        viewer = ((payload.get("data") or {}).get("viewer")) or {}
+        viewer_id = str(viewer.get("id") or "").strip() if isinstance(viewer, dict) else ""
+        if not viewer_id:
+            raise LinearClientError(
+                "Linear viewer.id whoami missing",
+                code="whoami-unavailable",
+            )
+        return viewer_id
+
     def get(self, issue_id: str) -> Any:
         if self._fixture is not None:
-            return self._fixture.get(issue_id)
+            record = self._fixture.get(issue_id)
+            if getattr(record, "comments_complete", None) is None:
+                record.comments_complete = True
+            return record
         return _record_from_issue(self._issue_payload(issue_id), project_key=self.project_key)
 
     def update(
@@ -1676,10 +1796,20 @@ class LinearIssuesClient:
         return self.get(issue_id)
 
     def add_comment(
-        self, issue_id: str, body: str, *, markers: list[str] | None = None
+        self,
+        issue_id: str,
+        body: str,
+        *,
+        markers: list[str] | None = None,
+        author_id: str = "",
     ) -> CommentRecord:
         if self._fixture is not None:
-            return self._fixture.add_comment(issue_id, body, markers=markers)
+            kwargs: dict[str, Any] = {}
+            if markers is not None:
+                kwargs["markers"] = markers
+            if author_id:
+                kwargs["author_id"] = author_id
+            return self._fixture.add_comment(issue_id, body, **kwargs)
         created = self._gql(
             COMMENT_CREATE_MUTATION,
             {"input": {"issueId": issue_id, "body": body}},
@@ -1690,6 +1820,13 @@ class LinearIssuesClient:
         comment = _parse_comment(raw)
         if markers:
             comment.markers = list(markers)
+        if author_id and comment.author_id != author_id:
+            raise issues_broker.IssueCommentAuthorshipMismatch(
+                "doc-review authorship mismatch",
+                expected=author_id,
+                actual=comment.author_id,
+                comment_id=comment.id,
+            )
         return comment
 
     def set_labels(
@@ -1820,6 +1957,7 @@ class LinearIssuesClient:
                             "id": comment.id,
                             "body": comment.body,
                             "createdAt": comment.created_at,
+                            "user": {"id": comment.author_id} if comment.author_id else None,
                             "parent": {"id": comment.parent_id} if comment.parent_id else None,
                             "resolvedAt": comment.resolved_at or None,
                             "resolvingComment": (

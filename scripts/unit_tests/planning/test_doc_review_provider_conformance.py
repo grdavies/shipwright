@@ -28,7 +28,6 @@ def _fixture_mode(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_github_doc_review_conformance_suite_green(tmp_path: Path) -> None:
-    import json
     import subprocess
 
     root = tmp_path
@@ -40,7 +39,20 @@ def test_github_doc_review_conformance_suite_green(tmp_path: Path) -> None:
         assert suite["dimensions"][dim]["verdict"] == "ok", (dim, suite["dimensions"][dim])
 
 
-@pytest.mark.parametrize("provider", ["jira", "linear", "notion", "gitlab-issues"])
+def test_linear_doc_review_conformance_suite_green(tmp_path: Path) -> None:
+    import subprocess
+
+    root = tmp_path
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    (root / ("." + "cursor") / "hooks" / "state").mkdir(parents=True, exist_ok=True)
+    suite = run_doc_review_conformance_suite("linear", root)
+    assert suite["verdict"] == "ok", suite.get("failedDimensions") or suite
+    assert suite.get("posture") == "enabled"
+    for dim in DOC_REVIEW_CONFORMANCE_DIMENSIONS:
+        assert suite["dimensions"][dim]["verdict"] == "ok", (dim, suite["dimensions"][dim])
+
+
+@pytest.mark.parametrize("provider", ["jira", "notion", "gitlab-issues"])
 def test_non_github_doc_review_conformance_disabled(provider: str) -> None:
     root = _repo_root()
     suite = run_doc_review_conformance_suite(provider, root)

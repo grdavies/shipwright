@@ -206,14 +206,56 @@ _FILE_STORE_REVIEW_GOLDENS: dict[str, str] = {
     "core/skills/doc-review/references/findings-schema.json": (
         "3d62dd6d1efb37e9f6293b55e77c52030e8d4c36c738a53a0775888683cf0b4a"
     ),
+    "core/skills/doc-review/references/synthesis.md": (
+        "4ad9371ea7515744c846c929acde599d18f8797366f09f1dc05f21620dfd4f08"
+    ),
 }
 
 
 def test_file_store_review_goldens_byte_identical() -> None:
-    """R33: persona-selection fixtures + findings schema remain frozen."""
+    """R33/R7: persona-selection fixtures + findings schema remain frozen."""
     root = Path(__file__).resolve().parents[3]
     for rel, expected in _FILE_STORE_REVIEW_GOLDENS.items():
         path = root / rel
         assert path.is_file(), f"missing file-store golden: {rel}"
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         assert digest == expected, f"file-store golden drift: {rel}"
+
+
+def test_file_store_in_ide_json_transport_byte_identical() -> None:
+    """R7: in-IDE selection/dispatch stay byte-identical for identical signal_context."""
+    from capability_migration_parity import canonical_bytes, select_family
+
+    root = Path(__file__).resolve().parents[3]
+    ctx = {
+        "tier": "Standard",
+        "doc_path": "docs/prds/example/example-prd.md",
+        "signals": {},
+    }
+    first = select_family("doc-review", ctx, repo_root=root, skip_freshness=True)
+    second = select_family("doc-review", ctx, repo_root=root, skip_freshness=True)
+    assert canonical_bytes(first) == canonical_bytes(second)
+    dispatch_a = select_family("dispatch", ctx, repo_root=root, skip_freshness=True)
+    dispatch_b = select_family("dispatch", ctx, repo_root=root, skip_freshness=True)
+    assert canonical_bytes(dispatch_a) == canonical_bytes(dispatch_b)
+
+
+def test_file_store_session_does_not_read_issue_store_capability_matrix() -> None:
+    """R7: file-store sessions must not import the issue-store capability matrix."""
+    root = Path(__file__).resolve().parents[3]
+    banned = (
+        "DOC_REVIEW_CAPABILITIES_BY_PROVIDER",
+        "DOC_REVIEW_ENABLED_PROVIDERS",
+        "planning_doc_review_transport",
+        "doc_review_capabilities_for",
+    )
+    surfaces = (
+        "scripts/doc_loop.py",
+        "scripts/doc-review-select.py",
+        "scripts/capability_select.py",
+        "scripts/capability_migration_parity.py",
+    )
+    for rel in surfaces:
+        text = (root / rel).read_text(encoding="utf-8")
+        for token in banned:
+            assert token not in text, f"{rel} reads issue-store matrix via {token}"
