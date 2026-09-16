@@ -16,6 +16,10 @@ import issues_broker
 import issues_http
 from credentials.model import Resolution, ResolvedToken
 from host_lib import load_workflow_config
+from planning.packaged_conformance_roots import (
+    PACKAGED_CONFORMANCE_RECOVERY,
+    packaged_conformance_search_roots,
+)
 from planning_canonical import (
     BODY_SIZE_LIMIT,
     FROZEN_LABEL,
@@ -686,8 +690,9 @@ def overflow_chunk_policy() -> dict[str, Any]:
         "chunkVia": "planning_canonical.chunk_body_if_needed",
         "notes": (
             "Oversized bodies are split with <!-- sw-chunk-overflow --> comments and a "
-            "sw-chunk-manifest marker; Linear description uses the generic UTF-8 limit "
-            f"({BODY_SIZE_LIMIT} bytes), not a tighter ADF-style cap."
+            "sw-chunk-manifest marker. Linear GraphQL String fields are character-counted "
+            "with no published max; the conservative operational pin is BODY_SIZE_LIMIT "
+            f"({BODY_SIZE_LIMIT} UTF-8 bytes) for both description and comment (PRD 357 R10)."
         ),
     }
 
@@ -794,8 +799,14 @@ def _linear_conformance_green(root: Path) -> bool:
     from _planning_pkg_loader import load_submodule
 
     pc = load_submodule("provider_conformance")
-    for candidate in (root, _plugin_source_root()):
-        record = pc.load_conformance_record(candidate, "linear")
+    plugin = _plugin_source_root()
+    for candidate in (root, plugin):
+        record = pc.load_conformance_record(
+            candidate,
+            "linear",
+            package_root=plugin,
+            active_host=None,
+        )
         if pc.conformance_dimensions_green(record):
             return True
     return False
@@ -895,6 +906,7 @@ def prd061_facade_projection_readiness(root: Path | None = None) -> dict[str, An
             "checks": packaged,
         }
     if blocked:
+        plugin = _plugin_source_root()
         return {
             "verdict": "blocked",
             "action": "linear-prd061-readiness-gate",
@@ -902,6 +914,13 @@ def prd061_facade_projection_readiness(root: Path | None = None) -> dict[str, An
             "prd061UnitId": PRD_061_UNIT_ID,
             "requirements": ["facade-contract", "projection-contract"],
             "blocked": blocked,
+            "searchedRoots": packaged_conformance_search_roots(
+                repo,
+                "linear.ok.json",
+                package_root=plugin,
+                active_host=None,
+            ),
+            "recoveryAction": PACKAGED_CONFORMANCE_RECOVERY,
             "resumeCommand": (
                 "merge and green PRD 061 facade/projection contract "
                 f"({PRD_061_FACADE_ACCEPTANCE_TEST}, "
@@ -921,10 +940,18 @@ def require_prd061_facade_projection_ready(root: Path) -> None:
     """Fail-closed PRD 061 readiness preflight before live Linear adapter activation (R34)."""
     gate = prd061_facade_projection_readiness(root)
     if gate.get("verdict") != "ready":
-        raise LinearClientError(
-            str(gate.get("cause") or "prd-061-facade-projection-not-merged-green"),
-            code="prd061-readiness-blocked",
+        plugin = _plugin_source_root()
+        searched = packaged_conformance_search_roots(
+            root,
+            "linear.ok.json",
+            package_root=plugin,
+            active_host=None,
         )
+        detail = (
+            f"{gate.get('cause') or 'prd-061-facade-projection-not-merged-green'}: "
+            f"searched {searched}; {PACKAGED_CONFORMANCE_RECOVERY}"
+        )
+        raise LinearClientError(detail, code="prd061-readiness-blocked")
 
 
 def resolve_linear_provider_doc(root: Path) -> Path:

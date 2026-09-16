@@ -112,8 +112,16 @@ injected fixture store.
 
 ## Body overflow / chunking (R10)
 
-Linear descriptions use the generic UTF-8 body limit (`BODY_SIZE_LIMIT` = 60_000 bytes) via
-`planning_canonical.chunk_body_if_needed(provider="linear")`. Oversized bodies are split into:
+Linear GraphQL `Issue.description` and `Comment.body` are GraphQL `String` fields
+(Unicode characters, not UTF-8 bytes). Linear developer docs do not publish a maximum
+length for either field ([GraphQL getting started](https://linear.app/developers/graphql);
+[GraphQL String](https://spec.graphql.org/October2021/#sec-String)). Recorded pin
+(`planning_canonical.LINEAR_SIZE_PIN`): conservative operational cap is `BODY_SIZE_LIMIT`
+(60_000 UTF-8 bytes) for **both** description and comment until a live-probe receipt
+records a tighter distinct cap. Linear-aware splitter work must not ship without this pin.
+
+Linear descriptions currently chunk via `planning_canonical.chunk_body_if_needed(provider="linear")`
+after `require_linear_size_pin()`. Oversized bodies are split into:
 
 1. Head description with `<!-- sw-chunk-manifest: … -->`
 2. Ordered overflow comments marked `<!-- sw-chunk-overflow -->`

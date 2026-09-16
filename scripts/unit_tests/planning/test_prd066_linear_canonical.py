@@ -12,7 +12,7 @@ if str(scripts) not in sys.path:
     sys.path.insert(0, str(scripts))
 
 import planning_linear_canonical as plc
-from planning_canonical import canonical_hash
+from planning_canonical import BODY_SIZE_LIMIT, LINEAR_SIZE_PIN, canonical_hash, require_linear_size_pin
 
 FIXTURE_DIR = scripts / "tests" / "fixtures" / "canonical" / "linear"
 GOLDEN_IDS = (
@@ -116,3 +116,21 @@ def test_r15_cli_rejects_internal_contract(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     assert plc.main(["normalize", "--fixture", str(path)]) == 2
+
+
+def test_linear_size_pin_recorded_before_splitter() -> None:
+    """PRD 357 R10 — Linear description/comment pin is a docs excerpt, not a guessed cap."""
+    pin = require_linear_size_pin()
+    assert pin is LINEAR_SIZE_PIN
+    assert pin["unit"] == "characters"
+    assert pin["notBytes"] is True
+    assert pin["operationalUnit"] == "utf8-bytes"
+    assert pin["publishedDescriptionMax"] is None
+    assert pin["publishedCommentMax"] is None
+    assert int(pin["descriptionLimit"]) == BODY_SIZE_LIMIT
+    assert int(pin["commentLimit"]) == BODY_SIZE_LIMIT
+    source = str(pin["source"])
+    assert "https://linear.app/developers/graphql" in source
+    assert "https://spec.graphql.org/" in source
+    assert "do not publish" in source.lower()
+    assert "character" in source.lower()

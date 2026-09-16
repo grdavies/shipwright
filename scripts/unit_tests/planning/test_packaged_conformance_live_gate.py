@@ -144,3 +144,36 @@ def test_present_and_fail_active_host_blocks_live_selection(
         active_host="codex",
     )
     assert "linear" not in shipped
+
+
+def test_no_active_host_consumer_without_vendored_tests_constructs_linear(
+    tmp_path: Path,
+    repo_root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Packaged consumer tree has no unit_tests and keeps consumer credential refs (PRD 357 R4/R5)."""
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+    assert not (consumer / "scripts" / "unit_tests").exists()
+    pkg = tmp_path / "sw"
+    _write_conformance(pkg / "dist/cursor", "linear", repo_root)
+
+    shipped = ps_facade.shipped_issues_providers(
+        consumer,
+        package_root=pkg,
+        active_host=None,
+    )
+    assert "linear" in shipped
+
+    monkeypatch.setattr(plc, "_plugin_source_root", lambda: pkg)
+    gate = plc.prd061_facade_projection_readiness(consumer)
+    assert gate.get("verdict") == "ready"
+    assert gate.get("reason") == "packaged-runtime-conformance"
+
+    store = issues_lib.FixtureIssuesStore(consumer / "linear-fixture.json")
+    cfg = _linear_cfg()
+    client = plc.LinearIssuesClient(consumer, cfg=cfg["planning"]["store"], fixture_store=store)
+    assert client is not None
+    assert cfg["planning"]["store"]["issues"]["teamKey"] == "ENG"
+    assert cfg["planning"]["store"]["issues"]["tokenEnv"] == "ISSUES_LINEAR_TOKEN"
+    monkeypatch.delenv("SW_ISSUES_FIXTURE", raising=False)
