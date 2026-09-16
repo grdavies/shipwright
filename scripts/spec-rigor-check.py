@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -34,6 +35,16 @@ PRD_V2_REQUIRED_SECTIONS = ("Acceptance Scenarios", "Success Criteria")
 PRD_BASE_REQUIRED_SECTIONS = ("Overview", "Goals", "Non-Goals", "Requirements", "Testing Strategy")
 
 PACKAGE_ROOT = SCRIPT_DIR.parent
+
+
+def _resolve_cli_root(raw: str | None) -> str | None:
+    if raw is not None and str(raw).strip():
+        return str(raw).strip()
+    if os.environ.get("SW_HARNESS", "").strip() == "1":
+        harness_root = os.environ.get("ROOT", "").strip()
+        if harness_root:
+            return harness_root
+    return None
 
 
 def _resolve_consumer_root(raw: str | None) -> tuple[Path | None, str | None]:
@@ -340,11 +351,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prd-unit-id", default="")
     parser.add_argument(
         "--root",
-        required=True,
+        default=None,
         help="Consumer repository root for workflow config and issue-store artifact resolve (PRD 358 R8)",
     )
     args = parser.parse_args(argv)
-    root, root_error = _resolve_consumer_root(args.root)
+    root, root_error = _resolve_consumer_root(_resolve_cli_root(args.root))
     if root is None:
         return _fail_root(root_error or "invalid --root")
     return _run(

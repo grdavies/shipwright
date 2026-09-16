@@ -190,7 +190,13 @@ def test_spec_rigor_consumer_root_fails_closed_without_root(
         cwd=str(issue_store_consumer),
         capture_output=True,
         text=True,
-        env={**os.environ, "PYTHONPATH": str(repo_root / "scripts"), "SW_ISSUES_FIXTURE": "1"},
+        env={
+            **os.environ,
+            "PYTHONPATH": str(repo_root / "scripts"),
+            "SW_ISSUES_FIXTURE": "1",
+            "SW_HARNESS": "",
+            "ROOT": "",
+        },
     )
     assert proc.returncode != 0
     assert "required" in (proc.stderr + proc.stdout).lower()
