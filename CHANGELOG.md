@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.19.0](https://github.com/grdavies/shipwright/compare/v2.18.0...v2.19.0) (2026-09-16)
+
+
+### Features
+
+* **prd-357:** linear issue-store production readiness ([#1217](https://github.com/grdavies/shipwright/issues/1217)) ([16db721](https://github.com/grdavies/shipwright/commit/16db721a74978d38754aeda7f1ecc57cbac66aca))
+
 ## [2.18.0](https://github.com/grdavies/shipwright/compare/v2.17.1...v2.18.0) (2026-09-15)
 
 
