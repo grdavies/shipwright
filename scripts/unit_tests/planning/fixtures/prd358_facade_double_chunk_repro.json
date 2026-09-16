@@ -1,0 +1,25 @@
+{
+  "name": "facade-double-chunk-repro-2.19.0",
+  "runtime": "2.19.0",
+  "markers": "<!-- sw-project-key: tie -->\n<!-- sw-artifact-type: prd -->\n<!-- sw-unit-id: 358-prd-linear-issue-store-fidelity -->\n\n",
+  "title": "# Linear issue-store dogfood fidelity\n\n",
+  "repeatLine": "Requirement paragraph with planning content and identifiers.\n",
+  "repeatCount": 12000,
+  "postedCommentIds": [
+    "7c419556-5949-4be6-8d31-c62dec197eaf",
+    "a082548d-ac31-4a20-b036-0a693d8786fe",
+    "765b45b3-e1a0-4147-ba1a-352ed1654666",
+    "061fc7f0-019e-4ce6-9b81-a7632484c03a",
+    "74dfa652-6b4f-462f-a7ef-8daba62cae59",
+    "325e13a6-3496-4d2f-ab01-737c0d55fd1f",
+    "16531e8d-03b8-4379-8f1c-3bc7933d9004",
+    "f7573a04-69b4-48ca-8835-75af7454d140",
+    "41b17d33-701e-42d5-9041-f9d815481b30",
+    "920af299-41c6-4b57-ade9-7f4f4d811bd5",
+    "15dc33c5-4894-4c4c-b78f-d2d7610e9e27",
+    "c64996e8-1708-4ffa-8fa3-65b9050b5544"
+  ],
+  "overflowChunkCount": 12,
+  "headBytesAfterRewrite": 60000,
+  "linearLimitBytes": 60000
+}
