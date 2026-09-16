@@ -1368,6 +1368,7 @@
 * merge phase linear-document-review-341-floor into feat/linear-issue-store-production-readiness (69a7cca) <!-- sw-deliver:linear-document-review-341-floor -->
 * merge phase jira-and-notion-document-review-enablement into feat/linear-issue-store-production-readiness (8e9f706) <!-- sw-deliver:jira-and-notion-document-review-enablement -->
 * merge phase asterisk-rid-extraction into feat/linear-issue-store-fidelity (f67a8dc) <!-- sw-deliver:asterisk-rid-extraction -->
+* merge phase installed-capability-index-freshness into feat/linear-issue-store-fidelity (7dff10a) <!-- sw-deliver:installed-capability-index-freshness -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
