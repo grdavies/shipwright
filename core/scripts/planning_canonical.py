@@ -19,6 +19,54 @@ FRONTMATTER_EXTRA_MARKER = re.compile(r"<!--\s*sw-frontmatter-extra:\s*(\{.*?\})
 BODY_SIZE_LIMIT = 60_000
 EDGE_DIVERGENCE_TOLERANCE = 0
 
+# PRD 357 R10 / D9 — pin Linear description vs comment before splitter work.
+# Linear GraphQL fields are GraphQL String (Unicode code points). Developer
+# docs do not publish a maximum length, so BODY_SIZE_LIMIT is the conservative
+# operational cap for both fields until a live-probe receipt records a tighter
+# distinct cap.
+LINEAR_SIZE_PIN_SOURCE = (
+    "Linear GraphQL Issue.description and Comment.body are String fields "
+    "(https://linear.app/developers/graphql; schema Issue.description: String, "
+    "Comment.body: String!). GraphQL String values are sequences of Unicode "
+    "code points (characters), not UTF-8 bytes "
+    "(https://spec.graphql.org/October2021/#sec-String). Linear developer docs "
+    "do not publish a maximum length for either field. Until a live-probe "
+    f"receipt records a distinct tighter cap, BODY_SIZE_LIMIT ({BODY_SIZE_LIMIT} "
+    "UTF-8 bytes) is the conservative operational pin for both description and "
+    "comment (D9: BODY_SIZE_LIMIT is used because no looser published source "
+    "exists; a tighter probed cap wins)."
+)
+LINEAR_SIZE_PIN = {
+    "unit": "characters",
+    "notBytes": True,
+    "operationalUnit": "utf8-bytes",
+    "publishedDescriptionMax": None,
+    "publishedCommentMax": None,
+    "descriptionLimit": BODY_SIZE_LIMIT,
+    "commentLimit": BODY_SIZE_LIMIT,
+    "source": LINEAR_SIZE_PIN_SOURCE,
+}
+
+
+def require_linear_size_pin() -> dict[str, Any]:
+    """Refuse Linear splitter work unless R10 pin fields are recorded."""
+    required = ("unit", "descriptionLimit", "commentLimit", "source", "operationalUnit")
+    missing = [key for key in required if not LINEAR_SIZE_PIN.get(key)]
+    source = str(LINEAR_SIZE_PIN.get("source") or "")
+    if (
+        missing
+        or LINEAR_SIZE_PIN.get("unit") != "characters"
+        or LINEAR_SIZE_PIN.get("notBytes") is not True
+        or LINEAR_SIZE_PIN.get("operationalUnit") != "utf8-bytes"
+        or int(LINEAR_SIZE_PIN["descriptionLimit"]) != BODY_SIZE_LIMIT
+        or int(LINEAR_SIZE_PIN["commentLimit"]) != BODY_SIZE_LIMIT
+        or "https://linear.app/developers/graphql" not in source
+        or "https://spec.graphql.org/" not in source
+        or "do not publish" not in source.lower()
+    ):
+        raise ValueError(f"linear-size-pin-missing:{','.join(missing) or 'source-or-unit'}")
+    return LINEAR_SIZE_PIN
+
 MARKER_PROJECT_KEY = re.compile(r"<!--\s*sw-project-key:\s*([a-z][a-z0-9-]*)\s*-->")
 MARKER_ARTIFACT_TYPE = re.compile(r"<!--\s*sw-artifact-type:\s*(\w+)\s*-->")
 MARKER_UNIT_ID = re.compile(r"<!--\s*sw-unit-id:\s*([^\s]+)\s*-->")
@@ -58,9 +106,16 @@ INBOUND_COMMENT_EXCLUDED_MARKERS = frozenset(
         "sw-doc-review-completion",
         "sw-doc-review-round",
         "sw:doc-review-round",
+        # Prefix form also matched in inbound filters via startswith(BUNDLE_ASSET_MARKER_PREFIX).
+        "sw-bundle-asset:plan",
+        "sw-bundle-asset:data-model",
+        "sw-bundle-asset:contracts",
+        "sw-bundle-asset:quickstart",
+        "sw-bundle-asset:checklist",
     }
 )
 FREEZE_RECORD_MARKER = "sw-freeze-record"
+BUNDLE_ASSET_MARKER_PREFIX = "sw-bundle-asset:"
 DOC_REVIEW_MARKER = "sw-doc-review"
 DOC_REVIEW_COMPLETION_MARKER = "sw:doc-review-completion"
 # Body-block witness excluded from freeze hash but never deleted from the live issue (R31/D22).
@@ -140,10 +195,15 @@ class CommentRecord:
     def excluded_from_canonical(self) -> bool:
         if any(m in EXCLUDED_COMMENT_MARKERS for m in self.markers):
             return True
+        # Bundle assets ride as marked comments on the unit issue (PRD 342 R35).
+        if any(str(m).startswith(BUNDLE_ASSET_MARKER_PREFIX) for m in self.markers):
+            return True
         body = self.body or ""
         for m in EXCLUDED_COMMENT_MARKERS:
             if f"<!-- {m} -->" in body or f"<!--{m}-->" in body:
                 return True
+        if BUNDLE_ASSET_MARKER_PREFIX in body:
+            return True
         # Colon/hyphen family open markers (PRD 341 R4/R24).
         if re.search(r"<!--\s*sw[:-]doc-review(?:-completion|-round)?\s*-->", body, re.IGNORECASE):
             return True
@@ -609,9 +669,9 @@ def structural_labels_from_content(content: str) -> list[str]:
         labels.append(visibility_label(str(fm["visibility"])))
     labels.extend(tag_labels_from_frontmatter(fm))
     for rel in EDGE_LABEL_PREFIXES:
-        value = fm.get(rel)
-        targets = value if isinstance(value, list) else ([value] if value else [])
-        labels.extend(edge_labels_for(rel, [str(t) for t in targets]))
+        # R37 — normalize list-form and comma-string edge targets identically.
+        targets = parse_absorbs_targets(fm.get(rel))
+        labels.extend(edge_labels_for(rel, targets))
     return labels
 
 
@@ -644,6 +704,15 @@ def compose_canonical_document(fm: dict[str, Any], body: str) -> str:
     return f"{render_frontmatter(fm)}\n\n{normalize_body(body)}\n"
 
 
+def edges_from_frontmatter(fm: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build portable sw-edges from structural frontmatter edge keys (R37)."""
+    edges: list[dict[str, Any]] = []
+    for rel in EDGE_LABEL_PREFIXES:
+        for target in parse_absorbs_targets(fm.get(rel)):
+            edges.append({"rel": rel, "target": target})
+    return edges
+
+
 def operator_body_from_canonical(content: str) -> str:
     """R20 -- operator-visible body without raw YAML frontmatter."""
     fm, body = split_frontmatter(content)
@@ -658,6 +727,9 @@ def operator_body_from_canonical(content: str) -> str:
         )
     if body:
         parts.append(body)
+    edge_list = edges_from_frontmatter(fm)
+    if edge_list:
+        parts.append(build_edges_block(edge_list, []))
     return "\n".join(parts)
 
 
@@ -1131,6 +1203,8 @@ def chunk_body_if_needed(
         from planning_notion_canonical import chunk_body_for_notion
 
         return chunk_body_for_notion(body, comments)
+    if provider == "linear":
+        require_linear_size_pin()
     if len(body.encode("utf-8")) <= BODY_SIZE_LIMIT:
         return body, comments
     encoded = body.encode("utf-8")
