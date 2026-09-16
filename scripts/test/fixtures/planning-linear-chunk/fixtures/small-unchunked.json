@@ -1,0 +1,5 @@
+{
+  "id": "small-unchunked",
+  "expectChunked": false,
+  "body": "# Synthetic unit\n\nShort Linear description for fixture corpus (sanitized).\n\n- [link](https://example.com/docs)\n"
+}

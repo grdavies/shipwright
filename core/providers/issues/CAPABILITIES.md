@@ -261,6 +261,10 @@ Document-review listing/revalidation charges class `document-review` under
 | fixture (`SW_ISSUES_FIXTURE`) | same floor as github-issues | Shared provider-conformance cases (R30) |
 | `gitlab-issues`, `jira`, `linear`, `notion` | unsupported | Preflight → `doc-review-provider-unsupported` before any persona write (R28) |
 
+Linear/Jira/Notion **planning LCD** (issue create/update/comment) may still be recognized or shipped
+independently of this matrix — doc-review transport is a separate promotion tracked under PRD 341 Phases
+4–5. Do not enable `/sw-doc-review` issue-store transport for those providers until the floor lands.
+
 Missing any mandatory capability fails closed with `doc-review-provider-unsupported` and the
 missing capability names — no partial write.
 

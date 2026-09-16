@@ -16,6 +16,10 @@ import issues_broker
 import issues_http
 from credentials.model import Resolution, ResolvedToken
 from host_lib import load_workflow_config
+from planning.packaged_conformance_roots import (
+    PACKAGED_CONFORMANCE_RECOVERY,
+    packaged_conformance_search_roots,
+)
 from planning_canonical import (
     BODY_SIZE_LIMIT,
     FROZEN_LABEL,
@@ -29,6 +33,7 @@ from planning_canonical import (
     build_comment_threads,
     chunk_body_if_needed,
     compute_etag,
+    rewrite_chunk_manifest_ids,
     parse_body_marker,
     project_label,
     serialize_comment_facade,
@@ -66,7 +71,17 @@ NATIVE_ISSUE_LOCK = False
 IDENTIFIER_NUM = re.compile(r"-(\d+)$")
 NATIVE_LINK_MARKER = re.compile(r"<!--\s*sw-native-link:([^:\s]+):([^\s]+)\s*-->")
 
-ISSUE_FIELDS = """
+COMMENT_NODE_FIELDS = """
+id
+body
+createdAt
+user { id }
+parent { id }
+resolvedAt
+resolvingComment { id }
+""".strip()
+
+ISSUE_FIELDS = f"""
 id
 identifier
 title
@@ -74,11 +89,11 @@ description
 url
 updatedAt
 priority
-state { id name type }
-labels { nodes { id name } }
-comments { nodes { id body createdAt parent { id } resolvedAt resolvingComment { id } } }
-relations { nodes { id type relatedIssue { id identifier } } }
-inverseRelations { nodes { id type issue { id identifier } } }
+state {{ id name type }}
+labels {{ nodes {{ id name }} }}
+comments {{ nodes {{ {COMMENT_NODE_FIELDS} }} }}
+relations {{ nodes {{ id type relatedIssue {{ id identifier }} }} }}
+inverseRelations {{ nodes {{ id type issue {{ id identifier }} }} }}
 """.strip()
 
 ISSUE_CREATE_MUTATION = f"""
@@ -105,12 +120,29 @@ query IssueGet($id: String!) {{
 }}
 """.strip()
 
+ISSUE_COMMENTS_PAGE_QUERY = f"""
+query IssueComments($id: String!, $first: Int, $after: String) {{
+  issue(id: $id) {{
+    comments(first: $first, after: $after) {{
+      nodes {{ {COMMENT_NODE_FIELDS} }}
+      pageInfo {{ hasNextPage endCursor }}
+    }}
+  }}
+}}
+""".strip()
+
 COMMENT_CREATE_MUTATION = """
 mutation CommentCreate($input: CommentCreateInput!) {
   commentCreate(input: $input) {
     success
-    comment { id body createdAt }
+    comment { id body createdAt user { id } }
   }
+}
+""".strip()
+
+WHOAMI_QUERY = """
+query LinearWhoami {
+  viewer { id }
 }
 """.strip()
 
@@ -165,6 +197,34 @@ query TeamProbe($filter: TeamFilter) {
   viewer { id }
 }
 """.strip()
+
+
+def linear_r15_floor_present() -> bool:
+    """True when whoami, comment author_id, and comment pagination exist (PRD 357 R15)."""
+    return bool(
+        callable(getattr(LinearIssuesClient, "authenticated_principal_id", None))
+        and "user { id }" in COMMENT_CREATE_MUTATION
+        and "user { id }" in COMMENT_NODE_FIELDS
+        and "hasNextPage" in ISSUE_COMMENTS_PAGE_QUERY
+        and "viewer { id }" in WHOAMI_QUERY
+    )
+
+
+def linear_doc_review_capabilities() -> dict[str, bool]:
+    """Advertise doc-review caps only when the R15 floor is present.
+
+    Degraded Linear lock is not a substitute for authorship or body-drift detect.
+    """
+    ready = linear_r15_floor_present()
+    return {
+        "post": ready,
+        "stableIds": ready,
+        "verifiableAuthorPrincipal": ready,
+        "stableApplicationId": False,
+        "nativeRevision": False,
+        "completeFullBody": ready,
+        "completePagination": ready,
+    }
 
 
 class LinearClientError(Exception):
@@ -677,17 +737,21 @@ def lock_capability() -> dict[str, Any]:
     }
 
 
+LINEAR_CHUNK_COMMENT_MAX_RETRIES = 3
+
+
 def overflow_chunk_policy() -> dict[str, Any]:
-    """R10 — body overflow uses generic BODY_SIZE_LIMIT + sw-chunk-overflow comments."""
+    """R10 — body overflow uses Linear-aware splitter + sw-chunk-overflow comments."""
     return {
         "provider": "linear",
         "bodySizeLimitBytes": BODY_SIZE_LIMIT,
         "chunkMarker": "sw-chunk-overflow",
-        "chunkVia": "planning_canonical.chunk_body_if_needed",
+        "chunkVia": "planning_linear_canonical.chunk_body_for_linear",
         "notes": (
             "Oversized bodies are split with <!-- sw-chunk-overflow --> comments and a "
-            "sw-chunk-manifest marker; Linear description uses the generic UTF-8 limit "
-            f"({BODY_SIZE_LIMIT} bytes), not a tighter ADF-style cap."
+            "sw-chunk-manifest marker. Linear GraphQL String fields are character-counted "
+            "with no published max; the conservative operational pin is BODY_SIZE_LIMIT "
+            f"({BODY_SIZE_LIMIT} UTF-8 bytes) for both description and comment (PRD 357 R10)."
         ),
     }
 
@@ -794,8 +858,14 @@ def _linear_conformance_green(root: Path) -> bool:
     from _planning_pkg_loader import load_submodule
 
     pc = load_submodule("provider_conformance")
-    for candidate in (root, _plugin_source_root()):
-        record = pc.load_conformance_record(candidate, "linear")
+    plugin = _plugin_source_root()
+    for candidate in (root, plugin):
+        record = pc.load_conformance_record(
+            candidate,
+            "linear",
+            package_root=plugin,
+            active_host=None,
+        )
         if pc.conformance_dimensions_green(record):
             return True
     return False
@@ -895,6 +965,7 @@ def prd061_facade_projection_readiness(root: Path | None = None) -> dict[str, An
             "checks": packaged,
         }
     if blocked:
+        plugin = _plugin_source_root()
         return {
             "verdict": "blocked",
             "action": "linear-prd061-readiness-gate",
@@ -902,6 +973,13 @@ def prd061_facade_projection_readiness(root: Path | None = None) -> dict[str, An
             "prd061UnitId": PRD_061_UNIT_ID,
             "requirements": ["facade-contract", "projection-contract"],
             "blocked": blocked,
+            "searchedRoots": packaged_conformance_search_roots(
+                repo,
+                "linear.ok.json",
+                package_root=plugin,
+                active_host=None,
+            ),
+            "recoveryAction": PACKAGED_CONFORMANCE_RECOVERY,
             "resumeCommand": (
                 "merge and green PRD 061 facade/projection contract "
                 f"({PRD_061_FACADE_ACCEPTANCE_TEST}, "
@@ -921,10 +999,18 @@ def require_prd061_facade_projection_ready(root: Path) -> None:
     """Fail-closed PRD 061 readiness preflight before live Linear adapter activation (R34)."""
     gate = prd061_facade_projection_readiness(root)
     if gate.get("verdict") != "ready":
-        raise LinearClientError(
-            str(gate.get("cause") or "prd-061-facade-projection-not-merged-green"),
-            code="prd061-readiness-blocked",
+        plugin = _plugin_source_root()
+        searched = packaged_conformance_search_roots(
+            root,
+            "linear.ok.json",
+            package_root=plugin,
+            active_host=None,
         )
+        detail = (
+            f"{gate.get('cause') or 'prd-061-facade-projection-not-merged-green'}: "
+            f"searched {searched}; {PACKAGED_CONFORMANCE_RECOVERY}"
+        )
+        raise LinearClientError(detail, code="prd061-readiness-blocked")
 
 
 def resolve_linear_provider_doc(root: Path) -> Path:
@@ -1129,6 +1215,8 @@ def _comment_resolving_id(raw: dict[str, Any]) -> str:
 
 
 def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
+    from planning_canonical import CHUNK_TOKEN_MARKER_PREFIX, chunk_token_from_comment
+
     body = str(raw.get("body") or "")
     markers: list[str] = []
     for marker_name in (
@@ -1139,11 +1227,21 @@ def _parse_comment(raw: dict[str, Any]) -> CommentRecord:
     ):
         if f"<!-- {marker_name} -->" in body or f"<!--{marker_name}-->" in body:
             markers.append(marker_name)
+    token = chunk_token_from_comment(CommentRecord(id="", body=body, markers=markers))
+    if token:
+        token_marker = f"{CHUNK_TOKEN_MARKER_PREFIX}{token}"
+        if token_marker not in markers:
+            markers.append(token_marker)
+    author_id = ""
+    user = raw.get("user")
+    if isinstance(user, dict):
+        author_id = str(user.get("id") or "")
     return CommentRecord(
         id=str(raw.get("id", "")),
         body=body,
         created_at=str(raw.get("createdAt") or raw.get("created_at") or ""),
         markers=markers,
+        author_id=author_id,
         parent_id=_comment_parent_id(raw),
         resolved_at=str(raw.get("resolvedAt") or raw.get("resolved_at") or ""),
         resolving_comment_id=_comment_resolving_id(raw),
@@ -1304,6 +1402,18 @@ def _record_from_issue(
         unit_id=unit_id,
     )
     record.etag = compute_etag(updated, body, title, record.labels)
+    if "_comments_complete" in payload:
+        record.comments_complete = bool(payload.get("_comments_complete"))
+    else:
+        comments_block = payload.get("comments")
+        if isinstance(comments_block, dict):
+            page_info = comments_block.get("pageInfo")
+            if isinstance(page_info, dict) and page_info.get("hasNextPage"):
+                record.comments_complete = False
+            else:
+                record.comments_complete = True
+        else:
+            record.comments_complete = True
     return record
 
 
@@ -1462,7 +1572,72 @@ class LinearIssuesClient:
             from issues_lib import IssueNotFound
 
             raise IssueNotFound(f"issue not found: {issue_id}")
+        nodes, complete = self._paginated_comment_nodes(issue_id)
+        issue["comments"] = {"nodes": nodes}
+        issue["_comments_complete"] = complete
         return issue
+
+    def _paginated_comment_nodes(
+        self,
+        issue_id: str,
+        *,
+        seed: Any = None,
+    ) -> tuple[list[dict[str, Any]], bool]:
+        """Page comments; comments_complete is false while hasNextPage remains (R15)."""
+        del seed  # ISSUE_FIELDS comments omit pageInfo; always page via comments query.
+        nodes: list[dict[str, Any]] = []
+        after: str | None = None
+        complete = True
+        for _ in range(max(1, MAX_SEARCH_PAGES)):
+            variables: dict[str, Any] = {"id": issue_id, "first": DEFAULT_PAGE_SIZE}
+            if after:
+                variables["after"] = after
+            payload = self._gql(ISSUE_COMMENTS_PAGE_QUERY, variables)
+            connection = (((payload.get("data") or {}).get("issue") or {}).get("comments")) or {}
+            batch = connection.get("nodes") or []
+            if isinstance(batch, list):
+                nodes.extend(item for item in batch if isinstance(item, dict))
+            page_info = (
+                connection.get("pageInfo") if isinstance(connection.get("pageInfo"), dict) else {}
+            )
+            if not page_info.get("hasNextPage"):
+                complete = True
+                break
+            complete = False
+            cursor = page_info.get("endCursor")
+            after = str(cursor) if cursor else None
+            if not after:
+                break
+        return nodes, complete
+
+    def _post_overflow_comments(
+        self,
+        issue_id: str,
+        extra: list[CommentRecord],
+        *,
+        head: str,
+    ) -> None:
+        """Post overflow comments; bounded RATELIMITED retry; rewrite manifest ids (R11)."""
+        if not extra:
+            return
+        posted_ids: list[str] = []
+        for comment in extra:
+            attempts = 0
+            while True:
+                try:
+                    posted = self.add_comment(issue_id, comment.body, markers=list(comment.markers))
+                    posted_ids.append(posted.id)
+                    break
+                except LinearRateLimited:
+                    attempts += 1
+                    if attempts >= LINEAR_CHUNK_COMMENT_MAX_RETRIES:
+                        raise LinearClientError(
+                            "linear-chunk-post-dirty: overflow comment post exhausted RATELIMITED retries",
+                            code="linear-chunk-post-dirty",
+                        ) from None
+        rewritten = rewrite_chunk_manifest_ids(head, posted_ids)
+        if rewritten != head:
+            self._gql(ISSUE_UPDATE_MUTATION, {"id": issue_id, "input": {"description": rewritten}})
 
     def create(
         self,
@@ -1505,8 +1680,7 @@ class LinearIssuesClient:
         if not isinstance(issue, dict) or not issue.get("id"):
             raise LinearClientError("issueCreate returned no issue", code="create-failed")
         issue_id = str(issue["id"])
-        for comment in extra:
-            self.add_comment(issue_id, comment.body, markers=list(comment.markers))
+        self._post_overflow_comments(issue_id, extra, head=head)
         if native_links:
             for link in native_links:
                 if not isinstance(link, dict):
@@ -1524,9 +1698,26 @@ class LinearIssuesClient:
                     )
         return self.get(issue_id)
 
+    def authenticated_principal_id(self) -> str:
+        """Brokered Linear whoami — viewer.id only, never a payload-claimed author (R15)."""
+        if self._fixture is not None:
+            return str(self._fixture.authenticated_principal_id())
+        payload = self._gql(WHOAMI_QUERY, None)
+        viewer = ((payload.get("data") or {}).get("viewer")) or {}
+        viewer_id = str(viewer.get("id") or "").strip() if isinstance(viewer, dict) else ""
+        if not viewer_id:
+            raise LinearClientError(
+                "Linear viewer.id whoami missing",
+                code="whoami-unavailable",
+            )
+        return viewer_id
+
     def get(self, issue_id: str) -> Any:
         if self._fixture is not None:
-            return self._fixture.get(issue_id)
+            record = self._fixture.get(issue_id)
+            if getattr(record, "comments_complete", None) is None:
+                record.comments_complete = True
+            return record
         return _record_from_issue(self._issue_payload(issue_id), project_key=self.project_key)
 
     def update(
@@ -1578,8 +1769,15 @@ class LinearIssuesClient:
             patch["state"] = "unstarted"
         if patch:
             self._gql(ISSUE_UPDATE_MUTATION, {"id": issue_id, "input": patch})
-        for comment in extra_comments:
-            self.add_comment(issue_id, comment.body, markers=list(comment.markers))
+        if extra_comments and body is not None:
+            self._post_overflow_comments(
+                issue_id,
+                extra_comments,
+                head=str(patch.get("description") or ""),
+            )
+        elif extra_comments:
+            for comment in extra_comments:
+                self.add_comment(issue_id, comment.body, markers=list(comment.markers))
         if native_links is not None:
             for link in native_links:
                 if not isinstance(link, dict):
@@ -1598,10 +1796,20 @@ class LinearIssuesClient:
         return self.get(issue_id)
 
     def add_comment(
-        self, issue_id: str, body: str, *, markers: list[str] | None = None
+        self,
+        issue_id: str,
+        body: str,
+        *,
+        markers: list[str] | None = None,
+        author_id: str = "",
     ) -> CommentRecord:
         if self._fixture is not None:
-            return self._fixture.add_comment(issue_id, body, markers=markers)
+            kwargs: dict[str, Any] = {}
+            if markers is not None:
+                kwargs["markers"] = markers
+            if author_id:
+                kwargs["author_id"] = author_id
+            return self._fixture.add_comment(issue_id, body, **kwargs)
         created = self._gql(
             COMMENT_CREATE_MUTATION,
             {"input": {"issueId": issue_id, "body": body}},
@@ -1612,6 +1820,13 @@ class LinearIssuesClient:
         comment = _parse_comment(raw)
         if markers:
             comment.markers = list(markers)
+        if author_id and comment.author_id != author_id:
+            raise issues_broker.IssueCommentAuthorshipMismatch(
+                "doc-review authorship mismatch",
+                expected=author_id,
+                actual=comment.author_id,
+                comment_id=comment.id,
+            )
         return comment
 
     def set_labels(
@@ -1742,6 +1957,7 @@ class LinearIssuesClient:
                             "id": comment.id,
                             "body": comment.body,
                             "createdAt": comment.created_at,
+                            "user": {"id": comment.author_id} if comment.author_id else None,
                             "parent": {"id": comment.parent_id} if comment.parent_id else None,
                             "resolvedAt": comment.resolved_at or None,
                             "resolvingComment": (
@@ -1844,7 +2060,7 @@ class LinearIssuesClient:
 def main(argv: list[str] | None = None) -> None:
     args = list(argv if argv is not None else sys.argv[1:])
     if len(args) < 2:
-        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|promotion-gate-evidence|docs-currency-gate|prd061-readiness-gate|operator-browse-checklist-gate|comments-relations-surface>"}))
+        print(json.dumps({"verdict": "fail", "error": "usage: planning_linear_client.py <root> <probe-team|doctor-oauth|lock-capability|overflow-policy|stage1-dogfood-gate|oauth-docs-gate|promotion-gate-evidence|docs-currency-gate|prd061-readiness-gate|operator-browse-checklist-gate|comments-relations-surface|live-facade-pilot-gate [receipt-path]>"}))
         raise SystemExit(2)
     root = Path(args[0]).resolve()
     cfg = load_workflow_config(root)
@@ -1879,6 +2095,18 @@ def main(argv: list[str] | None = None) -> None:
             raise SystemExit(2)
         client = LinearIssuesClient(root, cfg=cfg)
         print(json.dumps(client.comments_relations_surface(issue_id), indent=2))
+    elif cmd == "live-facade-pilot-gate":
+        from planning_linear_facade_pilot import live_facade_pilot_gate
+
+        receipt_arg = args[2] if len(args) > 2 else ""
+        receipt_path = Path(receipt_arg).resolve() if receipt_arg else None
+        out = live_facade_pilot_gate(root, cfg, receipt_path=receipt_path)
+        print(json.dumps(out, indent=2))
+        if out.get("verdict") == "ok":
+            raise SystemExit(0)
+        if out.get("verdict") == "blocked":
+            raise SystemExit(20)
+        raise SystemExit(2)
     else:
         print(json.dumps({"verdict": "fail", "error": f"unknown command: {cmd}"}))
         raise SystemExit(2)

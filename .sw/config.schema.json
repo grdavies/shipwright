@@ -1883,6 +1883,45 @@
                     "leastPrivilege",
                     "rotationPolicy"
                   ]
+                },
+                "liveFacadePilot": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Isolated live Linear facade pilot pin (PRD 357 R13). Uses a consumer-scoped credentialRef and disposable Linear team; does not replace planning.store.issues.credentialRef for the host planning store.",
+                  "properties": {
+                    "projectId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Selector-scoped project id that must appear in the credential entry allowedProjectIds."
+                    },
+                    "credentialRef": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Selector reference for the Linear API key (keystore/backend)."
+                    },
+                    "repoSlug": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Consumer git slug used for broker repo-scope (e.g. grdavies/tierforge)."
+                    },
+                    "remote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Paired git remote URL for the consumer repo (must match credential pairing)."
+                    },
+                    "teamKey": {
+                      "type": "string",
+                      "description": "Linear Team key for the disposable/dogfood team (e.g. TIE)."
+                    },
+                    "teamId": {
+                      "type": "string",
+                      "description": "Optional Linear GraphQL Team id when key resolution is ambiguous."
+                    }
+                  },
+                  "required": [
+                    "projectId",
+                    "credentialRef"
+                  ]
                 }
               }
             },

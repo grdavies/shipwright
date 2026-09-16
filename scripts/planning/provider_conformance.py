@@ -27,9 +27,7 @@ from issues_lib import (
 from planning.packaged_conformance_roots import (
     conformance_fixture_path,
     load_conformance_record,
-    provider_fixture_slug,
     providers_with_green_conformance,
-    resolve_conformance_fixture_path,
     resolve_package_root,
 )
 

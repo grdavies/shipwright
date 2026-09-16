@@ -60,7 +60,8 @@ DOC_REVIEW_MANDATORY_CAPABILITIES = (
 )
 
 # Adapter-owned capability floor. github-issues + fixture advertise after conformance (R27/R30).
-# Other providers default unsupported until individually enabled (R28/D6).
+# Linear/Jira/Notion advertise only when the R15 whoami/author_id/pagination floor is present
+# (PRD 357 R15/R6). Other providers default unsupported until individually enabled (R28/D6).
 DOC_REVIEW_CAPABILITIES_BY_PROVIDER: dict[str, dict[str, bool]] = {
     "github-issues": {
         "post": True,
@@ -1063,8 +1064,26 @@ def drift_failure(*, kind: str, detail: str = "", **extra: Any) -> dict[str, Any
 
 
 def doc_review_capabilities_for(provider: str) -> dict[str, bool]:
-    """Return adapter-owned ``docReviewComments`` record (defaults all false)."""
-    declared = DOC_REVIEW_CAPABILITIES_BY_PROVIDER.get(provider)
+    """Return adapter-owned ``docReviewComments`` record (defaults all false).
+
+    Linear/Jira/Notion resolve from the live R15 floor so missing
+    whoami/author_id/pagination keeps every mandatory capability false
+    (``doc-review-provider-unsupported``).
+    """
+    if provider == "linear":
+        from planning_linear_client import linear_doc_review_capabilities
+
+        declared = linear_doc_review_capabilities()
+    elif provider == "jira":
+        from planning_jira_client import jira_doc_review_capabilities
+
+        declared = jira_doc_review_capabilities()
+    elif provider == "notion":
+        from planning_notion_client import notion_doc_review_capabilities
+
+        declared = notion_doc_review_capabilities()
+    else:
+        declared = DOC_REVIEW_CAPABILITIES_BY_PROVIDER.get(provider)
     if isinstance(declared, dict):
         return {
             "post": bool(declared.get("post")),
@@ -1076,6 +1095,19 @@ def doc_review_capabilities_for(provider: str) -> dict[str, bool]:
             "completePagination": bool(declared.get("completePagination")),
         }
     return {name: False for name in (*DOC_REVIEW_MANDATORY_CAPABILITIES, "stableApplicationId", "nativeRevision")}
+
+
+def post_review_finding_size_limit_for(provider: str | None) -> int:
+    """Provider comment cap for findings posts (PRD 341 R39 / PRD 357 R15)."""
+    if provider == "linear":
+        from planning_canonical import LINEAR_SIZE_PIN
+
+        return int(LINEAR_SIZE_PIN["commentLimit"])
+    if provider == "jira":
+        from planning_jira_canonical import JIRA_CLOUD_DESCRIPTION_LIMIT
+
+        return int(JIRA_CLOUD_DESCRIPTION_LIMIT)
+    return DOC_REVIEW_COMMENT_SIZE_CAP
 
 
 def missing_doc_review_capabilities(provider: str) -> list[str]:
@@ -1114,6 +1146,7 @@ def budget_exhausted_failure(*, detail: str = "", **extra: Any) -> dict[str, Any
 
 
 def require_github_issue_store(*, effective: dict[str, Any], provider: str) -> dict[str, Any] | None:
+    """Issue-store-only capability gate (file-store never reads the enablement matrix)."""
     if effective.get("configured") != "issue-store":
         return transport_unavailable(reason="issue-store-required")
     missing = missing_doc_review_capabilities(provider)
@@ -1393,7 +1426,19 @@ def chunk_review_round_body(
     prefix itself exceeds the limit, keep a line-aligned prefix in the head
     and put the remaining prefix plus the fence in one overflow comment so
     reassembly does not rewrite PRD bytes.
+
+    Linear must not reuse the GitHub fence-in-one-comment path when that
+    overflow would exceed the R10 description/comment pin.
     """
+    if provider == "linear":
+        from planning_canonical import LINEAR_SIZE_PIN
+
+        head, extras = chunk_body_if_needed(body, [], provider="linear")
+        limit = int(LINEAR_SIZE_PIN["commentLimit"])
+        for extra in extras:
+            if len((extra.body or "").encode("utf-8")) > limit:
+                raise RuntimeError("linear-doc-review-overflow-exceeds-r10")
+        return head, extras
     if provider in {"jira", "notion"}:
         return chunk_body_if_needed(body, [], provider=provider)
     if len(body.encode("utf-8")) <= BODY_SIZE_LIMIT:
@@ -1990,7 +2035,9 @@ def execute_doc_review_txn(
                 unit_id=unit_id,
                 body_path=body_path,
             )
-        if len(body) > DOC_REVIEW_COMMENT_SIZE_CAP:
+        provider = getattr(client, "provider", None)
+        limit = post_review_finding_size_limit_for(provider)
+        if len(body) > limit:
             return {
                 "verdict": "fail",
                 "action": verb,
@@ -1998,7 +2045,7 @@ def execute_doc_review_txn(
                 "persona": persona,
                 "roundId": round_id,
                 "size": len(body),
-                "limit": DOC_REVIEW_COMMENT_SIZE_CAP,
+                "limit": limit,
             }
         if dry_run:
             return {

@@ -19,6 +19,54 @@ FRONTMATTER_EXTRA_MARKER = re.compile(r"<!--\s*sw-frontmatter-extra:\s*(\{.*?\})
 BODY_SIZE_LIMIT = 60_000
 EDGE_DIVERGENCE_TOLERANCE = 0
 
+# PRD 357 R10 / D9 — pin Linear description vs comment before splitter work.
+# Linear GraphQL fields are GraphQL String (Unicode code points). Developer
+# docs do not publish a maximum length, so BODY_SIZE_LIMIT is the conservative
+# operational cap for both fields until a live-probe receipt records a tighter
+# distinct cap.
+LINEAR_SIZE_PIN_SOURCE = (
+    "Linear GraphQL Issue.description and Comment.body are String fields "
+    "(https://linear.app/developers/graphql; schema Issue.description: String, "
+    "Comment.body: String!). GraphQL String values are sequences of Unicode "
+    "code points (characters), not UTF-8 bytes "
+    "(https://spec.graphql.org/October2021/#sec-String). Linear developer docs "
+    "do not publish a maximum length for either field. Until a live-probe "
+    f"receipt records a distinct tighter cap, BODY_SIZE_LIMIT ({BODY_SIZE_LIMIT} "
+    "UTF-8 bytes) is the conservative operational pin for both description and "
+    "comment (D9: BODY_SIZE_LIMIT is used because no looser published source "
+    "exists; a tighter probed cap wins)."
+)
+LINEAR_SIZE_PIN = {
+    "unit": "characters",
+    "notBytes": True,
+    "operationalUnit": "utf8-bytes",
+    "publishedDescriptionMax": None,
+    "publishedCommentMax": None,
+    "descriptionLimit": BODY_SIZE_LIMIT,
+    "commentLimit": BODY_SIZE_LIMIT,
+    "source": LINEAR_SIZE_PIN_SOURCE,
+}
+
+
+def require_linear_size_pin() -> dict[str, Any]:
+    """Refuse Linear splitter work unless R10 pin fields are recorded."""
+    required = ("unit", "descriptionLimit", "commentLimit", "source", "operationalUnit")
+    missing = [key for key in required if not LINEAR_SIZE_PIN.get(key)]
+    source = str(LINEAR_SIZE_PIN.get("source") or "")
+    if (
+        missing
+        or LINEAR_SIZE_PIN.get("unit") != "characters"
+        or LINEAR_SIZE_PIN.get("notBytes") is not True
+        or LINEAR_SIZE_PIN.get("operationalUnit") != "utf8-bytes"
+        or int(LINEAR_SIZE_PIN["descriptionLimit"]) != BODY_SIZE_LIMIT
+        or int(LINEAR_SIZE_PIN["commentLimit"]) != BODY_SIZE_LIMIT
+        or "https://linear.app/developers/graphql" not in source
+        or "https://spec.graphql.org/" not in source
+        or "do not publish" not in source.lower()
+    ):
+        raise ValueError(f"linear-size-pin-missing:{','.join(missing) or 'source-or-unit'}")
+    return LINEAR_SIZE_PIN
+
 MARKER_PROJECT_KEY = re.compile(r"<!--\s*sw-project-key:\s*([a-z][a-z0-9-]*)\s*-->")
 MARKER_ARTIFACT_TYPE = re.compile(r"<!--\s*sw-artifact-type:\s*(\w+)\s*-->")
 MARKER_UNIT_ID = re.compile(r"<!--\s*sw-unit-id:\s*([^\s]+)\s*-->")
@@ -27,6 +75,28 @@ MARKER_CHUNK_MANIFEST = re.compile(
     r"<!--\s*sw-chunk-manifest:\s*(\{.*?\})\s*-->",
     re.DOTALL,
 )
+
+
+def decode_linear_public_markdown_json(raw: str) -> str:
+    """Undo Linear Public Markdown escapes inside HTML-comment JSON payloads.
+
+    Linear backslash-escapes ``[`` / ``]`` / ``(`` / ``)`` when persisting
+    Public Markdown, which otherwise makes ``json.loads`` fail closed on a
+    valid ``sw-chunk-manifest``.
+    """
+    text = raw.replace("\\[", "[").replace("\\]", "]")
+    return text.replace("\\(", "(").replace("\\)", ")")
+
+
+def load_chunk_manifest(body: str) -> dict[str, Any] | None:
+    match = MARKER_CHUNK_MANIFEST.search(body)
+    if not match:
+        return None
+    try:
+        parsed = json.loads(decode_linear_public_markdown_json(match.group(1)))
+    except json.JSONDecodeError:
+        return None
+    return parsed if isinstance(parsed, dict) else None
 
 SW_EDGES_FENCE = re.compile(
     r"```sw-edges\s*\n(.*?)\n```",
@@ -58,9 +128,16 @@ INBOUND_COMMENT_EXCLUDED_MARKERS = frozenset(
         "sw-doc-review-completion",
         "sw-doc-review-round",
         "sw:doc-review-round",
+        # Prefix form also matched in inbound filters via startswith(BUNDLE_ASSET_MARKER_PREFIX).
+        "sw-bundle-asset:plan",
+        "sw-bundle-asset:data-model",
+        "sw-bundle-asset:contracts",
+        "sw-bundle-asset:quickstart",
+        "sw-bundle-asset:checklist",
     }
 )
 FREEZE_RECORD_MARKER = "sw-freeze-record"
+BUNDLE_ASSET_MARKER_PREFIX = "sw-bundle-asset:"
 DOC_REVIEW_MARKER = "sw-doc-review"
 DOC_REVIEW_COMPLETION_MARKER = "sw:doc-review-completion"
 # Body-block witness excluded from freeze hash but never deleted from the live issue (R31/D22).
@@ -140,10 +217,15 @@ class CommentRecord:
     def excluded_from_canonical(self) -> bool:
         if any(m in EXCLUDED_COMMENT_MARKERS for m in self.markers):
             return True
+        # Bundle assets ride as marked comments on the unit issue (PRD 342 R35).
+        if any(str(m).startswith(BUNDLE_ASSET_MARKER_PREFIX) for m in self.markers):
+            return True
         body = self.body or ""
         for m in EXCLUDED_COMMENT_MARKERS:
             if f"<!-- {m} -->" in body or f"<!--{m}-->" in body:
                 return True
+        if BUNDLE_ASSET_MARKER_PREFIX in body:
+            return True
         # Colon/hyphen family open markers (PRD 341 R4/R24).
         if re.search(r"<!--\s*sw[:-]doc-review(?:-completion|-round)?\s*-->", body, re.IGNORECASE):
             return True
@@ -609,9 +691,9 @@ def structural_labels_from_content(content: str) -> list[str]:
         labels.append(visibility_label(str(fm["visibility"])))
     labels.extend(tag_labels_from_frontmatter(fm))
     for rel in EDGE_LABEL_PREFIXES:
-        value = fm.get(rel)
-        targets = value if isinstance(value, list) else ([value] if value else [])
-        labels.extend(edge_labels_for(rel, [str(t) for t in targets]))
+        # R37 — normalize list-form and comma-string edge targets identically.
+        targets = parse_absorbs_targets(fm.get(rel))
+        labels.extend(edge_labels_for(rel, targets))
     return labels
 
 
@@ -644,6 +726,15 @@ def compose_canonical_document(fm: dict[str, Any], body: str) -> str:
     return f"{render_frontmatter(fm)}\n\n{normalize_body(body)}\n"
 
 
+def edges_from_frontmatter(fm: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build portable sw-edges from structural frontmatter edge keys (R37)."""
+    edges: list[dict[str, Any]] = []
+    for rel in EDGE_LABEL_PREFIXES:
+        for target in parse_absorbs_targets(fm.get(rel)):
+            edges.append({"rel": rel, "target": target})
+    return edges
+
+
 def operator_body_from_canonical(content: str) -> str:
     """R20 -- operator-visible body without raw YAML frontmatter."""
     fm, body = split_frontmatter(content)
@@ -658,6 +749,9 @@ def operator_body_from_canonical(content: str) -> str:
         )
     if body:
         parts.append(body)
+    edge_list = edges_from_frontmatter(fm)
+    if edge_list:
+        parts.append(build_edges_block(edge_list, []))
     return "\n".join(parts)
 
 
@@ -1094,14 +1188,10 @@ def _manifest_write_token(body: str) -> str | None:
     embedded in ``body``, so a manifest rewrite (real ids replacing synthetic
     placeholders) preserves the write-session token instead of dropping it
     (R27)."""
-    match = MARKER_CHUNK_MANIFEST.search(body)
-    if not match:
+    existing = load_chunk_manifest(body)
+    if existing is None:
         return None
-    try:
-        existing = json.loads(match.group(1))
-    except json.JSONDecodeError:
-        return None
-    token = existing.get("writeToken") if isinstance(existing, dict) else None
+    token = existing.get("writeToken")
     return token if isinstance(token, str) and token else None
 
 
@@ -1131,6 +1221,10 @@ def chunk_body_if_needed(
         from planning_notion_canonical import chunk_body_for_notion
 
         return chunk_body_for_notion(body, comments)
+    if provider == "linear":
+        from planning_linear_canonical import chunk_body_for_linear
+
+        return chunk_body_for_linear(body, comments)
     if len(body.encode("utf-8")) <= BODY_SIZE_LIMIT:
         return body, comments
     encoded = body.encode("utf-8")
@@ -1193,10 +1287,26 @@ def rewrite_chunk_manifest_ids(body: str, comment_ids: list[str]) -> str:
     return append_chunk_manifest_marker(body, marker)
 
 
+def chunk_token_from_comment(comment: CommentRecord) -> str | None:
+    """Extract write-session token from markers or persisted overflow body (R11)."""
+    for marker in comment.markers:
+        if marker.startswith(CHUNK_TOKEN_MARKER_PREFIX):
+            token = marker[len(CHUNK_TOKEN_MARKER_PREFIX) :]
+            return token if token else None
+    match = re.search(
+        rf"<!--\s*{CHUNK_TOKEN_MARKER_PREFIX}([^\s>]+)\s*-->",
+        comment.body or "",
+    )
+    if match:
+        return match.group(1)
+    return None
+
+
 def overflow_chunk_comments(
     comments: list[CommentRecord],
     *,
     token: str | None = None,
+    expected_author_id: str | None = None,
 ) -> list[CommentRecord]:
     """Overflow comments eligible for positional-fallback reassembly.
 
@@ -1217,7 +1327,17 @@ def overflow_chunk_comments(
     ]
     if token:
         token_marker = f"{CHUNK_TOKEN_MARKER_PREFIX}{token}"
-        candidates = [c for c in candidates if token_marker in c.markers]
+        candidates = [
+            c
+            for c in candidates
+            if token_marker in c.markers
+            or token_marker in (c.body or "")
+            or chunk_token_from_comment(c) == token
+        ]
+    if expected_author_id is not None:
+        expected = expected_author_id.strip()
+        if expected:
+            candidates = [c for c in candidates if c.author_id.strip() == expected]
     ordered = sorted(candidates, key=lambda c: (c.created_at, c.id))
     unique: list[CommentRecord] = []
     seen: set[str] = set()
@@ -1265,18 +1385,60 @@ def _append_reassembled_part(merged: str, part: str) -> str:
     merged += stripped
     return merged
 
-def reassemble_body(body: str, comments: list[CommentRecord]) -> str:
+class LinearChunkAuthorshipError(ValueError):
+    """R11 — overflow comment authorship or actor binding failed."""
+
+
+def assert_linear_overflow_authorship(
+    manifest: dict[str, Any],
+    comments: list[CommentRecord],
+    *,
+    expected_author_id: str,
+) -> None:
+    """Fail closed when manifest overflow comments lack provider author_id (R11)."""
+    expected = expected_author_id.strip()
+    if not expected:
+        raise LinearChunkAuthorshipError("linear-chunk-author-expected-missing")
+    comment_by_id = {c.id: c for c in comments}
+    chunks = manifest.get("chunks")
+    if not isinstance(chunks, list):
+        return
+    for entry in chunks:
+        if not isinstance(entry, dict):
+            continue
+        cid = entry.get("commentId")
+        if not isinstance(cid, str):
+            continue
+        comment = comment_by_id.get(cid)
+        if comment is None:
+            continue
+        if "sw-chunk-overflow" not in comment.markers and "<!-- sw-chunk-overflow -->" not in (
+            comment.body or ""
+        ):
+            continue
+        if not comment.author_id.strip():
+            raise LinearChunkAuthorshipError("linear-chunk-author-missing")
+
+
+def reassemble_body(
+    body: str,
+    comments: list[CommentRecord],
+    *,
+    linear_author_id: str | None = None,
+) -> str:
     text = normalize_body(body)
-    manifest_match = MARKER_CHUNK_MANIFEST.search(text)
-    if not manifest_match:
+    manifest = load_chunk_manifest(text)
+    if manifest is None:
         return text
-    try:
-        manifest = json.loads(manifest_match.group(1))
-    except json.JSONDecodeError:
-        return text
-    chunks = manifest.get("chunks") if isinstance(manifest, dict) else None
+    chunks = manifest.get("chunks")
     if not isinstance(chunks, list):
         return text
+    if linear_author_id is not None:
+        assert_linear_overflow_authorship(
+            manifest if isinstance(manifest, dict) else {},
+            comments,
+            expected_author_id=linear_author_id,
+        )
     write_token = manifest.get("writeToken") if isinstance(manifest, dict) else None
     comment_by_id = {c.id: c for c in comments}
     # R27: direct commentId matches below are unambiguous regardless of
@@ -1284,7 +1446,11 @@ def reassemble_body(body: str, comments: list[CommentRecord]) -> str:
     # fallback is the only path a stray concurrent/superseded write session's
     # overflow comment could leak into, so scope that list to this
     # manifest's own write-token.
-    overflow_comments = overflow_chunk_comments(comments, token=write_token)
+    overflow_comments = overflow_chunk_comments(
+        comments,
+        token=write_token,
+        expected_author_id=linear_author_id,
+    )
     overflow_parts: list[str] = []
     for entry in sorted(chunks, key=lambda x: x.get("index", 0) if isinstance(x, dict) else 0):
         if not isinstance(entry, dict):
@@ -1299,11 +1465,14 @@ def reassemble_body(body: str, comments: list[CommentRecord]) -> str:
             continue
         chunk_text = comment.body
         chunk_text = re.sub(r"<!--\s*sw-chunk-overflow\s*-->\n?", "", chunk_text)
+        chunk_text = re.sub(
+            rf"<!--\s*{CHUNK_TOKEN_MARKER_PREFIX}[^\s>]+\s*-->\n?",
+            "",
+            chunk_text,
+        )
         overflow_parts.append(chunk_text)
     base = MARKER_CHUNK_MANIFEST.sub("", text)
-    merged = base
-    for part in overflow_parts:
-        merged = _append_reassembled_part(merged, part)
+    merged = base + "".join(overflow_parts)
     return normalize_body(merged)
 
 

@@ -24,17 +24,19 @@ yet:
 
 ## Packaged provider conformance
 
-Installed wheels ship issues-provider conformance evidence under host bundles, not only at the
-package root:
+Installed wheels ship issues-provider conformance evidence under **dual roots** — dev/source tree plus host
+bundles (not package-root-only):
 
 ```text
+core/sw-reference/provider-conformance/<provider>.ok.json
 dist/<host>/core/sw-reference/provider-conformance/<provider>.ok.json
 ```
 
-Runtime resolution (host-bundle) searches the **active** host bundle first (`scripts/planning/packaged_conformance_roots.py`).
-Sibling `dist/<host>/` trees are used only when the active-host record is **absent** — never when
-present-and-fail. Staging `core/sw-reference/provider-conformance/` at the package root alone does not
-satisfy packaged installs.
+Runtime resolution (`scripts/planning/packaged_conformance_roots.py`) searches the **active** host bundle
+first. Sibling `dist/<host>/` trees apply only when the active-host record is **absent** — never when
+present-and-fail. With no active host, present bundles are walked in `PACKAGED_DIST_IDS` order. Operator
+recovery copy: `PACKAGED_CONFORMANCE_RECOVERY`. Staging only `core/sw-reference/provider-conformance/` at
+the package root without `dist/<host>/…` does not satisfy packaged installs.
 
 Live planning and issue-store gating resolve the shipped provider set on each call (root-keyed cache in
 `planning_store_facade.py`) — not a one-time import from the wrong package root.

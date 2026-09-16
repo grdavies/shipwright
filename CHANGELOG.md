@@ -1354,6 +1354,12 @@
 * merge phase live-gating-without-import-time-freeze-p0 into feat/packaged-provider-conformance-root (9e609cb) <!-- sw-deliver:live-gating-without-import-time-freeze-p0 -->
 * merge phase packaged-consumer-fixture-and-ci-test-p0 into feat/packaged-provider-conformance-root (c5f6675) <!-- sw-deliver:packaged-consumer-fixture-and-ci-test-p0 -->
 * merge phase documentation-and-signal-closeout into feat/packaged-provider-conformance-root (78ae2c0) <!-- sw-deliver:documentation-and-signal-closeout -->
+* merge phase packaged-linear-discovery-and-r10-limit-pin into feat/linear-issue-store-production-readiness (3343812) <!-- sw-deliver:packaged-linear-discovery-and-r10-limit-pin -->
+* merge phase linear-aware-chunker-and-sanitized-fixtures into feat/linear-issue-store-production-readiness (f69b5fe) <!-- sw-deliver:linear-aware-chunker-and-sanitized-fixtures -->
+* merge phase documentation-and-gap-close-out into feat/linear-issue-store-production-readiness (5214a35) <!-- sw-deliver:documentation-and-gap-close-out -->
+* merge phase live-linear-facade-pilot-phase-1-merge-gate into feat/linear-issue-store-production-readiness (d81848a) <!-- sw-deliver:live-linear-facade-pilot-phase-1-merge-gate -->
+* merge phase linear-document-review-341-floor into feat/linear-issue-store-production-readiness (69a7cca) <!-- sw-deliver:linear-document-review-341-floor -->
+* merge phase jira-and-notion-document-review-enablement into feat/linear-issue-store-production-readiness (8e9f706) <!-- sw-deliver:jira-and-notion-document-review-enablement -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
