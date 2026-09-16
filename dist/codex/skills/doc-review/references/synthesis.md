@@ -44,8 +44,9 @@ persona `doc-review-round-post`(s) that append `updated_at` pins → verify → 
 `doc-review-round-close`. Accept shipped finding envelopes `{round, persona, payload}` (R43).
 Do not mix bootstrap envelopes into a **new** round open — that is `doc-review-mixed-schema`.
 
-Unsupported providers halt with `doc-review-provider-unsupported` / transport refusal — do not
-synthesize from issue comments.
+Unsupported issue-store providers (Linear, Jira, Notion, … — until PRD 341 Phases 4–5) halt with
+`doc-review-provider-unsupported` / transport refusal — do not synthesize from issue comments. GitHub
+issue-store is the live transport.
 
 Manifest pins are excluded from PRD 043 R35 canonicalization (`sw-doc-review` marker comments).
 **Stripped-hash / body-drift:** the live `sw-doc-review-round` witness remains on the issue body but is

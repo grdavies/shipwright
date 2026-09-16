@@ -120,16 +120,28 @@ length for either field ([GraphQL getting started](https://linear.app/developers
 (60_000 UTF-8 bytes) for **both** description and comment until a live-probe receipt
 records a tighter distinct cap. Linear-aware splitter work must not ship without this pin.
 
+<<<<<<< HEAD
 Linear descriptions chunk via `planning_canonical.chunk_body_if_needed(provider="linear")`,
 which delegates to `planning_linear_canonical.chunk_body_for_linear` after
 `require_linear_size_pin()`. Oversized bodies are split into:
+=======
+**Shipped today (generic splitter):** oversized bodies go through
+`planning_canonical.chunk_body_if_needed(provider="linear")` after `require_linear_size_pin()`. That path
+enforces the `BODY_SIZE_LIMIT` pin but splits on a UTF-8 byte boundary with `errors="ignore"` truncation —
+which can corrupt normalized Unicode at chunk edges and does not yet bound overflow comment count (gap
+`gap-467-linear-large-document-chunking-corrupts-content-`).
+
+**Intended contract (Linear-aware splitter — parallel delivery, not merged here):** split on safe Unicode
+scalar boundaries under the pin; emit manifest + ordered `<!-- sw-chunk-overflow -->` comments with bounded
+overflow count; reassembly by immutable comment IDs (positional fallback only for synthetic placeholders).
+Wire format unchanged:
+>>>>>>> feat/linear-issue-store-production-readiness-phase-documentation-and-gap-close-out
 
 1. Head description with `<!-- sw-chunk-manifest: … -->`
 2. Ordered overflow comments marked `<!-- sw-chunk-overflow -->` plus
    `<!-- sw-chunk-token:<writeToken> -->` in the comment body (R11 actor binding)
 
-There is no ADF-style tighter cap (unlike Jira Cloud). Reassembly uses immutable comment IDs in the
-manifest (positional fallback only when ids are synthetic placeholders).
+There is no ADF-style tighter cap (unlike Jira Cloud).
 
 ## Dual budgets (R13)
 
