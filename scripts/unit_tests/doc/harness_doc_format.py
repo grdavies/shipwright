@@ -260,7 +260,7 @@ def legacy_union_ids(text):
     seen = set()
     for line in text.splitlines():
         for pat in [
-            re.compile(r"^- \*\*([RD]\d+)\*\*\s*(.*)$", re.I),
+            re.compile(r"^[-*] \*\*([RD]\d+)\*\*\s*(.*)$", re.I),
             re.compile(r"^\*\*([RD]\d+)\*\*\s*(.*)$", re.I),
         ]:
             m = pat.match(line)
