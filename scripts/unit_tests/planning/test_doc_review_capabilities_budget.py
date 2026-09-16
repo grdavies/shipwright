@@ -75,7 +75,7 @@ class TestCapabilityFloor:
         assert missing_doc_review_capabilities("linear") == []
 
     def test_non_github_preflight_unsupported(self) -> None:
-        for provider in ("gitlab-issues", "jira", "notion", "none"):
+        for provider in ("gitlab-issues", "none"):
             missing = missing_doc_review_capabilities(provider)
             assert missing
             out = provider_unsupported(provider=provider)
@@ -92,6 +92,29 @@ class TestCapabilityFloor:
         cfg_path = facade_repo / ("." + "cursor") / "workflow.config.json"
         cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
         cfg["planning"]["store"]["issuesProvider"] = "linear"
+        cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+        store = get_fixture_store(facade_repo)
+        unit_id = "341-prd-doc-review-transport"
+        _seed_issue(store, unit_id=unit_id)
+        loaded = load_workflow_config(facade_repo)
+        out = post_review_finding(
+            facade_repo,
+            loaded,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id="round-1",
+            persona="product",
+            payload=_sample_payload("product"),
+        )
+        assert out["verdict"] == "ok", out
+
+    @pytest.mark.parametrize("provider", ["jira", "notion"])
+    def test_facade_accepts_jira_and_notion_after_r15_floor(
+        self, facade_repo: Path, provider: str
+    ) -> None:
+        cfg_path = facade_repo / ("." + "cursor") / "workflow.config.json"
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+        cfg["planning"]["store"]["issuesProvider"] = provider
         cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
         store = get_fixture_store(facade_repo)
         unit_id = "341-prd-doc-review-transport"

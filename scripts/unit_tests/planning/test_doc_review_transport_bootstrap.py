@@ -229,8 +229,8 @@ class TestCapabilityGate:
         assert out["verdict"] == "fail"
         assert out["error"] == DOC_REVIEW_TRANSPORT_UNAVAILABLE
 
-    def test_jira_provider_fails_closed(self, transport_repo: Path) -> None:
-        cfg = _issue_store_cfg(provider="jira")
+    def test_gitlab_issues_provider_fails_closed(self, transport_repo: Path) -> None:
+        cfg = _issue_store_cfg(provider="gitlab-issues")
         (transport_repo / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
         out = _doc_review(
             transport_repo,

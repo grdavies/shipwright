@@ -89,6 +89,48 @@ def _native_links_from_comments(comments: list[Any]) -> list[dict[str, Any]]:
     return links
 
 SEARCH_PAGE_SIZE = 50
+MAX_COMMENT_PAGES = 10
+
+
+class JiraClientError(Exception):
+    def __init__(self, message: str, *, code: str = "jira-client-error") -> None:
+        super().__init__(message)
+        self.code = code
+
+
+def jira_r15_floor_present() -> bool:
+    """True when whoami, comment author_id, and comment pagination exist (PRD 357 R15)."""
+    add_comment = getattr(JiraIssuesClient, "add_comment", None)
+    varnames = getattr(getattr(add_comment, "__code__", None), "co_varnames", ())
+    return bool(
+        callable(getattr(JiraIssuesClient, "authenticated_principal_id", None))
+        and callable(getattr(JiraIssuesClient, "_paginated_comments", None))
+        and "author_id" in varnames
+        and "accountId" in (_parse_comment.__code__.co_names + _parse_comment.__code__.co_consts)
+    )
+
+
+def jira_doc_review_capabilities() -> dict[str, bool]:
+    """Advertise doc-review caps only when the R15 floor is present."""
+    ready = jira_r15_floor_present()
+    return {
+        "post": ready,
+        "stableIds": ready,
+        "verifiableAuthorPrincipal": ready,
+        "stableApplicationId": False,
+        "nativeRevision": False,
+        "completeFullBody": ready,
+        "completePagination": ready,
+    }
+
+
+def encode_doc_review_marker_family_for_adf(markdown: str) -> dict[str, Any]:
+    """Persist ``sw-doc-review`` HTML-comment family as ADF paragraphs (PRD 357 TR5).
+
+    ADF has no HTML-comment node. The same marker family is stored as paragraph
+    text — not a second protocol.
+    """
+    return markdown_to_adf(markdown)
 
 
 def _issues_section(cfg: dict[str, Any]) -> dict[str, Any]:
@@ -144,11 +186,14 @@ def _parse_comment(raw: dict[str, Any], *, flavor: str) -> Any:
     for marker in ("sw-freeze-record", "sw-chunk-overflow", "sw-memory-pointer"):
         if f"<!-- {marker} -->" in body or f"<!--{marker}-->" in body:
             markers.append(marker)
+    author = raw.get("author") if isinstance(raw.get("author"), dict) else {}
+    author_id = str(author.get("accountId") or author.get("name") or "")
     return CommentRecord(
         id=str(raw.get("id", "")),
         body=body,
         created_at=str(raw.get("created", "")),
         markers=markers,
+        author_id=author_id,
     )
 
 
@@ -385,6 +430,39 @@ class JiraIssuesClient:
                 continue
             self._add_cross_reference_link(issue_id, link_type, target)
 
+    def _paginated_comments(self, issue_id: str) -> tuple[list[dict[str, Any]], bool]:
+        """Page issue comments; comments_complete is false while more pages remain (R15)."""
+        comments: list[dict[str, Any]] = []
+        start_at = 0
+        complete = True
+        for _ in range(max(1, MAX_COMMENT_PAGES)):
+            url = (
+                f"{self.base}/issue/{issue_id}/comment"
+                f"?startAt={start_at}&maxResults={SEARCH_PAGE_SIZE}"
+            )
+            payload = self._http_json("GET", url, self.headers) or {}
+            batch = payload.get("comments") or []
+            if not isinstance(batch, list):
+                batch = []
+            comments.extend(item for item in batch if isinstance(item, dict))
+            total = int(payload.get("total") or 0)
+            start_at += len(batch)
+            if start_at >= total or not batch:
+                complete = True
+                break
+            complete = False
+        return comments, complete
+
+    def authenticated_principal_id(self) -> str:
+        """Brokered Jira whoami — /myself accountId, never a payload-claimed author (R15)."""
+        payload = self._http_json("GET", f"{self.base}/myself", self.headers)
+        if not isinstance(payload, dict):
+            raise JiraClientError("Jira /myself whoami missing", code="whoami-unavailable")
+        account_id = str(payload.get("accountId") or payload.get("name") or "").strip()
+        if not account_id:
+            raise JiraClientError("Jira /myself whoami missing", code="whoami-unavailable")
+        return account_id
+
     def _get_issue(self, issue_id: str) -> Any:
         payload = self._http_json(
             "GET",
@@ -396,13 +474,13 @@ class JiraIssuesClient:
 
             raise IssueNotFound(f"issue not found: {issue_id}")
         fields = payload.get("fields") if isinstance(payload.get("fields"), dict) else {}
-        comments_raw = []
-        comment_block = fields.get("comment")
-        if isinstance(comment_block, dict):
-            comments_raw = comment_block.get("comments") or []
-        comments = [_parse_comment(c, flavor=self.flavor) for c in comments_raw if isinstance(c, dict)]
+        comments_raw, complete = self._paginated_comments(issue_id)
+        comments = [_parse_comment(c, flavor=self.flavor) for c in comments_raw]
         native_links = self._read_native_links(issue_id, fields, comments)
-        return _record_from_issue(payload, flavor=self.flavor, native_links=native_links)
+        record = _record_from_issue(payload, flavor=self.flavor, native_links=native_links)
+        record.comments = comments
+        record.comments_complete = complete
+        return record
 
     def create(
         self,
@@ -510,18 +588,37 @@ class JiraIssuesClient:
             self._sync_native_links(issue_id, native_links, current=current.native_links)
         return self._get_issue(issue_id)
 
-    def add_comment(self, issue_id: str, body: str, *, markers: list[str] | None = None) -> Any:
-        from planning_canonical import CommentRecord
+    def add_comment(
+        self,
+        issue_id: str,
+        body: str,
+        *,
+        markers: list[str] | None = None,
+        author_id: str = "",
+    ) -> Any:
+        from issues_broker import IssueCommentAuthorshipMismatch
 
-        payload_body: Any = body if self.flavor == "dc" else markdown_to_adf(body)
+        payload_body: Any = body if self.flavor == "dc" else encode_doc_review_marker_family_for_adf(body)
         created = self._http_json(
             "POST",
             f"{self.base}/issue/{issue_id}/comment",
             self.headers,
             {"body": payload_body},
         )
-        cid = str((created or {}).get("id", ""))
-        return CommentRecord(id=cid, body=body, created_at=str((created or {}).get("created", "")), markers=list(markers or []))
+        raw = created if isinstance(created, dict) else {}
+        comment = _parse_comment(raw, flavor=self.flavor)
+        if not comment.body:
+            comment.body = body
+        if markers:
+            comment.markers = list(markers)
+        if author_id and comment.author_id != author_id:
+            raise IssueCommentAuthorshipMismatch(
+                "doc-review authorship mismatch",
+                expected=author_id,
+                actual=comment.author_id,
+                comment_id=comment.id,
+            )
+        return comment
 
     def set_labels(self, issue_id: str, labels: list[str], *, if_match: str | None = None) -> Any:
         return self.update(issue_id, labels=labels, if_match=if_match, allow_locked=True)
