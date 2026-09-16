@@ -83,7 +83,7 @@ def _jira_live_client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> pjc.Ji
     monkeypatch.setattr(pjc, "resolve_jira_api_project_key", lambda *_a, **_k: "DEMO")
     credential = Resolution.resolved(
         CredentialRef("jira-work"),
-        ResolvedToken(Secret("jira-test-token"), Principal(profile="work", account="bot@example.com")),
+        ResolvedToken(Secret("jira-test-token"), Principal(profile="work", account="t@t.com")),
     )
     return pjc.JiraIssuesClient(tmp_path, credential=credential)
 

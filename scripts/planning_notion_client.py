@@ -1322,10 +1322,10 @@ class NotionIssuesClient:
             credential=self._credential,
         )
         data = _json_response(status, body, token=self._token or "")
-        user_id = str(data.get("id") or "").strip() if isinstance(data, dict) else ""
-        if not user_id:
+        principal_id = str(data.get("id") or "").strip() if isinstance(data, dict) else ""
+        if not principal_id:
             raise NotionClientError("Notion /users/me whoami missing", code="whoami-unavailable")
-        return user_id
+        return principal_id
 
     def add_comment(
         self,
