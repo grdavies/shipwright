@@ -186,6 +186,18 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
     def _mutate_journal(self, mutator: Callable[[dict[str, Any]], None]) -> None:
         mutate_put_journal(self.root, mutator)
 
+    def _verify_reconstruct_before_ok_if_linear(self, record: Any, *, pre_chunk_body: str) -> Any:
+        """PRD 359 R12/D7 — reconstruct-before-ok runs only for Linear; other providers no-op."""
+        if self.issues_provider != "linear":
+            return record
+        return verify_reconstruct_before_ok(
+            self._client,
+            record,
+            pre_chunk_body=pre_chunk_body,
+            issues_provider=self.issues_provider,
+            ps_mod=_ps(),
+        )
+
     def _adapter_issue_comment(self, issue_id: str, body: str, *, markers: list[str] | None = None, **kwargs: Any):
         assert_adapter_issue_comment_allowed(body, markers)
         return self._client.issue_comment(issue_id, body, markers=markers, **kwargs)
@@ -688,16 +700,11 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
                         actual=exc.actual,
                     )
                 record = self._client.issue_get(record.id)
-            # R3/D5 — reconstruct-before-ok (Linear): refetch with complete
-            # comments, reassemble, and R6-compare before clearing incomplete.
-            if self.issues_provider == "linear":
-                record = verify_reconstruct_before_ok(
-                    self._client,
-                    record,
-                    pre_chunk_body=pre_chunk_body,
-                    issues_provider=self.issues_provider,
-                    ps_mod=_ps(),
-                )
+            # R3/D5 — reconstruct-before-ok (Linear-gated): refetch with complete
+            # comments, reassemble, and equivalent() compare before clearing incomplete.
+            record = self._verify_reconstruct_before_ok_if_linear(
+                record, pre_chunk_body=pre_chunk_body
+            )
             record = clear_put_incomplete_label(self._client, record, ps_mod=_ps())
         if chunked:
             self._mutate_journal(lambda journal: journal.pop(idx_key, None))
