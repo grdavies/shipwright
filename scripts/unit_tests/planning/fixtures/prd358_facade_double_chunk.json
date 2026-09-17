@@ -1,0 +1,16 @@
+{
+  "name": "uuid-minting-issuestorebackend-double",
+  "runtime": "2.19.0",
+  "usedBy": "scripts/unit_tests/planning/test_prd358_issuestore_uuid_double.py",
+  "requirement": "R5",
+  "decision": "D6",
+  "note": "Named corpus for the UUID-minting IssueStoreBackend double. Documents ≥3 overflow chunks and a 60,000-byte Linear head after rewrite_chunk_manifest_ids. Fixture comment-N skip paths are not this scenario.",
+  "markers": "<!-- sw-project-key: tie -->\n<!-- sw-artifact-type: prd -->\n<!-- sw-unit-id: 358-prd-linear-issue-store-fidelity -->\n\n",
+  "title": "# Linear issue-store dogfood fidelity\n\n",
+  "repeatLine": "Requirement paragraph with planning content and identifiers.\n",
+  "repeatCount": 12000,
+  "overflowChunkCount": 12,
+  "headBytesAfterRewrite": 60000,
+  "linearLimitBytes": 60000,
+  "minOverflowChunks": 3
+}
