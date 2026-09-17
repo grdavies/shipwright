@@ -253,7 +253,9 @@ def r6_canonical_body(text: str, *, issues_provider: str, ps_mod: Any) -> str:
         from planning_linear_canonical import linear_markdown_canonical
 
         return linear_markdown_canonical(text)
-    return ps_mod.normalize_body(text)
+    from planning_canonical import normalize_body
+
+    return normalize_body(text)
 
 
 def logical_issue_body(record: Any, *, ps_mod: Any) -> str:
