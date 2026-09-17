@@ -19,8 +19,10 @@ from planning_linear_canonical import (
     _split_positions,
     _utf8_byte_len,
     chunk_body_for_linear,
+    linear_public_markdown_equivalent,
 )
 from planning.backends.issues import scan_put_payloads
+from planning.backends.issues_helpers import reconstruct_bodies_equivalent
 
 UNIQUE = "SPAN-TOKEN-NEVER-IN-ERROR-prd359"
 
@@ -146,3 +148,57 @@ class TestPrd359SecretScanContract:
         text = src.read_text(encoding="utf-8")
         assert "GAP-474" in text and "GAP-475" in text
         assert "scan_put_payloads(" in text
+
+
+class _Ps:
+    @staticmethod
+    def strip_markers_and_edges(text: str) -> str:
+        return text
+
+    @staticmethod
+    def fail(message: str, **_kwargs: object) -> None:
+        raise AssertionError(message)
+
+
+class TestPrd359ReconstructEquivalent:
+    def test_comparison_form_mismatch_is_not_equivalent(self) -> None:
+        left = "See [docs](https://example.com/a) please\n"
+        right = "See [docs](https://example.com/b) please\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+        assert (
+            reconstruct_bodies_equivalent(left, right, issues_provider="linear", ps_mod=_Ps)
+            is False
+        )
+
+    def test_identity_token_equality_alone_is_not_ok(self) -> None:
+        left = "## R1 Title\n\nBody.\n"
+        right = "R1 Title\n\nBody.\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+        assert (
+            reconstruct_bodies_equivalent(left, right, issues_provider="linear", ps_mod=_Ps)
+            is False
+        )
+
+    def test_escaped_unmatched_ticks_are_not_equal_code_tokens(self) -> None:
+        left = "use `code` here\n"
+        right = "use \\`code\\` here\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+        assert (
+            reconstruct_bodies_equivalent(left, right, issues_provider="linear", ps_mod=_Ps)
+            is False
+        )
+
+    def test_enumerated_rewrite_still_equivalent(self) -> None:
+        left = "hello  world\n"
+        right = "hello world\n"
+        assert reconstruct_bodies_equivalent(
+            left, right, issues_provider="linear", ps_mod=_Ps
+        ) is linear_public_markdown_equivalent(left, right)
+
+    def test_github_provider_does_not_call_linear_equivalent(self) -> None:
+        left = "same-bytes"
+        right = "same-bytes"
+        assert (
+            reconstruct_bodies_equivalent(left, right, issues_provider="github", ps_mod=_Ps)
+            is True
+        )
