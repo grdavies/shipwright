@@ -6,6 +6,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from issues_lib import IssueRevisionConflict
+
 ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
 ISSUE_UNIT_INDEX_AUDIT = ".cursor/hooks/state/issue-store-unit-index-audit.jsonl"
@@ -243,3 +245,71 @@ def guard_unit_id_marker_reuse(
         match_type = record_artifact_type(match, ps_mod=ps_mod)
         if match_type and match_type != artifact_type:
             _refuse(match, match_type)
+
+
+def r6_canonical_body(text: str, *, issues_provider: str, ps_mod: Any) -> str:
+    """R6 Public Markdown equivalence for reconstruct-before-ok (PRD 358 R3/D5)."""
+    if issues_provider == "linear":
+        from planning_linear_canonical import linear_markdown_canonical
+
+        return linear_markdown_canonical(text)
+    return ps_mod.normalize_body(text)
+
+
+def logical_issue_body(record: Any, *, ps_mod: Any) -> str:
+    return ps_mod.strip_markers_and_edges(ps_mod.reassemble_body(record.body, record.comments))
+
+
+def verify_reconstruct_before_ok(
+    client: Any,
+    record: Any,
+    *,
+    pre_chunk_body: str,
+    issues_provider: str,
+    ps_mod: Any,
+) -> Any:
+    """Fail closed when refetched overflow cannot reassemble to the pre-chunk body (PRD 358 R3)."""
+    record = client.issue_get(record.id)
+    comments_complete = getattr(record, "comments_complete", None)
+    if comments_complete is False:
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-incomplete-comments",
+            issueId=record.id,
+            commentsComplete=comments_complete,
+        )
+    if issues_provider == "linear" and comments_complete is None:
+        record.comments_complete = True
+    reassembled = logical_issue_body(record, ps_mod=ps_mod)
+    expected = ps_mod.strip_markers_and_edges(pre_chunk_body)
+    if r6_canonical_body(expected, issues_provider=issues_provider, ps_mod=ps_mod) != r6_canonical_body(
+        reassembled, issues_provider=issues_provider, ps_mod=ps_mod
+    ):
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-mismatch",
+            issueId=record.id,
+            expectedBytes=len(expected.encode("utf-8")),
+            actualBytes=len(reassembled.encode("utf-8")),
+        )
+    return record
+
+
+def clear_put_incomplete_label(client: Any, record: Any, *, ps_mod: Any) -> Any:
+    final_labels = sorted(set(record.labels) - {ps_mod.PUT_INCOMPLETE_LABEL})
+    if final_labels == sorted(record.labels):
+        return record
+    try:
+        record = client.issue_update(
+            record.id,
+            labels=final_labels,
+            if_match=record.etag,
+        )
+    except IssueRevisionConflict as exc:
+        ps_mod.fail(
+            "revision-conflict",
+            code="revision-conflict",
+            expected=exc.expected,
+            actual=exc.actual,
+        )
+    return client.issue_get(record.id)

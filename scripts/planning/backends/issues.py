@@ -10,17 +10,17 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from planning_canonical import DOC_REVIEW_MARKER, MARKER_UNIT_ID
-
-
 from ._common import content_hash, finalize_materialize_from_get, log_operation
 from .issues_bundle_assets import IssueStoreBundleAssetsMixin
 from .issues_helpers import (
+    clear_put_incomplete_label,
     guard_unit_id_marker_reuse,
     issue_index_key,
     mutate_issue_unit_index,
     mutate_put_journal,
     read_issue_unit_index_locked,
     read_put_journal_locked,
+    verify_reconstruct_before_ok,
 )
 from .memory_cache import ReplicatedPlanningCacheBackend
 from ..model import StoreResult
@@ -157,7 +157,6 @@ def assert_doc_review_authorship(
             "actualAuthorId": actual,
         }
     return None
-
 
 
 class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
@@ -551,62 +550,6 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
             existing_native_links=list(existing.native_links or []) if existing is not None else None,
         )
 
-    def _r6_canonical_body(self, text: str) -> str:
-        """R6 Public Markdown equivalence for reconstruct-before-ok (PRD 358 R3/D5)."""
-        if self.issues_provider == "linear":
-            from planning_linear_canonical import linear_markdown_canonical
-
-            return linear_markdown_canonical(text)
-        return _ps().normalize_body(text)
-
-    def _logical_issue_body(self, record: Any) -> str:
-        return _ps().strip_markers_and_edges(_ps().reassemble_body(record.body, record.comments))
-
-    def _verify_reconstruct_before_ok(self, record: Any, *, pre_chunk_body: str) -> Any:
-        """Fail closed when refetched overflow cannot reassemble to the pre-chunk body (PRD 358 R3)."""
-        record = self._client.issue_get(record.id)
-        comments_complete = getattr(record, "comments_complete", None)
-        if comments_complete is False:
-            _ps().fail(
-                "reconstruct-before-ok",
-                code="reconstruct-incomplete-comments",
-                issueId=record.id,
-                commentsComplete=comments_complete,
-            )
-        if self.issues_provider == "linear" and comments_complete is None:
-            # Live Linear sets the flag; hermetic fixture backends omit it until get.
-            record.comments_complete = True
-        reassembled = self._logical_issue_body(record)
-        expected = _ps().strip_markers_and_edges(pre_chunk_body)
-        if self._r6_canonical_body(expected) != self._r6_canonical_body(reassembled):
-            _ps().fail(
-                "reconstruct-before-ok",
-                code="reconstruct-mismatch",
-                issueId=record.id,
-                expectedBytes=len(expected.encode("utf-8")),
-                actualBytes=len(reassembled.encode("utf-8")),
-            )
-        return record
-
-    def _clear_put_incomplete_label(self, record: Any) -> Any:
-        final_labels = sorted(set(record.labels) - {_ps().PUT_INCOMPLETE_LABEL})
-        if final_labels == sorted(record.labels):
-            return record
-        try:
-            record = self._client.issue_update(
-                record.id,
-                labels=final_labels,
-                if_match=record.etag,
-            )
-        except _ps().IssueRevisionConflict as exc:
-            _ps().fail(
-                "revision-conflict",
-                code="revision-conflict",
-                expected=exc.expected,
-                actual=exc.actual,
-            )
-        return self._client.issue_get(record.id)
-
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
         _ps().reject_bare_integer_unit_id(unit_id)
         role = self._bundle_asset_role(body_path)
@@ -768,8 +711,14 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
             # R3/D5 — reconstruct-before-ok: refetch with complete comments,
             # reassemble, and R6-compare to the caller pre-chunk body before
             # clearing sw:put-incomplete or returning StoreResult.content.
-            record = self._verify_reconstruct_before_ok(record, pre_chunk_body=pre_chunk_body)
-            record = self._clear_put_incomplete_label(record)
+            record = verify_reconstruct_before_ok(
+                self._client,
+                record,
+                pre_chunk_body=pre_chunk_body,
+                issues_provider=self.issues_provider,
+                ps_mod=_ps(),
+            )
+            record = clear_put_incomplete_label(self._client, record, ps_mod=_ps())
         if chunked:
             self._mutate_journal(lambda journal: journal.pop(idx_key, None))
         digest = _ps().canonical_hash(self._record_to_snapshot(record))
