@@ -13,6 +13,8 @@ def _run(repo: Path, fixture: str) -> tuple[int, dict]:
         [
             sys.executable,
             str(repo / "scripts/spec-rigor-check.py"),
+            "--root",
+            str(repo),
             "--artifact",
             "prd",
             "--path",

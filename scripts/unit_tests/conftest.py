@@ -186,6 +186,7 @@ def sw_env(repo_root: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, str]:
     env["PYTHONPATH"] = os.pathsep.join(parts)
     env["SW_REPO_ROOT"] = str(repo_root)
     env["ROOT"] = str(repo_root)
+    env["SW_HARNESS"] = "1"
     for key, value in env.items():
         monkeypatch.setenv(key, value)
     return env
