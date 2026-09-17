@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.20.0](https://github.com/grdavies/shipwright/compare/v2.19.0...v2.20.0) (2026-09-17)
+
+
+### Features
+
+* **prd-358:** linear issue store fidelity ([#1232](https://github.com/grdavies/shipwright/issues/1232)) ([ea8fb99](https://github.com/grdavies/shipwright/commit/ea8fb990a37b0d4e327f8c04c9950ae85f2a4e63))
+
 ## [2.19.0](https://github.com/grdavies/shipwright/compare/v2.18.0...v2.19.0) (2026-09-16)
 
 

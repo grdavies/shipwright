@@ -1,11 +1,11 @@
 {
   "adapter_id": "codex",
-  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/linear-issue-store-fidelity-phase-provider-and-skill-documentation/.shipwright/mcp/codex.json",
+  "config_path": "/home/runner/work/shipwright/shipwright/.shipwright/mcp/codex.json",
   "mcpServers": {
     "shipwright-bounded": {
       "command": "python3",
       "args": [
-        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/linear-issue-store-fidelity-phase-provider-and-skill-documentation/core/mcp/server.py"
+        "/home/runner/work/shipwright/shipwright/core/mcp/server.py"
       ],
       "transport": "stdio"
     }
