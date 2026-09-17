@@ -9,15 +9,18 @@ from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Iterator
 
-from planning_canonical import DOC_REVIEW_MARKER
-
+from planning_canonical import DOC_REVIEW_MARKER, MARKER_UNIT_ID
 from ._common import content_hash, finalize_materialize_from_get, log_operation
+from .issues_bundle_assets import IssueStoreBundleAssetsMixin
 from .issues_helpers import (
+    clear_put_incomplete_label,
+    guard_unit_id_marker_reuse,
     issue_index_key,
     mutate_issue_unit_index,
     mutate_put_journal,
     read_issue_unit_index_locked,
     read_put_journal_locked,
+    verify_reconstruct_before_ok,
 )
 from .memory_cache import ReplicatedPlanningCacheBackend
 from ..model import StoreResult
@@ -156,8 +159,7 @@ def assert_doc_review_authorship(
     return None
 
 
-
-class IssueStoreBackend(PlanningStoreBackend):
+class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
     backend_id = "issue-store"
 
     def __init__(self, root: Path, cfg: dict[str, Any]) -> None:
@@ -550,13 +552,35 @@ class IssueStoreBackend(PlanningStoreBackend):
 
     def put(self, unit_id: str, body_path: str, content: str, *, content_class: str | None = None) -> StoreResult:
         _ps().reject_bare_integer_unit_id(unit_id)
+        role = self._bundle_asset_role(body_path)
+        if role is not None:
+            return self._put_bundle_asset(unit_id, body_path, content, role)
         self._guard_write_visibility(unit_id, body_path, content)
         self._guard_write_secrets(content, path_hint=body_path)
+        self.self_heal_unit_index()  # R39
         existing: Any | None
         try:
             existing = self._lookup_record(unit_id, body_path, content=content)
         except _ps().IssueNotFound:
             existing = None
+        # R39 — guard on content/path type, not existing-record preference.
+        requested_type = _ps().artifact_type_from_content(content) or ""
+        if not _ps().is_resolved_artifact_type(requested_type):
+            inferred = _ps().infer_artifact_type(body_path)
+            requested_type = inferred if _ps().is_resolved_artifact_type(inferred) else ""
+        guard_type = requested_type or self._resolve_artifact_type(
+            body_path, record=existing, content=content, unit_id=unit_id
+        )
+        guard_unit_id_marker_reuse(
+            unit_id=unit_id,
+            artifact_type=guard_type,
+            existing=existing,
+            project_key=self.project_key,
+            client=self._client,
+            fail_fn=fail,
+            ps_mod=_ps(),
+            unit_marker=MARKER_UNIT_ID,
+        )
         artifact_type = self._resolve_artifact_type(
             body_path, record=existing, content=content, unit_id=unit_id
         )
@@ -576,6 +600,7 @@ class IssueStoreBackend(PlanningStoreBackend):
             edges=put_edges,
             native_links=put_native_links,
         )
+        pre_chunk_body = body
         body, extra_comments = _ps().chunk_body_if_needed(body, [], provider=self.issues_provider)
         idx_key = issue_index_key(self.project_key, unit_id)
         chunked = bool(extra_comments)
@@ -661,13 +686,13 @@ class IssueStoreBackend(PlanningStoreBackend):
             # back to positional matching, which can select a stale overflow
             # comment left over from an earlier put.
             rewritten_body = _ps().rewrite_chunk_manifest_ids(body, chunk_comment_ids)
-            final_labels = sorted(set(record.labels) - {_ps().PUT_INCOMPLETE_LABEL})
-            if rewritten_body != record.body or final_labels != sorted(record.labels):
+            labels_with_incomplete = sorted(set(record.labels) | {_ps().PUT_INCOMPLETE_LABEL})
+            if rewritten_body != record.body or labels_with_incomplete != sorted(record.labels):
                 try:
                     record = self._client.issue_update(
                         record.id,
                         body=rewritten_body,
-                        labels=final_labels,
+                        labels=labels_with_incomplete,
                         if_match=record.etag,
                     )
                 except _ps().IssueRevisionConflict as exc:
@@ -683,6 +708,17 @@ class IssueStoreBackend(PlanningStoreBackend):
                         actual=exc.actual,
                     )
                 record = self._client.issue_get(record.id)
+            # R3/D5 — reconstruct-before-ok (Linear): refetch with complete
+            # comments, reassemble, and R6-compare before clearing incomplete.
+            if self.issues_provider == "linear":
+                record = verify_reconstruct_before_ok(
+                    self._client,
+                    record,
+                    pre_chunk_body=pre_chunk_body,
+                    issues_provider=self.issues_provider,
+                    ps_mod=_ps(),
+                )
+            record = clear_put_incomplete_label(self._client, record, ps_mod=_ps())
         if chunked:
             self._mutate_journal(lambda journal: journal.pop(idx_key, None))
         digest = _ps().canonical_hash(self._record_to_snapshot(record))
@@ -690,6 +726,9 @@ class IssueStoreBackend(PlanningStoreBackend):
         return StoreResult("ok", unit_id, body_path, self.backend_id, content=content, hash=digest)
 
     def get(self, unit_id: str, body_path: str) -> StoreResult:
+        role = self._bundle_asset_role(body_path)
+        if role is not None:
+            return self._get_bundle_asset(unit_id, body_path, role)
         try:
             record = self._lookup_record(unit_id, body_path)
         except _ps().IssueNotFound:
