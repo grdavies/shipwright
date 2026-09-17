@@ -760,13 +760,31 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
         got = self.get(unit_id, body_path)
         return finalize_materialize_from_get(got, unit_id, body_path, self.backend_id, dest_path)
 
-    def freeze(self, unit_id: str, body_path: str, *, distill: bool = True) -> dict[str, Any]:
+    def freeze(
+        self,
+        unit_id: str,
+        body_path: str,
+        *,
+        distill: bool = True,
+        pre_chunk_body: str | None = None,
+        freeze_evidence_body: str | None = None,
+    ) -> dict[str, Any]:
         try:
             record = self._lookup_record(unit_id, body_path)
         except _ps().IssueNotFound:
             _ps().fail("issue-not-found", code="not-found", unitId=unit_id)
         except (_ps().IssueTombstone, _ps().IssueTransferred, _ps().IssueBudgetExhausted) as exc:
             _ps().handle_issue_client_error(exc)
+        from check_frozen_lib import refuse_truncated_linear_reconstruct
+
+        refuse_truncated_linear_reconstruct(
+            issues_provider=self.issues_provider,
+            record=record,
+            ps_mod=_ps(),
+            client=self._client,
+            pre_chunk_body=pre_chunk_body,
+            freeze_evidence_body=freeze_evidence_body,
+        )
         # R26 — freeze/hash SoT is LCD Issue or Document-backed body via facade resolution.
         resolved = self._resolve_canonical_body_for_op(unit_id, body_path, record)
         self._guard_write_visibility(unit_id, body_path, str(resolved["body"]))
@@ -940,13 +958,30 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
             "unitId": getattr(after, "unit_id", None),
         }
 
-    def verify_frozen_hash(self, unit_id: str, body_path: str) -> dict[str, Any]:
+    def verify_frozen_hash(
+        self,
+        unit_id: str,
+        body_path: str,
+        *,
+        pre_chunk_body: str | None = None,
+        freeze_evidence_body: str | None = None,
+    ) -> dict[str, Any]:
         try:
             record = self._lookup_record(unit_id, body_path)
         except _ps().IssueNotFound:
             _ps().fail("issue-not-found", code="not-found", unitId=unit_id)
         except (_ps().IssueTombstone, _ps().IssueTransferred, _ps().IssueBudgetExhausted) as exc:
             _ps().handle_issue_client_error(exc)
+        from check_frozen_lib import refuse_truncated_linear_reconstruct
+
+        refuse_truncated_linear_reconstruct(
+            issues_provider=self.issues_provider,
+            record=record,
+            ps_mod=_ps(),
+            client=self._client,
+            pre_chunk_body=pre_chunk_body,
+            freeze_evidence_body=freeze_evidence_body,
+        )
         if _ps().FREEZE_INCOMPLETE_LABEL in record.labels:
             _ps().fail("freeze-incomplete", code="freeze-incomplete", unitId=unit_id)
         if _ps().FROZEN_LABEL not in record.labels:
