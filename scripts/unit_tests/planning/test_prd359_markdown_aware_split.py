@@ -296,7 +296,7 @@ class TestPrd359ProviderNoOpAndTie7Journal:
             raise AssertionError("linear reconstruct-before-ok must not run for GitHub")
 
         monkeypatch.setattr(
-            "planning.backends.issues.verify_reconstruct_before_ok",
+            "planning.backends.issues_helpers.verify_reconstruct_before_ok",
             _track,
         )
         _init_repo(tmp_path)
