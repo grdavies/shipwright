@@ -81,6 +81,30 @@ def test_ratcheted_residual_literals_do_not_fire(tmp_path: Path) -> None:
     assert guard.main(["--root", str(root)]) == 0
 
 
+def test_packaged_sw_tree_is_not_scanned(tmp_path: Path) -> None:
+    root = _seed_root(tmp_path)
+    packaged = root / "sw" / "dist" / "cursor" / "core" / "hooks"
+    packaged.mkdir(parents=True)
+    (packaged / "offender.py").write_text(
+        'PATH = ".cursor/sw-deliver-runs/packaged"\n',
+        encoding="utf-8",
+    )
+    (root / "sw" / "scripts").mkdir(parents=True)
+    (root / "sw" / "scripts" / "also.py").write_text(
+        'PATH = ".cursor/workflow.config.json"\n',
+        encoding="utf-8",
+    )
+    (root / "core" / "sw-reference" / "path-literal-ratchet.json").write_text(
+        json.dumps({"schemaVersion": 1, "refs": []}) + "\n",
+        encoding="utf-8",
+    )
+    findings = guard.scan_repo(root)
+    assert findings == []
+    payload = guard.evaluate(root)
+    assert payload["verdict"] == "pass"
+    assert payload["newRefCount"] == 0
+
+
 def test_mirror_pair_reports_once(tmp_path: Path) -> None:
     root = _seed_root(tmp_path)
     body = 'PATH = ".cursor/workflow.config.json"\n'
