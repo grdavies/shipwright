@@ -20,7 +20,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from host_lib import load_workflow_config
 from inflight_signal import prd_unit_id_from_state
 from wave_json_io import StateCorruptError, read_json, write_json
-from wave_state import load_deliver_state, path_normalize_anchor
+from wave_state import load_deliver_state, path_normalize_anchor, run_slug_from_state
 
 CLOSEOUT_ROOT_REL = ".sw/deliver-closeout"
 PR_MAP_DIR = "pr-delivery-map"
@@ -298,7 +298,7 @@ def docs_currency_phase_in_progress(state: dict[str, Any], *, root: Path | None 
         if prd and prd != "000":
             from wave_living_docs import read_index_status_evidence
 
-            slug = str((state.get("target") or {}).get("slug") or "") or None
+            slug = run_slug_from_state(state) or None
             ev = read_index_status_evidence(root, prd, slug=slug)
             if ev and str(ev.get("status") or "") == "in-progress":
                 return True

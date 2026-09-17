@@ -72,21 +72,21 @@ ACCEPTANCE_RECORD_FIELDS = (
 @contextmanager
 def terminal_library_mode():
     """Route emit/fail to TerminalOutcome instead of sys.exit."""
-    token = _terminal_library_mode.set(True)
+    mode_reset = _terminal_library_mode.set(True)
     try:
         yield
     finally:
-        _terminal_library_mode.reset(token)
+        _terminal_library_mode.reset(mode_reset)
 
 
 @contextmanager
 def terminal_root_context(root: Path):
     """Bind repo root for halt-resume + acceptance enrichment on emit/fail."""
-    token = _terminal_root.set(root)
+    root_reset = _terminal_root.set(root)
     try:
         yield
     finally:
-        _terminal_root.reset(token)
+        _terminal_root.reset(root_reset)
 
 
 def resolve_terminal_halt_cause(payload: dict[str, Any]) -> str | None:
