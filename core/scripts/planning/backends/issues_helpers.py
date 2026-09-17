@@ -282,7 +282,18 @@ def verify_reconstruct_before_ok(
         )
     if issues_provider == "linear" and comments_complete is None:
         record.comments_complete = True
-    reassembled = logical_issue_body(record, ps_mod=ps_mod)
+    from planning_canonical import LinearChunkAuthorshipError
+
+    try:
+        reassembled = logical_issue_body(record, ps_mod=ps_mod)
+    except LinearChunkAuthorshipError as exc:
+        # R4/D11 — missing, nested, foreign, or superseded overflow is a failed write.
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-mismatch",
+            issueId=record.id,
+            reason=str(exc),
+        )
     expected = ps_mod.strip_markers_and_edges(pre_chunk_body)
     if r6_canonical_body(expected, issues_provider=issues_provider, ps_mod=ps_mod) != r6_canonical_body(
         reassembled, issues_provider=issues_provider, ps_mod=ps_mod
