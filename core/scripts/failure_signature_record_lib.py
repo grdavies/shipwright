@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import sw_state_write_lib as writer
+from wave_state import target_branch_from_state
 
 WRITER_NAME = "failure_signature_record_lib"
 
@@ -206,7 +207,7 @@ def maybe_record_no_progress(root: Path, state: dict[str, Any]) -> None:
         "wave-deliver",
         check_id="conductor:no-progress",
         exit_code=20,
-        job_id=str((state.get("target") or {}).get("branch") or "local"),
+        job_id=str(target_branch_from_state(state) or "local"),
         message=message,
         run_id=run_id,
     )

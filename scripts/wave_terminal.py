@@ -26,7 +26,7 @@ from wave_errors import fail_from_payload
 from host_lib import load_workflow_config, remote_name, remote_ref, resolve_provider
 from host import probe_remote_ref_exists
 from host_ratelimit import HostProbeInconclusive, HostRateLimited
-from wave_state import phase_complete
+from wave_state import phase_complete, run_slug_from_state, target_branch_from_state
 import loop_health_lib
 import planning_gap_capture as pgc
 
@@ -72,21 +72,21 @@ ACCEPTANCE_RECORD_FIELDS = (
 @contextmanager
 def terminal_library_mode():
     """Route emit/fail to TerminalOutcome instead of sys.exit."""
-    token = _terminal_library_mode.set(True)
+    mode_reset = _terminal_library_mode.set(True)
     try:
         yield
     finally:
-        _terminal_library_mode.reset(token)
+        _terminal_library_mode.reset(mode_reset)
 
 
 @contextmanager
 def terminal_root_context(root: Path):
     """Bind repo root for halt-resume + acceptance enrichment on emit/fail."""
-    token = _terminal_root.set(root)
+    root_reset = _terminal_root.set(root)
     try:
         yield
     finally:
-        _terminal_root.reset(token)
+        _terminal_root.reset(root_reset)
 
 
 def resolve_terminal_halt_cause(payload: dict[str, Any]) -> str | None:
@@ -721,7 +721,7 @@ def _cmd_terminal_retro_run_body(root: Path, args: list[str]) -> None:
     state = load_state(root)
     if not all_phases_green(state):
         fail("retrospective requires all phases green-merged", exit_code=20)
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not target:
         fail("target branch missing in run-state")
     top = git_top(root)
@@ -834,7 +834,7 @@ def _cmd_terminal_ship_run_body(root: Path, args: list[str], *, dry_run: bool) -
         if retro.exit_code != 0:
             emit_outcome(retro)
         state = load_state(root)
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not target:
         fail("target branch missing")
     if dry_run:
@@ -1317,7 +1317,7 @@ def ensure_terminal_index_projection(root: Path) -> None:
         return
     if derive_closeout_index_status(state, merged_to_main=False, root=root) != "complete":
         return
-    slug = str((state.get("target") or {}).get("slug") or "") or None
+    slug = str(run_slug_from_state(state) or "") or None
     worktree = pp.git_root(root)
     decision = prefer_worktree_projection_root(root, worktree)
     projection_root = Path(decision["projectionRoot"])
@@ -1516,7 +1516,7 @@ def cmd_resume_reconcile(root: Path, args: list[str]) -> None:
     state = load_state(root)
     if not state:
         fail("run state missing")
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not target:
         fail("target branch missing in run-state")
     top = git_top(root)
@@ -1638,7 +1638,7 @@ def terminal_pr_body(root: Path, state: dict[str, Any]) -> str:
         summary += "\n\n## Phase PRs\n\n" + "\n".join(phase_lines)
     summary += "\n\nHuman merge gate — do not auto-merge."
     test_plan = "- [ ] Review phase PR list\n- [ ] Confirm deliver-concurrency fixtures green"
-    slug = (state.get("target") or {}).get("slug") or "deliver-wave"
+    slug = run_slug_from_state(state) or "deliver-wave"
     prd = str(state.get("prd_number") or "050")
     decision = json.dumps(
         {
@@ -1758,9 +1758,13 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
 
 def _cmd_terminal_pr_prepare_body(root: Path, args: list[str], *, dry_run: bool) -> None:
     state = load_state(root)
-    target = (state.get("target") or {}).get("branch", "")
-    slug = (state.get("target") or {}).get("slug", target.split("/")[-1] if target else "feature")
-    commit_type = (state.get("target") or {}).get("type", "feat")
+    target = (target_branch_from_state(state) or "")
+    slug = run_slug_from_state(state) or (target.split("/")[-1] if target else "feature")
+    raw_target = state.get("target")
+    if isinstance(raw_target, dict) and raw_target.get("type"):
+        commit_type = str(raw_target.get("type") or "feat")
+    else:
+        commit_type = target.split("/", 1)[0] if "/" in target else "feat"
     base = default_base_branch(root)
 
     if state.get("terminalRejected"):
@@ -2144,7 +2148,8 @@ def finalize_run(
         load_run_scoped_state,
         run_finalize_authorization,
         save_run_scoped_state,
-    )
+    target_branch_from_state,
+)
     from wave_transition_receipt import (
         build_terminal_receipt,
         default_actor,

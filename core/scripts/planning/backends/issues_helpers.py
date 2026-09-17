@@ -6,8 +6,11 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from issues_lib import IssueRevisionConflict
+
 ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
+ISSUE_UNIT_INDEX_AUDIT = ".cursor/hooks/state/issue-store-unit-index-audit.jsonl"
 ISSUE_STORE_TXN_ID = "issue-store"
 
 def load_issue_unit_index(root: Path) -> dict[str, str]:
@@ -99,3 +102,282 @@ def mutate_put_journal(root: Path, mutator: Callable[[dict[str, Any]], None]) ->
         journal = load_put_journal(root)
         mutator(journal)
         txn.stage_write(path, _put_journal_payload(journal))
+
+
+def append_unit_index_audit(root: Path, entry: dict[str, Any]) -> None:
+    """Append-only audit for unit-index mutations (PRD 339 R39)."""
+    from datetime import datetime, timezone
+
+    path = root / ISSUE_UNIT_INDEX_AUDIT
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        **entry,
+        "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    with path.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(payload, sort_keys=True, ensure_ascii=False) + "\n")
+
+
+def self_heal_issue_unit_index(
+    root: Path,
+    *,
+    project_key: str,
+    resolve_record: Callable[[str], Any | None],
+    record_unit_id: Callable[[Any], str],
+    record_artifact_type: Callable[[Any], str],
+) -> dict[str, Any]:
+    """Heal polluted unit-index entries via single-writer CAS (PRD 339 R39).
+
+    Drops entries whose issue is missing, out of project scope, or whose
+    recorded unit-id no longer matches the index key. Concurrent writers share
+    ``planning_transaction`` / store lock — no silent dual-writer overwrite.
+    """
+    from planning_txn import planning_transaction
+
+    path = root / ISSUE_UNIT_INDEX
+    removed: list[dict[str, str]] = []
+    with planning_transaction(root, ISSUE_STORE_TXN_ID) as txn:
+        index = load_issue_unit_index(root)
+        prefix = f"{project_key}:"
+        for key, issue_id in list(index.items()):
+            if not key.startswith(prefix):
+                continue
+            unit_id = key[len(prefix) :]
+            record = resolve_record(issue_id)
+            if record is None:
+                del index[key]
+                removed.append({"key": key, "issueId": issue_id, "reason": "missing-issue"})
+                continue
+            got_unit = record_unit_id(record)
+            if got_unit and got_unit != unit_id:
+                del index[key]
+                removed.append(
+                    {
+                        "key": key,
+                        "issueId": issue_id,
+                        "reason": "unit-id-mismatch",
+                        "recordUnitId": got_unit,
+                    }
+                )
+                continue
+            # artifact type is informational for heal; marker reuse refusal owns type clashes
+            _ = record_artifact_type(record)
+        if removed:
+            txn.stage_write(path, _issue_index_payload(index))
+    for item in removed:
+        append_unit_index_audit(
+            root,
+            {
+                "event": "unit-index-self-heal",
+                "projectKey": project_key,
+                "before": {item["key"]: item["issueId"]},
+                "after": {},
+                "cause": item["reason"],
+                **item,
+            },
+        )
+    return {
+        "verdict": "pass",
+        "action": "unit-index-self-heal",
+        "removed": removed,
+        "removedCount": len(removed),
+    }
+
+
+def record_artifact_type(record: Any, *, ps_mod: Any) -> str:
+    content = ps_mod.strip_markers_and_edges(ps_mod.reassemble_body(record.body, record.comments))
+    return (
+        str(getattr(record, "artifact_type", "") or "").strip()
+        or ps_mod.artifact_type_from_labels(list(getattr(record, "labels", []) or []))
+        or ps_mod.artifact_type_from_content(content)
+        or ""
+    )
+
+
+def record_unit_id(record: Any, *, ps_mod: Any, unit_marker: Any) -> str:
+    labels = list(getattr(record, "labels", []) or [])
+    from_labels = ps_mod.unit_id_from_labels(labels)
+    if from_labels:
+        return from_labels
+    raw = str(getattr(record, "unit_id", "") or "").strip()
+    if raw:
+        return raw
+    body = getattr(record, "body", "") or ""
+    match = unit_marker.search(body)
+    return match.group(1).strip() if match else ""
+
+
+def guard_unit_id_marker_reuse(
+    *,
+    unit_id: str,
+    artifact_type: str,
+    existing: Any | None,
+    project_key: str,
+    client: Any,
+    fail_fn: Callable[..., None],
+    ps_mod: Any,
+    unit_marker: Any,
+) -> None:
+    """PRD 339 R39 — refuse sw-unit-id marker reuse across artifact types."""
+
+    def _refuse(match: Any, match_type: str) -> None:
+        fail_fn(
+            "unit-id-marker-reuse",
+            code="unit-id-marker-reuse",
+            unitId=unit_id,
+            existingArtifactType=match_type,
+            requestedArtifactType=artifact_type,
+            issueId=str(getattr(match, "id", "") or ""),
+        )
+
+    if existing is not None:
+        existing_type = record_artifact_type(existing, ps_mod=ps_mod)
+        if existing_type and existing_type != artifact_type:
+            _refuse(existing, existing_type)
+
+    search = getattr(client, "issue_search", None)
+    if not callable(search):
+        return
+    matches = client.issue_search(project_key=project_key, unit_id=unit_id)
+    for match in matches or []:
+        if existing is not None and str(getattr(match, "id", "")) == str(getattr(existing, "id", "")):
+            continue
+        match_type = record_artifact_type(match, ps_mod=ps_mod)
+        if match_type and match_type != artifact_type:
+            _refuse(match, match_type)
+
+
+def r6_canonical_body(text: str, *, issues_provider: str, ps_mod: Any) -> str:
+    """R6 Public Markdown equivalence for reconstruct-before-ok (PRD 358 R3/D5)."""
+    if issues_provider == "linear":
+        from planning_linear_canonical import linear_public_markdown_r6_form
+
+        return linear_public_markdown_r6_form(text)
+    from planning_canonical import normalize_body
+
+    return normalize_body(text)
+
+
+def logical_issue_body(record: Any, *, ps_mod: Any, linear_bind: bool = False) -> str:
+    return ps_mod.strip_markers_and_edges(
+        ps_mod.reassemble_body(record.body, record.comments, linear_bind=linear_bind)
+    )
+
+
+def verify_frozen_integrity(backend: Any, record: Any, *, ps_mod: Any) -> None:
+    if ps_mod.FREEZE_INCOMPLETE_LABEL in record.labels:
+        ps_mod.fail("freeze-incomplete", code="freeze-incomplete", unitId=record.unit_id)
+    if ps_mod.FROZEN_LABEL not in record.labels:
+        return
+    recorded = ps_mod.parse_freeze_record_hash(record.comments)
+    if not recorded:
+        ps_mod.fail("missing-freeze-record", code="lifecycle-tombstone", unitId=record.unit_id)
+    current = ps_mod.canonical_hash(backend._record_to_snapshot(record))
+    if current != recorded:
+        ps_mod.fail(
+            "tamper-detected",
+            code="tamper-detected",
+            unitId=record.unit_id,
+            recordedHash=recorded,
+            currentHash=current,
+        )
+
+
+def lookup_record_and_refuse_truncated_reconstruct(
+    backend: Any,
+    unit_id: str,
+    body_path: str,
+    *,
+    pre_chunk_body: str | None = None,
+    freeze_evidence_body: str | None = None,
+    ps_mod: Any,
+) -> Any:
+    """Lookup + PRD 358 R9 truncated-reconstruct refuse before freeze/hash."""
+    try:
+        record = backend._lookup_record(unit_id, body_path)
+    except ps_mod.IssueNotFound:
+        ps_mod.fail("issue-not-found", code="not-found", unitId=unit_id)
+    except (ps_mod.IssueTombstone, ps_mod.IssueTransferred, ps_mod.IssueBudgetExhausted) as exc:
+        ps_mod.handle_issue_client_error(exc)
+    # Deferred import: check_frozen_lib loads this module for logical_issue_body.
+    from check_frozen_lib import refuse_truncated_linear_reconstruct
+
+    refuse_truncated_linear_reconstruct(
+        issues_provider=backend.issues_provider,
+        record=record,
+        ps_mod=ps_mod,
+        client=backend._client,
+        pre_chunk_body=pre_chunk_body,
+        freeze_evidence_body=freeze_evidence_body,
+    )
+    return record
+
+
+def verify_reconstruct_before_ok(
+    client: Any,
+    record: Any,
+    *,
+    pre_chunk_body: str,
+    issues_provider: str,
+    ps_mod: Any,
+) -> Any:
+    """Fail closed when refetched overflow cannot reassemble to the pre-chunk body (PRD 358 R3)."""
+    record = client.issue_get(record.id)
+    comments_complete = getattr(record, "comments_complete", None)
+    if comments_complete is False:
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-incomplete-comments",
+            issueId=record.id,
+            commentsComplete=comments_complete,
+        )
+    if issues_provider == "linear" and comments_complete is None:
+        record.comments_complete = True
+    from planning_canonical import LinearChunkAuthorshipError
+
+    try:
+        reassembled = logical_issue_body(
+            record,
+            ps_mod=ps_mod,
+            linear_bind=issues_provider == "linear",
+        )
+    except LinearChunkAuthorshipError as exc:
+        # R4/D11 — missing, nested, foreign, or superseded overflow is a failed write.
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-mismatch",
+            issueId=record.id,
+            reason=str(exc),
+        )
+    expected = ps_mod.strip_markers_and_edges(pre_chunk_body)
+    if r6_canonical_body(expected, issues_provider=issues_provider, ps_mod=ps_mod) != r6_canonical_body(
+        reassembled, issues_provider=issues_provider, ps_mod=ps_mod
+    ):
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-mismatch",
+            issueId=record.id,
+            expectedBytes=len(expected.encode("utf-8")),
+            actualBytes=len(reassembled.encode("utf-8")),
+        )
+    return record
+
+
+def clear_put_incomplete_label(client: Any, record: Any, *, ps_mod: Any) -> Any:
+    final_labels = sorted(set(record.labels) - {ps_mod.PUT_INCOMPLETE_LABEL})
+    if final_labels == sorted(record.labels):
+        return record
+    try:
+        record = client.issue_update(
+            record.id,
+            labels=final_labels,
+            if_match=record.etag,
+        )
+    except IssueRevisionConflict as exc:
+        ps_mod.fail(
+            "revision-conflict",
+            code="revision-conflict",
+            expected=exc.expected,
+            actual=exc.actual,
+        )
+    return client.issue_get(record.id)

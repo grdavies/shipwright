@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -17,11 +18,55 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import doc_format
 import planning_artifact_handle as pah
+from repository_context import POSTURE_PLUGIN_SELF, resolve_repository_posture
+
+# PRD 358 R7 — R/D bullet grammar is single-sourced in doc_format (spec-rigor and
+# doc-format-normalize must not duplicate those patterns).
 import wave_deliver as wd
 from phase_sizing import evaluate_freeze_gate, has_advisory_block
 from _sw.cli import run_module_main
 
 AMBIGUITY = re.compile(r"\b(TBD|TODO|FIXME|\?\?\?|to be determined)\b", re.I)
+
+# PRD 342 R34 — Acceptance Scenarios + Success Criteria required for new PRD bodies only.
+PRD_BODY_CONTRACT_KEY = "prdBodyContract"
+PRD_BODY_CONTRACT_V2 = "v2"
+PRD_V2_REQUIRED_SECTIONS = ("Acceptance Scenarios", "Success Criteria")
+PRD_BASE_REQUIRED_SECTIONS = ("Overview", "Goals", "Non-Goals", "Requirements", "Testing Strategy")
+
+PACKAGE_ROOT = SCRIPT_DIR.parent
+
+
+def _resolve_cli_root(raw: str | None) -> str | None:
+    if raw is not None and str(raw).strip():
+        return str(raw).strip()
+    if os.environ.get("SW_HARNESS", "").strip() == "1":
+        harness_root = os.environ.get("ROOT", "").strip()
+        if harness_root:
+            return harness_root
+    return None
+
+
+def _resolve_consumer_root(raw: str | None) -> tuple[Path | None, str | None]:
+    """PRD 358 R8 — consumer workspace root; not implicit SCRIPT_DIR.parent."""
+    if raw is None or not str(raw).strip():
+        return None, "missing required --root"
+    root = Path(raw).expanduser().resolve()
+    if not root.is_dir():
+        return None, f"--root is not a directory: {root}"
+    scripts_at_root = root / "scripts"
+    try:
+        if scripts_at_root.resolve() == SCRIPT_DIR.resolve():
+            if resolve_repository_posture(root) != POSTURE_PLUGIN_SELF:
+                return None, "consumer --root must not be the package scripts/ parent"
+    except (OSError, RuntimeError, ValueError):
+        return None, "consumer --root must not be the package scripts/ parent"
+    return root, None
+
+
+def _fail_root(message: str) -> int:
+    print(json.dumps({"verdict": "fail", "error": message, "gate": "root"}))
+    return 20
 
 
 def _run(
@@ -47,6 +92,29 @@ def _run(
             item["rid"] = rid
         findings.append(item)
 
+    def issue_store_virtual_handle_gate() -> None:
+        """Traceability + doctor gate for issue-store virtual handles (PRD 280 R11/R12)."""
+        if source != "issue-store":
+            return
+        from host_lib import load_workflow_config
+        import planning_store_facade as planning_store_module
+
+        cfg = load_workflow_config(root)
+        gate = planning_store_module.doctor_tracked_prd_bodies(root, cfg)
+        if gate.get("verdict") == "fail":
+            add(
+                "analyze",
+                "error",
+                "tracked docs/prds bodies forbidden in code repo under issue-store virtual handle",
+                "R11",
+            )
+        add(
+            "analyze",
+            "pass",
+            "artifact resolved via issue-store virtual handle for traceability",
+            "R12",
+        )
+
     def section_body(name: str) -> str:
         m = re.search(rf"^##\s+{re.escape(name)}\s*$([\s\S]*?)(?=^##\s|\Z)", text, re.M | re.I)
         return m.group(1) if m else ""
@@ -65,9 +133,29 @@ def _run(
             add("checklist", "error", "no R-IDs found in Requirements bullets")
         for d in sorted({r for r in rids if rids.count(r) > 1}):
             add("checklist", "error", f"duplicate R-ID {d}", d)
-        for sec in ("Overview", "Goals", "Non-Goals", "Requirements", "Testing Strategy"):
+        for sec in PRD_BASE_REQUIRED_SECTIONS:
             if not re.search(rf"^##\s+{re.escape(sec)}\s*$", text, re.M | re.I):
                 add("checklist", "error", f"missing section: {sec}")
+        # R34 — forward-only: require Acceptance Scenarios + Success Criteria when
+        # frontmatter declares prdBodyContract: v2 (new PRDs). Existing bodies without
+        # the contract key remain grandfathered and never retroactively fail.
+        try:
+            import planning_bundle as _pb
+
+            fm = _pb.parse_frontmatter(text) or {}
+        except Exception:
+            fm = {}
+        if not isinstance(fm, dict):
+            fm = {}
+        contract = str(fm.get(PRD_BODY_CONTRACT_KEY, "") or "").strip().lower()
+        if contract in {PRD_BODY_CONTRACT_V2, "2", "true", "yes"}:
+            for sec in PRD_V2_REQUIRED_SECTIONS:
+                if not re.search(rf"^##\s+{re.escape(sec)}\s*$", text, re.M | re.I):
+                    add(
+                        "checklist",
+                        "error",
+                        f"missing section: {sec} (required for prdBodyContract: v2)",
+                    )
         if tier == "full":
             oq = section_body("Open Questions")
             if oq.strip():
@@ -166,6 +254,7 @@ def _run(
         return 0 if worst == "pass" else 10 if worst == "warn" else 20
 
     if artifact == "tasks":
+        issue_store_virtual_handle_gate()
         if not prd_path:
             add("analyze", "error", "--prd required for tasks analyze")
             print(json.dumps({"verdict": "fail", "artifact": "tasks", "findings": findings}))
@@ -176,7 +265,10 @@ def _run(
             print(json.dumps({"verdict": "fail", "artifact": "tasks", "findings": findings}))
             return 20
         union = json.loads(
-            subprocess.check_output([sys.executable, str(root / "scripts/spec-union.py"), str(prd_file)], text=True)
+            subprocess.check_output(
+                [sys.executable, str(SCRIPT_DIR / "spec-union.py"), str(prd_file)],
+                text=True,
+            )
         )
         union_ids = [r["id"] for r in union.get("requirements", [])]
         if not re.search(r"^##\s+Traceability\s*$", text, re.M | re.I):
@@ -257,8 +349,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prd", default="")
     parser.add_argument("--unit-id", default="")
     parser.add_argument("--prd-unit-id", default="")
+    parser.add_argument(
+        "--root",
+        default=None,
+        help="Consumer repository root for workflow config and issue-store artifact resolve (PRD 358 R8)",
+    )
     args = parser.parse_args(argv)
-    root = SCRIPT_DIR.parent
+    root, root_error = _resolve_consumer_root(_resolve_cli_root(args.root))
+    if root is None:
+        return _fail_root(root_error or "invalid --root")
     return _run(
         root,
         args.artifact,

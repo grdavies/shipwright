@@ -357,7 +357,7 @@ def main(argv: list[str] | None = None) -> int:
         read_completion_evidence,
         read_index_status_evidence,
     )
-    from wave_state import phase_complete
+    from wave_state import phase_complete, run_slug_from_state
 
     profile_resolution = resolve_docs_currency_profile(root)
     if profile_resolution.get("rolloutBlocked"):
@@ -400,11 +400,7 @@ def main(argv: list[str] | None = None) -> int:
         pass
 
     expected = derive_index_status(state, merged_main)
-    slug = str(
-        (state.get("target") or {}).get("slug")
-        or plan.get("slug")
-        or ""
-    ).strip() or None
+    slug = str(run_slug_from_state(state) or plan.get("slug") or "").strip() or None
 
     def _index_status_from_file() -> str | None:
         index_path = root / "docs" / "prds" / "INDEX.md"
@@ -427,7 +423,7 @@ def main(argv: list[str] | None = None) -> int:
 
     banned = living_doc_write_banned(root)
     use_store_evidence = banned or consumer_repo
-    slug = str((state.get("target") or {}).get("slug") or "")
+    slug = str(run_slug_from_state(state) or "")
     file_row_status = _index_status_from_file()
     index_status = None
     if use_store_evidence:

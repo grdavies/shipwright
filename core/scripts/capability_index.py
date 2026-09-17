@@ -21,6 +21,38 @@ CAPABILITY_ROOTS = (
 )
 EXECUTABLE_KINDS = frozenset({"provider", "hook"})
 FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---", re.DOTALL)
+CAPABILITY_INDEX_REL = Path("core/sw-reference/capability-index.json")
+
+
+def normalize_capability_repo_root(start: Path) -> Path:
+    """Map a ``core/`` subpath to the installed host bundle root when applicable (PRD 358 R10)."""
+    resolved = start.resolve()
+    if resolved.name == "core":
+        parent = resolved.parent
+        if (parent / "skills").is_dir() and not (resolved / "skills").is_dir():
+            return parent
+    return resolved
+
+
+def capability_scan_root(repo_root: Path) -> Path:
+    """Directory tree scanned for capability frontmatter (source ``core/`` or installed bundle)."""
+    repo = normalize_capability_repo_root(repo_root)
+    if (repo / "skills").is_dir():
+        return repo
+    if (repo / "core" / "skills").is_dir():
+        return repo / "core"
+    return repo / "core"
+
+
+def default_capability_index_path(repo_root: Path) -> Path:
+    repo = normalize_capability_repo_root(repo_root)
+    installed = repo / CAPABILITY_INDEX_REL
+    if installed.is_file():
+        return installed.resolve()
+    legacy = repo / "sw-reference" / "capability-index.json"
+    if legacy.is_file():
+        return legacy.resolve()
+    return installed.resolve()
 
 
 def derive_kind(source_path: str) -> str:
@@ -127,15 +159,17 @@ def write_index(core_root: Path, index: dict[str, Any] | None = None) -> Path:
     return out
 
 
-def check_freshness(core_root: Path, index_path: Path | None = None) -> tuple[bool, str]:
-    path = index_path or (core_root / "sw-reference" / "capability-index.json")
+def check_freshness(root: Path, index_path: Path | None = None) -> tuple[bool, str]:
+    repo = normalize_capability_repo_root(root)
+    scan_root = capability_scan_root(repo)
+    path = index_path or default_capability_index_path(repo)
     if not path.is_file():
         return False, f"missing committed index: {path}"
     try:
         committed = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         return False, f"invalid index JSON: {exc}"
-    expected = build_index(core_root)
+    expected = build_index(scan_root)
     if canonical_json(committed) != canonical_json(expected):
         return False, "capability-index.json does not match frontmatter aggregate"
     return True, "fresh"

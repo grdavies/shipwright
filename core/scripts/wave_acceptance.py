@@ -15,6 +15,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from halt_resume import resolve_run_id
 from wave_json_io import StateCorruptError, read_json, write_json
 from wave_run_paths import blocker_path, phase_blocker_path, terminal_acceptance_path
+from wave_state import target_branch_from_state
 
 TERMINAL_MERGED_STATUSES = frozenset(
     {"green-merged", "teardown-pending", "teardown-complete"}
@@ -141,7 +142,7 @@ def build_acceptance_record(
         "schemaVersion": 1,
         "recordedAt": utc_now(),
         "runId": resolve_run_id(state),
-        "targetBranch": (state.get("target") or {}).get("branch"),
+        "targetBranch": target_branch_from_state(state),
         "sourceTaskList": state.get("source_task_list"),
         "phases": build_phase_entries(state),
         "terminalPr": terminal if isinstance(terminal, dict) else {},

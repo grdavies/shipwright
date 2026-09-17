@@ -1367,6 +1367,18 @@
 * merge phase live-linear-facade-pilot-phase-1-merge-gate into feat/linear-issue-store-production-readiness (d81848a) <!-- sw-deliver:live-linear-facade-pilot-phase-1-merge-gate -->
 * merge phase linear-document-review-341-floor into feat/linear-issue-store-production-readiness (69a7cca) <!-- sw-deliver:linear-document-review-341-floor -->
 * merge phase jira-and-notion-document-review-enablement into feat/linear-issue-store-production-readiness (8e9f706) <!-- sw-deliver:jira-and-notion-document-review-enablement -->
+* merge phase asterisk-rid-extraction into feat/linear-issue-store-fidelity (f67a8dc) <!-- sw-deliver:asterisk-rid-extraction -->
+* merge phase installed-capability-index-freshness into feat/linear-issue-store-fidelity (7dff10a) <!-- sw-deliver:installed-capability-index-freshness -->
+* merge phase decision-log-guards into feat/linear-issue-store-fidelity (eb217f3) <!-- sw-deliver:decision-log-guards -->
+* merge phase facade-skip-on-manifest into feat/linear-issue-store-fidelity (c41824b) <!-- sw-deliver:facade-skip-on-manifest -->
+* merge phase installed-spec-rigor-consumer-root into feat/linear-issue-store-fidelity (65bbc90) <!-- sw-deliver:installed-spec-rigor-consumer-root -->
+* merge phase reconstruct-before-ok into feat/linear-issue-store-fidelity (b5a14b0) <!-- sw-deliver:reconstruct-before-ok -->
+* merge phase overflow-secret-scan-and-brokered-tokens into feat/linear-issue-store-fidelity (1efa330) <!-- sw-deliver:overflow-secret-scan-and-brokered-tokens -->
+* merge phase overflow-authorship-bind into feat/linear-issue-store-fidelity (ea9fb79) <!-- sw-deliver:overflow-authorship-bind -->
+* merge phase freeze-refuse-truncated-reconstruct into feat/linear-issue-store-fidelity (1f81cdc) <!-- sw-deliver:freeze-refuse-truncated-reconstruct -->
+* merge phase uuid-minting-issuestorebackend-double into feat/linear-issue-store-fidelity (2fb5977) <!-- sw-deliver:uuid-minting-issuestorebackend-double -->
+* merge phase canonical-markdown-equality-without-weakening into feat/linear-issue-store-fidelity (30c6472) <!-- sw-deliver:canonical-markdown-equality-without-weakening -->
+* merge phase provider-and-skill-documentation into feat/linear-issue-store-fidelity (42f9508) <!-- sw-deliver:provider-and-skill-documentation -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->

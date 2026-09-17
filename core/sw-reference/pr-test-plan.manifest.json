@@ -1604,6 +1604,17 @@
       "ciShard": 2
     },
     {
+      "id": "planning-358-decision-log-guards",
+      "script": "scripts/test/run_pytest.py",
+      "args": [
+        "scripts/unit_tests/planning/test_prd358_decision_guards.py",
+        "-q"
+      ],
+      "classification": "required",
+      "ciJobName": "feat-test-plan-pytest-required-shard-9",
+      "ciShard": 9
+    },
+    {
       "id": "planning-333-provider-semantic-parity-fixtures",
       "script": "scripts/test/run_pytest.py",
       "args": [

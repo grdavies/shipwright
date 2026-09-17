@@ -1,0 +1,7 @@
+{
+  "name": "over-budget-first-split",
+  "prefix": "# PRD 358 over budget\n\n",
+  "paddingChar": "z",
+  "paddingLength": 900,
+  "linearChunkLimitBytes": 320
+}

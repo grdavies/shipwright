@@ -37,6 +37,20 @@ Authoring commands emit slot-filling templates matching the canonical shape; non
 Paths resolve through `planningDir` from `workflow.config.json` (legacy `prdsDir`/`tasksDir` aliases
 pre-cutover). See `core/sw-reference/layout.md` for the unit tree and INDEX regions.
 
+## Consumer `--root` and asterisk RID (PRD 358 R7/R8)
+
+Installed `spec-rigor-check.py` **requires** consumer `--root`. Artifact resolve, `load_workflow_config`,
+and `get_backend` use that root — not `SCRIPT_DIR.parent`. Omit `--root`, or pass a root that resolves
+to the package `scripts/` parent, fails closed. Split roots: `--root` for workflow config and
+issue-store get; `SCRIPT_DIR` for `spec-union.py` and packaged helpers. Consumer repos have no
+`scripts/` tree.
+
+R/D bullets parse both hyphen and **asterisk** Markdown list markers (Linear Public Markdown):
+`- **R1** …` and `* **R1** …` (plus Linear spacing). `RID_BULLET`, `RID_BULLET_ALT`,
+`RID_BULLET_NONCANON`, tokenizer `RD_ID_BULLET`, `extract_rd_bullets`, spec-rigor,
+`doc-format-normalize`, and traceability all accept `*`. A hyphen-only diagnostic copy is not a
+passing artifact. Parser success on a truncated Linear stump is **not** freeze authority.
+
 ## Passes
 
 ### Clarify (ambiguity — Full, pre-PRD-freeze)
@@ -79,10 +93,10 @@ Via `scripts/traceability-check.py`:
 
 ```bash
 # Pre-PRD-freeze (pass --tier full|standard) — paths relative to planningDir or legacy prdsDir
-python3 scripts/spec-rigor-check.py --artifact prd --path <planningDir>/prd/prd-031-.../prd-031-....md --tier full
+python3 scripts/spec-rigor-check.py --root <consumer-repo> --artifact prd --path <planningDir>/prd/prd-031-.../prd-031-....md --tier full
 
 # Pre-task-freeze
-python3 scripts/spec-rigor-check.py --artifact tasks --path <planningDir>/prd/prd-031-.../tasks-prd-031-....md --prd <prd-body>
+python3 scripts/spec-rigor-check.py --root <consumer-repo> --artifact tasks --path <planningDir>/prd/prd-031-.../tasks-prd-031-....md --prd <prd-body>
 python3 scripts/traceability-check.py --prd <prd-body> --tasks <tasks-path>
 ```
 

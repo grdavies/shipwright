@@ -21,7 +21,9 @@ Port of v1 `spec-prd` under `sw-`. Freeze and task generation are separate steps
 1. Overview
 2. Goals
 3. Non-Goals
-4. Requirements (stable R-IDs; carry forward from brainstorm when present)
+4. Requirements (stable R-IDs; carry forward from brainstorm when present). Hyphen and **asterisk**
+   RID bullets are both valid: `- **R1** …` and `* **R1** …` (Linear Public Markdown). Spec-rigor
+   on the stored body must extract both; pass consumer `--root` to installed `spec-rigor-check.py`.
 5. Technical Requirements
 6. Security & Compliance
 7. Testing Strategy
@@ -44,7 +46,9 @@ by the spec-rigor authoring gate.
 4. Alternatives
 5. Consequences
 
-The decision section contract must stay in lockstep with `scripts/spec-rigor-check.py --artifact decision`.
+The decision section contract must stay in lockstep with `scripts/spec-rigor-check.py --root <consumer-repo> --artifact decision`.
+Installed spec-rigor requires consumer `--root` (omit or package-`scripts/` parent fails closed).
+Asterisk RID bullets (`* **D1**` / `* **R1**`) parse on the stored body.
 
 
 ## Issue-store authoring (PRD 056 R11–R12)

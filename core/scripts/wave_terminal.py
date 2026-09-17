@@ -10,7 +10,7 @@ import subprocess
 
 from _sw import interpreter
 import sys
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,7 +26,7 @@ from wave_errors import fail_from_payload
 from host_lib import load_workflow_config, remote_name, remote_ref, resolve_provider
 from host import probe_remote_ref_exists
 from host_ratelimit import HostProbeInconclusive, HostRateLimited
-from wave_state import phase_complete
+from wave_state import phase_complete, run_slug_from_state, target_branch_from_state
 import loop_health_lib
 import planning_gap_capture as pgc
 
@@ -54,19 +54,138 @@ class TerminalExit(Exception):
 _terminal_library_mode: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "_terminal_library_mode", default=False
 )
+_terminal_root: contextvars.ContextVar[Path | None] = contextvars.ContextVar(
+    "_terminal_root", default=None
+)
+
+ACCEPTANCE_RECORD_FIELDS = (
+    "schemaVersion",
+    "runId",
+    "phases",
+    "terminalPr",
+    "terminalGate",
+    "gatesRunRollup",
+    "interactionCount",
+)
 
 
 @contextmanager
 def terminal_library_mode():
     """Route emit/fail to TerminalOutcome instead of sys.exit."""
-    token = _terminal_library_mode.set(True)
+    mode_reset = _terminal_library_mode.set(True)
     try:
         yield
     finally:
-        _terminal_library_mode.reset(token)
+        _terminal_library_mode.reset(mode_reset)
+
+
+@contextmanager
+def terminal_root_context(root: Path):
+    """Bind repo root for halt-resume + acceptance enrichment on emit/fail."""
+    root_reset = _terminal_root.set(root)
+    try:
+        yield
+    finally:
+        _terminal_root.reset(root_reset)
+
+
+def resolve_terminal_halt_cause(payload: dict[str, Any]) -> str | None:
+    for key in ("cause", "halt"):
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    if payload.get("verdict") in ("halt", "fail"):
+        err = payload.get("error")
+        if isinstance(err, str) and err.strip():
+            return err.strip()
+    return None
+
+
+def is_legitimate_terminal_interrupt(payload: dict[str, Any]) -> bool:
+    return payload.get("verdict") in ("halt", "fail") and resolve_terminal_halt_cause(
+        payload
+    ) is not None
+
+
+def enrich_terminal_halt_payload(
+    root: Path,
+    payload: dict[str, Any],
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Attach standardized haltResume to legitimate terminal interrupts (PRD 337 R8)."""
+    if not is_legitimate_terminal_interrupt(payload):
+        return payload
+    cause = resolve_terminal_halt_cause(payload)
+    if state is None:
+        state = load_state(root)
+    from halt_resume import enrich_legitimate_halt
+
+    enrich_legitimate_halt(
+        payload,
+        root,
+        state,
+        halt_cause=str(cause),
+        persist_halt_count=payload.get("verdict") == "halt",
+    )
+    if payload.get("verdict") == "halt" and state is not None:
+        save_state(root, state)
+    return payload
+
+
+def attach_terminal_acceptance_record(
+    root: Path,
+    payload: dict[str, Any],
+    state: dict[str, Any],
+    *,
+    terminal_gate: dict[str, Any] | None = None,
+    gate_exit_code: int | None = None,
+) -> dict[str, Any]:
+    """Persist machine-checkable terminal acceptance on green gate paths (PRD 337 R8)."""
+    from wave_acceptance import embed_validated_acceptance
+
+    embed_validated_acceptance(
+        root,
+        state,
+        payload,
+        terminal_gate=terminal_gate,
+        gate_exit_code=gate_exit_code,
+    )
+    return payload
+
+
+def validate_acceptance_schema(record: dict[str, Any]) -> tuple[bool, list[str]]:
+    """Reject acceptance records missing required ledger fields (PRD 337 R8)."""
+    errors: list[str] = []
+    for field in ACCEPTANCE_RECORD_FIELDS:
+        if field not in record:
+            errors.append(f"acceptance:missing-{field}")
+    phases = record.get("phases")
+    if not isinstance(phases, list):
+        errors.append("acceptance:phases-not-list")
+    rollup = record.get("gatesRunRollup")
+    if not isinstance(rollup, dict):
+        errors.append("acceptance:gatesRunRollup-not-object")
+    elif not isinstance(rollup.get("phases"), dict):
+        errors.append("acceptance:gatesRunRollup-phases-missing")
+    return len(errors) == 0, errors
+
+
+def _finalize_terminal_payload(obj: dict[str, Any]) -> dict[str, Any]:
+    root = _terminal_root.get()
+    if root is None:
+        return obj
+    if obj.get("verdict") == "halt":
+        return enrich_terminal_halt_payload(root, obj)
+    if obj.get("verdict") == "fail":
+        from halt_resume import enrich_fail_extra
+
+        state = load_state(root)
+        return enrich_fail_extra(root, obj, state=state)
+    return obj
 
 
 def emit(obj: dict[str, Any], exit_code: int = 0) -> None:
+    obj = _finalize_terminal_payload(obj)
     if _terminal_library_mode.get():
         raise TerminalExit(TerminalOutcome(obj, exit_code))
     print(json.dumps(obj, ensure_ascii=False, indent=2))
@@ -236,16 +355,9 @@ def save_state(root: Path, state: dict[str, Any]) -> None:
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def phase_ack_cadence(root: Path) -> int:
     deliver = load_workflow_config(root).get("deliver") or {}
     try:
@@ -609,7 +721,7 @@ def _cmd_terminal_retro_run_body(root: Path, args: list[str]) -> None:
     state = load_state(root)
     if not all_phases_green(state):
         fail("retrospective requires all phases green-merged", exit_code=20)
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not target:
         fail("target branch missing in run-state")
     top = git_top(root)
@@ -722,7 +834,7 @@ def _cmd_terminal_ship_run_body(root: Path, args: list[str], *, dry_run: bool) -
         if retro.exit_code != 0:
             emit_outcome(retro)
         state = load_state(root)
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not target:
         fail("target branch missing")
     if dry_run:
@@ -1179,13 +1291,17 @@ def resolve_docs_currency_paths(root: Path) -> tuple[Path, Path, Path, Path]:
 
 
 def ensure_terminal_index_projection(root: Path) -> None:
-    """Project INDEX + completion evidence for issue-store before docs-currency (R4/R50)."""
+    """Project INDEX + completion evidence for issue-store before docs-currency (R4/R50).
+
+    Prefers worktree-scoped projection when invoked from the primary checkout (PRD 344 R3).
+    """
     import contextlib
     import io
 
+    from deliver_closeout import derive_closeout_index_status
+    from projection_state import prefer_worktree_projection_root
     from wave_living_docs import (
         append_completion_store_event,
-        derive_index_status,
         living_doc_write_banned,
         read_completion_evidence,
     )
@@ -1199,19 +1315,23 @@ def ensure_terminal_index_projection(root: Path) -> None:
     prd = str(state.get("prd_number") or "").zfill(3)
     if not prd or prd == "000":
         return
-    if derive_index_status(state, False) != "complete":
+    if derive_closeout_index_status(state, merged_to_main=False, root=root) != "complete":
         return
-    slug = str((state.get("target") or {}).get("slug") or "") or None
+    slug = str(run_slug_from_state(state) or "") or None
+    worktree = pp.git_root(root)
+    decision = prefer_worktree_projection_root(root, worktree)
+    projection_root = Path(decision["projectionRoot"])
     with contextlib.redirect_stdout(io.StringIO()):
-        pii.project_index_status(root, prd, "complete", slug=slug, force_issue_store=True)
-        worktree = pp.git_root(root)
-        unit_id = pii.resolve_prd_unit_id(root, prd, slug=slug) or pii._unit_id_from_derived_cache(
-            worktree, prd, slug=slug
+        pii.project_index_status(
+            projection_root, prd, "complete", slug=slug, force_issue_store=True
         )
-        if unit_id and read_completion_evidence(root, prd) is None:
+        unit_id = pii.resolve_prd_unit_id(projection_root, prd, slug=slug) or pii._unit_id_from_derived_cache(
+            projection_root, prd, slug=slug
+        )
+        if unit_id and read_completion_evidence(projection_root, prd) is None:
             notes = str((state.get("completion") or {}).get("notes") or "pre-merge compounding complete")
             append_completion_store_event(
-                root,
+                projection_root,
                 prd_id=prd,
                 unit_id=unit_id,
                 status="complete",
@@ -1288,7 +1408,9 @@ def run_terminal_gate_watch(root: Path, pr: str | None) -> tuple[int, dict[str, 
 
 
 def _terminal_library_call(fn, *args, **kwargs) -> TerminalOutcome:
-    with terminal_library_mode():
+    root = args[0] if args and isinstance(args[0], Path) else None
+    root_cm = terminal_root_context(root) if root is not None else nullcontext()
+    with root_cm, terminal_library_mode():
         try:
             fn(*args, **kwargs)
         except TerminalExit as exc:
@@ -1394,7 +1516,7 @@ def cmd_resume_reconcile(root: Path, args: list[str]) -> None:
     state = load_state(root)
     if not state:
         fail("run state missing")
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not target:
         fail("target branch missing in run-state")
     top = git_top(root)
@@ -1516,7 +1638,7 @@ def terminal_pr_body(root: Path, state: dict[str, Any]) -> str:
         summary += "\n\n## Phase PRs\n\n" + "\n".join(phase_lines)
     summary += "\n\nHuman merge gate — do not auto-merge."
     test_plan = "- [ ] Review phase PR list\n- [ ] Confirm deliver-concurrency fixtures green"
-    slug = (state.get("target") or {}).get("slug") or "deliver-wave"
+    slug = run_slug_from_state(state) or "deliver-wave"
     prd = str(state.get("prd_number") or "050")
     decision = json.dumps(
         {
@@ -1636,9 +1758,13 @@ def cmd_terminal_pr_prepare(root: Path, args: list[str]) -> None:
 
 def _cmd_terminal_pr_prepare_body(root: Path, args: list[str], *, dry_run: bool) -> None:
     state = load_state(root)
-    target = (state.get("target") or {}).get("branch", "")
-    slug = (state.get("target") or {}).get("slug", target.split("/")[-1] if target else "feature")
-    commit_type = (state.get("target") or {}).get("type", "feat")
+    target = (target_branch_from_state(state) or "")
+    slug = run_slug_from_state(state) or (target.split("/")[-1] if target else "feature")
+    raw_target = state.get("target")
+    if isinstance(raw_target, dict) and raw_target.get("type"):
+        commit_type = str(raw_target.get("type") or "feat")
+    else:
+        commit_type = target.split("/", 1)[0] if "/" in target else "feat"
     base = default_base_branch(root)
 
     if state.get("terminalRejected"):
@@ -1784,6 +1910,15 @@ def cmd_terminal_pr_gate(root: Path, args: list[str]) -> None:
         gate_ec, gate = run_check_gate(root, None)
         payload = terminal_local_gate_payload(root, gate_ec, gate, action="terminal-local-gate")
         ready = payload["verdict"] == "pass"
+        if ready:
+            state = load_state(root)
+            attach_terminal_acceptance_record(
+                root,
+                payload,
+                state,
+                terminal_gate=gate,
+                gate_exit_code=gate_ec,
+            )
         emit(payload, 0 if ready else 10)
     terminal = state.get("terminalPr") or {}
     pr = parse_kv(args, "--pr") or (str(terminal.get("number")) if terminal.get("number") else None)
@@ -1804,6 +1939,15 @@ def cmd_terminal_pr_gate(root: Path, args: list[str]) -> None:
     }
     if not ready:
         payload["reason"] = gate.get("reason") or "gate not green"
+    if ready:
+        state = load_state(root)
+        attach_terminal_acceptance_record(
+            root,
+            payload,
+            state,
+            terminal_gate=gate,
+            gate_exit_code=gate_ec,
+        )
     emit(payload, 0 if ready else 10)
 
 
@@ -1927,6 +2071,53 @@ def close_run_projections(root: Path, run_id: str, state: dict[str, Any]) -> dic
 from wave_deliver_loop import release_run_resources  # PRD 328 R3–R5 — phase-before-orch teardown
 
 
+def _merge_info_for_post_merge_retrospective(
+    state: dict[str, Any],
+    merge_info: dict[str, Any] | None = None,
+    *,
+    checkpoint: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    if merge_info and merge_info.get("merged"):
+        return merge_info
+    terminal_merge = state.get("terminalMerge") if isinstance(state.get("terminalMerge"), dict) else {}
+    merge_commit = str(
+        terminal_merge.get("mergeCommit")
+        or (checkpoint or {}).get("mergeCommit")
+        or ""
+    ).lower()
+    if not merge_commit:
+        return {"merged": False}
+    return {
+        "merged": True,
+        "mergeCommit": merge_commit,
+        "prNumber": terminal_merge.get("prNumber"),
+        "mergedAt": terminal_merge.get("mergedAt"),
+    }
+
+
+def _attach_post_merge_retrospective_dispatch(
+    root: Path,
+    run_id: str,
+    merge_info: dict[str, Any],
+    payload: dict[str, Any],
+    *,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    from deliver_closeout import dispatch_post_merge_retrospective
+
+    retro = dispatch_post_merge_retrospective(
+        root, run_id=run_id, merge_info=merge_info, dry_run=dry_run
+    )
+    out = dict(payload)
+    out["postMergeRetrospective"] = retro
+    if retro.get("awaitAgent") and retro.get("invoke") and not retro.get("noop"):
+        out["awaitAgent"] = True
+        out["invoke"] = retro["invoke"]
+    if retro.get("resumeCommand"):
+        out.setdefault("resumeCommand", retro["resumeCommand"])
+    return out
+
+
 def finalize_run(
     root: Path,
     run_id: str,
@@ -1957,7 +2148,8 @@ def finalize_run(
         load_run_scoped_state,
         run_finalize_authorization,
         save_run_scoped_state,
-    )
+    target_branch_from_state,
+)
     from wave_transition_receipt import (
         build_terminal_receipt,
         default_actor,
@@ -2000,22 +2192,34 @@ def finalize_run(
             if repair_err:
                 return repair_err
             ckpt = repaired
-            return {
+            return _attach_post_merge_retrospective_dispatch(
+                root,
+                run_id,
+                _merge_info_for_post_merge_retrospective(work_state, checkpoint=ckpt),
+                {
+                    "verdict": "pass",
+                    "action": "run-finalize",
+                    "immutable": True,
+                    "terminalReceipt": existing,
+                    "checkpoint": ckpt,
+                    "note": "checkpoint repaired from immutable state",
+                },
+                dry_run=dry_run,
+            )
+        return _attach_post_merge_retrospective_dispatch(
+            root,
+            run_id,
+            _merge_info_for_post_merge_retrospective(work_state, checkpoint=ckpt),
+            {
                 "verdict": "pass",
                 "action": "run-finalize",
                 "immutable": True,
                 "terminalReceipt": existing,
                 "checkpoint": ckpt,
-                "note": "checkpoint repaired from immutable state",
-            }
-        return {
-            "verdict": "pass",
-            "action": "run-finalize",
-            "immutable": True,
-            "terminalReceipt": existing,
-            "checkpoint": ckpt,
-            "note": "already finalized",
-        }
+                "note": "already finalized",
+            },
+            dry_run=dry_run,
+        )
 
     merge_info = verify_terminal_merge_via_host(root, work_state)
     if merge_info.get("verdict") != "pass":
@@ -2213,7 +2417,13 @@ def finalize_run(
     if recovery.get("mutated"):
         success_payload["finalizeRecovery"] = recovery
 
-    return success_payload
+    return _attach_post_merge_retrospective_dispatch(
+        root,
+        run_id,
+        merge_info,
+        success_payload,
+        dry_run=dry_run,
+    )
 
 
 def cmd_finalize_run(root: Path, args: list[str]) -> None:
@@ -2258,6 +2468,11 @@ def main() -> None:
     domain = sys.argv[2]
     args = sys.argv[3:]
 
+    with terminal_root_context(root):
+        _main_dispatch(root, domain, args)
+
+
+def _main_dispatch(root: Path, domain: str, args: list[str]) -> None:
     if domain == "resume":
         sub = args[0] if args else ""
         rest = args[1:]

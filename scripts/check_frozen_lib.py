@@ -21,6 +21,7 @@ from planning_artifact_handle import issue_store_separate_project_effective
 from wave_transition_receipt import hash_json
 
 FREEZE_RECORDS_DIR = ".cursor/sw-freeze-records"
+_RID_LIST_ASTERISK = re.compile(r"^(\s*)\* (\*\*[RD]\d+\*\*)", re.MULTILINE | re.IGNORECASE)
 
 
 def is_driver_invoked(explicit: bool | None = None) -> bool:
@@ -325,11 +326,131 @@ def verify_file_store_durability(root: Path, artifact: str, revision: str) -> di
     }
 
 
-def verify_issue_store_durability(root: Path, unit_id: str, body_path: str, revision: str) -> dict[str, Any]:
+def hyphen_normalize_rid_list_markers(text: str) -> str:
+    """Hyphen rewrite of Linear `*` R/D bullets — diagnostic copy only, never freeze evidence (R9)."""
+    return _RID_LIST_ASTERISK.sub(r"\1- \2", text)
+
+
+def is_normalized_temp_freeze_evidence(*, freeze_evidence_body: str, store_body: str) -> bool:
+    """True when freeze input is a hyphen-normalized copy rather than original store bytes."""
+    if freeze_evidence_body == store_body:
+        return False
+    hyphen_store = hyphen_normalize_rid_list_markers(store_body)
+    hyphen_evidence = hyphen_normalize_rid_list_markers(freeze_evidence_body)
+    if freeze_evidence_body == hyphen_store or store_body == hyphen_evidence:
+        return True
+    return hyphen_store == hyphen_evidence
+
+
+def _operator_store_form(text: str, ps_mod: Any) -> str:
+    """Map YAML canonical or composed issue body to original-byte store form for freeze compare."""
+    body = text
+    if ps_mod.has_raw_yaml_frontmatter(body):
+        body = ps_mod.operator_body_from_canonical(body)
+    return ps_mod.strip_markers_and_edges(body)
+
+
+def refuse_truncated_linear_reconstruct(
+    *,
+    issues_provider: str,
+    record: Any,
+    ps_mod: Any,
+    client: Any | None = None,
+    pre_chunk_body: str | None = None,
+    freeze_evidence_body: str | None = None,
+) -> None:
+    """Refuse Linear freeze/hash when R3 reconstruct fails or evidence is a normalized temp (PRD 358 R9).
+
+    Spec-rigor parsing `*` R-IDs on a truncated stump is not freeze authority (AS8/D8).
+    Original store bytes remain the freeze/hash witness — never a normalized temp.
+    """
+    if issues_provider != "linear":
+        return
+    if client is not None:
+        record = client.issue_get(record.id)
+    labels = list(getattr(record, "labels", []) or [])
+    if ps_mod.PUT_INCOMPLETE_LABEL in labels:
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-mismatch",
+            issueId=getattr(record, "id", None),
+            reason="put-incomplete",
+        )
+    comments_complete = getattr(record, "comments_complete", None)
+    if comments_complete is False:
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-incomplete-comments",
+            issueId=getattr(record, "id", None),
+            commentsComplete=comments_complete,
+        )
+    if issues_provider == "linear" and comments_complete is None:
+        record.comments_complete = True
+
+    from planning.backends.issues_helpers import logical_issue_body, r6_canonical_body
+
+    store_body = logical_issue_body(record, ps_mod=ps_mod)
+    if freeze_evidence_body is not None:
+        evidence = _operator_store_form(freeze_evidence_body, ps_mod)
+        if is_normalized_temp_freeze_evidence(freeze_evidence_body=evidence, store_body=store_body):
+            ps_mod.fail(
+                "normalized-temp-freeze-evidence",
+                code="normalized-temp-freeze-evidence",
+                issueId=getattr(record, "id", None),
+            )
+
+    if pre_chunk_body is not None:
+        expected = _operator_store_form(pre_chunk_body, ps_mod)
+        if r6_canonical_body(expected, issues_provider=issues_provider, ps_mod=ps_mod) != r6_canonical_body(
+            store_body, issues_provider=issues_provider, ps_mod=ps_mod
+        ):
+            ps_mod.fail(
+                "reconstruct-before-ok",
+                code="reconstruct-mismatch",
+                issueId=getattr(record, "id", None),
+                expectedBytes=len(expected.encode("utf-8")),
+                actualBytes=len(store_body.encode("utf-8")),
+            )
+        return
+
+    from planning_canonical import load_chunk_manifest
+
+    if not str(store_body).strip():
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-mismatch",
+            issueId=getattr(record, "id", None),
+            expectedBytes=0,
+            actualBytes=0,
+            reason="empty-reconstruct",
+        )
+    manifest = load_chunk_manifest(str(getattr(record, "body", "") or ""))
+    chunks = manifest.get("chunks") if isinstance(manifest, dict) else None
+    if chunks:
+        head_only = ps_mod.strip_markers_and_edges(str(getattr(record, "body", "") or ""))
+        if r6_canonical_body(store_body, issues_provider=issues_provider, ps_mod=ps_mod) == r6_canonical_body(
+            head_only, issues_provider=issues_provider, ps_mod=ps_mod
+        ):
+            ps_mod.fail(
+                "reconstruct-before-ok",
+                code="reconstruct-mismatch",
+                issueId=getattr(record, "id", None),
+                reason="truncated-head-only",
+            )
+
+
+def verify_issue_store_durability(
+    root: Path,
+    unit_id: str,
+    body_path: str,
+    revision: str,
+    *,
+    pre_chunk_body: str | None = None,
+) -> dict[str, Any]:
     from planning_store import get_backend
 
     backend = get_backend(root)
-    freeze_out = backend.freeze(unit_id, body_path, distill=False)
+    freeze_out = backend.freeze(unit_id, body_path, distill=False, pre_chunk_body=pre_chunk_body)
     store_revision = str(freeze_out.get("hash") or "")
     verify = backend.verify_frozen_hash(unit_id, body_path)
     recorded = str(verify.get("hash") or verify.get("recordedHash") or "")
@@ -387,6 +508,7 @@ def freeze_artifact(
             error="artifact-missing",
         )
 
+    original_body = path.read_text(encoding="utf-8")
     revision = content_revision(path)
     already_frozen = artifact_is_frozen(path)
     if already_frozen:
@@ -427,8 +549,9 @@ def freeze_artifact(
 
     if issue_store_separate_project_effective(root):
         uid = unit_id or path.stem
+        oracle = None if already_frozen else original_body
         durability = issue_store_fn(uid, artifact, revision) if issue_store_fn else verify_issue_store_durability(
-            root, uid, artifact, revision
+            root, uid, artifact, revision, pre_chunk_body=oracle
         )
         receipt = build_freeze_receipt(
             artifact=artifact,

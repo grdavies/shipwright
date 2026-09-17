@@ -113,7 +113,7 @@ When `python3 scripts/planning_store.py resolve-backend` reports effective `issu
 4. Run spec-rigor against the handle (no on-disk file required):
 
    ```bash
-   python3 scripts/spec-rigor-check.py --artifact brainstorm --path docs/brainstorms/<filename>.md --unit-id <unit-id>
+   python3 scripts/spec-rigor-check.py --root <consumer-repo> --artifact brainstorm --path docs/brainstorms/<filename>.md --unit-id <unit-id>
    ```
 
 File-store repos: unchanged — write to `docs/brainstorms/` as below.
@@ -124,8 +124,11 @@ File-store repos: unchanged — write to `docs/brainstorms/` as below.
 2. **File-store:** write to `docs/brainstorms/YYYY-MM-DD-<topic>-requirements.md`. **Issue-store:** `planning_store.put` only (see above).
 3. Assign stable R-IDs; include all required sections.
 4. **Spec-rigor gate (hard-blocking):** run
-   `python3 scripts/spec-rigor-check.py --artifact brainstorm --path <body-path> [--unit-id <unit-id>]` after the put/write.
+   `python3 scripts/spec-rigor-check.py --root <consumer-repo> --artifact brainstorm --path <body-path> [--unit-id <unit-id>]` after the put/write.
    Exit `20` halts — fix findings before handoff. Advisory re-check remains available to `/sw-doc-review`.
+   Installed spec-rigor requires consumer `--root` (omit / package-`scripts/` parent fails closed).
+   Requirement bullets use hyphen or **asterisk** RID markers (`- **R1**` and `* **R1**`); Linear
+   Public Markdown `*` lists must parse on the stored body.
 5. Report path and next step: `/sw-prd` (after `/sw-freeze` if freezing brainstorm first).
 
 ## Guardrails

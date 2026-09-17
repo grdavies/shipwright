@@ -34,6 +34,8 @@ def run_check(root: Path, path: Path) -> tuple[int, dict]:
         [
             sys.executable,
             str(root / "scripts/spec-rigor-check.py"),
+            "--root",
+            str(root),
             "--artifact",
             "brainstorm",
             "--path",

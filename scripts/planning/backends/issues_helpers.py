@@ -6,6 +6,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from issues_lib import IssueRevisionConflict
+
 ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
 ISSUE_UNIT_INDEX_AUDIT = ".cursor/hooks/state/issue-store-unit-index-audit.jsonl"
@@ -243,3 +245,139 @@ def guard_unit_id_marker_reuse(
         match_type = record_artifact_type(match, ps_mod=ps_mod)
         if match_type and match_type != artifact_type:
             _refuse(match, match_type)
+
+
+def r6_canonical_body(text: str, *, issues_provider: str, ps_mod: Any) -> str:
+    """R6 Public Markdown equivalence for reconstruct-before-ok (PRD 358 R3/D5)."""
+    if issues_provider == "linear":
+        from planning_linear_canonical import linear_public_markdown_r6_form
+
+        return linear_public_markdown_r6_form(text)
+    from planning_canonical import normalize_body
+
+    return normalize_body(text)
+
+
+def logical_issue_body(record: Any, *, ps_mod: Any, linear_bind: bool = False) -> str:
+    return ps_mod.strip_markers_and_edges(
+        ps_mod.reassemble_body(record.body, record.comments, linear_bind=linear_bind)
+    )
+
+
+def verify_frozen_integrity(backend: Any, record: Any, *, ps_mod: Any) -> None:
+    if ps_mod.FREEZE_INCOMPLETE_LABEL in record.labels:
+        ps_mod.fail("freeze-incomplete", code="freeze-incomplete", unitId=record.unit_id)
+    if ps_mod.FROZEN_LABEL not in record.labels:
+        return
+    recorded = ps_mod.parse_freeze_record_hash(record.comments)
+    if not recorded:
+        ps_mod.fail("missing-freeze-record", code="lifecycle-tombstone", unitId=record.unit_id)
+    current = ps_mod.canonical_hash(backend._record_to_snapshot(record))
+    if current != recorded:
+        ps_mod.fail(
+            "tamper-detected",
+            code="tamper-detected",
+            unitId=record.unit_id,
+            recordedHash=recorded,
+            currentHash=current,
+        )
+
+
+def lookup_record_and_refuse_truncated_reconstruct(
+    backend: Any,
+    unit_id: str,
+    body_path: str,
+    *,
+    pre_chunk_body: str | None = None,
+    freeze_evidence_body: str | None = None,
+    ps_mod: Any,
+) -> Any:
+    """Lookup + PRD 358 R9 truncated-reconstruct refuse before freeze/hash."""
+    try:
+        record = backend._lookup_record(unit_id, body_path)
+    except ps_mod.IssueNotFound:
+        ps_mod.fail("issue-not-found", code="not-found", unitId=unit_id)
+    except (ps_mod.IssueTombstone, ps_mod.IssueTransferred, ps_mod.IssueBudgetExhausted) as exc:
+        ps_mod.handle_issue_client_error(exc)
+    # Deferred import: check_frozen_lib loads this module for logical_issue_body.
+    from check_frozen_lib import refuse_truncated_linear_reconstruct
+
+    refuse_truncated_linear_reconstruct(
+        issues_provider=backend.issues_provider,
+        record=record,
+        ps_mod=ps_mod,
+        client=backend._client,
+        pre_chunk_body=pre_chunk_body,
+        freeze_evidence_body=freeze_evidence_body,
+    )
+    return record
+
+
+def verify_reconstruct_before_ok(
+    client: Any,
+    record: Any,
+    *,
+    pre_chunk_body: str,
+    issues_provider: str,
+    ps_mod: Any,
+) -> Any:
+    """Fail closed when refetched overflow cannot reassemble to the pre-chunk body (PRD 358 R3)."""
+    record = client.issue_get(record.id)
+    comments_complete = getattr(record, "comments_complete", None)
+    if comments_complete is False:
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-incomplete-comments",
+            issueId=record.id,
+            commentsComplete=comments_complete,
+        )
+    if issues_provider == "linear" and comments_complete is None:
+        record.comments_complete = True
+    from planning_canonical import LinearChunkAuthorshipError
+
+    try:
+        reassembled = logical_issue_body(
+            record,
+            ps_mod=ps_mod,
+            linear_bind=issues_provider == "linear",
+        )
+    except LinearChunkAuthorshipError as exc:
+        # R4/D11 — missing, nested, foreign, or superseded overflow is a failed write.
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-mismatch",
+            issueId=record.id,
+            reason=str(exc),
+        )
+    expected = ps_mod.strip_markers_and_edges(pre_chunk_body)
+    if r6_canonical_body(expected, issues_provider=issues_provider, ps_mod=ps_mod) != r6_canonical_body(
+        reassembled, issues_provider=issues_provider, ps_mod=ps_mod
+    ):
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="reconstruct-mismatch",
+            issueId=record.id,
+            expectedBytes=len(expected.encode("utf-8")),
+            actualBytes=len(reassembled.encode("utf-8")),
+        )
+    return record
+
+
+def clear_put_incomplete_label(client: Any, record: Any, *, ps_mod: Any) -> Any:
+    final_labels = sorted(set(record.labels) - {ps_mod.PUT_INCOMPLETE_LABEL})
+    if final_labels == sorted(record.labels):
+        return record
+    try:
+        record = client.issue_update(
+            record.id,
+            labels=final_labels,
+            if_match=record.etag,
+        )
+    except IssueRevisionConflict as exc:
+        ps_mod.fail(
+            "revision-conflict",
+            code="revision-conflict",
+            expected=exc.expected,
+            actual=exc.actual,
+        )
+    return client.issue_get(record.id)

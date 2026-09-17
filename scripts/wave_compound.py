@@ -527,7 +527,7 @@ def cmd_retrospective_detect_phase(root: Path, _args: list[str]) -> None:
 
 def cmd_compound_premerge_env(root: Path, args: list[str], *, domain: str = "retrospective") -> None:
     state = load_state(root) if state_path(root).is_file() else {}
-    target = (state.get("target") or {}).get("branch", "<type>/<slug>")
+    target = (target_branch_from_state(state) or "<type>/<slug>")
     invoke = (
         "/sw-compound-ship --pre-merge"
         if domain == "compound-ship"

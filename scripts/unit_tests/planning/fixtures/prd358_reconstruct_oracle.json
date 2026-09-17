@@ -1,0 +1,7 @@
+{
+  "name": "reconstruct-before-ok-oracle-2.19.0",
+  "fixture": "facade-double-chunk-repro-2.19.0",
+  "expectedCanonicalBytes": 194480,
+  "truncatedReassemblyBytes": 57881,
+  "note": "Live dogfood truncated reconstruct vs full pre-chunk body (PRD 358 R3)."
+}

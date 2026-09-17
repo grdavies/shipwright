@@ -20,7 +20,7 @@ if str(SCRIPT_DIR) not in sys.path:
 from host_lib import load_workflow_config
 from inflight_signal import prd_unit_id_from_state
 from wave_json_io import StateCorruptError, read_json, write_json
-from wave_state import load_deliver_state, path_normalize_anchor
+from wave_state import load_deliver_state, path_normalize_anchor, run_slug_from_state, target_branch_from_state
 
 CLOSEOUT_ROOT_REL = ".sw/deliver-closeout"
 PR_MAP_DIR = "pr-delivery-map"
@@ -252,8 +252,7 @@ def deliver_run_id_from_state(state: dict[str, Any]) -> str | None:
     if prd is None:
         return None
     prd_str = str(prd).zfill(3)
-    target = state.get("target") or {}
-    slug = target.get("slug") or slug_from_target_branch(str(target.get("branch") or ""))
+    slug = run_slug_from_state(state)
     if not slug:
         return None
     return f"sw-deliver-{prd_str}-{slug}"
@@ -298,7 +297,7 @@ def docs_currency_phase_in_progress(state: dict[str, Any], *, root: Path | None 
         if prd and prd != "000":
             from wave_living_docs import read_index_status_evidence
 
-            slug = str((state.get("target") or {}).get("slug") or "") or None
+            slug = run_slug_from_state(state) or None
             ev = read_index_status_evidence(root, prd, slug=slug)
             if ev and str(ev.get("status") or "") == "in-progress":
                 return True
@@ -373,7 +372,7 @@ def _state_matches_run_id(run_id: str, state: dict[str, Any]) -> bool:
 
 
 def _slug_from_state(state: dict[str, Any]) -> str:
-    return str((state.get("target") or {}).get("slug") or "")
+    return run_slug_from_state(state) or ""
 
 
 def _read_state_file(path: Path) -> dict[str, Any] | None:
@@ -1197,7 +1196,7 @@ def _terminal_pr_abandoned(
     if pr_state == "MERGED":
         return None
     if pr_state == "CLOSED":
-        slug = str((state.get("target") or {}).get("slug") or "")
+        slug = run_slug_from_state(state) or ""
         return {
             "verdict": "surface",
             "action": "abandoned-terminal-pr",
@@ -1432,9 +1431,8 @@ def mapping_from_deliver_state(state, pr_info):
     if pr_number is None:
         return {"verdict": "fail", "error": "pr-number-missing"}
     prd_unit = prd_unit_id_from_state(state) or ""
-    target = state.get("target") or {}
-    slug = str(target.get("slug") or "")
-    branch = str(target.get("branch") or "")
+    slug = run_slug_from_state(state) or ""
+    branch = target_branch_from_state(state) or ""
     prd_number = str(state.get("prd_number") or "").zfill(3)
     head = str(pr_info.get("head") or pr_info.get("headRefOid") or "")
     return {"prNumber": str(pr_number), "prUrl": str(pr_info.get("url") or ""), "prdUnitId": prd_unit, "prdNumber": prd_number, "deliverySlug": slug, "targetBranch": branch, "headSha": head, "runSlug": slug}

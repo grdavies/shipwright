@@ -3,21 +3,29 @@
 from __future__ import annotations
 
 import json
+import random
 import subprocess
 import sys
+import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from wave_state import run_slug_from_state, target_branch_from_state
+
 import planning_index_issue as pii
 import planning_paths
 from planning_artifact_handle import issue_store_is_effective
+import projection_state
 VALID_INDEX_STATUSES = frozenset({"not-started", "in-progress", "complete"})
 TERMINAL_PHASE_STATUSES = frozenset({"green-merged", "teardown-pending", "teardown-complete"})
+GAP_CLOSEOUT_RETRY_MAX_ATTEMPTS = 3
+GAP_CLOSEOUT_RETRY_BASE_SECONDS = 0.2
+GAP_CLOSEOUT_RETRY_CAP_SECONDS = 30.0
 
 def living_paths(root: Path) -> tuple[str, ...]:
     return planning_paths.living_paths_rel(planning_paths.load_planning_dirs(root))
@@ -227,7 +235,7 @@ def cmd_phase_status_live(root: Path, args: list[str]) -> None:
         {
             "verdict": "pass",
             "action": "phase-status-live",
-            "target": (state.get("target") or {}).get("branch"),
+            "target": target_branch_from_state(state),
             "verdictRun": state.get("verdict"),
             "livePhaseStatus": rows,
         }
@@ -249,7 +257,7 @@ def cmd_regenerate_index(root: Path, args: list[str]) -> None:
     import planning_index_gen as pig
 
     state = load_state(root)
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     dry_run = has_flag(args, "--dry-run")
     with living_doc_write_lock(root, target=target, holder="planning-index-generator"):
         content = pig.generate_index(root, writer="generator")
@@ -329,7 +337,9 @@ def append_completion_store_event(
 
 def read_completion_evidence(root: Path, prd_id: str) -> dict[str, object] | None:
     """PRD 061 R4/R5: read completion evidence from store cache under issue-store."""
-    if not living_doc_write_banned(root):
+    from sw_scripts_resolve import is_shipwright_self_repo
+
+    if not living_doc_write_banned(root) and is_shipwright_self_repo(root):
         return None
     cache = _completion_events_cache_path(root)
     if not cache.is_file():
@@ -348,8 +358,10 @@ def read_completion_evidence(root: Path, prd_id: str) -> dict[str, object] | Non
 
 
 def read_index_status_evidence(root: Path, prd_id: str, *, slug: str | None = None) -> dict[str, object] | None:
-    """PRD 061 R4: read index status from store projection cache under issue-store."""
-    if not living_doc_write_banned(root):
+    """PRD 061 R4 / PRD 325 R12: read index status from store projection cache."""
+    from sw_scripts_resolve import is_shipwright_self_repo
+
+    if not living_doc_write_banned(root) and is_shipwright_self_repo(root):
         return None
     return pii.read_projected_index_status(root, prd_id, slug=slug)
 
@@ -370,13 +382,168 @@ def facade_set_index_status(
     return pii.project_index_status(root, prd, status, slug=slug, dry_run=dry_run)
 
 
-def facade_gap_resolve(root: Path, prd: str) -> dict[str, object]:
+def facade_gap_resolve(root: Path, prd: str, *, pr: str = "") -> dict[str, object]:
     """Route gap resolve through issue-store facade under issue-store."""
     if living_doc_write_banned(root):
         import gap_backlog
 
         return gap_backlog._resolve_for_prd_issue_store(root, prd)
-    return run_reconcile_script(root, "gap-resolve", "--absorbing-prd", prd)
+    args: list[str] = ["gap-resolve", "--absorbing-prd", prd]
+    if pr:
+        args.extend(["--pr", pr])
+    return run_reconcile_script(root, *args)
+
+
+def gap_closeout_retry_config(root: Path) -> dict[str, float | int]:
+    """Bounded retry budget for issue-search gap closeout (PRD 337 R11)."""
+    from host_lib import load_workflow_config
+
+    cfg = load_workflow_config(root)
+    deliver = cfg.get("deliver") if isinstance(cfg.get("deliver"), dict) else {}
+    living = deliver.get("livingDocs") if isinstance(deliver.get("livingDocs"), dict) else {}
+    retry = living.get("gapCloseoutRetry") if isinstance(living.get("gapCloseoutRetry"), dict) else {}
+    return {
+        "maxAttempts": int(retry.get("maxAttempts", GAP_CLOSEOUT_RETRY_MAX_ATTEMPTS)),
+        "baseBackoffSeconds": float(retry.get("baseBackoffSeconds", GAP_CLOSEOUT_RETRY_BASE_SECONDS)),
+        "capBackoffSeconds": float(retry.get("capBackoffSeconds", GAP_CLOSEOUT_RETRY_CAP_SECONDS)),
+    }
+
+
+def _gap_resolve_resume_command(root: Path, worktree: Path) -> str:
+    wt = worktree.resolve()
+    repo = root.resolve()
+    if wt != repo:
+        return f"python3 scripts/wave.py living-docs reconcile --commit --orchestrator-worktree {wt}"
+    return "python3 scripts/wave.py living-docs reconcile --commit"
+
+
+def _gap_resolve_rate_limited_result(result: dict[str, Any]) -> bool:
+    error = str(result.get("error") or "").lower()
+    if error in {"rate-limited", "rate limit exceeded"}:
+        return True
+    if "rate" in error and "limit" in error:
+        return True
+    reason = str(result.get("reason") or "").lower()
+    if reason in {"rate-limited", "cumulative-wait-exhausted"}:
+        return True
+    if result.get("retryable") is True and "rate" in error:
+        return True
+    return False
+
+
+def _gap_resolve_rate_limited_exception(exc: BaseException) -> bool:
+    from issues_lib import IssueRateLimited
+
+    return isinstance(exc, IssueRateLimited)
+
+
+def _gap_resolve_backoff_seconds(attempt: int, config: dict[str, float | int]) -> float:
+    base = float(config["baseBackoffSeconds"])
+    cap = float(config["capBackoffSeconds"])
+    exp = min(cap, base * (2 ** max(0, attempt - 1)))
+    return random.uniform(0.0, exp)
+
+
+def _enforce_closeout_worktree(root: Path, worktree: Path) -> None:
+    """Gap closeout must run from a non-default closeout worktree (PRD 337 R11)."""
+    from default_branch_commit_guard import check
+
+    result = check(root, worktree=worktree)
+    if result.get("verdict") == "fail":
+        fail(
+            str(result.get("error") or "closeout worktree refused"),
+            exit_code=20,
+            halt="default-branch-closeout-refused",
+            **{k: v for k, v in result.items() if k not in {"verdict", "error"}},
+        )
+
+
+def facade_gap_resolve_with_retry(
+    root: Path,
+    prd: str,
+    *,
+    worktree: Path,
+    state: dict[str, Any] | None = None,
+    pr: str = "",
+    sleep_fn: Callable[[float], None] = time.sleep,
+) -> dict[str, object]:
+    """Bounded issue-search retry/backoff for gap closeout (PRD 337 R11)."""
+    _enforce_closeout_worktree(root, worktree)
+    config = gap_closeout_retry_config(root)
+    max_attempts = int(config["maxAttempts"])
+    resume_command = _gap_resolve_resume_command(root, worktree)
+    attempts = 0
+    cumulative_wait_ms = 0
+    last_result: dict[str, Any] | None = None
+    last_error = ""
+
+    for attempt in range(1, max_attempts + 1):
+        attempts = attempt
+        try:
+            result = facade_gap_resolve(worktree, prd, pr=pr)
+            last_result = dict(result) if isinstance(result, dict) else {"verdict": "fail", "error": str(result)}
+        except Exception as exc:  # noqa: BLE001 — classify retryable transport failures
+            if not _gap_resolve_rate_limited_exception(exc):
+                raise
+            last_error = str(exc)
+            last_result = {
+                "verdict": "resolution-partial",
+                "error": "rate-limited",
+                "reason": getattr(exc, "reason", "rate-limited"),
+                "retryable": bool(getattr(exc, "retryable", True)),
+                "cumulativeWaitMs": getattr(exc, "cumulative_wait_ms", 0),
+            }
+        else:
+            verdict = str(last_result.get("verdict") or "")
+            if verdict == "pass":
+                last_result["gapCloseoutRetry"] = {
+                    "attempts": attempts,
+                    "cumulativeWaitMs": cumulative_wait_ms,
+                    "exhausted": False,
+                }
+                return last_result
+            if not _gap_resolve_rate_limited_result(last_result):
+                last_result["gapCloseoutRetry"] = {
+                    "attempts": attempts,
+                    "cumulativeWaitMs": cumulative_wait_ms,
+                    "exhausted": False,
+                }
+                return last_result
+            last_error = str(last_result.get("error") or "rate-limited")
+
+        if attempt >= max_attempts:
+            break
+        wait_s = _gap_resolve_backoff_seconds(attempt, config)
+        cumulative_wait_ms += int(wait_s * 1000)
+        sleep_fn(wait_s)
+
+    exhaustion: dict[str, Any] = {
+        "verdict": "gap-closeout-retry-exhausted",
+        "halt": "gap-closeout-retry-exhausted",
+        "error": last_error or "gap closeout retry budget exhausted",
+        "retryable": True,
+        "attempts": attempts,
+        "maxAttempts": max_attempts,
+        "cumulativeWaitMs": cumulative_wait_ms,
+        "resumeCommand": resume_command,
+        "gapCloseoutRetry": {
+            "attempts": attempts,
+            "maxAttempts": max_attempts,
+            "cumulativeWaitMs": cumulative_wait_ms,
+            "exhausted": True,
+        },
+    }
+    if last_result is not None:
+        exhaustion["lastGapResolve"] = last_result
+    from halt_resume import build_halt_resume
+
+    exhaustion["haltResume"] = build_halt_resume(
+        root,
+        state,
+        halt_cause="gap-closeout-retry-exhausted",
+        resume_command=resume_command,
+    )
+    return exhaustion
 
 
 def facade_append_completion(
@@ -436,6 +603,126 @@ def doctor_banned_living_path_drift(root: Path) -> dict[str, object]:
     return {"verdict": "pass", "action": "doctor-banned-living-paths", "checks": ["banned-living-paths-clean"]}
 
 
+
+def _projection_interrupt_exceptions() -> tuple[type[BaseException], ...]:
+    """Timeout / rate-limit exceptions that should halt with resumeCommand (R2/R4)."""
+    excs: list[type[BaseException]] = []
+    try:
+        from issues_github import IssueSearchTimeout
+
+        excs.append(IssueSearchTimeout)
+    except ImportError:
+        pass
+    try:
+        from issues_lib import IssueRateLimited
+
+        excs.append(IssueRateLimited)
+    except ImportError:
+        pass
+    return tuple(excs)
+
+
+def _classify_projection_interrupt(exc: BaseException) -> tuple[str, bool]:
+    """Return (halt_cause, retryable) for a projection interrupt exception."""
+    name = type(exc).__name__
+    if name in {"IssueSearchTimeout", "IssueSearchTimeout"} or "Timeout" in name:
+        return "projection-search-timeout", bool(getattr(exc, "retryable", True))
+    if name in {"IssueRateLimited", "IssueRateLimited"} or "RateLimited" in name:
+        return "projection-rate-limited", bool(getattr(exc, "retryable", True))
+    return "projection-interrupted", True
+
+
+def prefer_worktree_for_projection(root: Path, worktree: Path) -> tuple[Path, dict[str, Any]]:
+    """Detect primary checkout and prefer worktree-scoped projection (R3)."""
+    decision = projection_state.prefer_worktree_projection_root(root, worktree)
+    return Path(decision["projectionRoot"]), decision
+
+
+def _run_index_projection_step(
+    worktree: Path,
+    prd: str,
+    index_status: str,
+    *,
+    slug: str | None,
+    dry_run: bool,
+) -> dict[str, Any]:
+    if living_doc_write_banned(worktree):
+        return facade_set_index_status(
+            worktree,
+            prd,
+            index_status,
+            slug=slug,
+            dry_run=dry_run,
+        )
+    issue_projection = pii.project_index_status(
+        worktree,
+        prd,
+        index_status,
+        slug=slug,
+        dry_run=dry_run,
+    )
+    if issue_projection.get("verdict") == "skipped":
+        return run_reconcile_script(
+            worktree,
+            "set-index-status",
+            "--prd",
+            prd,
+            "--status",
+            index_status,
+        )
+    return issue_projection
+
+
+def _halt_projection_interrupt(
+    root: Path,
+    worktree: Path,
+    *,
+    state: dict[str, Any] | None,
+    proj_state: dict[str, Any],
+    scope: str,
+    prd: str,
+    index_status: str,
+    step: str,
+    exc: BaseException,
+    primary_meta: dict[str, Any],
+) -> None:
+    cause, retryable = _classify_projection_interrupt(exc)
+    resume_command = projection_state.build_projection_resume_command(worktree, root=root)
+    projection_state.record_interrupt(
+        proj_state,
+        cause=cause,
+        error=str(exc),
+        resume_command=resume_command,
+        step=step,
+        retryable=retryable,
+        details={"exceptionType": type(exc).__name__},
+    )
+    projection_state.save_projection_state(worktree, proj_state)
+    from halt_resume import build_halt_resume
+
+    halt_resume = build_halt_resume(
+        root,
+        state,
+        halt_cause=cause,
+        resume_command=resume_command,
+    )
+    fail(
+        str(exc) or f"projection interrupted at {step}",
+        exit_code=30,
+        halt=cause,
+        action="living-docs-reconcile",
+        prd=prd,
+        indexStatus=index_status,
+        projectionStep=step,
+        projectionScope=scope,
+        projectionState=str(projection_state.projection_state_path(worktree, scope)),
+        primaryCheckout=primary_meta,
+        retryable=retryable,
+        haltResume=halt_resume,
+        resumeCommand=resume_command,
+    )
+
+
 def cmd_reconcile(root: Path, args: list[str]) -> None:
     if has_flag(args, "--commit") and not has_flag(args, "--dry-run"):
         worktree = resolve_worktree(root, args)
@@ -449,7 +736,7 @@ def cmd_reconcile(root: Path, args: list[str]) -> None:
     if not prd:
         fail("prd_number missing from deliver state/plan")
 
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     with living_doc_write_lock(root, target=target, holder="living-docs-reconcile"):
         _cmd_reconcile_locked(root, args, state, plan, prd)
 
@@ -460,38 +747,57 @@ def _cmd_reconcile_locked(
     merged_main = target_merge_detected(root, state)
     index_status = derive_index_status(state, merged_main)
     worktree = resolve_worktree(root, args)
+    worktree, primary_meta = prefer_worktree_for_projection(root, worktree)
     dry_run = has_flag(args, "--dry-run")
     do_commit = has_flag(args, "--commit")
 
-    slug = str((state.get("target") or {}).get("slug") or plan.get("slug") or "")
-    if living_doc_write_banned(worktree):
-        index_out = facade_set_index_status(
-            worktree,
-            prd,
-            index_status,
-            slug=slug or None,
-            dry_run=dry_run,
+    slug = str(run_slug_from_state(state) or plan.get("slug") or "")
+    scope = projection_state.projection_scope(prd=prd, slug=slug, action="reconcile")
+    proj_state = projection_state.load_projection_state(worktree, scope)
+    if not proj_state.get("prd"):
+        proj_state = projection_state.empty_projection_state(
+            scope=scope,
+            prd=prd,
+            slug=slug,
+            action="reconcile",
+            worktree=str(worktree),
         )
     else:
-        issue_projection = pii.project_index_status(
-            worktree,
-            prd,
-            index_status,
-            slug=slug or None,
-            dry_run=dry_run,
-        )
-        if issue_projection.get("verdict") == "skipped":
-            index_out = run_reconcile_script(
-                worktree,
-                "set-index-status",
-                "--prd",
-                prd,
-                "--status",
-                index_status,
-            )
-        else:
-            index_out = issue_projection
+        proj_state["prd"] = prd
+        proj_state["slug"] = slug
+        proj_state["worktree"] = str(worktree)
+    completed = set(proj_state.get("completedSteps") or [])
+    interrupt_types = _projection_interrupt_exceptions()
 
+    if "index" in completed:
+        index_out = dict((proj_state.get("results") or {}).get("index") or {})
+        index_out.setdefault("verdict", "pass")
+        index_out["resumed"] = True
+    else:
+        try:
+            index_out = _run_index_projection_step(
+                worktree,
+                prd,
+                index_status,
+                slug=slug or None,
+                dry_run=dry_run,
+            )
+        except interrupt_types as exc:
+            _halt_projection_interrupt(
+                root,
+                worktree,
+                state=state,
+                proj_state=proj_state,
+                scope=scope,
+                prd=prd,
+                index_status=index_status,
+                step="index",
+                exc=exc,
+                primary_meta=primary_meta,
+            )
+        projection_state.mark_step_complete(proj_state, "index", dict(index_out))
+        if not dry_run:
+            projection_state.save_projection_state(worktree, proj_state)
 
     planning_graph_out: dict[str, Any] | None = None
     legacy: dict[str, Any] | None = None
@@ -510,24 +816,86 @@ def _cmd_reconcile_locked(
 
     gap_out: dict[str, Any] | None = None
     if index_status == "complete":
-        if living_doc_write_banned(worktree):
-            gap_out = facade_gap_resolve(worktree, prd)
+        if "gap-resolve" in completed:
+            gap_out = dict((proj_state.get("results") or {}).get("gap-resolve") or {})
+            gap_out.setdefault("verdict", "pass")
+            gap_out["resumed"] = True
         else:
             pr_ref = ""
             terminal = state.get("terminalPr") or {}
             if terminal.get("number"):
                 pr_ref = str(terminal["number"])
-            gap_out = run_reconcile_script(
-                worktree,
-                "gap-resolve",
-                "--absorbing-prd",
-                prd,
-                *(["--pr", pr_ref] if pr_ref else []),
+            try:
+                gap_out = facade_gap_resolve_with_retry(
+                    root,
+                    prd,
+                    worktree=worktree,
+                    state=state,
+                    pr=pr_ref if not living_doc_write_banned(worktree) else "",
+                )
+            except interrupt_types as exc:
+                _halt_projection_interrupt(
+                    root,
+                    worktree,
+                    state=state,
+                    proj_state=proj_state,
+                    scope=scope,
+                    prd=prd,
+                    index_status=index_status,
+                    step="gap-resolve",
+                    exc=exc,
+                    primary_meta=primary_meta,
+                )
+            # Exhausted retry budget is a resumable interrupt (R2/R4).
+            if gap_out and gap_out.get("verdict") == "gap-closeout-retry-exhausted":
+                resume_command = str(
+                    gap_out.get("resumeCommand")
+                    or projection_state.build_projection_resume_command(worktree, root=root)
+                )
+                projection_state.record_interrupt(
+                    proj_state,
+                    cause="gap-closeout-retry-exhausted",
+                    error=str(gap_out.get("error") or "gap closeout retry budget exhausted"),
+                    resume_command=resume_command,
+                    step="gap-resolve",
+                    retryable=True,
+                    details={"gapResolve": gap_out},
+                )
+                if not dry_run:
+                    projection_state.save_projection_state(worktree, proj_state)
+                fail(
+                    str(gap_out.get("error") or "gap closeout retry budget exhausted"),
+                    exit_code=30,
+                    halt="gap-closeout-retry-exhausted",
+                    action="living-docs-reconcile",
+                    prd=prd,
+                    indexStatus=index_status,
+                    mergedCompleteRefused=True,
+                    gapResolve=gap_out,
+                    projectionScope=scope,
+                    projectionState=str(projection_state.projection_state_path(worktree, scope)),
+                    primaryCheckout=primary_meta,
+                    haltResume=gap_out.get("haltResume"),
+                    resumeCommand=resume_command,
+                )
+            projection_state.mark_step_complete(proj_state, "gap-resolve", dict(gap_out or {}))
+            if not dry_run:
+                projection_state.save_projection_state(worktree, proj_state)
+    else:
+        # Gap step not applicable — mark complete so resume state stays ordered.
+        if "gap-resolve" not in completed:
+            projection_state.mark_step_complete(
+                proj_state, "gap-resolve", {"verdict": "skipped", "reason": "index-not-complete"}
             )
+            if not dry_run:
+                projection_state.save_projection_state(worktree, proj_state)
 
     commit_sha = None
     if do_commit and not dry_run:
         commit_sha = git_commit_living_docs(worktree, prd, dry_run=False)
+
+    if not dry_run and projection_state.is_projection_complete(proj_state):
+        projection_state.clear_projection_state(worktree, scope)
 
     emit(
         {
@@ -542,8 +910,11 @@ def _cmd_reconcile_locked(
             "legacyProjection": legacy if dirs.planning == "docs/planning" else None,
             "livingDocsCommit": commit_sha,
             "dryRun": dry_run,
+            "projectionResumed": bool(completed),
+            "primaryCheckout": primary_meta,
         }
     )
+
 
 
 def cmd_append_terminal(root: Path, args: list[str]) -> None:
@@ -555,7 +926,7 @@ def cmd_append_terminal(root: Path, args: list[str]) -> None:
     from wave_living_doc_lock import living_doc_write_lock
 
     state = load_state(root)
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     with living_doc_write_lock(root, target=target, holder="living-docs-append-terminal"):
         _cmd_append_terminal_locked(root, args, state)
 
@@ -602,7 +973,7 @@ def _cmd_append_terminal_locked(root: Path, args: list[str], state: dict[str, An
     if head:
         append_args.extend(["--sha", head])
 
-    slug = str((state.get("target") or {}).get("slug") or plan.get("slug") or "")
+    slug = str(run_slug_from_state(state) or plan.get("slug") or "")
     unit_id = pii.resolve_prd_unit_id(worktree, prd, slug=slug or None) or f"prd-{prd}"
     if living_doc_write_banned(worktree):
         out = facade_append_completion(

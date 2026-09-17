@@ -527,4 +527,5 @@ Phase PR CI uses bounded poll/self-wake — not terminal-only watch.
 
 Operator halts include `tasks-currency-divergence`, `gap-check-missing`, `batch-integration-head-moved`,
 and living-docs **deferral** (`livingDocDeferral` + `resumeCommand`) when the repo-wide lock is held.
+<!-- currency: refreshed 2026-09-17T08:45:00Z — terminal-ship after wave_terminal closeout -->
 

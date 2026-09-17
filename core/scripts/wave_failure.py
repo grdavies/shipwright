@@ -13,6 +13,9 @@ from pathlib import Path
 from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+from wave_state import target_branch_from_state
 
 from wave_post_merge import run_post_merge_verify
 FLAKY_DEFAULT_RETRIES = 1
@@ -269,16 +272,9 @@ def load_plan(root: Path, state: dict[str, Any] | None = None) -> dict[str, Any]
 
 
 def load_workflow_config(root: Path) -> dict[str, Any]:
-    for rel in (".cursor/workflow.config.json", "workflow.config.json"):
-        path = root / rel
-        if path.is_file():
-            try:
-                return json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                continue
-    return {}
+    from shipwright_paths import load_workflow_config as _load_workflow_config
 
-
+    return _load_workflow_config(root)
 def plan_edges(root: Path, state: dict[str, Any] | None = None) -> list[dict[str, str]]:
     plan = load_plan(root, state)
     return [dict(e) for e in plan.get("edges") or []]
@@ -466,7 +462,7 @@ def cmd_verify_run(root: Path, args: list[str]) -> None:
     dry_run = has_flag(args, "--dry-run")
     flaky_retries = int(parse_kv(args, "--flaky-retries", str(FLAKY_DEFAULT_RETRIES)) or "1")
     wt = resolve_orchestrator_worktree(root, args)
-    target = (load_state(root).get("target") or {}).get("branch", "")
+    target = target_branch_from_state(load_state(root)) or ""
     if dry_run:
         emit(
             {
@@ -506,7 +502,7 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
     if not phase_slug:
         fail("--phase-slug required")
     state_hint = load_state(root)
-    target_branch = (state_hint.get("target") or {}).get("branch")
+    target_branch = target_branch_from_state(state_hint)
     if not (state_hint.get("phases") or {}):
         fail(
             "deliver state missing phases; fix .cursor/sw-deliver-state.json breadcrumb",
@@ -606,11 +602,24 @@ def cmd_verify_run_after_merge(root: Path, args: list[str]) -> None:
 
 
 def cmd_blast_radius_dependents(root: Path, args: list[str]) -> None:
+    from wave_phase_pr import PHASE_GREEN_MERGED_PREDICATE, phase_green_merged
+    from wave_state import phase_complete
+
     state = load_state(root)
     pid, meta = find_phase(state, parse_kv(args, "--phase-id"), parse_kv(args, "--phase-slug"))
     deps = transitive_dependent_ids(pid, plan_edges(root, state))
     phases = state.get("phases") or {}
-    slugs = [phases[d].get("slug", d) for d in deps if d in phases]
+    slugs = []
+    cleared: list[dict[str, str]] = []
+    for dep_id in deps:
+        if dep_id not in phases:
+            continue
+        dep_meta = phases[dep_id]
+        entry = {"phaseId": dep_id, "phaseSlug": str(dep_meta.get("slug", dep_id))}
+        if phase_complete(dep_meta.get("status")) or phase_green_merged(root, dep_meta):
+            cleared.append({**entry, "reason": "green-merged"})
+        else:
+            slugs.append(dep_meta.get("slug", dep_id))
     emit(
         {
             "verdict": "pass",
@@ -619,22 +628,55 @@ def cmd_blast_radius_dependents(root: Path, args: list[str]) -> None:
             "sourcePhaseSlug": meta.get("slug"),
             "dependentPhaseIds": deps,
             "dependentPhaseSlugs": slugs,
+            "blastRadius": {
+                "cleared": cleared,
+                "predicate": PHASE_GREEN_MERGED_PREDICATE,
+            },
         }
     )
 
 
+def _partition_blast_radius_dependents(
+    root: Path,
+    phases: dict[str, Any],
+    deps: list[str],
+) -> tuple[list[str], list[dict[str, str]]]:
+    from wave_phase_pr import phase_green_merged
+    from wave_state import phase_complete
+
+    to_invalidate: list[str] = []
+    cleared: list[dict[str, str]] = []
+    for dep_id in deps:
+        if dep_id not in phases:
+            continue
+        dep_meta = phases[dep_id]
+        entry = {"phaseId": dep_id, "phaseSlug": str(dep_meta.get("slug", dep_id))}
+        if phase_complete(dep_meta.get("status")):
+            if phase_green_merged(root, dep_meta):
+                cleared.append({**entry, "reason": "green-merged"})
+            continue
+        if phase_green_merged(root, dep_meta):
+            cleared.append({**entry, "reason": "green-merged"})
+            continue
+        to_invalidate.append(dep_id)
+    return to_invalidate, cleared
+
+
 def cmd_blast_radius_apply(root: Path, args: list[str]) -> None:
+    from wave_phase_pr import PHASE_GREEN_MERGED_PREDICATE, phase_green_merged
+    from wave_state import phase_complete, record_blast_radius
+
     state = load_state(root)
     pid, meta = find_phase(state, parse_kv(args, "--phase-id"), parse_kv(args, "--phase-slug"))
     cause = parse_kv(args, "--cause") or meta.get("cause") or "blocked"
     upstream_slug = meta.get("slug", pid)
     deps = transitive_dependent_ids(pid, plan_edges(root, state))
     phases = state.get("phases") or {}
+    to_invalidate, cleared = _partition_blast_radius_dependents(root, phases, deps)
     blocked: list[dict[str, str]] = []
-    for dep_id in deps:
-        if dep_id not in phases:
-            continue
-        if phases[dep_id].get("status") in ("green-merged", "rejected"):
+    for dep_id in to_invalidate:
+        dep_meta = phases[dep_id]
+        if phase_complete(dep_meta.get("status")):
             continue
         phases[dep_id]["status"] = "blocked"
         phases[dep_id]["cause"] = f"blast-radius:upstream-blocked:{upstream_slug}"
@@ -643,6 +685,14 @@ def cmd_blast_radius_apply(root: Path, args: list[str]) -> None:
             {"phaseId": dep_id, "phaseSlug": phases[dep_id].get("slug", dep_id)}
         )
     state["phases"] = phases
+    now = utc_now()
+    record_blast_radius(
+        state,
+        applied=blocked,
+        cleared=cleared,
+        predicate=PHASE_GREEN_MERGED_PREDICATE,
+        at=now,
+    )
     save_state(root, state)
     append_log(
         root,
@@ -651,17 +701,24 @@ def cmd_blast_radius_apply(root: Path, args: list[str]) -> None:
             "sourcePhaseId": pid,
             "sourcePhaseSlug": upstream_slug,
             "blockedDependents": blocked,
+            "clearedDependents": cleared,
             "cause": cause,
         },
         state,
     )
     emit(
         {
-            "verdict": "pass",
+            "verdict": "ok",
             "action": "blast-radius-apply",
             "sourcePhaseId": pid,
             "sourcePhaseSlug": upstream_slug,
             "blockedDependents": blocked,
+            "blastRadius": {
+                "applied": blocked,
+                "cleared": cleared,
+                "predicate": PHASE_GREEN_MERGED_PREDICATE,
+                "at": now,
+            },
         }
     )
 
@@ -710,7 +767,7 @@ def resume_deliver_command(
 
 def cmd_stabilize_route(root: Path, args: list[str]) -> None:
     state = load_state(root)
-    target = (state.get("target") or {}).get("branch", "")
+    target = (target_branch_from_state(state) or "")
     scope = parse_kv(args, "--scope", "phase") or "phase"
     if scope == "whole-feature":
         emit(
@@ -742,7 +799,7 @@ def cmd_stabilize_route(root: Path, args: list[str]) -> None:
 def cmd_report_blockers(root: Path, _args: list[str]) -> None:
     state = load_state(root)
     phases = state.get("phases") or {}
-    target = (state.get("target") or {}).get("branch", "")
+    target = (target_branch_from_state(state) or "")
     blockers: list[dict[str, Any]] = []
     blocked_dependents: list[dict[str, str]] = []
     merged_green: list[dict[str, str]] = []
@@ -918,7 +975,7 @@ def cmd_revert_phase(root: Path, args: list[str]) -> None:
             "revertCommit": revert_sha,
             "bookkeeping": bookkeeping,
             "blastRadius": blast,
-            "recommendedCommand": stabilize_command_for_phase(meta, (state.get("target") or {}).get("branch", "")),
+            "recommendedCommand": stabilize_command_for_phase(meta, (target_branch_from_state(state) or "")),
         }
     )
 
@@ -960,7 +1017,7 @@ def cmd_terminal_deny(root: Path, args: list[str]) -> None:
         state = load_state(root)
         state["terminalRejected"] = True
         state["verdict"] = "rejected"
-    target = (state.get("target") or {}).get("branch", "")
+    target = (target_branch_from_state(state) or "")
     state["recommendedCommand"] = (
         f"/sw-stabilize  # target {target}"
         if scope == "whole-feature"

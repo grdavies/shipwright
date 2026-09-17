@@ -56,8 +56,10 @@ Transition receipts for doc-loop mechanical freezes persist under
    `python3 scripts/planning_visibility.py check-freeze-visibility <artifact>` before stamping — git-tracked
    artifacts MUST declare `visibility: public` in frontmatter or freeze halts fail-closed.
 2. **Spec-rigor gate** (`skills/spec-rigor/SKILL.md`) — halt on `fail` (exit `20`):
-   - **PRD / brainstorm / amendment:** `python3 scripts/spec-rigor-check.py --artifact prd --path <file> --tier <full|standard>`
-     (tier from triage or `--tier`; default `standard` when unknown).
+   - **PRD / brainstorm / amendment:** `python3 scripts/spec-rigor-check.py --root <consumer-repo> --artifact prd --path <file> --tier <full|standard>`
+     (tier from triage or `--tier`; default `standard` when unknown). Consumer `--root` is required;
+     omit or package-`scripts/` parent fails closed. Asterisk RID bullets (`* **R1**`) parse on the
+     stored body — a hyphen-only temp copy is not freeze evidence.
    - **PRD Full-tier linkage (R55):** before stamping, run
      `python3 scripts/doc-link-check.py --path <file> --tier full` — halt on exit `20` when `brainstorm:` is
      missing or dangling.
@@ -69,7 +71,7 @@ Transition receipts for doc-loop mechanical freezes persist under
      via `memory-sot.py` and pipes body through `memory-redact.py`. Provider write of the authoritative
      record (memory-SoT) is best-effort post-freeze with an audit breadcrumb in
      `docs/decisions/.memory-freeze-audit.log` — never a CI gate.
-   - **Task list:** `python3 scripts/spec-rigor-check.py --artifact tasks --path <file> --prd <frozen-prd>` then
+   - **Task list:** `python3 scripts/spec-rigor-check.py --root <consumer-repo> --artifact tasks --path <file> --prd <frozen-prd>` then
      `python3 scripts/traceability-check.py --prd <frozen-prd> --tasks <file>` — both must pass before freeze.
    - `warn` (exit `10`) may proceed with logged findings.
 2b. **Brainstorm forward ref (R53):** when freezing a **Full-tier PRD**, if the source brainstorm is not frozen,
@@ -116,6 +118,10 @@ python3 scripts/planning_store.py freeze --unit-id <unit-id> --body-path <artifa
   closes+links brainstorm issue (retained, not deleted)
 - Distillation failure flags `sw:freeze-incomplete` and blocks deliver (fail-closed)
 - CI/deliver verify via `python3 scripts/planning_store.py verify-frozen-hash ...`
+- **Linear reconstruct-before-ok (PRD 358 R9):** freeze of a Linear-backed unit is refused when
+  reconstruction fails (truncated head, missing overflow, `writeToken`/authorship mismatch), even if
+  spec-rigor parses asterisk `* **R1**` R-IDs on the stump. A normalized temporary copy is never
+  freeze evidence or frozen-hash input. Pass consumer `--root` into spec-rigor on the freeze path.
 
 
 

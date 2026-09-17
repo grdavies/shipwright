@@ -29,7 +29,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from host_lib import load_workflow_config, remote_name, remote_ref, remote_heads_ref
 from wave_json_io import StateCorruptError, read_json, write_json
-from wave_state import assert_phase_status
+from wave_state import assert_phase_status, target_branch_from_state
 import planning_paths
 from _sw.git_integrate import abort_merge, list_merge_conflict_paths, merge_branch_into
 from phase_status_discovery import (
@@ -330,7 +330,7 @@ def clear_open_journal_if_merged(root: Path, state: dict[str, Any]) -> dict[str,
         if meta.get("slug") == phase_slug:
             phase_branch = meta.get("branch")
             break
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not phase_branch or not target:
         return state
     top = root
@@ -1246,7 +1246,7 @@ def cmd_merge_enqueue(root: Path, args: list[str]) -> None:
         fail("missing phase branch for enqueue", exit_code=20, phase=phase_slug)
     from decision_graph.prototype import refuse_merge_enqueue
 
-    target_branch = str((state.get("target") or {}).get("branch") or "")
+    target_branch = str(target_branch_from_state(state) or "")
     prototype_check = refuse_merge_enqueue(str(phase_branch), target_branch)
     if prototype_check.get("verdict") != "pass":
         fail(
@@ -1516,7 +1516,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             phase_branch = meta.get("branch")
             phase_id = pid
             break
-    target = (state.get("target") or {}).get("branch")
+    target = target_branch_from_state(state)
     if not phase_branch or not target:
         fail("missing phase branch or target in run-state")
 
@@ -1650,7 +1650,7 @@ def cmd_merge_run_next(root: Path, args: list[str]) -> None:
             state["phases"][phase_id]["mergeCommit"] = merge_commit
         save_state(root, state)
 
-        target_branch = (state.get("target") or {}).get("branch", "feat/unknown")
+        target_branch = target_branch_from_state(state) or "feat/unknown"
         commit_type = target_branch.split("/", 1)[0] if "/" in target_branch else "feat"
         if phase_id and phase_id in state.get("phases", {}):
             for record in state.get("mergedPhases") or []:
@@ -1899,7 +1899,7 @@ def cmd_merge_collect_all_ready(root: Path, args: list[str]) -> None:
 
 def cmd_report_terminal(root: Path, args: list[str]) -> None:
     state = load_state(root)
-    target = (state.get("target") or {}).get("branch", "")
+    target = target_branch_from_state(state) or ""
     phases = state.get("phases") or {}
     merged_phases = list(state.get("mergedPhases") or [])
     blocked = [p for p in phases.values() if p.get("status") == "blocked"]
