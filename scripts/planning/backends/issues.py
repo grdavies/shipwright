@@ -22,7 +22,7 @@ from .issues_helpers import (
     read_issue_unit_index_locked,
     read_put_journal_locked,
     verify_frozen_integrity,
-    verify_reconstruct_before_ok,
+    verify_reconstruct_before_ok_if_linear,
 )
 from .memory_cache import ReplicatedPlanningCacheBackend
 from ..model import StoreResult
@@ -185,18 +185,6 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
 
     def _mutate_journal(self, mutator: Callable[[dict[str, Any]], None]) -> None:
         mutate_put_journal(self.root, mutator)
-
-    def _verify_reconstruct_before_ok_if_linear(self, record: Any, *, pre_chunk_body: str) -> Any:
-        """PRD 359 R12/D7 — reconstruct-before-ok runs only for Linear; other providers no-op."""
-        if self.issues_provider != "linear":
-            return record
-        return verify_reconstruct_before_ok(
-            self._client,
-            record,
-            pre_chunk_body=pre_chunk_body,
-            issues_provider=self.issues_provider,
-            ps_mod=_ps(),
-        )
 
     def _adapter_issue_comment(self, issue_id: str, body: str, *, markers: list[str] | None = None, **kwargs: Any):
         assert_adapter_issue_comment_allowed(body, markers)
@@ -702,8 +690,8 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
                 record = self._client.issue_get(record.id)
             # R3/D5 — reconstruct-before-ok (Linear-gated): refetch with complete
             # comments, reassemble, and equivalent() compare before clearing incomplete.
-            record = self._verify_reconstruct_before_ok_if_linear(
-                record, pre_chunk_body=pre_chunk_body
+            record = verify_reconstruct_before_ok_if_linear(
+                self, record, pre_chunk_body=pre_chunk_body, ps_mod=_ps()
             )
             record = clear_put_incomplete_label(self._client, record, ps_mod=_ps())
         if chunked:
