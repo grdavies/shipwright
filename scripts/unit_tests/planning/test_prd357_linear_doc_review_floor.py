@@ -16,6 +16,7 @@ import issues_lib
 import planning_linear_client as plc
 from issues_broker import IssueCommentAuthorshipMismatch
 from planning_canonical import BODY_SIZE_LIMIT, LINEAR_SIZE_PIN, reassemble_body
+from planning_linear_canonical import LinearOversizedConstructError
 from planning_doc_review_transport import (
     DOC_REVIEW_MANDATORY_CAPABILITIES,
     DOC_REVIEW_PROVIDER_UNSUPPORTED,
@@ -297,19 +298,17 @@ class TestLinearR6Enablement:
         full = upsert_review_round_block(prefix, block)
         assert len(full.encode("utf-8")) > BODY_SIZE_LIMIT
         github_head, github_extras = chunk_review_round_body(full)
-        linear_head, linear_extras = chunk_review_round_body(full, provider="linear")
         assert github_extras
         github_overflow = github_extras[0].body.encode("utf-8")
         comment_limit = int(LINEAR_SIZE_PIN["commentLimit"])
         # GitHub fence-in-one-comment may exceed Linear's R10 comment pin.
         assert len(github_overflow) > comment_limit
-        assert linear_extras
-        for extra in linear_extras:
-            assert len(extra.body.encode("utf-8")) <= comment_limit
-        logical = reassemble_body(linear_head, linear_extras)
-        manifest, err = inspect_review_round_block(logical)
-        assert err is None, err
-        assert manifest["roundId"] == "r-linear-overflow"
+        # PRD 359 R8/R9: the review-round JSON fence is a closed-set construct.
+        # Linear cannot split it and must fail closed when it exceeds overflow budget.
+        with pytest.raises(LinearOversizedConstructError) as exc:
+            chunk_review_round_body(full, provider="linear")
+        assert exc.value.kind == "fenced-code"
+        assert exc.value.code == "oversized-closed-set"
 
     def test_linear_id_rewrite_is_not_comment_drift(self) -> None:
         """Synthetic chunk ids rewritten to real comment ids stay findable, not drifted."""
