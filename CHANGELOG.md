@@ -1377,6 +1377,7 @@
 * merge phase overflow-authorship-bind into feat/linear-issue-store-fidelity (ea9fb79) <!-- sw-deliver:overflow-authorship-bind -->
 * merge phase freeze-refuse-truncated-reconstruct into feat/linear-issue-store-fidelity (1f81cdc) <!-- sw-deliver:freeze-refuse-truncated-reconstruct -->
 * merge phase uuid-minting-issuestorebackend-double into feat/linear-issue-store-fidelity (2fb5977) <!-- sw-deliver:uuid-minting-issuestorebackend-double -->
+* merge phase canonical-markdown-equality-without-weakening into feat/linear-issue-store-fidelity (30c6472) <!-- sw-deliver:canonical-markdown-equality-without-weakening -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
