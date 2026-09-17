@@ -1,11 +1,11 @@
 {
   "adapter_id": "codex",
-  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/linear-issue-store-fidelity-orchestrator/.shipwright/mcp/codex.json",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/linear-issue-store-fidelity-phase-canonical-markdown-equality-without-weakening/.shipwright/mcp/codex.json",
   "mcpServers": {
     "shipwright-bounded": {
       "command": "python3",
       "args": [
-        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/linear-issue-store-fidelity-orchestrator/core/mcp/server.py"
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/linear-issue-store-fidelity-phase-canonical-markdown-equality-without-weakening/core/mcp/server.py"
       ],
       "transport": "stdio"
     }
