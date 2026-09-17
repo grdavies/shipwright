@@ -67,6 +67,8 @@ def main() -> int:
         [
             sys.executable,
             str(scripts / "spec-rigor-check.py"),
+            "--root",
+            str(root),
             "--artifact",
             "prd",
             "--path",
