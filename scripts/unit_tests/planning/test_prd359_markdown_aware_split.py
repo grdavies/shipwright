@@ -1,4 +1,4 @@
-"""PRD 359 R8–R10 / R14 — Markdown-aware Linear splits and fail-closed oversized constructs."""
+"""PRD 359 — Markdown-aware splits, equivalent() families, and reconstruct gates."""
 
 from __future__ import annotations
 
@@ -14,22 +14,99 @@ if str(scripts) not in sys.path:
 
 from planning_canonical import CommentRecord
 from planning_linear_canonical import (
+    LINEAR_PUBLIC_MARKDOWN_R6_REWRITES,
     LinearOversizedConstructError,
+    _canon_url,
     _split_overflow_comments,
     _split_positions,
     _utf8_byte_len,
     chunk_body_for_linear,
     linear_public_markdown_equivalent,
+    linear_public_markdown_r6_form,
+    original_bytes_hash_body,
 )
 from planning.backends.issues import scan_put_payloads
 from planning.backends.issues_helpers import reconstruct_bodies_equivalent
 
 UNIQUE = "SPAN-TOKEN-NEVER-IN-ERROR-prd359"
+FIXTURE_LINEAR = scripts / "test" / "fixtures" / "linear"
+MARKDOWN_REPRO = FIXTURE_LINEAR / "markdown-repro-2.20.0.json"
+RUNTIME_RECHECK = FIXTURE_LINEAR / "runtime-recheck-2.20.0.json"
 
 
 def _assert_no_interior_cuts(text: str, start: int, end: int) -> None:
     for pos in _split_positions(text):
         assert not (start < pos < end), f"illegal cut {pos} inside [{start},{end})"
+
+
+class TestPrd359MarkdownReproFixture:
+    def test_thirteen_regions_each_named_family(self) -> None:
+        data = json.loads(MARKDOWN_REPRO.read_text(encoding="utf-8"))
+        regions = data["regions"]
+        assert len(regions) == 13
+        families = {row["family"] for row in regions}
+        assert families.issubset(LINEAR_PUBLIC_MARKDOWN_R6_REWRITES)
+        assert families == {
+            "bold-around-inline-code",
+            "ordered-list-leading-space",
+            "italic-delimiter",
+            "literal-punctuation-escape",
+            "plain-domain-autolink",
+        }
+        for row in regions:
+            assert linear_public_markdown_equivalent(row["submitted"], row["refetched"])
+
+    def test_runtime_recheck_fixture_stays_equivalent(self) -> None:
+        data = json.loads(RUNTIME_RECHECK.read_text(encoding="utf-8"))
+        assert data["expectEquivalent"] is True
+        assert linear_public_markdown_equivalent(
+            data["submitMarkdown"], data["refetchedMarkdown"]
+        )
+
+
+class TestPrd359NamedRewriteFamilies:
+    def test_bold_around_inline_code_equivalent_when_wrap_only(self) -> None:
+        left = "Keep **`token`** here.\n"
+        right = "Keep `token` here.\n"
+        assert linear_public_markdown_equivalent(left, right)
+
+    def test_bold_redistributed_to_neighbor_rid_not_equivalent(self) -> None:
+        left = "See **`token`** and **R1**.\n"
+        right = "See `token` and **R1**.\n"
+        assert linear_public_markdown_equivalent(left, right)
+        moved = "See `token` and **`R1`**.\n"
+        assert linear_public_markdown_equivalent(left, moved) is False
+
+    def test_italic_delimiter_and_ordered_list_spacing(self) -> None:
+        italic_left = "Note _same_ text.\n"
+        italic_right = "Note *same* text.\n"
+        assert linear_public_markdown_equivalent(italic_left, italic_right)
+        ordered_left = "1. Item one\n2. Item two\n"
+        ordered_right = "1.  Item one\n2.  Item two\n"
+        assert linear_public_markdown_equivalent(ordered_left, ordered_right)
+        changed_number = "2. Item one\n"
+        assert linear_public_markdown_equivalent(ordered_left, changed_number) is False
+
+    def test_punctuation_unescape_outside_code_not_in_freeze_hash(self) -> None:
+        left = "Operator \\. escape.\n"
+        right = "Operator . escape.\n"
+        assert linear_public_markdown_equivalent(left, right)
+        assert original_bytes_hash_body(left) != original_bytes_hash_body(right)
+        tick_escape = "use \\`code\\` here\n"
+        assert linear_public_markdown_equivalent(left, tick_escape) is False
+
+    def test_canon_url_unwrap_and_scheme_distinct(self) -> None:
+        assert _canon_url("<https://example.com>") == "https://example.com"
+        assert _canon_url("<http://example.com>") == "http://example.com"
+        assert _canon_url("http://example.com") != _canon_url("https://example.com")
+        assert _canon_url("//cdn.example.com") == "//cdn.example.com"
+        assert _canon_url("javascript:alert(1)") == "javascript:alert(1)"
+        mixed = "[http://x](https://x)\n"
+        plain = "http://x\n"
+        assert linear_public_markdown_r6_form(mixed) != linear_public_markdown_r6_form(plain)
+        assert linear_public_markdown_equivalent(
+            "<http://host>\n", "https://host\n"
+        ) is False
 
 
 class TestPrd359SplitPositions:
