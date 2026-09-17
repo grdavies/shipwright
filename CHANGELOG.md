@@ -1371,6 +1371,7 @@
 * merge phase installed-capability-index-freshness into feat/linear-issue-store-fidelity (7dff10a) <!-- sw-deliver:installed-capability-index-freshness -->
 * merge phase decision-log-guards into feat/linear-issue-store-fidelity (eb217f3) <!-- sw-deliver:decision-log-guards -->
 * merge phase facade-skip-on-manifest into feat/linear-issue-store-fidelity (c41824b) <!-- sw-deliver:facade-skip-on-manifest -->
+* merge phase installed-spec-rigor-consumer-root into feat/linear-issue-store-fidelity (65bbc90) <!-- sw-deliver:installed-spec-rigor-consumer-root -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
