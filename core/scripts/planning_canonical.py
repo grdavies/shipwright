@@ -1396,16 +1396,19 @@ def _is_overflow_chunk_comment(comment: CommentRecord) -> bool:
 
 
 def _linear_overflow_bind_active(
-    manifest: dict[str, Any] | None,
+    _manifest: dict[str, Any] | None,
     linear_author_id: str | None,
+    *,
+    linear_bind: bool = False,
 ) -> bool:
-    """Linear bind is active when this write carried a writeToken or an actor id (R4)."""
-    if linear_author_id is not None:
+    """Linear fail-closed bind is opt-in via actor id or reconstruct-before-ok (R4).
+
+    A writeToken alone is not Linear bind: generic R27 chunking also stamps
+    writeToken so incomplete last-writer heads can skip missing overflow.
+    """
+    if linear_bind or linear_author_id is not None:
         return True
-    if not isinstance(manifest, dict):
-        return False
-    session = manifest.get("writeToken")
-    return isinstance(session, str) and bool(session.strip())
+    return False
 
 
 def _manifest_write_token_value(manifest: dict[str, Any] | None) -> str | None:
@@ -1476,6 +1479,7 @@ def reassemble_body(
     comments: list[CommentRecord],
     *,
     linear_author_id: str | None = None,
+    linear_bind: bool = False,
 ) -> str:
     text = normalize_body(body)
     manifest = load_chunk_manifest(text)
@@ -1487,6 +1491,7 @@ def reassemble_body(
     bind_linear = _linear_overflow_bind_active(
         manifest if isinstance(manifest, dict) else None,
         linear_author_id,
+        linear_bind=linear_bind,
     )
     session = _manifest_write_token_value(manifest if isinstance(manifest, dict) else None)
     if linear_author_id is not None:

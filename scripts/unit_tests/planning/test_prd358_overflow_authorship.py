@@ -67,7 +67,7 @@ def test_zero_comments_with_write_token_fails_closed() -> None:
     _body, head, overflow = _chunked_linear_body()
     assert load_chunk_manifest(head)
     with pytest.raises(LinearChunkAuthorshipError, match="linear-chunk-overflow-missing"):
-        reassemble_body(head, [])
+        reassemble_body(head, [], linear_bind=True)
     assert overflow
 
 
@@ -109,7 +109,7 @@ def test_superseded_session_token_fails_closed() -> None:
     superseded = [_retoken(c, stale_token, comment_id=f"stale-{i}") for i, c in enumerate(overflow)]
     rewritten = rewrite_chunk_manifest_ids(head, [c.id for c in superseded])
     with pytest.raises(LinearChunkAuthorshipError, match="linear-chunk-token-superseded"):
-        reassemble_body(rewritten, superseded)
+        reassemble_body(rewritten, superseded, linear_bind=True)
 
 
 def test_authorship_bind_missing_author_fails_closed() -> None:

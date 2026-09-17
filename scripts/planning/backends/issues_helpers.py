@@ -258,8 +258,10 @@ def r6_canonical_body(text: str, *, issues_provider: str, ps_mod: Any) -> str:
     return normalize_body(text)
 
 
-def logical_issue_body(record: Any, *, ps_mod: Any) -> str:
-    return ps_mod.strip_markers_and_edges(ps_mod.reassemble_body(record.body, record.comments))
+def logical_issue_body(record: Any, *, ps_mod: Any, linear_bind: bool = False) -> str:
+    return ps_mod.strip_markers_and_edges(
+        ps_mod.reassemble_body(record.body, record.comments, linear_bind=linear_bind)
+    )
 
 
 def verify_reconstruct_before_ok(
@@ -285,7 +287,11 @@ def verify_reconstruct_before_ok(
     from planning_canonical import LinearChunkAuthorshipError
 
     try:
-        reassembled = logical_issue_body(record, ps_mod=ps_mod)
+        reassembled = logical_issue_body(
+            record,
+            ps_mod=ps_mod,
+            linear_bind=issues_provider == "linear",
+        )
     except LinearChunkAuthorshipError as exc:
         # R4/D11 — missing, nested, foreign, or superseded overflow is a failed write.
         ps_mod.fail(
