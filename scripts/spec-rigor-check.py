@@ -18,7 +18,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import doc_format
 import planning_artifact_handle as pah
-from repository_context import POSTURE_PLUGIN_SELF, detect_repository_posture
+from repository_context import POSTURE_PLUGIN_SELF, resolve_repository_posture
 
 # PRD 358 R7 — R/D bullet grammar is single-sourced in doc_format (spec-rigor and
 # doc-format-normalize must not duplicate those patterns).
@@ -57,7 +57,7 @@ def _resolve_consumer_root(raw: str | None) -> tuple[Path | None, str | None]:
     scripts_at_root = root / "scripts"
     try:
         if scripts_at_root.resolve() == SCRIPT_DIR.resolve():
-            if detect_repository_posture(root) != POSTURE_PLUGIN_SELF:
+            if resolve_repository_posture(root) != POSTURE_PLUGIN_SELF:
                 return None, "consumer --root must not be the package scripts/ parent"
     except (OSError, RuntimeError, ValueError):
         return None, "consumer --root must not be the package scripts/ parent"
