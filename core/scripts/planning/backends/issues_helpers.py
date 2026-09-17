@@ -12,6 +12,23 @@ ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
 ISSUE_UNIT_INDEX_AUDIT = ".cursor/hooks/state/issue-store-unit-index-audit.jsonl"
 ISSUE_STORE_TXN_ID = "issue-store"
+# PRD 359 R14 / D2 — absorb set remains GAP-474 and GAP-475 (no expansion).
+PUT_SECRET_SCAN_ABSORB = ("GAP-474", "GAP-475")
+
+
+def scan_put_payloads(
+    guard: Callable[..., None],
+    *,
+    pre_chunk_body: str,
+    head: str,
+    overflow_bodies: list[str],
+    path_hint: str | None = None,
+) -> None:
+    """Fail-closed secret scan on pre-chunk, posted head, and each overflow fragment."""
+    guard(pre_chunk_body, path_hint=path_hint)
+    guard(head, path_hint=path_hint)
+    for fragment in overflow_bodies:
+        guard(fragment, path_hint=path_hint)
 
 def load_issue_unit_index(root: Path) -> dict[str, str]:
     path = root / ISSUE_UNIT_INDEX
