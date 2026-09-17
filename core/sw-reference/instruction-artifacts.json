@@ -256,7 +256,7 @@
       "sourcePath": "core/commands/sw-debug.md"
     },
     {
-      "bodyDigest": "6a4d9a11763cd72d34ee78f5ee10e2655189dc130907d51472a5e5dc4155fb2b",
+      "bodyDigest": "e79c7a02246d8c7f7b898b81e3f8dc08231bd2f095a858d185b10d70df39f44a",
       "capabilities": [],
       "description": "Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.",
       "id": "sw-deliver",
@@ -517,7 +517,7 @@
       "sourcePath": "core/commands/sw-status.md"
     },
     {
-      "bodyDigest": "abda36f578de6ec29ceac6c66e5e36db4b529c4979668ce966c99a9559ce75e3",
+      "bodyDigest": "221ff16b8ec89206f773f4f86e7d3b1ec2974e6076c530cdc8b6cd990a913450",
       "capabilities": [],
       "description": "Generate a frozen task list from a frozen PRD in a single pass. Does not start implementation.",
       "id": "sw-tasks",
