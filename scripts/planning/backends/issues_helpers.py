@@ -250,9 +250,9 @@ def guard_unit_id_marker_reuse(
 def r6_canonical_body(text: str, *, issues_provider: str, ps_mod: Any) -> str:
     """R6 Public Markdown equivalence for reconstruct-before-ok (PRD 358 R3/D5)."""
     if issues_provider == "linear":
-        from planning_linear_canonical import linear_markdown_canonical
+        from planning_linear_canonical import linear_public_markdown_r6_form
 
-        return linear_markdown_canonical(text)
+        return linear_public_markdown_r6_form(text)
     from planning_canonical import normalize_body
 
     return normalize_body(text)

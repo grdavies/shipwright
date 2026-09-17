@@ -24,8 +24,10 @@ from planning_canonical import (
     MARKER_CHUNK_MANIFEST,
     canonical_form,
     canonical_hash,
+    decode_linear_public_markdown_json,
     normalize_body,
     require_linear_size_pin,
+    strip_markers_and_edges,
 )
 
 SUPPORTED_CONTRACT = "public-markdown"
@@ -153,6 +155,193 @@ def linear_markdown_canonical(markdown: str) -> str:
     text = _normalize_collapsibles(text)
     text = _normalize_fenced_code_langs(text)
     return normalize_body(text)
+
+
+# PRD 358 R6 — comparison-only Linear Public Markdown rewrites. Freeze/hash still
+# uses original bytes via canonical_hash (excludes sw-freeze-record / sw-chunk-overflow).
+LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
+    {
+        "list-marker",
+        "bold-delimiter",
+        "code-span",
+        "table-formatting",
+        "plain-domain-autolink",
+    }
+)
+
+_FENCED_BLOCK = re.compile(r"^```[^\n]*\n.*?^```", re.MULTILINE | re.DOTALL)
+_INLINE_CODE = re.compile(r"(?<!`)(`+)([^`]+)\1(?!`)")
+_UNORDERED_LIST = re.compile(r"^(\s*)[-+](?= \S)", re.MULTILINE)
+_BOLD_UNDERSCORE = re.compile(r"(?<!\w)__([^_\n]+?)__(?!\w)")
+_MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
+_AUTO_LINK = re.compile(r"<(https?://[^>]+)>")
+_BARE_DOMAIN = re.compile(
+    r"(?<![\w./:@])((?:https?://)?(?:www\.)?[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})(?:/[^\s)\]>\"']*)?)"
+)
+# Underscore is a word char, so `\bR6\b` misses `__R6__` Linear bold delimiters.
+_RID_TOKEN = re.compile(r"(?<![A-Za-z0-9])([RD]\d+)(?![A-Za-z0-9])")
+_UUID_TOKEN = re.compile(
+    r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
+)
+_SW_TOKEN = re.compile(r"\bsw[:\-][A-Za-z0-9:._-]+\b")
+
+
+def original_bytes_hash_body(markdown: str) -> str:
+    """Freeze/hash witness: original bytes after newline normalize. Not R6 form."""
+    return normalize_body(markdown)
+
+
+def _placeholder_protect(text: str, pattern: re.Pattern[str], prefix: str) -> tuple[str, list[str]]:
+    stored: list[str] = []
+
+    def _save(match: re.Match[str]) -> str:
+        stored.append(match.group(0))
+        return f"\x00{prefix}{len(stored) - 1}\x00"
+
+    return pattern.sub(_save, text), stored
+
+
+def _placeholder_restore(text: str, stored: list[str], prefix: str) -> str:
+    for index, block in enumerate(stored):
+        text = text.replace(f"\x00{prefix}{index}\x00", block)
+    return text
+
+
+def _looks_like_domain(label: str) -> bool:
+    stripped = label.strip()
+    if not stripped or " " in stripped:
+        return False
+    return bool(_BARE_DOMAIN.fullmatch(stripped))
+
+
+def _canon_url(url: str) -> str:
+    text = url.strip()
+    if text.startswith(("http://", "https://")):
+        return text
+    return f"https://{text}"
+
+
+def _normalize_list_markers(text: str) -> str:
+    return _UNORDERED_LIST.sub(r"\1*", text)
+
+
+def _normalize_bold_delimiters(text: str) -> str:
+    return _BOLD_UNDERSCORE.sub(r"**\1**", text)
+
+
+def _normalize_table_line(line: str) -> str:
+    stripped = line.strip()
+    if not _is_gfm_table_line(stripped):
+        return line
+    cells = [cell.strip() for cell in stripped.strip("|").split("|")]
+    normalized: list[str] = []
+    for cell in cells:
+        compact = cell.replace(" ", "")
+        if re.fullmatch(r":?-{1,}:?", compact):
+            left = compact.startswith(":")
+            right = compact.endswith(":") and compact != ":"
+            if left and right:
+                normalized.append(":---:")
+            elif left:
+                normalized.append(":---")
+            elif right:
+                normalized.append("---:")
+            else:
+                normalized.append("---")
+        else:
+            normalized.append(cell)
+    return "| " + " | ".join(normalized) + " |"
+
+
+def _normalize_tables(text: str) -> str:
+    return "\n".join(_normalize_table_line(line) for line in text.split("\n"))
+
+
+def _normalize_autolinks(text: str) -> str:
+    def _md_link(match: re.Match[str]) -> str:
+        label, href = match.group(1), match.group(2)
+        canon = _canon_url(href)
+        if _looks_like_domain(label) and _canon_url(label) == canon:
+            return canon
+        label_host = label.strip().removeprefix("https://").removeprefix("http://")
+        href_host = canon.removeprefix("https://").removeprefix("http://")
+        if label_host == href_host:
+            return canon
+        return f"[{label}]({canon})"
+
+    text = _MD_LINK.sub(_md_link, text)
+    text = _AUTO_LINK.sub(lambda match: _canon_url(match.group(1)), text)
+    return _BARE_DOMAIN.sub(lambda match: _canon_url(match.group(1)), text)
+
+
+def _r6_rewrite_outside_code(text: str) -> str:
+    text = _normalize_list_markers(text)
+    text = _normalize_bold_delimiters(text)
+    text = _normalize_tables(text)
+    return _normalize_autolinks(text)
+
+
+def _normalize_inline_code_span(match: re.Match[str]) -> str:
+    ticks, inner = match.group(1), match.group(2)
+    return f"{ticks}{inner.strip()}{ticks}"
+
+
+def linear_public_markdown_r6_form(markdown: str) -> str:
+    """Enumerated Linear Public Markdown comparison form (PRD 358 R6). Not a hash witness."""
+    text = decode_linear_public_markdown_json(markdown)
+    text = strip_markers_and_edges(text)
+    text = linear_markdown_canonical(text)
+    text, fences = _placeholder_protect(text, _FENCED_BLOCK, "FENCE")
+    text = _INLINE_CODE.sub(_normalize_inline_code_span, text)
+    text, codes = _placeholder_protect(text, _INLINE_CODE, "CODE")
+    text = _r6_rewrite_outside_code(text)
+    text = _placeholder_restore(text, codes, "CODE")
+    text = _placeholder_restore(text, fences, "FENCE")
+    return normalize_body(text)
+
+
+def _extract_code_contents(text: str) -> tuple[str, ...]:
+    spans = [match.group(2).strip() for match in _INLINE_CODE.finditer(text)]
+    fences = []
+    for match in _FENCED_BLOCK.finditer(text):
+        body = match.group(0)
+        lines = body.split("\n")
+        inner = "\n".join(lines[1:-1]).strip()
+        if inner:
+            fences.append(inner)
+    return tuple(sorted(spans + fences))
+
+
+def _extract_links(text: str) -> tuple[str, ...]:
+    found: set[str] = set()
+    remainder = text
+    for match in _MD_LINK.finditer(text):
+        found.add(_canon_url(match.group(2)))
+        remainder = remainder.replace(match.group(0), " ", 1)
+    for match in _AUTO_LINK.finditer(remainder):
+        found.add(_canon_url(match.group(1)))
+        remainder = remainder.replace(match.group(0), " ", 1)
+    for match in _BARE_DOMAIN.finditer(remainder):
+        found.add(_canon_url(match.group(1)))
+    return tuple(sorted(found))
+
+
+def _r6_identity_tokens(markdown: str) -> dict[str, tuple[str, ...]]:
+    text = decode_linear_public_markdown_json(markdown)
+    text = strip_markers_and_edges(text)
+    return {
+        "rids": tuple(sorted(set(_RID_TOKEN.findall(text)))),
+        "code": _extract_code_contents(text),
+        "links": _extract_links(text),
+        "ids": tuple(sorted(set(_UUID_TOKEN.findall(text) + _SW_TOKEN.findall(text)))),
+    }
+
+
+def linear_public_markdown_equivalent(left: str, right: str) -> bool:
+    """True only for enumerated Linear Public Markdown rewrites (PRD 358 R6 / AS7)."""
+    if _r6_identity_tokens(left) != _r6_identity_tokens(right):
+        return False
+    return linear_public_markdown_r6_form(left) == linear_public_markdown_r6_form(right)
 
 
 def simulate_public_markdown_round_trip(submit_markdown: str) -> str:
