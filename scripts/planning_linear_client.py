@@ -298,6 +298,77 @@ def resolve_token_env(cfg: dict[str, Any]) -> str:
     return raw.strip() if isinstance(raw, str) and raw.strip() else ""
 
 
+def _overflow_comment_secret_scan(root: Path, body: str) -> None:
+    """PRD 358 D10 — overflow comment bodies use the planning-store secret-scan chokepoint."""
+    from planning_store import secret_scan_text
+
+    secret_scan_text(body, path_hint="sw-chunk-overflow")
+
+
+def resolve_linear_e2e_credential(
+    root: Path,
+    cfg: dict[str, Any] | None = None,
+) -> Resolution:
+    """PRD 358 D10 — Linear e2e/acceptance credentials resolve only via credentials.resolver."""
+    from credentials.model import CredentialRef
+    from credentials.resolver import RepositoryContext, resolve
+    from planning_store import (
+        git_remote_url,
+        load_workflow_config,
+        parse_owner_repo,
+        remote_name,
+        resolve_issues_token_env,
+    )
+
+    resolved_cfg = cfg if cfg is not None else load_workflow_config(root)
+    issues = _issues_section(resolved_cfg)
+    cred_ref_raw = issues.get("credentialRef")
+    token_env = resolve_token_env(resolved_cfg) or resolve_issues_token_env(
+        resolved_cfg, "linear"
+    )
+    if not isinstance(cred_ref_raw, str) or not cred_ref_raw.strip():
+        if token_env:
+            return Resolution.unresolved(
+                CredentialRef(f"tokenEnv:{token_env}"),
+                reason="linear-e2e-tokenenv-refused",
+            )
+        return Resolution.unresolved(
+            CredentialRef("linear-e2e"),
+            reason="linear-e2e-missing-credential-ref",
+        )
+    ref = cred_ref_raw.strip()
+    remote = remote_name(resolved_cfg)
+    remote_url = git_remote_url(root, remote)
+    parsed = parse_owner_repo(remote_url if isinstance(remote_url, str) else None)
+    repo_slug = f"{parsed[0]}/{parsed[1]}" if parsed else ""
+    project_id = resolved_cfg.get("projectId")
+    project_id_str = (
+        project_id.strip() if isinstance(project_id, str) and project_id.strip() else "unpaired"
+    )
+    return resolve(
+        CredentialRef(ref),
+        provider="linear",
+        purpose="planning",
+        context=RepositoryContext(
+            remote=remote_url or remote,
+            repo_slug=repo_slug,
+            project_id=project_id_str,
+            destination_endpoint=GRAPHQL_URL,
+            adapter_id="linear",
+        ),
+    )
+
+
+def _scrub_ambient_linear_e2e_tokens_from_env(env: dict[str, str], cfg: dict[str, Any]) -> None:
+    """Remove ambient Linear token env aliases before brokered e2e subprocesses (D10)."""
+    token_env = resolve_token_env(cfg)
+    if token_env:
+        env.pop(token_env, None)
+    for key in list(env):
+        if key.startswith("ISSUES_LINEAR") or key in {"LINEAR_API_KEY", "LINEAR_TOKEN"}:
+            env.pop(key, None)
+
+
 def resolve_team_scope(cfg: dict[str, Any]) -> dict[str, str]:
     issues = _issues_section(cfg)
     team_key = issues.get("teamKey")
@@ -883,6 +954,11 @@ def _acceptance_test_ready(root: Path, rel_test: str) -> dict[str, Any]:
     test_path, tree = resolved
     gate_repo = _plugin_source_root()
     env = os.environ.copy()
+    try:
+        cfg = load_workflow_config(root)
+        _scrub_ambient_linear_e2e_tokens_from_env(env, cfg)
+    except Exception:  # noqa: BLE001 — scrub is best-effort when config is absent
+        pass
     env.pop("PYTEST_ADDOPTS", None)
     env.pop("PYTEST_CURRENT_TEST", None)
     path_parts = [
@@ -1630,6 +1706,7 @@ class LinearIssuesClient:
             return
         posted_ids: list[str] = []
         for comment in extra:
+            _overflow_comment_secret_scan(self.root, comment.body)
             attempts = 0
             while True:
                 try:

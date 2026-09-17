@@ -20,11 +20,10 @@ def integration_branch(root: Path) -> str | None:
     """Sole authority: durable deliver state; SW_INTEGRATION_BRANCH is harness-only (R4)."""
     state_branch: str | None = None
     try:
-        from wave_state import load_deliver_state
+        from wave_state import load_deliver_state, target_branch_from_state
 
         state = load_deliver_state(root)
-        target = state.get("target") or {}
-        raw = target.get("branch")
+        raw = target_branch_from_state(state)
         if isinstance(raw, str) and raw.strip():
             state_branch = raw.strip()
     except ImportError:
@@ -42,11 +41,10 @@ def integration_branch(root: Path) -> str | None:
 def integration_branch_or_fail(root: Path) -> str:
     state_branch: str | None = None
     try:
-        from wave_state import load_deliver_state
+        from wave_state import load_deliver_state, target_branch_from_state
 
         state = load_deliver_state(root)
-        target = state.get("target") or {}
-        raw = target.get("branch")
+        raw = target_branch_from_state(state)
         if isinstance(raw, str) and raw.strip():
             state_branch = raw.strip()
     except ImportError:
