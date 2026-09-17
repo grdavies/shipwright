@@ -1375,6 +1375,7 @@
 * merge phase reconstruct-before-ok into feat/linear-issue-store-fidelity (b5a14b0) <!-- sw-deliver:reconstruct-before-ok -->
 * merge phase overflow-secret-scan-and-brokered-tokens into feat/linear-issue-store-fidelity (1efa330) <!-- sw-deliver:overflow-secret-scan-and-brokered-tokens -->
 * merge phase overflow-authorship-bind into feat/linear-issue-store-fidelity (ea9fb79) <!-- sw-deliver:overflow-authorship-bind -->
+* merge phase freeze-refuse-truncated-reconstruct into feat/linear-issue-store-fidelity (1f81cdc) <!-- sw-deliver:freeze-refuse-truncated-reconstruct -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
