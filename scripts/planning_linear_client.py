@@ -33,6 +33,7 @@ from planning_canonical import (
     build_comment_threads,
     chunk_body_if_needed,
     compute_etag,
+    load_chunk_manifest,
     rewrite_chunk_manifest_ids,
     parse_body_marker,
     project_label,
@@ -1421,7 +1422,14 @@ def prepare_body_with_overflow(
     body: str,
     comments: list[CommentRecord] | None = None,
 ) -> tuple[str, list[CommentRecord]]:
-    """Apply R10 overflow/chunk policy for Linear bodies."""
+    """Apply R10 overflow/chunk policy for Linear bodies.
+
+    PRD 358 R1 — ``IssueStoreBackend`` already chunked via ``chunk_body_for_linear``;
+    when the head carries ``sw-chunk-manifest``, the facade owns the split and the
+    adapter must not treat the manifested head as ordinary document text.
+    """
+    if load_chunk_manifest(body) is not None:
+        return body, list(comments or [])
     return chunk_body_if_needed(body, list(comments or []), provider="linear")
 
 
