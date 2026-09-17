@@ -1386,7 +1386,61 @@ def _append_reassembled_part(merged: str, part: str) -> str:
     return merged
 
 class LinearChunkAuthorshipError(ValueError):
-    """R11 — overflow comment authorship or actor binding failed."""
+    """R4/D11 — overflow comment authorship, writeToken, or nested-manifest bind failed."""
+
+
+def _is_overflow_chunk_comment(comment: CommentRecord) -> bool:
+    return "sw-chunk-overflow" in comment.markers or "<!-- sw-chunk-overflow -->" in (
+        comment.body or ""
+    )
+
+
+def _linear_overflow_bind_active(
+    _manifest: dict[str, Any] | None,
+    linear_author_id: str | None,
+    *,
+    linear_bind: bool = False,
+) -> bool:
+    """Linear fail-closed bind is opt-in via actor id or reconstruct-before-ok (R4).
+
+    A writeToken alone is not Linear bind: generic R27 chunking also stamps
+    writeToken so incomplete last-writer heads can skip missing overflow.
+    """
+    if linear_bind or linear_author_id is not None:
+        return True
+    return False
+
+
+def _manifest_write_token_value(manifest: dict[str, Any] | None) -> str | None:
+    if not isinstance(manifest, dict):
+        return None
+    session = manifest.get("writeToken")
+    if isinstance(session, str) and session.strip():
+        return session
+    return None
+
+
+def assert_linear_overflow_comment_bind(
+    comment: CommentRecord,
+    *,
+    write_token: str | None = None,
+    expected_author_id: str | None = None,
+) -> None:
+    """Fail closed when one overflow comment is nested, superseded, or foreign (R4)."""
+    if load_chunk_manifest(comment.body or "") is not None:
+        raise LinearChunkAuthorshipError("linear-chunk-nested-manifest")
+    if write_token:
+        comment_session = chunk_token_from_comment(comment)
+        if comment_session != write_token:
+            raise LinearChunkAuthorshipError("linear-chunk-token-superseded")
+    if expected_author_id is not None:
+        expected = expected_author_id.strip()
+        if not expected:
+            raise LinearChunkAuthorshipError("linear-chunk-author-expected-missing")
+        if not comment.author_id.strip():
+            raise LinearChunkAuthorshipError("linear-chunk-author-missing")
+        if comment.author_id.strip() != expected:
+            raise LinearChunkAuthorshipError("linear-chunk-author-mismatch")
 
 
 def assert_linear_overflow_authorship(
@@ -1395,7 +1449,7 @@ def assert_linear_overflow_authorship(
     *,
     expected_author_id: str,
 ) -> None:
-    """Fail closed when manifest overflow comments lack provider author_id (R11)."""
+    """Fail closed when manifest overflow comments lack or mismatch Linear authorship (R4/R11)."""
     expected = expected_author_id.strip()
     if not expected:
         raise LinearChunkAuthorshipError("linear-chunk-author-expected-missing")
@@ -1403,6 +1457,7 @@ def assert_linear_overflow_authorship(
     chunks = manifest.get("chunks")
     if not isinstance(chunks, list):
         return
+    session = _manifest_write_token_value(manifest)
     for entry in chunks:
         if not isinstance(entry, dict):
             continue
@@ -1410,14 +1465,13 @@ def assert_linear_overflow_authorship(
         if not isinstance(cid, str):
             continue
         comment = comment_by_id.get(cid)
-        if comment is None:
+        if comment is None or not _is_overflow_chunk_comment(comment):
             continue
-        if "sw-chunk-overflow" not in comment.markers and "<!-- sw-chunk-overflow -->" not in (
-            comment.body or ""
-        ):
-            continue
-        if not comment.author_id.strip():
-            raise LinearChunkAuthorshipError("linear-chunk-author-missing")
+        assert_linear_overflow_comment_bind(
+            comment,
+            write_token=session,
+            expected_author_id=expected_author_id,
+        )
 
 
 def reassemble_body(
@@ -1425,6 +1479,7 @@ def reassemble_body(
     comments: list[CommentRecord],
     *,
     linear_author_id: str | None = None,
+    linear_bind: bool = False,
 ) -> str:
     text = normalize_body(body)
     manifest = load_chunk_manifest(text)
@@ -1433,22 +1488,29 @@ def reassemble_body(
     chunks = manifest.get("chunks")
     if not isinstance(chunks, list):
         return text
+    bind_linear = _linear_overflow_bind_active(
+        manifest if isinstance(manifest, dict) else None,
+        linear_author_id,
+        linear_bind=linear_bind,
+    )
+    session = _manifest_write_token_value(manifest if isinstance(manifest, dict) else None)
     if linear_author_id is not None:
         assert_linear_overflow_authorship(
             manifest if isinstance(manifest, dict) else {},
             comments,
             expected_author_id=linear_author_id,
         )
-    write_token = manifest.get("writeToken") if isinstance(manifest, dict) else None
     comment_by_id = {c.id: c for c in comments}
     # R27: direct commentId matches below are unambiguous regardless of
     # write-token (real provider ids are globally unique); the positional
     # fallback is the only path a stray concurrent/superseded write session's
     # overflow comment could leak into, so scope that list to this
-    # manifest's own write-token.
+    # manifest's own write-token. R4: identifier survival is not enough —
+    # foreign/superseded overflow referenced by id fails closed instead of
+    # being assembled, and unscoped positional mix is a failed write.
     overflow_comments = overflow_chunk_comments(
         comments,
-        token=write_token,
+        token=session,
         expected_author_id=linear_author_id,
     )
     overflow_parts: list[str] = []
@@ -1457,11 +1519,25 @@ def reassemble_body(
             continue
         cid = entry.get("commentId")
         comment = comment_by_id.get(cid) if isinstance(cid, str) else None
+        if comment is not None and bind_linear and _is_overflow_chunk_comment(comment):
+            assert_linear_overflow_comment_bind(
+                comment,
+                write_token=session,
+                expected_author_id=linear_author_id,
+            )
         if comment is None:
             index = entry.get("index")
             if isinstance(index, int) and 0 <= index < len(overflow_comments):
                 comment = overflow_comments[index]
+                if bind_linear and comment is not None:
+                    assert_linear_overflow_comment_bind(
+                        comment,
+                        write_token=session,
+                        expected_author_id=linear_author_id,
+                    )
         if comment is None:
+            if bind_linear:
+                raise LinearChunkAuthorshipError("linear-chunk-overflow-missing")
             continue
         chunk_text = comment.body
         chunk_text = re.sub(r"<!--\s*sw-chunk-overflow\s*-->\n?", "", chunk_text)
