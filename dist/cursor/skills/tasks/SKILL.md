@@ -19,7 +19,7 @@ When effective backend is `issue-store`:
 3. Run gates on handles (materialize is deliver-time only):
 
    ```bash
-   python3 scripts/spec-rigor-check.py --artifact tasks --path <body-path> --unit-id <tasks-unit-id>      --prd <prd-body-path> --prd-unit-id <prd-unit-id>
+   python3 scripts/spec-rigor-check.py --root <consumer-repo> --artifact tasks --path <body-path> --unit-id <tasks-unit-id>      --prd <prd-body-path> --prd-unit-id <prd-unit-id>
    python3 scripts/traceability-check.py --prd <prd-body-path> --tasks <body-path> [--prd-unit-id …] [--tasks-unit-id …]
    ```
 
@@ -51,7 +51,9 @@ When task generation covers PRDs with an attached `DecisionGraph`:
 4. Emit **`## Phase Dependencies`** (required) — machine-parseable edge source for `/sw-deliver` phase-mode (R5/R6/R37). Place after `## Tasks` and before `## Traceability`.
 5. Run execute-tier granularity pass (see **Execute-tier granularity** below).
 6. Add `## Traceability` table mapping each union R-ID → task ref → named test scenario → **ZOMBIES checklist** (test-list-first; see `skills/spec-rigor/references/zombies.md`).
-7. Save task file; run `spec-rigor-check.py` (tasks) + `traceability-check.py`; freeze via `/sw-freeze`.
+7. Save task file; run `spec-rigor-check.py --root <consumer-repo>` (tasks) + `traceability-check.py`; freeze via `/sw-freeze`.
+   Installed spec-rigor requires consumer `--root`. Requirement bullets and task R-ID cites parse hyphen
+   **and asterisk** RID markers (`- **R1**` / `* **R1**`); Linear `*` lists must extract on the stored body.
 8. Register/refresh PRD entry in `docs/prds/INDEX.md` with status `not-started`.
 9. **Stop** — do not start implementation. Standalone `/sw-tasks` ends after freeze; `doc.afterTasks` on
    `/sw-doc` owns the boundary to implementation.

@@ -1044,6 +1044,14 @@ Authoring lives under `core/`; the emitter propagates manifest artifacts into bo
 **Freshness:** `scripts/test/run_emitter_fixtures.py` fails when `capability-index.json` or dist trees drift
 from current frontmatter. Regenerate after manifest edits: `python3 -m sw generate --all`.
 
+**Installed freshness dual-mode (PRD 358 R10):** `capability_index.check_freshness` distinguishes a
+source-tree `core/` checkout from an installed/emitted bundle layout. For an installed bundle,
+freshness compares that bundle's index to the same packaged layout the emitter hashed
+(plugin-root `skills/` / `agents/` via harness-roots-manifest / `packaged_conformance_roots`).
+It must not rebuild from a source-tree `core/` or `consumer_repo/core`. Missing scan roots fail
+closed rather than falling back to a developer checkout. Mixing an installed index with a
+different source `core/` fails.
+
 **Pre-selection:** `wave_preflight` / selector entrypoints fail closed when the runtime index does not
 reproduce from current sources.
 

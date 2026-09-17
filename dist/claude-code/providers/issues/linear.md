@@ -110,7 +110,7 @@ Duck-type surface in `scripts/planning_linear_client.py` (`LinearIssuesClient`) 
 `search`, plus lifecycle hooks (`mark_tombstone`, …). Hermetic CI uses `SW_ISSUES_FIXTURE=1` or an
 injected fixture store.
 
-## Body overflow / chunking (R10)
+## Body overflow / chunking (R10 / PRD 358)
 
 Linear GraphQL `Issue.description` and `Comment.body` are GraphQL `String` fields
 (Unicode characters, not UTF-8 bytes). Linear developer docs do not publish a maximum
@@ -120,13 +120,29 @@ length for either field ([GraphQL getting started](https://linear.app/developers
 (60_000 UTF-8 bytes) for **both** description and comment until a live-probe receipt
 records a tighter distinct cap. Linear-aware splitter work must not ship without this pin.
 
-Linear descriptions chunk via `planning_canonical.chunk_body_if_needed(provider="linear")`,
-which delegates to `planning_linear_canonical.chunk_body_for_linear` after
-`require_linear_size_pin()`. Oversized bodies are split into:
+The **facade is the single owner** of Linear description splitting. `IssueStoreBackend`
+calls `planning_canonical.chunk_body_if_needed(provider="linear")`, which delegates to
+`planning_linear_canonical.chunk_body_for_linear` after `require_linear_size_pin()`.
+Oversized bodies are split into:
 
 1. Head description with `<!-- sw-chunk-manifest: … -->`
 2. Ordered overflow comments marked `<!-- sw-chunk-overflow -->` plus
-   `<!-- sw-chunk-token:<writeToken> -->` in the comment body (R11 actor binding)
+   `<!-- sw-chunk-token:<writeToken> -->` in the comment body (authorship / actor binding)
+
+**Skip-on-manifest (R1):** adapter `prepare_body_with_overflow` is a hard skip when the
+body already carries `sw-chunk-manifest`. A manifested head is never treated as ordinary
+document text and split again (create and update).
+
+**UUID head budget (R2):** the first split budgets `json.dumps` of overflow ids at
+36-character UUID length (and attached metadata) before posting, so
+`rewrite_chunk_manifest_ids` cannot push the head over 60,000 UTF-8 bytes.
+
+**reconstruct-before-ok (R3):** after put finalization, `IssueStoreBackend` re-reads with
+`comments_complete` true, reassembles head+overflow, and compares against the
+**caller-supplied pre-chunk body** under R6 canonical Markdown. Fail closed on missing,
+nested, or unreferenced chunks, `writeToken` / authorship mismatch, canonical inequality,
+or reconstructed UTF-8 length outside the intended write. Do not clear `sw:put-incomplete`,
+return `ok`, or freeze/hash when the check fails.
 
 There is no ADF-style tighter cap (unlike Jira Cloud).
 

@@ -44,13 +44,25 @@ Normalization: CRLF→LF, trim trailing spaces per line, strip leading/trailing 
 
 Comments tagged `sw-freeze-record` or `sw-chunk-overflow` are excluded from canonicalization (R37/R46).
 
-## Chunk overflow (R9)
+## Chunk overflow (R9 / PRD 358)
 
 When UTF-8 body exceeds the adapter limit, overflow is stored in ordered comments with a body manifest:
 
 `<!-- sw-chunk-manifest: {"version":1,"chunks":[{"index":0,"commentId":"..."}]} -->`
 
-Reassembly concatenates chunk bodies in manifest order.
+Reassembly concatenates chunk bodies in manifest order **only after reconstruct-before-ok
+succeeds**. Linear overflow reconstruct-before-ok requires:
+
+- `comments_complete` true on the live re-read
+- overflow comments bound to this write's `writeToken` and Linear overflow **authorship**
+- R6 canonical Markdown compare against the caller-supplied pre-chunk body (not a
+  persisted-description echo)
+
+Nested `sw-chunk-manifest` fragments inside overflow comments are a failed write.
+Unscoped positional fallback of foreign or superseded overflow is a failed write.
+Original bytes remain the freeze/hash witness; enumerated Linear Public Markdown rewrites
+(`*`/`-` list markers, documented bold/code/table formatting, plain-domain autolinks) are
+the only allowed equality exceptions.
 
 ## sw-edges block (R29/R47)
 
