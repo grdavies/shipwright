@@ -1386,6 +1386,7 @@
 * merge phase uuid-minting-issuestorebackend-double into feat/linear-issue-store-fidelity (2fb5977) <!-- sw-deliver:uuid-minting-issuestorebackend-double -->
 * merge phase canonical-markdown-equality-without-weakening into feat/linear-issue-store-fidelity (30c6472) <!-- sw-deliver:canonical-markdown-equality-without-weakening -->
 * merge phase provider-and-skill-documentation into feat/linear-issue-store-fidelity (42f9508) <!-- sw-deliver:provider-and-skill-documentation -->
+* merge phase markdown-aware-splitter-and-oversized-fail-closed into feat/linear-public-markdown-remaining (57a240b) <!-- sw-deliver:markdown-aware-splitter-and-oversized-fail-closed -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
