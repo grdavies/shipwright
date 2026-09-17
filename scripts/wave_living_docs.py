@@ -91,7 +91,7 @@ def derive_index_status(state: dict[str, Any], merged_to_main: bool) -> str:
     if all(s in TERMINAL_PHASE_STATUSES for s in statuses):
         completion = state.get("completion") or {}
         if completion.get("status") == "completed-pending-merge":
-            return "complete"
+            return "in-progress"
     if any(s not in ("pending",) for s in statuses):
         return "in-progress"
     return "not-started"
