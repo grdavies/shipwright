@@ -283,6 +283,8 @@ def _docs_currency_state_block(state: dict[str, Any]) -> dict[str, Any]:
 
 def docs_currency_phase_in_progress(state: dict[str, Any], *, root: Path | None = None) -> bool:
     """True when living-doc/docs-currency work is still in flight at terminal prepare (R13)."""
+    if is_pending_merge_completion(state):
+        return True
     docs = _docs_currency_state_block(state)
     status = str(docs.get("status") or docs.get("indexStatus") or "")
     if status in ("in-progress", "pending"):

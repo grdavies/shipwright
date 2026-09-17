@@ -185,4 +185,4 @@ Re-run the matching doctor after remediation; codes are designed for CI log grep
 
 Open a [discussion](https://github.com/grdavies/shipwright/discussions) or file an issue if something is
 unclear before starting large changes.
-<!-- currency: refreshed 2026-09-15T20:24:00Z — terminal docs-currency after PRD 356 suite-registry absorb closeout -->
+<!-- currency: refreshed 2026-09-17T08:45:00Z — terminal docs-currency after PRD 358 feature-branch closeout -->
