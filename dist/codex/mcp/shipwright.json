@@ -1,11 +1,11 @@
 {
   "adapter_id": "codex",
-  "config_path": "/home/runner/work/shipwright/shipwright/.shipwright/mcp/codex.json",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/linear-public-markdown-remaining-phase-markdown-aware-splitter-and-oversized-fail-closed/.shipwright/mcp/codex.json",
   "mcpServers": {
     "shipwright-bounded": {
       "command": "python3",
       "args": [
-        "/home/runner/work/shipwright/shipwright/core/mcp/server.py"
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/linear-public-markdown-remaining-phase-markdown-aware-splitter-and-oversized-fail-closed/core/mcp/server.py"
       ],
       "transport": "stdio"
     }
