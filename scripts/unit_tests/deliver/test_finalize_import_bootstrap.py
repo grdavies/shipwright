@@ -5,12 +5,24 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 SCRIPT_DIR = Path(__file__).resolve().parents[2]
+_SAFE_CWD = SCRIPT_DIR.parent
+
+
+@pytest.fixture(autouse=True)
+def _restore_cwd_after_finalize_test() -> Generator[None, None, None]:
+    """finalize_run rebind leaves cwd on primary/tmp — restore a live directory for pytest."""
+    yield
+    try:
+        os.chdir(_SAFE_CWD)
+    except OSError:
+        pass
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
@@ -148,18 +160,14 @@ def test_finalize_primary_bind_before_release(tmp_path: Path, monkeypatch: pytes
         "detail": "terminal-pr-host",
     }
 
-    safe_cwd = SCRIPT_DIR.parent
-    try:
-        with (
-            patch(
-                "wave_terminal.verify_terminal_merge_via_host",
-                return_value={"verdict": "pass", "merged": True, **merge_info},
-            ),
-            patch("wave_terminal.release_run_resources", side_effect=_capture_release),
-        ):
-            payload = finalize_run(orch, run_id, state, actor="tester")
-    finally:
-        os.chdir(safe_cwd)
+    with (
+        patch(
+            "wave_terminal.verify_terminal_merge_via_host",
+            return_value={"verdict": "pass", "merged": True, **merge_info},
+        ),
+        patch("wave_terminal.release_run_resources", side_effect=_capture_release),
+    ):
+        payload = finalize_run(orch, run_id, state, actor="tester")
 
     assert payload["verdict"] == "pass"
     assert captured["cwd"] == primary.resolve()

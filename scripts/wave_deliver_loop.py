@@ -1864,14 +1864,35 @@ def ensure_finalize_scripts_bootstrap(root: Path) -> Path:
     return ensure_scripts_on_path(root, executor=Path(__file__))
 
 
+def snapshot_process_cwd() -> str | None:
+    """Best-effort process cwd before finalize rebind (may be missing if already torn down)."""
+    try:
+        return os.getcwd()
+    except FileNotFoundError:
+        return None
+
+
+def restore_process_cwd_after_finalize(prior: str | None, primary: Path) -> None:
+    """Restore caller cwd after finalize rebind when the prior directory still exists."""
+    if prior:
+        try:
+            if Path(prior).is_dir():
+                os.chdir(prior)
+                return
+        except OSError:
+            pass
+    try:
+        os.chdir(primary.resolve())
+    except OSError:
+        pass
+
+
 def rebind_finalize_execution_to_primary(root: Path) -> Path:
     """Rebind cwd, sys.path, and finalize imports to the primary checkout (PRD 362 R10/R13).
 
     ``ensure_finalize_scripts_bootstrap`` alone is insufficient when finalize runs from an
     orchestrator worktree — orch teardown removes the cwd backing ``sys.path`` entries.
     """
-    import os
-
     from primary_checkout_guard import canonical_repo_root, primary_worktree_path
 
     repo_root = canonical_repo_root(root)
