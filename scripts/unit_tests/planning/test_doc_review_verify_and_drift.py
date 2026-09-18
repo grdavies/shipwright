@@ -12,10 +12,17 @@ from planning_canonical import CommentRecord
 from planning_doc_review_transport import (
     DOC_REVIEW_BODY_DRIFT,
     DOC_REVIEW_COMMENT_DRIFT,
+    DOC_REVIEW_MANIFEST_CONFLICT,
     build_doc_review_comment_body,
     stripped_artifact_hash,
 )
-from planning_store_facade import load_workflow_config, open_review_manifest, post_review_finding, verify_review_manifest
+from planning_store_facade import (
+    complete_review_round,
+    load_workflow_config,
+    open_review_manifest,
+    post_review_finding,
+    verify_review_manifest,
+)
 from unit_tests.planning.test_doc_review_transport_bootstrap import (
     FIXTURE_GITHUB_PRINCIPAL_ID,
     _fixture_bot,
@@ -249,3 +256,176 @@ class TestBodyDrift:
         )
         assert out["verdict"] == "ok"
         assert out.get("error") != DOC_REVIEW_BODY_DRIFT
+
+
+class TestCompleteAfterR3Recovery:
+    def test_same_key_open_replay_preserves_pin_sequence(self, transport_repo: Path) -> None:
+        cfg = load_workflow_config(transport_repo)
+        store = get_fixture_store(transport_repo)
+        unit_id = "360-prd-doc-review-linear-remaining"
+        round_id = "round-replay-seq"
+        _seed_issue(store, unit_id=unit_id)
+        opened, comment_ids = _post_then_open(
+            transport_repo,
+            cfg,
+            unit_id=unit_id,
+            round_id=round_id,
+            personas=[
+                ("coherence", _sample_payload("coherence")),
+                ("security", _sample_payload("security")),
+            ],
+        )
+        assert opened["verdict"] == "ok"
+        before_comments = [c.body for c in get_fixture_store(transport_repo).get("887").comments]
+
+        replay = open_review_manifest(
+            transport_repo,
+            cfg,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id=round_id,
+            ordered_comment_ids=comment_ids,
+        )
+        assert replay["verdict"] == "ok"
+        assert replay.get("idempotent") is True
+        after_comments = [c.body for c in get_fixture_store(transport_repo).get("887").comments]
+        assert after_comments == before_comments
+
+    def test_same_key_permutation_open_conflicts(self, transport_repo: Path) -> None:
+        cfg = load_workflow_config(transport_repo)
+        store = get_fixture_store(transport_repo)
+        unit_id = "360-prd-doc-review-linear-remaining"
+        round_id = "round-replay-perm"
+        _seed_issue(store, unit_id=unit_id)
+        opened, comment_ids = _post_then_open(
+            transport_repo,
+            cfg,
+            unit_id=unit_id,
+            round_id=round_id,
+            personas=[
+                ("coherence", _sample_payload("coherence")),
+                ("security", _sample_payload("security")),
+            ],
+        )
+        assert opened["verdict"] == "ok"
+        assert len(comment_ids) >= 2
+        permuted = list(reversed(comment_ids))
+        conflict = open_review_manifest(
+            transport_repo,
+            cfg,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id=round_id,
+            ordered_comment_ids=permuted,
+        )
+        assert conflict["verdict"] == "fail"
+        assert conflict["error"] == DOC_REVIEW_MANIFEST_CONFLICT
+
+    def test_nor26_shape_complete_after_r3_without_deleting_comments(self, transport_repo: Path) -> None:
+        cfg = load_workflow_config(transport_repo)
+        store = get_fixture_store(transport_repo)
+        unit_id = "360-prd-doc-review-linear-remaining"
+        round_id = "round-nor26-complete"
+        _seed_issue(store, unit_id=unit_id)
+        personas = ("coherence", "security", "product")
+        comment_ids: list[str] = []
+        for persona in personas:
+            posted = post_review_finding(
+                transport_repo,
+                cfg,
+                issue_id="887",
+                unit_id=unit_id,
+                round_id=round_id,
+                persona=persona,
+                payload=_sample_payload(persona),
+            )
+            assert posted["verdict"] == "ok"
+            comment_ids.append(str(posted["commentId"]))
+        permuted = list(reversed(comment_ids))
+        opened = open_review_manifest(
+            transport_repo,
+            cfg,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id=round_id,
+            ordered_comment_ids=permuted,
+        )
+        assert opened["verdict"] == "ok"
+        verified = verify_review_manifest(
+            transport_repo,
+            cfg,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id=round_id,
+        )
+        assert verified["verdict"] == "ok"
+        comment_count_before = len(get_fixture_store(transport_repo).get("887").comments)
+        closed = complete_review_round(
+            transport_repo,
+            cfg,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id=round_id,
+        )
+        assert closed["verdict"] == "ok", closed
+        record = get_fixture_store(transport_repo).get("887")
+        assert len(record.comments) >= comment_count_before
+
+    def test_complete_idempotent_still_reverifies(self, transport_repo: Path) -> None:
+        cfg = load_workflow_config(transport_repo)
+        store = get_fixture_store(transport_repo)
+        unit_id = "341-prd-doc-review-transport"
+        round_id = "round-complete-reverify"
+        _seed_issue(store, unit_id=unit_id)
+        _post_then_open(transport_repo, cfg, unit_id=unit_id, round_id=round_id)
+        first = complete_review_round(
+            transport_repo,
+            cfg,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id=round_id,
+        )
+        assert first["verdict"] == "ok"
+        record = get_fixture_store(transport_repo)
+        record.get("887").comments[0].body = record.get("887").comments[0].body.replace(
+            "Example finding",
+            "Edited finding",
+        )
+        record._persist()
+        second = complete_review_round(
+            transport_repo,
+            cfg,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id=round_id,
+        )
+        assert second["verdict"] == "fail"
+        assert second["error"] == DOC_REVIEW_COMMENT_DRIFT
+
+    def test_new_round_refused_until_prior_complete(self, transport_repo: Path) -> None:
+        cfg = load_workflow_config(transport_repo)
+        store = get_fixture_store(transport_repo)
+        unit_id = "341-prd-doc-review-transport"
+        _seed_issue(store, unit_id=unit_id)
+        _post_then_open(transport_repo, cfg, unit_id=unit_id, round_id="round-a")
+        posted_b = post_review_finding(
+            transport_repo,
+            cfg,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id="round-b",
+            persona="coherence",
+            payload=_sample_payload("coherence"),
+        )
+        assert posted_b["verdict"] == "ok"
+        blocked = open_review_manifest(
+            transport_repo,
+            cfg,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id="round-b",
+            ordered_comment_ids=[str(posted_b["commentId"])],
+        )
+        assert blocked["verdict"] == "fail"
+        assert blocked["error"] == "doc-review-round-already-open"
+        assert blocked.get("openRoundId") == "round-a"
