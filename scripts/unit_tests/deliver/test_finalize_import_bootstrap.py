@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -147,14 +148,18 @@ def test_finalize_primary_bind_before_release(tmp_path: Path, monkeypatch: pytes
         "detail": "terminal-pr-host",
     }
 
-    with (
-        patch(
-            "wave_terminal.verify_terminal_merge_via_host",
-            return_value={"verdict": "pass", "merged": True, **merge_info},
-        ),
-        patch("wave_terminal.release_run_resources", side_effect=_capture_release),
-    ):
-        payload = finalize_run(orch, run_id, state, actor="tester")
+    safe_cwd = SCRIPT_DIR.parent
+    try:
+        with (
+            patch(
+                "wave_terminal.verify_terminal_merge_via_host",
+                return_value={"verdict": "pass", "merged": True, **merge_info},
+            ),
+            patch("wave_terminal.release_run_resources", side_effect=_capture_release),
+        ):
+            payload = finalize_run(orch, run_id, state, actor="tester")
+    finally:
+        os.chdir(safe_cwd)
 
     assert payload["verdict"] == "pass"
     assert captured["cwd"] == primary.resolve()
