@@ -342,6 +342,25 @@ def lookup_record_and_refuse_truncated_reconstruct(
     return record
 
 
+def verify_reconstruct_before_ok_if_linear(
+    backend: Any,
+    record: Any,
+    *,
+    pre_chunk_body: str,
+    ps_mod: Any,
+) -> Any:
+    """PRD 359 R12/D7 — reconstruct-before-ok runs only for Linear; other providers no-op."""
+    if backend.issues_provider != "linear":
+        return record
+    return verify_reconstruct_before_ok(
+        backend._client,
+        record,
+        pre_chunk_body=pre_chunk_body,
+        issues_provider=backend.issues_provider,
+        ps_mod=ps_mod,
+    )
+
+
 def verify_reconstruct_before_ok(
     client: Any,
     record: Any,

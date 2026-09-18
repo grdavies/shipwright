@@ -22,7 +22,7 @@ from .issues_helpers import (
     read_issue_unit_index_locked,
     read_put_journal_locked,
     verify_frozen_integrity,
-    verify_reconstruct_before_ok,
+    verify_reconstruct_before_ok_if_linear,
 )
 from .memory_cache import ReplicatedPlanningCacheBackend
 from ..model import StoreResult
@@ -688,16 +688,11 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
                         actual=exc.actual,
                     )
                 record = self._client.issue_get(record.id)
-            # R3/D5 — reconstruct-before-ok (Linear): refetch with complete
-            # comments, reassemble, and R6-compare before clearing incomplete.
-            if self.issues_provider == "linear":
-                record = verify_reconstruct_before_ok(
-                    self._client,
-                    record,
-                    pre_chunk_body=pre_chunk_body,
-                    issues_provider=self.issues_provider,
-                    ps_mod=_ps(),
-                )
+            # R3/D5 — reconstruct-before-ok (Linear-gated): refetch with complete
+            # comments, reassemble, and equivalent() compare before clearing incomplete.
+            record = verify_reconstruct_before_ok_if_linear(
+                self, record, pre_chunk_body=pre_chunk_body, ps_mod=_ps()
+            )
             record = clear_put_incomplete_label(self._client, record, ps_mod=_ps())
         if chunked:
             self._mutate_journal(lambda journal: journal.pop(idx_key, None))
