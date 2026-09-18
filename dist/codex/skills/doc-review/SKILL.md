@@ -24,7 +24,7 @@ Multi-persona review for PRDs and decision records. Pattern borrowed from compou
 
 | `planning.store.backend` | Findings transport |
 | --- | --- |
-| `issue-store` | Facade review-round ops (`post` → `open` → `verify` → `complete`) via marker-delimited `sw-doc-review` comments (GitHub; PRD 341) |
+| `issue-store` | Facade review-round ops (`post` → `open` → `verify` → `complete`) via marker-delimited `sw-doc-review` comments (**GitHub** and **Linear** when `docReviewComments` preflight passes; PRD 341 / PRD 360) |
 | default (file-store) | In-IDE parallel sub-agent panel + JSON synthesis |
 
 Under issue-store, persona **selection** and **dispatch binding** are identical to file-store; only the
@@ -38,13 +38,15 @@ PRD 341 issue-store facade work must not alter file-store goldens, selector outp
 `signal_context`, or the file-store procedure below. Regression lock:
 `scripts/unit_tests/doc/test_doc_loop_state.py` (persona-selection + findings-schema hashes).
 
-**Provider gate (PRD 341 floor):** under `planning.store.backend: issue-store`, **GitHub** (`github-issues`) is
-the only **live** document-review transport today — facade ops after `docReviewComments` conformance.
-**Linear, Jira, Notion**, and other non-GitHub issues providers remain `doc-review-provider-unsupported`
-until Phases 4–5 land the full PRD 341 provider floor (see `core/providers/issues/CAPABILITIES.md` matrix).
-Do not claim Linear/Jira/Notion review is enabled before that promotion. **File-store** sessions use the
-in-IDE panel only — halt on transport refusal; do not fall back to in-IDE transport from an issue-store
-session, and do not route file-store reviews through the GitHub facade.
+**Provider gate (PRD 341 floor; PRD 360 R1):** under `planning.store.backend: issue-store`, **GitHub**
+(`github-issues`) and **Linear** (`linear`) are supported issue-store `/sw-doc-review` transports when
+`doc_review_capabilities_for` / `docReviewComments` preflight passes (facade ops after conformance).
+**Jira** and **Notion** may advertise the mandatory floor in fixture/conformance paths but are **not**
+dogfooded-live — treat them as fixture-enabled-not-dogfooded; do not claim operator-live review until
+promotion. Other providers without the floor still halt with `doc-review-provider-unsupported` (see
+`core/providers/issues/CAPABILITIES.md`). **File-store** sessions use the in-IDE panel only — halt on
+transport refusal; do not fall back to in-IDE transport from an issue-store session, and do not route
+file-store reviews through the issue-store facade.
 
 **IDE fallback:** when `backend != issue-store`, the procedure under **Selection** / parallel panel + JSON
 synthesis is the sole transport — byte-identical to the pre-341 file-store path.
@@ -302,6 +304,17 @@ When reviewing `docs/prds/<n>-<slug>/amendments/A<k>-*.md` drafts:
 Persona-vs-persona or operator-vs-synthesizer disagreement on a finding's `autofix_class` routes through
 `skills/calibration-loop/SKILL.md` rather than a silent pick or a repeated abstract prompt — see
 `references/synthesis.md` **Disposition disputes**.
+
+## PRD 360 closeout (operator-confirmed)
+
+- **Absorb (D1):** closes **GAP-473** and **GAP-476** only — related planning issues are context, not
+  auto-absorb targets.
+- **Accept-all (D7):** recovery is **complete-after-R3** (no supersession, no skip-verify). Same-key reopen
+  is **ordinal-equal** (unchanged pin-row zip). Provider chronology inequality is **not** reorder drift when
+  `pin_order` is an exhaustive permutation of the same round comment IDs (**chrono-ok**). Operator-facing
+  copies stay on the **closed-plus-guides** allowlist (`core/commands/sw-doc-review.md`,
+  `references/synthesis.md`, provider CAPABILITIES, `core/documentation/github-issues.md`,
+  `core/documentation/issue-store.md`, `core/providers/issues/linear.md`, and emitted `dist/` copies).
 
 ## Handoff
 

@@ -110,6 +110,15 @@ Duck-type surface in `scripts/planning_linear_client.py` (`LinearIssuesClient`) 
 `search`, plus lifecycle hooks (`mark_tombstone`, …). Hermetic CI uses `SW_ISSUES_FIXTURE=1` or an
 injected fixture store.
 
+## Document-review transport (PRD 341 / PRD 360)
+
+When `planning.store.backend` is `issue-store` and `issuesProvider` is `linear`, `/sw-doc-review` uses the
+same five facade ops as GitHub (`post_review_finding` → `open_review_manifest` → verify →
+`complete_review_round`) with marker-delimited `sw-doc-review` comments. Capabilities advertise via
+`linear_doc_review_capabilities()` when the R15 floor is present; preflight fails closed with
+`doc-review-provider-unsupported` when mandatory fields are missing. GitHub remains a supported
+transport in parallel — this section does not claim Jira/Notion doc-review is operator-live.
+
 ## Body overflow / chunking (R10 / PRD 358)
 
 Linear GraphQL `Issue.description` and `Comment.body` are GraphQL `String` fields

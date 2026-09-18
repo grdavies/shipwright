@@ -978,6 +978,22 @@ def build_open_manifest_block(
     }
 
 
+def manifest_pin_comment_ids(manifest: dict[str, Any]) -> list[str]:
+    """Ordered comment ids from manifest pin rows (ordinal zip sequence)."""
+    manifest = normalize_manifest_block(manifest)
+    pins_raw = manifest.get("pins")
+    if not isinstance(pins_raw, list):
+        return []
+    order: list[str] = []
+    for row in pins_raw:
+        if not isinstance(row, dict):
+            continue
+        comment_id = str(normalize_pin_row(row).get("commentId") or "")
+        if comment_id:
+            order.append(comment_id)
+    return order
+
+
 def manifest_immutable_equal(left: dict[str, Any], right: dict[str, Any]) -> bool:
     """Semantic equality for manifest open replay (R12). Etag OCC is not compared."""
     left_n = normalize_manifest_block(left)
@@ -1203,6 +1219,37 @@ def verify_manifest_binding(
     return None
 
 
+def pin_order_exhaustive_permutation_of_marked(
+    pin_order: list[str],
+    marked_order: list[str],
+) -> bool:
+    """True when both sequences list the same comment ids (PRD 360 R3 / D3)."""
+    return len(pin_order) == len(marked_order) and set(pin_order) == set(marked_order)
+
+
+def verify_pin_row_ordinals(pins_raw: list[Any]) -> dict[str, Any] | None:
+    """Fail when manifest pin ordinals drift from their row index after open (R3)."""
+    for idx, row in enumerate(pins_raw):
+        if not isinstance(row, dict):
+            continue
+        normalized = normalize_pin_row(row)
+        if "ordinal" not in normalized:
+            continue
+        try:
+            ordinal = int(normalized.get("ordinal"))
+        except (TypeError, ValueError):
+            return drift_failure(kind="malformed", detail="invalid-ordinal", commentId=str(normalized.get("commentId") or ""))
+        if ordinal != idx:
+            return drift_failure(
+                kind="reorder",
+                detail="ordinal-mutation",
+                commentId=str(normalized.get("commentId") or ""),
+                expectedOrdinal=idx,
+                actualOrdinal=ordinal,
+            )
+    return None
+
+
 def verify_body_artifact_hash(
     *,
     manifest: dict[str, Any],
@@ -1334,14 +1381,19 @@ def verify_round_integrity(
     if missing_ids:
         return drift_failure(kind="delete", commentIds=sorted(missing_ids))
 
+    ordinal_drift = verify_pin_row_ordinals(pins_raw)
+    if ordinal_drift is not None:
+        return ordinal_drift
+
     marked_order = [str(comment.id) for comment in marked]
     if pin_order and marked_order and pin_order != marked_order:
-        return drift_failure(
-            kind="reorder",
-            detail="pin-order-mismatch",
-            expectedOrder=pin_order,
-            actualOrder=marked_order,
-        )
+        if not pin_order_exhaustive_permutation_of_marked(pin_order, marked_order):
+            return drift_failure(
+                kind="reorder",
+                detail="pin-order-mismatch",
+                expectedOrder=pin_order,
+                actualOrder=marked_order,
+            )
 
     return None
 
@@ -1664,6 +1716,48 @@ def execute_doc_review_txn(
                 "openRoundId": manifest.get("roundId"),
             }
         if manifest.get("roundId") == round_id and manifest.get("status") == "closed":
+            existing_key = str(manifest.get("idempotencyKey") or "").strip()
+            if existing_key and existing_key != manifest_key:
+                return {
+                    "verdict": "fail",
+                    "action": verb,
+                    "error": "doc-review-round-already-closed",
+                    "roundId": round_id,
+                    "idempotencyKey": existing_key,
+                }
+            compare_existing = dict(manifest)
+            if not existing_key:
+                compare_existing["idempotencyKey"] = manifest_key
+            if not str(compare_existing.get("artifactHash") or "").strip():
+                compare_existing["artifactHash"] = proposed.get("artifactHash")
+            if manifest_immutable_equal(compare_existing, proposed):
+                out = manifest_response(manifest, comments=list(record.comments))
+                out.update(
+                    {
+                        "verdict": "ok",
+                        "action": verb,
+                        "issueId": issue_id,
+                        "status": "closed",
+                        "idempotent": True,
+                    }
+                )
+                return out
+            existing_order = manifest_pin_comment_ids(manifest)
+            proposed_order = manifest_pin_comment_ids(proposed)
+            if (
+                existing_order
+                and proposed_order
+                and pin_order_exhaustive_permutation_of_marked(existing_order, proposed_order)
+                and existing_order != proposed_order
+            ):
+                return {
+                    "verdict": "fail",
+                    "action": verb,
+                    "error": DOC_REVIEW_MANIFEST_CONFLICT,
+                    "issueId": issue_id,
+                    "roundId": round_id,
+                    "idempotencyKey": manifest_key,
+                }
             return {
                 "verdict": "fail",
                 "action": verb,
@@ -1751,6 +1845,16 @@ def execute_doc_review_txn(
 
         if manifest.get("roundId") == round_id and manifest.get("status") == "closed":
             if existing_receipts:
+                drift = verify_round_integrity(
+                    manifest=manifest,
+                    comments=list(refreshed.comments),
+                    expected_author_id=author_id,
+                    body=close_body,
+                )
+                if drift is not None:
+                    drift["action"] = verb
+                    drift["issueId"] = issue_id
+                    return drift
                 comment, envelope = existing_receipts[0]
                 return {
                     "verdict": "ok",

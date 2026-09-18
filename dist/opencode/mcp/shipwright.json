@@ -1,11 +1,11 @@
 {
   "adapter_id": "opencode",
-  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/linear-public-markdown-remaining-phase-markdown-aware-splitter-and-oversized-fail-closed/.shipwright/mcp/opencode.json",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/doc-review-linear-remaining-orchestrator/.shipwright/mcp/opencode.json",
   "mcpServers": {
     "shipwright-bounded": {
       "command": "python3",
       "args": [
-        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/linear-public-markdown-remaining-phase-markdown-aware-splitter-and-oversized-fail-closed/core/mcp/server.py"
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/doc-review-linear-remaining-orchestrator/core/mcp/server.py"
       ],
       "transport": "stdio"
     }

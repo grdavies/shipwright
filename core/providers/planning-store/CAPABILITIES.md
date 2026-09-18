@@ -131,7 +131,8 @@ revision fallback, manifest lifecycle, drift detection, and idempotency remain p
 | Backend / issues provider | Document-review posture |
 | --- | --- |
 | `issue-store` + `github-issues` (conformance-green) | Enabled after `docReviewComments` preflight |
-| `issue-store` + any other issues provider | `doc-review-provider-unsupported` at preflight |
+| `issue-store` + `linear` (R15 floor / conformance-green) | Enabled after `docReviewComments` preflight |
+| `issue-store` + other issues providers | `doc-review-provider-unsupported` at preflight when floor incomplete |
 | Non-`issue-store` backends | In-IDE file-store transport unchanged (R33) — no issue comment facade |
 
 Request budget: listing and revalidation charge `planning.store.requestBudget` under class
