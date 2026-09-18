@@ -26,7 +26,64 @@ import wave_deliver as wd
 from phase_sizing import evaluate_freeze_gate, has_advisory_block
 from _sw.cli import run_module_main
 
-AMBIGUITY = re.compile(r"\b(TBD|TODO|FIXME|\?\?\?|to be determined)\b", re.I)
+# Layered ambiguity matcher (PRD 361 phase 1) — precedence: allowlist, unresolved phrase / ???,
+# punctuation wrap, Title-case named state, slash-taxonomy (lowercase), else hard markers.
+_SLASH_TAXONOMY_LOWERCASE = re.compile(
+    r"(?<![A-Za-z0-9/])(?:[a-z][a-z0-9]*/)+[a-z][a-z0-9]*(?![A-Za-z0-9/])"
+)
+_TITLE_CASE_NAMED_STATE = re.compile(
+    r"\b(?:Todo|Idea|Note|Draft|Pending|Done|Blocked|Backlog)\b"
+)
+_TRIPLE_QUESTION = re.compile(r"\?\?\?")
+_UNRESOLVED_PHRASE = re.compile(r"\bto be determined\b", re.I)
+_CASUAL_LOWER_MARKER = re.compile(r"\b(todo|tbd|fixme)\b")
+_HARD_AMBIGUITY_MARKER = re.compile(r"\b(TBD|TODO|FIXME)\b", re.I)
+_COLON_WRAP = re.compile(r"\b([A-Za-z][A-Za-z0-9_-]*)\s*:")
+_BRACKET_WRAP = re.compile(r"\[([^\]]+)\]")
+
+
+def _reviewed_literals_allowlist(_text: str) -> frozenset[str]:
+    """Phase 2 parses reviewedLiterals; phase 1 ships with an empty allowlist."""
+    return frozenset()
+
+
+def _allowlisted(fragment: str, allowlist: frozenset[str]) -> bool:
+    return fragment in allowlist
+
+
+def text_has_ambiguity_marker(body: str, allowlist: frozenset[str] | None = None) -> bool:
+    """Return True when layered matcher finds a blocking ambiguity marker in body."""
+    allow = allowlist if allowlist is not None else frozenset()
+    if not body or not body.strip():
+        return False
+
+    for match in _COLON_WRAP.finditer(body):
+        token = match.group(1)
+        if not (_allowlisted(token, allow) or _allowlisted(f"{token}:", allow)):
+            return True
+    for match in _BRACKET_WRAP.finditer(body):
+        inner = match.group(1).strip()
+        bracketed = f"[{match.group(1)}]"
+        if not (_allowlisted(inner, allow) or _allowlisted(bracketed, allow)):
+            return True
+
+    if _TRIPLE_QUESTION.search(body) and not any("???" in entry for entry in allow):
+        return True
+    if _UNRESOLVED_PHRASE.search(body) and not any(
+        "to be determined" in entry.lower() for entry in allow
+    ):
+        return True
+
+    masked = _SLASH_TAXONOMY_LOWERCASE.sub(" ", body)
+    masked = _TITLE_CASE_NAMED_STATE.sub(" ", masked)
+
+    for match in _CASUAL_LOWER_MARKER.finditer(masked):
+        if not _allowlisted(match.group(0), allow):
+            return True
+    for match in _HARD_AMBIGUITY_MARKER.finditer(masked):
+        if not _allowlisted(match.group(0), allow):
+            return True
+    return False
 
 # PRD 342 R34 — Acceptance Scenarios + Success Criteria required for new PRD bodies only.
 PRD_BODY_CONTRACT_KEY = "prdBodyContract"
@@ -84,6 +141,7 @@ def _run(
         print(json.dumps({"verdict": "fail", "error": f"artifact not found: {body_path}", "artifact": artifact}))
         return 20
     text = content
+    reviewed_literals = _reviewed_literals_allowlist(text)
     findings: list[dict] = []
 
     def add(gate: str, severity: str, message: str, rid: str | None = None) -> None:
@@ -125,7 +183,7 @@ def _run(
             if not rid.startswith("R"):
                 continue
             rids.append(rid)
-            if AMBIGUITY.search(body):
+            if text_has_ambiguity_marker(body, reviewed_literals):
                 add("checklist", "error", f"ambiguity marker in {rid}", rid)
             if len(body) < 12:
                 add("checklist", "warn", f"requirement text very short in {rid}", rid)
@@ -165,7 +223,11 @@ def _run(
                         continue
                     if s.lower() in ("none", "(none)", "n/a", "- none"):
                         continue
-                    if re.match(r"^- \[[ xX]\]", s) or AMBIGUITY.search(s) or s.startswith("- "):
+                    if (
+                        re.match(r"^- \[[ xX]\]", s)
+                        or text_has_ambiguity_marker(s, reviewed_literals)
+                        or s.startswith("- ")
+                    ):
                         add("clarify", "error", f"unresolved open question: {s[:80]}")
         worst = "pass"
         if any(f["severity"] == "error" for f in findings):
@@ -181,7 +243,7 @@ def _run(
             if not rid.startswith("R"):
                 continue
             rids.append(rid)
-            if AMBIGUITY.search(body):
+            if text_has_ambiguity_marker(body, reviewed_literals):
                 add("checklist", "error", f"ambiguity marker in {rid}", rid)
             if len(body) < 12:
                 add("checklist", "warn", f"requirement text very short in {rid}", rid)
@@ -234,7 +296,7 @@ def _run(
             if not did.startswith("D"):
                 continue
             dids.append(did)
-            if AMBIGUITY.search(body):
+            if text_has_ambiguity_marker(body, reviewed_literals):
                 add("checklist", "error", f"ambiguity marker in {did}", did)
             if len(body) < 12:
                 add("checklist", "warn", f"requirement text very short in {did}", did)
