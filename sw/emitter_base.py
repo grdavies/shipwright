@@ -331,19 +331,65 @@ if __name__ == "__main__":
         return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _rmtree_on_rm_error(func, p: str, exc_info: object) -> None:
+    import stat
+
+    if not os.access(p, os.W_OK):
+        os.chmod(p, stat.S_IWUSR | stat.S_IRUSR | stat.S_IXUSR)
+        func(p)
+    else:
+        raise exc_info[1]  # type: ignore[index]
+
+
+def _unique_sibling_dir(parent: Path, prefix: str) -> Path:
+    candidate = parent / prefix
+    suffix = 0
+    while candidate.exists():
+        suffix += 1
+        candidate = parent / f"{prefix}.{suffix}"
+    return candidate
+
+
+@contextmanager
+def restore_safe_emit_directory(final_dest: Path):
+    """Stage platform emit; swap on success; restore the prior tree on failure (PRD 362 R2)."""
+    final_dest = final_dest.resolve()
+    parent = final_dest.parent
+    pid = os.getpid()
+    backup = _unique_sibling_dir(parent, f".{final_dest.name}.pre-emit.{pid}")
+    staging = _unique_sibling_dir(parent, f".{final_dest.name}.staging.{pid}")
+
+    had_prior = final_dest.exists()
+    if had_prior:
+        final_dest.rename(backup)
+
+    staging.mkdir(parents=True, exist_ok=True)
+    try:
+        yield staging
+    except BaseException:
+        if staging.exists():
+            shutil.rmtree(staging, onerror=_rmtree_on_rm_error, ignore_errors=True)
+        if had_prior and backup.exists():
+            if final_dest.exists():
+                shutil.rmtree(final_dest, onerror=_rmtree_on_rm_error, ignore_errors=True)
+            backup.rename(final_dest)
+        elif not had_prior and final_dest.exists():
+            shutil.rmtree(final_dest, onerror=_rmtree_on_rm_error, ignore_errors=True)
+        raise
+
+    if staging.exists():
+        if final_dest.exists():
+            shutil.rmtree(final_dest, onerror=_rmtree_on_rm_error, ignore_errors=True)
+        staging.rename(final_dest)
+    if had_prior and backup.exists():
+        shutil.rmtree(backup, onerror=_rmtree_on_rm_error, ignore_errors=True)
+
+
 def ensure_clean_dir(path: Path) -> None:
+    """Remove and recreate a directory. Prefer restore_safe_emit_directory for tracked dist trees."""
     if not path.exists():
         path.mkdir(parents=True, exist_ok=True)
         return
-
-    def _on_rm_error(func, p: str, exc_info: object) -> None:
-        import stat
-
-        if not os.access(p, os.W_OK):
-            os.chmod(p, stat.S_IWUSR | stat.S_IRUSR | stat.S_IXUSR)
-            func(p)
-        else:
-            raise exc_info[1]  # type: ignore[index]
 
     trash = path.parent / f".{path.name}.delete.{os.getpid()}"
     suffix = 0
@@ -351,5 +397,5 @@ def ensure_clean_dir(path: Path) -> None:
         suffix += 1
         trash = path.parent / f".{path.name}.delete.{os.getpid()}.{suffix}"
     path.rename(trash)
-    shutil.rmtree(trash, onerror=_on_rm_error, ignore_errors=True)
+    shutil.rmtree(trash, onerror=_rmtree_on_rm_error, ignore_errors=True)
     path.mkdir(parents=True, exist_ok=True)
