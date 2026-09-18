@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 from pathlib import Path
 
-from emitter_base import EmitterBase, EmitterError, ensure_clean_dir, read_version
+from emitter_base import EmitterBase, EmitterError, restore_safe_emit_directory, read_version
 # verify-presets.json emitted via emitter_base.SW_REFERENCE_CLOSED_EMIT
 
 import sys as _sys
@@ -67,17 +68,19 @@ class ClaudeCodeEmitter(EmitterBase):
 
     def _emit_impl(self, core_root: Path, repo_root: Path, dest: Path) -> None:
         self.validate_descriptor()
-        ensure_clean_dir(dest)
-        self.copy_emittable_content(core_root, dest)
-        self.emit_zipapp_runtime(repo_root, dest)
-        self._apply_use_when_to_skills(core_root, dest)
-        self._copy_runtime_support(core_root, repo_root, dest)
-        self._emit_plugin_manifest(repo_root, dest)
-        self._emit_install_version(repo_root, dest)
-        self.copy_install_root_documentation(core_root, dest)
-        self._emit_installer_entrypoint(dest)
-        self._emit_hooks(repo_root, dest)
-        self._emit_claude_md(core_root, dest)
+        with restore_safe_emit_directory(dest) as emit_dest:
+            self.copy_emittable_content(core_root, emit_dest)
+            if os.environ.get("SHIPWRIGHT_EMITTER_INJECT_FAIL") == "1":
+                raise EmitterError("injected failure for restore-safe emit harness")
+            self.emit_zipapp_runtime(repo_root, emit_dest)
+            self._apply_use_when_to_skills(core_root, emit_dest)
+            self._copy_runtime_support(core_root, repo_root, emit_dest)
+            self._emit_plugin_manifest(repo_root, emit_dest)
+            self._emit_install_version(repo_root, emit_dest)
+            self.copy_install_root_documentation(core_root, emit_dest)
+            self._emit_installer_entrypoint(emit_dest)
+            self._emit_hooks(repo_root, emit_dest)
+            self._emit_claude_md(core_root, emit_dest)
 
     @staticmethod
     def _rule_use_when_description(rule_text: str) -> str | None:
