@@ -40,11 +40,101 @@ _CASUAL_LOWER_MARKER = re.compile(r"\b(todo|tbd|fixme)\b")
 _HARD_AMBIGUITY_MARKER = re.compile(r"\b(TBD|TODO|FIXME)\b", re.I)
 _COLON_WRAP = re.compile(r"\b([A-Za-z][A-Za-z0-9_-]*)\s*:")
 _BRACKET_WRAP = re.compile(r"\[([^\]]+)\]")
+_FRONTMATTER_BLOCK = re.compile(r"\A---\s*\n([\s\S]*?)\n---\s*(?:\n|$)", re.M)
+_FLOW_LIST = re.compile(r"^\[(.*)\]$", re.S)
 
 
-def _reviewed_literals_allowlist(_text: str) -> frozenset[str]:
-    """Phase 2 parses reviewedLiterals; phase 1 ships with an empty allowlist."""
-    return frozenset()
+def _parse_flow_string_list(raw: str) -> list[str] | None:
+    """Parse YAML flow-style string list (`[a, b]`); None when not that shape."""
+    match = _FLOW_LIST.match(raw.strip())
+    if not match:
+        return None
+    inner = match.group(1).strip()
+    if not inner:
+        return []
+    items: list[str] = []
+    buf: list[str] = []
+    quote: str | None = None
+    escaped = False
+    for ch in inner:
+        if quote:
+            if escaped:
+                buf.append(ch)
+                escaped = False
+                continue
+            if ch == "\\" and quote == '"':
+                escaped = True
+                continue
+            if ch == quote:
+                quote = None
+                continue
+            buf.append(ch)
+            continue
+        if ch in ("'", '"'):
+            quote = ch
+            continue
+        if ch == ",":
+            items.append("".join(buf).strip())
+            buf = []
+            continue
+        buf.append(ch)
+    items.append("".join(buf).strip())
+    if quote is not None:
+        return None
+    return [item for item in items if item != ""]
+
+
+def _reviewed_literals_from_value(value: object) -> tuple[frozenset[str] | None, str | None]:
+    """Normalize reviewedLiterals to an exact-string allowlist. Fail closed on bad shapes."""
+    if value is None:
+        return frozenset(), None
+    if isinstance(value, str):
+        flow = _parse_flow_string_list(value)
+        if flow is None:
+            return None, "reviewedLiterals must be a YAML list of strings"
+        value = flow
+    if not isinstance(value, list):
+        return None, "reviewedLiterals must be a YAML list of strings"
+    if not value:
+        return frozenset(), None
+    allow: list[str] = []
+    for item in value:
+        if not isinstance(item, str) or not item:
+            return None, "reviewedLiterals must be a YAML list of strings"
+        allow.append(item)
+    return frozenset(allow), None
+
+
+def _reviewed_literals_allowlist(text: str) -> tuple[frozenset[str], str | None]:
+    """Parse optional frontmatter reviewedLiterals (list-capable; not planning_bundle)."""
+    from yaml_structured import safe_load
+
+    match = _FRONTMATTER_BLOCK.match(text)
+    if not match:
+        return frozenset(), None
+    try:
+        fm = safe_load(match.group(1))
+    except Exception:
+        return frozenset(), None
+    if not isinstance(fm, dict) or "reviewedLiterals" not in fm:
+        return frozenset(), None
+    allow, err = _reviewed_literals_from_value(fm.get("reviewedLiterals"))
+    if err:
+        return frozenset(), err
+    return allow or frozenset(), None
+
+
+def _decision_log_covers_reviewed_literals(text: str, allowlist: frozenset[str]) -> bool:
+    """R5: non-empty reviewedLiterals requires Decision Log naming those tokens."""
+    if not allowlist:
+        return True
+    m = re.search(r"^##\s+Decision Log\s*$([\s\S]*?)(?=^##\s|\Z)", text, re.M | re.I)
+    if not m:
+        return False
+    log = m.group(1)
+    if not log.strip():
+        return False
+    return all(token in log for token in allowlist)
 
 
 def _allowlisted(fragment: str, allowlist: frozenset[str]) -> bool:
@@ -141,7 +231,7 @@ def _run(
         print(json.dumps({"verdict": "fail", "error": f"artifact not found: {body_path}", "artifact": artifact}))
         return 20
     text = content
-    reviewed_literals = _reviewed_literals_allowlist(text)
+    reviewed_literals, reviewed_literals_error = _reviewed_literals_allowlist(text)
     findings: list[dict] = []
 
     def add(gate: str, severity: str, message: str, rid: str | None = None) -> None:
@@ -149,6 +239,15 @@ def _run(
         if rid:
             item["rid"] = rid
         findings.append(item)
+
+    if reviewed_literals_error:
+        add("checklist", "error", reviewed_literals_error)
+    elif reviewed_literals and not _decision_log_covers_reviewed_literals(text, reviewed_literals):
+        add(
+            "checklist",
+            "error",
+            "non-empty reviewedLiterals requires Decision Log naming each token",
+        )
 
     def issue_store_virtual_handle_gate() -> None:
         """Traceability + doctor gate for issue-store virtual handles (PRD 280 R11/R12)."""
