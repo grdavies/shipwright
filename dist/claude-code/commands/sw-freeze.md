@@ -117,10 +117,12 @@ python3 scripts/planning_store.py freeze --unit-id <unit-id> --body-path <artifa
   closes+links brainstorm issue (retained, not deleted)
 - Distillation failure flags `sw:freeze-incomplete` and blocks deliver (fail-closed)
 - CI/deliver verify via `python3 scripts/planning_store.py verify-frozen-hash ...`
-- **Linear reconstruct-before-ok (PRD 358 R9):** freeze of a Linear-backed unit is refused when
-  reconstruction fails (truncated head, missing overflow, `writeToken`/authorship mismatch), even if
-  spec-rigor parses asterisk `* **R1**` R-IDs on the stump. A normalized temporary copy is never
-  freeze evidence or frozen-hash input. Pass consumer `--root` into spec-rigor on the freeze path.
+- **Linear reconstruct-before-ok (PRD 358 R9 / PRD 359):** freeze of a Linear-backed unit is
+  refused when reconstruction fails (truncated head, missing overflow, `writeToken`/authorship
+  mismatch, or `linear_public_markdown_equivalent()` mismatch against the pre-chunk body), even if
+  spec-rigor parses asterisk `* **R1**` R-IDs on the stump. Original bytes remain the freeze/hash
+  witness. A normalized temporary copy is never freeze evidence or frozen-hash input. Pass consumer
+  `--root` into spec-rigor on the freeze path.
 
 
 
