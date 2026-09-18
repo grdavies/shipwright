@@ -31,7 +31,7 @@ Resolve `planning.store.backend` from `.cursor/workflow.config.json`:
 
 | Backend | Transport |
 | --- | --- |
-| `issue-store` | **Facade-only** review-round ops on the PRD artifact issue when `issuesProvider` is **GitHub** (`github-issues`): `post_review_finding` → `open_review_manifest` → `read_review_manifest` / `verify_review_manifest` → `complete_review_round`. Marker-delimited `sw-doc-review` comments; live body witness excluded from stripped canonical hash. Linear/Jira/Notion issue-store: `doc-review-provider-unsupported` until PRD 341 Phases 4–5. |
+| `issue-store` | **Facade-only** review-round ops on the PRD artifact issue when `issuesProvider` is **GitHub** (`github-issues`) or **Linear** (`linear`) after `docReviewComments` preflight: `post_review_finding` → `open_review_manifest` → `read_review_manifest` / `verify_review_manifest` → `complete_review_round`. Marker-delimited `sw-doc-review` comments; live body witness excluded from stripped canonical hash. Jira/Notion: fixture-enabled-not-dogfooded — not operator-live; halt when preflight refuses. |
 | **else** (default file-store) | In-IDE parallel sub-agent panel + JSON synthesis — **byte-identical** to pre-341 (R33). |
 
 Under issue-store, dispatch binding and persona selection are unchanged; only the **findings transport**

@@ -300,9 +300,10 @@ python3 scripts/planning_index_issue.py project-index-status --prd <n> --status 
 
 ## Document-review (PRD 341)
 
-**GitHub** (`github-issues`) is the only live issue-store doc-review transport today. Linear, Jira, and Notion
-issue-store backends halt with `doc-review-provider-unsupported` until PRD 341 Phases 4–5 promote the
-`docReviewComments` floor (matrix: `core/providers/issues/CAPABILITIES.md`). New GitHub rounds:
+**GitHub** (`github-issues`) and **Linear** (`linear`) are live issue-store doc-review transports when
+`docReviewComments` preflight passes (matrix: `core/providers/issues/CAPABILITIES.md`). **Jira** and **Notion**
+are fixture-enabled-not-dogfooded — not operator-live; halt with `doc-review-provider-unsupported` when the
+floor is incomplete. New rounds:
 **post-then-open** → verify → **complete** via five facade ops. Stripped-hash excludes live witnesses from
 freeze inputs; `.cursor/doc-review-runs/` is cache-only.
 
