@@ -1398,6 +1398,7 @@
 * merge phase list-capable-reviewedliterals-extra into feat/spec-rigor-reviewed-literal (8bff650) <!-- sw-deliver:list-capable-reviewedliterals-extra -->
 * merge phase goldens-and-skill-text into feat/spec-rigor-reviewed-literal (f3c5ec1) <!-- sw-deliver:goldens-and-skill-text -->
 * merge phase restore-dist-claude-code-after-failed-wipe-r2-small into feat/self-host-closeout-hygiene (8299700) <!-- sw-deliver:restore-dist-claude-code-after-failed-wipe-r2-small -->
+* merge phase clear-idle-batchintegrationhead-r7-r8-r9-small into feat/self-host-closeout-hygiene (ddff236) <!-- sw-deliver:clear-idle-batchintegrationhead-r7-r8-r9-small -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
