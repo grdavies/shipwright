@@ -1,11 +1,11 @@
 {
   "adapter_id": "opencode",
-  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/doc-review-linear-remaining-phase-verify-honors-exhaustive-permutation-vs-chronology/.shipwright/mcp/opencode.json",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/doc-review-linear-remaining-phase-complete-after-r3-recovery-and-same-key-replay/.shipwright/mcp/opencode.json",
   "mcpServers": {
     "shipwright-bounded": {
       "command": "python3",
       "args": [
-        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/doc-review-linear-remaining-phase-verify-honors-exhaustive-permutation-vs-chronology/core/mcp/server.py"
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/doc-review-linear-remaining-phase-complete-after-r3-recovery-and-same-key-replay/core/mcp/server.py"
       ],
       "transport": "stdio"
     }
