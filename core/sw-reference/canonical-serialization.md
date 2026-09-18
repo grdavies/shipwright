@@ -55,14 +55,27 @@ succeeds**. Linear overflow reconstruct-before-ok requires:
 
 - `comments_complete` true on the live re-read
 - overflow comments bound to this write's `writeToken` and Linear overflow **authorship**
-- R6 canonical Markdown compare against the caller-supplied pre-chunk body (not a
-  persisted-description echo)
+- `linear_public_markdown_equivalent()` against the caller-supplied pre-chunk body (not a
+  persisted-description echo, and not R6 form identity alone)
 
 Nested `sw-chunk-manifest` fragments inside overflow comments are a failed write.
 Unscoped positional fallback of foreign or superseded overflow is a failed write.
-Original bytes remain the freeze/hash witness; enumerated Linear Public Markdown rewrites
-(`*`/`-` list markers, documented bold/code/table formatting, plain-domain autolinks) are
-the only allowed equality exceptions.
+Original bytes remain the freeze/hash witness (`original_bytes_hash_body`).
+`linear_public_markdown_equivalent()` may treat only the named Linear Public Markdown
+rewrite families as equal:
+
+- `list-marker`
+- `bold-delimiter`
+- `code-span`
+- `table-formatting`
+- `plain-domain-autolink`
+- `bold-around-inline-code`
+- `italic-delimiter`
+- `ordered-list-leading-space`
+- `literal-punctuation-escape`
+
+A new Standard unit under this contract does **not** amend frozen PRD 358 materialized
+trees or PRD 357 docs.
 
 ## sw-edges block (R29/R47)
 

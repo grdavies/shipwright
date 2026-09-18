@@ -123,11 +123,19 @@ records a tighter distinct cap. Linear-aware splitter work must not ship without
 The **facade is the single owner** of Linear description splitting. `IssueStoreBackend`
 calls `planning_canonical.chunk_body_if_needed(provider="linear")`, which delegates to
 `planning_linear_canonical.chunk_body_for_linear` after `require_linear_size_pin()`.
-Oversized bodies are split into:
+Splits are Markdown-aware: cut points sit at construct boundaries (inline code, links,
+emphasis, fenced code, GFM tables). An oversized closed-set construct that cannot be
+split without an interior cut fails closed as `LinearOversizedConstructError`
+(`code: oversized-closed-set`) — never a max-prefix fallback inside the span.
+Oversized bodies that do split become:
 
 1. Head description with `<!-- sw-chunk-manifest: … -->`
 2. Ordered overflow comments marked `<!-- sw-chunk-overflow -->` plus
    `<!-- sw-chunk-token:<writeToken> -->` in the comment body (authorship / actor binding)
+
+**Accept-all (PRD 359):** live-pass, map-13 named rewrite families, split-first
+re-measure, and closed-set oversized refusal are recorded operator contracts — not
+optional adapter knobs.
 
 **Skip-on-manifest (R1):** adapter `prepare_body_with_overflow` is a hard skip when the
 body already carries `sw-chunk-manifest`. A manifested head is never treated as ordinary
@@ -137,12 +145,13 @@ document text and split again (create and update).
 36-character UUID length (and attached metadata) before posting, so
 `rewrite_chunk_manifest_ids` cannot push the head over 60,000 UTF-8 bytes.
 
-**reconstruct-before-ok (R3):** after put finalization, `IssueStoreBackend` re-reads with
-`comments_complete` true, reassembles head+overflow, and compares against the
-**caller-supplied pre-chunk body** under R6 canonical Markdown. Fail closed on missing,
-nested, or unreferenced chunks, `writeToken` / authorship mismatch, canonical inequality,
-or reconstructed UTF-8 length outside the intended write. Do not clear `sw:put-incomplete`,
-return `ok`, or freeze/hash when the check fails.
+**reconstruct-before-ok (R3 / PRD 359):** after put finalization, `IssueStoreBackend`
+re-reads with `comments_complete` true, reassembles head+overflow, and compares against
+the **caller-supplied pre-chunk body** with `linear_public_markdown_equivalent()` (Linear
+only; other providers no-op this gate). Fail closed on missing, nested, or unreferenced
+chunks, `writeToken` / authorship mismatch, equivalent() inequality, or reconstructed
+UTF-8 length outside the intended write. Do not clear `sw:put-incomplete`, return `ok`,
+or freeze/hash when the check fails.
 
 There is no ADF-style tighter cap (unlike Jira Cloud).
 
