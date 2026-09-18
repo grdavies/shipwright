@@ -106,4 +106,4 @@ When the parent doc-loop `tasks` stage carries an orchestrated receipt (`orchest
 `relatedWorkResolved`, `parentRunId`), pass `--orchestrated --parent-run-id` to
 `planning-related.py scan` so related-work is not rescanned. Standalone `/sw-tasks` omits those flags.
 
-<!-- currency: refreshed 2026-09-17T08:50:00Z — terminal-ship after check_frozen_lib / doc_loop currency -->
+<!-- currency: refreshed 2026-09-18T01:51:00Z — terminal-ship after check_frozen_lib equivalent() -->
