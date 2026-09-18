@@ -1130,6 +1130,7 @@ def remediate_pending_for_state(root: Path, state: dict[str, Any]) -> bool:
 def refresh_batch_integration_head(root: Path, state: dict[str, Any]) -> None:
     """Atomically refresh batchIntegrationHead when batch queue active (R34)."""
     if not (state.get("mergeQueue") or state.get("mergeJournal")):
+        clear_batch_integration_head_if_idle(state)
         return
     head = integration_branch_head(root, state)
     if head:
@@ -2385,6 +2386,14 @@ def batch_integration_head_halt(
 def clear_batch_integration_head_if_idle(state: dict[str, Any]) -> None:
     if not state.get("mergeQueue") and not state.get("mergeJournal"):
         state.pop("batchIntegrationHead", None)
+
+
+def batch_integration_head_halt_after_idle_clear(
+    root: Path, state: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Apply R7 idle clear before evaluating batch-integration-head halt (R8/R9)."""
+    clear_batch_integration_head_if_idle(state)
+    return batch_integration_head_halt(root, state)
 
 
 def in_flight_merge_halt(
@@ -3657,7 +3666,7 @@ def compute_next_action(
     if merge_halt:
         return merge_halt
 
-    batch_halt = batch_integration_head_halt(root, state)
+    batch_halt = batch_integration_head_halt_after_idle_clear(root, state)
     if batch_halt:
         return batch_halt
 
@@ -4549,6 +4558,7 @@ def _execute_mechanical_inner(
             return {"executed": "post-merge-verify-remediate", "phaseSlug": slug, **data}
         if ec == 10 and data.get("cause") == "verify:environmental":
             state.update(load_state(root))
+            clear_batch_integration_head_if_idle(state)
             attempts = state.setdefault("verifyRemediationAttempts", {})
             attempts[pid] = int(step.get("attempt") or attempts.get(pid, 0))
             meta = (state.get("phases") or {}).get(pid)
@@ -4597,7 +4607,7 @@ def _execute_mechanical_inner(
 
     if action == "merge-run-next":
         fixture_tree_clean_or_halt(root, state)
-        batch_halt = batch_integration_head_halt(root, state)
+        batch_halt = batch_integration_head_halt_after_idle_clear(root, state)
         if batch_halt:
             fail(
                 batch_halt.get("cause") or "batch-integration-head-moved",
@@ -4610,6 +4620,7 @@ def _execute_mechanical_inner(
             # Reload disk state first — merge-run-next already dequeued + recorded
             # completedMerges; saving the pre-call in-memory snapshot would wipe that (R9).
             state.update(load_state(root))
+            clear_batch_integration_head_if_idle(state)
             # Merge advanced integration HEAD; refresh freeze before draining siblings (R10/R34).
             refresh_batch_integration_head(root, state)
             refresh_merge_queue_liveness_cas(root, state)
