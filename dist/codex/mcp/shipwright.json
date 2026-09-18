@@ -1,11 +1,11 @@
 {
   "adapter_id": "codex",
-  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/spec-rigor-reviewed-literal-phase-goldens-and-skill-text/.shipwright/mcp/codex.json",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/self-host-closeout-hygiene-phase-refuse-orchestrator-generate-all-r1-r3-r6-small/.shipwright/mcp/codex.json",
   "mcpServers": {
     "shipwright-bounded": {
       "command": "python3",
       "args": [
-        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/spec-rigor-reviewed-literal-phase-goldens-and-skill-text/core/mcp/server.py"
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/self-host-closeout-hygiene-phase-refuse-orchestrator-generate-all-r1-r3-r6-small/core/mcp/server.py"
       ],
       "transport": "stdio"
     }
