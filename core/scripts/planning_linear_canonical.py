@@ -166,15 +166,27 @@ LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
         "code-span",
         "table-formatting",
         "plain-domain-autolink",
+        "bold-around-inline-code",
+        "italic-delimiter",
+        "ordered-list-leading-space",
+        "literal-punctuation-escape",
     }
 )
+
+# PRD 359 R5 — fixture-enumerated punctuation unescape alphabet (excludes delimiter ticks).
+_LITERAL_PUNCTUATION_UNESCAPE_CHARS = frozenset(".,;:!?#'\"+-=&")
 
 _FENCED_BLOCK = re.compile(r"^```[^\n]*\n.*?^```", re.MULTILINE | re.DOTALL)
 _INLINE_CODE = re.compile(r"(?<!`)(`+)([^`]+)\1(?!`)")
 _UNORDERED_LIST = re.compile(r"^(\s*)[-+](?= \S)", re.MULTILINE)
 _BOLD_UNDERSCORE = re.compile(r"(?<!\w)__([^_\n]+?)__(?!\w)")
 _MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
-_AUTO_LINK = re.compile(r"<(https?://[^>]+)>")
+_AUTO_LINK = re.compile(r"<([^<>\s]+)>")
+_ORDERED_LIST = re.compile(r"^(\s*)(\d+)\.(\s+)(\S)", re.MULTILINE)
+_ITALIC_UNDERSCORE = re.compile(r"(?<!\w)_(?!_)([^_\n]+?)_(?!\w)")
+_LITERAL_PUNCTUATION_ESCAPE = re.compile(
+    r"\\([" + re.escape("".join(sorted(_LITERAL_PUNCTUATION_UNESCAPE_CHARS))) + r"])"
+)
 _BARE_DOMAIN = re.compile(
     r"(?<![\w./:@])((?:https?://)?(?:www\.)?[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})(?:/[^\s)\]>\"']*)?)"
 )
@@ -214,9 +226,23 @@ def _looks_like_domain(label: str) -> bool:
     return bool(_BARE_DOMAIN.fullmatch(stripped))
 
 
-def _canon_url(url: str) -> str:
+def _unwrap_angle_brackets(url: str) -> str:
+    """Unwrap a single `<destination>` pair (PRD 359 R6 / D8). No loop or remainder concat."""
     text = url.strip()
+    if not text.startswith("<") or not text.endswith(">"):
+        return text
+    if text.count("<") != 1 or text.count(">") != 1:
+        return text
+    return text[1:-1].strip()
+
+
+def _canon_url(url: str) -> str:
+    text = _unwrap_angle_brackets(url.strip())
     if text.startswith(("http://", "https://")):
+        return text
+    if text.startswith("//"):
+        return text
+    if re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", text):
         return text
     return f"https://{text}"
 
@@ -227,6 +253,41 @@ def _normalize_list_markers(text: str) -> str:
 
 def _normalize_bold_delimiters(text: str) -> str:
     return _BOLD_UNDERSCORE.sub(r"**\1**", text)
+
+
+def _normalize_italic_delimiters(text: str) -> str:
+    return _ITALIC_UNDERSCORE.sub(r"*\1*", text)
+
+
+def _normalize_ordered_list_spacing(text: str) -> str:
+    return _ORDERED_LIST.sub(r"\1\2. \4", text)
+
+
+def _normalize_literal_punctuation_escapes(text: str) -> str:
+    def _repl(match: re.Match[str]) -> str:
+        return match.group(1)
+
+    return _LITERAL_PUNCTUATION_ESCAPE.sub(_repl, text)
+
+
+def _normalize_bold_around_inline_code(text: str) -> str:
+    """Drop bold wrapping an inline code span only (PRD 359 R3 — not a global strip)."""
+    out: list[str] = []
+    index = 0
+    for match in _INLINE_CODE.finditer(text):
+        start, end = match.start(), match.end()
+        bold_wrapped = (
+            start >= 2
+            and end + 2 <= len(text)
+            and text[start - 2 : start] == "**"
+            and text[end : end + 2] == "**"
+        )
+        slice_start = start - 2 if bold_wrapped else start
+        out.append(text[index:slice_start])
+        out.append(match.group(0))
+        index = end + 2 if bold_wrapped else end
+    out.append(text[index:])
+    return "".join(out)
 
 
 def _normalize_table_line(line: str) -> str:
@@ -261,11 +322,12 @@ def _normalize_autolinks(text: str) -> str:
     def _md_link(match: re.Match[str]) -> str:
         label, href = match.group(1), match.group(2)
         canon = _canon_url(href)
+        stripped_label = label.strip()
         if _looks_like_domain(label) and _canon_url(label) == canon:
             return canon
-        label_host = label.strip().removeprefix("https://").removeprefix("http://")
-        href_host = canon.removeprefix("https://").removeprefix("http://")
-        if label_host == href_host:
+        if stripped_label == href.strip() or stripped_label == canon:
+            return canon
+        if stripped_label.startswith(("http://", "https://", "//")) and stripped_label == canon:
             return canon
         return f"[{label}]({canon})"
 
@@ -276,7 +338,10 @@ def _normalize_autolinks(text: str) -> str:
 
 def _r6_rewrite_outside_code(text: str) -> str:
     text = _normalize_list_markers(text)
+    text = _normalize_ordered_list_spacing(text)
     text = _normalize_bold_delimiters(text)
+    text = _normalize_italic_delimiters(text)
+    text = _normalize_literal_punctuation_escapes(text)
     text = _normalize_tables(text)
     return _normalize_autolinks(text)
 
@@ -293,11 +358,28 @@ def linear_public_markdown_r6_form(markdown: str) -> str:
     text = linear_markdown_canonical(text)
     text, fences = _placeholder_protect(text, _FENCED_BLOCK, "FENCE")
     text = _INLINE_CODE.sub(_normalize_inline_code_span, text)
+    text = _normalize_bold_around_inline_code(text)
     text, codes = _placeholder_protect(text, _INLINE_CODE, "CODE")
     text = _r6_rewrite_outside_code(text)
     text = _placeholder_restore(text, codes, "CODE")
     text = _placeholder_restore(text, fences, "FENCE")
     return normalize_body(text)
+
+
+def _inline_code_bold_attachments(text: str) -> tuple[str, ...]:
+    """Occurrence-ordered inline code plus bold-wrap flag (PRD 359 R3)."""
+    attachments: list[str] = []
+    for match in _INLINE_CODE.finditer(text):
+        inner = match.group(2).strip()
+        start, end = match.start(), match.end()
+        bold_wrapped = (
+            start >= 2
+            and end + 2 <= len(text)
+            and text[start - 2 : start] == "**"
+            and text[end : end + 2] == "**"
+        )
+        attachments.append(f"{inner}|bold={int(bold_wrapped)}")
+    return tuple(attachments)
 
 
 def _extract_code_contents(text: str) -> tuple[str, ...]:
@@ -411,6 +493,24 @@ class LinearChunkHeadBudgetError(RuntimeError):
     """No description head fits within the limit after UUID manifest rewrite (PRD 358 R2)."""
 
 
+class LinearOversizedConstructError(RuntimeError):
+    """Closed-set Markdown construct exceeds Linear overflow budget (PRD 359 R9/D6).
+
+    Message is opaque JSON: kind, length, code — never the span text.
+    """
+
+    def __init__(self, *, kind: str, length: int, code: str = "oversized-closed-set") -> None:
+        payload = json.dumps(
+            {"code": code, "kind": kind, "length": length},
+            sort_keys=True,
+            ensure_ascii=True,
+        )
+        super().__init__(payload)
+        self.kind = kind
+        self.length = length
+        self.code = code
+
+
 def _utf8_byte_len(text: str) -> int:
     return len(text.encode("utf-8"))
 
@@ -427,11 +527,129 @@ def _is_gfm_table_line(line: str) -> bool:
     return len(parts) >= 2 and "|" in stripped
 
 
-def _split_positions(text: str) -> list[int]:
-    """Split points outside fenced code blocks and GFM tables (R9).
+_EMPHASIS_BOLD_STAR = re.compile(r"\*\*[^*\n]+?\*\*")
+_EMPHASIS_BOLD_US = re.compile(r"(?<!\w)__[^_\n]+?__(?!\w)")
+_EMPHASIS_ITALIC_STAR = re.compile(r"(?<!\*)\*(?!\*)[^*\n]+?\*(?!\*)")
+_EMPHASIS_ITALIC_US = re.compile(r"(?<!\w)_(?!_)[^_\n]+?_(?!\w)")
+_MD_IMAGE_OR_LINK = re.compile(r"!?\[(?:[^\]]*)\]\([^)]+\)")
 
-    Prefer newline boundaries; allow Unicode character boundaries on plain lines.
+
+def _spans_overlap(start: int, end: int, occupied: list[tuple[int, int]]) -> bool:
+    for occ_start, occ_end in occupied:
+        if start < occ_end and end > occ_start:
+            return True
+    return False
+
+
+def _is_list_marker_open(text: str, star_index: int) -> bool:
+    line_start = text.rfind("\n", 0, star_index) + 1
+    prefix = text[line_start:star_index]
+    if prefix.strip():
+        return False
+    return star_index + 1 < len(text) and text[star_index + 1] in " \t"
+
+
+def _collect_regex_spans(
+    text: str,
+    pattern: re.Pattern[str],
+    kind: str,
+    occupied: list[tuple[int, int]],
+    *,
+    skip_list_star: bool = False,
+) -> list[tuple[int, int, str]]:
+    found: list[tuple[int, int, str]] = []
+    for match in pattern.finditer(text):
+        start, end = match.start(), match.end()
+        if skip_list_star and _is_list_marker_open(text, start):
+            continue
+        if _spans_overlap(start, end, occupied):
+            continue
+        found.append((start, end, kind))
+        occupied.append((start, end))
+    return found
+
+
+def _table_and_fence_spans(text: str) -> list[tuple[int, int, str]]:
+    spans: list[tuple[int, int, str]] = []
+    for match in _FENCED_BLOCK.finditer(text):
+        spans.append((match.start(), match.end(), "fenced-code"))
+    in_table = False
+    table_start = 0
+    index = 0
+    length = len(text)
+    occupied_fences = [(s, e) for s, e, k in spans if k == "fenced-code"]
+    while index <= length:
+        newline = text.find("\n", index)
+        line_end = length if newline == -1 else newline
+        line = text[index:line_end]
+        inside_fence = _spans_overlap(index, line_end, occupied_fences)
+        is_table = (not inside_fence) and _is_gfm_table_line(line)
+        if is_table and not in_table:
+            in_table = True
+            table_start = index
+        elif in_table and not is_table:
+            spans.append((table_start, index, "gfm-table"))
+            in_table = False
+        if newline == -1:
+            if in_table:
+                spans.append((table_start, length, "gfm-table"))
+            break
+        index = newline + 1
+    return spans
+
+
+def _closed_set_spans(text: str) -> list[tuple[int, int, str]]:
+    """Non-overlapping closed-set indivisibles: fences, tables, code, links, emphasis."""
+    spans = _table_and_fence_spans(text)
+    occupied = [(s, e) for s, e, _k in spans]
+    spans.extend(_collect_regex_spans(text, _INLINE_CODE, "inline-code", occupied))
+    spans.extend(_collect_regex_spans(text, _MD_IMAGE_OR_LINK, "markdown-link", occupied))
+    spans.extend(_collect_regex_spans(text, _AUTO_LINK, "markdown-link", occupied))
+    spans.extend(_collect_regex_spans(text, _EMPHASIS_BOLD_STAR, "emphasis", occupied))
+    spans.extend(_collect_regex_spans(text, _EMPHASIS_BOLD_US, "emphasis", occupied))
+    spans.extend(
+        _collect_regex_spans(
+            text, _EMPHASIS_ITALIC_STAR, "emphasis", occupied, skip_list_star=True
+        )
+    )
+    spans.extend(_collect_regex_spans(text, _EMPHASIS_ITALIC_US, "emphasis", occupied))
+    spans.sort(key=lambda item: (item[0], item[1]))
+    return spans
+
+
+def _offset_inside_closed_set(pos: int, spans: list[tuple[int, int, str]]) -> bool:
+    return any(start < pos < end for start, end, _kind in spans)
+
+
+def _leading_closed_set(text: str) -> tuple[str, int] | None:
+    for start, end, kind in _closed_set_spans(text):
+        if start == 0:
+            return kind, _utf8_byte_len(text[:end])
+    return None
+
+
+def _overflow_marker_overhead_bytes() -> int:
+    return _utf8_byte_len(_overflow_comment_prefix("0" * 12))
+
+
+def _raise_if_oversized_closed_set(text: str) -> None:
+    overhead = _overflow_marker_overhead_bytes()
+    budget = _LINEAR_CHUNK_LIMIT - overhead
+    if budget < 0:
+        budget = 0
+    for start, end, kind in _closed_set_spans(text):
+        length = _utf8_byte_len(text[start:end])
+        if length > budget:
+            raise LinearOversizedConstructError(kind=kind, length=length)
+
+
+def _split_positions(text: str) -> list[int]:
+    """Legal cuts: newlines outside fences/tables, and closed-set boundaries (R8/R10).
+
+    Never returns an offset strictly inside inline code, Markdown links, emphasis
+    runs, fenced code, or GFM tables.
     """
+    spans = _closed_set_spans(text)
     positions: set[int] = {0}
     in_fence = False
     in_table = False
@@ -463,12 +681,15 @@ def _split_positions(text: str) -> list[int]:
                     in_table = False
                 if newline != -1:
                     positions.add(newline + 1)
-                if not in_table:
-                    for cut in range(line_start + 1, line_end + 1):
+                for cut in range(line_start + 1, line_end + 1):
+                    if not _offset_inside_closed_set(cut, spans):
                         positions.add(cut)
         if newline == -1:
             break
         index = newline + 1
+    for start, end, _kind in spans:
+        positions.add(start)
+        positions.add(end)
     positions.add(length)
     return sorted(positions)
 
@@ -539,6 +760,10 @@ def _split_overflow_comments(
         positions = _split_positions(remaining)
         chunk_len = _max_prefix_bytes(remaining, limit=max_piece_bytes, positions=positions)
         if chunk_len <= 0:
+            leading = _leading_closed_set(remaining)
+            if leading is not None:
+                kind, length = leading
+                raise LinearOversizedConstructError(kind=kind, length=length)
             chunk_len = _max_prefix_chars(remaining, max_piece_bytes)
         if chunk_len <= 0:
             raise RuntimeError("Linear body chunking failed: overflow fragment exceeds comment limit")
@@ -604,6 +829,7 @@ def chunk_body_for_linear(
         return body, comments
 
     write_token = uuid.uuid4().hex[:12]
+    _raise_if_oversized_closed_set(body)
     positions = _split_positions(body)
     lo, hi = 0, len(positions) - 1
     best: tuple[str, list[CommentRecord]] | None = None
@@ -626,6 +852,10 @@ def chunk_body_for_linear(
         else:
             hi = mid - 1
     if best is None:
+        leading = _leading_closed_set(body)
+        if leading is not None:
+            kind, length = leading
+            raise LinearOversizedConstructError(kind=kind, length=length)
         raise LinearChunkHeadBudgetError(
             "Linear body chunking failed: no description head fits after UUID manifest rewrite"
         )

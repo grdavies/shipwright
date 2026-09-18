@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-17T07:49:06Z",
+  "generatedAt": "2026-09-18T01:56:17Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -1945,19 +1945,19 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:158:install-hooks.py",
+      "id": "core/commands/sw-freeze.md:160:install-hooks.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 158,
+      "line": 160,
       "column": 31,
       "script": "install-hooks.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:162:sw_bootstrap.py",
+      "id": "core/commands/sw-freeze.md:164:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 162,
+      "line": 164,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -4411,91 +4411,91 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:172:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:181:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 172,
+      "line": 181,
       "column": 32,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:230:planning_store.py",
+      "id": "core/providers/issues/linear.md:239:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 230,
+      "line": 239,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:231:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:240:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 231,
+      "line": 240,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:268:test/run_pytest.py",
+      "id": "core/providers/issues/linear.md:277:test/run_pytest.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 268,
+      "line": 277,
       "column": 8,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:274:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:283:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 274,
+      "line": 283,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:280:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:289:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 280,
+      "line": 289,
       "column": 28,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:344:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:353:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 344,
+      "line": 353,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:364:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:373:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 364,
+      "line": 373,
       "column": 10,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:393:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:402:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 393,
+      "line": 402,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:394:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:403:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 394,
+      "line": 403,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
@@ -7552,10 +7552,10 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/canonical-serialization.md:105:test/run_planning_store_fixtures.py",
+      "id": "core/sw-reference/canonical-serialization.md:118:test/run_planning_store_fixtures.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/canonical-serialization.md",
-      "line": 105,
+      "line": 118,
       "column": 9,
       "script": "test/run_planning_store_fixtures.py",
       "classification": "self-repo-only"
@@ -9226,19 +9226,19 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:158:install-hooks.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:160:install-hooks.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 158,
+      "line": 160,
       "column": 31,
       "script": "install-hooks.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:162:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:164:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 162,
+      "line": 164,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -15256,19 +15256,19 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:158:install-hooks.py",
+      "id": "dist/cursor/commands/sw-freeze.md:160:install-hooks.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 158,
+      "line": 160,
       "column": 31,
       "script": "install-hooks.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:162:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-freeze.md:164:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 162,
+      "line": 164,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"

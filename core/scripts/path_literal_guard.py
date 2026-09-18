@@ -27,7 +27,6 @@ SCAN_ROOTS = (
     "core/scripts",
     "core/hooks",
     "hooks",
-    "sw",
     "platforms",
 )
 
@@ -40,6 +39,7 @@ SKIP_PATH_MARKERS = (
     "/fixtures/",
     "/_sw/vendor/",
     "/generated/",
+    "/sw/dist/",
 )
 
 CONFIG_PATH_NEEDLES = (
@@ -122,6 +122,11 @@ def mirror_pair_rel(rel: str) -> str | None:
 def should_skip_rel(rel: str) -> bool:
     posix = f"/{rel}"
     if any(marker in posix for marker in SKIP_PATH_MARKERS):
+        return True
+    # Packaged plugin copies under sw/ (including sw/scripts + sw/dist) duplicate
+    # scripts/ + core/ mirrors; scanning them inflates the ratchet with generated
+    # install trees (PRD 342 R11 — scan authored sources only).
+    if rel == "sw" or rel.startswith("sw/"):
         return True
     if rel in {GUARD_REL.as_posix(), "core/scripts/path_literal_guard.py"}:
         return True

@@ -7,11 +7,29 @@ from pathlib import Path
 from typing import Any
 
 from issues_lib import IssueRevisionConflict
+from planning_linear_canonical import linear_public_markdown_equivalent
 
 ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
 ISSUE_UNIT_INDEX_AUDIT = ".cursor/hooks/state/issue-store-unit-index-audit.jsonl"
 ISSUE_STORE_TXN_ID = "issue-store"
+# PRD 359 R14 / D2 — absorb set remains GAP-474 and GAP-475 (no expansion).
+PUT_SECRET_SCAN_ABSORB = ("GAP-474", "GAP-475")
+
+
+def scan_put_payloads(
+    guard: Callable[..., None],
+    *,
+    pre_chunk_body: str,
+    head: str,
+    overflow_bodies: list[str],
+    path_hint: str | None = None,
+) -> None:
+    """Fail-closed secret scan on pre-chunk, posted head, and each overflow fragment."""
+    guard(pre_chunk_body, path_hint=path_hint)
+    guard(head, path_hint=path_hint)
+    for fragment in overflow_bodies:
+        guard(fragment, path_hint=path_hint)
 
 def load_issue_unit_index(root: Path) -> dict[str, str]:
     path = root / ISSUE_UNIT_INDEX
@@ -248,7 +266,7 @@ def guard_unit_id_marker_reuse(
 
 
 def r6_canonical_body(text: str, *, issues_provider: str, ps_mod: Any) -> str:
-    """R6 Public Markdown equivalence for reconstruct-before-ok (PRD 358 R3/D5)."""
+    """R6 Public Markdown comparison form (PRD 358 R3). Not the reconstruct-ok predicate."""
     if issues_provider == "linear":
         from planning_linear_canonical import linear_public_markdown_r6_form
 
@@ -256,6 +274,17 @@ def r6_canonical_body(text: str, *, issues_provider: str, ps_mod: Any) -> str:
     from planning_canonical import normalize_body
 
     return normalize_body(text)
+
+
+def reconstruct_bodies_equivalent(
+    expected: str, actual: str, *, issues_provider: str, ps_mod: Any
+) -> bool:
+    """Shared put+freeze reconstruct-before-ok predicate (PRD 359 R2/R11/D5)."""
+    if issues_provider == "linear":
+        return linear_public_markdown_equivalent(expected, actual)
+    return r6_canonical_body(
+        expected, issues_provider=issues_provider, ps_mod=ps_mod
+    ) == r6_canonical_body(actual, issues_provider=issues_provider, ps_mod=ps_mod)
 
 
 def logical_issue_body(record: Any, *, ps_mod: Any, linear_bind: bool = False) -> str:
@@ -313,6 +342,25 @@ def lookup_record_and_refuse_truncated_reconstruct(
     return record
 
 
+def verify_reconstruct_before_ok_if_linear(
+    backend: Any,
+    record: Any,
+    *,
+    pre_chunk_body: str,
+    ps_mod: Any,
+) -> Any:
+    """PRD 359 R12/D7 — reconstruct-before-ok runs only for Linear; other providers no-op."""
+    if backend.issues_provider != "linear":
+        return record
+    return verify_reconstruct_before_ok(
+        backend._client,
+        record,
+        pre_chunk_body=pre_chunk_body,
+        issues_provider=backend.issues_provider,
+        ps_mod=ps_mod,
+    )
+
+
 def verify_reconstruct_before_ok(
     client: Any,
     record: Any,
@@ -350,8 +398,8 @@ def verify_reconstruct_before_ok(
             reason=str(exc),
         )
     expected = ps_mod.strip_markers_and_edges(pre_chunk_body)
-    if r6_canonical_body(expected, issues_provider=issues_provider, ps_mod=ps_mod) != r6_canonical_body(
-        reassembled, issues_provider=issues_provider, ps_mod=ps_mod
+    if not reconstruct_bodies_equivalent(
+        expected, reassembled, issues_provider=issues_provider, ps_mod=ps_mod
     ):
         ps_mod.fail(
             "reconstruct-before-ok",

@@ -387,7 +387,10 @@ def refuse_truncated_linear_reconstruct(
     if issues_provider == "linear" and comments_complete is None:
         record.comments_complete = True
 
-    from planning.backends.issues_helpers import logical_issue_body, r6_canonical_body
+    from planning.backends.issues_helpers import (
+        logical_issue_body,
+        reconstruct_bodies_equivalent,
+    )
 
     store_body = logical_issue_body(record, ps_mod=ps_mod)
     if freeze_evidence_body is not None:
@@ -401,8 +404,8 @@ def refuse_truncated_linear_reconstruct(
 
     if pre_chunk_body is not None:
         expected = _operator_store_form(pre_chunk_body, ps_mod)
-        if r6_canonical_body(expected, issues_provider=issues_provider, ps_mod=ps_mod) != r6_canonical_body(
-            store_body, issues_provider=issues_provider, ps_mod=ps_mod
+        if not reconstruct_bodies_equivalent(
+            expected, store_body, issues_provider=issues_provider, ps_mod=ps_mod
         ):
             ps_mod.fail(
                 "reconstruct-before-ok",
@@ -428,8 +431,8 @@ def refuse_truncated_linear_reconstruct(
     chunks = manifest.get("chunks") if isinstance(manifest, dict) else None
     if chunks:
         head_only = ps_mod.strip_markers_and_edges(str(getattr(record, "body", "") or ""))
-        if r6_canonical_body(store_body, issues_provider=issues_provider, ps_mod=ps_mod) == r6_canonical_body(
-            head_only, issues_provider=issues_provider, ps_mod=ps_mod
+        if reconstruct_bodies_equivalent(
+            store_body, head_only, issues_provider=issues_provider, ps_mod=ps_mod
         ):
             ps_mod.fail(
                 "reconstruct-before-ok",

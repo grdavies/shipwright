@@ -1386,6 +1386,11 @@
 * merge phase uuid-minting-issuestorebackend-double into feat/linear-issue-store-fidelity (2fb5977) <!-- sw-deliver:uuid-minting-issuestorebackend-double -->
 * merge phase canonical-markdown-equality-without-weakening into feat/linear-issue-store-fidelity (30c6472) <!-- sw-deliver:canonical-markdown-equality-without-weakening -->
 * merge phase provider-and-skill-documentation into feat/linear-issue-store-fidelity (42f9508) <!-- sw-deliver:provider-and-skill-documentation -->
+* merge phase markdown-aware-splitter-and-oversized-fail-closed into feat/linear-public-markdown-remaining (57a240b) <!-- sw-deliver:markdown-aware-splitter-and-oversized-fail-closed -->
+* merge phase reconstruct-and-freeze-use-equivalent into feat/linear-public-markdown-remaining (a2a2692) <!-- sw-deliver:reconstruct-and-freeze-use-equivalent -->
+* merge phase named-rewrite-families-after-split-first-re-measure into feat/linear-public-markdown-remaining (d641d2f) <!-- sw-deliver:named-rewrite-families-after-split-first-re-measure -->
+* merge phase provider-no-op-and-tie-7-journal into feat/linear-public-markdown-remaining (d565680) <!-- sw-deliver:provider-no-op-and-tie-7-journal -->
+* merge phase operator-docs-for-equivalent-and-markdown-aware-splits into feat/linear-public-markdown-remaining (4a9638d) <!-- sw-deliver:operator-docs-for-equivalent-and-markdown-aware-splits -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
