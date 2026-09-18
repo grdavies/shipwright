@@ -15,7 +15,7 @@ from planning_doc_review_transport import (
     build_doc_review_comment_body,
     stripped_artifact_hash,
 )
-from planning_store_facade import load_workflow_config, verify_review_manifest
+from planning_store_facade import load_workflow_config, open_review_manifest, post_review_finding, verify_review_manifest
 from unit_tests.planning.test_doc_review_transport_bootstrap import (
     FIXTURE_GITHUB_PRINCIPAL_ID,
     _fixture_bot,
@@ -135,7 +135,47 @@ class TestCommentDrift:
         assert out["error"] == DOC_REVIEW_COMMENT_DRIFT
         assert out.get("driftKind") == "added"
 
-    def test_reorder_pins_is_comment_drift(self, transport_repo: Path) -> None:
+    def test_exhaustive_pin_permutation_vs_chronology_verify_ok(self, transport_repo: Path) -> None:
+        cfg = load_workflow_config(transport_repo)
+        store = get_fixture_store(transport_repo)
+        unit_id = "360-prd-doc-review-linear-remaining"
+        round_id = "round-nor26-shape"
+        _seed_issue(store, unit_id=unit_id)
+        personas = ("coherence", "security", "product")
+        comment_ids: list[str] = []
+        for persona in personas:
+            posted = post_review_finding(
+                transport_repo,
+                cfg,
+                issue_id="887",
+                unit_id=unit_id,
+                round_id=round_id,
+                persona=persona,
+                payload=_sample_payload(persona),
+            )
+            assert posted["verdict"] == "ok"
+            comment_ids.append(str(posted["commentId"]))
+        permuted = list(reversed(comment_ids))
+        opened = open_review_manifest(
+            transport_repo,
+            cfg,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id=round_id,
+            ordered_comment_ids=permuted,
+        )
+        assert opened["verdict"] == "ok"
+        out = verify_review_manifest(
+            transport_repo,
+            cfg,
+            issue_id="887",
+            unit_id=unit_id,
+            round_id=round_id,
+        )
+        assert out["verdict"] == "ok"
+        assert out.get("detail") != "pin-order-mismatch"
+
+    def test_post_open_ordinal_mutation_is_comment_drift(self, transport_repo: Path) -> None:
         opened, comment_ids = _open_round(transport_repo)
         assert opened["verdict"] == "ok"
         assert len(comment_ids) >= 2
@@ -146,7 +186,6 @@ class TestCommentDrift:
             upsert_review_round_block,
         )
 
-        # Swap pin order in the body witness while comments stay in open order (R20).
         manifest = parse_review_round_block(record.body)
         pins = list(manifest.get("pins") or [])
         assert len(pins) >= 2
@@ -165,6 +204,8 @@ class TestCommentDrift:
         assert out["verdict"] == "fail"
         assert out["error"] == DOC_REVIEW_COMMENT_DRIFT
         assert out.get("driftKind") == "reorder"
+        assert out.get("detail") == "ordinal-mutation"
+        assert out.get("detail") != "pin-order-mismatch"
 
 
 class TestBodyDrift:

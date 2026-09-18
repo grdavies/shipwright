@@ -1203,6 +1203,37 @@ def verify_manifest_binding(
     return None
 
 
+def pin_order_exhaustive_permutation_of_marked(
+    pin_order: list[str],
+    marked_order: list[str],
+) -> bool:
+    """True when both sequences list the same comment ids (PRD 360 R3 / D3)."""
+    return len(pin_order) == len(marked_order) and set(pin_order) == set(marked_order)
+
+
+def verify_pin_row_ordinals(pins_raw: list[Any]) -> dict[str, Any] | None:
+    """Fail when manifest pin ordinals drift from their row index after open (R3)."""
+    for idx, row in enumerate(pins_raw):
+        if not isinstance(row, dict):
+            continue
+        normalized = normalize_pin_row(row)
+        if "ordinal" not in normalized:
+            continue
+        try:
+            ordinal = int(normalized.get("ordinal"))
+        except (TypeError, ValueError):
+            return drift_failure(kind="malformed", detail="invalid-ordinal", commentId=str(normalized.get("commentId") or ""))
+        if ordinal != idx:
+            return drift_failure(
+                kind="reorder",
+                detail="ordinal-mutation",
+                commentId=str(normalized.get("commentId") or ""),
+                expectedOrdinal=idx,
+                actualOrdinal=ordinal,
+            )
+    return None
+
+
 def verify_body_artifact_hash(
     *,
     manifest: dict[str, Any],
@@ -1334,14 +1365,19 @@ def verify_round_integrity(
     if missing_ids:
         return drift_failure(kind="delete", commentIds=sorted(missing_ids))
 
+    ordinal_drift = verify_pin_row_ordinals(pins_raw)
+    if ordinal_drift is not None:
+        return ordinal_drift
+
     marked_order = [str(comment.id) for comment in marked]
     if pin_order and marked_order and pin_order != marked_order:
-        return drift_failure(
-            kind="reorder",
-            detail="pin-order-mismatch",
-            expectedOrder=pin_order,
-            actualOrder=marked_order,
-        )
+        if not pin_order_exhaustive_permutation_of_marked(pin_order, marked_order):
+            return drift_failure(
+                kind="reorder",
+                detail="pin-order-mismatch",
+                expectedOrder=pin_order,
+                actualOrder=marked_order,
+            )
 
     return None
 
