@@ -635,7 +635,7 @@ def try_adopt_recorded_orchestrator_worktree(
         adopt_orchestrator_worktree,
         git_toplevel,
         orchestrator_worktree_branch,
-        orchestrator_worktree_dirty,
+        orchestrator_worktree_dirty_halt,
     )
 
     current = orchestrator_worktree_branch(path)
@@ -648,13 +648,18 @@ def try_adopt_recorded_orchestrator_worktree(
             actual=current,
             expected=target,
         )
-    if orchestrator_worktree_dirty(path):
+    dirty_halt = orchestrator_worktree_dirty_halt(path)
+    if dirty_halt:
         _fail_orch_adopt(
             root,
             state,
             f"orchestrator worktree is dirty: {path}",
-            halt="dirty-orchestrator",
-            cause="resume:orchestrator-dirty",
+            halt=dirty_halt,
+            cause=(
+                "closeout:generate-only-dirt"
+                if dirty_halt == "closeout:generate-only-dirt"
+                else "resume:orchestrator-dirty"
+            ),
             path=str(path),
         )
     if not _orchestrator_lock_reclaimable(repo_root, target):
