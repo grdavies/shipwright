@@ -1,11 +1,11 @@
 {
   "adapter_id": "opencode",
-  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/self-host-closeout-hygiene-phase-clear-idle-batchintegrationhead-r7-r8-r9-small/.shipwright/mcp/opencode.json",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/self-host-closeout-hygiene-orchestrator/.shipwright/mcp/opencode.json",
   "mcpServers": {
     "shipwright-bounded": {
       "command": "python3",
       "args": [
-        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/self-host-closeout-hygiene-phase-clear-idle-batchintegrationhead-r7-r8-r9-small/core/mcp/server.py"
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/self-host-closeout-hygiene-orchestrator/core/mcp/server.py"
       ],
       "transport": "stdio"
     }

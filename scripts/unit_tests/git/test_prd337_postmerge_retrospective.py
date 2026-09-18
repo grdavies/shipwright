@@ -3,11 +3,24 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+
+_SAFE_CWD = Path(__file__).resolve().parents[3]
+
+
+@pytest.fixture(autouse=True)
+def _restore_cwd_after_finalize_test() -> Generator[None, None, None]:
+    yield
+    try:
+        os.chdir(_SAFE_CWD)
+    except OSError:
+        pass
 
 ROOT = Path(__file__).resolve().parents[3]
 if str(ROOT / "scripts") not in sys.path:

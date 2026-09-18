@@ -2103,11 +2103,22 @@ def _attach_post_merge_retrospective_dispatch(
     *,
     dry_run: bool = False,
 ) -> dict[str, Any]:
+    from wave_deliver_loop import (
+        rebind_finalize_execution_to_primary,
+        restore_process_cwd_after_finalize,
+        snapshot_process_cwd,
+    )
+
+    prior_cwd = snapshot_process_cwd()
+    primary_root = rebind_finalize_execution_to_primary(root)
     from deliver_closeout import dispatch_post_merge_retrospective
 
-    retro = dispatch_post_merge_retrospective(
-        root, run_id=run_id, merge_info=merge_info, dry_run=dry_run
-    )
+    try:
+        retro = dispatch_post_merge_retrospective(
+            primary_root, run_id=run_id, merge_info=merge_info, dry_run=dry_run
+        )
+    finally:
+        restore_process_cwd_after_finalize(prior_cwd, primary_root)
     out = dict(payload)
     out["postMergeRetrospective"] = retro
     if retro.get("awaitAgent") and retro.get("invoke") and not retro.get("noop"):
@@ -2260,7 +2271,18 @@ def finalize_run(
             root, run_id, "release", checkpoint=checkpoint, merge_commit=merge_commit
         )
         try:
-            released = release_run_resources(root, run_id, work_state)
+            from wave_deliver_loop import (
+                rebind_finalize_execution_to_primary,
+                restore_process_cwd_after_finalize,
+                snapshot_process_cwd,
+            )
+
+            prior_cwd = snapshot_process_cwd()
+            root = rebind_finalize_execution_to_primary(root)
+            try:
+                released = release_run_resources(root, run_id, work_state)
+            finally:
+                restore_process_cwd_after_finalize(prior_cwd, root)
             # Partial multi-resource failure: surface typed resume, never success (R4/R16).
             failed_resources = [
                 name
