@@ -1864,6 +1864,29 @@ def ensure_finalize_scripts_bootstrap(root: Path) -> Path:
     return ensure_scripts_on_path(root, executor=Path(__file__))
 
 
+def rebind_finalize_execution_to_primary(root: Path) -> Path:
+    """Rebind cwd, sys.path, and finalize imports to the primary checkout (PRD 362 R10/R13).
+
+    ``ensure_finalize_scripts_bootstrap`` alone is insufficient when finalize runs from an
+    orchestrator worktree — orch teardown removes the cwd backing ``sys.path`` entries.
+    """
+    import os
+
+    from primary_checkout_guard import canonical_repo_root, primary_worktree_path
+
+    repo_root = canonical_repo_root(root)
+    primary = primary_worktree_path(repo_root).resolve()
+    os.chdir(primary)
+    scripts_dir = ensure_scripts_on_path(primary, executor=Path(__file__))
+    scripts_entry = str(scripts_dir.resolve())
+    if scripts_entry not in sys.path:
+        sys.path.insert(0, scripts_entry)
+    import deliver_closeout  # noqa: F401 — primary binding before orch release
+    import planning_projection_ledger  # noqa: F401
+
+    return primary
+
+
 def finalize_checkpoint_needs_repair(
     checkpoint: dict[str, Any] | None,
     *,

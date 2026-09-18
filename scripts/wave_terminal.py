@@ -2103,10 +2103,13 @@ def _attach_post_merge_retrospective_dispatch(
     *,
     dry_run: bool = False,
 ) -> dict[str, Any]:
+    from wave_deliver_loop import rebind_finalize_execution_to_primary
+
+    primary_root = rebind_finalize_execution_to_primary(root)
     from deliver_closeout import dispatch_post_merge_retrospective
 
     retro = dispatch_post_merge_retrospective(
-        root, run_id=run_id, merge_info=merge_info, dry_run=dry_run
+        primary_root, run_id=run_id, merge_info=merge_info, dry_run=dry_run
     )
     out = dict(payload)
     out["postMergeRetrospective"] = retro
@@ -2260,6 +2263,9 @@ def finalize_run(
             root, run_id, "release", checkpoint=checkpoint, merge_commit=merge_commit
         )
         try:
+            from wave_deliver_loop import rebind_finalize_execution_to_primary
+
+            root = rebind_finalize_execution_to_primary(root)
             released = release_run_resources(root, run_id, work_state)
             # Partial multi-resource failure: surface typed resume, never success (R4/R16).
             failed_resources = [
