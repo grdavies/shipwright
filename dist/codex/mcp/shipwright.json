@@ -1,11 +1,11 @@
 {
   "adapter_id": "codex",
-  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/doc-review-linear-remaining-phase-complete-after-r3-recovery-and-same-key-replay/.shipwright/mcp/codex.json",
+  "config_path": "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/doc-review-linear-remaining-orchestrator/.shipwright/mcp/codex.json",
   "mcpServers": {
     "shipwright-bounded": {
       "command": "python3",
       "args": [
-        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/doc-review-linear-remaining-phase-complete-after-r3-recovery-and-same-key-replay/core/mcp/server.py"
+        "/Volumes/External Storage/GitHub/shipwright/.sw-worktrees/doc-review-linear-remaining-orchestrator/core/mcp/server.py"
       ],
       "transport": "stdio"
     }

@@ -10,9 +10,12 @@ Reuse the open round's `roundId` through collect → verify → synthesize → c
 
 Open a **new** `roundId` when any of these apply:
 
-- verify refuses or detects drift and recovery needs a fresh snapshot
 - a late persona retry arrives after the round is closed/completed
 - a newly selected panel runs
+
+While a round witness is **open**, do **not** open a fresh `roundId` to recover from verify drift.
+After R3-corrected verify (exhaustive permutation vs provider chronology is not reorder drift), recovery is
+`complete_review_round` on the **same** `roundId` — not supersession and not skip-verify.
 
 A completed round is not reopenable under the same `roundId`. Freeze stays blocked until the latest
 expected round has a completion receipt (GitHub v1 also requires closed body status).
@@ -44,9 +47,10 @@ persona `doc-review-round-post`(s) that append `updated_at` pins → verify → 
 `doc-review-round-close`. Accept shipped finding envelopes `{round, persona, payload}` (R43).
 Do not mix bootstrap envelopes into a **new** round open — that is `doc-review-mixed-schema`.
 
-Unsupported issue-store providers (Linear, Jira, Notion, … — until PRD 341 Phases 4–5) halt with
-`doc-review-provider-unsupported` / transport refusal — do not synthesize from issue comments. GitHub
-issue-store is the live transport.
+**GitHub** and **Linear** issue-store transports are live when `docReviewComments` preflight passes.
+**Jira** and **Notion** are fixture-enabled-not-dogfooded — not operator-live; halt with
+`doc-review-provider-unsupported` when preflight refuses. Do not synthesize from issue comments when
+transport preflight fails.
 
 Manifest pins are excluded from PRD 043 R35 canonicalization (`sw-doc-review` marker comments).
 **Stripped-hash / body-drift:** the live `sw-doc-review-round` witness remains on the issue body but is
