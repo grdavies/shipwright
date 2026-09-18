@@ -1394,6 +1394,7 @@
 * merge phase verify-honors-exhaustive-permutation-vs-chronology into feat/doc-review-linear-remaining (b08ee6b) <!-- sw-deliver:verify-honors-exhaustive-permutation-vs-chronology -->
 * merge phase complete-after-r3-recovery-and-same-key-replay into feat/doc-review-linear-remaining (3b2f085) <!-- sw-deliver:complete-after-r3-recovery-and-same-key-replay -->
 * merge phase closed-allowlist-linear-docs into feat/doc-review-linear-remaining (68cbc9b) <!-- sw-deliver:closed-allowlist-linear-docs -->
+* merge phase layered-matcher-helper-at-every-ambiguity-call-site into feat/spec-rigor-reviewed-literal (06b70db) <!-- sw-deliver:layered-matcher-helper-at-every-ambiguity-call-site -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
