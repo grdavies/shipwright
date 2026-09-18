@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-_SAFE_CWD = Path(__file__).resolve().parents[2]
+_SAFE_CWD = Path(__file__).resolve().parents[3]
 
 
 @pytest.fixture(autouse=True)
