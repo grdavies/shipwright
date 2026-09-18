@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-18T04:41:51Z",
+  "generatedAt": "2026-09-18T16:40:38Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -7147,46 +7147,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:81:phase_sizing.py",
+      "id": "core/skills/spec-rigor/SKILL.md:90:phase_sizing.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 81,
+      "line": 90,
       "column": 92,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:96:spec-rigor-check.py",
+      "id": "core/skills/spec-rigor/SKILL.md:105:spec-rigor-check.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 96,
+      "line": 105,
       "column": 8,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:99:spec-rigor-check.py",
+      "id": "core/skills/spec-rigor/SKILL.md:108:spec-rigor-check.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 99,
+      "line": 108,
       "column": 8,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:100:traceability-check.py",
+      "id": "core/skills/spec-rigor/SKILL.md:109:traceability-check.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 100,
+      "line": 109,
       "column": 8,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:140:sw_bootstrap.py",
+      "id": "core/skills/spec-rigor/SKILL.md:149:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 140,
+      "line": 149,
       "column": 53,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -13501,46 +13501,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:81:phase_sizing.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:90:phase_sizing.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 81,
+      "line": 90,
       "column": 92,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:96:spec-rigor-check.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:105:spec-rigor-check.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 96,
+      "line": 105,
       "column": 8,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:99:spec-rigor-check.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:108:spec-rigor-check.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 99,
+      "line": 108,
       "column": 8,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:100:traceability-check.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:109:traceability-check.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 100,
+      "line": 109,
       "column": 8,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:140:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:149:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 140,
+      "line": 149,
       "column": 53,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -19531,46 +19531,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:81:phase_sizing.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:90:phase_sizing.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 81,
+      "line": 90,
       "column": 92,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:96:spec-rigor-check.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:105:spec-rigor-check.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 96,
+      "line": 105,
       "column": 8,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:99:spec-rigor-check.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:108:spec-rigor-check.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 99,
+      "line": 108,
       "column": 8,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:100:traceability-check.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:109:traceability-check.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 100,
+      "line": 109,
       "column": 8,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:140:sw_bootstrap.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:149:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 140,
+      "line": 149,
       "column": 53,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"

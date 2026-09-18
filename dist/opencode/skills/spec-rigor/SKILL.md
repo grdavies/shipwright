@@ -57,8 +57,17 @@ passing artifact. Parser success on a truncated Linear stump is **not** freeze a
 
 Resolve or explicitly defer every open question before freeze:
 
-- Scan `## Open Questions` — no unresolved bullets (`- [ ]`, `TBD`, `???`, `TODO`).
-- Scan requirement bodies for ambiguity markers (`TBD`, `TODO`, `FIXME`, `???`, `to be determined`).
+- Scan `## Open Questions` — no unresolved bullets (`- [ ]`, unresolved placeholders, `???`).
+- Scan requirement / decision bodies with the **layered** ambiguity matcher in
+  `scripts/spec-rigor-check.py` (same helper on PRD, brainstorm, decision, and Full Open Questions).
+- Unresolved placeholders still fail closed: all-caps `TBD`/`TODO`/`FIXME`, casual lowercase of those
+  tokens, `to be determined`, and `???`.
+- Context-aware defaults (no allowlist required): Title-case named states (e.g. NOR-7 **Todo**) and
+  lowercase slash-taxonomy segments (`idea/todo/note`) do **not** fail. Placeholder-shaped wraps
+  (`token:` / `[token]`) still fail unless listed.
+- Optional frontmatter `reviewedLiterals` (YAML list of exact strings) suppresses exact matches only;
+  a non-empty list requires a Decision Log entry naming each token. Not every case-insensitive
+  word-boundary hit is unfinished work.
 - Surface blocking questions to the user; do not freeze until cleared or moved to Decision Log with rationale.
 
 ### Checklist (requirement quality — pre-PRD-freeze)
@@ -67,7 +76,7 @@ Deterministic PRD checks via `scripts/spec-rigor-check.py --artifact prd`:
 
 - At least one stable R-ID in Requirements.
 - No duplicate R-IDs.
-- No ambiguity markers in requirement text.
+- No unresolved ambiguity markers in requirement text (layered matcher above).
 - Required PRD sections present (Overview, Goals, Non-Goals, Requirements, Testing Strategy).
 - New PRDs (`prdBodyContract: v2`) also require Acceptance Scenarios and Success Criteria; existing bodies without the contract key are grandfathered.
 
