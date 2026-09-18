@@ -1392,6 +1392,7 @@
 * merge phase provider-no-op-and-tie-7-journal into feat/linear-public-markdown-remaining (d565680) <!-- sw-deliver:provider-no-op-and-tie-7-journal -->
 * merge phase operator-docs-for-equivalent-and-markdown-aware-splits into feat/linear-public-markdown-remaining (4a9638d) <!-- sw-deliver:operator-docs-for-equivalent-and-markdown-aware-splits -->
 * merge phase verify-honors-exhaustive-permutation-vs-chronology into feat/doc-review-linear-remaining (b08ee6b) <!-- sw-deliver:verify-honors-exhaustive-permutation-vs-chronology -->
+* merge phase complete-after-r3-recovery-and-same-key-replay into feat/doc-review-linear-remaining (3b2f085) <!-- sw-deliver:complete-after-r3-recovery-and-same-key-replay -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
