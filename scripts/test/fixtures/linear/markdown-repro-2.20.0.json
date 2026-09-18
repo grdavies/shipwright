@@ -1,0 +1,90 @@
+{
+  "version": "2.20.0",
+  "source": "GAP-474-redacted-prd-19-regions",
+  "preSplitByteOracle": {
+    "submitted": 194480,
+    "refetched": 192494,
+    "note": "Evidence only — not a post-implementation fail oracle (PRD 359 R1)."
+  },
+  "punctuationUnescapeAlphabet": ".,;:!?#'\"+-=&",
+  "regions": [
+    {
+      "id": "r01",
+      "family": "bold-around-inline-code",
+      "submitted": "Wrap **`sw:token-a`** in bold.\n",
+      "refetched": "Wrap `sw:token-a` in bold.\n"
+    },
+    {
+      "id": "r02",
+      "family": "bold-around-inline-code",
+      "submitted": "See **`R3`** requirement.\n",
+      "refetched": "See `R3` requirement.\n"
+    },
+    {
+      "id": "r03",
+      "family": "bold-around-inline-code",
+      "submitted": "Run **`chunk_body_for_linear`** next.\n",
+      "refetched": "Run `chunk_body_for_linear` next.\n"
+    },
+    {
+      "id": "r04",
+      "family": "ordered-list-leading-space",
+      "submitted": "1. First item\n2. Second item\n",
+      "refetched": "1.  First item\n2.  Second item\n"
+    },
+    {
+      "id": "r05",
+      "family": "ordered-list-leading-space",
+      "submitted": "3. Third\n4. Fourth\n",
+      "refetched": "3.   Third\n4.   Fourth\n"
+    },
+    {
+      "id": "r06",
+      "family": "italic-delimiter",
+      "submitted": "Note _emphasis-one_ here.\n",
+      "refetched": "Note *emphasis-one* here.\n"
+    },
+    {
+      "id": "r07",
+      "family": "italic-delimiter",
+      "submitted": "Keep __R6__ and _italic-two_ stable.\n",
+      "refetched": "Keep **R6** and *italic-two* stable.\n"
+    },
+    {
+      "id": "r08",
+      "family": "literal-punctuation-escape",
+      "submitted": "Operator \\. and \\; escapes.\n",
+      "refetched": "Operator . and ; escapes.\n"
+    },
+    {
+      "id": "r09",
+      "family": "literal-punctuation-escape",
+      "submitted": "Alert\\! and question\\?\n",
+      "refetched": "Alert! and question?\n"
+    },
+    {
+      "id": "r10",
+      "family": "literal-punctuation-escape",
+      "submitted": "Hash\\# and plus\\+\n",
+      "refetched": "Hash# and plus+\n"
+    },
+    {
+      "id": "r11",
+      "family": "plain-domain-autolink",
+      "submitted": "Visit Tierforge.dev/docs today.\n",
+      "refetched": "Visit <Tierforge.dev/docs> today.\n"
+    },
+    {
+      "id": "r12",
+      "family": "plain-domain-autolink",
+      "submitted": "Also example.org/path today.\n",
+      "refetched": "Also <example.org/path> today.\n"
+    },
+    {
+      "id": "r13",
+      "family": "plain-domain-autolink",
+      "submitted": "See https://linear.app/acme/issue/RED-1\n",
+      "refetched": "See <https://linear.app/acme/issue/RED-1>\n"
+    }
+  ]
+}

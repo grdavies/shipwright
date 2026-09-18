@@ -1,0 +1,8 @@
+{
+  "version": "2.20.0",
+  "source": "PRD-19-redacted-inline-code-chunk",
+  "description": "Inline-code span must remain in one fragment after Markdown-aware splits (PRD 359 R10).",
+  "submitMarkdown": "Prefix text.\n\nUse `INLINE-CODE-SPAN-TOKEN` inside a long paragraph that forces overflow chunking when limits are tight.\n\nSuffix.\n",
+  "refetchedMarkdown": "Prefix text.\n\nUse `INLINE-CODE-SPAN-TOKEN` inside a long paragraph that forces overflow chunking when limits are tight.\n\nSuffix.\n",
+  "expectEquivalent": true
+}

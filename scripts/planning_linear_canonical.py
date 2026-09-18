@@ -166,15 +166,27 @@ LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
         "code-span",
         "table-formatting",
         "plain-domain-autolink",
+        "bold-around-inline-code",
+        "italic-delimiter",
+        "ordered-list-leading-space",
+        "literal-punctuation-escape",
     }
 )
+
+# PRD 359 R5 — fixture-enumerated punctuation unescape alphabet (excludes delimiter ticks).
+_LITERAL_PUNCTUATION_UNESCAPE_CHARS = frozenset(".,;:!?#'\"+-=&")
 
 _FENCED_BLOCK = re.compile(r"^```[^\n]*\n.*?^```", re.MULTILINE | re.DOTALL)
 _INLINE_CODE = re.compile(r"(?<!`)(`+)([^`]+)\1(?!`)")
 _UNORDERED_LIST = re.compile(r"^(\s*)[-+](?= \S)", re.MULTILINE)
 _BOLD_UNDERSCORE = re.compile(r"(?<!\w)__([^_\n]+?)__(?!\w)")
 _MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
-_AUTO_LINK = re.compile(r"<(https?://[^>]+)>")
+_AUTO_LINK = re.compile(r"<([^<>\s]+)>")
+_ORDERED_LIST = re.compile(r"^(\s*)(\d+)\.(\s+)(\S)", re.MULTILINE)
+_ITALIC_UNDERSCORE = re.compile(r"(?<!\w)_(?!_)([^_\n]+?)_(?!\w)")
+_LITERAL_PUNCTUATION_ESCAPE = re.compile(
+    r"\\([" + re.escape("".join(sorted(_LITERAL_PUNCTUATION_UNESCAPE_CHARS))) + r"])"
+)
 _BARE_DOMAIN = re.compile(
     r"(?<![\w./:@])((?:https?://)?(?:www\.)?[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})(?:/[^\s)\]>\"']*)?)"
 )
@@ -214,9 +226,23 @@ def _looks_like_domain(label: str) -> bool:
     return bool(_BARE_DOMAIN.fullmatch(stripped))
 
 
-def _canon_url(url: str) -> str:
+def _unwrap_angle_brackets(url: str) -> str:
+    """Unwrap a single `<destination>` pair (PRD 359 R6 / D8). No loop or remainder concat."""
     text = url.strip()
+    if not text.startswith("<") or not text.endswith(">"):
+        return text
+    if text.count("<") != 1 or text.count(">") != 1:
+        return text
+    return text[1:-1].strip()
+
+
+def _canon_url(url: str) -> str:
+    text = _unwrap_angle_brackets(url.strip())
     if text.startswith(("http://", "https://")):
+        return text
+    if text.startswith("//"):
+        return text
+    if re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", text):
         return text
     return f"https://{text}"
 
@@ -227,6 +253,41 @@ def _normalize_list_markers(text: str) -> str:
 
 def _normalize_bold_delimiters(text: str) -> str:
     return _BOLD_UNDERSCORE.sub(r"**\1**", text)
+
+
+def _normalize_italic_delimiters(text: str) -> str:
+    return _ITALIC_UNDERSCORE.sub(r"*\1*", text)
+
+
+def _normalize_ordered_list_spacing(text: str) -> str:
+    return _ORDERED_LIST.sub(r"\1\2. \4", text)
+
+
+def _normalize_literal_punctuation_escapes(text: str) -> str:
+    def _repl(match: re.Match[str]) -> str:
+        return match.group(1)
+
+    return _LITERAL_PUNCTUATION_ESCAPE.sub(_repl, text)
+
+
+def _normalize_bold_around_inline_code(text: str) -> str:
+    """Drop bold wrapping an inline code span only (PRD 359 R3 — not a global strip)."""
+    out: list[str] = []
+    index = 0
+    for match in _INLINE_CODE.finditer(text):
+        start, end = match.start(), match.end()
+        bold_wrapped = (
+            start >= 2
+            and end + 2 <= len(text)
+            and text[start - 2 : start] == "**"
+            and text[end : end + 2] == "**"
+        )
+        slice_start = start - 2 if bold_wrapped else start
+        out.append(text[index:slice_start])
+        out.append(match.group(0))
+        index = end + 2 if bold_wrapped else end
+    out.append(text[index:])
+    return "".join(out)
 
 
 def _normalize_table_line(line: str) -> str:
@@ -261,11 +322,12 @@ def _normalize_autolinks(text: str) -> str:
     def _md_link(match: re.Match[str]) -> str:
         label, href = match.group(1), match.group(2)
         canon = _canon_url(href)
+        stripped_label = label.strip()
         if _looks_like_domain(label) and _canon_url(label) == canon:
             return canon
-        label_host = label.strip().removeprefix("https://").removeprefix("http://")
-        href_host = canon.removeprefix("https://").removeprefix("http://")
-        if label_host == href_host:
+        if stripped_label == href.strip() or stripped_label == canon:
+            return canon
+        if stripped_label.startswith(("http://", "https://", "//")) and stripped_label == canon:
             return canon
         return f"[{label}]({canon})"
 
@@ -276,7 +338,10 @@ def _normalize_autolinks(text: str) -> str:
 
 def _r6_rewrite_outside_code(text: str) -> str:
     text = _normalize_list_markers(text)
+    text = _normalize_ordered_list_spacing(text)
     text = _normalize_bold_delimiters(text)
+    text = _normalize_italic_delimiters(text)
+    text = _normalize_literal_punctuation_escapes(text)
     text = _normalize_tables(text)
     return _normalize_autolinks(text)
 
@@ -293,11 +358,28 @@ def linear_public_markdown_r6_form(markdown: str) -> str:
     text = linear_markdown_canonical(text)
     text, fences = _placeholder_protect(text, _FENCED_BLOCK, "FENCE")
     text = _INLINE_CODE.sub(_normalize_inline_code_span, text)
+    text = _normalize_bold_around_inline_code(text)
     text, codes = _placeholder_protect(text, _INLINE_CODE, "CODE")
     text = _r6_rewrite_outside_code(text)
     text = _placeholder_restore(text, codes, "CODE")
     text = _placeholder_restore(text, fences, "FENCE")
     return normalize_body(text)
+
+
+def _inline_code_bold_attachments(text: str) -> tuple[str, ...]:
+    """Occurrence-ordered inline code plus bold-wrap flag (PRD 359 R3)."""
+    attachments: list[str] = []
+    for match in _INLINE_CODE.finditer(text):
+        inner = match.group(2).strip()
+        start, end = match.start(), match.end()
+        bold_wrapped = (
+            start >= 2
+            and end + 2 <= len(text)
+            and text[start - 2 : start] == "**"
+            and text[end : end + 2] == "**"
+        )
+        attachments.append(f"{inner}|bold={int(bold_wrapped)}")
+    return tuple(attachments)
 
 
 def _extract_code_contents(text: str) -> tuple[str, ...]:
