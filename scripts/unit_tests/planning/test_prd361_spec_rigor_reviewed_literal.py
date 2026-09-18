@@ -203,6 +203,8 @@ def test_existing_fixtures_regression() -> None:
     for fixture, expect_pass in (
         ("prd-pass.md", True),
         ("prd-pass-v2.md", True),
+        ("prd-pass-title-case-named-state.md", True),
+        ("prd-pass-reviewed-literal.md", True),
         ("prd-fail-clarify.md", False),
     ):
         path = _WORKTREE_ROOT / "scripts/test/fixtures/spec-rigor" / fixture
