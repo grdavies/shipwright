@@ -779,7 +779,7 @@
       "sourcePath": "core/skills/simplify/SKILL.md"
     },
     {
-      "bodyDigest": "1b641f921d7eca4b670d9819ec765a2eff26661ee75464b0b15c0b0f0df78336",
+      "bodyDigest": "b45d1595fec63b77c8c4b4de82877d6204f16977b7db5ba7c7f757c0b2215d74",
       "capabilities": [],
       "description": "Pre-freeze spec quality gates (clarify, checklist, analyze) and R-ID to task to test traceability. Use when validating PRD quality before /sw-freeze on Standard or Full tier. Blocks freeze on hard failures.",
       "id": "spec-rigor",
