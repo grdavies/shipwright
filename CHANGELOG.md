@@ -1396,6 +1396,7 @@
 * merge phase closed-allowlist-linear-docs into feat/doc-review-linear-remaining (68cbc9b) <!-- sw-deliver:closed-allowlist-linear-docs -->
 * merge phase layered-matcher-helper-at-every-ambiguity-call-site into feat/spec-rigor-reviewed-literal (06b70db) <!-- sw-deliver:layered-matcher-helper-at-every-ambiguity-call-site -->
 * merge phase list-capable-reviewedliterals-extra into feat/spec-rigor-reviewed-literal (8bff650) <!-- sw-deliver:list-capable-reviewedliterals-extra -->
+* merge phase goldens-and-skill-text into feat/spec-rigor-reviewed-literal (f3c5ec1) <!-- sw-deliver:goldens-and-skill-text -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
