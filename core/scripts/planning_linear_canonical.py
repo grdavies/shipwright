@@ -170,6 +170,7 @@ LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
         "italic-delimiter",
         "ordered-list-leading-space",
         "literal-punctuation-escape",
+        "post-code-underscore-unescape",
     }
 )
 
@@ -306,6 +307,73 @@ def _normalize_phrase_internal_multi_span_bold(text: str) -> str:
     return _BOLD_ASTERISK_RUN.sub(_repl, text)
 
 
+def _underscore_starts_or_ends_emphasis_run(text: str, idx: int) -> bool:
+    """True when a single `_` at idx opens or closes an underscore emphasis run (PRD 363 R4)."""
+    if idx < 0 or idx >= len(text) or text[idx] != "_":
+        return False
+    if idx > 0 and text[idx - 1] == "_":
+        return False
+    if idx + 1 < len(text) and text[idx + 1] == "_":
+        return False
+    line_start = text.rfind("\n", 0, idx) + 1
+    line = text[line_start:]
+    rel = idx - line_start
+    for match in _ITALIC_UNDERSCORE.finditer(line):
+        if match.start() == rel or match.end() - 1 == rel:
+            return True
+    remainder = text[idx:]
+    if _ITALIC_UNDERSCORE.match(remainder):
+        return True
+    after = text[idx + 1 :]
+    word = re.match(r"(\w+)", after)
+    if not word:
+        return False
+    word_end = idx + 1 + word.end()
+    rest = text[word_end:]
+    if rest.startswith("_"):
+        return True
+    if not rest or rest[0] == "\n":
+        return True
+    if rest[0].isspace():
+        return False
+    return False
+
+
+def _rewrite_post_code_underscore_prefix(text: str, pos: int, out: list[str]) -> int:
+    """Normalize at most one underscore escape immediately after an inline code span."""
+    if pos >= len(text):
+        return pos
+    if text.startswith("\\_", pos):
+        underscore = pos + 1
+        if not _underscore_starts_or_ends_emphasis_run(text, underscore):
+            out.append("_")
+            return pos + 2
+        return pos
+    if text[pos] != "_":
+        return pos
+    if _underscore_starts_or_ends_emphasis_run(text, pos):
+        word = re.match(r"_(\w+)", text[pos:])
+        if word and (
+            pos + word.end() >= len(text) or text[pos + word.end()] in "\n"
+        ):
+            out.append(f"*{word.group(1)}*")
+            return pos + word.end()
+        return pos
+    out.append("_")
+    return pos + 1
+
+
+def _normalize_post_code_literal_underscore_escapes(text: str) -> str:
+    """Unescape post-code `\\_` only when it would not start or end emphasis (PRD 363 R4)."""
+    out: list[str] = []
+    index = 0
+    for match in _INLINE_CODE.finditer(text):
+        out.append(text[index : match.end()])
+        index = _rewrite_post_code_underscore_prefix(text, match.end(), out)
+    out.append(text[index:])
+    return "".join(out)
+
+
 def _normalize_bold_around_inline_code(text: str) -> str:
     """Drop bold wrapping an inline code span only (PRD 359 R3 — not a global strip)."""
     out: list[str] = []
@@ -397,6 +465,7 @@ def linear_public_markdown_r6_form(markdown: str) -> str:
     text = _INLINE_CODE.sub(_normalize_inline_code_span, text)
     text = _normalize_phrase_internal_multi_span_bold(text)
     text = _normalize_bold_around_inline_code(text)
+    text = _normalize_post_code_literal_underscore_escapes(text)
     text, codes = _placeholder_protect(text, _INLINE_CODE, "CODE")
     text = _r6_rewrite_outside_code(text)
     text = _placeholder_restore(text, codes, "CODE")
