@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -98,9 +100,13 @@ def test_regen_command_doc_chain_order_and_no_build_chain_check() -> None:
     assert "sw generate claude-code" in joined or " generate claude-code" in joined
     assert "snapshot-tree.py" in joined
     assert "ship-build-chain-check" not in joined
-    assert calls.index([c for c in calls if "agent_instruction_compiler.py" in " ".join(c)][0]) < calls.index(
-        [c for c in calls if "snapshot-tree.py" in " ".join(c)][0]
-    )
+    compiler_cmds = [c for c in calls if "agent_instruction_compiler.py" in " ".join(c)]
+    assert compiler_cmds
+    assert all("--check" not in " ".join(c) for c in compiler_cmds)
+    generate_cmds = [c for c in calls if " generate " in " ".join(c)]
+    snapshot_cmds = [c for c in calls if "snapshot-tree.py" in " ".join(c)]
+    assert calls.index(compiler_cmds[0]) < calls.index(generate_cmds[0])
+    assert calls.index(generate_cmds[-1]) < calls.index(snapshot_cmds[0])
 
 
 def test_instruction_compiler_check_is_not_currency_green(tmp_path: Path) -> None:
@@ -112,6 +118,58 @@ def test_instruction_compiler_check_is_not_currency_green(tmp_path: Path) -> Non
     (root / COMPILED_ARTIFACT_REL).write_text('{"artifacts": []}\n', encoding="utf-8")
     drift = check_command_doc_instruction_currency(root, doc_rel="core/commands/sw-doc.md")
     assert any(row.get("kind") == "command-doc-instruction-artifact-stale" for row in drift)
+
+
+def _mini_command_doc_compile_root(repo_root: Path, tmp_path: Path) -> Path:
+    root = tmp_path / "mini"
+    for rel in (
+        "core/commands/sw-doc.md",
+        "core/commands/sw-tasks.md",
+        "core/commands/sw-freeze.md",
+        "core/commands/sw-deliver.md",
+        COMPILED_ARTIFACT_REL,
+        ".cursor/workflow.config.json",
+    ):
+        src = repo_root / rel
+        dst = root / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+    return root
+
+
+def test_instruction_compiler_check_does_not_write_artifact_or_clear_currency(
+    repo_root: Path, tmp_path: Path
+) -> None:
+    root = _mini_command_doc_compile_root(repo_root, tmp_path)
+    artifact = root / COMPILED_ARTIFACT_REL
+    stale_body = '{"artifacts": []}\n'
+    artifact.write_text(stale_body, encoding="utf-8")
+    assert check_command_doc_instruction_currency(root)
+
+    check_proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "agent_instruction_compiler.py"),
+            "--check",
+            "--root",
+            str(root),
+        ],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    assert check_proc.returncode != 0
+    assert artifact.read_text(encoding="utf-8") == stale_body
+    assert check_command_doc_instruction_currency(root)
+
+    write_proc = subprocess.run(
+        [sys.executable, str(SCRIPT_DIR / "agent_instruction_compiler.py"), "--root", str(root)],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    assert write_proc.returncode == 0
+    assert check_command_doc_instruction_currency(root) == []
 
 
 def test_snapshot_tree_fails_golden_before_generate(repo: Path) -> None:
