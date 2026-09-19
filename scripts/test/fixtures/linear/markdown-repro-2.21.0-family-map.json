@@ -1,0 +1,60 @@
+{
+  "version": "2.21.0",
+  "source": "pilot-diagnosis-2.21.0.json",
+  "diagnosisPath": ".shipwright/migrations/linear-20260914/pilot-2.21.0/pilot-diagnosis-2.21.0.json",
+  "markdownReproPath": ".shipwright/migrations/linear-20260914/pilot-2.21.0/markdown-repro-2.21.0.json",
+  "leftoverRegionCount": 7,
+  "allowedRequirementIds": ["R2", "R3", "R4", "R5"],
+  "redactedFixturePath": "scripts/test/fixtures/linear/prd363-redacted-comparison-families.json",
+  "leftovers": [
+    {
+      "regionId": "lr01",
+      "requirementId": "R2",
+      "gapUnitId": "gap-482-bold-phrases-with-multiple-inline-code-spans-fai",
+      "planningIssue": 1060,
+      "redactedFixtureId": "lr01"
+    },
+    {
+      "regionId": "lr02",
+      "requirementId": "R2",
+      "gapUnitId": "gap-482-bold-phrases-with-multiple-inline-code-spans-fai",
+      "planningIssue": 1060,
+      "redactedFixtureId": "lr02"
+    },
+    {
+      "regionId": "lr03",
+      "requirementId": "R2",
+      "gapUnitId": "gap-482-bold-phrases-with-multiple-inline-code-spans-fai",
+      "planningIssue": 1060,
+      "redactedFixtureId": "lr03"
+    },
+    {
+      "regionId": "lr04",
+      "requirementId": "R3",
+      "gapUnitId": "gap-483-top-level-ordered-lists-keep-a-leading-pad-that-",
+      "planningIssue": 1061,
+      "redactedFixtureId": "lr04"
+    },
+    {
+      "regionId": "lr05",
+      "requirementId": "R3",
+      "gapUnitId": "gap-483-top-level-ordered-lists-keep-a-leading-pad-that-",
+      "planningIssue": 1061,
+      "redactedFixtureId": "lr05"
+    },
+    {
+      "regionId": "lr06",
+      "requirementId": "R4",
+      "gapUnitId": "gap-484-literal-underscore-after-an-inline-code-span-is-",
+      "planningIssue": 1062,
+      "redactedFixtureId": "lr06"
+    },
+    {
+      "regionId": "lr07",
+      "requirementId": "R5",
+      "gapUnitId": "gap-485-implicit-domain-autolinks-rewrite-http-provider-",
+      "planningIssue": 1063,
+      "redactedFixtureId": "lr07"
+    }
+  ]
+}

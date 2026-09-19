@@ -146,6 +146,27 @@ Oversized bodies that do split become:
 re-measure, and closed-set oversized refusal are recorded operator contracts — not
 optional adapter knobs.
 
+**Map-13 contract (PRD 359 / PRD 363 R14):** `linear_public_markdown_equivalent()` may
+treat only the named rewrite families in `core/sw-reference/canonical-serialization.md`
+as equal — the closed set is `LINEAR_PUBLIC_MARKDOWN_R6_REWRITES` in
+`scripts/planning_linear_canonical.py`:
+
+- `list-marker`
+- `bold-delimiter`
+- `code-span`
+- `table-formatting`
+- `plain-domain-autolink`
+- `bold-around-inline-code`
+- `italic-delimiter`
+- `ordered-list-leading-space`
+- `literal-punctuation-escape`
+- `post-code-underscore-unescape`
+- `implicit-domain-http-autolink`
+
+PRD 359 italics (`italic-delimiter`) and single-span `bold-around-inline-code` remain
+non-regression requirements under PRD 363; new families do not amend frozen PRD 359/358/357
+artifacts.
+
 **Skip-on-manifest (R1):** adapter `prepare_body_with_overflow` is a hard skip when the
 body already carries `sw-chunk-manifest`. A manifested head is never treated as ordinary
 document text and split again (create and update).

@@ -170,6 +170,8 @@ LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
         "italic-delimiter",
         "ordered-list-leading-space",
         "literal-punctuation-escape",
+        "post-code-underscore-unescape",
+        "implicit-domain-http-autolink",
     }
 )
 
@@ -183,12 +185,18 @@ _BOLD_UNDERSCORE = re.compile(r"(?<!\w)__([^_\n]+?)__(?!\w)")
 _MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 _AUTO_LINK = re.compile(r"<([^<>\s]+)>")
 _ORDERED_LIST = re.compile(r"^(\s*)(\d+)\.(\s+)(\S)", re.MULTILINE)
+# PRD 363 R3 — exactly one ASCII space before a top-level ordered marker (not tab / 2+ spaces).
+_TOP_LEVEL_ORDERED_ONE_SPACE_PAD = re.compile(r"^ (\d+\. )", re.MULTILINE)
 _ITALIC_UNDERSCORE = re.compile(r"(?<!\w)_(?!_)([^_\n]+?)_(?!\w)")
 _LITERAL_PUNCTUATION_ESCAPE = re.compile(
     r"\\([" + re.escape("".join(sorted(_LITERAL_PUNCTUATION_UNESCAPE_CHARS))) + r"])"
 )
 _BARE_DOMAIN = re.compile(
-    r"(?<![\w./:@])((?:https?://)?(?:www\.)?[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})(?:/[^\s)\]>\"']*)?)"
+    r"(?<![\w./:@])"
+    r"((?:https?://)?(?:www\.)?"
+    r"[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?"
+    r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+"
+    r"(?:/[^\s)\]>\"']*)?)"
 )
 # Underscore is a word char, so `\bR6\b` misses `__R6__` Linear bold delimiters.
 _RID_TOKEN = re.compile(r"(?<![A-Za-z0-9])([RD]\d+)(?![A-Za-z0-9])")
@@ -247,6 +255,55 @@ def _canon_url(url: str) -> str:
     return f"https://{text}"
 
 
+def _schemeless_domain_hostpath(url: str) -> str | None:
+    """Host/path for a bare or http-schemed domain destination (PRD 363 R5)."""
+    text = _unwrap_angle_brackets(url.strip())
+    if text.startswith("http://"):
+        text = text[7:]
+    elif text.startswith(("https://", "//")) or re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", text):
+        return None
+    if _looks_like_domain(text):
+        return text
+    return None
+
+
+def _named_schemeless_link_identity(hostpath: str) -> str:
+    return f"schemeless:{hostpath}"
+
+
+def _md_link_href_identity(label: str, href: str) -> str:
+    stripped_label = label.strip()
+    if _looks_like_domain(stripped_label):
+        return _named_schemeless_link_identity(stripped_label)
+    return _autolink_identity(href)
+
+
+def _autolink_identity(raw: str) -> str:
+    text = _unwrap_angle_brackets(raw.strip())
+    hostpath = _schemeless_domain_hostpath(text)
+    if hostpath is not None:
+        return _named_schemeless_link_identity(hostpath)
+    if text.startswith("https://"):
+        return text
+    return _canon_url(text)
+
+
+def _bare_domain_link_identity(raw: str) -> str:
+    hostpath = _schemeless_domain_hostpath(raw)
+    if hostpath is not None:
+        return _named_schemeless_link_identity(hostpath)
+    return _canon_url(raw)
+
+
+def _autolink_comparison_url(raw: str) -> str:
+    """R6 comparison form for angle autolinks (http provider → https witness)."""
+    text = _unwrap_angle_brackets(raw.strip())
+    hostpath = _schemeless_domain_hostpath(text)
+    if hostpath is not None:
+        return _canon_url(hostpath)
+    return _canon_url(text)
+
+
 def _normalize_list_markers(text: str) -> str:
     return _UNORDERED_LIST.sub(r"\1*", text)
 
@@ -263,11 +320,112 @@ def _normalize_ordered_list_spacing(text: str) -> str:
     return _ORDERED_LIST.sub(r"\1\2. \4", text)
 
 
+def _normalize_top_level_ordered_one_space_pad(text: str) -> str:
+    """Strip one leading ASCII space before top-level ordered markers (PRD 363 R3)."""
+
+    return _TOP_LEVEL_ORDERED_ONE_SPACE_PAD.sub(r"\1", text)
+
+
 def _normalize_literal_punctuation_escapes(text: str) -> str:
     def _repl(match: re.Match[str]) -> str:
         return match.group(1)
 
     return _LITERAL_PUNCTUATION_ESCAPE.sub(_repl, text)
+
+
+_BOLD_ASTERISK_RUN = re.compile(r"\*\*(.+?)\*\*", re.DOTALL)
+
+
+def _phrase_internal_multi_span_bold(run_inner: str) -> bool:
+    """True when a ** run contains inline code plus phrase prose or multiple codes (PRD 363 R2)."""
+    codes = list(_INLINE_CODE.finditer(run_inner))
+    if not codes:
+        return False
+    if len(codes) >= 2:
+        return True
+    only = codes[0]
+    before = run_inner[: only.start()].strip()
+    after = run_inner[only.end() :].strip()
+    return bool(before or after)
+
+
+def _normalize_phrase_internal_multi_span_bold(text: str) -> str:
+    """Unwrap phrase-internal ** runs that contain inline code spans (PRD 363 R2)."""
+
+    def _repl(match: re.Match[str]) -> str:
+        inner = match.group(1)
+        if _phrase_internal_multi_span_bold(inner):
+            return inner
+        return match.group(0)
+
+    return _BOLD_ASTERISK_RUN.sub(_repl, text)
+
+
+def _underscore_starts_or_ends_emphasis_run(text: str, idx: int) -> bool:
+    """True when a single `_` at idx opens or closes an underscore emphasis run (PRD 363 R4)."""
+    if idx < 0 or idx >= len(text) or text[idx] != "_":
+        return False
+    if idx > 0 and text[idx - 1] == "_":
+        return False
+    if idx + 1 < len(text) and text[idx + 1] == "_":
+        return False
+    line_start = text.rfind("\n", 0, idx) + 1
+    line = text[line_start:]
+    rel = idx - line_start
+    for match in _ITALIC_UNDERSCORE.finditer(line):
+        if match.start() == rel or match.end() - 1 == rel:
+            return True
+    remainder = text[idx:]
+    if _ITALIC_UNDERSCORE.match(remainder):
+        return True
+    after = text[idx + 1 :]
+    word = re.match(r"(\w+)", after)
+    if not word:
+        return False
+    word_end = idx + 1 + word.end()
+    rest = text[word_end:]
+    if rest.startswith("_"):
+        return True
+    if not rest or rest[0] == "\n":
+        return True
+    if rest[0].isspace():
+        return False
+    return False
+
+
+def _rewrite_post_code_underscore_prefix(text: str, pos: int, out: list[str]) -> int:
+    """Normalize at most one underscore escape immediately after an inline code span."""
+    if pos >= len(text):
+        return pos
+    if text.startswith("\\_", pos):
+        underscore = pos + 1
+        if not _underscore_starts_or_ends_emphasis_run(text, underscore):
+            out.append("_")
+            return pos + 2
+        return pos
+    if text[pos] != "_":
+        return pos
+    if _underscore_starts_or_ends_emphasis_run(text, pos):
+        word = re.match(r"_(\w+)", text[pos:])
+        if word and (
+            pos + word.end() >= len(text) or text[pos + word.end()] in "\n"
+        ):
+            out.append(f"*{word.group(1)}*")
+            return pos + word.end()
+        return pos
+    out.append("_")
+    return pos + 1
+
+
+def _normalize_post_code_literal_underscore_escapes(text: str) -> str:
+    """Unescape post-code `\\_` only when it would not start or end emphasis (PRD 363 R4)."""
+    out: list[str] = []
+    index = 0
+    for match in _INLINE_CODE.finditer(text):
+        out.append(text[index : match.end()])
+        index = _rewrite_post_code_underscore_prefix(text, match.end(), out)
+    out.append(text[index:])
+    return "".join(out)
 
 
 def _normalize_bold_around_inline_code(text: str) -> str:
@@ -332,12 +490,13 @@ def _normalize_autolinks(text: str) -> str:
         return f"[{label}]({canon})"
 
     text = _MD_LINK.sub(_md_link, text)
-    text = _AUTO_LINK.sub(lambda match: _canon_url(match.group(1)), text)
+    text = _AUTO_LINK.sub(lambda match: _autolink_comparison_url(match.group(1)), text)
     return _BARE_DOMAIN.sub(lambda match: _canon_url(match.group(1)), text)
 
 
 def _r6_rewrite_outside_code(text: str) -> str:
     text = _normalize_list_markers(text)
+    text = _normalize_top_level_ordered_one_space_pad(text)
     text = _normalize_ordered_list_spacing(text)
     text = _normalize_bold_delimiters(text)
     text = _normalize_italic_delimiters(text)
@@ -358,7 +517,9 @@ def linear_public_markdown_r6_form(markdown: str) -> str:
     text = linear_markdown_canonical(text)
     text, fences = _placeholder_protect(text, _FENCED_BLOCK, "FENCE")
     text = _INLINE_CODE.sub(_normalize_inline_code_span, text)
+    text = _normalize_phrase_internal_multi_span_bold(text)
     text = _normalize_bold_around_inline_code(text)
+    text = _normalize_post_code_literal_underscore_escapes(text)
     text, codes = _placeholder_protect(text, _INLINE_CODE, "CODE")
     text = _r6_rewrite_outside_code(text)
     text = _placeholder_restore(text, codes, "CODE")
@@ -398,13 +559,13 @@ def _extract_links(text: str) -> tuple[str, ...]:
     found: set[str] = set()
     remainder = text
     for match in _MD_LINK.finditer(text):
-        found.add(_canon_url(match.group(2)))
+        found.add(_md_link_href_identity(match.group(1), match.group(2)))
         remainder = remainder.replace(match.group(0), " ", 1)
     for match in _AUTO_LINK.finditer(remainder):
-        found.add(_canon_url(match.group(1)))
+        found.add(_autolink_identity(match.group(1)))
         remainder = remainder.replace(match.group(0), " ", 1)
     for match in _BARE_DOMAIN.finditer(remainder):
-        found.add(_canon_url(match.group(1)))
+        found.add(_bare_domain_link_identity(match.group(1)))
     return tuple(sorted(found))
 
 
@@ -621,6 +782,61 @@ def _offset_inside_closed_set(pos: int, spans: list[tuple[int, int, str]]) -> bo
     return any(start < pos < end for start, end, _kind in spans)
 
 
+def _merge_closed_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    if not intervals:
+        return []
+    intervals = sorted(intervals)
+    merged: list[tuple[int, int]] = [intervals[0]]
+    for start, end in intervals[1:]:
+        prev_start, prev_end = merged[-1]
+        if start <= prev_end + 1:
+            merged[-1] = (prev_start, max(prev_end, end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def _forbidden_interior_merged(spans: list[tuple[int, int, str]]) -> list[tuple[int, int]]:
+    forbidden: list[tuple[int, int]] = []
+    for start, end, _kind in spans:
+        inner_lo = start + 1
+        inner_hi = end - 1
+        if inner_lo <= inner_hi:
+            forbidden.append((inner_lo, inner_hi))
+    return _merge_closed_intervals(forbidden)
+
+
+def _add_interior_legal_cuts_on_line(
+    positions: set[int],
+    line_start: int,
+    line_end: int,
+    forbidden_merged: list[tuple[int, int]],
+) -> None:
+    """Add in-line legal cuts via merged closed-set interior gaps (PRD 363 R6)."""
+    lo = line_start + 1
+    hi = line_end
+    if lo > hi:
+        return
+    if not forbidden_merged:
+        positions.update(range(lo, hi + 1))
+        return
+    cursor = lo
+    for f_start, f_end in forbidden_merged:
+        if f_end < lo:
+            continue
+        if f_start > hi:
+            break
+        clip_start = max(f_start, lo)
+        clip_end = min(f_end, hi)
+        if cursor < clip_start:
+            positions.update(range(cursor, clip_start))
+        cursor = max(cursor, clip_end + 1)
+        if cursor > hi:
+            return
+    if cursor <= hi:
+        positions.update(range(cursor, hi + 1))
+
+
 def _leading_closed_set(text: str) -> tuple[str, int] | None:
     for start, end, kind in _closed_set_spans(text):
         if start == 0:
@@ -650,6 +866,7 @@ def _split_positions(text: str) -> list[int]:
     runs, fenced code, or GFM tables.
     """
     spans = _closed_set_spans(text)
+    forbidden_merged = _forbidden_interior_merged(spans)
     positions: set[int] = {0}
     in_fence = False
     in_table = False
@@ -681,9 +898,9 @@ def _split_positions(text: str) -> list[int]:
                     in_table = False
                 if newline != -1:
                     positions.add(newline + 1)
-                for cut in range(line_start + 1, line_end + 1):
-                    if not _offset_inside_closed_set(cut, spans):
-                        positions.add(cut)
+                _add_interior_legal_cuts_on_line(
+                    positions, line_start, line_end, forbidden_merged
+                )
         if newline == -1:
             break
         index = newline + 1

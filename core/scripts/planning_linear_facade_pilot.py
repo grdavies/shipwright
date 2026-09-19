@@ -5,12 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import tempfile
 from pathlib import Path
 from typing import Any
 
 from credentials.model import Resolution, ResolutionState, ResolvedToken
 from credentials.resolver import RepositoryContext, resolve
 from credentials.selector_store import SelectorEntry, load_selector_store
+from planning.backends.live_facade_prove import run_live_facade_issue_store_prove
 from planning_canonical import reassemble_body
 from planning_linear_canonical import linear_markdown_canonical
 
@@ -18,6 +20,7 @@ GRAPHQL_URL = "https://api.linear.app/graphql"
 PILOT_MARKER = "sw:live-facade-pilot"
 RECEIPT_GATE = "live-facade-pilot-phase-1-merge-gate"
 RECEIPT_VERSION = 1
+DEFAULT_STUCK_ISSUE_IDENTIFIER = "TIE-8"
 
 RECEIPT_TOP_LEVEL_KEYS = frozenset(
     {
@@ -31,6 +34,8 @@ RECEIPT_TOP_LEVEL_KEYS = frozenset(
         "chunkCount",
         "overscopedKeyCheck",
         "scopeCheck",
+        "stuckIssueCheck",
+        "issueStoreOps",
         "credentialBlocked",
         "blockedCause",
     }
@@ -231,11 +236,28 @@ def _validate_pilot_scope(
             "error": "pilot-endpoint-out-of-scope",
             "allowedEndpoints": list(entry.allowed_endpoints),
         }
+    repo_slug = str(pilot.get("repoSlug") or "").strip()
+    remote = str(pilot.get("remote") or "").strip()
+    if not repo_slug and remote:
+        from host_lib import parse_owner_repo
+
+        parsed = parse_owner_repo(remote)
+        repo_slug = f"{parsed[0]}/{parsed[1]}" if parsed else ""
+    allowed_repos = tuple(entry.allowed_repos)
+    if repo_slug and allowed_repos and repo_slug not in allowed_repos:
+        return {
+            "verdict": "fail",
+            "error": "pilot-repo-out-of-scope",
+            "repoSlug": repo_slug,
+            "allowedRepos": list(allowed_repos),
+        }
     return {
         "verdict": "ok",
         "projectId": project_id,
         "allowedProjectIds": list(allowed_projects),
         "allowedEndpoints": list(entry.allowed_endpoints),
+        "allowedRepos": list(allowed_repos),
+        "repoSlug": repo_slug or None,
     }
 
 
@@ -251,6 +273,78 @@ def _refetched_canonical(record: Any) -> str:
 def _comment_byte_max(record: Any) -> int:
     sizes = [len(str(c.body or "").encode("utf-8")) for c in (record.comments or [])]
     return max(sizes) if sizes else 0
+
+
+def _stuck_issue_identifier(pilot: dict[str, Any]) -> str:
+    return str(pilot.get("stuckIssueIdentifier") or DEFAULT_STUCK_ISSUE_IDENTIFIER).strip()
+
+
+def _check_stuck_issue_put_incomplete(client: Any, identifier: str) -> dict[str, Any]:
+    """PRD 363 R10 — TIE-8 (or configured id) must remain sw:put-incomplete."""
+    from planning_store import PUT_INCOMPLETE_LABEL
+
+    if not identifier:
+        return {"verdict": "skipped", "identifier": None}
+    try:
+        record = client.get(identifier)
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "verdict": "fail",
+            "error": "stuck-issue-unreadable",
+            "identifier": identifier,
+            "detail": str(exc),
+        }
+    labels = list(getattr(record, "labels", []) or [])
+    if PUT_INCOMPLETE_LABEL not in labels:
+        return {
+            "verdict": "fail",
+            "error": "stuck-issue-not-put-incomplete",
+            "identifier": identifier,
+            "labels": labels,
+        }
+    return {
+        "verdict": "ok",
+        "identifier": identifier,
+        "putIncomplete": True,
+    }
+
+
+def _operator_gap_content(unit_id: str, synthetic: str) -> str:
+    return (
+        f"---\n"
+        f"id: {unit_id}\n"
+        f"type: gap\n"
+        f"status: open\n"
+        f"visibility: public\n"
+        f"---\n\n"
+        f"<!-- {PILOT_MARKER} -->\n\n"
+        f"{synthetic}"
+    )
+
+
+def _wire_brokered_issue_store(
+    root: Path,
+    linear_cfg: dict[str, Any],
+    *,
+    token: str,
+    resolution: Resolution,
+) -> Any:
+    from issues_lib import IssuesClient
+    from planning.backends.issues import IssueStoreBackend
+    from planning_linear_client import LinearIssuesClient
+
+    store_section = dict(linear_cfg.get("planning", {}).get("store", {}))
+    backend_cfg = {"planning": {"store": store_section}, "host": linear_cfg.get("host") or {"provider": "github"}}
+    backend = IssueStoreBackend(root, backend_cfg)
+    broker_client = IssuesClient(root, "linear")
+    broker_client._linear = LinearIssuesClient(  # noqa: SLF001
+        root,
+        cfg=store_section,
+        token=token,
+        credential=resolution,
+    )
+    backend._client = broker_client
+    return backend
 
 
 def live_facade_pilot_gate(
@@ -371,49 +465,65 @@ def live_facade_pilot_gate(
     ops: list[str] = []
     issue_id = ""
     receipt: dict[str, Any] = base_receipt
+    stuck_id = _stuck_issue_identifier(pilot)
+    stuck_before = _check_stuck_issue_put_incomplete(client, stuck_id)
     try:
-        created = client.create(
-            title="[sw-pilot] live facade receipt",
-            body=f"<!-- {PILOT_MARKER} -->\n\n{synthetic}",
-            labels=[project_key, "sw:pilot", "artifact:gap"],
-            project_key=project_key,
-            artifact_type="gap",
-            unit_id="live-facade-pilot",
-        )
-        ops.append("create")
-        issue_id = str(created.id)
-        after_create = client.get(issue_id)
-        ops.append("read")
-        materialized_create = _materialize_facade_body(after_create)
-        if canonical_identity_hash(materialized_create) != canonical_identity_hash(synthetic):
+        if stuck_before.get("verdict") == "fail":
             raise LinearClientError(
-                "live identity mismatch after create",
-                code="canonical-identity-mismatch",
+                str(stuck_before.get("error") or "stuck-issue-check"),
+                code=str(stuck_before.get("error") or "stuck-issue-check"),
             )
+        unit_id = "live-facade-pilot"
+        body_path = f"docs/planning/{unit_id}/body.md"
+        operator_content = _operator_gap_content(unit_id, synthetic)
         updated_synthetic = f"{synthetic}\n\n## pilot-update\n\nminor sanitized edit."
-        updated_body = f"<!-- {PILOT_MARKER} -->\n\n{updated_synthetic}"
-        client.update(issue_id, body=updated_body, if_match=after_create.etag)
-        ops.append("update")
-        after_update = client.get(issue_id)
-        ops.append("read")
-        materialized = _materialize_facade_body(after_update)
-        ops.append("materialize")
-        if canonical_identity_hash(materialized) != canonical_identity_hash(updated_synthetic):
-            raise LinearClientError(
-                "live identity mismatch after update",
-                code="canonical-identity-mismatch",
+        updated_operator_content = _operator_gap_content(unit_id, updated_synthetic)
+        backend = _wire_brokered_issue_store(
+            root,
+            linear_cfg,
+            token=token,
+            resolution=resolution,
+        )
+        with tempfile.TemporaryDirectory(prefix="sw-live-facade-") as tmp:
+            materialize_dest = Path(tmp) / "materialized.md"
+            prove = run_live_facade_issue_store_prove(
+                backend,
+                unit_id=unit_id,
+                body_path=body_path,
+                operator_content=operator_content,
+                updated_operator_content=updated_operator_content,
+                materialize_dest=materialize_dest,
             )
-        chunk_count = len([c for c in after_update.comments if "sw-chunk-overflow" in c.body])
+            ops.extend(prove.get("ops") or [])
+            issue_id = str(prove.get("issueId") or "")
+            after_update = client.get(issue_id)
+            materialized = _materialize_facade_body(after_update)
+            if canonical_identity_hash(materialized) != canonical_identity_hash(updated_synthetic):
+                raise LinearClientError(
+                    "live identity mismatch after issue-store prove",
+                    code="canonical-identity-mismatch",
+                )
+        stuck_after = _check_stuck_issue_put_incomplete(client, stuck_id)
+        if stuck_after.get("verdict") == "fail":
+            raise LinearClientError(
+                str(stuck_after.get("error") or "stuck-issue-mutated"),
+                code=str(stuck_after.get("error") or "stuck-issue-mutated"),
+            )
         receipt = {
             **base_receipt,
             "verdict": "ok",
             "ops": ops,
+            "issueStoreOps": list(prove.get("ops") or []),
             "canonicalIdentityHash": canonical_identity_hash(materialized),
-            "descriptionBytes": len(str(after_update.body or "").encode("utf-8")),
-            "commentBytesMax": _comment_byte_max(after_update),
-            "chunkCount": chunk_count,
+            "descriptionBytes": int(prove.get("descriptionBytes") or 0),
+            "commentBytesMax": int(prove.get("commentBytesMax") or 0),
+            "chunkCount": int(prove.get("chunkCount") or 0),
             "overscopedKeyCheck": "fail" if overscoped else "ok",
             "scopeCheck": {"verdict": "ok", "projectId": scope.get("projectId")},
+            "stuckIssueCheck": {
+                "before": stuck_before,
+                "after": stuck_after,
+            },
         }
         if overscoped:
             receipt["verdict"] = "fail"

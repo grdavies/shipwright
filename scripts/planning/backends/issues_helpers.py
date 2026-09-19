@@ -279,7 +279,13 @@ def r6_canonical_body(text: str, *, issues_provider: str, ps_mod: Any) -> str:
 def reconstruct_bodies_equivalent(
     expected: str, actual: str, *, issues_provider: str, ps_mod: Any
 ) -> bool:
-    """Shared put+freeze reconstruct-before-ok predicate (PRD 359 R2/R11/D5)."""
+    """Shared reconstruct-before-ok predicate (PRD 359 R2; PRD 363 R7/R11).
+
+    Linear uses ``linear_public_markdown_equivalent`` only — matching R6 identity
+    tokens without a matching comparison form is never success. Freeze/hash tamper
+    checks use ``canonical_hash`` on original bytes via ``verify_frozen_integrity``,
+    not the R6 comparison form.
+    """
     if issues_provider == "linear":
         return linear_public_markdown_equivalent(expected, actual)
     return r6_canonical_body(
@@ -294,6 +300,7 @@ def logical_issue_body(record: Any, *, ps_mod: Any, linear_bind: bool = False) -
 
 
 def verify_frozen_integrity(backend: Any, record: Any, *, ps_mod: Any) -> None:
+    """PRD 363 R11 — freeze witness is ``canonical_hash`` (original bytes), not R6 form."""
     if ps_mod.FREEZE_INCOMPLETE_LABEL in record.labels:
         ps_mod.fail("freeze-incomplete", code="freeze-incomplete", unitId=record.unit_id)
     if ps_mod.FROZEN_LABEL not in record.labels:
