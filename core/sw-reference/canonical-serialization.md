@@ -73,6 +73,8 @@ rewrite families as equal:
 - `italic-delimiter`
 - `ordered-list-leading-space`
 - `literal-punctuation-escape`
+- `post-code-underscore-unescape` (PRD 363 R4)
+- `implicit-domain-http-autolink` (PRD 363 R5)
 
 A new Standard unit under this contract does **not** amend frozen PRD 358 materialized
 trees or PRD 357 docs.
