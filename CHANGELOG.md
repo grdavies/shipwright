@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.21.0](https://github.com/grdavies/shipwright/compare/v2.20.0...v2.21.0) (2026-09-19)
+
+
+### Features
+
+* **prd-359:** linear public markdown remaining ([#1239](https://github.com/grdavies/shipwright/issues/1239)) ([326f6df](https://github.com/grdavies/shipwright/commit/326f6df16c970f6d2c735fb5aa861011ff4814c8))
+* **prd-360:** doc review linear remaining ([#1244](https://github.com/grdavies/shipwright/issues/1244)) ([53c7ab3](https://github.com/grdavies/shipwright/commit/53c7ab35b49fbf10565323deabe0978374071415))
+* **prd-361:** spec rigor reviewed literal ([#1248](https://github.com/grdavies/shipwright/issues/1248)) ([1cac439](https://github.com/grdavies/shipwright/commit/1cac43969e8c8c567d33cb4ee7575b6b86edf1ce))
+* **prd-362:** self host closeout hygiene ([#1259](https://github.com/grdavies/shipwright/issues/1259)) ([ec8d102](https://github.com/grdavies/shipwright/commit/ec8d1020f5e6a2c0ed966d218fb2f627d6727e15))
+
 ## [2.20.0](https://github.com/grdavies/shipwright/compare/v2.19.0...v2.20.0) (2026-09-17)
 
 
