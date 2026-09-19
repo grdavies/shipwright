@@ -146,3 +146,42 @@ class TestPrd363Phase3TopLevelOrderedOneSpacePad:
         data = load_json(REDACTED_FAMILIES)
         row = next(row for row in data["mutants"] if row["id"] == "r3-changed-marker")
         assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False
+
+
+class TestPrd363Phase4PostCodeUnderscoreUnescape:
+    @staticmethod
+    def _r4_pairs() -> list[dict[str, str]]:
+        data = load_json(REDACTED_FAMILIES)
+        return [
+            row
+            for row in data["pairs"]
+            if row.get("family") == "post-code-underscore-unescape"
+        ]
+
+    def test_redacted_r4_pairs_pass_equivalent(self) -> None:
+        for row in self._r4_pairs():
+            assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]), row[
+                "id"
+            ]
+
+    def test_identity_preserving_post_code_escape_passes(self) -> None:
+        left = "After `token`_suffix here.\n"
+        right = "After `token`\\_suffix here.\n"
+        assert linear_public_markdown_equivalent(left, right)
+
+    def test_underscore_inside_code_span_unchanged(self) -> None:
+        left = "Use `token_suffix` today.\n"
+        right = "Use `token\\_suffix` today.\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+
+    def test_underscore_inside_emphasis_not_post_code(self) -> None:
+        left = "_wrap `code` tail_\n"
+        right = "_wrap `code` tail\\_\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+
+    def test_emphasis_inventing_mutant_fails(self) -> None:
+        data = load_json(REDACTED_FAMILIES)
+        row = next(
+            row for row in data["mutants"] if row["id"] == "r4-underscore-starts-emphasis"
+        )
+        assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False
