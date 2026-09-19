@@ -735,6 +735,7 @@
     "prd339_cross_prd_gate.py",
     "prd339_phase1_acceptance.py",
     "prd339_visibility_nomenclature.py",
+    "prd363_fixture_lib.py",
     "primary_checkout_guard.py",
     "project_baseline.py",
     "project_doctrine.py",
@@ -893,6 +894,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 890,
+  "moduleCount": 891,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
