@@ -73,3 +73,39 @@ class TestPrd363Phase1RedactedFixtures:
         assert not PRD363_PRIVATE_PILOT_DIR.exists() or private_pilot_tree_gitignored(
             REPO_ROOT
         )
+
+
+class TestPrd363Phase2MultiSpanBold:
+    @staticmethod
+    def _r2_pairs() -> list[dict[str, str]]:
+        data = load_json(REDACTED_FAMILIES)
+        return [
+            row
+            for row in data["pairs"]
+            if row.get("family") == "multi-span-bold-around-inline-code"
+        ]
+
+    def test_redacted_r2_pairs_pass_equivalent(self) -> None:
+        for row in self._r2_pairs():
+            assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]), row[
+                "id"
+            ]
+
+    def test_single_bold_run_multi_code_phrase_passes(self) -> None:
+        left = "**Call `fn-a` and `fn-b` in one phrase.**\n"
+        right = "Call **`fn-a`** and `fn-b` in one phrase.\n"
+        assert linear_public_markdown_equivalent(left, right)
+
+    def test_prd359_neighbor_rid_redistribution_mutant_fails(self) -> None:
+        left = "See **`token`** and **R1**.\n"
+        moved = "See `token` and **`R1`**.\n"
+        assert linear_public_markdown_equivalent(left, moved) is False
+
+    def test_redacted_r2_redistribution_mutant_fails(self) -> None:
+        data = load_json(REDACTED_FAMILIES)
+        row = next(
+            row
+            for row in data["mutants"]
+            if row["id"] == "r2-neighbor-rid-redistributed"
+        )
+        assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False
