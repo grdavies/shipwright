@@ -1,0 +1,105 @@
+{
+  "version": "2.21.0-redacted",
+  "source": "synthetic-family-minimal-prd363-phase1",
+  "pairs": [
+    {
+      "id": "lr01",
+      "family": "multi-span-bold-around-inline-code",
+      "requirementId": "R2",
+      "submitted": "Call **`fn-a`** and **`fn-b`** in one phrase.\n",
+      "refetched": "Call **`fn-a`** and `fn-b` in one phrase.\n"
+    },
+    {
+      "id": "lr02",
+      "family": "multi-span-bold-around-inline-code",
+      "requirementId": "R2",
+      "submitted": "Ship **`svc-one`**, then **`svc-two`**.\n",
+      "refetched": "Ship `svc-one`, then **`svc-two`**.\n"
+    },
+    {
+      "id": "lr03",
+      "family": "multi-span-bold-around-inline-code",
+      "requirementId": "R2",
+      "submitted": "Wrap **`code-x`** plus prose and **`code-y`**.\n",
+      "refetched": "Wrap `code-x` plus prose and **`code-y`**.\n"
+    },
+    {
+      "id": "lr04",
+      "family": "top-level-ordered-one-space-pad",
+      "requirementId": "R3",
+      "submitted": "1. Alpha step\n2. Beta step\n",
+      "refetched": " 1. Alpha step\n 2. Beta step\n"
+    },
+    {
+      "id": "lr05",
+      "family": "top-level-ordered-one-space-pad",
+      "requirementId": "R3",
+      "submitted": "3. Gamma\n4. Delta\n",
+      "refetched": " 3. Gamma\n 4. Delta\n"
+    },
+    {
+      "id": "lr06",
+      "family": "post-code-underscore-unescape",
+      "requirementId": "R4",
+      "submitted": "After `token`_suffix here.\n",
+      "refetched": "After `token`\\_suffix here.\n"
+    },
+    {
+      "id": "lr07",
+      "family": "implicit-domain-http-autolink",
+      "requirementId": "R5",
+      "submitted": "See docs.example.test/path today.\n",
+      "refetched": "See <http://docs.example.test/path> today.\n"
+    }
+  ],
+  "mutants": [
+    {
+      "id": "r2-neighbor-rid-redistributed",
+      "family": "multi-span-bold-around-inline-code",
+      "requirementId": "R2",
+      "submitted": "See **`tok`** and **R1**.\n",
+      "refetched": "See `tok` and **`R1`**.\n",
+      "expectEquivalent": false
+    },
+    {
+      "id": "r3-two-space-pad",
+      "family": "top-level-ordered-one-space-pad",
+      "requirementId": "R3",
+      "submitted": "1. Only one\n",
+      "refetched": "  1. Only one\n",
+      "expectEquivalent": false
+    },
+    {
+      "id": "r3-changed-marker",
+      "family": "top-level-ordered-one-space-pad",
+      "requirementId": "R3",
+      "submitted": "1. Item\n",
+      "refetched": " 2. Item\n",
+      "expectEquivalent": false
+    },
+    {
+      "id": "r4-underscore-starts-emphasis",
+      "family": "post-code-underscore-unescape",
+      "requirementId": "R4",
+      "submitted": "Note `x`_emphasis\n",
+      "refetched": "Note `x`\\_emphasis\n",
+      "expectEquivalent": false
+    },
+    {
+      "id": "r5-http-vs-https",
+      "family": "implicit-domain-http-autolink",
+      "requirementId": "R5",
+      "submitted": "Open host.example.test/page\n",
+      "refetched": "Open <https://host.example.test/page>\n",
+      "expectEquivalent": false
+    },
+    {
+      "id": "r5-javascript-scheme",
+      "family": "implicit-domain-http-autolink",
+      "requirementId": "R5",
+      "submitted": "Click host.example.test\n",
+      "refetched": "Click <javascript:alert(1)>\n",
+      "expectEquivalent": false
+    }
+  ]
+}
