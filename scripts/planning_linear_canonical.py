@@ -782,6 +782,61 @@ def _offset_inside_closed_set(pos: int, spans: list[tuple[int, int, str]]) -> bo
     return any(start < pos < end for start, end, _kind in spans)
 
 
+def _merge_closed_intervals(intervals: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    if not intervals:
+        return []
+    intervals = sorted(intervals)
+    merged: list[tuple[int, int]] = [intervals[0]]
+    for start, end in intervals[1:]:
+        prev_start, prev_end = merged[-1]
+        if start <= prev_end + 1:
+            merged[-1] = (prev_start, max(prev_end, end))
+        else:
+            merged.append((start, end))
+    return merged
+
+
+def _forbidden_interior_merged(spans: list[tuple[int, int, str]]) -> list[tuple[int, int]]:
+    forbidden: list[tuple[int, int]] = []
+    for start, end, _kind in spans:
+        inner_lo = start + 1
+        inner_hi = end - 1
+        if inner_lo <= inner_hi:
+            forbidden.append((inner_lo, inner_hi))
+    return _merge_closed_intervals(forbidden)
+
+
+def _add_interior_legal_cuts_on_line(
+    positions: set[int],
+    line_start: int,
+    line_end: int,
+    forbidden_merged: list[tuple[int, int]],
+) -> None:
+    """Add in-line legal cuts via merged closed-set interior gaps (PRD 363 R6)."""
+    lo = line_start + 1
+    hi = line_end
+    if lo > hi:
+        return
+    if not forbidden_merged:
+        positions.update(range(lo, hi + 1))
+        return
+    cursor = lo
+    for f_start, f_end in forbidden_merged:
+        if f_end < lo:
+            continue
+        if f_start > hi:
+            break
+        clip_start = max(f_start, lo)
+        clip_end = min(f_end, hi)
+        if cursor < clip_start:
+            positions.update(range(cursor, clip_start))
+        cursor = max(cursor, clip_end + 1)
+        if cursor > hi:
+            return
+    if cursor <= hi:
+        positions.update(range(cursor, hi + 1))
+
+
 def _leading_closed_set(text: str) -> tuple[str, int] | None:
     for start, end, kind in _closed_set_spans(text):
         if start == 0:
@@ -811,6 +866,7 @@ def _split_positions(text: str) -> list[int]:
     runs, fenced code, or GFM tables.
     """
     spans = _closed_set_spans(text)
+    forbidden_merged = _forbidden_interior_merged(spans)
     positions: set[int] = {0}
     in_fence = False
     in_table = False
@@ -842,9 +898,9 @@ def _split_positions(text: str) -> list[int]:
                     in_table = False
                 if newline != -1:
                     positions.add(newline + 1)
-                for cut in range(line_start + 1, line_end + 1):
-                    if not _offset_inside_closed_set(cut, spans):
-                        positions.add(cut)
+                _add_interior_legal_cuts_on_line(
+                    positions, line_start, line_end, forbidden_merged
+                )
         if newline == -1:
             break
         index = newline + 1
