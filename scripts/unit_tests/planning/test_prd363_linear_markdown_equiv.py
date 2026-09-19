@@ -109,3 +109,40 @@ class TestPrd363Phase2MultiSpanBold:
             if row["id"] == "r2-neighbor-rid-redistributed"
         )
         assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False
+
+
+class TestPrd363Phase3TopLevelOrderedOneSpacePad:
+    @staticmethod
+    def _r3_pairs() -> list[dict[str, str]]:
+        data = load_json(REDACTED_FAMILIES)
+        return [
+            row
+            for row in data["pairs"]
+            if row.get("family") == "top-level-ordered-one-space-pad"
+        ]
+
+    def test_redacted_r3_pairs_pass_equivalent(self) -> None:
+        for row in self._r3_pairs():
+            assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]), row[
+                "id"
+            ]
+
+    def test_one_leading_space_on_top_level_ordered_passes(self) -> None:
+        left = "1. Alpha step\n2. Beta step\n"
+        right = " 1. Alpha step\n 2. Beta step\n"
+        assert linear_public_markdown_equivalent(left, right)
+
+    def test_nested_indent_change_fails(self) -> None:
+        left = "1. Parent\n   2. Child\n"
+        right = "1. Parent\n  2. Child\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+
+    def test_two_space_pad_mutant_fails(self) -> None:
+        data = load_json(REDACTED_FAMILIES)
+        row = next(row for row in data["mutants"] if row["id"] == "r3-two-space-pad")
+        assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False
+
+    def test_changed_marker_mutant_fails(self) -> None:
+        data = load_json(REDACTED_FAMILIES)
+        row = next(row for row in data["mutants"] if row["id"] == "r3-changed-marker")
+        assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False

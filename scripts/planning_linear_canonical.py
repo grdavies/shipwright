@@ -183,6 +183,8 @@ _BOLD_UNDERSCORE = re.compile(r"(?<!\w)__([^_\n]+?)__(?!\w)")
 _MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 _AUTO_LINK = re.compile(r"<([^<>\s]+)>")
 _ORDERED_LIST = re.compile(r"^(\s*)(\d+)\.(\s+)(\S)", re.MULTILINE)
+# PRD 363 R3 — exactly one ASCII space before a top-level ordered marker (not tab / 2+ spaces).
+_TOP_LEVEL_ORDERED_ONE_SPACE_PAD = re.compile(r"^ (\d+\. )", re.MULTILINE)
 _ITALIC_UNDERSCORE = re.compile(r"(?<!\w)_(?!_)([^_\n]+?)_(?!\w)")
 _LITERAL_PUNCTUATION_ESCAPE = re.compile(
     r"\\([" + re.escape("".join(sorted(_LITERAL_PUNCTUATION_UNESCAPE_CHARS))) + r"])"
@@ -261,6 +263,12 @@ def _normalize_italic_delimiters(text: str) -> str:
 
 def _normalize_ordered_list_spacing(text: str) -> str:
     return _ORDERED_LIST.sub(r"\1\2. \4", text)
+
+
+def _normalize_top_level_ordered_one_space_pad(text: str) -> str:
+    """Strip one leading ASCII space before top-level ordered markers (PRD 363 R3)."""
+
+    return _TOP_LEVEL_ORDERED_ONE_SPACE_PAD.sub(r"\1", text)
 
 
 def _normalize_literal_punctuation_escapes(text: str) -> str:
@@ -366,6 +374,7 @@ def _normalize_autolinks(text: str) -> str:
 
 def _r6_rewrite_outside_code(text: str) -> str:
     text = _normalize_list_markers(text)
+    text = _normalize_top_level_ordered_one_space_pad(text)
     text = _normalize_ordered_list_spacing(text)
     text = _normalize_bold_delimiters(text)
     text = _normalize_italic_delimiters(text)
