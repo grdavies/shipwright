@@ -270,6 +270,34 @@ def _normalize_literal_punctuation_escapes(text: str) -> str:
     return _LITERAL_PUNCTUATION_ESCAPE.sub(_repl, text)
 
 
+_BOLD_ASTERISK_RUN = re.compile(r"\*\*(.+?)\*\*", re.DOTALL)
+
+
+def _phrase_internal_multi_span_bold(run_inner: str) -> bool:
+    """True when a ** run contains inline code plus phrase prose or multiple codes (PRD 363 R2)."""
+    codes = list(_INLINE_CODE.finditer(run_inner))
+    if not codes:
+        return False
+    if len(codes) >= 2:
+        return True
+    only = codes[0]
+    before = run_inner[: only.start()].strip()
+    after = run_inner[only.end() :].strip()
+    return bool(before or after)
+
+
+def _normalize_phrase_internal_multi_span_bold(text: str) -> str:
+    """Unwrap phrase-internal ** runs that contain inline code spans (PRD 363 R2)."""
+
+    def _repl(match: re.Match[str]) -> str:
+        inner = match.group(1)
+        if _phrase_internal_multi_span_bold(inner):
+            return inner
+        return match.group(0)
+
+    return _BOLD_ASTERISK_RUN.sub(_repl, text)
+
+
 def _normalize_bold_around_inline_code(text: str) -> str:
     """Drop bold wrapping an inline code span only (PRD 359 R3 — not a global strip)."""
     out: list[str] = []
@@ -358,6 +386,7 @@ def linear_public_markdown_r6_form(markdown: str) -> str:
     text = linear_markdown_canonical(text)
     text, fences = _placeholder_protect(text, _FENCED_BLOCK, "FENCE")
     text = _INLINE_CODE.sub(_normalize_inline_code_span, text)
+    text = _normalize_phrase_internal_multi_span_bold(text)
     text = _normalize_bold_around_inline_code(text)
     text, codes = _placeholder_protect(text, _INLINE_CODE, "CODE")
     text = _r6_rewrite_outside_code(text)
