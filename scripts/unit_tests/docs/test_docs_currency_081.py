@@ -196,3 +196,101 @@ def test_snapshot_tree_fails_golden_before_generate(repo: Path) -> None:
     )
     assert proc.returncode != 0
     assert "dist-stale-before-generate" in proc.stderr
+
+
+def test_snapshot_tree_writes_golden_when_dist_mirrors_match(repo: Path) -> None:
+    from planning_paths import GOLDEN_MANIFEST_REL
+
+    core_doc = repo / "core/commands/sw-doc.md"
+    core_doc.parent.mkdir(parents=True, exist_ok=True)
+    body = "# aligned core\n"
+    core_doc.write_text(body, encoding="utf-8")
+    for platform in ("cursor", "claude-code"):
+        mirror = repo / "dist" / platform / "commands" / "sw-doc.md"
+        mirror.parent.mkdir(parents=True, exist_ok=True)
+        mirror.write_text(body, encoding="utf-8")
+    (repo / "dist" / "cursor" / "providers").mkdir(parents=True)
+    golden = repo / GOLDEN_MANIFEST_REL
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "snapshot-tree.py"),
+            str(golden),
+            "--root",
+            str(repo),
+        ],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0
+    assert golden.is_file()
+    assert "commands/sw-doc.md" in golden.read_text(encoding="utf-8")
+
+
+def test_command_doc_dist_mirrors_stale_when_core_changes(
+    repo_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    gate = _load_docs_currency_gate()
+    root = _mini_command_doc_compile_root(repo_root, tmp_path)
+    doc_rel = "core/commands/sw-doc.md"
+    body = (root / doc_rel).read_text(encoding="utf-8")
+    for platform in ("cursor", "claude-code"):
+        mirror = root / "dist" / platform / "commands" / Path(doc_rel).name
+        mirror.parent.mkdir(parents=True, exist_ok=True)
+        mirror.write_text(body, encoding="utf-8")
+    (root / doc_rel).write_text(body + "\n# mirror drift\n", encoding="utf-8")
+    monkeypatch.setattr(gate, "_git_last_commit_epoch", lambda _r, _p: 100)
+    drift = gate.check_command_documentation_currency(root)
+    kinds = {row.get("kind") for row in drift if row.get("doc") == doc_rel}
+    assert "command-doc-dist-mirror-stale" in kinds
+    assert "command-doc-stale" not in kinds
+    assert any(row.get("platform") == "cursor" for row in drift if row.get("kind") == "command-doc-dist-mirror-stale")
+    assert any(row.get("platform") == "claude-code" for row in drift if row.get("kind") == "command-doc-dist-mirror-stale")
+
+
+def test_command_doc_currency_fails_stale_downstream_with_matching_needles(
+    repo_root: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    gate = _load_docs_currency_gate()
+    root = _mini_command_doc_compile_root(repo_root, tmp_path)
+    doc_rel = "core/commands/sw-doc.md"
+    artifact = root / COMPILED_ARTIFACT_REL
+    artifact.write_text('{"artifacts": []}\n', encoding="utf-8")
+    monkeypatch.setattr(gate, "_git_last_commit_epoch", lambda _r, _p: 100)
+    drift = gate.check_command_documentation_currency(root)
+    assert not any(row.get("kind") == "command-doc-stale" for row in drift)
+    assert not any(row.get("kind") == "command-doc-needle-missing" for row in drift)
+    assert any(
+        row.get("kind") == "command-doc-instruction-artifact-stale" and row.get("doc") == doc_rel
+        for row in drift
+    )
+
+
+def test_regen_chain_ends_with_snapshot_tree_refresh(tmp_path: Path) -> None:
+    gate = _load_docs_currency_gate()
+    root = tmp_path / "repo"
+    golden_rel = "scripts/test/fixtures/parity/cursor-golden.manifest"
+    golden = root / golden_rel
+    golden.parent.mkdir(parents=True, exist_ok=True)
+    golden.write_text("stale-manifest\tdeadbeef\n", encoding="utf-8")
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(list(cmd))
+        if "snapshot-tree.py" in " ".join(cmd):
+            golden.write_text("commands/sw-doc.md\tfresh\n", encoding="utf-8")
+        class _Proc:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        return _Proc()
+
+    with patch("subprocess.run", side_effect=fake_run):
+        payload = gate.regen_command_doc_currency_downstream(root)
+    assert payload["verdict"] == "pass"
+    snapshot_cmds = [c for c in calls if "snapshot-tree.py" in " ".join(c)]
+    assert snapshot_cmds
+    assert snapshot_cmds[-1] == calls[-1]
+    assert "fresh" in golden.read_text(encoding="utf-8")
