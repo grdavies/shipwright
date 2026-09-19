@@ -256,7 +256,7 @@
       "sourcePath": "core/commands/sw-debug.md"
     },
     {
-      "bodyDigest": "e79c7a02246d8c7f7b898b81e3f8dc08231bd2f095a858d185b10d70df39f44a",
+      "bodyDigest": "48fc28623ea26e6336b145cfd28ac959841f776cf8e263728831b298f66a24f1",
       "capabilities": [],
       "description": "Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.",
       "id": "sw-deliver",
@@ -265,7 +265,7 @@
       "sourcePath": "core/commands/sw-deliver.md"
     },
     {
-      "bodyDigest": "58097030a6e8f1ce113896f8e79c711a0fd00991ed8b92a296e4b3117e8b1755",
+      "bodyDigest": "d2e44e539e85a287806314850cb18e2038816b37c34f41990e431c82daa41c20",
       "capabilities": [],
       "description": "Orchestrate the doc pipeline through task freeze, then branch on doc.afterTasks before dispatching implementation. Does not inline implementation.",
       "id": "sw-doc",
@@ -319,7 +319,7 @@
       "sourcePath": "core/commands/sw-feedback-close.md"
     },
     {
-      "bodyDigest": "97540b3056cb8dc86232e369a100847e46f0617ff71a960ba0dee945f6f7a6d4",
+      "bodyDigest": "de6f6c1feed24b084fd907af333c0c71687c693905f133c34aa46c9e54c94bb5",
       "capabilities": [],
       "description": "Stamp frozen: true on an artifact, register in INDEX, and enforce immutability. Does not unfreeze or edit frozen parents.",
       "id": "sw-freeze",
@@ -517,7 +517,7 @@
       "sourcePath": "core/commands/sw-status.md"
     },
     {
-      "bodyDigest": "a7759fcb3bc24341a0a5ecefb3a266f62cc20bd70b412c67ad13b6f807349095",
+      "bodyDigest": "b0ce1c09966d794d68ea32adb9d09666b482488fd2006fa7e0039b05566255c6",
       "capabilities": [],
       "description": "Generate a frozen task list from a frozen PRD in a single pass. Does not start implementation.",
       "id": "sw-tasks",

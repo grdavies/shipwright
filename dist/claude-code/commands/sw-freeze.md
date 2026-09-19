@@ -189,4 +189,25 @@ Freeze durability continues through `planning_store.py` → `planning_store_faca
 `sw-freeze-record` after frozen state/label mutations so `get` / `verify-frozen-hash` stay
 tamper-clean (PRD 275) — freeze stamp itself unchanged.
 
+## Command-doc currency regen (PRD 362 R3/R5)
+
+This file is in `COMMAND_DOC_CURRENCY_ARTIFACTS`. When `docs-currency-gate` reports drift on bound code
+paths, regen downstream from the **primary checkout** only — never invoke `python3 -m sw generate --all`
+(or Codex/OpenCode MCP emit) with cwd in an orchestrator worktree under `.sw-worktrees/` (R3).
+
+**Default stamp chain** (after the command body matches the code):
+
+1. `python3 scripts/agent_instruction_compiler.py` (write mode; `--check` alone is not green).
+2. `python3 -m sw generate cursor` and `python3 -m sw generate claude-code` from primary.
+3. `python3 scripts/golden_manifest.py generate` (refreshes `scripts/test/fixtures/parity/cursor-golden.manifest` after dist/cursor generate).
+
+Shortcut after editing this file:
+`python3 scripts/docs-currency-gate.py restamp-command-doc <repo-root> core/commands/sw-freeze.md` bumps
+the marker and runs the stamp chain. Or `python3 scripts/docs-currency-gate.py regen-command-doc-chain
+<repo-root>` when the doc is already current.
+
+Full-tree `python3 -m sw generate --all` is **primary-checkout only** when every platform plus MCP JSON
+must be refreshed; pass `--restore-plan` when the generator refuses without it. Do not use
+`ship-build-chain-check --check` as regen.
+
 <!-- currency: refreshed 2026-09-15T20:26:00Z — terminal docs-currency after planning_store shipped_issues_providers export; check_frozen_lib / check-frozen / planning_store -->
