@@ -17,6 +17,7 @@ if str(scripts) not in sys.path:
 from planning.backends.issues_helpers import reconstruct_bodies_equivalent
 from planning_canonical import BODY_SIZE_LIMIT, CommentRecord, IssueSnapshot, canonical_hash, chunk_body_if_needed
 from planning_linear_canonical import (
+    LINEAR_PUBLIC_MARKDOWN_R6_REWRITES,
     _split_positions,
     chunk_body_for_linear,
     linear_public_markdown_equivalent,
@@ -24,7 +25,6 @@ from planning_linear_canonical import (
     original_bytes_hash_body,
 )
 from prd363_fixture_lib import (
-    PRD363_LEFTOVER_REGION_COUNT,
     PRD363_LEFTOVER_REGION_COUNT,
     PRD363_PRIVATE_PILOT_DIR,
     family_map_covers_redacted_pairs,
@@ -370,3 +370,52 @@ class TestPrd363Phase7NegativesFreezeHashAndProviderNoOps:
         )
         chunk_body_if_needed("Jira-sized body.\n", [], provider="jira")
         assert jira_calls == ["jira"]
+
+
+class TestPrd363Phase8DocsEmit:
+    @staticmethod
+    def _families_from_canonical_serialization_doc() -> set[str]:
+        text = (REPO_ROOT / "core/sw-reference/canonical-serialization.md").read_text(
+            encoding="utf-8"
+        )
+        anchor = "rewrite families as equal:"
+        start = text.index(anchor) + len(anchor)
+        end = text.index("\n\nA new Standard unit", start)
+        block = text[start:end]
+        families: set[str] = set()
+        for line in block.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("- `") and "`" in stripped[3:]:
+                families.add(stripped[3 : stripped.index("`", 3)])
+        return families
+
+    def test_canonical_serialization_emits_full_r6_rewrite_list(self) -> None:
+        doc_families = self._families_from_canonical_serialization_doc()
+        assert doc_families == set(LINEAR_PUBLIC_MARKDOWN_R6_REWRITES)
+
+    def test_linear_md_map13_contract_matches_code(self) -> None:
+        text = (REPO_ROOT / "core/providers/issues/linear.md").read_text(encoding="utf-8")
+        assert "Map-13 contract" in text
+        for family in sorted(LINEAR_PUBLIC_MARKDOWN_R6_REWRITES):
+            assert f"`{family}`" in text
+
+    def test_dist_linear_md_matches_core_emit(self) -> None:
+        core = (REPO_ROOT / "core/providers/issues/linear.md").read_text(encoding="utf-8")
+        for platform in ("cursor", "claude-code"):
+            dist_path = REPO_ROOT / "dist" / platform / "providers/issues/linear.md"
+            assert dist_path.is_file(), f"missing dist emit: {dist_path}"
+            assert dist_path.read_text(encoding="utf-8") == core
+
+
+class TestPrd363Phase8Prd359ItalicsNonRegression:
+    """PRD 359 R9 — italics and single-span bold-around-inline-code stay equivalent."""
+
+    def test_underscore_versus_asterisk_italics_equivalent(self) -> None:
+        left = "Note _same emphasis_ text.\n"
+        right = "Note *same emphasis* text.\n"
+        assert linear_public_markdown_equivalent(left, right)
+
+    def test_single_span_bold_around_inline_code_equivalent(self) -> None:
+        left = "Keep **`token`** here.\n"
+        right = "Keep `token` here.\n"
+        assert linear_public_markdown_equivalent(left, right)
