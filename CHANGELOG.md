@@ -1405,6 +1405,7 @@
 * merge phase finalize-post-release-tests-r11-r12-r13-small into feat/self-host-closeout-hygiene (2139807) <!-- sw-deliver:finalize-post-release-tests-r11-r12-r13-small -->
 * merge phase command-doc-regen-prose-r3-r5-small into feat/self-host-closeout-hygiene (5b4d400) <!-- sw-deliver:command-doc-regen-prose-r3-r5-small -->
 * merge phase stamp-chain-remaining-tests-r5-r14-small into feat/self-host-closeout-hygiene (7d3a057) <!-- sw-deliver:stamp-chain-remaining-tests-r5-r14-small -->
+* merge phase docs-currency-stale-downstream-gate-r15-r16-r17-small into feat/self-host-closeout-hygiene (3a554f6) <!-- sw-deliver:docs-currency-stale-downstream-gate-r15-r16-r17-small -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
