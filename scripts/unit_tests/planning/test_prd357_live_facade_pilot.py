@@ -48,6 +48,8 @@ def test_receipt_accepts_allowlisted_shape() -> None:
         "scopeCheck": {"verdict": "ok", "projectId": "proj-pilot"},
         "credentialBlocked": False,
         "blockedCause": None,
+        "issueStoreOps": ["put", "get", "materialize", "retry-put", "update", "get"],
+        "stuckIssueCheck": {"before": {"verdict": "ok"}, "after": {"verdict": "ok"}},
     }
     assert pilot.validate_live_facade_receipt(good)["verdict"] == "ok"
 
