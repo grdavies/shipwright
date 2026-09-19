@@ -1,4 +1,4 @@
-"""PRD 363 — Linear Public Markdown 2.21.0 equivalence (phase-scoped growth)."""
+"""PRD 363 Linear markdown equivalence regression suite."""
 
 from __future__ import annotations
 
@@ -14,10 +14,15 @@ scripts = Path(__file__).resolve().parents[2]
 if str(scripts) not in sys.path:
     sys.path.insert(0, str(scripts))
 
+from planning.backends.issues_helpers import reconstruct_bodies_equivalent
+from planning_canonical import BODY_SIZE_LIMIT, CommentRecord, IssueSnapshot, canonical_hash, chunk_body_if_needed
 from planning_linear_canonical import (
+    LINEAR_PUBLIC_MARKDOWN_R6_REWRITES,
     _split_positions,
     chunk_body_for_linear,
     linear_public_markdown_equivalent,
+    linear_public_markdown_r6_form,
+    original_bytes_hash_body,
 )
 from prd363_fixture_lib import (
     PRD363_LEFTOVER_REGION_COUNT,
@@ -290,3 +295,127 @@ class TestPrd363Phase6LegalCutEnumeration:
         chunk_body_for_linear(body[:50_000], [])
         assert seen, "chunker should call _split_positions"
         assert seen[0] == original(body[:50_000])
+
+
+class _Ps:
+    @staticmethod
+    def strip_markers_and_edges(text: str) -> str:
+        return text
+
+    @staticmethod
+    def fail(message: str, **_kwargs: object) -> None:
+        raise AssertionError(message)
+
+
+class TestPrd363Phase7NegativesFreezeHashAndProviderNoOps:
+    def test_identity_token_match_without_comparison_form_fails(self) -> None:
+        left = "## R1 Title\n\nBody.\n"
+        right = "R1 Title\n\nBody.\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+        assert (
+            reconstruct_bodies_equivalent(left, right, issues_provider="linear", ps_mod=_Ps)
+            is False
+        )
+
+    def test_rewrite_only_equivalent_bodies_keep_distinct_freeze_hash(self) -> None:
+        hyphen = "- **R1** Facade owns Linear split."
+        asterisk = "* **R1** Facade owns Linear split."
+        assert linear_public_markdown_equivalent(hyphen, asterisk)
+        snap_h = IssueSnapshot(title="t", body=hyphen, state="open", labels=[], comments=[])
+        snap_a = IssueSnapshot(title="t", body=asterisk, state="open", labels=[], comments=[])
+        assert canonical_hash(snap_h) != canonical_hash(snap_a)
+        assert original_bytes_hash_body(hyphen) != linear_public_markdown_r6_form(hyphen) or hyphen == asterisk
+
+    def test_github_chunk_output_unchanged_vs_default(self) -> None:
+        body = "Z" * (BODY_SIZE_LIMIT + 64)
+        head_default, comments_default = chunk_body_if_needed(body, [], provider=None)
+        head_github, comments_github = chunk_body_if_needed(body, [], provider="github-issues")
+        assert len(comments_github) == len(comments_default) == 1
+        assert [c.body for c in comments_github] == [c.body for c in comments_default]
+
+    def test_non_linear_providers_do_not_invoke_linear_chunker(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        body = "Z" * (BODY_SIZE_LIMIT + 64)
+
+        def _boom(*_args: object, **_kwargs: object) -> tuple[str, list[CommentRecord]]:
+            raise AssertionError("linear chunker must not run for non-linear providers")
+
+        monkeypatch.setattr(
+            "planning_linear_canonical.chunk_body_for_linear",
+            _boom,
+        )
+        chunk_body_if_needed(body, [], provider="github-issues")
+        chunk_body_if_needed(body, [], provider="notion")
+
+    def test_jira_routes_to_jira_chunker_not_linear(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        jira_calls: list[str] = []
+
+        def _boom(*_args: object, **_kwargs: object) -> tuple[str, list[CommentRecord]]:
+            raise AssertionError("linear chunker must not run for Jira")
+
+        def _jira_chunk(body: str, comments: list[CommentRecord]) -> tuple[str, list[CommentRecord]]:
+            jira_calls.append("jira")
+            return body, comments
+
+        monkeypatch.setattr(
+            "planning_linear_canonical.chunk_body_for_linear",
+            _boom,
+        )
+        monkeypatch.setattr(
+            "planning_jira_canonical.chunk_body_for_jira_cloud",
+            _jira_chunk,
+        )
+        chunk_body_if_needed("Jira-sized body.\n", [], provider="jira")
+        assert jira_calls == ["jira"]
+
+
+class TestPrd363Phase8DocsEmit:
+    @staticmethod
+    def _families_from_canonical_serialization_doc() -> set[str]:
+        text = (REPO_ROOT / "core/sw-reference/canonical-serialization.md").read_text(
+            encoding="utf-8"
+        )
+        anchor = "rewrite families as equal:"
+        start = text.index(anchor) + len(anchor)
+        end = text.index("\n\nA new Standard unit", start)
+        block = text[start:end]
+        families: set[str] = set()
+        for line in block.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("- `") and "`" in stripped[3:]:
+                families.add(stripped[3 : stripped.index("`", 3)])
+        return families
+
+    def test_canonical_serialization_emits_full_r6_rewrite_list(self) -> None:
+        doc_families = self._families_from_canonical_serialization_doc()
+        assert doc_families == set(LINEAR_PUBLIC_MARKDOWN_R6_REWRITES)
+
+    def test_linear_md_map13_contract_matches_code(self) -> None:
+        text = (REPO_ROOT / "core/providers/issues/linear.md").read_text(encoding="utf-8")
+        assert "Map-13 contract" in text
+        for family in sorted(LINEAR_PUBLIC_MARKDOWN_R6_REWRITES):
+            assert f"`{family}`" in text
+
+    def test_dist_linear_md_matches_core_emit(self) -> None:
+        core = (REPO_ROOT / "core/providers/issues/linear.md").read_text(encoding="utf-8")
+        for platform in ("cursor", "claude-code"):
+            dist_path = REPO_ROOT / "dist" / platform / "providers/issues/linear.md"
+            assert dist_path.is_file(), f"missing dist emit: {dist_path}"
+            assert dist_path.read_text(encoding="utf-8") == core
+
+
+class TestPrd363Phase8Prd359ItalicsNonRegression:
+    """PRD 359 R9 — italics and single-span bold-around-inline-code stay equivalent."""
+
+    def test_underscore_versus_asterisk_italics_equivalent(self) -> None:
+        left = "Note _same emphasis_ text.\n"
+        right = "Note *same emphasis* text.\n"
+        assert linear_public_markdown_equivalent(left, right)
+
+    def test_single_span_bold_around_inline_code_equivalent(self) -> None:
+        left = "Keep **`token`** here.\n"
+        right = "Keep `token` here.\n"
+        assert linear_public_markdown_equivalent(left, right)

@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-19T02:58:00Z",
+  "generatedAt": "2026-09-19T17:10:25Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -4555,91 +4555,91 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:190:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:211:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 190,
+      "line": 211,
       "column": 32,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:248:planning_store.py",
+      "id": "core/providers/issues/linear.md:269:planning_store.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 248,
+      "line": 269,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:249:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:270:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 249,
+      "line": 270,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:286:test/run_pytest.py",
+      "id": "core/providers/issues/linear.md:307:test/run_pytest.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 286,
+      "line": 307,
       "column": 8,
       "script": "test/run_pytest.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:292:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:313:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 292,
+      "line": 313,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:298:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:319:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 298,
+      "line": 319,
       "column": 28,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:362:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:383:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 362,
+      "line": 383,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:382:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:403:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 382,
+      "line": 403,
       "column": 10,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:411:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:432:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 411,
+      "line": 432,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/providers/issues/linear.md:412:planning_linear_client.py",
+      "id": "core/providers/issues/linear.md:433:planning_linear_client.py",
       "tree": "core/providers",
       "file": "core/providers/issues/linear.md",
-      "line": 412,
+      "line": 433,
       "column": 8,
       "script": "planning_linear_client.py",
       "classification": "self-repo-only"
@@ -7696,10 +7696,10 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/canonical-serialization.md:118:test/run_planning_store_fixtures.py",
+      "id": "core/sw-reference/canonical-serialization.md:120:test/run_planning_store_fixtures.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/canonical-serialization.md",
-      "line": 118,
+      "line": 120,
       "column": 9,
       "script": "test/run_planning_store_fixtures.py",
       "classification": "self-repo-only"
