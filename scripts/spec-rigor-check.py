@@ -26,8 +26,9 @@ import wave_deliver as wd
 from phase_sizing import evaluate_freeze_gate, has_advisory_block
 from _sw.cli import run_module_main
 
-# Layered ambiguity matcher (PRD 361 phase 1) — precedence: allowlist, unresolved phrase / ???,
-# punctuation wrap, Title-case named state, slash-taxonomy (lowercase), else hard markers.
+# Layered ambiguity matcher (PRD 361 phase 1 / PRD 364 R5–R6) — precedence: allowlist,
+# unresolved phrase / ???, vocab-restricted punctuation wrap, Title-case named state,
+# slash-taxonomy (lowercase), else hard markers.
 _SLASH_TAXONOMY_LOWERCASE = re.compile(
     r"(?<![A-Za-z0-9/])(?:[a-z][a-z0-9]*/)+[a-z][a-z0-9]*(?![A-Za-z0-9/])"
 )
@@ -38,8 +39,9 @@ _TRIPLE_QUESTION = re.compile(r"\?\?\?")
 _UNRESOLVED_PHRASE = re.compile(r"\bto be determined\b", re.I)
 _CASUAL_LOWER_MARKER = re.compile(r"\b(todo|tbd|fixme)\b")
 _HARD_AMBIGUITY_MARKER = re.compile(r"\b(TBD|TODO|FIXME)\b", re.I)
-_COLON_WRAP = re.compile(r"\b([A-Za-z][A-Za-z0-9_-]*)\s*:")
-_BRACKET_WRAP = re.compile(r"\[([^\]]+)\]")
+# PRD 364 R5 — wraps are colliding unfinished-work vocabulary only (not any-word).
+_COLON_WRAP = re.compile(r"\b(TODO|TBD|FIXME)\s*:", re.I)
+_BRACKET_WRAP = re.compile(r"\[(TODO|TBD|FIXME)\]", re.I)
 _FRONTMATTER_BLOCK = re.compile(r"\A---\s*\n([\s\S]*?)\n---\s*(?:\n|$)", re.M)
 _FLOW_LIST = re.compile(r"^\[(.*)\]$", re.S)
 
@@ -142,10 +144,22 @@ def _allowlisted(fragment: str, allowlist: frozenset[str]) -> bool:
 
 
 def text_has_ambiguity_marker(body: str, allowlist: frozenset[str] | None = None) -> bool:
-    """Return True when layered matcher finds a blocking ambiguity marker in body."""
+    """Return True when layered matcher finds a blocking ambiguity marker in body.
+
+    Precedence (PRD 361 / PRD 364 R6): allowlist, unresolved phrase / ???,
+    vocab-restricted punctuation wrap, Title-case named state, slash-taxonomy
+    (lowercase), else hard markers. Wraps run before Title-case masking.
+    """
     allow = allowlist if allowlist is not None else frozenset()
     if not body or not body.strip():
         return False
+
+    if _TRIPLE_QUESTION.search(body) and not any("???" in entry for entry in allow):
+        return True
+    if _UNRESOLVED_PHRASE.search(body) and not any(
+        "to be determined" in entry.lower() for entry in allow
+    ):
+        return True
 
     for match in _COLON_WRAP.finditer(body):
         token = match.group(1)
@@ -156,13 +170,6 @@ def text_has_ambiguity_marker(body: str, allowlist: frozenset[str] | None = None
         bracketed = f"[{match.group(1)}]"
         if not (_allowlisted(inner, allow) or _allowlisted(bracketed, allow)):
             return True
-
-    if _TRIPLE_QUESTION.search(body) and not any("???" in entry for entry in allow):
-        return True
-    if _UNRESOLVED_PHRASE.search(body) and not any(
-        "to be determined" in entry.lower() for entry in allow
-    ):
-        return True
 
     masked = _SLASH_TAXONOMY_LOWERCASE.sub(" ", body)
     masked = _TITLE_CASE_NAMED_STATE.sub(" ", masked)

@@ -141,7 +141,8 @@ def test_r3_all_caps_slash_segment_fails() -> None:
 
 
 def test_r4_colon_and_bracket_wrap_fail() -> None:
-    body = _prd_skeleton("State Pending: must be explicit", "Label [Pending] in UI copy")
+    # PRD 364 R9 — wrap goldens use colliding unfinished-work tokens (Todo), not Pending.
+    body = _prd_skeleton("State Todo: must be explicit", "Label [Todo] in UI copy")
     _, data = _run_prd(_WORKTREE_ROOT, body)
     msgs = _ambiguity_messages(data)
     assert len(msgs) >= 2
@@ -203,6 +204,8 @@ def test_existing_fixtures_regression() -> None:
     for fixture, expect_pass in (
         ("prd-pass.md", True),
         ("prd-pass-v2.md", True),
+        ("prd-pass-title-case-named-state.md", True),
+        ("prd-pass-reviewed-literal.md", True),
         ("prd-fail-clarify.md", False),
     ):
         path = _WORKTREE_ROOT / "scripts/test/fixtures/spec-rigor" / fixture
