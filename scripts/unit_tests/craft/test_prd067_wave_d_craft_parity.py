@@ -57,7 +57,9 @@ def test_new_commands_documented_in_commands_guide() -> None:
 
 
 def test_user_guides_free_of_prd_tokens() -> None:
-    paths = list(GUIDES.glob("*.md")) + [ROOT / "README.md"]
+    # docs/guides are durable redirect stubs; scan canonical adopter bodies.
+    canon = ROOT / "core" / "documentation"
+    paths = list(canon.glob("*.md")) + [ROOT / "README.md"]
     offenders: list[str] = []
     for path in paths:
         if PROVENANCE.search(path.read_text(encoding="utf-8")):
