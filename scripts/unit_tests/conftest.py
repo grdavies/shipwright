@@ -47,10 +47,22 @@ def _restore_cursor_tree(cursor_dir: Path, snap: dict[str, bytes]) -> None:
 
 
 def _copy_dist_platform(src: Path, dest: Path) -> None:
+    """Restore a platform tree from the session snapshot.
+
+    Uses ``dirs_exist_ok`` so External-Storage / concurrent emitter restores do not
+    fail closed on ``FileExistsError`` during pytest teardown (deliver pre-pr-smoke).
+    """
     if dest.exists():
         shutil.rmtree(dest, ignore_errors=True)
     if src.is_dir():
-        shutil.copytree(src, dest, symlinks=True)
+        try:
+            shutil.copytree(src, dest, symlinks=True, dirs_exist_ok=True)
+        except shutil.Error:
+            # Partial mid-copy races on networked volumes — best-effort restore.
+            if dest.exists():
+                shutil.rmtree(dest, ignore_errors=True)
+            if src.is_dir():
+                shutil.copytree(src, dest, symlinks=True, dirs_exist_ok=True)
 
 
 def _restore_dist_platforms(repo_root: Path, snap_root: Path) -> None:

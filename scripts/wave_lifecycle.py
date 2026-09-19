@@ -359,6 +359,45 @@ def orchestrator_worktree_dirty(path: Path) -> bool:
     return bool(status.strip())
 
 
+def orchestrator_dirty_paths(path: Path) -> list[str]:
+    status = git_run(["status", "--porcelain"], cwd=path, check=False).stdout
+    paths: list[str] = []
+    for line in status.splitlines():
+        if not line.strip():
+            continue
+        entry = line[3:].strip()
+        if " -> " in entry:
+            entry = entry.split(" -> ", 1)[1].strip()
+        paths.append(entry.replace("\\", "/"))
+    return paths
+
+
+def _path_is_generate_dist_dirt(entry: str) -> bool:
+    normalized = entry.replace("\\", "/").lstrip("./")
+    if normalized.startswith("dist/"):
+        return True
+    if "/dist/" in normalized:
+        return True
+    return False
+
+
+def is_generate_only_orchestrator_dirt(path: Path) -> bool:
+    """True when every dirty path is under dist/ (generate MCP JSON or wiped platform trees) — PRD 362 R6."""
+    paths = orchestrator_dirty_paths(path)
+    if not paths:
+        return False
+    return all(_path_is_generate_dist_dirt(p) for p in paths)
+
+
+def orchestrator_worktree_dirty_halt(path: Path) -> str | None:
+    """Return halt id for a dirty orchestrator worktree, or None when clean."""
+    if not orchestrator_worktree_dirty(path):
+        return None
+    if is_generate_only_orchestrator_dirt(path):
+        return "closeout:generate-only-dirt"
+    return "dirty-orchestrator"
+
+
 def _primary_workspace(top: Path) -> Path:
     from primary_checkout_guard import canonical_repo_root, primary_worktree_path
 
@@ -498,12 +537,24 @@ def cmd_orchestrator_provision(root: Path, args: list[str]) -> None:
                 halt="orchestrator-branch-mismatch",
                 remediation=f"git -C {path} checkout {target}",
             )
-        if orchestrator_worktree_dirty(path):
+        dirty_halt = orchestrator_worktree_dirty_halt(path)
+        if dirty_halt:
+            remediation = (
+                "restore tracked dist/MCP from primary checkout; generate-only orch dirt is a failed closeout "
+                "(PRD 362 R6), not dirty-orchestrator teardown recovery"
+                if dirty_halt == "closeout:generate-only-dirt"
+                else f"commit or stash changes in {path} before adopt"
+            )
             fail(
                 f"orchestrator worktree is dirty: {path}",
                 exit_code=20,
-                halt="dirty-orchestrator",
-                remediation=f"commit or stash changes in {path} before adopt",
+                halt=dirty_halt,
+                cause=(
+                    "closeout:generate-only-dirt"
+                    if dirty_halt == "closeout:generate-only-dirt"
+                    else "resume:orchestrator-dirty"
+                ),
+                remediation=remediation,
             )
         tip = git_run(["rev-parse", "HEAD"], cwd=path).stdout.strip()
         primary_binding, orchestrator_binding = _resolve_scripts_bindings(primary, path)
