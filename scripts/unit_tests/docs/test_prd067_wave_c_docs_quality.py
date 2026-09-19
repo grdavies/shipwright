@@ -2,22 +2,26 @@
 from __future__ import annotations
 
 import re
-import subprocess
-import sys
 from pathlib import Path
-
-import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 GUIDES = ROOT / "docs" / "guides"
-SCRIPTS = ROOT / "scripts"
+# Public docs/guides paths are durable redirect stubs; canonical bodies live here.
+CANON = ROOT / "core" / "documentation"
 PROVENANCE = re.compile(r"\bPRD\s*\d+|\bR\d+\b|\bGAP-\d+", re.I)
 
 
+def _guide(name: str) -> Path:
+    """Prefer canonical core/documentation body; require public stub still present."""
+    stub = GUIDES / name
+    assert stub.is_file(), f"missing public stub: {stub}"
+    canon = CANON / name
+    assert canon.is_file(), f"missing canonical guide: {canon}"
+    return canon
+
+
 def test_style_guide_exists_with_diataxis_and_naming() -> None:
-    path = GUIDES / "style-guide.md"
-    assert path.is_file()
-    text = path.read_text()
+    text = _guide("style-guide.md").read_text()
     assert re.search(r"Di[aá]taxis", text, re.I)
     assert "Google" in text
     assert "slug" in text.lower()
@@ -25,10 +29,10 @@ def test_style_guide_exists_with_diataxis_and_naming() -> None:
 
 
 def test_glossary_and_decision_tree_exist() -> None:
-    gloss = (GUIDES / "glossary.md").read_text()
+    gloss = _guide("glossary.md").read_text()
     for term in ("unit", "gap", "freeze", "deliver", "wave", "phase", "conductor"):
         assert term in gloss.lower()
-    tree = (GUIDES / "decision-tree.md").read_text()
+    tree = _guide("decision-tree.md").read_text()
     assert "```mermaid" in tree
 
 
@@ -37,7 +41,8 @@ def test_documentation_dir_absent() -> None:
 
 
 def test_user_guides_free_of_prd_tokens() -> None:
-    paths = list(GUIDES.glob("*.md")) + [ROOT / "README.md"]
+    # Adopter-facing bodies are under core/documentation; docs/guides are stubs.
+    paths = list(CANON.glob("*.md")) + [ROOT / "README.md"]
     offenders: list[str] = []
     for path in paths:
         if PROVENANCE.search(path.read_text()):
@@ -46,14 +51,14 @@ def test_user_guides_free_of_prd_tokens() -> None:
 
 
 def test_configuration_documents_delegation_mode() -> None:
-    text = (GUIDES / "configuration.md").read_text()
+    text = _guide("configuration.md").read_text()
     assert "delegation.mode" in text
     assert "bind-only" in text
     assert "heuristic" in text
 
 
 def test_getting_started_has_adoption_arc() -> None:
-    text = (GUIDES / "getting-started.md").read_text()
+    text = _guide("getting-started.md").read_text()
     assert "First session" in text
     assert "Week two" in text
     assert "After a month" in text or "after a month" in text.lower()
