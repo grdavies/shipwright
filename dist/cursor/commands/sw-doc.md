@@ -470,4 +470,25 @@ dispatch through **GraphScheduler** (`scripts/graph/legacy_adapters.py` →
 `/sw-feedback` — no graph-prefixed slash commands and no parallel operator UX. Graph `runId` is the
 generic run identity already used by deliver status/explain.
 
+## Command-doc currency regen (PRD 362 R3/R5)
+
+This file is in `COMMAND_DOC_CURRENCY_ARTIFACTS`. When `docs-currency-gate` reports drift on bound code
+paths, regen downstream from the **primary checkout** only — never invoke `python3 -m sw generate --all`
+(or Codex/OpenCode MCP emit) with cwd in an orchestrator worktree under `.sw-worktrees/` (R3).
+
+**Default stamp chain** (after the command body matches the code):
+
+1. `python3 scripts/agent_instruction_compiler.py` (write mode; `--check` alone is not green).
+2. `python3 -m sw generate cursor` and `python3 -m sw generate claude-code` from primary.
+3. `python3 scripts/snapshot-tree.py scripts/test/fixtures/parity/cursor-golden.manifest --root <repo-root>`.
+
+Shortcut after editing this file:
+`python3 scripts/docs-currency-gate.py restamp-command-doc <repo-root> core/commands/sw-doc.md` bumps the
+marker and runs the stamp chain. Or `python3 scripts/docs-currency-gate.py regen-command-doc-chain
+<repo-root>` when the doc is already current.
+
+Full-tree `python3 -m sw generate --all` is **primary-checkout only** when every platform plus MCP JSON
+must be refreshed; pass `--restore-plan` when the generator refuses without it. Do not use
+`ship-build-chain-check --check` as regen.
+
 <!-- currency: refreshed 2026-08-30T01:56:00Z for terminal prepare (PRD 341) -->
