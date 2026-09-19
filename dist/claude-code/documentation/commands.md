@@ -147,7 +147,7 @@ Composition, convergence, and domain terms:
 [`graph-domain-terminology.md`](graph-domain-terminology.md).
 
 ### Deliver operator surface
-<!-- currency: refreshed 2026-09-14T20:02:00Z — terminal docs-currency; wave_deliver / wave_terminal / wave_run_adopt -->
+<!-- currency: refreshed 2026-09-19T04:40:00Z — terminal docs-currency; wave_deliver / wave_terminal / wave_run_adopt -->
 
 Mechanical list / resume / finalize commands report run identity, target branch, stage, lock holder,
 and `requiresAdoption` **before** any mutation. Operators invoke them via `wave_deliver.py` (or
@@ -527,5 +527,5 @@ Phase PR CI uses bounded poll/self-wake — not terminal-only watch.
 
 Operator halts include `tasks-currency-divergence`, `gap-check-missing`, `batch-integration-head-moved`,
 and living-docs **deferral** (`livingDocDeferral` + `resumeCommand`) when the repo-wide lock is held.
-<!-- currency: refreshed 2026-09-17T08:45:00Z — terminal-ship after wave_terminal closeout -->
+<!-- currency: refreshed 2026-09-19T04:40:00Z — terminal-ship after wave_terminal closeout -->
 

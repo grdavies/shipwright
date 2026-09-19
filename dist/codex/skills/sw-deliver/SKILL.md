@@ -342,7 +342,9 @@ unchanged. On execute ref terminal `green`, `execute_task_status.py` auto-record
    queue drains — halt if integration moves mid-batch.
 7. On `merge-ready-green`: `merge enqueue` → `merge run-next` when gate + review barrier settle.
 8. **Deterministic conflict auto-resolve (R12):** `merge-queue:conflict` on golden-manifest / `dist/**` /
-   generated mirrors only may auto-regen (`copy-to-core` + `python3 -m sw generate --all`) within
+   generated mirrors only may auto-regen from **primary** (`scripts/copy-to-core.py` then the command-doc
+   stamp chain — platform-scoped `sw generate cursor` / `claude-code`, not `python3 -m sw generate --all`
+   from the orchestrator worktree; see **Command-doc currency regen**) within
    `deliver.deterministicConflict.maxAttempts` (default 1); semantic or multi-preimage conflicts halt.
 9. On blocker: bounded remediation (`deliver.remediation.maxAttempts`, default **2**), blast-radius for
    siblings, consolidated blocker report on halt (R8–R12).
@@ -715,8 +717,32 @@ fallbacks. Terminal `list, resume, finalize`, **Resume cardinality**, **Drain-bu
 Before presenting the human merge gate, `scripts/wave_terminal.py` runs living-docs append +
 `docs-currency-gate` and tasks-currency corroboration. Drift on command docs bound to
 `wave_deliver.py` / `wave_deliver_loop.py` / `wave_terminal.py` / `wave_run_adopt.py` blocks
-`terminal pr prepare` fail-closed — refresh the stale command doc (this file or `/sw-freeze`) and
-re-run prepare; do not skip the gate.
+`terminal pr prepare` fail-closed — refresh the stale command doc from the **primary checkout** (this file,
+`/sw-doc`, `/sw-freeze`, or `/sw-tasks` per binding) using **Command-doc currency regen** below, then
+re-run prepare; do not skip the gate and do not run `python3 -m sw generate --all` from an orchestrator
+worktree.
+
+## Command-doc currency regen (PRD 362 R3/R5)
+
+This file is in `COMMAND_DOC_CURRENCY_ARTIFACTS`. When `docs-currency-gate` or terminal prepare reports
+drift on bound code paths, regen downstream from the **primary checkout** only — never invoke
+`python3 -m sw generate --all` (or Codex/OpenCode MCP emit) with cwd in an orchestrator worktree under
+`.sw-worktrees/` (R3).
+
+**Default stamp chain** (after the command body matches the code):
+
+1. `python3 scripts/agent_instruction_compiler.py` (write mode; `--check` alone is not green).
+2. `python3 -m sw generate cursor` and `python3 -m sw generate claude-code` from primary.
+3. `python3 scripts/golden_manifest.py generate` (refreshes `scripts/test/fixtures/parity/cursor-golden.manifest` after dist/cursor generate).
+
+Shortcut after editing this file:
+`python3 scripts/docs-currency-gate.py restamp-command-doc <repo-root> core/commands/sw-deliver.md` bumps
+the marker and runs the stamp chain. Or `python3 scripts/docs-currency-gate.py regen-command-doc-chain
+<repo-root>` when the doc is already current.
+
+Full-tree `python3 -m sw generate --all` is **primary-checkout only** when every platform plus MCP JSON
+must be refreshed; pass `--restore-plan` when the generator refuses without it. Do not use
+`ship-build-chain-check --check` as regen.
 
 ## Currency (PRD 085 terminal)
 
@@ -735,4 +761,4 @@ primary checkout). Repo-root cwd with an orchestrator path under `.sw-worktrees/
 orchestrator worktree; terminal closeout reuses the same order. Primary cwd stays when pruning orch;
 husk/parked trees do not fail the release path.
 
-<!-- currency: refreshed 2026-09-17T08:50:00Z — terminal-ship after wave_terminal closeout -->
+<!-- currency: refreshed 2026-09-19T04:41:00Z — terminal-ship after wave_terminal closeout -->

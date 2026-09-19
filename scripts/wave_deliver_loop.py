@@ -635,7 +635,7 @@ def try_adopt_recorded_orchestrator_worktree(
         adopt_orchestrator_worktree,
         git_toplevel,
         orchestrator_worktree_branch,
-        orchestrator_worktree_dirty,
+        orchestrator_worktree_dirty_halt,
     )
 
     current = orchestrator_worktree_branch(path)
@@ -648,13 +648,18 @@ def try_adopt_recorded_orchestrator_worktree(
             actual=current,
             expected=target,
         )
-    if orchestrator_worktree_dirty(path):
+    dirty_halt = orchestrator_worktree_dirty_halt(path)
+    if dirty_halt:
         _fail_orch_adopt(
             root,
             state,
             f"orchestrator worktree is dirty: {path}",
-            halt="dirty-orchestrator",
-            cause="resume:orchestrator-dirty",
+            halt=dirty_halt,
+            cause=(
+                "closeout:generate-only-dirt"
+                if dirty_halt == "closeout:generate-only-dirt"
+                else "resume:orchestrator-dirty"
+            ),
             path=str(path),
         )
     if not _orchestrator_lock_reclaimable(repo_root, target):
@@ -1130,6 +1135,7 @@ def remediate_pending_for_state(root: Path, state: dict[str, Any]) -> bool:
 def refresh_batch_integration_head(root: Path, state: dict[str, Any]) -> None:
     """Atomically refresh batchIntegrationHead when batch queue active (R34)."""
     if not (state.get("mergeQueue") or state.get("mergeJournal")):
+        clear_batch_integration_head_if_idle(state)
         return
     head = integration_branch_head(root, state)
     if head:
@@ -1864,6 +1870,50 @@ def ensure_finalize_scripts_bootstrap(root: Path) -> Path:
     return ensure_scripts_on_path(root, executor=Path(__file__))
 
 
+def snapshot_process_cwd() -> str | None:
+    """Best-effort process cwd before finalize rebind (may be missing if already torn down)."""
+    try:
+        return os.getcwd()
+    except FileNotFoundError:
+        return None
+
+
+def restore_process_cwd_after_finalize(prior: str | None, primary: Path) -> None:
+    """Restore caller cwd after finalize rebind when the prior directory still exists."""
+    if prior:
+        try:
+            if Path(prior).is_dir():
+                os.chdir(prior)
+                return
+        except OSError:
+            pass
+    try:
+        os.chdir(primary.resolve())
+    except OSError:
+        pass
+
+
+def rebind_finalize_execution_to_primary(root: Path) -> Path:
+    """Rebind cwd, sys.path, and finalize imports to the primary checkout (PRD 362 R10/R13).
+
+    ``ensure_finalize_scripts_bootstrap`` alone is insufficient when finalize runs from an
+    orchestrator worktree — orch teardown removes the cwd backing ``sys.path`` entries.
+    """
+    from primary_checkout_guard import canonical_repo_root, primary_worktree_path
+
+    repo_root = canonical_repo_root(root)
+    primary = primary_worktree_path(repo_root).resolve()
+    os.chdir(primary)
+    scripts_dir = ensure_scripts_on_path(primary, executor=Path(__file__))
+    scripts_entry = str(scripts_dir.resolve())
+    if scripts_entry not in sys.path:
+        sys.path.insert(0, scripts_entry)
+    import deliver_closeout  # noqa: F401 — primary binding before orch release
+    import planning_projection_ledger  # noqa: F401
+
+    return primary
+
+
 def finalize_checkpoint_needs_repair(
     checkpoint: dict[str, Any] | None,
     *,
@@ -2385,6 +2435,14 @@ def batch_integration_head_halt(
 def clear_batch_integration_head_if_idle(state: dict[str, Any]) -> None:
     if not state.get("mergeQueue") and not state.get("mergeJournal"):
         state.pop("batchIntegrationHead", None)
+
+
+def batch_integration_head_halt_after_idle_clear(
+    root: Path, state: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Apply R7 idle clear before evaluating batch-integration-head halt (R8/R9)."""
+    clear_batch_integration_head_if_idle(state)
+    return batch_integration_head_halt(root, state)
 
 
 def in_flight_merge_halt(
@@ -3657,7 +3715,7 @@ def compute_next_action(
     if merge_halt:
         return merge_halt
 
-    batch_halt = batch_integration_head_halt(root, state)
+    batch_halt = batch_integration_head_halt_after_idle_clear(root, state)
     if batch_halt:
         return batch_halt
 
@@ -4549,6 +4607,7 @@ def _execute_mechanical_inner(
             return {"executed": "post-merge-verify-remediate", "phaseSlug": slug, **data}
         if ec == 10 and data.get("cause") == "verify:environmental":
             state.update(load_state(root))
+            clear_batch_integration_head_if_idle(state)
             attempts = state.setdefault("verifyRemediationAttempts", {})
             attempts[pid] = int(step.get("attempt") or attempts.get(pid, 0))
             meta = (state.get("phases") or {}).get(pid)
@@ -4597,7 +4656,7 @@ def _execute_mechanical_inner(
 
     if action == "merge-run-next":
         fixture_tree_clean_or_halt(root, state)
-        batch_halt = batch_integration_head_halt(root, state)
+        batch_halt = batch_integration_head_halt_after_idle_clear(root, state)
         if batch_halt:
             fail(
                 batch_halt.get("cause") or "batch-integration-head-moved",
@@ -4610,6 +4669,7 @@ def _execute_mechanical_inner(
             # Reload disk state first — merge-run-next already dequeued + recorded
             # completedMerges; saving the pre-call in-memory snapshot would wipe that (R9).
             state.update(load_state(root))
+            clear_batch_integration_head_if_idle(state)
             # Merge advanced integration HEAD; refresh freeze before draining siblings (R10/R34).
             refresh_batch_integration_head(root, state)
             refresh_merge_queue_liveness_cas(root, state)

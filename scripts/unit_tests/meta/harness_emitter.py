@@ -282,6 +282,33 @@ p.write_text(json.dumps(data, indent=2) + '\n')
   fi
 fi
 
+# PRD 362 R2 — failed claude-code emit must not wipe tracked dist/claude-code
+if [ -d "$ROOT/dist/claude-code" ]; then
+  BEFORE=$(find "$ROOT/dist/claude-code" -type f 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$BEFORE" -gt 0 ]; then
+    set +e
+    OUT_TEXT=$(SHIPWRIGHT_EMITTER_INJECT_FAIL=1 $GEN generate claude-code 2>&1)
+    EC=$?
+    set -e
+    if [ "$EC" -ne 0 ]; then
+      AFTER=$(find "$ROOT/dist/claude-code" -type f 2>/dev/null | wc -l | tr -d ' ')
+      if [ "$AFTER" -gt 0 ]; then
+        echo "OK  claude-emit-failed-restore-dist"
+      else
+        echo "FAIL claude-emit-failed-restore-dist dist/claude-code empty after failed emit"
+        FAIL=1
+      fi
+    else
+      echo "FAIL claude-emit-failed-restore-dist expected non-zero exit with inject fail"
+      echo "$OUT_TEXT"
+      FAIL=1
+    fi
+  else
+    echo "FAIL claude-emit-failed-restore-dist dist/claude-code has no files before test"
+    FAIL=1
+  fi
+fi
+
 exit "$FAIL"
 
 """

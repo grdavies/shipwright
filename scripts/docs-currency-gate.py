@@ -2,10 +2,14 @@
 """Hard-block when living-doc ledger drifts from durable deliver state for the current run (R50). """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import subprocess
 import sys
+from datetime import date
 from pathlib import Path
+from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -258,7 +262,193 @@ def check_command_documentation_currency(root: Path) -> list[dict[str, object]]:
                     "maxCodeCommitEpoch": max(code_epochs),
                 }
             )
+        drift.extend(_command_doc_downstream_drift(root, entry))
     return drift
+
+
+def command_doc_currency_doc_rels() -> frozenset[str]:
+    return frozenset(str(entry["doc"]) for entry in COMMAND_DOC_CURRENCY_ARTIFACTS)
+
+
+def is_command_doc_currency_artifact(artifact_rel: str) -> bool:
+    normalized = artifact_rel.strip().lstrip("/")
+    return normalized in command_doc_currency_doc_rels()
+
+
+def _command_doc_downstream_drift(root: Path, entry: dict[str, object]) -> list[dict[str, object]]:
+    """Fail closed when needles/epochs match but stamp-chain downstream artifacts lag (PRD 362 R14–R17)."""
+    from agent_instruction_compiler import check_command_doc_instruction_currency
+    from planning_paths import GOLDEN_MANIFEST_REL
+
+    artifact_id = str(entry.get("id") or entry["doc"])
+    doc_rel = str(entry["doc"])
+    drift: list[dict[str, object]] = []
+
+    for row in check_command_doc_instruction_currency(root, doc_rel=doc_rel):
+        drift.append({**row, "artifact": artifact_id, "doc": doc_rel})
+
+    golden = root / GOLDEN_MANIFEST_REL
+    if (root / "dist" / "cursor").is_dir():
+        try:
+            import golden_manifest as gm
+        except ImportError:
+            gm = None  # type: ignore[assignment]
+        if gm is not None:
+            result = gm.check_staleness(root, manifest_path=golden)
+            if result.get("verdict") != "pass" or result.get("stale"):
+                drift.append(
+                    {
+                        "kind": "command-doc-golden-stale",
+                        "artifact": artifact_id,
+                        "doc": doc_rel,
+                        "manifest": GOLDEN_MANIFEST_REL,
+                        "detail": result,
+                    }
+                )
+
+    for platform in ("cursor", "claude-code"):
+        core_doc = root / doc_rel
+        mirror = root / "dist" / platform / "commands" / Path(doc_rel).name
+        if not core_doc.is_file() or not mirror.is_file():
+            continue
+        if hashlib.sha256(core_doc.read_bytes()).digest() != hashlib.sha256(mirror.read_bytes()).digest():
+            drift.append(
+                {
+                    "kind": "command-doc-dist-mirror-stale",
+                    "artifact": artifact_id,
+                    "doc": doc_rel,
+                    "platform": platform,
+                    "mirror": mirror.relative_to(root).as_posix(),
+                }
+            )
+    return drift
+
+
+def touch_command_doc_currency_marker(path: Path) -> str:
+    """Bump docs-currency marker on a command doc without clearing freeze state (PRD 362 R5)."""
+    text = path.read_text(encoding="utf-8")
+    marker = f"doc_currency_at: {date.today().isoformat()}"
+    if text.startswith("---"):
+        end = text.find("\n---", 3)
+        if end != -1:
+            block = text[4:end]
+            lines = [line for line in block.splitlines() if not line.strip().startswith("doc_currency_at:")]
+            lines.append(marker)
+            text = "---" + "\n".join(lines) + "\n---" + text[end + 4 :]
+        else:
+            text = f"---\n{marker}\n---\n" + text
+    else:
+        text = f"---\n{marker}\n---\n" + text
+    path.write_text(text, encoding="utf-8")
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def regen_command_doc_currency_downstream(root: Path) -> dict[str, Any]:
+    """Compiler write → platform-scoped generate → snapshot-tree (PRD 362 R5/R15/R16)."""
+    from planning_paths import GOLDEN_MANIFEST_REL
+
+    root = root.resolve()
+    compiler = root / "scripts" / "agent_instruction_compiler.py"
+    golden = root / GOLDEN_MANIFEST_REL
+    steps: list[dict[str, object]] = []
+
+    proc = subprocess.run(
+        [sys.executable, str(compiler)],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    steps.append({"step": "agent_instruction_compiler-write", "exitCode": proc.returncode})
+    if proc.returncode != 0:
+        return {
+            "verdict": "fail",
+            "action": "regen-command-doc-currency",
+            "steps": steps,
+            "stderr": proc.stderr or proc.stdout,
+        }
+
+    for platform in ("cursor", "claude-code"):
+        gen = subprocess.run(
+            [sys.executable, "-m", "sw", "generate", platform],
+            cwd=str(root),
+            text=True,
+            capture_output=True,
+        )
+        steps.append({"step": f"sw-generate-{platform}", "exitCode": gen.returncode})
+        if gen.returncode != 0:
+            return {
+                "verdict": "fail",
+                "action": "regen-command-doc-currency",
+                "steps": steps,
+                "stderr": gen.stderr or gen.stdout,
+            }
+
+    snap = subprocess.run(
+        [
+            sys.executable,
+            str(root / "scripts" / "snapshot-tree.py"),
+            str(golden),
+            "--root",
+            str(root),
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    steps.append({"step": "snapshot-tree", "exitCode": snap.returncode, "manifest": GOLDEN_MANIFEST_REL})
+    if snap.returncode != 0:
+        return {
+            "verdict": "fail",
+            "action": "regen-command-doc-currency",
+            "steps": steps,
+            "stderr": snap.stderr or snap.stdout,
+        }
+
+    return {"verdict": "pass", "action": "regen-command-doc-currency", "steps": steps}
+
+
+def restamp_command_doc_currency(root: Path, artifact_rel: str) -> dict[str, Any]:
+    """Restamp one command doc and run the stamp-chain regen (PRD 362 R5)."""
+    normalized = artifact_rel.strip().lstrip("/")
+    if not is_command_doc_currency_artifact(normalized):
+        return {
+            "verdict": "fail",
+            "action": "restamp-command-doc-currency",
+            "error": "not-command-doc-currency-artifact",
+            "artifact": normalized,
+        }
+    path = (root / normalized).resolve()
+    if not path.is_file():
+        return {
+            "verdict": "fail",
+            "action": "restamp-command-doc-currency",
+            "error": "artifact-missing",
+            "artifact": normalized,
+        }
+    revision = touch_command_doc_currency_marker(path)
+    regen = regen_command_doc_currency_downstream(root)
+    regen["artifact"] = normalized
+    regen["revision"] = revision
+    return regen
+
+
+def _cmd_restamp_command_doc(argv: list[str]) -> int:
+    if len(argv) < 3:
+        print(json.dumps({"verdict": "fail", "error": "usage: restamp-command-doc <repo_root> <artifact_rel>"}))
+        return 2
+    root = Path(argv[1])
+    payload = restamp_command_doc_currency(root, argv[2])
+    print(json.dumps(payload))
+    return 0 if payload.get("verdict") == "pass" else 20
+
+
+def _cmd_regen_command_doc_chain(argv: list[str]) -> int:
+    if len(argv) < 2:
+        print(json.dumps({"verdict": "fail", "error": "usage: regen-command-doc-chain <repo_root>"}))
+        return 2
+    payload = regen_command_doc_currency_downstream(Path(argv[1]))
+    print(json.dumps(payload))
+    return 0 if payload.get("verdict") == "pass" else 20
 
 
 def _parse_run_id(argv: list[str]) -> tuple[str | None, bool, list[str]]:
@@ -336,6 +526,10 @@ def _resolve_argv(argv: list[str]) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     raw_argv = list(argv if argv is not None else sys.argv)
+    if len(raw_argv) > 1 and raw_argv[1] == "restamp-command-doc":
+        return _cmd_restamp_command_doc(raw_argv)
+    if len(raw_argv) > 1 and raw_argv[1] == "regen-command-doc-chain":
+        return _cmd_regen_command_doc_chain(raw_argv)
     run_id, skip_artifact_currency, stripped = _parse_run_id(raw_argv)
     resolved = _resolve_argv(stripped)
     root = Path(resolved[1])

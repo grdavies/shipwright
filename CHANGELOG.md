@@ -1397,6 +1397,15 @@
 * merge phase layered-matcher-helper-at-every-ambiguity-call-site into feat/spec-rigor-reviewed-literal (06b70db) <!-- sw-deliver:layered-matcher-helper-at-every-ambiguity-call-site -->
 * merge phase list-capable-reviewedliterals-extra into feat/spec-rigor-reviewed-literal (8bff650) <!-- sw-deliver:list-capable-reviewedliterals-extra -->
 * merge phase goldens-and-skill-text into feat/spec-rigor-reviewed-literal (f3c5ec1) <!-- sw-deliver:goldens-and-skill-text -->
+* merge phase restore-dist-claude-code-after-failed-wipe-r2-small into feat/self-host-closeout-hygiene (8299700) <!-- sw-deliver:restore-dist-claude-code-after-failed-wipe-r2-small -->
+* merge phase clear-idle-batchintegrationhead-r7-r8-r9-small into feat/self-host-closeout-hygiene (ddff236) <!-- sw-deliver:clear-idle-batchintegrationhead-r7-r8-r9-small -->
+* merge phase finalize-primary-rebind-r10-r11-r13-small into feat/self-host-closeout-hygiene (a6bfbef) <!-- sw-deliver:finalize-primary-rebind-r10-r11-r13-small -->
+* merge phase refuse-orchestrator-generate-all-r1-r3-r6-small into feat/self-host-closeout-hygiene (0c061ab) <!-- sw-deliver:refuse-orchestrator-generate-all-r1-r3-r6-small -->
+* merge phase mcp-path-predicate-and-terminal-prepare-r1-r4-small into feat/self-host-closeout-hygiene (24015bb) <!-- sw-deliver:mcp-path-predicate-and-terminal-prepare-r1-r4-small -->
+* merge phase finalize-post-release-tests-r11-r12-r13-small into feat/self-host-closeout-hygiene (2139807) <!-- sw-deliver:finalize-post-release-tests-r11-r12-r13-small -->
+* merge phase command-doc-regen-prose-r3-r5-small into feat/self-host-closeout-hygiene (5b4d400) <!-- sw-deliver:command-doc-regen-prose-r3-r5-small -->
+* merge phase stamp-chain-remaining-tests-r5-r14-small into feat/self-host-closeout-hygiene (7d3a057) <!-- sw-deliver:stamp-chain-remaining-tests-r5-r14-small -->
+* merge phase docs-currency-stale-downstream-gate-r15-r16-r17-small into feat/self-host-closeout-hygiene (3a554f6) <!-- sw-deliver:docs-currency-stale-downstream-gate-r15-r16-r17-small -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->

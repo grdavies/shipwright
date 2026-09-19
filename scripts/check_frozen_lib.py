@@ -79,6 +79,29 @@ def content_revision(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def restamp_command_doc_currency(root: Path, artifact: str) -> dict[str, Any]:
+    """Restamp a command-doc currency artifact and refresh the stamp-chain downstream (PRD 362 R5)."""
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT_DIR / "docs-currency-gate.py"),
+            "restamp-command-doc",
+            str(root),
+            artifact,
+        ],
+        cwd=str(root),
+        text=True,
+        capture_output=True,
+    )
+    try:
+        payload = json.loads(proc.stdout or proc.stderr or "{}")
+    except json.JSONDecodeError:
+        payload = {"verdict": "fail", "stderr": proc.stderr or proc.stdout}
+    if proc.returncode != 0 and payload.get("verdict") != "pass":
+        payload.setdefault("verdict", "fail")
+    return payload
+
+
 def stamp_frozen(path: Path) -> str:
     text = path.read_text(encoding="utf-8")
     if artifact_is_frozen(path):

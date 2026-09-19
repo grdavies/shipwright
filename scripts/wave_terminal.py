@@ -1177,6 +1177,18 @@ def run_terminal_prepare_living_docs_gates(
     root: Path, state: dict[str, Any]
 ) -> list[dict[str, Any]]:
     """Run append-terminal + currency gates; degrade recoverable planning failures (R5)."""
+    import mcp_path_predicate
+
+    try:
+        mcp_path_predicate.assert_terminal_prepare_mcp_paths(root)
+    except RuntimeError as exc:
+        fail(
+            str(exc),
+            exit_code=1,
+            halt="blocked",
+            cause="terminal-prepare:mcp-path-predicate",
+        )
+
     from phase_ship_hygiene import ensure_orchestrator_gate_manifest_cache
 
     manifest_repair = ensure_orchestrator_gate_manifest_cache(root, state)
@@ -1294,14 +1306,18 @@ def ensure_terminal_index_projection(root: Path) -> None:
     """Project INDEX + completion evidence for issue-store before docs-currency (R4/R50).
 
     Prefers worktree-scoped projection when invoked from the primary checkout (PRD 344 R3).
+
+    Uses raw ``derive_index_status`` (not closeout masking): lagging store
+    ``in-progress`` evidence is exactly what this step upgrades. Closeout R13
+    masking would chicken-egg block projection forever under issue-store.
     """
     import contextlib
     import io
 
-    from deliver_closeout import derive_closeout_index_status
     from projection_state import prefer_worktree_projection_root
     from wave_living_docs import (
         append_completion_store_event,
+        derive_index_status,
         living_doc_write_banned,
         read_completion_evidence,
     )
@@ -1315,7 +1331,8 @@ def ensure_terminal_index_projection(root: Path) -> None:
     prd = str(state.get("prd_number") or "").zfill(3)
     if not prd or prd == "000":
         return
-    if derive_closeout_index_status(state, merged_to_main=False, root=root) != "complete":
+    # Pre-merge terminal: not yet on main — use deliver-state derivation only.
+    if derive_index_status(state, merged_to_main=False) != "complete":
         return
     slug = str(run_slug_from_state(state) or "") or None
     worktree = pp.git_root(root)
@@ -2103,11 +2120,22 @@ def _attach_post_merge_retrospective_dispatch(
     *,
     dry_run: bool = False,
 ) -> dict[str, Any]:
+    from wave_deliver_loop import (
+        rebind_finalize_execution_to_primary,
+        restore_process_cwd_after_finalize,
+        snapshot_process_cwd,
+    )
+
+    prior_cwd = snapshot_process_cwd()
+    primary_root = rebind_finalize_execution_to_primary(root)
     from deliver_closeout import dispatch_post_merge_retrospective
 
-    retro = dispatch_post_merge_retrospective(
-        root, run_id=run_id, merge_info=merge_info, dry_run=dry_run
-    )
+    try:
+        retro = dispatch_post_merge_retrospective(
+            primary_root, run_id=run_id, merge_info=merge_info, dry_run=dry_run
+        )
+    finally:
+        restore_process_cwd_after_finalize(prior_cwd, primary_root)
     out = dict(payload)
     out["postMergeRetrospective"] = retro
     if retro.get("awaitAgent") and retro.get("invoke") and not retro.get("noop"):
@@ -2260,7 +2288,18 @@ def finalize_run(
             root, run_id, "release", checkpoint=checkpoint, merge_commit=merge_commit
         )
         try:
-            released = release_run_resources(root, run_id, work_state)
+            from wave_deliver_loop import (
+                rebind_finalize_execution_to_primary,
+                restore_process_cwd_after_finalize,
+                snapshot_process_cwd,
+            )
+
+            prior_cwd = snapshot_process_cwd()
+            root = rebind_finalize_execution_to_primary(root)
+            try:
+                released = release_run_resources(root, run_id, work_state)
+            finally:
+                restore_process_cwd_after_finalize(prior_cwd, root)
             # Partial multi-resource failure: surface typed resume, never success (R4/R16).
             failed_resources = [
                 name

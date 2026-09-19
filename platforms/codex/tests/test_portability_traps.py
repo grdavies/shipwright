@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -102,3 +103,99 @@ def test_generator_emits_closed_sw_reference(tmp_path: Path) -> None:
     assert (out / "core" / "sw-reference" / "config.schema.json").is_file()
     assert (out / "core" / "sw-reference" / "memory-provider-catalog.json").is_file()
     assert (out / "core" / "sw-reference" / "templates" / "ci-stub-pull-request.yml").is_file()
+
+
+def _fake_orchestrator_checkout(tmp_path: Path, *, link_repo: bool = True) -> Path:
+    primary = tmp_path / "primary"
+    primary.mkdir()
+    subprocess.run(["git", "init", "-b", "main"], cwd=primary, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "config", "user.email", "t@t.com"],
+        cwd=primary,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(
+        ["git", "config", "user.name", "Test"],
+        cwd=primary,
+        check=True,
+        capture_output=True,
+    )
+    subprocess.run(["git", "commit", "--allow-empty", "-m", "init"], cwd=primary, check=True, capture_output=True)
+    orch = primary / ".sw-worktrees" / "trap-orchestrator"
+    subprocess.run(
+        ["git", "worktree", "add", "-b", "feat/trap-orchestrator", str(orch), "main"],
+        cwd=primary,
+        check=True,
+        capture_output=True,
+    )
+    for part in ("sw", "platforms", "core", "scripts"):
+        if not link_repo:
+            continue
+        link = orch / part
+        if link.exists() or link.is_symlink():
+            link.unlink()
+        link.symlink_to(_REPO / part, target_is_directory=True)
+    dist = orch / "dist"
+    dist.mkdir(parents=True, exist_ok=True)
+    mcp_rels = ("codex/mcp/shipwright.json",) if not link_repo else (
+        "codex/mcp/shipwright.json",
+        "opencode/mcp/shipwright.json",
+    )
+    for rel in mcp_rels:
+        src = _REPO / "dist" / rel
+        if src.is_file():
+            dest = dist / rel
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(src.read_bytes())
+    if not link_repo:
+        subprocess.run(["git", "add", "dist"], cwd=orch, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "track dist mcp"],
+            cwd=orch,
+            check=True,
+            capture_output=True,
+        )
+    return orch
+
+
+def test_r1_r6_orch_generate_all_refuses_and_mcp_unchanged(tmp_path: Path) -> None:
+    orch = _fake_orchestrator_checkout(tmp_path)
+    tracked_mcp = _REPO / "dist/codex/mcp/shipwright.json"
+    assert tracked_mcp.is_file()
+    before = tracked_mcp.read_bytes()
+    proc = subprocess.run(
+        [sys.executable, "-m", "sw", "generate", "--all"],
+        cwd=str(orch),
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 20, proc.stderr
+    assert before == tracked_mcp.read_bytes()
+    assert "refused" in proc.stderr.lower()
+
+
+def test_r1_r6_generate_only_orch_dirt_is_failed_closeout(tmp_path: Path) -> None:
+    orch = _fake_orchestrator_checkout(tmp_path, link_repo=False)
+    rel_mcp = "dist/codex/mcp/shipwright.json"
+    target = orch / rel_mcp
+    assert target.is_file()
+    target.write_text(target.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    subprocess.run(["git", "add", rel_mcp], cwd=orch, check=True, capture_output=True)
+    lifecycle = _load("wave_lifecycle", _REPO / "scripts" / "wave_lifecycle.py")
+    assert lifecycle.is_generate_only_orchestrator_dirt(orch) is True
+    assert lifecycle.orchestrator_worktree_dirty_halt(orch) == "closeout:generate-only-dirt"
+
+
+def test_r1_restore_plan_emit_from_orch_uses_primary_paths(tmp_path: Path) -> None:
+    orch = _fake_orchestrator_checkout(tmp_path)
+    proc = subprocess.run(
+        [sys.executable, "-m", "sw", "generate", "codex", "--restore-plan"],
+        cwd=str(orch),
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    mcp = json.loads((orch / "dist/codex/mcp/shipwright.json").read_text(encoding="utf-8"))
+    blob = json.dumps(mcp)
+    assert ".sw-worktrees/" not in blob

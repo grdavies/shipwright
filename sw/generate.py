@@ -18,6 +18,92 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 from capability_index import write_index  # noqa: E402
 from kernel_classification import sync_sw_ship_chain_markers  # noqa: E402
 
+MCP_EMIT_PLATFORMS = frozenset({"codex", "opencode"})
+ORCHESTRATOR_NAME_SUFFIX = "-orchestrator"
+
+
+def _git_common_dir(start: Path) -> Path:
+    proc = subprocess.run(
+        ["git", "-C", str(start), "rev-parse", "--git-common-dir"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0 or not proc.stdout.strip():
+        return start.resolve()
+    common = Path(proc.stdout.strip())
+    if not common.is_absolute():
+        common = (start / common).resolve()
+    return common.parent.resolve()
+
+
+def _primary_worktree_path(repo_root: Path) -> Path:
+    proc = subprocess.run(
+        ["git", "-C", str(repo_root), "worktree", "list", "--porcelain"],
+        text=True,
+        capture_output=True,
+    )
+    if proc.returncode != 0:
+        return repo_root.resolve()
+    for line in proc.stdout.splitlines():
+        if line.startswith("worktree "):
+            return Path(line.split(" ", 1)[1].strip()).resolve()
+    return repo_root.resolve()
+
+
+def process_repo_root() -> Path:
+    """Git toplevel for the active generate checkout (PRD 362 — cwd authority)."""
+    for start in (Path.cwd(), REPO_ROOT):
+        proc = subprocess.run(
+            ["git", "-C", str(start), "rev-parse", "--show-toplevel"],
+            text=True,
+            capture_output=True,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            return Path(proc.stdout.strip()).resolve()
+    return REPO_ROOT.resolve()
+
+
+def is_orchestrator_worktree(repo_root: Path) -> bool:
+    """True when repo_root is a deliver orchestrator worktree under .sw-worktrees/ (PRD 362 R1)."""
+    root = repo_root.resolve()
+    primary = _primary_worktree_path(_git_common_dir(root))
+    sw_root = primary / ".sw-worktrees"
+    if not sw_root.is_dir():
+        return False
+    try:
+        root.relative_to(sw_root.resolve())
+    except ValueError:
+        return False
+    return root.name.endswith(ORCHESTRATOR_NAME_SUFFIX)
+
+
+def orchestrator_generate_guarded(platforms: list[str], *, all_flag: bool) -> bool:
+    if all_flag:
+        return True
+    return any(p in MCP_EMIT_PLATFORMS for p in platforms)
+
+
+def refuse_orchestrator_generate(
+    repo_root: Path,
+    platforms: list[str],
+    *,
+    all_flag: bool,
+    restore_plan: bool,
+) -> int | None:
+    """Return exit code when refused; None when allowed to proceed."""
+    if not is_orchestrator_worktree(repo_root):
+        return None
+    if restore_plan:
+        return None
+    if not orchestrator_generate_guarded(platforms, all_flag=all_flag):
+        return None
+    print(
+        "sw generate: refused from orchestrator worktree without --restore-plan "
+        "(PRD 362 R1/R3); use platform-scoped generate from the primary checkout",
+        file=sys.stderr,
+    )
+    return 20
+
 
 def _discover_platforms() -> list[str]:
     if not PLATFORMS_ROOT.is_dir():
@@ -75,6 +161,11 @@ def main(argv: list[str] | None = None) -> int:
     gen = sub.add_parser("generate", help="Emit dist/<platform>/ from core/")
     gen.add_argument("platform", nargs="?", help="Platform id (e.g. cursor, claude-code)")
     gen.add_argument("--all", action="store_true", help="Generate all platforms with emitters")
+    gen.add_argument(
+        "--restore-plan",
+        action="store_true",
+        help="Explicit operator restore plan for orchestrator-cwd generate (PRD 362 R1)",
+    )
     gen.add_argument("--core", type=Path, default=None, help="Override core/ root (fixtures)")
     gen.add_argument("--dest", type=Path, default=None, help="Override dist output root")
     gen.add_argument(
@@ -101,6 +192,16 @@ def main(argv: list[str] | None = None) -> int:
     else:
         gen.print_help()
         return 1
+
+    if args.core is None and args.dest is None:
+        refuse_rc = refuse_orchestrator_generate(
+            process_repo_root(),
+            platforms,
+            all_flag=bool(args.all),
+            restore_plan=bool(args.restore_plan),
+        )
+        if refuse_rc is not None:
+            return refuse_rc
 
     for platform in platforms:
         out = generate_platform(platform, core_root=args.core, dest_root=args.dest)

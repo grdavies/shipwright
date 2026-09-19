@@ -7,6 +7,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 scripts = Path(__file__).resolve().parents[2]
 if str(scripts) not in sys.path:
     sys.path.insert(0, str(scripts))
@@ -149,3 +151,102 @@ def test_orchestrator_worktree_cwd_anchors_deliver_paths_to_primary(tmp_path: Pa
     new_state = {"verdict": "running", "runId": run_id, "note": "orch-write"}
     save_run_scoped_state(orch, run_id, new_state)
     assert json.loads(state_path(primary, run_id).read_text(encoding="utf-8"))["note"] == "orch-write"
+
+
+def test_refresh_batch_integration_head_clears_when_queues_idle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PRD 362 R7 — empty queues drop stale batchIntegrationHead without re-freezing."""
+    from wave_deliver_loop import refresh_batch_integration_head
+
+    state = {
+        "mergeQueue": [],
+        "mergeJournal": None,
+        "batchIntegrationHead": "stale-freeze-sha",
+    }
+    root = Path(__file__).resolve().parents[3]
+    monkeypatch.setattr(
+        "wave_deliver_loop.integration_branch_head",
+        lambda _root, _state: "current-integration-head",
+    )
+    refresh_batch_integration_head(root, state)
+    assert "batchIntegrationHead" not in state
+
+
+def test_compute_next_action_skips_stale_batch_head_halt_when_idle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PRD 362 R8 — last batch member must not halt on leftover freeze after queues drain."""
+    plan = {
+        "mode": "phase",
+        "target": {"branch": "feat/demo", "slug": "demo"},
+        "items": [
+            {"id": "1", "slug": "alpha", "branch": "feat/demo-phase-alpha"},
+            {"id": "2", "slug": "beta", "branch": "feat/demo-phase-beta"},
+        ],
+        "waves": [["1", "2"]],
+        "edges": [],
+    }
+    state = {
+        "verdict": "running",
+        "target": {"branch": "feat/demo", "slug": "demo"},
+        "targetLock": {"branch": "feat/demo"},
+        "currentWave": 1,
+        "baseCapture": {"branch": "main", "sha": "abc"},
+        "waveBatchingPlan": {"waves": [["1", "2"]]},
+        "mergeQueue": [],
+        "mergeJournal": None,
+        "batchIntegrationHead": "stale-freeze-sha",
+        "phases": {
+            "1": {"slug": "alpha", "status": "merged", "branch": "feat/demo-phase-alpha"},
+            "2": {"slug": "beta", "status": "merged", "branch": "feat/demo-phase-beta"},
+        },
+        "orchestratorWorktree": {"path": "/tmp/orch"},
+        "specSeed": {"done": True},
+        "driverHeartbeatAt": "2099-01-01T00:00:00Z",
+    }
+    root = Path(__file__).resolve().parents[3]
+    monkeypatch.setattr("wave_deliver_loop.trunk_base_persisted", lambda _root: True)
+    monkeypatch.setattr("wave_deliver_loop.check_budget_halt", lambda _root, _state: None)
+    monkeypatch.setattr("wave_deliver_loop.check_deliver_hang_desync", lambda _root, _state: None)
+    monkeypatch.setattr("wave_deliver_loop.check_watchdog", lambda _root, _state: None)
+    monkeypatch.setattr("wave_deliver_loop.check_background_task_failures", lambda *_a: None)
+    monkeypatch.setattr("wave_deliver_loop.in_flight_merge_halt", lambda *_a: None)
+    monkeypatch.setattr(
+        "wave_deliver_loop.integration_branch_head",
+        lambda _root, _state: "moved-integration-head",
+    )
+    monkeypatch.setattr(
+        "wave_deliver_loop.in_flight_wave_phases",
+        lambda _wave_ids, _statuses: [],
+    )
+    monkeypatch.setattr(
+        "wave_deliver_loop.merge_ready_in_flight_phases",
+        lambda *_a: [],
+    )
+    monkeypatch.setattr(
+        "wave_deliver_loop.batch_in_flight_all_terminal",
+        lambda *_a: True,
+    )
+    step = compute_next_action(root, state, plan)
+    assert step.get("cause") != "batch-integration-head-moved"
+
+
+def test_batch_integration_head_halt_after_idle_clear(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """PRD 362 R9 — idle clear runs before batch-integration-head halt evaluation."""
+    from wave_deliver_loop import batch_integration_head_halt_after_idle_clear
+
+    state = {
+        "mergeQueue": [],
+        "mergeJournal": None,
+        "batchIntegrationHead": "stale-freeze-sha",
+    }
+    root = Path(__file__).resolve().parents[3]
+    monkeypatch.setattr(
+        "wave_deliver_loop.integration_branch_head",
+        lambda _root, _state: "moved-integration-head",
+    )
+    assert batch_integration_head_halt_after_idle_clear(root, state) is None
+    assert "batchIntegrationHead" not in state

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -19,6 +20,7 @@ from wave_deliver_loop import (
     FINALIZE_CHECKPOINT_PHASES,
     ensure_finalize_scripts_bootstrap,
     load_finalize_checkpoint,
+    rebind_finalize_execution_to_primary,
     release_run_resources,
 )
 from wave_json_io import write_json
@@ -188,3 +190,39 @@ def test_matrix_release_no_orphan_husks(tmp_path: Path) -> None:
     worktrees = payload.get("worktrees") or []
     assert len(worktrees) == 2
     assert all(entry.get("removed") for entry in worktrees)
+
+
+def test_sys_path_only_bootstrap_insufficient_without_rebind(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, repo_root: Path
+) -> None:
+    """R13 — sys.path insert alone fails when backing dir is removed; R10 rebind holds."""
+    primary = _init_repo(tmp_path)
+    orch = primary / ".sw-worktrees" / "matrix-r13-orch"
+    orch.parent.mkdir(parents=True, exist_ok=True)
+    _git(primary, "worktree", "add", "-q", str(orch), "feat/matrix-328")
+
+    backing = orch / "ephemeral-scripts"
+    backing.mkdir()
+    scripts = str(repo_root / "scripts")
+    monkeypatch.setattr(
+        sys,
+        "path",
+        [p for p in sys.path if p not in {scripts, str(backing.resolve())}],
+    )
+    sys.path.insert(0, str(backing.resolve()))
+    monkeypatch.chdir(orch)
+    shutil.rmtree(backing)
+
+    for name in list(sys.modules):
+        if name == "deliver_closeout" or name.startswith("deliver_closeout."):
+            del sys.modules[name]
+
+    with pytest.raises(ModuleNotFoundError):
+        import importlib
+
+        importlib.import_module("deliver_closeout")
+
+    rebind_finalize_execution_to_primary(primary)
+    import deliver_closeout  # noqa: F401
+
+    assert Path.cwd().resolve() == primary.resolve()
