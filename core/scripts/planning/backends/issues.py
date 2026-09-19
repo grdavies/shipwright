@@ -992,3 +992,70 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
             "prdUnitId": prd_unit_id,
             "etag": updated.etag,
         }
+
+    def live_facade_issue_store_prove(
+        self,
+        *,
+        unit_id: str,
+        body_path: str,
+        operator_content: str,
+        updated_operator_content: str,
+        materialize_dest: Path,
+    ) -> dict[str, Any]:
+        """Live pilot put/get/materialize/update(+retry) via IssueStoreBackend (PRD 363 R10).
+
+        Exercises reconstruct-before-ok on chunked puts without mutating unrelated
+        stuck issues (e.g. TIE-8 put-incomplete) elsewhere in Linear.
+        """
+        ops: list[str] = []
+        first = self.put(unit_id, body_path, operator_content)
+        if first.verdict != "ok":
+            _ps().fail(
+                "live-prove-put",
+                code="live-prove-put",
+                reason=first.reason or first.verdict,
+                unitId=unit_id,
+            )
+        ops.append("put")
+        record = self._lookup_record(unit_id, body_path)
+        if _ps().PUT_INCOMPLETE_LABEL in record.labels:
+            _ps().fail(
+                "live-prove-put-incomplete",
+                code="reconstruct-before-ok",
+                unitId=unit_id,
+                issueId=record.id,
+            )
+        got = self.get(unit_id, body_path)
+        if got.verdict != "ok" or got.content is None:
+            _ps().fail("live-prove-get", code="live-prove-get", unitId=unit_id)
+        ops.append("get")
+        mat = self.materialize(unit_id, body_path, materialize_dest)
+        if mat.verdict != "ok":
+            _ps().fail("live-prove-materialize", code="live-prove-materialize", unitId=unit_id)
+        ops.append("materialize")
+        retry = self.put(unit_id, body_path, operator_content)
+        if retry.verdict != "ok":
+            _ps().fail("live-prove-retry", code="live-prove-retry", unitId=unit_id)
+        ops.append("retry-put")
+        updated = self.put(unit_id, body_path, updated_operator_content)
+        if updated.verdict != "ok":
+            _ps().fail("live-prove-update", code="live-prove-update", unitId=unit_id)
+        ops.append("update")
+        final = self.get(unit_id, body_path)
+        if final.verdict != "ok" or final.content is None:
+            _ps().fail("live-prove-get-final", code="live-prove-get", unitId=unit_id)
+        ops.append("get")
+        final_record = self._lookup_record(unit_id, body_path)
+        chunk_count = len(
+            [c for c in (final_record.comments or []) if "sw-chunk-overflow" in str(c.body or "")]
+        )
+        return {
+            "ops": ops,
+            "issueId": final_record.id,
+            "chunkCount": chunk_count,
+            "descriptionBytes": len(str(final_record.body or "").encode("utf-8")),
+            "commentBytesMax": max(
+                (len(str(c.body or "").encode("utf-8")) for c in (final_record.comments or [])),
+                default=0,
+            ),
+        }
