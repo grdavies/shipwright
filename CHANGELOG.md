@@ -1401,6 +1401,7 @@
 * merge phase clear-idle-batchintegrationhead-r7-r8-r9-small into feat/self-host-closeout-hygiene (ddff236) <!-- sw-deliver:clear-idle-batchintegrationhead-r7-r8-r9-small -->
 * merge phase finalize-primary-rebind-r10-r11-r13-small into feat/self-host-closeout-hygiene (a6bfbef) <!-- sw-deliver:finalize-primary-rebind-r10-r11-r13-small -->
 * merge phase refuse-orchestrator-generate-all-r1-r3-r6-small into feat/self-host-closeout-hygiene (0c061ab) <!-- sw-deliver:refuse-orchestrator-generate-all-r1-r3-r6-small -->
+* merge phase mcp-path-predicate-and-terminal-prepare-r1-r4-small into feat/self-host-closeout-hygiene (24015bb) <!-- sw-deliver:mcp-path-predicate-and-terminal-prepare-r1-r4-small -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
