@@ -20,6 +20,12 @@ MAX_SKILL_NAME_LEN = 64
 MAX_SKILL_DESCRIPTION_LEN = 1024
 
 COMPILED_ARTIFACT_REL = "core/sw-reference/instruction-artifacts.json"
+COMMAND_DOC_CURRENCY_SOURCE_PATHS: tuple[str, ...] = (
+    "core/commands/sw-doc.md",
+    "core/commands/sw-tasks.md",
+    "core/commands/sw-freeze.md",
+    "core/commands/sw-deliver.md",
+)
 INHERIT_MODEL = "inherit"
 AGENT_GLOB = "core/agents/sw-*.md"
 SKILL_GLOB = "core/skills/*/SKILL.md"
@@ -320,6 +326,58 @@ def lint_skill_file(
         description=description.strip() if isinstance(description, str) else "",
         skill_dir=skill_dir,
     )
+
+
+def check_command_doc_instruction_currency(
+    repo_root: Path,
+    *,
+    doc_rel: str | None = None,
+) -> list[dict[str, Any]]:
+    """Docs-currency is not green from ``--check`` alone; committed JSON must match write regen (PRD 362 R14)."""
+    targets = {doc_rel} if doc_rel else set(COMMAND_DOC_CURRENCY_SOURCE_PATHS)
+    exit_code, payload = check_compiled_artifact(repo_root)
+    if exit_code == 0:
+        return []
+    reason = str(payload.get("reason") or "")
+    if reason == "instruction-artifact-missing":
+        return [
+            {
+                "kind": "command-doc-instruction-artifact-missing",
+                "path": COMPILED_ARTIFACT_REL,
+            }
+        ]
+    mismatches = payload.get("mismatches") or []
+    drift: list[dict[str, Any]] = []
+    for row in mismatches:
+        if not isinstance(row, dict):
+            continue
+        source_path = str(row.get("sourcePath") or "")
+        if source_path not in targets:
+            continue
+        drift.append(
+            {
+                "kind": "command-doc-instruction-artifact-stale",
+                "sourcePath": source_path,
+                "reason": row.get("reason") or "body-digest-mismatch",
+            }
+        )
+    if drift:
+        return drift
+    if reason == "instruction-artifact-drift":
+        return [
+            {
+                "kind": "command-doc-instruction-artifact-stale",
+                "reason": "instruction-artifact-drift",
+                "detail": "run agent_instruction_compiler.py write mode (not --check) after command-doc restamp",
+            }
+        ]
+    return [
+        {
+            "kind": "command-doc-instruction-artifact-stale",
+            "reason": reason or "instruction-compile-fail",
+            "detail": payload,
+        }
+    ]
 
 
 def check_compiled_artifact(repo_root: Path) -> tuple[int, dict[str, Any]]:
