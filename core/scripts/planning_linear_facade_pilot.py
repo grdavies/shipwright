@@ -12,6 +12,7 @@ from typing import Any
 from credentials.model import Resolution, ResolutionState, ResolvedToken
 from credentials.resolver import RepositoryContext, resolve
 from credentials.selector_store import SelectorEntry, load_selector_store
+from planning.backends.live_facade_prove import run_live_facade_issue_store_prove
 from planning_canonical import reassemble_body
 from planning_linear_canonical import linear_markdown_canonical
 
@@ -485,7 +486,8 @@ def live_facade_pilot_gate(
         )
         with tempfile.TemporaryDirectory(prefix="sw-live-facade-") as tmp:
             materialize_dest = Path(tmp) / "materialized.md"
-            prove = backend.live_facade_issue_store_prove(
+            prove = run_live_facade_issue_store_prove(
+                backend,
                 unit_id=unit_id,
                 body_path=body_path,
                 operator_content=operator_content,

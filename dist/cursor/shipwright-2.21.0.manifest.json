@@ -636,6 +636,7 @@
     "planning/backends/issues_bundle_assets.py",
     "planning/backends/issues_helpers.py",
     "planning/backends/linear.py",
+    "planning/backends/live_facade_prove.py",
     "planning/backends/local_synced.py",
     "planning/backends/memory_cache.py",
     "planning/cli.py",
@@ -894,6 +895,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 891,
+  "moduleCount": 892,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }
