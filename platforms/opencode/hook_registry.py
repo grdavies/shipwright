@@ -86,11 +86,13 @@ def build_mcp_config(repo_root: Path, *, enabled: bool = True) -> dict[str, Any]
     scripts = repo_root / "scripts"
     if str(scripts) not in sys.path:
         sys.path.insert(0, str(scripts))
+    import mcp_path_predicate  # noqa: WPS433
     import shipwright_paths  # noqa: WPS433
 
-    server = shipwright_paths.bounded_mcp_server_path(repo_root)
-    config_path = shipwright_paths.bounded_mcp_config_path(repo_root, "opencode")
-    return {
+    emit_root = mcp_path_predicate.mcp_emit_repo_root(repo_root)
+    server = shipwright_paths.bounded_mcp_server_path(emit_root)
+    config_path = shipwright_paths.bounded_mcp_config_path(emit_root, "opencode")
+    doc = {
         "adapter_id": "opencode",
         "config_path": str(config_path),
         "mcpServers": {
@@ -101,6 +103,8 @@ def build_mcp_config(repo_root: Path, *, enabled: bool = True) -> dict[str, Any]
             }
         },
     }
+    mcp_path_predicate.validate_build_mcp_config(doc)
+    return doc
 
 
 def portability_trap_contract() -> dict[str, Any]:
