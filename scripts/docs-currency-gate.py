@@ -276,7 +276,7 @@ def is_command_doc_currency_artifact(artifact_rel: str) -> bool:
 
 
 def _command_doc_downstream_drift(root: Path, entry: dict[str, object]) -> list[dict[str, object]]:
-    """Fail closed when needles/epochs match but stamp-chain downstream artifacts lag (PRD 362 R14–R16)."""
+    """Fail closed when needles/epochs match but stamp-chain downstream artifacts lag (PRD 362 R14–R17)."""
     from agent_instruction_compiler import check_command_doc_instruction_currency
     from planning_paths import GOLDEN_MANIFEST_REL
 
