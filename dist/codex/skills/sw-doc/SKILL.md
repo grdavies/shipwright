@@ -481,7 +481,7 @@ paths, regen downstream from the **primary checkout** only — never invoke `pyt
 
 1. `python3 scripts/agent_instruction_compiler.py` (write mode; `--check` alone is not green).
 2. `python3 -m sw generate cursor` and `python3 -m sw generate claude-code` from primary.
-3. `python3 scripts/snapshot-tree.py scripts/test/fixtures/parity/cursor-golden.manifest --root <repo-root>`.
+3. `python3 scripts/golden_manifest.py generate` (refreshes `scripts/test/fixtures/parity/cursor-golden.manifest` after dist/cursor generate).
 
 Shortcut after editing this file:
 `python3 scripts/docs-currency-gate.py restamp-command-doc <repo-root> core/commands/sw-doc.md` bumps the
