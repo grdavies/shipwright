@@ -108,3 +108,28 @@ def test_partial_finalize_typed_resume_after_release(tmp_path: Path) -> None:
     final = load_run_scoped_state(tmp_path, run_id)
     assert final.get("immutable") is True
     assert final.get("verdict") == "finalized"
+
+
+def test_module_not_found_after_orch_release_failed_finalize(tmp_path: Path) -> None:
+    """R12 — ModuleNotFoundError after orch release is failed finalize with typed resume."""
+    _init_repo(tmp_path)
+    run_id = "deliver-r12-modnotfound"
+    state = _seed_run(tmp_path, run_id)
+
+    def _release_only(root, rid, st):
+        return {"worktrees": [], "gitCwd": str(root)}
+
+    with (
+        patch("wave_compound.terminal_pr_merged_via_host", return_value=_merge_info()),
+        patch("wave_deliver_loop.release_run_resources", side_effect=_release_only),
+        patch(
+            "wave_terminal.close_run_projections",
+            side_effect=ModuleNotFoundError("No module named 'deliver_closeout'"),
+        ),
+    ):
+        partial = finalize_run(tmp_path, run_id, state, actor="tester")
+
+    assert partial["verdict"] == "fail"
+    assert partial["halt"] == "finalize:partial"
+    assert partial["resumeCommand"] == resume_finalize_command(run_id)
+    assert "deliver_closeout" in str(partial.get("error") or "")

@@ -160,14 +160,18 @@ def test_finalize_primary_bind_before_release(tmp_path: Path, monkeypatch: pytes
         "detail": "terminal-pr-host",
     }
 
-    with (
-        patch(
-            "wave_terminal.verify_terminal_merge_via_host",
-            return_value={"verdict": "pass", "merged": True, **merge_info},
-        ),
-        patch("wave_terminal.release_run_resources", side_effect=_capture_release),
-    ):
-        payload = finalize_run(orch, run_id, state, actor="tester")
+    safe_cwd = SCRIPT_DIR.parent
+    try:
+        with (
+            patch(
+                "wave_terminal.verify_terminal_merge_via_host",
+                return_value={"verdict": "pass", "merged": True, **merge_info},
+            ),
+            patch("wave_terminal.release_run_resources", side_effect=_capture_release),
+        ):
+            payload = finalize_run(orch, run_id, state, actor="tester")
+    finally:
+        os.chdir(safe_cwd)
 
     assert payload["verdict"] == "pass"
     assert captured["cwd"] == primary.resolve()
@@ -175,6 +179,42 @@ def test_finalize_primary_bind_before_release(tmp_path: Path, monkeypatch: pytes
     assert captured["scripts_on_path"] is True
     assert captured["deliver_closeout"] is not None
     assert captured["planning_projection_ledger"] is not None
+
+
+def test_finalize_post_release_dispatch_after_orch_delete(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """R11 — post-release dispatch resolves from primary after the orch tree is deleted."""
+    import wave_terminal as wt
+
+    primary, orch = _repo_with_orchestrator(tmp_path)
+    run_id = "deliver-r11-post-release-dispatch"
+    merge_info = {
+        "merged": True,
+        "mergeCommit": "b" * 40,
+        "prNumber": 362,
+        "mergedAt": "2026-08-24T18:00:00Z",
+    }
+    monkeypatch.chdir(orch)
+    subprocess.run(["git", "worktree", "remove", "-f", str(orch)], cwd=primary, check=True)
+    assert not orch.exists()
+    monkeypatch.chdir(primary)
+
+    safe_cwd = SCRIPT_DIR.parent
+    try:
+        payload = wt._attach_post_merge_retrospective_dispatch(
+            primary,
+            run_id,
+            merge_info,
+            {"verdict": "pass"},
+            dry_run=True,
+        )
+    finally:
+        os.chdir(safe_cwd)
+
+    retro = payload["postMergeRetrospective"]
+    assert retro["verdict"] == "pass"
+    assert retro.get("action") == "post-merge-retrospective-dispatch"
 
 
 def test_finalize_bootstrap_imports_planning_txn_without_pythonpath(
