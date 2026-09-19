@@ -185,3 +185,17 @@ def test_r1_r6_generate_only_orch_dirt_is_failed_closeout(tmp_path: Path) -> Non
     lifecycle = _load("wave_lifecycle", _REPO / "scripts" / "wave_lifecycle.py")
     assert lifecycle.is_generate_only_orchestrator_dirt(orch) is True
     assert lifecycle.orchestrator_worktree_dirty_halt(orch) == "closeout:generate-only-dirt"
+
+
+def test_r1_restore_plan_emit_from_orch_uses_primary_paths(tmp_path: Path) -> None:
+    orch = _fake_orchestrator_checkout(tmp_path)
+    proc = subprocess.run(
+        [sys.executable, "-m", "sw", "generate", "codex", "--restore-plan"],
+        cwd=str(orch),
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    mcp = json.loads((orch / "dist/codex/mcp/shipwright.json").read_text(encoding="utf-8"))
+    blob = json.dumps(mcp)
+    assert ".sw-worktrees/" not in blob

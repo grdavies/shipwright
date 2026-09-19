@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 _REPO = Path(__file__).resolve().parents[3]
 _OC = Path(__file__).resolve().parents[1]
@@ -98,3 +101,76 @@ def test_r30_mcp_config_no_conflict_with_codex(tmp_path: Path) -> None:
     assert oc_mcp["adapter_id"] == "opencode"
     assert cx_mcp["adapter_id"] == "codex"
     assert "/.opencode/" not in oc_mcp["config_path"]
+
+
+def test_r1_restore_plan_emit_has_no_worktree_paths(tmp_path: Path) -> None:
+    out = _gen.generate(tmp_path / "opencode", repo_root=_REPO, core_root=_REPO / "core")
+    mcp = json.loads((out / "mcp" / "shipwright.json").read_text(encoding="utf-8"))
+    blob = json.dumps(mcp)
+    assert ".sw-worktrees/" not in blob
+
+
+def test_r4_terminal_prepare_fail_closed_on_orch_mcp_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import subprocess
+
+    import pytest
+
+    scripts = str(_REPO / "scripts")
+    if scripts not in sys.path:
+        sys.path.insert(0, scripts)
+    import mcp_path_predicate
+
+    root = tmp_path / "repo"
+    root.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=root, check=True)
+    bad_rel = "dist/opencode/mcp/shipwright.json"
+    bad_path = root / bad_rel
+    bad_path.parent.mkdir(parents=True)
+    bad_path.write_text(
+        json.dumps(
+            {
+                "adapter_id": "opencode",
+                "config_path": str(root / ".sw-worktrees" / "orch" / ".shipwright" / "mcp" / "opencode.json"),
+                "mcpServers": {
+                    "shipwright-bounded": {
+                        "command": "python3",
+                        "args": [str(root / ".sw-worktrees" / "orch" / "core" / "mcp" / "server.py")],
+                        "transport": "stdio",
+                    }
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="terminal-prepare"):
+        mcp_path_predicate.assert_terminal_prepare_mcp_paths(root)
+
+    bad_path.unlink()
+    primary = root / "primary-abs"
+    primary.mkdir()
+    monkeypatch.setattr(mcp_path_predicate, "primary_checkout_root", lambda _start=None: primary.resolve())
+    good_path = root / "dist/codex/mcp/shipwright.json"
+    good_path.parent.mkdir(parents=True, exist_ok=True)
+    good_path.write_text(
+        json.dumps(
+            {
+                "adapter_id": "codex",
+                "config_path": str(primary / ".shipwright" / "mcp" / "codex.json"),
+                "mcpServers": {
+                    "shipwright-bounded": {
+                        "command": "python3",
+                        "args": [str(primary / "core" / "mcp" / "server.py")],
+                        "transport": "stdio",
+                    }
+                },
+            },
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    mcp_path_predicate.assert_terminal_prepare_mcp_paths(root)

@@ -1177,6 +1177,18 @@ def run_terminal_prepare_living_docs_gates(
     root: Path, state: dict[str, Any]
 ) -> list[dict[str, Any]]:
     """Run append-terminal + currency gates; degrade recoverable planning failures (R5)."""
+    import mcp_path_predicate
+
+    try:
+        mcp_path_predicate.assert_terminal_prepare_mcp_paths(root)
+    except RuntimeError as exc:
+        fail(
+            str(exc),
+            exit_code=1,
+            halt="blocked",
+            cause="terminal-prepare:mcp-path-predicate",
+        )
+
     from phase_ship_hygiene import ensure_orchestrator_gate_manifest_cache
 
     manifest_repair = ensure_orchestrator_gate_manifest_cache(root, state)
