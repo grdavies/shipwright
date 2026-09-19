@@ -171,6 +171,7 @@ LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
         "ordered-list-leading-space",
         "literal-punctuation-escape",
         "post-code-underscore-unescape",
+        "implicit-domain-http-autolink",
     }
 )
 
@@ -191,7 +192,11 @@ _LITERAL_PUNCTUATION_ESCAPE = re.compile(
     r"\\([" + re.escape("".join(sorted(_LITERAL_PUNCTUATION_UNESCAPE_CHARS))) + r"])"
 )
 _BARE_DOMAIN = re.compile(
-    r"(?<![\w./:@])((?:https?://)?(?:www\.)?[a-zA-Z0-9-]+(?:\.[a-zA-Z]{2,})(?:/[^\s)\]>\"']*)?)"
+    r"(?<![\w./:@])"
+    r"((?:https?://)?(?:www\.)?"
+    r"[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?"
+    r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+"
+    r"(?:/[^\s)\]>\"']*)?)"
 )
 # Underscore is a word char, so `\bR6\b` misses `__R6__` Linear bold delimiters.
 _RID_TOKEN = re.compile(r"(?<![A-Za-z0-9])([RD]\d+)(?![A-Za-z0-9])")
@@ -248,6 +253,55 @@ def _canon_url(url: str) -> str:
     if re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", text):
         return text
     return f"https://{text}"
+
+
+def _schemeless_domain_hostpath(url: str) -> str | None:
+    """Host/path for a bare or http-schemed domain destination (PRD 363 R5)."""
+    text = _unwrap_angle_brackets(url.strip())
+    if text.startswith("http://"):
+        text = text[7:]
+    elif text.startswith(("https://", "//")) or re.match(r"[A-Za-z][A-Za-z0-9+.-]*:", text):
+        return None
+    if _looks_like_domain(text):
+        return text
+    return None
+
+
+def _named_schemeless_link_identity(hostpath: str) -> str:
+    return f"schemeless:{hostpath}"
+
+
+def _md_link_href_identity(label: str, href: str) -> str:
+    stripped_label = label.strip()
+    if _looks_like_domain(stripped_label):
+        return _named_schemeless_link_identity(stripped_label)
+    return _autolink_identity(href)
+
+
+def _autolink_identity(raw: str) -> str:
+    text = _unwrap_angle_brackets(raw.strip())
+    hostpath = _schemeless_domain_hostpath(text)
+    if hostpath is not None:
+        return _named_schemeless_link_identity(hostpath)
+    if text.startswith("https://"):
+        return text
+    return _canon_url(text)
+
+
+def _bare_domain_link_identity(raw: str) -> str:
+    hostpath = _schemeless_domain_hostpath(raw)
+    if hostpath is not None:
+        return _named_schemeless_link_identity(hostpath)
+    return _canon_url(raw)
+
+
+def _autolink_comparison_url(raw: str) -> str:
+    """R6 comparison form for angle autolinks (http provider → https witness)."""
+    text = _unwrap_angle_brackets(raw.strip())
+    hostpath = _schemeless_domain_hostpath(text)
+    if hostpath is not None:
+        return _canon_url(hostpath)
+    return _canon_url(text)
 
 
 def _normalize_list_markers(text: str) -> str:
@@ -436,7 +490,7 @@ def _normalize_autolinks(text: str) -> str:
         return f"[{label}]({canon})"
 
     text = _MD_LINK.sub(_md_link, text)
-    text = _AUTO_LINK.sub(lambda match: _canon_url(match.group(1)), text)
+    text = _AUTO_LINK.sub(lambda match: _autolink_comparison_url(match.group(1)), text)
     return _BARE_DOMAIN.sub(lambda match: _canon_url(match.group(1)), text)
 
 
@@ -505,13 +559,13 @@ def _extract_links(text: str) -> tuple[str, ...]:
     found: set[str] = set()
     remainder = text
     for match in _MD_LINK.finditer(text):
-        found.add(_canon_url(match.group(2)))
+        found.add(_md_link_href_identity(match.group(1), match.group(2)))
         remainder = remainder.replace(match.group(0), " ", 1)
     for match in _AUTO_LINK.finditer(remainder):
-        found.add(_canon_url(match.group(1)))
+        found.add(_autolink_identity(match.group(1)))
         remainder = remainder.replace(match.group(0), " ", 1)
     for match in _BARE_DOMAIN.finditer(remainder):
-        found.add(_canon_url(match.group(1)))
+        found.add(_bare_domain_link_identity(match.group(1)))
     return tuple(sorted(found))
 
 

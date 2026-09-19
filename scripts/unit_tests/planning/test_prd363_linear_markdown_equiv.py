@@ -185,3 +185,35 @@ class TestPrd363Phase4PostCodeUnderscoreUnescape:
             row for row in data["mutants"] if row["id"] == "r4-underscore-starts-emphasis"
         )
         assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False
+
+
+class TestPrd363Phase5ImplicitDomainAutolinkIdentityPolicy:
+    @staticmethod
+    def _r5_pairs() -> list[dict[str, str]]:
+        data = load_json(REDACTED_FAMILIES)
+        return [
+            row
+            for row in data["pairs"]
+            if row.get("family") == "implicit-domain-http-autolink"
+        ]
+
+    def test_redacted_r5_pairs_pass_equivalent(self) -> None:
+        for row in self._r5_pairs():
+            assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]), row[
+                "id"
+            ]
+
+    def test_schemeless_domain_matches_http_angle_autolink(self) -> None:
+        left = "See docs.example.test/path today.\n"
+        right = "See <http://docs.example.test/path> today.\n"
+        assert linear_public_markdown_equivalent(left, right)
+
+    def test_http_vs_https_autolink_mutant_fails(self) -> None:
+        data = load_json(REDACTED_FAMILIES)
+        row = next(row for row in data["mutants"] if row["id"] == "r5-http-vs-https")
+        assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False
+
+    def test_javascript_scheme_mutant_fails(self) -> None:
+        data = load_json(REDACTED_FAMILIES)
+        row = next(row for row in data["mutants"] if row["id"] == "r5-javascript-scheme")
+        assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False
