@@ -76,3 +76,108 @@ def test_prd364_r5_gap487_probe_table_installed_matcher() -> None:
             continue
         expect = bool(row["expectAmbiguity"])
         assert m.text_has_ambiguity_marker(row["text"]) is expect, row["id"]
+
+
+def _prd_skeleton(*req_lines: str, frontmatter_extra: str = "", decision_log: str = "") -> str:
+    reqs = "\n".join(f"- **R{n}** {body}" for n, body in enumerate(req_lines, start=1))
+    fm_extra = frontmatter_extra.rstrip() + "\n" if frontmatter_extra.strip() else ""
+    log_body = decision_log if decision_log else ""
+    return (
+        "---\n"
+        "frozen: false\n"
+        f"{fm_extra}"
+        "---\n"
+        "# PRD 364 phase-4 fixture\n\n"
+        "## Overview\n\nFixture.\n\n"
+        "## Goals\n\n- Validate taxonomy\n\n"
+        "## Non-Goals\n\n- None\n\n"
+        "## Requirements\n\n"
+        f"{reqs}\n\n"
+        "## Technical Requirements\n\nNone\n\n"
+        "## Security & Compliance\n\nNone\n\n"
+        "## Testing Strategy\n\nUnit\n\n"
+        "## Rollout Plan\n\nShip\n\n"
+        "## Decision Log\n\n"
+        f"{log_body}\n"
+        "## Open Questions\n\n(none)\n"
+    )
+
+
+def _run_prd(body: str) -> tuple[int, dict]:
+    fix = _WORKTREE_ROOT / "scripts/test/fixtures/spec-rigor/_tmp-prd364-phase4.md"
+    fix.parent.mkdir(parents=True, exist_ok=True)
+    fix.write_text(body, encoding="utf-8")
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(_WORKTREE_ROOT / "scripts/spec-rigor-check.py"),
+                "--root",
+                str(_WORKTREE_ROOT),
+                "--artifact",
+                "prd",
+                "--path",
+                str(fix),
+                "--tier",
+                "standard",
+            ],
+            cwd=str(_WORKTREE_ROOT),
+            capture_output=True,
+            text=True,
+        )
+        try:
+            data = json.loads(proc.stdout)
+        except json.JSONDecodeError:
+            data = {"verdict": "fail", "raw": proc.stdout, "stderr": proc.stderr}
+        return proc.returncode, data
+    finally:
+        try:
+            fix.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def test_prd364_r3_title_case_and_slash_taxonomy_still_pass() -> None:
+    """PRD 364 R3 — 361 Title-case + lowercase slash-taxonomy and critical-states sentence."""
+    m = _load_matcher()
+    rows = {row["id"]: row for row in _gap487_probe_rows()}
+    for row_id in ("slash-taxonomy-lowercase-pass", "named-states-label-taxonomy"):
+        assert m.text_has_ambiguity_marker(rows[row_id]["text"]) is False, row_id
+    body = _prd_skeleton("Workflow enters Todo when criteria met", "Tags use idea/todo/note taxonomy")
+    code, data = _run_prd(body)
+    assert code == 0
+    assert data.get("verdict") == "pass"
+
+
+def test_prd364_r9_todo_wraps_fail_pending_colon_passes() -> None:
+    """PRD 364 R9 — colliding Todo wraps fail; non-colliding Title-case Pending colon passes."""
+    m = _load_matcher()
+    assert m.text_has_ambiguity_marker("State Todo: must be explicit") is True
+    assert m.text_has_ambiguity_marker("Label [Todo] in UI copy") is True
+    assert m.text_has_ambiguity_marker("State Pending: optional detail") is False
+
+
+def test_prd364_r4_unfinished_authorization_exit_20() -> None:
+    """PRD 364 R4 — unfinished-authorization golden still fails spec-rigor (exit 20)."""
+    rows = {row["id"]: row for row in _gap487_probe_rows()}
+    text = rows["unfinished-authorization-fail-closed"]["text"]
+    code, data = _run_prd(_prd_skeleton(text))
+    assert code == 20
+    assert data.get("verdict") != "pass"
+
+
+def test_prd364_r5_wraps_fail_unless_reviewed_literal_exact_match() -> None:
+    """PRD 364 R5 — colon/bracket Todo wraps fail unless exact reviewedLiterals + Decision Log."""
+    m = _load_matcher()
+    assert m.text_has_ambiguity_marker("Copy uses Todo: in UI") is True
+    allow = frozenset({"Todo:"})
+    assert m.text_has_ambiguity_marker("Copy uses Todo: in UI", allowlist=allow) is False
+    body = _prd_skeleton(
+        "State Todo: documented",
+        "Label [Todo] in UI copy",
+        frontmatter_extra='reviewedLiterals: ["Todo:", "[Todo]"]\n',
+        decision_log="- Todo: and [Todo] are documented UI labels, not unfinished work.\n",
+    )
+    code, data = _run_prd(body)
+    assert code == 0
+    assert data.get("verdict") == "pass"
