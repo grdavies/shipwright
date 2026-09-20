@@ -1421,6 +1421,7 @@
 * merge phase markdown-link-exemption-is-wrapper-only into feat/spec-rigor-punct-wrap (ce19b44) <!-- sw-deliver:markdown-link-exemption-is-wrapper-only -->
 * merge phase retarget-361-wrap-goldens into feat/spec-rigor-punct-wrap (3ded055) <!-- sw-deliver:retarget-361-wrap-goldens -->
 * merge phase title-case-taxonomy-and-fail-closed-markers into feat/spec-rigor-punct-wrap (b8e636c) <!-- sw-deliver:title-case-taxonomy-and-fail-closed-markers -->
+* merge phase skill-text-and-emit into feat/spec-rigor-punct-wrap (d4d45bb) <!-- sw-deliver:skill-text-and-emit -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
