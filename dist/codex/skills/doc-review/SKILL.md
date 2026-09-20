@@ -1,6 +1,6 @@
 ---
 name: doc-review
-description: Review PRD drafts with parallel persona sub-agents and a synthesizer that auto-applies safe fixes. Use when Standard or Full tier needs persona panel review before freeze. Quick tier skips; does not generate tasks.
+description: Review PRD drafts with parallel persona sub-agents and a synthesizer that merges findings then applies safe fixes after the transport-appropriate close point. Use when Standard or Full tier needs persona panel review before freeze. Quick tier skips; does not generate tasks.
 metadata:
   shipwright-capability:
     version: 1
@@ -75,9 +75,12 @@ PRD 045's legacy transport spelling `sw:doc-review` refers to this same marker f
 4. **Human channel:** operator notes as plain comments without the `sw-doc-review` marker.
 5. **Read / verify** before synthesis (`doc-review-round-read` / `doc-review-round-verify`). Fail closed on
    drift, body-drift, or OCC `revision-conflict` (re-run the whole verb after refresh — no in-verb retry).
-6. Synthesize (`references/synthesis.md`) only when verify returns `verdict: ok`.
-7. **Complete** — `doc-review-round-close` / `complete_review_round` (completion receipt).
-8. Apply `safe_auto` / gate `gated_auto` / `manual` identically to file-store synthesis.
+6. Synthesize (`references/synthesis.md`) only when verify returns `verdict: ok` — merge findings in
+   memory; do not mutate the issue body before complete.
+7. **Complete** — `doc-review-round-close` / `complete_review_round` against the unchanged closed witness
+   (completion receipt).
+8. **Apply** — on a fresh read after complete, apply `safe_auto` / gate `gated_auto` / `manual`. Do not
+   verify or complete the same `roundId` again after apply.
 
 **Bootstrap in-flight (#1070):** open-then-post / `close` remains for rounds opened before facade mapping
 — see `references/synthesis.md`. Do not mix bootstrap envelopes into a new-round open.
@@ -251,8 +254,13 @@ exit 20; do not spawn on unresolved `inherit`.
    that persona Task — never reuse a single preflight across N spawns.
 8. Read full document (no section splitting) — each selected persona is a parallel sub-agent (R28/R31).
 9. Each agent returns JSON per `references/findings-schema.json`.
-10. Synthesizer follows `references/synthesis.md`.
-11. Apply `safe_auto` silently; gate `gated_auto` and `manual`.
+10. Synthesizer follows `references/synthesis.md` (in-memory merge/disposition; no body mutation that will
+    be re-verified).
+11. **Apply by transport:**
+    - **issue-store** — same sequence as new-round steps 6–8: complete on the unchanged witness, then
+      fresh-read apply (`safe_auto` silent; gate `gated_auto` / `manual`).
+    - **file-store** — no `complete_review_round`; apply after the synthesis report (`safe_auto` silent;
+      gate `gated_auto` / `manual`). Do not call complete.
 
 ## Invariants (non-negotiable constraint class)
 
