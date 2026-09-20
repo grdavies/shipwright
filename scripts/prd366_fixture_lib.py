@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+"""PRD 366 phase-1 fixture contracts — 2.22.0 leftover classification and witness policy."""
+
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Any
+
+PRD366_ALLOWED_REQUIREMENT_IDS = frozenset({"R4", "R5", "R6", "R7"})
+PRD366_LEFTOVER_REGION_COUNT = 7
+PRD366_GAP_UNIT_IDS = frozenset(
+    {
+        "gap-486-version-section-token-domain-rewrite",
+        "gap-487-implicit-autolink-identity-comparison-mismatch",
+        "gap-488-mixed-bold-inline-code-both-sides-unwrap",
+        "gap-489-acceptance-criteria-underscore-full-line",
+    }
+)
+PRD366_PRIVATE_PILOT_DIR = Path(
+    ".shipwright/migrations/linear-20260914/pilot-2.22.0"
+)
+PRD366_PRIVATE_DIAGNOSIS = PRD366_PRIVATE_PILOT_DIR / "pilot-diagnosis-2.22.0.json"
+PRD366_MARKDOWN_REPRO = PRD366_PRIVATE_PILOT_DIR / "markdown-repro-2.22.0.json"
+PRD366_RUNTIME_RECHECK = PRD366_PRIVATE_PILOT_DIR / "runtime-recheck-2.22.0.json"
+PRD366_INPUT_R6 = PRD366_PRIVATE_PILOT_DIR / "input-r6.md"
+PRD366_READBACK_R6 = PRD366_PRIVATE_PILOT_DIR / "readback-r6.md"
+COMMITTED_FAMILY_MAP = Path(
+    "scripts/test/fixtures/linear/markdown-repro-2.22.0-family-map.json"
+)
+DEFAULT_STUCK_ISSUE_IDENTIFIER = "TIE-8"
+
+
+class WitnessUnavailableError(RuntimeError):
+    """Raised when neither private 2.22.0 bytes nor a live TIE-8 re-read is available."""
+
+
+class WitnessKind(str, Enum):
+    PRIVATE_PILOT = "private-pilot"
+    LIVE_TIE8 = "live-tie8"
+
+
+@dataclass(frozen=True)
+class WitnessSource:
+    kind: WitnessKind
+    repo_root: Path
+    pilot_dir: Path | None = None
+
+    def diagnosis_path(self) -> Path | None:
+        if self.kind != WitnessKind.PRIVATE_PILOT or self.pilot_dir is None:
+            return None
+        return self.pilot_dir / "pilot-diagnosis-2.22.0.json"
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def validate_family_map(data: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    if data.get("version") != "2.22.0":
+        errors.append("family-map version must be 2.22.0")
+    leftovers = data.get("leftovers")
+    if not isinstance(leftovers, list):
+        errors.append("family-map leftovers must be a list")
+        return errors
+    if len(leftovers) != PRD366_LEFTOVER_REGION_COUNT:
+        errors.append(
+            f"family-map expects {PRD366_LEFTOVER_REGION_COUNT} leftover rows, got {len(leftovers)}"
+        )
+    seen_ids: set[str] = set()
+    for idx, row in enumerate(leftovers):
+        if not isinstance(row, dict):
+            errors.append(f"leftovers[{idx}] must be an object")
+            continue
+        region_id = row.get("regionId")
+        if not isinstance(region_id, str) or not region_id:
+            errors.append(f"leftovers[{idx}] missing regionId")
+        elif region_id in seen_ids:
+            errors.append(f"duplicate regionId {region_id}")
+        else:
+            seen_ids.add(region_id)
+        req = row.get("requirementId")
+        if req not in PRD366_ALLOWED_REQUIREMENT_IDS:
+            errors.append(
+                f"leftovers[{idx}] requirementId {req!r} not in {sorted(PRD366_ALLOWED_REQUIREMENT_IDS)}"
+            )
+        gap = row.get("gapUnitId")
+        if gap not in PRD366_GAP_UNIT_IDS:
+            errors.append(
+                f"leftovers[{idx}] gapUnitId must reference PRD 366 absorb set {sorted(PRD366_GAP_UNIT_IDS)}"
+            )
+        fixture_ref = row.get("redactedFixtureId")
+        if not isinstance(fixture_ref, str) or not fixture_ref:
+            errors.append(f"leftovers[{idx}] missing redactedFixtureId")
+    return errors
+
+
+def _diagnosis_leftover_rows(diagnosis: dict[str, Any]) -> list[dict[str, Any]]:
+    leftovers = diagnosis.get("leftovers")
+    if isinstance(leftovers, list):
+        return [row for row in leftovers if isinstance(row, dict)]
+    regions = diagnosis.get("regions")
+    if isinstance(regions, list):
+        return [row for row in regions if isinstance(row, dict)]
+    return []
+
+
+def validate_family_map_against_diagnosis(
+    family_map: dict[str, Any], diagnosis: dict[str, Any]
+) -> list[str]:
+    """When private diagnosis bytes exist, every diagnosis row must be classified R4–R7."""
+    errors: list[str] = []
+    diag_rows = _diagnosis_leftover_rows(diagnosis)
+    if not diag_rows:
+        errors.append("diagnosis has no leftover rows to classify")
+        return errors
+    map_by_region: dict[str, dict[str, Any]] = {}
+    for row in family_map.get("leftovers") or []:
+        if isinstance(row, dict) and isinstance(row.get("regionId"), str):
+            map_by_region[row["regionId"]] = row
+    for idx, row in enumerate(diag_rows):
+        region_id = row.get("regionId") or row.get("id")
+        if not isinstance(region_id, str) or not region_id:
+            errors.append(f"diagnosis row[{idx}] missing regionId/id")
+            continue
+        mapped = map_by_region.get(region_id)
+        if mapped is None:
+            errors.append(f"unclassified leftover region {region_id}")
+            continue
+        req = mapped.get("requirementId")
+        if req not in PRD366_ALLOWED_REQUIREMENT_IDS:
+            errors.append(f"region {region_id} maps to invalid requirementId {req!r}")
+    extra = sorted(set(map_by_region) - {str(r.get("regionId") or r.get("id")) for r in diag_rows})
+    if extra:
+        errors.append(f"family-map references unknown diagnosis regions: {extra}")
+    return errors
+
+
+def private_pilot_tree_present(repo_root: Path) -> bool:
+    root = Path(repo_root).resolve()
+    diagnosis = root / PRD366_PRIVATE_DIAGNOSIS
+    repro = root / PRD366_MARKDOWN_REPRO
+    return diagnosis.is_file() and repro.is_file()
+
+
+def private_pilot_tree_gitignored(repo_root: Path) -> bool:
+    """True when the private pilot directory is not tracked (expected for CI)."""
+    from subprocess import run
+
+    rel = PRD366_PRIVATE_PILOT_DIR.as_posix()
+    proc = run(
+        ["git", "check-ignore", "-q", rel],
+        cwd=repo_root,
+        capture_output=True,
+    )
+    return proc.returncode == 0
+
+
+def live_tie8_reread_available(repo_root: Path) -> bool:
+    """Broker-only probe: live TIE-8 re-read is allowed when credentials resolve."""
+    root = Path(repo_root).resolve()
+    try:
+        from credentials.model import ResolutionState
+        from credentials.resolver import RepositoryContext, resolve
+        from credentials.selector_store import load_selector_store
+        from host_lib import load_workflow_config
+        from planning_linear_facade_pilot import _pilot_section
+    except ImportError:
+        return False
+    cfg = load_workflow_config(root)
+    pilot = _pilot_section(cfg)
+    if not pilot.get("enabled"):
+        return False
+    store = load_selector_store(root)
+    if store is None:
+        return False
+    ctx = RepositoryContext(repo_root=root, remote_url=None)
+    try:
+        resolution = resolve(store, ctx, backend_id="linear")
+    except Exception:
+        return False
+    return resolution.state == ResolutionState.OK and bool(resolution.token)
+
+
+def resolve_witness_source(repo_root: Path) -> WitnessSource:
+    """Prefer gitignored private 2.22.0 bytes; otherwise live TIE-8 re-read."""
+    root = Path(repo_root).resolve()
+    if private_pilot_tree_present(root):
+        return WitnessSource(
+            kind=WitnessKind.PRIVATE_PILOT,
+            repo_root=root,
+            pilot_dir=root / PRD366_PRIVATE_PILOT_DIR,
+        )
+    if live_tie8_reread_available(root):
+        return WitnessSource(kind=WitnessKind.LIVE_TIE8, repo_root=root, pilot_dir=None)
+    raise WitnessUnavailableError(
+        "missing private 2.22.0 pilot bytes and live TIE-8 re-read unavailable"
+    )
+
+
+def require_witness_source(repo_root: Path) -> WitnessSource:
+    """Fail closed when prove cannot use private bytes or live TIE-8."""
+    return resolve_witness_source(repo_root)
+
+
+def load_committed_family_map(repo_root: Path) -> dict[str, Any]:
+    path = Path(repo_root).resolve() / COMMITTED_FAMILY_MAP
+    if not path.is_file():
+        raise FileNotFoundError(f"missing committed family map: {path}")
+    return load_json(path)
