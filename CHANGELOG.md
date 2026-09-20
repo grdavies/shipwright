@@ -1438,6 +1438,7 @@
 * merge phase dist-emit-and-linear-wording into feat/doc-review-synth-order (ca35c98) <!-- sw-deliver:dist-emit-and-linear-wording -->
 * merge phase classify-leftover-2-22-regions-and-witness-policy into feat/linear-markdown-equiv-222 (dfb6c81) <!-- sw-deliver:classify-leftover-2-22-regions-and-witness-policy -->
 * merge phase extending-unit-stance-and-363-immutability into feat/linear-markdown-equiv-222 (c106c5d) <!-- sw-deliver:extending-unit-stance-and-363-immutability -->
+* merge phase version-and-section-tokens-are-not-domains into feat/linear-markdown-equiv-222 (fdd1137) <!-- sw-deliver:version-and-section-tokens-are-not-domains -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
