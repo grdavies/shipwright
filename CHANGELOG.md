@@ -1436,6 +1436,7 @@
 * merge phase post-complete-apply-write-path into feat/doc-review-synth-order (c3ac155) <!-- sw-deliver:post-complete-apply-write-path -->
 * merge phase fixtures-for-body-drift-and-finding-text-non-persistence into feat/doc-review-synth-order (42e13bf) <!-- sw-deliver:fixtures-for-body-drift-and-finding-text-non-persistence -->
 * merge phase dist-emit-and-linear-wording into feat/doc-review-synth-order (ca35c98) <!-- sw-deliver:dist-emit-and-linear-wording -->
+* merge phase classify-leftover-2-22-regions-and-witness-policy into feat/linear-markdown-equiv-222 (dfb6c81) <!-- sw-deliver:classify-leftover-2-22-regions-and-witness-policy -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
