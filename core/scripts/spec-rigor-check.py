@@ -42,6 +42,9 @@ _HARD_AMBIGUITY_MARKER = re.compile(r"\b(TBD|TODO|FIXME)\b", re.I)
 # PRD 364 R5 — wraps are colliding unfinished-work vocabulary only (not any-word).
 _COLON_WRAP = re.compile(r"\b(TODO|TBD|FIXME)\s*:", re.I)
 _BRACKET_WRAP = re.compile(r"\[(TODO|TBD|FIXME)\]", re.I)
+# PRD 364 R2 — wrap scans skip link/autolink destinations only (labels still collide).
+_MD_LINK = re.compile(r"!?\[(?P<label>[^\]]*)\]\((?P<dest>[^)]+)\)")
+_AUTO_LINK = re.compile(r"<(?P<dest>[^<>\s]+)>")
 _FRONTMATTER_BLOCK = re.compile(r"\A---\s*\n([\s\S]*?)\n---\s*(?:\n|$)", re.M)
 _FLOW_LIST = re.compile(r"^\[(.*)\]$", re.S)
 
@@ -143,11 +146,27 @@ def _allowlisted(fragment: str, allowlist: frozenset[str]) -> bool:
     return fragment in allowlist
 
 
+def _wrap_match_exempt_in_markdown_link(body: str, start: int, end: int) -> bool:
+    """True when a punctuation-wrap hit lies wholly in a link/autolink destination."""
+    for match in _MD_LINK.finditer(body):
+        dest_start = match.start("dest")
+        dest_end = match.end("dest")
+        if dest_start <= start and end <= dest_end:
+            return True
+    for match in _AUTO_LINK.finditer(body):
+        dest_start = match.start("dest")
+        dest_end = match.end("dest")
+        if dest_start <= start and end <= dest_end:
+            return True
+    return False
+
+
 def text_has_ambiguity_marker(body: str, allowlist: frozenset[str] | None = None) -> bool:
     """Return True when layered matcher finds a blocking ambiguity marker in body.
 
     Precedence (PRD 361 / PRD 364 R6): allowlist, unresolved phrase / ???,
-    vocab-restricted punctuation wrap, Title-case named state, slash-taxonomy
+    vocab-restricted punctuation wrap (PRD 364 R2 skips wrap hits inside Markdown
+    link/autolink destinations only), Title-case named state, slash-taxonomy
     (lowercase), else hard markers. Wraps run before Title-case masking.
     """
     allow = allowlist if allowlist is not None else frozenset()
@@ -162,10 +181,14 @@ def text_has_ambiguity_marker(body: str, allowlist: frozenset[str] | None = None
         return True
 
     for match in _COLON_WRAP.finditer(body):
+        if _wrap_match_exempt_in_markdown_link(body, match.start(), match.end()):
+            continue
         token = match.group(1)
         if not (_allowlisted(token, allow) or _allowlisted(f"{token}:", allow)):
             return True
     for match in _BRACKET_WRAP.finditer(body):
+        if _wrap_match_exempt_in_markdown_link(body, match.start(), match.end()):
+            continue
         inner = match.group(1).strip()
         bracketed = f"[{match.group(1)}]"
         if not (_allowlisted(inner, allow) or _allowlisted(bracketed, allow)):
