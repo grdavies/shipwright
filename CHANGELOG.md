@@ -1419,6 +1419,7 @@
 * merge phase probe-table-and-representative-fixture into feat/spec-rigor-punct-wrap (987d90a) <!-- sw-deliver:probe-table-and-representative-fixture -->
 * merge phase narrow-wrap-regex-and-keep-361-precedence into feat/spec-rigor-punct-wrap (eab9716) <!-- sw-deliver:narrow-wrap-regex-and-keep-361-precedence -->
 * merge phase markdown-link-exemption-is-wrapper-only into feat/spec-rigor-punct-wrap (ce19b44) <!-- sw-deliver:markdown-link-exemption-is-wrapper-only -->
+* merge phase retarget-361-wrap-goldens into feat/spec-rigor-punct-wrap (3ded055) <!-- sw-deliver:retarget-361-wrap-goldens -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
