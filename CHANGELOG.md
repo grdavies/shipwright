@@ -1424,6 +1424,7 @@
 * merge phase skill-text-and-emit into feat/spec-rigor-punct-wrap (d4d45bb) <!-- sw-deliver:skill-text-and-emit -->
 * merge phase align-skill-and-synthesis-reference-to-one-sequence into feat/doc-review-synth-order (31600b8) <!-- sw-deliver:align-skill-and-synthesis-reference-to-one-sequence -->
 * merge phase file-store-transport-stays-apply-after-synthesis into feat/doc-review-synth-order (390457f) <!-- sw-deliver:file-store-transport-stays-apply-after-synthesis -->
+* merge phase post-complete-apply-write-path into feat/doc-review-synth-order (c3ac155) <!-- sw-deliver:post-complete-apply-write-path -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
