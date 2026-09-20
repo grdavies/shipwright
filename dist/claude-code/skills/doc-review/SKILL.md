@@ -79,8 +79,12 @@ PRD 045's legacy transport spelling `sw:doc-review` refers to this same marker f
    memory; do not mutate the issue body before complete.
 7. **Complete** — `doc-review-round-close` / `complete_review_round` against the unchanged closed witness
    (completion receipt).
-8. **Apply** — on a fresh read after complete, apply `safe_auto` / gate `gated_auto` / `manual`. Do not
-   verify or complete the same `roundId` again after apply.
+8. **Apply** — on a fresh read after complete, apply `safe_auto` / gate `gated_auto` / `manual` via the
+   out-of-facade stripped-byte OCC write (witness-preserving splice; never `planning_store.put` /
+   `compose_issue_body`). Apply source is pinned or staged finding envelopes from the verified round, not
+   a post-close comment re-fetch. Do not verify or complete the same `roundId` again after apply.
+   **Review-done** (and `/sw-freeze`) waits until this apply step finishes — complete without apply is not
+   review-done.
 
 **Bootstrap in-flight (#1070):** open-then-post / `close` remains for rounds opened before facade mapping
 — see `references/synthesis.md`. Do not mix bootstrap envelopes into a new-round open.
@@ -326,4 +330,10 @@ Persona-vs-persona or operator-vs-synthesizer disagreement on a finding's `autof
 
 ## Handoff
 
-→ `/sw-freeze` when no blocking manual trade-offs remain.
+**issue-store:** `/sw-freeze` only after new-round steps 6–8 finish — synthesis, complete on the unchanged
+witness, then post-complete apply. A completion receipt alone is not review-done; do not freeze while apply
+is pending. After apply, do not call `verify_review_manifest` or `complete_review_round` again on that
+`roundId`.
+
+**file-store:** `/sw-freeze` when no blocking manual trade-offs remain after the synthesis-report apply step
+(no complete step).
