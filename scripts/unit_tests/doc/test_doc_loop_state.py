@@ -207,7 +207,7 @@ _FILE_STORE_REVIEW_GOLDENS: dict[str, str] = {
         "3d62dd6d1efb37e9f6293b55e77c52030e8d4c36c738a53a0775888683cf0b4a"
     ),
     "core/skills/doc-review/references/synthesis.md": (
-        "6d935c84e395eaadd522506e938ac618d2e1acba54f607facb497a4cfd1bfaa3"
+        "1a93603521af4f76b5fc5d364bfea471c950e0f7afc06f95d63ba3b4865d06e5"
     ),
 }
 
