@@ -1425,6 +1425,7 @@
 * merge phase align-skill-and-synthesis-reference-to-one-sequence into feat/doc-review-synth-order (31600b8) <!-- sw-deliver:align-skill-and-synthesis-reference-to-one-sequence -->
 * merge phase file-store-transport-stays-apply-after-synthesis into feat/doc-review-synth-order (390457f) <!-- sw-deliver:file-store-transport-stays-apply-after-synthesis -->
 * merge phase post-complete-apply-write-path into feat/doc-review-synth-order (c3ac155) <!-- sw-deliver:post-complete-apply-write-path -->
+* merge phase fixtures-for-body-drift-and-finding-text-non-persistence into feat/doc-review-synth-order (42e13bf) <!-- sw-deliver:fixtures-for-body-drift-and-finding-text-non-persistence -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
