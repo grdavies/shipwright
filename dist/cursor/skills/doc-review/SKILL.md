@@ -80,8 +80,7 @@ PRD 045's legacy transport spelling `sw:doc-review` refers to this same marker f
 7. **Complete** — `doc-review-round-close` / `complete_review_round` against the unchanged closed witness
    (completion receipt).
 8. **Apply** — on a fresh read after complete, apply `safe_auto` / gate `gated_auto` / `manual` via the
-   out-of-facade stripped-byte OCC write (`apply_closed_round_stripped_body` in
-   `scripts/planning_doc_review_transport.py` — witness-preserving splice, never `planning_store.put` /
+   out-of-facade stripped-byte OCC write (witness-preserving splice; never `planning_store.put` /
    `compose_issue_body`). Apply source is pinned or staged finding envelopes from the verified round, not
    a post-close comment re-fetch. Do not verify or complete the same `roundId` again after apply.
    **Review-done** (and `/sw-freeze`) waits until this apply step finishes — complete without apply is not
