@@ -1418,6 +1418,7 @@
 * merge phase docs-currency-stale-downstream-gate-r15-r16-r17-small into feat/self-host-closeout-hygiene (3a554f6) <!-- sw-deliver:docs-currency-stale-downstream-gate-r15-r16-r17-small -->
 * merge phase probe-table-and-representative-fixture into feat/spec-rigor-punct-wrap (987d90a) <!-- sw-deliver:probe-table-and-representative-fixture -->
 * merge phase narrow-wrap-regex-and-keep-361-precedence into feat/spec-rigor-punct-wrap (eab9716) <!-- sw-deliver:narrow-wrap-regex-and-keep-361-precedence -->
+* merge phase markdown-link-exemption-is-wrapper-only into feat/spec-rigor-punct-wrap (ce19b44) <!-- sw-deliver:markdown-link-exemption-is-wrapper-only -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
