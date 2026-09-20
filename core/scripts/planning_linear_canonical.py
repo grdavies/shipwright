@@ -175,6 +175,19 @@ LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
     }
 )
 
+# PRD 366 D4 — parser-grade AST compare is explicitly out of scope for the 2.22.0 follow-up.
+LINEAR_PUBLIC_MARKDOWN_EQUIVALENCE_STRATEGY = "named-closed-set-families"
+LINEAR_PUBLIC_MARKDOWN_PARSER_GRADE_AST_COMPARE = "rejected"
+
+
+def linear_public_markdown_equivalence_strategy() -> dict[str, str]:
+    """Document the binding leftover equality method (stance A; stance D rejected)."""
+    return {
+        "strategy": LINEAR_PUBLIC_MARKDOWN_EQUIVALENCE_STRATEGY,
+        "parserGradeAstCompare": LINEAR_PUBLIC_MARKDOWN_PARSER_GRADE_AST_COMPARE,
+        "rewriteRegistry": "LINEAR_PUBLIC_MARKDOWN_R6_REWRITES",
+    }
+
 # PRD 359 R5 — fixture-enumerated punctuation unescape alphabet (excludes delimiter ticks).
 _LITERAL_PUNCTUATION_UNESCAPE_CHARS = frozenset(".,;:!?#'\"+-=&")
 
@@ -290,30 +303,34 @@ def _md_link_href_identity(label: str, href: str) -> str:
     return _autolink_identity(href)
 
 
-def _autolink_identity(raw: str) -> str:
+def _implicit_autolink_policy(raw: str) -> tuple[str, str]:
+    """Shared R5 policy: identity token and R6 comparison URL for one destination."""
     text = _unwrap_angle_brackets(raw.strip())
     hostpath = _schemeless_domain_hostpath(text)
     if hostpath is not None:
-        return _named_schemeless_link_identity(hostpath)
+        return (
+            _named_schemeless_link_identity(hostpath),
+            _canon_url(hostpath),
+        )
+    comparison = _canon_url(text)
     if text.startswith("https://"):
-        return text
-    return _canon_url(text)
+        identity = text
+    else:
+        identity = comparison
+    return (identity, comparison)
+
+
+def _autolink_identity(raw: str) -> str:
+    return _implicit_autolink_policy(raw)[0]
 
 
 def _bare_domain_link_identity(raw: str) -> str:
-    hostpath = _schemeless_domain_hostpath(raw)
-    if hostpath is not None:
-        return _named_schemeless_link_identity(hostpath)
-    return _canon_url(raw)
+    return _implicit_autolink_policy(raw)[0]
 
 
 def _autolink_comparison_url(raw: str) -> str:
     """R6 comparison form for angle autolinks (http provider → https witness)."""
-    text = _unwrap_angle_brackets(raw.strip())
-    hostpath = _schemeless_domain_hostpath(text)
-    if hostpath is not None:
-        return _canon_url(hostpath)
-    return _canon_url(text)
+    return _implicit_autolink_policy(raw)[1]
 
 
 def _normalize_list_markers(text: str) -> str:

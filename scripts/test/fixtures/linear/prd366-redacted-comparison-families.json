@@ -68,6 +68,22 @@
       "submitted": "Follow §5.3 for acceptance.\n",
       "refetched": "Follow §https://5.3 for acceptance.\n",
       "expectEquivalent": false
+    },
+    {
+      "id": "r5-http-vs-https-explicit",
+      "family": "implicit-domain-http-autolink",
+      "requirementId": "R5",
+      "submitted": "Open host.example.test/page\n",
+      "refetched": "Open <https://host.example.test/page>\n",
+      "expectEquivalent": false
+    },
+    {
+      "id": "r5-destination-changed-explicit",
+      "family": "implicit-domain-http-autolink",
+      "requirementId": "R5",
+      "submitted": "See docs.example.test/path today.\n",
+      "refetched": "See <http://docs.example.test/other> today.\n",
+      "expectEquivalent": false
     }
   ]
 }

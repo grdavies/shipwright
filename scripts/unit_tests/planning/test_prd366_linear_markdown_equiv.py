@@ -18,8 +18,12 @@ from planning_linear_canonical import (
     LINEAR_PUBLIC_MARKDOWN_EQUIVALENCE_STRATEGY,
     LINEAR_PUBLIC_MARKDOWN_PARSER_GRADE_AST_COMPARE,
     LINEAR_PUBLIC_MARKDOWN_R6_REWRITES,
+    _autolink_comparison_url,
+    _autolink_identity,
+    _implicit_autolink_policy,
     _looks_like_domain,
     linear_public_markdown_equivalence_strategy,
+    _r6_identity_tokens,
     linear_public_markdown_equivalent,
     linear_public_markdown_r6_form,
 )
@@ -148,6 +152,54 @@ class TestPrd366Phase2VersionSectionTokenDomainRewrite:
                 assert (
                     linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False
                 )
+
+
+class TestPrd366Phase3ImplicitAutolinkUnification:
+    @staticmethod
+    def _r5_pairs() -> list[dict[str, str]]:
+        data = load_json(REDACTED_FAMILIES)
+        return [
+            row
+            for row in data["pairs"]
+            if row.get("family") == "implicit-domain-http-autolink"
+        ]
+
+    def test_implicit_autolink_policy_unifies_identity_and_comparison(self) -> None:
+        bare = "docs.example.test/path"
+        angle_http = "http://docs.example.test/path"
+        identity, comparison = _implicit_autolink_policy(bare)
+        assert identity == _autolink_identity(bare)
+        assert comparison == _autolink_comparison_url(angle_http)
+        assert identity == _autolink_identity(angle_http)
+        assert comparison == _autolink_comparison_url(bare)
+        assert identity.startswith("schemeless:")
+        assert comparison == "https://docs.example.test/path"
+
+    def test_redacted_r5_pairs_pass_equivalent(self) -> None:
+        for row in self._r5_pairs():
+            assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]), row[
+                "id"
+            ]
+
+    def test_schemeless_host_matches_http_angle_autolink(self) -> None:
+        left = "See docs.example.test/path today.\n"
+        right = "See <http://docs.example.test/path> today.\n"
+        assert linear_public_markdown_equivalent(left, right)
+
+    def test_explicit_url_mutants_fail_identity_and_form(self) -> None:
+        data = load_json(REDACTED_FAMILIES)
+        for row in data["mutants"]:
+            if row.get("family") != "implicit-domain-http-autolink":
+                continue
+            if row.get("expectEquivalent") is False:
+                submitted, refetched = row["submitted"], row["refetched"]
+                assert linear_public_markdown_equivalent(submitted, refetched) is False
+                assert _r6_identity_tokens(submitted) != _r6_identity_tokens(refetched)
+                if row["id"] == "r5-destination-changed-explicit":
+                    assert (
+                        linear_public_markdown_r6_form(submitted)
+                        != linear_public_markdown_r6_form(refetched)
+                    )
 
 
 class TestPrd366Phase11ExtendingUnitStance:
