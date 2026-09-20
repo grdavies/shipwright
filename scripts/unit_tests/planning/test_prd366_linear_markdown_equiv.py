@@ -18,13 +18,17 @@ from planning_linear_canonical import (
     LINEAR_PUBLIC_MARKDOWN_EQUIVALENCE_STRATEGY,
     LINEAR_PUBLIC_MARKDOWN_PARSER_GRADE_AST_COMPARE,
     LINEAR_PUBLIC_MARKDOWN_R6_REWRITES,
+    _looks_like_domain,
     linear_public_markdown_equivalence_strategy,
+    linear_public_markdown_equivalent,
+    linear_public_markdown_r6_form,
 )
 from prd366_fixture_lib import (
     PRD366_ALLOWED_REQUIREMENT_IDS,
     PRD366_LEFTOVER_REGION_COUNT,
     PRD366_PRIVATE_PILOT_DIR,
     WitnessUnavailableError,
+    family_map_covers_redacted_pairs,
     load_committed_family_map,
     load_json,
     private_pilot_tree_gitignored,
@@ -32,10 +36,12 @@ from prd366_fixture_lib import (
     resolve_witness_source,
     validate_family_map,
     validate_family_map_against_diagnosis,
+    validate_redacted_families,
 )
 
 FIXTURE_LINEAR = scripts / "test" / "fixtures" / "linear"
 FAMILY_MAP = FIXTURE_LINEAR / "markdown-repro-2.22.0-family-map.json"
+REDACTED_FAMILIES = FIXTURE_LINEAR / "prd366-redacted-comparison-families.json"
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 class TestPrd366Phase1FamilyMap:
@@ -94,6 +100,55 @@ class TestPrd366Phase1WitnessPolicy:
             ).kind
         except WitnessUnavailableError:
             pytest.skip("no witness source in this environment")
+
+class TestPrd366Phase2VersionSectionTokenDomainRewrite:
+    @staticmethod
+    def _r4_pairs() -> list[dict[str, str]]:
+        data = load_json(REDACTED_FAMILIES)
+        return [
+            row
+            for row in data["pairs"]
+            if row.get("family") == "version-section-token-domain-rewrite"
+        ]
+
+    def test_redacted_fixture_contract(self) -> None:
+        data = load_json(REDACTED_FAMILIES)
+        assert validate_redacted_families(data) == []
+        family_map = load_json(FAMILY_MAP)
+        assert family_map_covers_redacted_pairs(family_map, data) == []
+
+    def test_version_and_section_tokens_are_not_domains(self) -> None:
+        assert not _looks_like_domain("v0.3")
+        assert not _looks_like_domain("v1.2.3")
+        assert not _looks_like_domain("§5.3")
+        assert not _looks_like_domain("5.3")
+        assert _looks_like_domain("docs.example.test")
+        assert _looks_like_domain("example.com")
+
+    def test_r6_form_preserves_version_and_section_tokens(self) -> None:
+        text = "Ship v0.3 per §5.3; see docs.example.test/path.\n"
+        normalized = linear_public_markdown_r6_form(text)
+        assert "v0.3" in normalized
+        assert "§5.3" in normalized
+        assert "https://docs.example.test/path" in normalized
+        assert "https://v0.3" not in normalized
+
+    def test_redacted_r4_pairs_pass_equivalent(self) -> None:
+        for row in self._r4_pairs():
+            assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]), row[
+                "id"
+            ]
+
+    def test_r4_mutants_fail_equivalence(self) -> None:
+        data = load_json(REDACTED_FAMILIES)
+        for row in data["mutants"]:
+            if row.get("family") != "version-section-token-domain-rewrite":
+                continue
+            if row.get("expectEquivalent") is False:
+                assert (
+                    linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False
+                )
+
 
 class TestPrd366Phase11ExtendingUnitStance:
     def test_binding_stance_a_and_rejected_b_c_d(self) -> None:
