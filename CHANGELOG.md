@@ -1416,6 +1416,12 @@
 * merge phase command-doc-regen-prose-r3-r5-small into feat/self-host-closeout-hygiene (5b4d400) <!-- sw-deliver:command-doc-regen-prose-r3-r5-small -->
 * merge phase stamp-chain-remaining-tests-r5-r14-small into feat/self-host-closeout-hygiene (7d3a057) <!-- sw-deliver:stamp-chain-remaining-tests-r5-r14-small -->
 * merge phase docs-currency-stale-downstream-gate-r15-r16-r17-small into feat/self-host-closeout-hygiene (3a554f6) <!-- sw-deliver:docs-currency-stale-downstream-gate-r15-r16-r17-small -->
+* merge phase probe-table-and-representative-fixture into feat/spec-rigor-punct-wrap (987d90a) <!-- sw-deliver:probe-table-and-representative-fixture -->
+* merge phase narrow-wrap-regex-and-keep-361-precedence into feat/spec-rigor-punct-wrap (eab9716) <!-- sw-deliver:narrow-wrap-regex-and-keep-361-precedence -->
+* merge phase markdown-link-exemption-is-wrapper-only into feat/spec-rigor-punct-wrap (ce19b44) <!-- sw-deliver:markdown-link-exemption-is-wrapper-only -->
+* merge phase retarget-361-wrap-goldens into feat/spec-rigor-punct-wrap (3ded055) <!-- sw-deliver:retarget-361-wrap-goldens -->
+* merge phase title-case-taxonomy-and-fail-closed-markers into feat/spec-rigor-punct-wrap (b8e636c) <!-- sw-deliver:title-case-taxonomy-and-fail-closed-markers -->
+* merge phase skill-text-and-emit into feat/spec-rigor-punct-wrap (d4d45bb) <!-- sw-deliver:skill-text-and-emit -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
@@ -1511,3 +1517,4 @@
 ### Features
 
 * initial shipwright plugin scaffold and multi-platform emitters
+* Phase retarget-361-wrap-goldens: PRD 364 R9 361 wrap goldens use Todo colliders ([grdavies/planning#1071](https://github.com/grdavies/planning/issues/1071))
