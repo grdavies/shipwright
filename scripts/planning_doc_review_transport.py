@@ -49,6 +49,11 @@ DOC_REVIEW_FINDINGS_API_VERSION = "shipwright.dev/doc-review-finding/v1"
 DOC_REVIEW_COMPLETION_MARKER = "sw:doc-review-completion"
 DOC_REVIEW_BUDGET_OPERATION = "document-review"
 DOC_REVIEW_MIXED_SCHEMA = "doc-review-mixed-schema"
+DOC_REVIEW_APPLY_FORBIDDEN = "doc-review-apply-forbidden"
+DOC_REVIEW_APPLY_SOURCE_REQUIRED = "doc-review-apply-source-required"
+DOC_REVIEW_APPLY_WITNESS_STRIPPED = "doc-review-apply-witness-stripped"
+DOC_REVIEW_APPLY_ROUND_NOT_CLOSED = "doc-review-round-not-closed"
+DOC_REVIEW_ROUND_APPLY_STRIPPED = "doc-review-round-apply-stripped"
 
 # Mandatory docReviewComments fields (PRD 341 R27). Optional: nativeRevision, stableApplicationId.
 DOC_REVIEW_MANDATORY_CAPABILITIES = (
@@ -1561,6 +1566,220 @@ def apply_manifest_update(
     except IssueRevisionConflict as exc:
         return revision_conflict_result(action=verb, issue_id=str(issue_id), exc=exc)
     return None
+
+
+def witness_block_text(body: str) -> str | None:
+    """Rendered closed/open witness bytes on ``body`` (PRD 365 R8)."""
+    manifest, err = inspect_review_round_block(body)
+    if err or not manifest:
+        return None
+    return render_review_round_block(normalize_manifest_block(manifest))
+
+
+def _stripped_input_carries_witness(stripped_body: str) -> bool:
+    text = stripped_body or ""
+    if DOC_REVIEW_ROUND_JSON_FENCE.search(text):
+        return True
+    if DOC_REVIEW_ROUND_OPEN_MARKER.search(text) or DOC_REVIEW_ROUND_CLOSE_MARKER.search(text):
+        return True
+    if LEGACY_INLINE_ROUND_MARKER.search(text):
+        return True
+    return False
+
+
+def validate_apply_envelope_source(
+    manifest: dict[str, Any],
+    envelopes: list[dict[str, Any]],
+) -> dict[str, Any] | None:
+    """Ensure apply consumes pinned/staged envelopes — not live comment re-fetch (PRD 365 R8)."""
+    pins_raw = manifest.get("pins")
+    if not isinstance(pins_raw, list):
+        return {
+            "verdict": "fail",
+            "error": DOC_REVIEW_ROUND_MALFORMED,
+            "detail": "manifest-missing-pins",
+        }
+    by_key: dict[str, dict[str, Any]] = {}
+    for row in pins_raw:
+        if not isinstance(row, dict):
+            continue
+        normalized = normalize_pin_row(row)
+        key = str(normalized.get("idempotencyKey") or "")
+        if key:
+            by_key[key] = normalized
+    if not envelopes:
+        return {
+            "verdict": "fail",
+            "error": DOC_REVIEW_APPLY_SOURCE_REQUIRED,
+            "detail": "apply-envelopes-empty",
+        }
+    for envelope in envelopes:
+        normalized = normalize_finding_envelope(envelope)
+        key = str(normalized.get("idempotencyKey") or "")
+        if not key or key not in by_key:
+            return {
+                "verdict": "fail",
+                "error": DOC_REVIEW_UNPINNED_FINDINGS,
+                "detail": "apply-envelope-not-pinned",
+                "idempotencyKey": key,
+            }
+        pin = by_key[key]
+        expected_hash = str(pin.get("payloadHash") or "")
+        actual_hash = str(normalized.get("payloadHash") or "")
+        if expected_hash and actual_hash and expected_hash != actual_hash:
+            return {
+                "verdict": "fail",
+                "error": DOC_REVIEW_COMMENT_DRIFT,
+                "driftKind": "apply-envelope-hash-mismatch",
+                "idempotencyKey": key,
+            }
+    return None
+
+
+def apply_closed_round_stripped_body(
+    client: IssuesClient,
+    *,
+    issue_id: str,
+    unit_id: str,
+    round_id: str,
+    stripped_body: str,
+    apply_envelopes: list[dict[str, Any]],
+    dry_run: bool = False,
+    composed_via_store: bool = False,
+) -> dict[str, Any]:
+    """Post-complete OCC write of stripped artifact bytes; witness preserved (PRD 365 R8).
+
+    Out-of-facade — not one of the five public review ops. Do not route through
+    ``planning_store.put`` or ``compose_issue_body`` (``composed_via_store`` must stay false).
+    """
+    verb = DOC_REVIEW_ROUND_APPLY_STRIPPED
+    if composed_via_store:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": DOC_REVIEW_APPLY_FORBIDDEN,
+            "detail": "planning-store-compose-forbidden",
+            "issueId": issue_id,
+            "roundId": round_id,
+        }
+    if _stripped_input_carries_witness(stripped_body):
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": DOC_REVIEW_APPLY_WITNESS_STRIPPED,
+            "issueId": issue_id,
+            "roundId": round_id,
+        }
+    try:
+        record = client.issue_get(str(issue_id))
+    except Exception as exc:  # noqa: BLE001
+        return {"verdict": "fail", "action": verb, "error": str(exc), "issueId": issue_id}
+    if not comments_pagination_complete(record):
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": DOC_REVIEW_PAGINATION_INCOMPLETE,
+            "issueId": issue_id,
+            "roundId": round_id,
+        }
+    logical_body = logical_issue_body(record)
+    unit_err = verify_issue_unit(logical_body, unit_id=unit_id, issue_id=str(issue_id))
+    if unit_err is not None:
+        unit_err["action"] = verb
+        return unit_err
+    manifest, manifest_err = inspect_review_round_block(logical_body)
+    if manifest_err:
+        return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail=manifest_err)
+    bind_err = verify_manifest_binding(manifest, unit_id=unit_id, issue_id=str(issue_id))
+    if bind_err is not None:
+        bind_err["action"] = verb
+        return bind_err
+    if manifest.get("roundId") != round_id:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": DOC_REVIEW_ROUND_MALFORMED,
+            "detail": "round-id-mismatch",
+            "roundId": round_id,
+        }
+    if manifest.get("status") != "closed":
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": DOC_REVIEW_APPLY_ROUND_NOT_CLOSED,
+            "issueId": issue_id,
+            "roundId": round_id,
+        }
+    envelope_err = validate_apply_envelope_source(manifest, apply_envelopes)
+    if envelope_err is not None:
+        envelope_err["action"] = verb
+        envelope_err["issueId"] = issue_id
+        envelope_err.setdefault("roundId", round_id)
+        return envelope_err
+
+    witness_before = witness_block_text(logical_body)
+    if not witness_before:
+        return manifest_malformed_result(action=verb, issue_id=str(issue_id), detail="missing-witness")
+
+    closed_manifest = normalize_manifest_block(manifest)
+    proposed_body = upsert_review_round_block(stripped_body, closed_manifest)
+    witness_after = witness_block_text(proposed_body)
+    if witness_after != witness_before:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": DOC_REVIEW_APPLY_WITNESS_STRIPPED,
+            "issueId": issue_id,
+            "roundId": round_id,
+            "detail": "witness-bytes-changed",
+        }
+    if proposed_body == logical_body:
+        return {
+            "verdict": "ok",
+            "action": verb,
+            "issueId": issue_id,
+            "roundId": round_id,
+            "idempotent": True,
+            "artifactHash": str(closed_manifest.get("artifactHash") or ""),
+        }
+    if dry_run:
+        return {
+            "verdict": "ok",
+            "action": verb,
+            "dryRun": True,
+            "issueId": issue_id,
+            "roundId": round_id,
+            "artifactHash": str(closed_manifest.get("artifactHash") or ""),
+        }
+    conflict = apply_manifest_update(
+        client,
+        issue_id=str(issue_id),
+        verb=verb,
+        record_body=stripped_body,
+        etag=record.etag,
+        manifest_block=closed_manifest,
+    )
+    if conflict is not None:
+        return conflict
+    refreshed = client.issue_get(str(issue_id))
+    refreshed_body = logical_issue_body(refreshed)
+    if witness_block_text(refreshed_body) != witness_before:
+        return {
+            "verdict": "fail",
+            "action": verb,
+            "error": DOC_REVIEW_APPLY_WITNESS_STRIPPED,
+            "issueId": issue_id,
+            "roundId": round_id,
+            "detail": "post-write-witness-drift",
+        }
+    return {
+        "verdict": "ok",
+        "action": verb,
+        "issueId": issue_id,
+        "roundId": round_id,
+        "idempotent": False,
+        "artifactHash": str(closed_manifest.get("artifactHash") or ""),
+    }
 
 
 def execute_doc_review_txn(
