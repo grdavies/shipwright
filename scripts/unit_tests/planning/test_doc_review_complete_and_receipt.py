@@ -7,16 +7,22 @@ from pathlib import Path
 
 import pytest
 
-from issues_lib import get_fixture_store
+from issues_lib import IssuesClient, get_fixture_store
 from planning_doc_review_transport import (
     DOC_REVIEW_COMPLETION_API_VERSION,
     DOC_REVIEW_COMPLETION_MARKER,
+    apply_closed_round_stripped_body,
     body_manifest_id,
     build_completion_receipt_body,
     default_completion_idempotency_key,
     find_completion_receipts,
     inspect_review_round_block,
+    logical_issue_body,
+    normalize_finding_envelope,
     parse_completion_receipt,
+    parse_doc_review_comment,
+    strip_review_round_blocks,
+    witness_block_text,
 )
 from planning_store_facade import complete_review_round, load_workflow_config
 from unit_tests.planning.test_doc_review_transport_bootstrap import (
@@ -139,3 +145,51 @@ def test_completion_replay_returns_same_receipt(transport_repo: Path) -> None:
     key = default_completion_idempotency_key(round_id=round_id, manifest_id=manifest_id)
     matches = find_completion_receipts(list(record.comments), round_id=round_id, idempotency_key_value=key)
     assert len(matches) == 1
+
+
+def test_apply_after_complete_patches_stripped_preserves_witness(transport_repo: Path) -> None:
+    cfg = load_workflow_config(transport_repo)
+    store = get_fixture_store(transport_repo)
+    unit_id = "341-prd-doc-review-transport"
+    _seed_issue(store, unit_id=unit_id)
+    round_id = "round-apply-after-close"
+    _post_then_open(transport_repo, cfg, unit_id=unit_id, round_id=round_id)
+    closed = complete_review_round(
+        transport_repo,
+        cfg,
+        issue_id="887",
+        unit_id=unit_id,
+        round_id=round_id,
+    )
+    assert closed["verdict"] == "ok", closed
+
+    record = get_fixture_store(transport_repo).get("887")
+    logical_before = logical_issue_body(record)
+    manifest_before, manifest_err = inspect_review_round_block(record.body)
+    assert manifest_err is None, manifest_err
+    assert manifest_before.get("status") == "closed"
+    witness_before = witness_block_text(logical_before)
+    assert witness_before
+
+    finding_comment = next(
+        c for c in record.comments if parse_doc_review_comment(c.body or "") is not None
+    )
+    envelope = normalize_finding_envelope(parse_doc_review_comment(finding_comment.body) or {})
+
+    stripped_only = strip_review_round_blocks(logical_before).rstrip() + "\n\n## Safe-auto applied\n"
+    client = IssuesClient(transport_repo, "github-issues")
+    applied = apply_closed_round_stripped_body(
+        client,
+        issue_id="887",
+        unit_id=unit_id,
+        round_id=round_id,
+        stripped_body=stripped_only,
+        apply_envelopes=[envelope],
+    )
+    assert applied["verdict"] == "ok", applied
+    assert applied.get("idempotent") is False
+
+    after = client.issue_get("887")
+    logical_after = logical_issue_body(after)
+    assert witness_block_text(logical_after) == witness_before
+    assert "## Safe-auto applied" in logical_after

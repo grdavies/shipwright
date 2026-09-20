@@ -629,11 +629,11 @@
       "sourcePath": "core/skills/deliver/SKILL.md"
     },
     {
-      "bodyDigest": "967f8c74e4e9322d64e3be8c75ca666c383374279eb9d0bdfbec5f91282455e5",
+      "bodyDigest": "7d865b553a362209e0c1b2444675680967aa20e17a248db09db4767cd89c7931",
       "capabilities": [
         "skill.doc-review"
       ],
-      "description": "Review PRD drafts with parallel persona sub-agents and a synthesizer that auto-applies safe fixes. Use when Standard or Full tier needs persona panel review before freeze. Quick tier skips; does not generate tasks.",
+      "description": "Review PRD drafts with parallel persona sub-agents and a synthesizer that merges findings then applies safe fixes after the transport-appropriate close point. Use when Standard or Full tier needs persona panel review before freeze. Quick tier skips; does not generate tasks.",
       "id": "doc-review",
       "kind": "skill",
       "model": null,

@@ -1422,6 +1422,11 @@
 * merge phase retarget-361-wrap-goldens into feat/spec-rigor-punct-wrap (3ded055) <!-- sw-deliver:retarget-361-wrap-goldens -->
 * merge phase title-case-taxonomy-and-fail-closed-markers into feat/spec-rigor-punct-wrap (b8e636c) <!-- sw-deliver:title-case-taxonomy-and-fail-closed-markers -->
 * merge phase skill-text-and-emit into feat/spec-rigor-punct-wrap (d4d45bb) <!-- sw-deliver:skill-text-and-emit -->
+* merge phase align-skill-and-synthesis-reference-to-one-sequence into feat/doc-review-synth-order (31600b8) <!-- sw-deliver:align-skill-and-synthesis-reference-to-one-sequence -->
+* merge phase file-store-transport-stays-apply-after-synthesis into feat/doc-review-synth-order (390457f) <!-- sw-deliver:file-store-transport-stays-apply-after-synthesis -->
+* merge phase post-complete-apply-write-path into feat/doc-review-synth-order (c3ac155) <!-- sw-deliver:post-complete-apply-write-path -->
+* merge phase fixtures-for-body-drift-and-finding-text-non-persistence into feat/doc-review-synth-order (42e13bf) <!-- sw-deliver:fixtures-for-body-drift-and-finding-text-non-persistence -->
+* merge phase dist-emit-and-linear-wording into feat/doc-review-synth-order (ca35c98) <!-- sw-deliver:dist-emit-and-linear-wording -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
