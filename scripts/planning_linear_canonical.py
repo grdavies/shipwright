@@ -175,6 +175,19 @@ LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
     }
 )
 
+# PRD 366 D4 — parser-grade AST compare is explicitly out of scope for the 2.22.0 follow-up.
+LINEAR_PUBLIC_MARKDOWN_EQUIVALENCE_STRATEGY = "named-closed-set-families"
+LINEAR_PUBLIC_MARKDOWN_PARSER_GRADE_AST_COMPARE = "rejected"
+
+
+def linear_public_markdown_equivalence_strategy() -> dict[str, str]:
+    """Document the binding leftover equality method (stance A; stance D rejected)."""
+    return {
+        "strategy": LINEAR_PUBLIC_MARKDOWN_EQUIVALENCE_STRATEGY,
+        "parserGradeAstCompare": LINEAR_PUBLIC_MARKDOWN_PARSER_GRADE_AST_COMPARE,
+        "rewriteRegistry": "LINEAR_PUBLIC_MARKDOWN_R6_REWRITES",
+    }
+
 # PRD 359 R5 — fixture-enumerated punctuation unescape alphabet (excludes delimiter ticks).
 _LITERAL_PUNCTUATION_UNESCAPE_CHARS = frozenset(".,;:!?#'\"+-=&")
 
