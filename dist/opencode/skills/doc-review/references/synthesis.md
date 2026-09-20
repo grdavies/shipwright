@@ -6,7 +6,7 @@ marker-delimited `sw-doc-review` comments under a review-round manifest (PRD 341
 ## Review-round identity (R37)
 
 In-loop synthesis (same panel, same `roundId`, bounded to two passes) is **not** a new facade round.
-Reuse the open round's `roundId` through collect → verify → synthesize → complete/close.
+Reuse the open round's `roundId` through collect → verify → synthesize → complete → apply.
 
 Open a **new** `roundId` when any of these apply:
 
@@ -29,7 +29,7 @@ expected round has a completion receipt (GitHub v1 also requires closed body sta
 (`complete_review_round`). Findings use `apiVersion` `DocReviewFinding` envelopes; pins use
 `body-sha256/v1`.
 
-At synthesis checkpoint:
+At synthesis checkpoint (issue-store — complete then apply):
 
 1. **Post** — each `doc-review-round-post` adds a brokered `sw-doc-review` comment (no body pin yet).
 2. **Open** — `doc-review-round-open` writes the etag-guarded body witness with exhaustive pins.
@@ -37,14 +37,18 @@ At synthesis checkpoint:
 4. **Verify** — `doc-review-round-verify` checks bot authorship, marker/envelope consistency,
    manifest binding, and pin parity; fail closed with `doc-review-comment-drift`. Manifest mutations are one
    etag-guarded update per verb — `revision-conflict` halts without automatic retry; re-run the whole verb.
-5. **Synthesize** — only after verify passes; apply autofix routing below. Keep the same `roundId`.
-6. **Complete** — `doc-review-round-close` after synthesis (verify runs again before close + receipt).
+5. **Synthesize** — only after verify passes; merge/dedup findings **in memory** and decide dispositions.
+   Do **not** mutate the issue body here — completion re-verifies the closed witness. Keep the same `roundId`.
+6. **Complete** — `doc-review-round-close` against the **unchanged** witness (verify runs again before close +
+   receipt). Bounded-loop extra passes on the same `roundId` merge findings only and must finish before complete.
+7. **Apply** — on a **fresh read** after complete, apply `safe_auto` / gate `gated_auto` / `manual` while
+   preserving the closed witness on the body. Do not call verify or complete again on that `roundId`.
 
 ### In-flight bootstrap rounds (#1070 — open-then-post / close)
 
 Rounds opened before facade mapping finish on the shipped path: `doc-review-round-open` →
 persona `doc-review-round-post`(s) that append `updated_at` pins → verify → synthesize →
-`doc-review-round-close`. Accept shipped finding envelopes `{round, persona, payload}` (R43).
+`doc-review-round-close` → fresh-read apply. Accept shipped finding envelopes `{round, persona, payload}` (R43).
 Do not mix bootstrap envelopes into a **new** round open — that is `doc-review-mixed-schema`.
 
 **GitHub** and **Linear** issue-store transports are live when `docReviewComments` preflight passes.
@@ -65,14 +69,17 @@ non-authoritative — synthesis authority is the issue-store facade + draft unde
 1. **Collect** — gather JSON findings from each dispatched persona (in-IDE JSON or issue-store comments under manifest).
 2. **Validate** — drop findings that fail `findings-schema.json`.
 3. **Dedup/merge** — same section + same issue from multiple personas → single finding (highest severity wins).
-4. **Route by `autofix_class`:**
-   - `safe_auto` — apply `suggested_fix` silently to the PRD draft.
+4. **Route by `autofix_class` (disposition only until apply time):**
+   - `safe_auto` — mark for silent apply of `suggested_fix` to the PRD draft.
    - `gated_auto` — present fix; apply only after user confirms.
    - `manual` — surface as trade-off; halt orchestrator until user decides.
+   Do **not** mutate a body that will be re-verified at complete (issue-store). File-store has no closed
+   witness — apply after the synthesis report per `SKILL.md` Dispatch.
 5. **Docs-currency findings** (`sw-docs-currency-reviewer`) — recommended documentation-artifact updates
    (path + required change) fold into PRD requirements / tasks on acceptance via `gated_auto` or `manual`.
    Never silent auto-edit of docs or the parent file; never a hard freeze/ship block.
-6. **Report** — list applied fixes, gated items, manual trade-offs, residual risks.
+6. **Report** — list dispositions, gated items, manual trade-offs, residual risks (and applied fixes once
+   the transport-appropriate apply step has run).
 
 ## Disposition disputes (calibration-loop)
 
