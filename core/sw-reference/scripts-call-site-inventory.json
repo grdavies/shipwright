@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-09-19T17:10:25Z",
+  "generatedAt": "2026-09-20T02:28:33Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -7291,21 +7291,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:90:phase_sizing.py",
+      "id": "core/skills/spec-rigor/SKILL.md:93:phase_sizing.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 90,
+      "line": 93,
       "column": 92,
       "script": "phase_sizing.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "core/skills/spec-rigor/SKILL.md:105:spec-rigor-check.py",
-      "tree": "core/skills",
-      "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 105,
-      "column": 8,
-      "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
@@ -7318,19 +7309,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:109:traceability-check.py",
+      "id": "core/skills/spec-rigor/SKILL.md:111:spec-rigor-check.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 109,
+      "line": 111,
+      "column": 8,
+      "script": "spec-rigor-check.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/skills/spec-rigor/SKILL.md:112:traceability-check.py",
+      "tree": "core/skills",
+      "file": "core/skills/spec-rigor/SKILL.md",
+      "line": 112,
       "column": 8,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/spec-rigor/SKILL.md:149:sw_bootstrap.py",
+      "id": "core/skills/spec-rigor/SKILL.md:152:sw_bootstrap.py",
       "tree": "core/skills",
       "file": "core/skills/spec-rigor/SKILL.md",
-      "line": 149,
+      "line": 152,
       "column": 53,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -13789,21 +13789,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:90:phase_sizing.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:93:phase_sizing.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 90,
+      "line": 93,
       "column": 92,
       "script": "phase_sizing.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:105:spec-rigor-check.py",
-      "tree": "dist/claude-code/skills",
-      "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 105,
-      "column": 8,
-      "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
@@ -13816,19 +13807,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:109:traceability-check.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:111:spec-rigor-check.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 109,
+      "line": 111,
+      "column": 8,
+      "script": "spec-rigor-check.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:112:traceability-check.py",
+      "tree": "dist/claude-code/skills",
+      "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
+      "line": 112,
       "column": 8,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:149:sw_bootstrap.py",
+      "id": "dist/claude-code/skills/spec-rigor/SKILL.md:152:sw_bootstrap.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/spec-rigor/SKILL.md",
-      "line": 149,
+      "line": 152,
       "column": 53,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -19963,21 +19963,12 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:90:phase_sizing.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:93:phase_sizing.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 90,
+      "line": 93,
       "column": 92,
       "script": "phase_sizing.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:105:spec-rigor-check.py",
-      "tree": "dist/cursor/skills",
-      "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 105,
-      "column": 8,
-      "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
@@ -19990,19 +19981,28 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:109:traceability-check.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:111:spec-rigor-check.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 109,
+      "line": 111,
+      "column": 8,
+      "script": "spec-rigor-check.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:112:traceability-check.py",
+      "tree": "dist/cursor/skills",
+      "file": "dist/cursor/skills/spec-rigor/SKILL.md",
+      "line": 112,
       "column": 8,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/spec-rigor/SKILL.md:149:sw_bootstrap.py",
+      "id": "dist/cursor/skills/spec-rigor/SKILL.md:152:sw_bootstrap.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/spec-rigor/SKILL.md",
-      "line": 149,
+      "line": 152,
       "column": 53,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"

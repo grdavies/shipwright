@@ -63,8 +63,11 @@ Resolve or explicitly defer every open question before freeze:
 - Unresolved placeholders still fail closed: all-caps `TBD`/`TODO`/`FIXME`, casual lowercase of those
   tokens, `to be determined`, and `???`.
 - Context-aware defaults (no allowlist required): Title-case named states (e.g. NOR-7 **Todo**) and
-  lowercase slash-taxonomy segments (`idea/todo/note`) do **not** fail. Placeholder-shaped wraps
-  (`token:` / `[token]`) still fail unless listed.
+  lowercase slash-taxonomy segments (`idea/todo/note`) do **not** fail.
+- **Vocab-restricted punctuation wraps (PRD 364):** only unfinished-work tokens `TODO` / `TBD` / `FIXME`
+  (case-insensitive) count as wrap hits — `token:` or `[token]`. Any other word plus colon, or any other
+  bracket span, is **not** a wrapper hit. Wrap scans skip Markdown link/autolink **destinations** only;
+  colliding link **labels** still fail. Wraps run before Title-case masking in the layered matcher.
 - Optional frontmatter `reviewedLiterals` (YAML list of exact strings) suppresses exact matches only;
   a non-empty list requires a Decision Log entry naming each token. Not every case-insensitive
   word-boundary hit is unfinished work.
