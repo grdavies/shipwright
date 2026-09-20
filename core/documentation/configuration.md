@@ -2342,7 +2342,7 @@ python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.py genera
 python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" effective_config_gen.py project-docs --write
 ```
 
-Shipwright `2.21.0` · schema `config.schema.json`
+Shipwright `2.22.0` · schema `config.schema.json`
 
 | Setting | Schema default | Greenfield | Migration | Runtime fallback | Deprecated | Removed |
 | --- | --- | --- | --- | --- | --- | --- |

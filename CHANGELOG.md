@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.22.0](https://github.com/grdavies/shipwright/compare/v2.21.0...v2.22.0) (2026-09-20)
+
+
+### Features
+
+* **prd-363:** linear markdown equiv 221 ([#1269](https://github.com/grdavies/shipwright/issues/1269)) ([9ec088f](https://github.com/grdavies/shipwright/commit/9ec088f4edbad56b0a6c53a97f5107c3451992ce))
+* **prd-364:** spec rigor punct wrap ([#1277](https://github.com/grdavies/shipwright/issues/1277)) ([a96027c](https://github.com/grdavies/shipwright/commit/a96027ce0b5c4ee28a8dde6e9d3fb3a8981bdd4f))
+* **prd-365:** doc review synth order ([#1283](https://github.com/grdavies/shipwright/issues/1283)) ([ceaa369](https://github.com/grdavies/shipwright/commit/ceaa369572332efc3028590701d204380f5da312))
+
 ## [2.21.0](https://github.com/grdavies/shipwright/compare/v2.20.0...v2.21.0) (2026-09-19)
 
 
