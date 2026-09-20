@@ -7,7 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from issues_lib import IssueRevisionConflict
-from planning_linear_canonical import linear_public_markdown_equivalent
+from planning_linear_canonical import (
+    _r6_identity_tokens,
+    linear_public_markdown_equivalent,
+    linear_public_markdown_r6_form,
+)
 
 ISSUE_UNIT_INDEX = ".cursor/hooks/state/issue-store-unit-index.json"
 PUT_JOURNAL_PATH = ".cursor/hooks/state/issue-store-put-journal.json"
@@ -276,6 +280,25 @@ def r6_canonical_body(text: str, *, issues_provider: str, ps_mod: Any) -> str:
     return normalize_body(text)
 
 
+# PRD 366 D3 — TIE-8-sized bodies must not treat identity-token match as reconstruct-ok.
+LINEAR_OVERSIZED_BODY_UTF8_BYTES = 194_480
+
+
+def identity_only_linear_reconstruct_ok_rejected(expected: str, actual: str) -> bool:
+    """True when stance C would accept identity match but dual-gate rejects (oversized bodies)."""
+    oversized = (
+        max(len(expected.encode("utf-8")), len(actual.encode("utf-8")))
+        >= LINEAR_OVERSIZED_BODY_UTF8_BYTES
+    )
+    if not oversized:
+        return False
+    if _r6_identity_tokens(expected) != _r6_identity_tokens(actual):
+        return False
+    if linear_public_markdown_equivalent(expected, actual):
+        return False
+    return linear_public_markdown_r6_form(expected) != linear_public_markdown_r6_form(actual)
+
+
 def reconstruct_bodies_equivalent(
     expected: str, actual: str, *, issues_provider: str, ps_mod: Any
 ) -> bool:
@@ -287,6 +310,8 @@ def reconstruct_bodies_equivalent(
     not the R6 comparison form.
     """
     if issues_provider == "linear":
+        if identity_only_linear_reconstruct_ok_rejected(expected, actual):
+            return False
         return linear_public_markdown_equivalent(expected, actual)
     return r6_canonical_body(
         expected, issues_provider=issues_provider, ps_mod=ps_mod

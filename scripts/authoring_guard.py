@@ -33,6 +33,87 @@ LEGACY_UNIT_ID_RE = re.compile(r"^prd-(\d{3})-")
 # Pre-031 cutover: legacy INDEX uses not-started; frozen-but-unshipped PRDs amend as planned.
 LEGACY_INDEX_AMEND_STATUS = {"not-started": "planned"}
 
+# PRD 366 (linear-markdown-equiv-222) extending-unit stance ledger (D1–D5).
+PRD363_COMPLETE_PARENT_UNIT_ID = "363-prd-linear-markdown-equiv-221"
+PRD366_EXTENDING_UNIT_ID = "366-prd-linear-markdown-equiv-222"
+PRD366_BINDING_STANCE = "A"
+PRD366_REJECTED_STANCES = frozenset({"B", "C", "D"})
+PRD366_STANCE_SUMMARY: dict[str, str] = {
+    "A": "dual-gate named-family allowlist continuation for leftover 2.22.0 reconstruct",
+    "B": "witness unification only — required slice of A, not a substitute for leftover families",
+    "C": "identity-only reconstruct-ok — rejected; dual-gate remains binding",
+    "D": "parser-grade CommonMark/GFM AST compare — out of scope for this follow-up",
+}
+PRD366_IMMUTABLE_PATH_MARKERS = (
+    "docs/prds/363-linear-markdown-equiv-221/",
+    PRD363_COMPLETE_PARENT_UNIT_ID,
+    "test_prd363_linear_markdown_equiv.py",
+    "test_prd363_live_prove_after_package_install.py",
+    "prd363_fixture_lib.py",
+    "markdown-repro-2.21.0-family-map.json",
+    "prd363-redacted-comparison-families.json",
+)
+PRD366_ALLOWED_MUTATION_MARKERS = (
+    "366-linear-markdown-equiv-222",
+    PRD366_EXTENDING_UNIT_ID,
+    "test_prd366",
+    "prd366_fixture_lib.py",
+    "markdown-repro-2.22.0",
+    "planning_linear_canonical.py",
+    "planning/backends/issues_helpers.py",
+    "authoring-guard.py",
+    "authoring_guard.py",
+    "canonical-serialization.md",
+    "core/providers/issues/linear.md",
+    "dist/",
+)
+
+
+def prd366_extending_unit_policy() -> dict[str, Any]:
+    """Machine-readable PRD 366 extending-unit stance contract (phase 11 / D1–D5)."""
+    return {
+        "parentCompleteUnitId": PRD363_COMPLETE_PARENT_UNIT_ID,
+        "extendingUnitId": PRD366_EXTENDING_UNIT_ID,
+        "bindingStance": PRD366_BINDING_STANCE,
+        "rejectedStances": sorted(PRD366_REJECTED_STANCES),
+        "stanceSummary": dict(PRD366_STANCE_SUMMARY),
+        "immutablePathMarkers": list(PRD366_IMMUTABLE_PATH_MARKERS),
+        "allowedMutationMarkers": list(PRD366_ALLOWED_MUTATION_MARKERS),
+        "method": "dual-gate-named-family-allowlist-continuation",
+    }
+
+
+def reject_prd366_stance_substitute(stance: str) -> dict[str, Any]:
+    """Refuse stance B/C/D when proposed as the whole unit method (D2–D4)."""
+    normalized = stance.strip().upper()
+    if normalized == PRD366_BINDING_STANCE:
+        return {"verdict": "pass", "stance": normalized, "binding": True}
+    if normalized not in PRD366_REJECTED_STANCES:
+        return {
+            "verdict": "fail",
+            "stance": normalized,
+            "error": "unknown prd366 stance",
+            "bindingStance": PRD366_BINDING_STANCE,
+        }
+    return {
+        "verdict": "fail",
+        "stance": normalized,
+        "error": "prd366 stance rejected as unit substitute",
+        "summary": PRD366_STANCE_SUMMARY[normalized],
+        "bindingStance": PRD366_BINDING_STANCE,
+        "requiredMethod": prd366_extending_unit_policy()["method"],
+    }
+
+
+def classify_prd366_mutation_path(rel_path: str) -> str:
+    """Classify a repo-relative path for extending-unit mutation policy (R14/D5)."""
+    norm = rel_path.replace("\\", "/")
+    if any(marker in norm for marker in PRD366_IMMUTABLE_PATH_MARKERS):
+        return "immutable-363"
+    if any(marker in norm for marker in PRD366_ALLOWED_MUTATION_MARKERS):
+        return "allowed-366"
+    return "out-of-scope"
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
