@@ -32,6 +32,17 @@ COMMITTED_FAMILY_MAP = Path(
 )
 DEFAULT_STUCK_ISSUE_IDENTIFIER = "TIE-8"
 
+FORBIDDEN_REDACTED_SUBSTRINGS = (
+    "Authorization:",
+    "Bearer ",
+    "upsertDiscount",
+    "listDiscounts",
+    "Tierforge.dev",
+    "linear.app/acme",
+    "RED-1",
+    "sw:token",
+)
+
 
 class WitnessUnavailableError(RuntimeError):
     """Raised when neither private 2.22.0 bytes nor a live TIE-8 re-read is available."""
@@ -211,3 +222,52 @@ def load_committed_family_map(repo_root: Path) -> dict[str, Any]:
     if not path.is_file():
         raise FileNotFoundError(f"missing committed family map: {path}")
     return load_json(path)
+
+
+def validate_redacted_families(data: dict[str, Any]) -> list[str]:
+    errors: list[str] = []
+    if data.get("version") != "2.22.0-redacted":
+        errors.append("redacted families version must be 2.22.0-redacted")
+    pairs = data.get("pairs")
+    mutants = data.get("mutants")
+    if not isinstance(pairs, list) or not pairs:
+        errors.append("redacted families pairs must be a non-empty list")
+    if not isinstance(mutants, list) or not mutants:
+        errors.append("redacted families mutants must be a non-empty list")
+    blob = json.dumps(data, ensure_ascii=False)
+    for needle in FORBIDDEN_REDACTED_SUBSTRINGS:
+        if needle in blob:
+            errors.append(f"redacted fixture must not contain private corpus marker: {needle}")
+    for label, rows in (("pairs", pairs), ("mutants", mutants)):
+        if not isinstance(rows, list):
+            continue
+        for idx, row in enumerate(rows):
+            if not isinstance(row, dict):
+                errors.append(f"{label}[{idx}] must be an object")
+                continue
+            for key in ("id", "family", "requirementId", "submitted", "refetched"):
+                if not isinstance(row.get(key), str) or not row.get(key):
+                    errors.append(f"{label}[{idx}] missing {key}")
+            if row.get("requirementId") not in PRD366_ALLOWED_REQUIREMENT_IDS:
+                errors.append(f"{label}[{idx}] invalid requirementId")
+    return errors
+
+
+def family_map_covers_redacted_pairs(
+    family_map: dict[str, Any], redacted: dict[str, Any]
+) -> list[str]:
+    errors: list[str] = []
+    leftovers = family_map.get("leftovers") or []
+    ref_ids = {row.get("redactedFixtureId") for row in leftovers if isinstance(row, dict)}
+    pair_ids = {
+        row.get("id")
+        for row in (redacted.get("pairs") or [])
+        if isinstance(row, dict)
+    }
+    missing = sorted(pair_ids - ref_ids)
+    extra = sorted(ref_ids - pair_ids)
+    if missing:
+        errors.append(f"family-map missing redactedFixtureId for pair ids: {missing}")
+    if extra:
+        errors.append(f"family-map references unknown redactedFixtureId: {extra}")
+    return errors

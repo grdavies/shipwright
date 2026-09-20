@@ -198,6 +198,8 @@ _BARE_DOMAIN = re.compile(
     r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+"
     r"(?:/[^\s)\]>\"']*)?)"
 )
+_VERSION_TOKEN = re.compile(r"^v\d+(?:\.\d+)*$", re.IGNORECASE)
+_SECTION_TOKEN = re.compile(r"^§?\d+(?:\.\d+)+$")
 # Underscore is a word char, so `\bR6\b` misses `__R6__` Linear bold delimiters.
 _RID_TOKEN = re.compile(r"(?<![A-Za-z0-9])([RD]\d+)(?![A-Za-z0-9])")
 _UUID_TOKEN = re.compile(
@@ -227,9 +229,19 @@ def _placeholder_restore(text: str, stored: list[str], prefix: str) -> str:
     return text
 
 
+def _looks_like_version_or_section_token(label: str) -> bool:
+    """PRD 366 R4 — semver and section refs are not bare domains."""
+    host = label.strip().split("/", 1)[0]
+    if _VERSION_TOKEN.fullmatch(host):
+        return True
+    return bool(_SECTION_TOKEN.fullmatch(host))
+
+
 def _looks_like_domain(label: str) -> bool:
     stripped = label.strip()
     if not stripped or " " in stripped:
+        return False
+    if _looks_like_version_or_section_token(stripped):
         return False
     return bool(_BARE_DOMAIN.fullmatch(stripped))
 
@@ -489,9 +501,15 @@ def _normalize_autolinks(text: str) -> str:
             return canon
         return f"[{label}]({canon})"
 
+    def _bare_domain_sub(match: re.Match[str]) -> str:
+        raw = match.group(1)
+        if not _looks_like_domain(raw):
+            return raw
+        return _canon_url(raw)
+
     text = _MD_LINK.sub(_md_link, text)
     text = _AUTO_LINK.sub(lambda match: _autolink_comparison_url(match.group(1)), text)
-    return _BARE_DOMAIN.sub(lambda match: _canon_url(match.group(1)), text)
+    return _BARE_DOMAIN.sub(_bare_domain_sub, text)
 
 
 def _r6_rewrite_outside_code(text: str) -> str:
@@ -565,7 +583,9 @@ def _extract_links(text: str) -> tuple[str, ...]:
         found.add(_autolink_identity(match.group(1)))
         remainder = remainder.replace(match.group(0), " ", 1)
     for match in _BARE_DOMAIN.finditer(remainder):
-        found.add(_bare_domain_link_identity(match.group(1)))
+        raw = match.group(1)
+        if _looks_like_domain(raw):
+            found.add(_bare_domain_link_identity(raw))
     return tuple(sorted(found))
 
 

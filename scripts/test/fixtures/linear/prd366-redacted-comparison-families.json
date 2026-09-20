@@ -1,0 +1,73 @@
+{
+  "version": "2.22.0-redacted",
+  "source": "synthetic-family-minimal-prd366-phase2",
+  "pairs": [
+    {
+      "id": "lr01",
+      "family": "version-section-token-domain-rewrite",
+      "requirementId": "R4",
+      "submitted": "Cutover targets v0.3 after sign-off.\n",
+      "refetched": "Cutover targets v0.3 after sign-off.\n"
+    },
+    {
+      "id": "lr02",
+      "family": "version-section-token-domain-rewrite",
+      "requirementId": "R4",
+      "submitted": "Follow §5.3 for acceptance criteria.\n",
+      "refetched": "Follow §5.3 for acceptance criteria.\n"
+    },
+    {
+      "id": "lr03",
+      "family": "implicit-domain-http-autolink",
+      "requirementId": "R5",
+      "submitted": "See docs.example.test/path today.\n",
+      "refetched": "See <http://docs.example.test/path> today.\n"
+    },
+    {
+      "id": "lr04",
+      "family": "implicit-domain-http-autolink",
+      "requirementId": "R5",
+      "submitted": "Also visit api.example.test/v1 today.\n",
+      "refetched": "Also visit <http://api.example.test/v1> today.\n"
+    },
+    {
+      "id": "lr05",
+      "family": "mixed-bold-inline-code-both-sides-unwrap",
+      "requirementId": "R6",
+      "submitted": "Call **`fn-a`** and **`fn-b`** in one phrase.\n",
+      "refetched": "Call **`fn-a`** and `fn-b` in one phrase.\n"
+    },
+    {
+      "id": "lr06",
+      "family": "mixed-bold-inline-code-both-sides-unwrap",
+      "requirementId": "R6",
+      "submitted": "Ship **`svc-one`**, then **`svc-two`**.\n",
+      "refetched": "Ship `svc-one`, then **`svc-two`**.\n"
+    },
+    {
+      "id": "lr07",
+      "family": "acceptance-criteria-underscore-full-line",
+      "requirementId": "R7",
+      "submitted": "_Acceptance criteria line_\n",
+      "refetched": "Acceptance criteria line\n"
+    }
+  ],
+  "mutants": [
+    {
+      "id": "r4-version-https-mutant",
+      "family": "version-section-token-domain-rewrite",
+      "requirementId": "R4",
+      "submitted": "Cutover targets v0.3 after sign-off.\n",
+      "refetched": "Cutover targets https://v0.3 after sign-off.\n",
+      "expectEquivalent": false
+    },
+    {
+      "id": "r4-section-https-mutant",
+      "family": "version-section-token-domain-rewrite",
+      "requirementId": "R4",
+      "submitted": "Follow §5.3 for acceptance.\n",
+      "refetched": "Follow §https://5.3 for acceptance.\n",
+      "expectEquivalent": false
+    }
+  ]
+}
