@@ -202,6 +202,51 @@ class TestPrd366Phase3ImplicitAutolinkUnification:
                     )
 
 
+class TestPrd366Phase4MixedBoldInlineCodeBothSidesUnwrap:
+    @staticmethod
+    def _r6_pairs() -> list[dict[str, str]]:
+        data = load_json(REDACTED_FAMILIES)
+        return [
+            row
+            for row in data["pairs"]
+            if row.get("family") == "mixed-bold-inline-code-both-sides-unwrap"
+        ]
+
+    def test_named_family_registered(self) -> None:
+        assert "mixed-bold-inline-code-both-sides-unwrap" in LINEAR_PUBLIC_MARKDOWN_R6_REWRITES
+        assert "bold-around-inline-code" in LINEAR_PUBLIC_MARKDOWN_R6_REWRITES
+
+    def test_redacted_r6_pairs_pass_equivalent(self) -> None:
+        for row in self._r6_pairs():
+            assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]), row[
+                "id"
+            ]
+
+    def test_half_unwrap_fails_without_mixed_phrase_family(self) -> None:
+        import planning_linear_canonical as plc
+
+        left = "Call **`fn-a`** and **`fn-b`** in one phrase.\n"
+        right = "Call **`fn-a`** and `fn-b` in one phrase.\n"
+        assert left != right
+        orig = plc._normalize_mixed_bold_inline_code_both_sides_unwrap
+        plc._normalize_mixed_bold_inline_code_both_sides_unwrap = lambda text: text
+        try:
+            assert linear_public_markdown_r6_form(left) != linear_public_markdown_r6_form(right)
+        finally:
+            plc._normalize_mixed_bold_inline_code_both_sides_unwrap = orig
+        assert linear_public_markdown_equivalent(left, right)
+
+    def test_code_content_mutant_fails(self) -> None:
+        left = "Call **`fn-a`** and **`fn-b`** in one phrase.\n"
+        right = "Call **`fn-a`** and **`fn-other`** in one phrase.\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+
+    def test_single_span_still_uses_bold_around_inline_code(self) -> None:
+        left = "Keep **`token`** here.\n"
+        right = "Keep `token` here.\n"
+        assert linear_public_markdown_equivalent(left, right)
+
+
 class TestPrd366Phase11ExtendingUnitStance:
     def test_binding_stance_a_and_rejected_b_c_d(self) -> None:
         policy = authoring_guard.prd366_extending_unit_policy()

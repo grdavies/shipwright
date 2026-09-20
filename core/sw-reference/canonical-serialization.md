@@ -70,6 +70,7 @@ rewrite families as equal:
 - `table-formatting`
 - `plain-domain-autolink`
 - `bold-around-inline-code`
+- `mixed-bold-inline-code-both-sides-unwrap`
 - `italic-delimiter`
 - `ordered-list-leading-space`
 - `literal-punctuation-escape`
