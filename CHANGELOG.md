@@ -1440,6 +1440,7 @@
 * merge phase extending-unit-stance-and-363-immutability into feat/linear-markdown-equiv-222 (c106c5d) <!-- sw-deliver:extending-unit-stance-and-363-immutability -->
 * merge phase version-and-section-tokens-are-not-domains into feat/linear-markdown-equiv-222 (fdd1137) <!-- sw-deliver:version-and-section-tokens-are-not-domains -->
 * merge phase unify-implicit-autolink-identity-and-comparison into feat/linear-markdown-equiv-222 (5b58136) <!-- sw-deliver:unify-implicit-autolink-identity-and-comparison -->
+* merge phase mixed-bold-and-inline-code-both-sides-unwrap into feat/linear-markdown-equiv-222 (9812b47) <!-- sw-deliver:mixed-bold-and-inline-code-both-sides-unwrap -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
