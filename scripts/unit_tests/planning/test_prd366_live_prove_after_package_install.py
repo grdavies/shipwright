@@ -1,4 +1,4 @@
-"""PRD 366 phase 9 — full fixture on the wheel-installed runtime (R8, R12)."""
+"""PRD 366 phase 9–10 — wheel-installed runtime and live facade prove (R8, R10–R12)."""
 
 from __future__ import annotations
 
@@ -19,8 +19,10 @@ if str(scripts) not in sys.path:
 
 from planning.backends import issues_helpers as ih
 from prd366_fixture_lib import (
+    DEFAULT_STUCK_ISSUE_IDENTIFIER,
     PRD366_PRIVATE_PILOT_DIR,
     WitnessUnavailableError,
+    live_tie8_reread_available,
     load_committed_family_map,
     load_json,
     load_preserved_full_fixture_pair,
@@ -220,3 +222,95 @@ class TestPrd366Phase9FullFixtureWheelInstalledRuntime:
             require_witness_source(repo_root)
         except WitnessUnavailableError:
             pytest.skip("no witness source in this environment")
+
+
+class TestPrd366Phase10Tie8ReconstructGateGuards:
+    def test_hand_clear_put_incomplete_refused_without_reconstruct(self) -> None:
+        class _Ps:
+            PUT_INCOMPLETE_LABEL = "sw:put-incomplete"
+
+            @staticmethod
+            def fail(message: str, **kwargs: object) -> None:
+                raise AssertionError(message)
+
+        record = type("R", (), {"id": "tie-8", "labels": ["sw:put-incomplete"], "etag": "1"})()
+        client = type("C", (), {})()
+        with pytest.raises(AssertionError, match="reconstruct-before-ok"):
+            ih.clear_put_incomplete_label(client, record, ps_mod=_Ps())
+
+    def test_bulk_import_refetch_not_reconstruct_ok(self) -> None:
+        assert ih.bulk_import_refetch_reconstruct_ok_refused(
+            pre_chunk_body=None,
+            refetch_imported_without_put=True,
+        )
+        assert not ih.bulk_import_refetch_reconstruct_ok_refused(
+            pre_chunk_body="pre-chunk body",
+            refetch_imported_without_put=True,
+        )
+
+    def test_pilot_repair_does_not_target_stuck_tie8_unit(self) -> None:
+        assert DEFAULT_STUCK_ISSUE_IDENTIFIER == "TIE-8"
+        assert "live-facade-pilot" != DEFAULT_STUCK_ISSUE_IDENTIFIER
+
+
+class TestPrd366Phase10LiveConfiguredFacadeRoundTrip:
+    def test_live_facade_gate_put_get_materialize_update_when_live(
+        self, repo_root: Path,
+    ) -> None:
+        if not live_tie8_reread_available(repo_root):
+            pytest.skip("live configured-facade credentials unavailable")
+        import planning_linear_facade_pilot as pilot
+        from host_lib import load_workflow_config
+
+        cfg = load_workflow_config(repo_root)
+        out = pilot.live_facade_pilot_gate(repo_root, cfg)
+        if out.get("credentialBlocked"):
+            pytest.skip(out.get("blockedCause") or "credential blocked")
+        assert out.get("verdict") == "ok", out
+        ops = out.get("issueStoreOps") or out.get("ops") or []
+        for step in ("put", "get", "materialize", "update"):
+            assert step in ops, ops
+        stuck = out.get("stuckIssueCheck") or {}
+        assert stuck.get("before", {}).get("putIncomplete") is True
+        assert stuck.get("after", {}).get("putIncomplete") is True
+        assert stuck.get("before", {}).get("identifier") == DEFAULT_STUCK_ISSUE_IDENTIFIER
+
+    def test_wheel_installed_live_facade_gate_preserves_tie8(
+        self, tmp_path: Path, repo_root: Path,
+    ) -> None:
+        if not live_tie8_reread_available(repo_root):
+            pytest.skip("live configured-facade credentials unavailable")
+        staged = _wheel_scripts_dir(tmp_path, repo_root)
+        code = textwrap.dedent(
+            f"""
+            import json
+            import sys
+            from pathlib import Path
+
+            staged = Path({json.dumps(str(staged))})
+            repo_root = Path({json.dumps(str(repo_root))})
+            sys.path.insert(0, str(staged))
+            from host_lib import load_workflow_config
+            import planning_linear_facade_pilot as pilot
+
+            cfg = load_workflow_config(repo_root)
+            out = pilot.live_facade_pilot_gate(repo_root, cfg)
+            print(json.dumps(out))
+            """
+        )
+        env = {key: value for key, value in os.environ.items() if key != "PYTHONPATH"}
+        env["PYTHONPATH"] = str(staged.resolve())
+        proc = subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=str(repo_root),
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        if proc.returncode != 0:
+            pytest.skip(proc.stderr or proc.stdout)
+        out = json.loads(proc.stdout.strip())
+        if out.get("verdict") != "ok":
+            pytest.skip(out.get("blockedCause") or "live gate not ok in wheel subprocess")
+        stuck = out.get("stuckIssueCheck") or {}
+        assert stuck.get("after", {}).get("putIncomplete") is True

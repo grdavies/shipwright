@@ -693,7 +693,9 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
             record = verify_reconstruct_before_ok_if_linear(
                 self, record, pre_chunk_body=pre_chunk_body, ps_mod=_ps()
             )
-            record = clear_put_incomplete_label(self._client, record, ps_mod=_ps())
+            record = clear_put_incomplete_label(
+                self._client, record, ps_mod=_ps(), reconstruct_verified=True
+            )
         if chunked:
             self._mutate_journal(lambda journal: journal.pop(idx_key, None))
         digest = _ps().canonical_hash(self._record_to_snapshot(record))
