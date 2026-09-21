@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.23.0](https://github.com/grdavies/shipwright/compare/v2.22.0...v2.23.0) (2026-09-21)
+
+
+### Features
+
+* **dispatch:** consumer runtime roots and Codex reasoning effort ([#1297](https://github.com/grdavies/shipwright/issues/1297)) ([09f4aaf](https://github.com/grdavies/shipwright/commit/09f4aaf3cf0b6a4e7af22079450e44cfc75a8a37))
+* **prd-366:** linear markdown equiv 222 ([#1295](https://github.com/grdavies/shipwright/issues/1295)) ([9280e8a](https://github.com/grdavies/shipwright/commit/9280e8a3cc86ed7c9d76641235f7b7c1bc91b220))
+
 ## [2.22.0](https://github.com/grdavies/shipwright/compare/v2.21.0...v2.22.0) (2026-09-20)
 
 
