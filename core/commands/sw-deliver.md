@@ -470,6 +470,9 @@ Before each phase/terminal delegated Task from `/sw-deliver`:
 1. `python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-deliver --skill conductor`
 2. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-deliver --skill conductor --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Dispatch Task with explicit concrete `model:` and resolved caveman intensity context; never rely on inherited model.
+   When binding emits `reasoningEffort`, pass it as Codex `reasoning_effort` alongside the model.
+   When tiers share a model, supply `--parent-tier` matching the parent dispatch tier; do not
+   infer the tier from the first matching model ID.
 
 Resolve model: `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command <child-slug>` (or `--skill conductor`).
 Resolve intensity: `python3 scripts/resolve-intensity.py --command sw-deliver --skill conductor`.

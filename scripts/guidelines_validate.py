@@ -13,7 +13,11 @@ GUIDELINES_REL = Path("core/sw-reference/guidelines.json")
 
 
 def guidelines_path(root: Path) -> Path:
-    return root / GUIDELINES_REL
+    from init_profile_report import resolve_sw_reference_file
+
+    return resolve_sw_reference_file(
+        root, GUIDELINES_REL, script_dir=Path(__file__).resolve().parent
+    ) or root / GUIDELINES_REL
 
 
 def load_guidelines(root: Path) -> dict[str, Any]:

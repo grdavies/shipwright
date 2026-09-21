@@ -66,7 +66,10 @@ def sub_branch_name(feature_slug_value: str, phase_slug: str, ref_id: str) -> st
 
 
 def load_dependency_rules(root: Path) -> dict[str, Any]:
-    path = root / RULES_REL
+    from init_profile_report import resolve_sw_reference_file
+
+    path = resolve_sw_reference_file(root, RULES_REL, script_dir=Path(__file__).resolve().parent)
+    path = path or root / RULES_REL
     if not path.is_file():
         fail(f"missing dependency rules: {RULES_REL}")
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -521,7 +524,7 @@ def cmd_provision_sub_branch(root: Path, args: argparse.Namespace) -> int:
             "--task-ref",
             args.task_ref,
         ],
-        cwd=str(Path(__file__).resolve().parent.parent),
+        cwd=str(root),
         text=True,
         capture_output=True,
     )
@@ -551,7 +554,7 @@ def cmd_teardown_sub_branch(root: Path, args: argparse.Namespace) -> int:
     script = Path(__file__).resolve().parent / "worktree.py"
     proc = subprocess.run(
         [sys.executable, str(script), "teardown", name, "--force"],
-        cwd=str(Path(__file__).resolve().parent.parent),
+        cwd=str(root),
         text=True,
         capture_output=True,
     )

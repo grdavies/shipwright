@@ -107,9 +107,8 @@ def _load_workflow_config_jsonc(root: Path) -> dict:
 
 
 def repo_root(start: Path | None = None) -> Path:
-    script_root = SCRIPT_DIR.parent
-    if any(p.is_file() for p in _workflow_config_candidates(script_root)):
-        return script_root
+    # Repository operations belong to the caller, even when the shared runtime
+    # is itself a configured Shipwright checkout.
     start = start or Path.cwd()
     proc = subprocess.run(
         ["git", "-C", str(start), "rev-parse", "--show-toplevel"],

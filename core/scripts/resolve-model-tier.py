@@ -34,10 +34,11 @@ def main(argv: list[str] | None = None) -> int:
     defaults_path = args.defaults or str(root / "core/sw-reference/model-routing.defaults.json")
     config_path = args.config
     if not config_path:
-        for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
-            if candidate.is_file():
-                config_path = str(candidate)
-                break
+        from shipwright_paths import workflow_config_path
+
+        resolved = workflow_config_path(Path.cwd())
+        if resolved is not None:
+            config_path = str(resolved)
 
     tier_arg, command, skill, agent, delegate = (
         args.tier,
@@ -96,7 +97,15 @@ def main(argv: list[str] | None = None) -> int:
                 cause=str(allow.get("cause") or "binding:model-not-allowlisted"),
                 modelId=model_id,
             )
+        from model_reasoning import resolve_reasoning_effort
+
+        try:
+            effort = resolve_reasoning_effort(models, name, str(allow["modelId"]))
+        except ValueError as exc:
+            fail(str(exc), cause="binding:invalid-reasoning-effort")
         payload = {"tier": name, "modelId": allow["modelId"], "source": source}
+        if effort is not None:
+            payload["reasoningEffort"] = effort
         if allow.get("aliasFrom"):
             payload["aliasFrom"] = allow["aliasFrom"]
         print(json.dumps(payload))

@@ -1621,6 +1621,9 @@ def ensure_exclusive_run_lease(
             "run-lease-generation-stale",
             "run-lease-missing",
             "run-lease-stale-self",
+            # Acquisition checks heartbeat, PID and host before reclaiming;
+            # a held fence alone cannot distinguish a crashed previous driver.
+            "run-lease-held",
         ):
             acquired = provider.acquire(
                 run_id, source_task_list=task_list_arg
@@ -5108,6 +5111,27 @@ def cmd_deliver_loop(root: Path, args: list[str]) -> None:
 
     state = load_state(root, task_list)
     plan, state = resolve_plan_with_adoption(root, state, task_list)
+    # Provisioning can precede plan/run initialization. Bind only a validated,
+    # explicit fresh-entry source before adoption checks its identity; never
+    # overwrite identity on an existing run or accept a different target.
+    if task_list and not any(state.get(key) for key in (
+        "source_task_list", "runId", "scopedRunId", "phases"
+    )) and not plan:
+        from wave_deliver import (
+            parse_frontmatter, require_task_list_frozen,
+            resolve_run_entry_target, _task_list_path_for_light_derive,
+        )
+
+        task_path = _task_list_path_for_light_derive(root, task_list)
+        frontmatter = parse_frontmatter(task_path.read_text(encoding="utf-8"))
+        require_task_list_frozen(root, task_list, frontmatter)
+        target = resolve_run_entry_target(root, task_list, args)["branch"]
+        recorded_target = (state.get("target") or {}).get("branch")
+        if recorded_target and recorded_target != target:
+            fail("fresh entry task list does not match orchestrator target",
+                 exit_code=20, halt="orchestrator-adopt",
+                 cause="adopt:task-list-target-mismatch")
+        state["source_task_list"] = task_list
     resumed = bool(state.get("verdict") == "running" and state.get("phases"))
     if task_list and resumed:
         entry = apply_resume_entry(root, state, plan, args)

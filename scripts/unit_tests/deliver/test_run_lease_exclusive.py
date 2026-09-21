@@ -132,3 +132,26 @@ def test_two_adopters_only_one_drives(repo: Path) -> None:
     held = json.loads(lock_path.read_text(encoding="utf-8"))
     assert held["pid"] == os.getpid() + 111111
     assert held["generation"] == gen
+
+
+@pytest.mark.parametrize("live", [False, True])
+def test_recorded_generation_reclaims_only_dead_stale_owner(repo: Path, live: bool) -> None:
+    run_id = "deliver-recorded-generation"
+    first = acquire_run_lease(repo, run_id)
+    lock_path = run_lease_path_for(repo, run_id)
+    meta = json.loads(lock_path.read_text())
+    meta.update(pid=os.getpid() + 999999, heartbeatAt="2000-01-01T00:00:00Z")
+    lock_path.write_text(json.dumps(meta))
+    state = {"runId": run_id, "runLease": {"runId": run_id, "generation": first["generation"]}}
+    with patch("wave_lock.ship_lease_pid_alive", return_value=live), patch(
+        "wave_lock.run_lease_owner_live", return_value=live
+    ):
+        if live:
+            with pytest.raises(SystemExit):
+                ensure_exclusive_run_lease(repo, state)
+            assert json.loads(lock_path.read_text())["pid"] == meta["pid"]
+        else:
+            result = ensure_exclusive_run_lease(repo, state)
+            assert result["verdict"] == "pass"
+            assert state["runLease"]["generation"] > first["generation"]
+            assert json.loads(lock_path.read_text())["pid"] == os.getpid()

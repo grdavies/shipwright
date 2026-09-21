@@ -12,7 +12,8 @@
     "gemini-3-flash",
     "gemini-3.1-pro",
     "gpt-5.6-sol-medium",
-    "gpt-5.6-terra-medium"
+    "gpt-5.6-terra-medium",
+    "gpt-6-astra"
   ],
   "aliases": {
     "gpt-5.5-medium": "gpt-5.6-terra-medium",
