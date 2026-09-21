@@ -60,9 +60,16 @@ succeeds**. Linear overflow reconstruct-before-ok requires:
 
 Nested `sw-chunk-manifest` fragments inside overflow comments are a failed write.
 Unscoped positional fallback of foreign or superseded overflow is a failed write.
-Original bytes remain the freeze/hash witness (`original_bytes_hash_body`).
+Original bytes remain the freeze/hash witness (`original_bytes_hash_body`). The R6
+**comparison form** (`linear_public_markdown_r6_form`) is an in-memory witness for
+`linear_public_markdown_equivalent()` and reconstruct-before-ok only — it is **never
+posted** to Linear `Issue.description` or overflow comments; adapters persist original
+bytes (after newline normalize), not comparison form.
+
 `linear_public_markdown_equivalent()` may treat only the named Linear Public Markdown
 rewrite families as equal:
+
+Silent undocumented equality is not supported — only the closed-set members below.
 
 - `list-marker`
 - `bold-delimiter`
@@ -70,7 +77,7 @@ rewrite families as equal:
 - `table-formatting`
 - `plain-domain-autolink`
 - `bold-around-inline-code`
-- `mixed-bold-inline-code-both-sides-unwrap`
+- `mixed-bold-inline-code-both-sides-unwrap` (PRD 366 R6)
 - `italic-delimiter`
 - `ordered-list-leading-space`
 - `literal-punctuation-escape`
