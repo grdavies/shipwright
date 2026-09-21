@@ -443,7 +443,64 @@ def verify_reconstruct_before_ok(
     return record
 
 
-def clear_put_incomplete_label(client: Any, record: Any, *, ps_mod: Any) -> Any:
+def refuse_hand_clear_put_incomplete_without_reconstruct(
+    *,
+    reconstruct_verified: bool,
+    ps_mod: Any,
+    issue_id: str | None = None,
+) -> None:
+    """PRD 366 R11 — incomplete markers must not clear without reconstruct-before-ok."""
+    if reconstruct_verified:
+        return
+    ps_mod.fail(
+        "reconstruct-before-ok",
+        code="put-incomplete-hand-clear-refused",
+        issueId=issue_id,
+    )
+
+
+def bulk_import_refetch_reconstruct_ok_refused(
+    *,
+    pre_chunk_body: str | None,
+    refetch_imported_without_put: bool,
+) -> bool:
+    """PRD 366 R11 — bulk-imported refetch is not a substitute for reconstruct-before-ok."""
+    if not refetch_imported_without_put:
+        return False
+    return not (isinstance(pre_chunk_body, str) and pre_chunk_body.strip())
+
+
+def refuse_bulk_import_refetch_as_reconstruct_ok(
+    *,
+    pre_chunk_body: str | None,
+    refetch_imported_without_put: bool,
+    ps_mod: Any,
+    issue_id: str | None = None,
+) -> None:
+    if bulk_import_refetch_reconstruct_ok_refused(
+        pre_chunk_body=pre_chunk_body,
+        refetch_imported_without_put=refetch_imported_without_put,
+    ):
+        ps_mod.fail(
+            "reconstruct-before-ok",
+            code="bulk-import-refetch-not-reconstruct-ok",
+            issueId=issue_id,
+        )
+
+
+def clear_put_incomplete_label(
+    client: Any,
+    record: Any,
+    *,
+    ps_mod: Any,
+    reconstruct_verified: bool = False,
+) -> Any:
+    if ps_mod.PUT_INCOMPLETE_LABEL in record.labels:
+        refuse_hand_clear_put_incomplete_without_reconstruct(
+            reconstruct_verified=reconstruct_verified,
+            ps_mod=ps_mod,
+            issue_id=str(getattr(record, "id", "") or ""),
+        )
     final_labels = sorted(set(record.labels) - {ps_mod.PUT_INCOMPLETE_LABEL})
     if final_labels == sorted(record.labels):
         return record
