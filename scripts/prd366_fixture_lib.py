@@ -253,6 +253,62 @@ def validate_redacted_families(data: dict[str, Any]) -> list[str]:
     return errors
 
 
+@dataclass(frozen=True)
+class PreservedFullFixturePair:
+    """Full preserved submit/readback witness for PRD 366 R8 (not redacted family excerpts)."""
+
+    submitted: str
+    refetched: str
+    witness_kind: WitnessKind
+    source_path: str
+
+
+def _markdown_repro_pair(data: dict[str, Any]) -> tuple[str, str]:
+    submitted = data.get("submitMarkdown") or data.get("submittedMarkdown") or data.get("submitted")
+    refetched = data.get("refetchedMarkdown") or data.get("refetched")
+    if not isinstance(submitted, str) or not submitted.strip():
+        raise ValueError("witness fixture missing submitMarkdown")
+    if not isinstance(refetched, str) or not refetched.strip():
+        raise ValueError("witness fixture missing refetchedMarkdown")
+    return submitted, refetched
+
+
+def load_preserved_full_fixture_pair(repo_root: Path) -> PreservedFullFixturePair:
+    """Load the full 2.22.0 preserved input/readback pair (private bytes or live re-read)."""
+    witness = require_witness_source(repo_root)
+    root = Path(repo_root).resolve()
+    if witness.kind == WitnessKind.PRIVATE_PILOT and witness.pilot_dir is not None:
+        repro = witness.pilot_dir / PRD366_MARKDOWN_REPRO.name
+        if not repro.is_file():
+            recheck = witness.pilot_dir / PRD366_RUNTIME_RECHECK.name
+            if recheck.is_file():
+                repro = recheck
+            else:
+                raise FileNotFoundError(f"missing private markdown repro: {repro}")
+        data = load_json(repro)
+        submitted, refetched = _markdown_repro_pair(data)
+        return PreservedFullFixturePair(
+            submitted=submitted,
+            refetched=refetched,
+            witness_kind=witness.kind,
+            source_path=str(repro.relative_to(root)),
+        )
+    recheck = root / PRD366_RUNTIME_RECHECK
+    if recheck.is_file():
+        data = load_json(recheck)
+        submitted, refetched = _markdown_repro_pair(data)
+        return PreservedFullFixturePair(
+            submitted=submitted,
+            refetched=refetched,
+            witness_kind=WitnessKind.LIVE_TIE8,
+            source_path=str(recheck.relative_to(root)),
+        )
+    raise WitnessUnavailableError(
+        "live TIE-8 re-read requires runtime-recheck-2.22.0.json under "
+        f"{PRD366_PRIVATE_PILOT_DIR.as_posix()}"
+    )
+
+
 def family_map_covers_redacted_pairs(
     family_map: dict[str, Any], redacted: dict[str, Any]
 ) -> list[str]:
