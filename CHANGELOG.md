@@ -1444,6 +1444,7 @@
 * merge phase full-acceptance-criteria-underscore-line into feat/linear-markdown-equiv-222 (b5f8c9e) <!-- sw-deliver:full-acceptance-criteria-underscore-line -->
 * merge phase dual-gate-named-family-registry-and-original-bytes-hash into feat/linear-markdown-equiv-222 (6c6c549) <!-- sw-deliver:dual-gate-named-family-registry-and-original-bytes-hash -->
 * merge phase preserve-363-greens-and-identity-dropping-negatives into feat/linear-markdown-equiv-222 (8487508) <!-- sw-deliver:preserve-363-greens-and-identity-dropping-negatives -->
+* merge phase emit-named-family-documentation into feat/linear-markdown-equiv-222 (930058f) <!-- sw-deliver:emit-named-family-documentation -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
