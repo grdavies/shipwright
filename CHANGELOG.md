@@ -1442,6 +1442,7 @@
 * merge phase unify-implicit-autolink-identity-and-comparison into feat/linear-markdown-equiv-222 (5b58136) <!-- sw-deliver:unify-implicit-autolink-identity-and-comparison -->
 * merge phase mixed-bold-and-inline-code-both-sides-unwrap into feat/linear-markdown-equiv-222 (9812b47) <!-- sw-deliver:mixed-bold-and-inline-code-both-sides-unwrap -->
 * merge phase full-acceptance-criteria-underscore-line into feat/linear-markdown-equiv-222 (b5f8c9e) <!-- sw-deliver:full-acceptance-criteria-underscore-line -->
+* merge phase dual-gate-named-family-registry-and-original-bytes-hash into feat/linear-markdown-equiv-222 (6c6c549) <!-- sw-deliver:dual-gate-named-family-registry-and-original-bytes-hash -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
