@@ -2,6 +2,7 @@
 name: sw-deliver
 description: Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.
 alwaysApply: false
+doc_currency_at: 2026-09-21
 ---
 
 # `/sw-deliver`
@@ -471,6 +472,9 @@ Before each phase/terminal delegated Task from `/sw-deliver`:
 1. `python3 scripts/wave.py dispatch preflight --dispatch-id <id> --agent <agent-id> --command sw-deliver --skill conductor`
 2. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-deliver --skill conductor --parent-model <parent-concrete-id> [--dispatch-id <id>]`
 3. Dispatch Task with explicit concrete `model:` and resolved caveman intensity context; never rely on inherited model.
+   When binding emits `reasoningEffort`, pass it as Codex `reasoning_effort` alongside the model.
+   When tiers share a model, supply `--parent-tier` matching the parent dispatch tier; do not
+   infer the tier from the first matching model ID.
 
 Resolve model: `python3 scripts/sw_bootstrap.py resolve-model-tier.py -- --command <child-slug>` (or `--skill conductor`).
 Resolve intensity: `python3 scripts/resolve-intensity.py --command sw-deliver --skill conductor`.
@@ -761,4 +765,4 @@ primary checkout). Repo-root cwd with an orchestrator path under `.sw-worktrees/
 orchestrator worktree; terminal closeout reuses the same order. Primary cwd stays when pruning orch;
 husk/parked trees do not fail the release path.
 
-<!-- currency: refreshed 2026-09-19T04:41:00Z — terminal-ship after wave_terminal closeout -->
+<!-- currency: refreshed 2026-09-21T06:59:25Z — consumer runtime + reasoning effort -->

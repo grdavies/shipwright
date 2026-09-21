@@ -3,6 +3,45 @@
 Operator diagnostics for common Shipwright failure modes. Prefer these recipes over
 ad-hoc retries when a command already emitted a typed halt and `resumeCommand`.
 
+## Consumer delivery initialization and crash recovery
+
+A newly provisioned orchestrator may exist before its first plan or run identity.
+Deliver binds an explicitly supplied, frozen task list before adoption only when no
+run identity or phase state exists and the task list matches the recorded target.
+Existing run identity is never overwritten by this recovery.
+
+Kernel classification, planning guidelines and execute dependency rules resolve
+through the shared packaged reference resolver. Consumer repositories do not need a copy of Shipwright's
+`core/sw-reference` tree. A malformed local artifact remains an error.
+
+On resume, a recorded lease held by a previous driver is passed through normal
+acquisition checks. Reclaim requires a stale heartbeat and dead same-host PID;
+a live owner remains protected and generation fencing advances on reclaim.
+A different recorded host still requires explicit operator acknowledgement via
+the run-lease acquisition command's `--cross-host-ack` option. Do not delete lock
+files or fabricate run IDs to bypass these checks.
+
+## Consumer review reports a missing capability index
+
+`code-review-select.py --repo-root <consumer>` keeps review policy and reviewer
+metrics in that consumer repository. Capability manifests and their freshness
+check belong to the selected Shipwright runtime. Consumers without a capability
+bundle resolve that runtime through the trusted scripts resolver, including an
+explicit `SHIPWRIGHT_SCRIPTS` binding. They do not need copied `core/sw-reference`
+files, and `--repo-root` must not be changed to the Shipwright checkout to make
+review selection succeed.
+
+A source runtime checks its `core/` frontmatter; an installed bundle checks its
+installed layout. A missing, malformed or stale index in the selected runtime
+still stops selection. An invalid or untrusted `SHIPWRIGHT_SCRIPTS` also stops
+selection. Repair or reinstall that runtime; do not disable freshness or silently
+switch to a different bundle.
+
+A consumer with its own capability index or authored capability tree retains
+that authority, including failures for an incomplete or stale local bundle.
+Explicit index overrides remain bound to the consumer's frontmatter. Runtime
+fallback applies only when the consumer has no local capability bundle.
+
 ## Linear recognized-but-not-shipped on packaged install 
 
 Symptom: planning discovery or `gitignore-generate --write` refuses Linear with

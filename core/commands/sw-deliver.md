@@ -1,6 +1,7 @@
 ---
 description: Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.
 alwaysApply: false
+doc_currency_at: 2026-09-21
 ---
 
 # `/sw-deliver`
@@ -763,4 +764,4 @@ primary checkout). Repo-root cwd with an orchestrator path under `.sw-worktrees/
 orchestrator worktree; terminal closeout reuses the same order. Primary cwd stays when pruning orch;
 husk/parked trees do not fail the release path.
 
-<!-- currency: refreshed 2026-09-19T04:41:00Z — terminal-ship after wave_terminal closeout -->
+<!-- currency: refreshed 2026-09-21T06:59:25Z — consumer runtime + reasoning effort -->
