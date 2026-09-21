@@ -167,13 +167,77 @@ LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
         "table-formatting",
         "plain-domain-autolink",
         "bold-around-inline-code",
+        "mixed-bold-inline-code-both-sides-unwrap",
         "italic-delimiter",
         "ordered-list-leading-space",
         "literal-punctuation-escape",
         "post-code-underscore-unescape",
+        "acceptance-criteria-underscore-full-line",
         "implicit-domain-http-autolink",
     }
 )
+
+# PRD 366 phase 6 — leftover redacted fixture families bind to named closed-set members only.
+PRD366_ADDED_R6_REWRITE_FAMILIES = frozenset(
+    {
+        "mixed-bold-inline-code-both-sides-unwrap",
+        "acceptance-criteria-underscore-full-line",
+    }
+)
+
+PRD366_REDACTED_FAMILY_REGISTRY_BINDINGS: dict[str, frozenset[str]] = {
+    "version-section-token-domain-rewrite": frozenset({"plain-domain-autolink"}),
+    "implicit-domain-http-autolink": frozenset(
+        {"implicit-domain-http-autolink", "plain-domain-autolink"}
+    ),
+    "mixed-bold-inline-code-both-sides-unwrap": frozenset(
+        {"mixed-bold-inline-code-both-sides-unwrap", "bold-around-inline-code"}
+    ),
+    "acceptance-criteria-underscore-full-line": frozenset(
+        {"acceptance-criteria-underscore-full-line", "post-code-underscore-unescape"}
+    ),
+}
+
+
+def prd366_leftover_rewrite_families_registered(
+    redacted_families: frozenset[str] | None = None,
+) -> list[str]:
+    """Return errors when a PRD 366 leftover family is not bound to named R6 members."""
+    errors: list[str] = []
+    families = redacted_families or frozenset(PRD366_REDACTED_FAMILY_REGISTRY_BINDINGS)
+    for name in sorted(families):
+        members = PRD366_REDACTED_FAMILY_REGISTRY_BINDINGS.get(name)
+        if members is None:
+            errors.append(f"unbound PRD 366 leftover family: {name}")
+            continue
+        missing = sorted(m for m in members if m not in LINEAR_PUBLIC_MARKDOWN_R6_REWRITES)
+        if missing:
+            errors.append(f"{name} binds missing registry members: {missing}")
+    return errors
+
+
+# PRD 366 R7 — redacted full-line witness; excerpt without acceptance-criteria context is not proof.
+R7_ACCEPTANCE_CRITERIA_FULL_LINE_SUBMITTED = (
+    "- **Acceptance criteria:** after `token`_suffix on the complete line.\n"
+)
+R7_ACCEPTANCE_CRITERIA_FULL_LINE_REFETCHED = (
+    "- **Acceptance criteria:** after `token`\\_suffix on the complete line.\n"
+)
+R7_ACCEPTANCE_CRITERIA_EXCERPT_SUBMITTED = "`token`_suffix\n"
+R7_ACCEPTANCE_CRITERIA_EXCERPT_REFETCHED = "`token`\\_suffix\n"
+
+# PRD 366 D4 — parser-grade AST compare is explicitly out of scope for the 2.22.0 follow-up.
+LINEAR_PUBLIC_MARKDOWN_EQUIVALENCE_STRATEGY = "named-closed-set-families"
+LINEAR_PUBLIC_MARKDOWN_PARSER_GRADE_AST_COMPARE = "rejected"
+
+
+def linear_public_markdown_equivalence_strategy() -> dict[str, str]:
+    """Document the binding leftover equality method (stance A; stance D rejected)."""
+    return {
+        "strategy": LINEAR_PUBLIC_MARKDOWN_EQUIVALENCE_STRATEGY,
+        "parserGradeAstCompare": LINEAR_PUBLIC_MARKDOWN_PARSER_GRADE_AST_COMPARE,
+        "rewriteRegistry": "LINEAR_PUBLIC_MARKDOWN_R6_REWRITES",
+    }
 
 # PRD 359 R5 — fixture-enumerated punctuation unescape alphabet (excludes delimiter ticks).
 _LITERAL_PUNCTUATION_UNESCAPE_CHARS = frozenset(".,;:!?#'\"+-=&")
@@ -198,6 +262,8 @@ _BARE_DOMAIN = re.compile(
     r"(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?)+"
     r"(?:/[^\s)\]>\"']*)?)"
 )
+_VERSION_TOKEN = re.compile(r"^v\d+(?:\.\d+)*$", re.IGNORECASE)
+_SECTION_TOKEN = re.compile(r"^§?\d+(?:\.\d+)+$")
 # Underscore is a word char, so `\bR6\b` misses `__R6__` Linear bold delimiters.
 _RID_TOKEN = re.compile(r"(?<![A-Za-z0-9])([RD]\d+)(?![A-Za-z0-9])")
 _UUID_TOKEN = re.compile(
@@ -227,9 +293,19 @@ def _placeholder_restore(text: str, stored: list[str], prefix: str) -> str:
     return text
 
 
+def _looks_like_version_or_section_token(label: str) -> bool:
+    """PRD 366 R4 — semver and section refs are not bare domains."""
+    host = label.strip().split("/", 1)[0]
+    if _VERSION_TOKEN.fullmatch(host):
+        return True
+    return bool(_SECTION_TOKEN.fullmatch(host))
+
+
 def _looks_like_domain(label: str) -> bool:
     stripped = label.strip()
     if not stripped or " " in stripped:
+        return False
+    if _looks_like_version_or_section_token(stripped):
         return False
     return bool(_BARE_DOMAIN.fullmatch(stripped))
 
@@ -278,30 +354,34 @@ def _md_link_href_identity(label: str, href: str) -> str:
     return _autolink_identity(href)
 
 
-def _autolink_identity(raw: str) -> str:
+def _implicit_autolink_policy(raw: str) -> tuple[str, str]:
+    """Shared R5 policy: identity token and R6 comparison URL for one destination."""
     text = _unwrap_angle_brackets(raw.strip())
     hostpath = _schemeless_domain_hostpath(text)
     if hostpath is not None:
-        return _named_schemeless_link_identity(hostpath)
+        return (
+            _named_schemeless_link_identity(hostpath),
+            _canon_url(hostpath),
+        )
+    comparison = _canon_url(text)
     if text.startswith("https://"):
-        return text
-    return _canon_url(text)
+        identity = text
+    else:
+        identity = comparison
+    return (identity, comparison)
+
+
+def _autolink_identity(raw: str) -> str:
+    return _implicit_autolink_policy(raw)[0]
 
 
 def _bare_domain_link_identity(raw: str) -> str:
-    hostpath = _schemeless_domain_hostpath(raw)
-    if hostpath is not None:
-        return _named_schemeless_link_identity(hostpath)
-    return _canon_url(raw)
+    return _implicit_autolink_policy(raw)[0]
 
 
 def _autolink_comparison_url(raw: str) -> str:
     """R6 comparison form for angle autolinks (http provider → https witness)."""
-    text = _unwrap_angle_brackets(raw.strip())
-    hostpath = _schemeless_domain_hostpath(text)
-    if hostpath is not None:
-        return _canon_url(hostpath)
-    return _canon_url(text)
+    return _implicit_autolink_policy(raw)[1]
 
 
 def _normalize_list_markers(text: str) -> str:
@@ -428,24 +508,77 @@ def _normalize_post_code_literal_underscore_escapes(text: str) -> str:
     return "".join(out)
 
 
-def _normalize_bold_around_inline_code(text: str) -> str:
-    """Drop bold wrapping an inline code span only (PRD 359 R3 — not a global strip)."""
+def prove_r7_acceptance_criteria_underscore_full_line() -> dict[str, bool]:
+    """Prove post-code underscore on the complete acceptance-criteria line (PRD 366 R7).
+
+    A reduced excerpt that drops triggering acceptance-criteria context is not proof.
+    """
+    full_ok = linear_public_markdown_equivalent(
+        R7_ACCEPTANCE_CRITERIA_FULL_LINE_SUBMITTED,
+        R7_ACCEPTANCE_CRITERIA_FULL_LINE_REFETCHED,
+    )
+    excerpt_ok = linear_public_markdown_equivalent(
+        R7_ACCEPTANCE_CRITERIA_EXCERPT_SUBMITTED,
+        R7_ACCEPTANCE_CRITERIA_EXCERPT_REFETCHED,
+    )
+    return {
+        "fullLineEquivalent": full_ok,
+        "excerptNotProof": not excerpt_ok,
+        "ok": full_ok and not excerpt_ok,
+    }
+
+
+def _inline_code_bold_wrapped(text: str, start: int, end: int) -> bool:
+    return (
+        start >= 2
+        and end + 2 <= len(text)
+        and text[start - 2 : start] == "**"
+        and text[end : end + 2] == "**"
+    )
+
+
+def _mixed_bold_inline_code_phrase(line: str) -> bool:
+    """True when a line has 2+ inline code spans (PRD 366 R6 mixed phrase unwrap)."""
+    return len(list(_INLINE_CODE.finditer(line))) >= 2
+
+
+def _unwrap_bold_wrapped_inline_codes(segment: str) -> str:
+    """Drop ** around inline code spans within one segment (both-sides unwrap only)."""
     out: list[str] = []
     index = 0
-    for match in _INLINE_CODE.finditer(text):
+    for match in _INLINE_CODE.finditer(segment):
         start, end = match.start(), match.end()
-        bold_wrapped = (
-            start >= 2
-            and end + 2 <= len(text)
-            and text[start - 2 : start] == "**"
-            and text[end : end + 2] == "**"
-        )
+        bold_wrapped = _inline_code_bold_wrapped(segment, start, end)
         slice_start = start - 2 if bold_wrapped else start
-        out.append(text[index:slice_start])
+        out.append(segment[index:slice_start])
         out.append(match.group(0))
         index = end + 2 if bold_wrapped else end
-    out.append(text[index:])
+    out.append(segment[index:])
     return "".join(out)
+
+
+def _normalize_mixed_bold_inline_code_both_sides_unwrap(text: str) -> str:
+    """Unwrap bold on inline codes in mixed phrases on both sides of compare (PRD 366 R6)."""
+    lines = text.split("\n")
+    out: list[str] = []
+    for line in lines:
+        if _mixed_bold_inline_code_phrase(line):
+            out.append(_unwrap_bold_wrapped_inline_codes(line))
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
+def _normalize_bold_around_inline_code(text: str) -> str:
+    """Drop bold wrapping a lone inline code span (PRD 359 R3 — not mixed phrases)."""
+    lines = text.split("\n")
+    out: list[str] = []
+    for line in lines:
+        if _mixed_bold_inline_code_phrase(line):
+            out.append(line)
+        else:
+            out.append(_unwrap_bold_wrapped_inline_codes(line))
+    return "\n".join(out)
 
 
 def _normalize_table_line(line: str) -> str:
@@ -489,9 +622,15 @@ def _normalize_autolinks(text: str) -> str:
             return canon
         return f"[{label}]({canon})"
 
+    def _bare_domain_sub(match: re.Match[str]) -> str:
+        raw = match.group(1)
+        if not _looks_like_domain(raw):
+            return raw
+        return _canon_url(raw)
+
     text = _MD_LINK.sub(_md_link, text)
     text = _AUTO_LINK.sub(lambda match: _autolink_comparison_url(match.group(1)), text)
-    return _BARE_DOMAIN.sub(lambda match: _canon_url(match.group(1)), text)
+    return _BARE_DOMAIN.sub(_bare_domain_sub, text)
 
 
 def _r6_rewrite_outside_code(text: str) -> str:
@@ -518,6 +657,7 @@ def linear_public_markdown_r6_form(markdown: str) -> str:
     text, fences = _placeholder_protect(text, _FENCED_BLOCK, "FENCE")
     text = _INLINE_CODE.sub(_normalize_inline_code_span, text)
     text = _normalize_phrase_internal_multi_span_bold(text)
+    text = _normalize_mixed_bold_inline_code_both_sides_unwrap(text)
     text = _normalize_bold_around_inline_code(text)
     text = _normalize_post_code_literal_underscore_escapes(text)
     text, codes = _placeholder_protect(text, _INLINE_CODE, "CODE")
@@ -565,7 +705,9 @@ def _extract_links(text: str) -> tuple[str, ...]:
         found.add(_autolink_identity(match.group(1)))
         remainder = remainder.replace(match.group(0), " ", 1)
     for match in _BARE_DOMAIN.finditer(remainder):
-        found.add(_bare_domain_link_identity(match.group(1)))
+        raw = match.group(1)
+        if _looks_like_domain(raw):
+            found.add(_bare_domain_link_identity(raw))
     return tuple(sorted(found))
 
 

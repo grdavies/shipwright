@@ -1,0 +1,60 @@
+{
+  "version": "2.22.0",
+  "source": "pilot-diagnosis-2.22.0.json",
+  "diagnosisPath": ".shipwright/migrations/linear-20260914/pilot-2.22.0/pilot-diagnosis-2.22.0.json",
+  "markdownReproPath": ".shipwright/migrations/linear-20260914/pilot-2.22.0/markdown-repro-2.22.0.json",
+  "leftoverRegionCount": 7,
+  "allowedRequirementIds": ["R4", "R5", "R6", "R7"],
+  "redactedFixturePath": "scripts/test/fixtures/linear/prd366-redacted-comparison-families.json",
+  "leftovers": [
+    {
+      "regionId": "lr01",
+      "requirementId": "R4",
+      "gapUnitId": "gap-486-version-section-token-domain-rewrite",
+      "planningIssue": 1077,
+      "redactedFixtureId": "lr01"
+    },
+    {
+      "regionId": "lr02",
+      "requirementId": "R4",
+      "gapUnitId": "gap-486-version-section-token-domain-rewrite",
+      "planningIssue": 1077,
+      "redactedFixtureId": "lr02"
+    },
+    {
+      "regionId": "lr03",
+      "requirementId": "R5",
+      "gapUnitId": "gap-487-implicit-autolink-identity-comparison-mismatch",
+      "planningIssue": 1077,
+      "redactedFixtureId": "lr03"
+    },
+    {
+      "regionId": "lr04",
+      "requirementId": "R5",
+      "gapUnitId": "gap-487-implicit-autolink-identity-comparison-mismatch",
+      "planningIssue": 1077,
+      "redactedFixtureId": "lr04"
+    },
+    {
+      "regionId": "lr05",
+      "requirementId": "R6",
+      "gapUnitId": "gap-488-mixed-bold-inline-code-both-sides-unwrap",
+      "planningIssue": 1077,
+      "redactedFixtureId": "lr05"
+    },
+    {
+      "regionId": "lr06",
+      "requirementId": "R6",
+      "gapUnitId": "gap-488-mixed-bold-inline-code-both-sides-unwrap",
+      "planningIssue": 1077,
+      "redactedFixtureId": "lr06"
+    },
+    {
+      "regionId": "lr07",
+      "requirementId": "R7",
+      "gapUnitId": "gap-489-acceptance-criteria-underscore-full-line",
+      "planningIssue": 1077,
+      "redactedFixtureId": "lr07"
+    }
+  ]
+}

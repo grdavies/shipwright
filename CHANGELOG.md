@@ -1436,6 +1436,17 @@
 * merge phase post-complete-apply-write-path into feat/doc-review-synth-order (c3ac155) <!-- sw-deliver:post-complete-apply-write-path -->
 * merge phase fixtures-for-body-drift-and-finding-text-non-persistence into feat/doc-review-synth-order (42e13bf) <!-- sw-deliver:fixtures-for-body-drift-and-finding-text-non-persistence -->
 * merge phase dist-emit-and-linear-wording into feat/doc-review-synth-order (ca35c98) <!-- sw-deliver:dist-emit-and-linear-wording -->
+* merge phase classify-leftover-2-22-regions-and-witness-policy into feat/linear-markdown-equiv-222 (dfb6c81) <!-- sw-deliver:classify-leftover-2-22-regions-and-witness-policy -->
+* merge phase extending-unit-stance-and-363-immutability into feat/linear-markdown-equiv-222 (c106c5d) <!-- sw-deliver:extending-unit-stance-and-363-immutability -->
+* merge phase version-and-section-tokens-are-not-domains into feat/linear-markdown-equiv-222 (fdd1137) <!-- sw-deliver:version-and-section-tokens-are-not-domains -->
+* merge phase unify-implicit-autolink-identity-and-comparison into feat/linear-markdown-equiv-222 (5b58136) <!-- sw-deliver:unify-implicit-autolink-identity-and-comparison -->
+* merge phase mixed-bold-and-inline-code-both-sides-unwrap into feat/linear-markdown-equiv-222 (9812b47) <!-- sw-deliver:mixed-bold-and-inline-code-both-sides-unwrap -->
+* merge phase full-acceptance-criteria-underscore-line into feat/linear-markdown-equiv-222 (b5f8c9e) <!-- sw-deliver:full-acceptance-criteria-underscore-line -->
+* merge phase dual-gate-named-family-registry-and-original-bytes-hash into feat/linear-markdown-equiv-222 (6c6c549) <!-- sw-deliver:dual-gate-named-family-registry-and-original-bytes-hash -->
+* merge phase preserve-363-greens-and-identity-dropping-negatives into feat/linear-markdown-equiv-222 (8487508) <!-- sw-deliver:preserve-363-greens-and-identity-dropping-negatives -->
+* merge phase emit-named-family-documentation into feat/linear-markdown-equiv-222 (930058f) <!-- sw-deliver:emit-named-family-documentation -->
+* merge phase full-fixture-on-the-wheel-installed-runtime into feat/linear-markdown-equiv-222 (db9490c) <!-- sw-deliver:full-fixture-on-the-wheel-installed-runtime -->
+* merge phase live-facade-write-read-materialize-and-update into feat/linear-markdown-equiv-222 (ce06bfe) <!-- sw-deliver:live-facade-write-read-materialize-and-update -->
 ### Bug Fixes
 
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->

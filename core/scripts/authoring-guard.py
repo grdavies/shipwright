@@ -12,6 +12,17 @@ if str(SCRIPT_DIR) not in sys.path:
 
 from _sw.cli import run_module_main
 
+import authoring_guard as _authoring_guard
+
+# PRD 366 extending-unit stance surface (phase 11 — tasks reference this path).
+PRD363_COMPLETE_PARENT_UNIT_ID = _authoring_guard.PRD363_COMPLETE_PARENT_UNIT_ID
+PRD366_EXTENDING_UNIT_ID = _authoring_guard.PRD366_EXTENDING_UNIT_ID
+PRD366_BINDING_STANCE = _authoring_guard.PRD366_BINDING_STANCE
+PRD366_REJECTED_STANCES = _authoring_guard.PRD366_REJECTED_STANCES
+prd366_extending_unit_policy = _authoring_guard.prd366_extending_unit_policy
+reject_prd366_stance_substitute = _authoring_guard.reject_prd366_stance_substitute
+classify_prd366_mutation_path = _authoring_guard.classify_prd366_mutation_path
+
 
 def git_root() -> Path:
     proc = subprocess.run(
