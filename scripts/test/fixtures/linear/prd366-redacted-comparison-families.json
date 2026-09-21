@@ -48,8 +48,8 @@
       "id": "lr07",
       "family": "acceptance-criteria-underscore-full-line",
       "requirementId": "R7",
-      "submitted": "_Acceptance criteria line_\n",
-      "refetched": "Acceptance criteria line\n"
+      "submitted": "- **Acceptance criteria:** after `token`_suffix on the complete line.\n",
+      "refetched": "- **Acceptance criteria:** after `token`\\_suffix on the complete line.\n"
     }
   ],
   "mutants": [

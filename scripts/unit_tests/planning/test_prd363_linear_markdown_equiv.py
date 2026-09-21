@@ -23,6 +23,7 @@ from planning_linear_canonical import (
     linear_public_markdown_equivalent,
     linear_public_markdown_r6_form,
     original_bytes_hash_body,
+    prove_r7_acceptance_criteria_underscore_full_line,
 )
 from prd363_fixture_lib import (
     PRD363_LEFTOVER_REGION_COUNT,
@@ -182,6 +183,12 @@ class TestPrd363Phase4PostCodeUnderscoreUnescape:
             ]
 
     def test_identity_preserving_post_code_escape_passes(self) -> None:
+        left = "After `token`_suffix here.\n"
+        right = "After `token`\\_suffix here.\n"
+        assert linear_public_markdown_equivalent(left, right)
+
+    def test_isolated_post_code_still_green_after_r7_full_line_prove(self) -> None:
+        assert prove_r7_acceptance_criteria_underscore_full_line()["ok"] is True
         left = "After `token`_suffix here.\n"
         right = "After `token`\\_suffix here.\n"
         assert linear_public_markdown_equivalent(left, right)
