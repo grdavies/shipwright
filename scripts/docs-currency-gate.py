@@ -334,7 +334,7 @@ def touch_command_doc_currency_marker(path: Path) -> str:
             block = text[4:end]
             lines = [line for line in block.splitlines() if not line.strip().startswith("doc_currency_at:")]
             lines.append(marker)
-            text = "---" + "\n".join(lines) + "\n---" + text[end + 4 :]
+            text = "---\n" + "\n".join(lines) + "\n---" + text[end + 4 :]
         else:
             text = f"---\n{marker}\n---\n" + text
     else:

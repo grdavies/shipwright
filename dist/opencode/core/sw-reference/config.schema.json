@@ -1331,6 +1331,65 @@
               "description": "Agent or native-panel specialist id → semantic tier (no inherit)."
             }
           }
+        },
+        "reasoningEffortByTier": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Optional per-tier reasoning effort; dispatch as a separate tool parameter alongside modelId.",
+          "properties": {
+            "cheap": {
+              "type": "string",
+              "enum": [
+                "none",
+                "minimal",
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max",
+                "ultra"
+              ]
+            },
+            "build": {
+              "type": "string",
+              "enum": [
+                "none",
+                "minimal",
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max",
+                "ultra"
+              ]
+            },
+            "mid": {
+              "type": "string",
+              "enum": [
+                "none",
+                "minimal",
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max",
+                "ultra"
+              ]
+            },
+            "deep": {
+              "type": "string",
+              "enum": [
+                "none",
+                "minimal",
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max",
+                "ultra"
+              ]
+            }
+          }
         }
       }
     },

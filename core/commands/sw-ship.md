@@ -222,7 +222,9 @@ Before any delegated Task spawn from `/sw-ship`:
    `$SW_RUN_DIR/` or `.cursor/sw-deliver-runs/<phase>/`.
 3. `python3 scripts/dispatch-check.py --agent <agent-id> --command sw-ship --skill <active-skill> --parent-model <parent-concrete-id> [--dispatch-id <id>] --prompt <constructed-prompt-path>`
 4. Stamp Task with explicit `model: <resolved-concrete-id>` and `tool_input.prompt` equal to the validated
-   prompt file; do not use `inherit`.
+   prompt file; do not use `inherit`. When binding emits `reasoningEffort`, pass it as Codex
+   `reasoning_effort` alongside the model. When tiers share a model, supply `--parent-tier`
+   matching the parent dispatch tier; do not infer the tier from the first matching model ID.
 
 Example (phase-dispatch child Task):
 

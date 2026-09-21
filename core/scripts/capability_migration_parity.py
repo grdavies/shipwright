@@ -77,17 +77,36 @@ def select_family(
     index_path: Path | None = None,
     skip_freshness: bool = False,
 ) -> dict[str, Any]:
-    from capability_index import check_freshness
+    from capability_index import (
+        CAPABILITY_ROOTS,
+        check_freshness,
+        default_capability_index_path,
+    )
+    from sw_scripts_resolve import resolve_scripts_dir
 
-    core_root = repo_root / "core"
-    index_file = index_path or (core_root / "sw-reference" / "capability-index.json")
+    # The consumer owns configuration; the capability bundle owns its index and
+    # frontmatter. Never replace a present or incompletely authored local bundle
+    # with a different runtime merely because its freshness check would fail.
+    capability_root = repo_root.resolve()
+    local_index = default_capability_index_path(capability_root)
+    owns_bundle = (
+        local_index.exists()
+        or (capability_root / "skills").is_dir()
+        or any((capability_root / "core" / name).is_dir() for name, _ in CAPABILITY_ROOTS)
+    )
+    if index_path is None and not owns_bundle:
+        runtime = resolve_scripts_dir(repo_root, executor=Path(__file__))
+        if runtime.error or runtime.path is None:
+            raise RuntimeError(runtime.error or "no trusted capability runtime found")
+        capability_root = runtime.path.resolve().parent
+    index_file = index_path or default_capability_index_path(capability_root)
     if not skip_freshness:
-        ok, message = check_freshness(core_root, index_file)
+        ok, message = check_freshness(capability_root, index_file)
         if not ok:
             raise RuntimeError(message)
     index = load_index(index_file)
     normalized = normalize_signal_context(ctx)
-    result = select_capabilities(index, normalized, repo_root=repo_root)
+    result = select_capabilities(index, normalized, repo_root=capability_root)
 
     if family == "doc-review":
         projected = project_doc_review(result, normalized)

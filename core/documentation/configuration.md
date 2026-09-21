@@ -790,6 +790,7 @@ Detect platform (`cursor` or `claude-code`) and seed the `models` block:
 | Key | Purpose |
 |-----|---------|
 | `models.tiers` | Four semantic tiers → concrete dispatch IDs (`cheap`, `build`, `mid`, `deep`) |
+| `models.reasoningEffortByTier` | Optional effort per tier, passed separately from the model ID |
 | `models.aliases` | e.g. `fast` → `cheap` |
 | `models.roles` | `builder` and `reviewer` floors (reviewer ≥ builder) |
 | `models.routing` | Per `sw-*` command and skill tier; `inherit` for orchestrators |
@@ -803,6 +804,19 @@ unless confirmed. See `.sw/models-tiering.md` for platform catalogs, `models.rou
 `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" resolve-model-tier.py -- --agent <id>` and run
 `python3 "${CURSOR_PLUGIN_ROOT}/scripts/sw-run.py" reviewer-dispatch-check.py--agent <id> --parent-model <parent-concrete-id>`;
 stamp the resolved concrete `model:` on the Task (do not rely on `model: inherit` from the parent session).
+
+**Codex effort routing:** a tier can select `gpt-6-astra` while
+`models.reasoningEffortByTier` selects `low`, `medium`, or `high`. Keep effort
+separate from the concrete model ID. Both `resolve-model-tier.py` and
+`dispatch-check.py` emit `reasoningEffort`; pass that value as the Codex subagent
+`reasoning_effort` parameter. An omitted mapping preserves existing model defaults.
+Astra rejects `none` and `minimal`. Invalid configured efforts fail closed.
+
+These commands use the caller's project configuration by default; `--config`
+selects another configuration explicitly. When one model is shared across tiers,
+pass `--parent-tier` to `dispatch-check.py` to identify the parent tier without
+relying on JSON ordering. The selected tier must map to the supplied parent model;
+existing reviewer floors still apply.
 
 **Task model allowlist:** concrete Task spawn IDs are single-sourced from
 `core/sw-reference/task-model-allowlist.json`. `resolve-model-tier.py` and `dispatch-check.py` emit or

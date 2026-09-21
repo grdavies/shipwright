@@ -61,7 +61,7 @@ resolved_ceiling() {
   mkdir -p "$tmp/scripts" "$tmp/.cursor"
   cp "$SRC" "$tmp/scripts/worktree.py"
   printf '%s\n' "$config_body" >"$tmp/.cursor/workflow.config.json"
-  out="$(bash "$tmp/scripts/worktree.py" ceiling-check 2>/dev/null || true)"
+  out="$(cd "$tmp" && python3 "$tmp/scripts/worktree.py" ceiling-check 2>/dev/null || true)"
   rm -rf "$tmp"
   python3 -c "import json,sys; print(json.loads(sys.argv[1]).get('ceiling',''))" "$out" 2>/dev/null || echo ""
 }

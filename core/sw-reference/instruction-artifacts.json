@@ -256,7 +256,7 @@
       "sourcePath": "core/commands/sw-debug.md"
     },
     {
-      "bodyDigest": "1b2c2ba575a13599c172f161f21b481b6b93f4200240ca7a3b06a3abb3ab7cff",
+      "bodyDigest": "4fddd9384c56f5a174ab9ddaba59862f9e96ef92ff3f094d7f1638c4c2be82eb",
       "capabilities": [],
       "description": "Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.",
       "id": "sw-deliver",
@@ -472,7 +472,7 @@
       "sourcePath": "core/commands/sw-setup.md"
     },
     {
-      "bodyDigest": "81f22c96436f03d7242d9e3aa33ef58709ba9bb49c9e705c928345c38a938ae1",
+      "bodyDigest": "ac35ab64096dbd23ead020f78f27bb34c3052d2d9b6d1673fc30e28131b772b7",
       "capabilities": [],
       "description": "Gated orchestrator over the phase loop \u2014 advances on green, halts at human merge gate. Never merges.",
       "id": "sw-ship",

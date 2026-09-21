@@ -317,8 +317,13 @@ def evaluate_dispatch(
     command_name: str | None,
     skill_name: str | None,
     policy: ModelPolicy | None = None,
+    parent_tier_override: str | None = None,
 ) -> dict:
     tier_policy = policy or ModelPolicy.from_tiers(tiers)
+    if parent_tier_override and tiers.get(parent_tier_override) != parent_model:
+        return {"verdict": "fail", "cause": "binding:parent-tier-model-mismatch",
+                "parentModel": parent_model, "parentTier": parent_tier_override,
+                "retryable": False}
     parent_tier, used_fallback, fallback_err = resolve_parent_tier(
         parent_model, tiers, fallback_tier=fallback_tier, policy=tier_policy
     )
@@ -331,6 +336,9 @@ def evaluate_dispatch(
             "retryable": False,
             "remediation": "set dispatch.unregisteredParentModelTier to cheap|build|mid|deep",
         }
+
+    if parent_tier_override:
+        parent_tier, used_fallback = parent_tier_override, False
 
     if requires_parent_tier(agent):
         parent_rank = tier_rank(parent_tier, tier_policy)
@@ -568,6 +576,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--command", default="")
     parser.add_argument("--skill", default="")
     parser.add_argument("--parent-model", required=True)
+    parser.add_argument("--parent-tier", default="",
+                        help="Explicit parent tier when multiple tiers share one model ID")
     parser.add_argument("--dispatch-id", default="")
     parser.add_argument("--override", action="store_true")
     parser.add_argument("--config", default="")
@@ -634,6 +644,13 @@ def main(argv: list[str] | None = None) -> int:
             "remediation": "retry with bounded parallelism respecting worktree.parallelCeiling and harness limits",
         }))
         return 20
+
+    if not args.config:
+        from shipwright_paths import workflow_config_path
+
+        caller_config = workflow_config_path(Path.cwd())
+        if caller_config is not None:
+            args.config = str(caller_config)
 
     model_cmd = [sys.executable, str(script_dir / "resolve-model-tier.py"), "--agent", agent]
     intensity_cmd = [sys.executable, str(script_dir / "resolve-intensity.py"), "--agent", agent]
@@ -816,7 +833,8 @@ def main(argv: list[str] | None = None) -> int:
         config=cfg_doc,
         selected_model=model_id,
     )
-    if preflight.get("advisory_applied") and preflight.get("selected_model"):
+    if (preflight.get("advisory_applied") and preflight.get("selected_model")
+            and preflight["selected_model"] != model_id):
         model_id = str(preflight["selected_model"])
         resolved_tier = model_to_tier(model_id, tiers)
         if resolved_tier:
@@ -835,7 +853,18 @@ def main(argv: list[str] | None = None) -> int:
         command_name=command_name,
         skill_name=skill_name,
         policy=policy,
+        parent_tier_override=args.parent_tier or None,
     )
+    from model_reasoning import resolve_reasoning_effort
+
+    try:
+        effort = resolve_reasoning_effort(models, model_tier, str(model_id))
+    except ValueError as exc:
+        print(json.dumps({"verdict": "fail", "cause": "binding:invalid-reasoning-effort",
+                          "error": str(exc)}))
+        return 20
+    if effort is not None:
+        result["reasoningEffort"] = effort
     if args.prompt:
         result["intensity"] = intensity
         result["intensitySource"] = intensity_source

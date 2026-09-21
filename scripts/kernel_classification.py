@@ -23,7 +23,11 @@ CHAIN_MARKER_END = "<!-- canonical-chain:end -->"
 
 
 def classification_path(root: Path) -> Path:
-    return root / CLASSIFICATION_REL
+    from init_profile_report import resolve_sw_reference_file
+
+    return resolve_sw_reference_file(
+        root, CLASSIFICATION_REL, script_dir=Path(__file__).resolve().parent
+    ) or root / CLASSIFICATION_REL
 
 
 @lru_cache(maxsize=8)
