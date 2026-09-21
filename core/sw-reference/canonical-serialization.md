@@ -75,6 +75,7 @@ rewrite families as equal:
 - `ordered-list-leading-space`
 - `literal-punctuation-escape`
 - `post-code-underscore-unescape` (PRD 363 R4)
+- `acceptance-criteria-underscore-full-line` (PRD 366 R7)
 - `implicit-domain-http-autolink` (PRD 363 R5)
 
 A new Standard unit under this contract does **not** amend frozen PRD 358 materialized

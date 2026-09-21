@@ -162,6 +162,7 @@ as equal — the closed set is `LINEAR_PUBLIC_MARKDOWN_R6_REWRITES` in
 - `ordered-list-leading-space`
 - `literal-punctuation-escape`
 - `post-code-underscore-unescape`
+- `acceptance-criteria-underscore-full-line`
 - `implicit-domain-http-autolink`
 
 PRD 359 italics (`italic-delimiter`) and single-span `bold-around-inline-code` remain
