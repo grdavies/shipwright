@@ -363,6 +363,41 @@ class TestPrd366Phase6DualGateNamedFamilyRegistryAndOriginalBytesHash:
         )
 
 
+class TestPrd366Phase7Preserve363GreensAndIdentityDroppingNegatives:
+    """R3 ordered-list regression plus R9 identity-dropping negatives."""
+
+    def test_prd363_ordered_list_one_space_padding_still_green(self) -> None:
+        left = "1. Alpha step\n2. Beta step\n"
+        right = " 1. Alpha step\n 2. Beta step\n"
+        assert linear_public_markdown_equivalent(left, right)
+
+    def test_changed_prose_fails_equivalent(self) -> None:
+        left = "Ship the leftover families today.\n"
+        right = "Ship the leftover families tomorrow.\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+
+    def test_changed_code_fails_equivalent(self) -> None:
+        left = "Call **`fn-a`** and **`fn-b`** in one phrase.\n"
+        right = "Call **`fn-a`** and **`fn-other`** in one phrase.\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+
+    def test_changed_explicit_url_fails_equivalent(self) -> None:
+        data = load_json(REDACTED_FAMILIES)
+        row = next(m for m in data["mutants"] if m["id"] == "r5-destination-changed-explicit")
+        assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]) is False
+        assert _r6_identity_tokens(row["submitted"]) != _r6_identity_tokens(row["refetched"])
+
+    def test_changed_nesting_fails_equivalent(self) -> None:
+        left = "1. Parent\n   2. Child\n"
+        right = "1. Parent\n  2. Child\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+
+    def test_missing_content_fails_equivalent(self) -> None:
+        left = "## Title\n\nFull acceptance criteria line with context.\n"
+        right = "## Title\n\n"
+        assert linear_public_markdown_equivalent(left, right) is False
+
+
 class TestPrd366Phase11ExtendingUnitStance:
     def test_binding_stance_a_and_rejected_b_c_d(self) -> None:
         policy = authoring_guard.prd366_extending_unit_policy()
