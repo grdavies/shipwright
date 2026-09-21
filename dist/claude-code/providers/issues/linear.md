@@ -146,10 +146,18 @@ Oversized bodies that do split become:
 re-measure, and closed-set oversized refusal are recorded operator contracts — not
 optional adapter knobs.
 
-**Map-13 contract (PRD 359 / PRD 363 R14):** `linear_public_markdown_equivalent()` may
+**Map-13 contract (PRD 359 / PRD 363 R14 / PRD 366 R13):** `linear_public_markdown_equivalent()` may
 treat only the named rewrite families in `core/sw-reference/canonical-serialization.md`
 as equal — the closed set is `LINEAR_PUBLIC_MARKDOWN_R6_REWRITES` in
-`scripts/planning_linear_canonical.py`:
+`scripts/planning_linear_canonical.py`. Silent undocumented equality is **not**
+supported; PRD 366 leftover 2.22.0 families extend the registry only by adding named
+members below (not catch-all normalization).
+
+The R6 **comparison form** (`linear_public_markdown_r6_form`) is used for equivalence
+and reconstruct-before-ok checks only — it is **never posted** to Linear description or
+overflow comments. Freeze, content hash, and put payloads remain on original bytes.
+
+Named rewrite families:
 
 - `list-marker`
 - `bold-delimiter`
@@ -157,7 +165,7 @@ as equal — the closed set is `LINEAR_PUBLIC_MARKDOWN_R6_REWRITES` in
 - `table-formatting`
 - `plain-domain-autolink`
 - `bold-around-inline-code`
-- `mixed-bold-inline-code-both-sides-unwrap`
+- `mixed-bold-inline-code-both-sides-unwrap` (PRD 366 R6)
 - `italic-delimiter`
 - `ordered-list-leading-space`
 - `literal-punctuation-escape`
