@@ -177,6 +177,45 @@ LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
     }
 )
 
+# PRD 366 phase 6 — leftover redacted fixture families bind to named closed-set members only.
+PRD366_ADDED_R6_REWRITE_FAMILIES = frozenset(
+    {
+        "mixed-bold-inline-code-both-sides-unwrap",
+        "acceptance-criteria-underscore-full-line",
+    }
+)
+
+PRD366_REDACTED_FAMILY_REGISTRY_BINDINGS: dict[str, frozenset[str]] = {
+    "version-section-token-domain-rewrite": frozenset({"plain-domain-autolink"}),
+    "implicit-domain-http-autolink": frozenset(
+        {"implicit-domain-http-autolink", "plain-domain-autolink"}
+    ),
+    "mixed-bold-inline-code-both-sides-unwrap": frozenset(
+        {"mixed-bold-inline-code-both-sides-unwrap", "bold-around-inline-code"}
+    ),
+    "acceptance-criteria-underscore-full-line": frozenset(
+        {"acceptance-criteria-underscore-full-line", "post-code-underscore-unescape"}
+    ),
+}
+
+
+def prd366_leftover_rewrite_families_registered(
+    redacted_families: frozenset[str] | None = None,
+) -> list[str]:
+    """Return errors when a PRD 366 leftover family is not bound to named R6 members."""
+    errors: list[str] = []
+    families = redacted_families or frozenset(PRD366_REDACTED_FAMILY_REGISTRY_BINDINGS)
+    for name in sorted(families):
+        members = PRD366_REDACTED_FAMILY_REGISTRY_BINDINGS.get(name)
+        if members is None:
+            errors.append(f"unbound PRD 366 leftover family: {name}")
+            continue
+        missing = sorted(m for m in members if m not in LINEAR_PUBLIC_MARKDOWN_R6_REWRITES)
+        if missing:
+            errors.append(f"{name} binds missing registry members: {missing}")
+    return errors
+
+
 # PRD 366 R7 — redacted full-line witness; excerpt without acceptance-criteria context is not proof.
 R7_ACCEPTANCE_CRITERIA_FULL_LINE_SUBMITTED = (
     "- **Acceptance criteria:** after `token`_suffix on the complete line.\n"

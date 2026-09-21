@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -14,15 +15,21 @@ if str(scripts) not in sys.path:
 
 import authoring_guard
 from planning.backends import issues_helpers as ih
+from planning.backends.issues_helpers import reconstruct_bodies_equivalent
+from planning_canonical import IssueSnapshot, canonical_hash
 from planning_linear_canonical import (
     LINEAR_PUBLIC_MARKDOWN_EQUIVALENCE_STRATEGY,
     LINEAR_PUBLIC_MARKDOWN_PARSER_GRADE_AST_COMPARE,
     LINEAR_PUBLIC_MARKDOWN_R6_REWRITES,
+    PRD366_ADDED_R6_REWRITE_FAMILIES,
+    PRD366_REDACTED_FAMILY_REGISTRY_BINDINGS,
     _autolink_comparison_url,
     _autolink_identity,
     _implicit_autolink_policy,
     _looks_like_domain,
     linear_public_markdown_equivalence_strategy,
+    original_bytes_hash_body,
+    prd366_leftover_rewrite_families_registered,
     _r6_identity_tokens,
     linear_public_markdown_equivalent,
     linear_public_markdown_r6_form,
@@ -275,6 +282,87 @@ class TestPrd366Phase5FullAcceptanceCriteriaUnderscoreLine:
             ]
 
 
+class _Ps:
+    PUT_INCOMPLETE_LABEL = "sw-put-incomplete"
+
+    @staticmethod
+    def strip_markers_and_edges(text: str) -> str:
+        return text
+
+    @staticmethod
+    def reassemble_body(body: str, comments: list[object], *, linear_bind: bool = False) -> str:
+        return body
+
+    @staticmethod
+    def has_raw_yaml_frontmatter(body: str) -> bool:
+        return False
+
+    @staticmethod
+    def operator_body_from_canonical(body: str) -> str:
+        return body
+
+    @staticmethod
+    def fail(message: str, **_kwargs: object) -> None:
+        raise AssertionError(message)
+
+
+class TestPrd366Phase6DualGateNamedFamilyRegistryAndOriginalBytesHash:
+    def test_reconstruct_requires_both_identity_and_comparison_form(self) -> None:
+        left = "## R1 Title\n\nBody.\n"
+        right = "R1 Title\n\nBody.\n"
+        assert _r6_identity_tokens(left) == _r6_identity_tokens(right)
+        assert linear_public_markdown_equivalent(left, right) is False
+        assert (
+            reconstruct_bodies_equivalent(left, right, issues_provider="linear", ps_mod=_Ps)
+            is False
+        )
+
+    def test_freeze_refuse_uses_shared_reconstruct_predicate(self) -> None:
+        from check_frozen_lib import refuse_truncated_linear_reconstruct
+
+        record = type(
+            "Rec",
+            (),
+            {
+                "id": "issue-1",
+                "labels": [],
+                "body": "R1 Title\n\nBody.\n",
+                "comments": [],
+                "comments_complete": True,
+            },
+        )()
+        pre_chunk = "## R1 Title\n\nBody.\n"
+        with pytest.raises(AssertionError, match="reconstruct"):
+            refuse_truncated_linear_reconstruct(
+                issues_provider="linear",
+                record=record,
+                ps_mod=_Ps,
+                pre_chunk_body=pre_chunk,
+            )
+
+    def test_leftover_redacted_families_bind_to_named_registry(self) -> None:
+        data = load_json(REDACTED_FAMILIES)
+        fixture_families = frozenset(
+            row["family"] for row in data["pairs"] if isinstance(row.get("family"), str)
+        )
+        assert fixture_families == frozenset(PRD366_REDACTED_FAMILY_REGISTRY_BINDINGS)
+        assert prd366_leftover_rewrite_families_registered(fixture_families) == []
+        assert PRD366_ADDED_R6_REWRITE_FAMILIES <= LINEAR_PUBLIC_MARKDOWN_R6_REWRITES
+
+    def test_freeze_hash_stays_on_original_bytes_not_r6_form(self) -> None:
+        hyphen = "- **R1** Facade owns Linear split."
+        asterisk = "* **R1** Facade owns Linear split."
+        assert linear_public_markdown_equivalent(hyphen, asterisk)
+        snap_h = IssueSnapshot(title="t", body=hyphen, state="open", labels=[], comments=[])
+        snap_a = IssueSnapshot(title="t", body=asterisk, state="open", labels=[], comments=[])
+        assert canonical_hash(snap_h) != canonical_hash(snap_a)
+        assert original_bytes_hash_body(hyphen) == hyphen.strip("\n")
+        assert (
+            original_bytes_hash_body(hyphen) != linear_public_markdown_r6_form(hyphen)
+            or hyphen == asterisk
+        )
+
+
 class TestPrd366Phase11ExtendingUnitStance:
     def test_binding_stance_a_and_rejected_b_c_d(self) -> None:
         policy = authoring_guard.prd366_extending_unit_policy()
@@ -327,14 +415,15 @@ class TestPrd366Phase11ExtendingUnitStance:
             assert family  # named-family members remain the rewrite registry
 
     def test_branch_diff_does_not_touch_frozen_363_artifacts(self) -> None:
+        base = os.environ.get("SW_INTEGRATION_BRANCH", "feat/linear-markdown-equiv-222")
         proc = subprocess.run(
-            ["git", "diff", "main...HEAD", "--name-only"],
+            ["git", "diff", f"{base}...HEAD", "--name-only"],
             cwd=REPO_ROOT,
             capture_output=True,
             text=True,
         )
         if proc.returncode != 0:
-            pytest.skip("main...HEAD diff unavailable in this worktree")
+            pytest.skip(f"{base}...HEAD diff unavailable in this worktree")
         changed = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
         for rel in changed:
             assert authoring_guard.classify_prd366_mutation_path(rel) != "immutable-363", rel

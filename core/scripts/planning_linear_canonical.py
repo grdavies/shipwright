@@ -167,13 +167,64 @@ LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
         "table-formatting",
         "plain-domain-autolink",
         "bold-around-inline-code",
+        "mixed-bold-inline-code-both-sides-unwrap",
         "italic-delimiter",
         "ordered-list-leading-space",
         "literal-punctuation-escape",
         "post-code-underscore-unescape",
+        "acceptance-criteria-underscore-full-line",
         "implicit-domain-http-autolink",
     }
 )
+
+# PRD 366 phase 6 — leftover redacted fixture families bind to named closed-set members only.
+PRD366_ADDED_R6_REWRITE_FAMILIES = frozenset(
+    {
+        "mixed-bold-inline-code-both-sides-unwrap",
+        "acceptance-criteria-underscore-full-line",
+    }
+)
+
+PRD366_REDACTED_FAMILY_REGISTRY_BINDINGS: dict[str, frozenset[str]] = {
+    "version-section-token-domain-rewrite": frozenset({"plain-domain-autolink"}),
+    "implicit-domain-http-autolink": frozenset(
+        {"implicit-domain-http-autolink", "plain-domain-autolink"}
+    ),
+    "mixed-bold-inline-code-both-sides-unwrap": frozenset(
+        {"mixed-bold-inline-code-both-sides-unwrap", "bold-around-inline-code"}
+    ),
+    "acceptance-criteria-underscore-full-line": frozenset(
+        {"acceptance-criteria-underscore-full-line", "post-code-underscore-unescape"}
+    ),
+}
+
+
+def prd366_leftover_rewrite_families_registered(
+    redacted_families: frozenset[str] | None = None,
+) -> list[str]:
+    """Return errors when a PRD 366 leftover family is not bound to named R6 members."""
+    errors: list[str] = []
+    families = redacted_families or frozenset(PRD366_REDACTED_FAMILY_REGISTRY_BINDINGS)
+    for name in sorted(families):
+        members = PRD366_REDACTED_FAMILY_REGISTRY_BINDINGS.get(name)
+        if members is None:
+            errors.append(f"unbound PRD 366 leftover family: {name}")
+            continue
+        missing = sorted(m for m in members if m not in LINEAR_PUBLIC_MARKDOWN_R6_REWRITES)
+        if missing:
+            errors.append(f"{name} binds missing registry members: {missing}")
+    return errors
+
+
+# PRD 366 R7 — redacted full-line witness; excerpt without acceptance-criteria context is not proof.
+R7_ACCEPTANCE_CRITERIA_FULL_LINE_SUBMITTED = (
+    "- **Acceptance criteria:** after `token`_suffix on the complete line.\n"
+)
+R7_ACCEPTANCE_CRITERIA_FULL_LINE_REFETCHED = (
+    "- **Acceptance criteria:** after `token`\\_suffix on the complete line.\n"
+)
+R7_ACCEPTANCE_CRITERIA_EXCERPT_SUBMITTED = "`token`_suffix\n"
+R7_ACCEPTANCE_CRITERIA_EXCERPT_REFETCHED = "`token`\\_suffix\n"
 
 # PRD 366 D4 — parser-grade AST compare is explicitly out of scope for the 2.22.0 follow-up.
 LINEAR_PUBLIC_MARKDOWN_EQUIVALENCE_STRATEGY = "named-closed-set-families"
@@ -457,24 +508,77 @@ def _normalize_post_code_literal_underscore_escapes(text: str) -> str:
     return "".join(out)
 
 
-def _normalize_bold_around_inline_code(text: str) -> str:
-    """Drop bold wrapping an inline code span only (PRD 359 R3 — not a global strip)."""
+def prove_r7_acceptance_criteria_underscore_full_line() -> dict[str, bool]:
+    """Prove post-code underscore on the complete acceptance-criteria line (PRD 366 R7).
+
+    A reduced excerpt that drops triggering acceptance-criteria context is not proof.
+    """
+    full_ok = linear_public_markdown_equivalent(
+        R7_ACCEPTANCE_CRITERIA_FULL_LINE_SUBMITTED,
+        R7_ACCEPTANCE_CRITERIA_FULL_LINE_REFETCHED,
+    )
+    excerpt_ok = linear_public_markdown_equivalent(
+        R7_ACCEPTANCE_CRITERIA_EXCERPT_SUBMITTED,
+        R7_ACCEPTANCE_CRITERIA_EXCERPT_REFETCHED,
+    )
+    return {
+        "fullLineEquivalent": full_ok,
+        "excerptNotProof": not excerpt_ok,
+        "ok": full_ok and not excerpt_ok,
+    }
+
+
+def _inline_code_bold_wrapped(text: str, start: int, end: int) -> bool:
+    return (
+        start >= 2
+        and end + 2 <= len(text)
+        and text[start - 2 : start] == "**"
+        and text[end : end + 2] == "**"
+    )
+
+
+def _mixed_bold_inline_code_phrase(line: str) -> bool:
+    """True when a line has 2+ inline code spans (PRD 366 R6 mixed phrase unwrap)."""
+    return len(list(_INLINE_CODE.finditer(line))) >= 2
+
+
+def _unwrap_bold_wrapped_inline_codes(segment: str) -> str:
+    """Drop ** around inline code spans within one segment (both-sides unwrap only)."""
     out: list[str] = []
     index = 0
-    for match in _INLINE_CODE.finditer(text):
+    for match in _INLINE_CODE.finditer(segment):
         start, end = match.start(), match.end()
-        bold_wrapped = (
-            start >= 2
-            and end + 2 <= len(text)
-            and text[start - 2 : start] == "**"
-            and text[end : end + 2] == "**"
-        )
+        bold_wrapped = _inline_code_bold_wrapped(segment, start, end)
         slice_start = start - 2 if bold_wrapped else start
-        out.append(text[index:slice_start])
+        out.append(segment[index:slice_start])
         out.append(match.group(0))
         index = end + 2 if bold_wrapped else end
-    out.append(text[index:])
+    out.append(segment[index:])
     return "".join(out)
+
+
+def _normalize_mixed_bold_inline_code_both_sides_unwrap(text: str) -> str:
+    """Unwrap bold on inline codes in mixed phrases on both sides of compare (PRD 366 R6)."""
+    lines = text.split("\n")
+    out: list[str] = []
+    for line in lines:
+        if _mixed_bold_inline_code_phrase(line):
+            out.append(_unwrap_bold_wrapped_inline_codes(line))
+        else:
+            out.append(line)
+    return "\n".join(out)
+
+
+def _normalize_bold_around_inline_code(text: str) -> str:
+    """Drop bold wrapping a lone inline code span (PRD 359 R3 — not mixed phrases)."""
+    lines = text.split("\n")
+    out: list[str] = []
+    for line in lines:
+        if _mixed_bold_inline_code_phrase(line):
+            out.append(line)
+        else:
+            out.append(_unwrap_bold_wrapped_inline_codes(line))
+    return "\n".join(out)
 
 
 def _normalize_table_line(line: str) -> str:
@@ -553,6 +657,7 @@ def linear_public_markdown_r6_form(markdown: str) -> str:
     text, fences = _placeholder_protect(text, _FENCED_BLOCK, "FENCE")
     text = _INLINE_CODE.sub(_normalize_inline_code_span, text)
     text = _normalize_phrase_internal_multi_span_bold(text)
+    text = _normalize_mixed_bold_inline_code_both_sides_unwrap(text)
     text = _normalize_bold_around_inline_code(text)
     text = _normalize_post_code_literal_underscore_escapes(text)
     text, codes = _placeholder_protect(text, _INLINE_CODE, "CODE")
