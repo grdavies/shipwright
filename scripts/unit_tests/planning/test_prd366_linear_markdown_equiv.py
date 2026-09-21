@@ -26,6 +26,7 @@ from planning_linear_canonical import (
     _r6_identity_tokens,
     linear_public_markdown_equivalent,
     linear_public_markdown_r6_form,
+    prove_r7_acceptance_criteria_underscore_full_line,
 )
 from prd366_fixture_lib import (
     PRD366_ALLOWED_REQUIREMENT_IDS,
@@ -245,6 +246,33 @@ class TestPrd366Phase4MixedBoldInlineCodeBothSidesUnwrap:
         left = "Keep **`token`** here.\n"
         right = "Keep `token` here.\n"
         assert linear_public_markdown_equivalent(left, right)
+
+
+class TestPrd366Phase5FullAcceptanceCriteriaUnderscoreLine:
+    @staticmethod
+    def _r7_pairs() -> list[dict[str, str]]:
+        data = load_json(REDACTED_FAMILIES)
+        return [
+            row
+            for row in data["pairs"]
+            if row.get("family") == "acceptance-criteria-underscore-full-line"
+        ]
+
+    def test_named_family_registered(self) -> None:
+        assert "acceptance-criteria-underscore-full-line" in LINEAR_PUBLIC_MARKDOWN_R6_REWRITES
+        assert "post-code-underscore-unescape" in LINEAR_PUBLIC_MARKDOWN_R6_REWRITES
+
+    def test_r7_prove_full_line_not_excerpt(self) -> None:
+        out = prove_r7_acceptance_criteria_underscore_full_line()
+        assert out["ok"] is True
+        assert out["fullLineEquivalent"] is True
+        assert out["excerptNotProof"] is True
+
+    def test_redacted_r7_pairs_pass_equivalent(self) -> None:
+        for row in self._r7_pairs():
+            assert linear_public_markdown_equivalent(row["submitted"], row["refetched"]), row[
+                "id"
+            ]
 
 
 class TestPrd366Phase11ExtendingUnitStance:

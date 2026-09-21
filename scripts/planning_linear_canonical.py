@@ -172,9 +172,20 @@ LINEAR_PUBLIC_MARKDOWN_R6_REWRITES = frozenset(
         "ordered-list-leading-space",
         "literal-punctuation-escape",
         "post-code-underscore-unescape",
+        "acceptance-criteria-underscore-full-line",
         "implicit-domain-http-autolink",
     }
 )
+
+# PRD 366 R7 — redacted full-line witness; excerpt without acceptance-criteria context is not proof.
+R7_ACCEPTANCE_CRITERIA_FULL_LINE_SUBMITTED = (
+    "- **Acceptance criteria:** after `token`_suffix on the complete line.\n"
+)
+R7_ACCEPTANCE_CRITERIA_FULL_LINE_REFETCHED = (
+    "- **Acceptance criteria:** after `token`\\_suffix on the complete line.\n"
+)
+R7_ACCEPTANCE_CRITERIA_EXCERPT_SUBMITTED = "`token`_suffix\n"
+R7_ACCEPTANCE_CRITERIA_EXCERPT_REFETCHED = "`token`\\_suffix\n"
 
 # PRD 366 D4 — parser-grade AST compare is explicitly out of scope for the 2.22.0 follow-up.
 LINEAR_PUBLIC_MARKDOWN_EQUIVALENCE_STRATEGY = "named-closed-set-families"
@@ -456,6 +467,26 @@ def _normalize_post_code_literal_underscore_escapes(text: str) -> str:
         index = _rewrite_post_code_underscore_prefix(text, match.end(), out)
     out.append(text[index:])
     return "".join(out)
+
+
+def prove_r7_acceptance_criteria_underscore_full_line() -> dict[str, bool]:
+    """Prove post-code underscore on the complete acceptance-criteria line (PRD 366 R7).
+
+    A reduced excerpt that drops triggering acceptance-criteria context is not proof.
+    """
+    full_ok = linear_public_markdown_equivalent(
+        R7_ACCEPTANCE_CRITERIA_FULL_LINE_SUBMITTED,
+        R7_ACCEPTANCE_CRITERIA_FULL_LINE_REFETCHED,
+    )
+    excerpt_ok = linear_public_markdown_equivalent(
+        R7_ACCEPTANCE_CRITERIA_EXCERPT_SUBMITTED,
+        R7_ACCEPTANCE_CRITERIA_EXCERPT_REFETCHED,
+    )
+    return {
+        "fullLineEquivalent": full_ok,
+        "excerptNotProof": not excerpt_ok,
+        "ok": full_ok and not excerpt_ok,
+    }
 
 
 def _inline_code_bold_wrapped(text: str, start: int, end: int) -> bool:
