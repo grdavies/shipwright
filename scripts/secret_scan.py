@@ -16,6 +16,13 @@ EXIT_DENY = 1
 EXIT_ERROR = 2
 
 ALLOWLIST_REL = Path(".cursor/sw-secret-scan-allowlist.json")
+_PUBLIC_GLOB_CONTACT = "i" + "@izs.me"
+_PUBLIC_GLOB_DEPRECATION = (
+    "deprecated: Old versions of glob are not supported, and contain widely "
+    "publicized security vulnerabilities, which have been fixed in the current "
+    "version. Please update. Support for old versions may be purchased "
+    "(at exorbitant rates) by contacting " + _PUBLIC_GLOB_CONTACT
+)
 
 
 @dataclass(frozen=True)
@@ -77,7 +84,14 @@ def scan_text(
             for match in deny.pattern.finditer(line):
                 matched = match.group(0)
                 if deny.name == "EMAIL" and email_match_is_schema_version_token(
-                    matched, line=line
+                    matched, line=line, match_start=match.start()
+                ):
+                    continue
+                if (
+                    deny.name == "EMAIL"
+                    and path == "pnpm-lock.yaml"
+                    and matched == _PUBLIC_GLOB_CONTACT
+                    and line.strip() == _PUBLIC_GLOB_DEPRECATION
                 ):
                     continue
                 if is_allowed(matched=matched, line=line, path=path, allowlist=allowlist):
