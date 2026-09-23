@@ -99,8 +99,29 @@ _SCHEMA_VERSION_EMAIL_TOKEN = re.compile(
 )
 
 
-def email_match_is_schema_version_token(matched: str, *, line: str = "") -> bool:
+# Match only complete Markdown, quoted JSON, or lockfile `path:` patch values.
+# Keeping the EMAIL span exempts this occurrence, never an adjacent address.
+_PATCH_NAME = (
+    r"[a-z0-9][a-z0-9._-]*@(?:0|[1-9][0-9]*)\."
+    r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.patch"
+)
+_PACKAGE_PATCH_REFERENCE = re.compile(
+    rf"(?<![\\`])`patches/(?P<markdown>{_PATCH_NAME})`(?!`)"
+    rf'|(?<![\\\"])"patches/(?P<json>{_PATCH_NAME})"(?!")'
+    rf"|(?<=path: )patches/(?P<yaml>{_PATCH_NAME})(?=$|\s)"
+)
+
+
+def email_match_is_schema_version_token(
+    matched: str, *, line: str = "", match_start: int | None = None,
+) -> bool:
     """True when an EMAIL-pattern match is a schema-version token, not a credential (R36)."""
+    if match_start is not None:
+        for reference in _PACKAGE_PATCH_REFERENCE.finditer(line):
+            for group in ("markdown", "json", "yaml"):
+                if (reference.group(group) == matched
+                        and reference.span(group) == (match_start, match_start + len(matched))):
+                    return True
     token = matched.strip()
     if _SCHEMA_VERSION_EMAIL_TOKEN.fullmatch(token):
         return True
