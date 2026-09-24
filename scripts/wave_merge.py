@@ -1328,6 +1328,181 @@ def resolve_orchestrator_worktree(root: Path, args: list[str]) -> Path:
     return Path(path).resolve()
 
 
+def recover_verified_merge_state(
+    state: dict[str, Any], phase_slug: str, merge_commit: str
+) -> tuple[dict[str, Any], list[str]]:
+    """Finish only the state transition skipped by a failed post-merge verify."""
+    import copy
+
+    recovered = copy.deepcopy(state)
+    phases = recovered.get("phases") or {}
+    pid = phase_id_for_slug(recovered, phase_slug)
+    meta = phases.get(pid) if pid else None
+    if not isinstance(meta, dict) or meta.get("status") != "blocked" or meta.get("cause") != "verify:failed":
+        raise ValueError("phase is not blocked by post-merge verification")
+    if meta.get("mergeCommit") != merge_commit:
+        raise ValueError("phase merge commit does not match completed merge")
+    if recovered.get("verdict") != "blocked" or recovered.get("cause") != "remediation-budget-exhausted":
+        raise ValueError("run is not blocked by this verification recovery")
+    if recovered.get("mergeQueue") or recovered.get("mergeJournal"):
+        raise ValueError("merge queue or journal is still active")
+    if not any(
+        isinstance(row, dict)
+        and row.get("phase") == phase_slug
+        and row.get("mergeCommit") == merge_commit
+        for row in recovered.get("completedMerges") or []
+    ):
+        raise ValueError("completed merge record is missing")
+    if not any(
+        isinstance(row, dict)
+        and row.get("phaseSlug") == phase_slug
+        and row.get("mergeCommit") == merge_commit
+        for row in recovered.get("mergedPhases") or []
+    ):
+        raise ValueError("merged phase record is missing")
+
+    blocked_cause = f"blast-radius:upstream-blocked:{phase_slug}"
+    restored: list[str] = []
+    for dep_id, dep_meta in phases.items():
+        if isinstance(dep_meta, dict) and dep_meta.get("status") == "blocked" and dep_meta.get("cause") == blocked_cause:
+            dep_meta["status"] = "pending"
+            dep_meta.pop("cause", None)
+            dep_meta["updatedAt"] = utc_now()
+            restored.append(str(dep_id))
+    other_blockers = [
+        str(other_id)
+        for other_id, other in phases.items()
+        if other_id != pid and isinstance(other, dict) and other.get("status") == "blocked"
+    ]
+    if other_blockers:
+        raise ValueError(f"unrelated blocked phases remain: {', '.join(other_blockers)}")
+    meta["status"] = "teardown-pending"
+    meta.pop("cause", None)
+    meta.pop("postMergeVerifyPending", None)
+    meta.pop("verifyEnvironmental", None)
+    meta["updatedAt"] = utc_now()
+    recovered["verdict"] = "running"
+    recovered.pop("cause", None)
+    from wave_state import record_blast_radius
+
+    record_blast_radius(
+        recovered,
+        applied=[],
+        cleared=[{"phaseId": dep_id, "phaseSlug": str(phases[dep_id].get("slug") or dep_id), "reason": "upstream-post-merge-verified"} for dep_id in restored],
+        predicate="post-merge-verified",
+        at=utc_now(),
+    )
+    return recovered, restored
+
+
+def prepare_recovery_cursor(root: Path, state: dict[str, Any]) -> str:
+    """Replace the old terminal halt with the conductor's actual next step."""
+    from wave_deliver_loop import compute_next_action, load_plan
+
+    for key in ("budgetHalt", "blockerReport", "haltResume", "lockReleased", "lastStallCause"):
+        state.pop(key, None)
+    state["lastProgressKey"] = None
+    state["noProgressStreak"] = 0
+    state.pop("nextAction", None)
+    step = compute_next_action(root, state, load_plan(root, state))
+    action = str(step.get("action") or "")
+    if action in ("", "terminal", "halt-blocked"):
+        raise ValueError(f"recovery cannot advance conductor: {step}")
+    state["nextAction"] = action
+    state["driverHeartbeatAt"] = utc_now()
+    return action
+
+
+def recovery_pr_close_acceptable(result: dict[str, Any], phase_slug: str) -> bool:
+    """Permit only the close helper's precise benign already-ineligible skip."""
+    if result.get("verdict") == "ok":
+        return True
+    return (
+        result.get("verdict") == "skip"
+        and result.get("reason") == "phase-not-green-merged"
+        and result.get("phase") == phase_slug
+        and result.get("closed") == []
+    )
+
+
+def cmd_merge_recover_after_verify(root: Path, args: list[str]) -> None:
+    """Reverify a retained merge and complete its interrupted closeout, once."""
+    slug = parse_kv(args, "--phase-slug")
+    if not slug:
+        fail("--phase-slug required")
+    state = load_state(root)
+    pid = phase_id_for_slug(state, slug)
+    meta = (state.get("phases") or {}).get(pid) if pid else None
+    if not isinstance(meta, dict):
+        fail("phase missing from deliver state", exit_code=20)
+    merge_commit = str(meta.get("mergeCommit") or "")
+    try:
+        candidate, restored = recover_verified_merge_state(state, slug, merge_commit)
+    except ValueError as exc:
+        fail(str(exc), exit_code=20)
+    target = target_branch_from_state(state)
+    orch = resolve_orchestrator_worktree(root, args)
+    if not target or not orch.is_dir():
+        fail("target or orchestrator worktree missing", exit_code=20)
+    remote = remote_name(load_workflow_config(root))
+    fetched = git_run(["fetch", remote, target], cwd=orch, check=False)
+    if fetched.returncode != 0:
+        fail("could not refresh remote target before recovery", exit_code=20)
+    target_sha = git_run(["rev-parse", "--verify", target], cwd=orch, check=False).stdout.strip()
+    head_sha = git_run(["rev-parse", "--verify", "HEAD"], cwd=orch, check=False).stdout.strip()
+    remote_sha = git_run(["rev-parse", "--verify", remote_ref(remote, target)], cwd=orch, check=False).stdout.strip()
+    branch = str(meta.get("branch") or "")
+    phase_sha = git_run(["rev-parse", "--verify", branch], cwd=orch, check=False).stdout.strip()
+    if not all((target_sha, head_sha, remote_sha, phase_sha, merge_commit)) or not (target_sha == head_sha == remote_sha):
+        fail("local, checked-out, and remote target tips must match", exit_code=20)
+    for ancestor, descendant in ((phase_sha, merge_commit), (merge_commit, target_sha)):
+        if git_run(["merge-base", "--is-ancestor", ancestor, descendant], cwd=orch, check=False).returncode != 0:
+            fail("merge ancestry does not match recorded phase", exit_code=20)
+
+    from wave_failure import post_merge_verify_scope
+    from wave_post_merge import run_post_merge_verify
+
+    scope = post_merge_verify_scope(root)
+    outcome = run_post_merge_verify(root, orch, scope=scope)
+    if outcome.get("verdict") != "pass" or not outcome.get("results"):
+        fail("fresh post-merge verification did not pass", exit_code=20, verify=outcome)
+    try:
+        next_action = prepare_recovery_cursor(root, candidate)
+    except ValueError as exc:
+        fail(str(exc), exit_code=20)
+    # Re-read under the conductor's target lock; refuse if state changed while verifying.
+    fresh = load_state(root)
+    if fresh != state:
+        fail("deliver state changed during post-merge verification", exit_code=20)
+    from wave_terminal import phase_ack_cadence
+
+    cadence = phase_ack_cadence(root)
+    merges = int(candidate.get("mergesSinceAck") or 0) + 1
+    candidate["mergesSinceAck"] = merges
+    ack_pending = cadence > 0 and merges >= cadence
+    if ack_pending:
+        candidate["ackPending"] = True
+        candidate["ackPendingAt"] = utc_now()
+
+    from wave_phase_pr import close_superseded_phase_prs
+    from planning_progress import sync_phase_done
+
+    ack = {"mergesSinceAck": merges, "cadence": cadence, "ackPending": ack_pending}
+    pr_close = close_superseded_phase_prs(root, candidate, phase_slug=slug)
+    if not recovery_pr_close_acceptable(pr_close, slug):
+        fail("phase PR closeout incomplete; recovery state unchanged", exit_code=20, supersededPrClose=pr_close)
+    progress = sync_phase_done(root, candidate, str(pid))
+    if progress.get("verdict") not in ("ok", "pass"):
+        fail("phase progress sync incomplete; recovery state unchanged", exit_code=20, progressSync=progress)
+    if load_state(root) != state:
+        fail("deliver state changed during recovery closeout", exit_code=20)
+    save_state(root, candidate)
+    from wave_state import append_log
+
+    append_log(root, {"event": "post-merge-verified-recovery", "phase": slug, "mergeCommit": merge_commit, "nextAction": next_action, "restoredDependents": restored}, target=target)
+    emit({"verdict": "pass", "action": "merge-recover-after-verify", "phase": slug, "mergeCommit": merge_commit, "nextAction": next_action, "restoredDependents": restored, "verify": outcome, "ack": ack, "supersededPrClose": pr_close, "progressSync": progress})
+
+
 def cmd_merge_exec(root: Path, args: list[str]) -> None:
     phase_slug = parse_kv(args, "--phase-slug")
     phase_branch = parse_kv(args, "--phase-branch")
@@ -2028,12 +2203,14 @@ def main() -> None:
             cmd_merge_exec(root, rest)
         elif sub == "run-next":
             cmd_merge_run_next(root, rest)
+        elif sub == "recover-after-verify":
+            cmd_merge_recover_after_verify(root, rest)
         elif sub == "collect-all-ready":
             cmd_merge_collect_all_ready(root, rest)
         elif sub == "ancestry-check":
             cmd_merge_ancestry_check(root, rest)
         else:
-            fail("merge subcommand required: gate-check|enqueue|exec|run-next|collect-all-ready|ancestry-check")
+            fail("merge subcommand required: gate-check|enqueue|exec|run-next|recover-after-verify|collect-all-ready|ancestry-check")
     elif domain == "report":
         sub = args[0] if args else ""
         rest = args[1:]

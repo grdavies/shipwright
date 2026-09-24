@@ -1,0 +1,278 @@
+{
+  "version": 1,
+  "manifestVersion": "1.0.0",
+  "description": "Declarative gate manifest for /sw-ship and deliver chokepoints (PRD 065 R5, R29).",
+  "taxonomy": {
+    "ship-chain": "Gates invoked within the /sw-ship step loop.",
+    "external-chokepoint": "Kernel chokepoints enforced outside the step loop.",
+    "advisory": "Optional or agent-classified gates; config may promote to mandatory."
+  },
+  "r9ProseOnlyGateIds": [
+    "behavioral-anomaly",
+    "build-chain",
+    "pre-pr-smoke",
+    "decision-log",
+    "verification-gate"
+  ],
+  "kernelFloorGateIds": [
+    "verification-gate",
+    "check-gate",
+    "gap-check-gate",
+    "secret-scan"
+  ],
+  "gates": [
+    {
+      "id": "behavioral-anomaly",
+      "taxonomy": "ship-chain",
+      "defaultClass": "mandatory",
+      "lineageRef": {
+        "kind": "prose-only-r9",
+        "bindingKey": "behavioral-anomaly"
+      },
+      "entrypoint": {
+        "script": "scripts/behavioral_anomaly_check.py",
+        "mechanical": true
+      },
+      "evidence": {
+        "bindingMode": "head-exact",
+        "evaluationPoint": "post-sw-verify",
+        "statusArtifact": "{runDir}/behavioral-anomaly.status.json"
+      },
+      "failureRouting": "halt",
+      "ordering": {
+        "after": "sw-verify",
+        "before": "verification-gate"
+      }
+    },
+    {
+      "id": "verification-gate",
+      "taxonomy": "ship-chain",
+      "defaultClass": "mandatory",
+      "lineageRef": {
+        "kind": "kernel",
+        "kernelChokepointId": "verification-gate"
+      },
+      "entrypoint": {
+        "script": "scripts/verify-evidence.py",
+        "mechanical": true
+      },
+      "evidence": {
+        "bindingMode": "head-exact",
+        "evaluationPoint": "pre-sw-commit",
+        "statusArtifact": "{runDir}/verification-gate.status.json"
+      },
+      "failureRouting": "halt",
+      "ordering": {
+        "after": "sw-verify",
+        "before": "sw-commit"
+      }
+    },
+    {
+      "id": "build-chain",
+      "taxonomy": "ship-chain",
+      "defaultClass": "mandatory",
+      "lineageRef": {
+        "kind": "prose-only-r9",
+        "bindingKey": "build-chain"
+      },
+      "entrypoint": {
+        "script": "scripts/ship-build-chain-check.py",
+        "mechanical": true
+      },
+      "evidence": {
+        "bindingMode": "tree-stable",
+        "evaluationPoint": "pre-sw-commit",
+        "statusArtifact": "{runDir}/build-chain.status.json"
+      },
+      "failureRouting": "halt",
+      "ordering": {
+        "before": "sw-commit"
+      }
+    },
+    {
+      "id": "decision-log",
+      "taxonomy": "ship-chain",
+      "defaultClass": "mandatory",
+      "lineageRef": {
+        "kind": "prose-only-r9",
+        "bindingKey": "decision-log"
+      },
+      "entrypoint": {
+        "script": "scripts/decision_log.py",
+        "mechanical": true
+      },
+      "evidence": {
+        "bindingMode": "head-exact",
+        "evaluationPoint": "pre-sw-pr",
+        "statusArtifact": "{runDir}/decision-log.status.json"
+      },
+      "failureRouting": "halt",
+      "ordering": {
+        "after": "sw-commit",
+        "before": "sw-pr"
+      }
+    },
+    {
+      "id": "pre-pr-smoke",
+      "taxonomy": "ship-chain",
+      "defaultClass": "mandatory",
+      "lineageRef": {
+        "kind": "prose-only-r9",
+        "bindingKey": "pre-pr-smoke"
+      },
+      "entrypoint": {
+        "script": "scripts/ship_pre_pr_smoke.py",
+        "mechanical": true
+      },
+      "evidence": {
+        "bindingMode": "head-exact",
+        "evaluationPoint": "pre-sw-pr",
+        "statusArtifact": "{runDir}/pre-pr-smoke.status.json"
+      },
+      "failureRouting": "halt",
+      "ordering": {
+        "after": "sw-commit",
+        "before": "sw-pr"
+      }
+    },
+    {
+      "id": "sw-review",
+      "taxonomy": "advisory",
+      "defaultClass": "optional",
+      "lineageRef": {
+        "kind": "guideline",
+        "planPolicyStepId": "sw-review"
+      },
+      "entrypoint": {
+        "command": "sw-review",
+        "mechanical": false
+      },
+      "evidence": {
+        "bindingMode": "head-exact",
+        "evaluationPoint": "pre-sw-commit",
+        "statusArtifact": "{runDir}/sw-local-review-run-report.json"
+      },
+      "failureRouting": "halt-on-promoted-severity",
+      "ordering": {
+        "after": "verification-gate",
+        "before": "sw-commit"
+      }
+    },
+    {
+      "id": "sw-simplify",
+      "taxonomy": "advisory",
+      "defaultClass": "optional",
+      "agentClassified": true,
+      "lineageRef": {
+        "kind": "guideline",
+        "planPolicyStepId": "sw-simplify"
+      },
+      "entrypoint": {
+        "command": "sw-simplify",
+        "mechanical": false
+      },
+      "evidence": {
+        "bindingMode": "head-exact",
+        "evaluationPoint": "pre-sw-commit",
+        "statusArtifact": "{runDir}/sw-simplify.status.json",
+        "outcomeArtifact": "{runDir}/sw-simplify-outcome.json"
+      },
+      "failureRouting": "halt-on-regression",
+      "ordering": {
+        "after": "sw-review",
+        "before": "sw-commit"
+      }
+    },
+    {
+      "id": "gap-check",
+      "taxonomy": "advisory",
+      "defaultClass": "optional",
+      "lineageRef": {
+        "kind": "guideline",
+        "planPolicyStepId": "gap-check"
+      },
+      "entrypoint": {
+        "command": "gap-check",
+        "mechanical": false
+      },
+      "evidence": {
+        "bindingMode": "head-exact",
+        "evaluationPoint": "pre-sw-commit",
+        "statusArtifact": "{phaseRunDir}/gap-check.status.json"
+      },
+      "failureRouting": "halt-on-binding-fail",
+      "ordering": {
+        "after": "sw-simplify",
+        "before": "sw-commit"
+      }
+    },
+    {
+      "id": "check-gate",
+      "taxonomy": "external-chokepoint",
+      "defaultClass": "mandatory",
+      "lineageRef": {
+        "kind": "kernel",
+        "kernelChokepointId": "check-gate"
+      },
+      "entrypoint": {
+        "script": "scripts/check-gate.py",
+        "mechanical": true
+      },
+      "evidence": {
+        "bindingMode": "head-exact",
+        "evaluationPoint": "pre-merge-ready",
+        "statusArtifact": "{runDir}/check-gate.status.json"
+      },
+      "failureRouting": "halt",
+      "ordering": {
+        "after": "sw-stabilize",
+        "before": "sw-ready"
+      }
+    },
+    {
+      "id": "secret-scan",
+      "taxonomy": "external-chokepoint",
+      "defaultClass": "mandatory",
+      "lineageRef": {
+        "kind": "kernel",
+        "kernelChokepointId": "git-push-secret-scan"
+      },
+      "entrypoint": {
+        "script": "scripts/secret-scan.py",
+        "mechanical": true
+      },
+      "evidence": {
+        "bindingMode": "head-exact",
+        "evaluationPoint": "pre-sw-pr",
+        "statusArtifact": "{runDir}/secret-scan.status.json"
+      },
+      "failureRouting": "halt",
+      "ordering": {
+        "after": "sw-commit",
+        "before": "sw-watch-ci"
+      }
+    },
+    {
+      "id": "gap-check-gate",
+      "taxonomy": "external-chokepoint",
+      "defaultClass": "mandatory",
+      "lineageRef": {
+        "kind": "kernel",
+        "kernelChokepointId": "gap-check-gate-deliver"
+      },
+      "entrypoint": {
+        "script": "scripts/gap-check-gate.py",
+        "mechanical": true
+      },
+      "evidence": {
+        "bindingMode": "head-exact",
+        "evaluationPoint": "pre-merge-enqueue",
+        "statusArtifact": "{phaseRunDir}/gap-check.status.json"
+      },
+      "failureRouting": "halt",
+      "ordering": {
+        "before": "merge-enqueue"
+      }
+    }
+  ]
+}

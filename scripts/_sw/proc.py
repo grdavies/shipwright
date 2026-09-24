@@ -91,6 +91,17 @@ def materialize_child_env(
             declared_context_keys=_non_credential_sw_keys(source),
             pythonpath=source.get("PYTHONPATH"),
         )
+        # Internal Shipwright dispatch needs its bound plugin scripts root in
+        # consumer repos. Validate this one non-SW setting before forwarding;
+        # explicit hook/host child environments remain default-deny.
+        scripts_root = source.get("SHIPWRIGHT_SCRIPTS", "")
+        if scripts_root.strip():
+            from sw_scripts_resolve import validate_env_scripts_root
+
+            trusted, error = validate_env_scripts_root(scripts_root)
+            if error or trusted is None:
+                raise ValueError(error or "SHIPWRIGHT_SCRIPTS is not trusted")
+            env["SHIPWRIGHT_SCRIPTS"] = str(trusted)
         # Orchestrator-only injections (hooks must pass HookVerifyEnv and stay token-free).
         planning_token = source.get("SW_PLANNING_ISSUES_TOKEN", "").strip()
         if planning_token:

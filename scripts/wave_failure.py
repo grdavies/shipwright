@@ -371,6 +371,11 @@ def verify_watchdog_max_minutes(root: Path) -> float | None:
 
 def post_merge_verify_scope(root: Path) -> str:
     """Scoped post-merge verify when widen list absent (PRD 055 R32)."""
+    from repository_context import is_plugin_self_repository
+
+    if not is_plugin_self_repository(root):
+        # Consumer verify commands own their scope; suite-registry is Shipwright-only.
+        return "phase"
     import test_scope as ts
 
     changed = ts.resolve_changed_paths(root, None)

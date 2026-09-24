@@ -1,8 +1,10 @@
-"""PRD 348 R1/R1a — post-merge verify uses argv-list pytest (no space-joined paths)."""
+"""Post-merge verification selects configured consumer commands or argv-list pytest."""
 
 from __future__ import annotations
 
+import json
 import subprocess
+import sys
 from pathlib import Path
 from wave_post_merge import pytest_argv, run_post_merge_verify, run_pytest_paths
 
@@ -49,6 +51,7 @@ def test_run_pytest_paths_subprocess_receives_argv_list(tmp_path: Path) -> None:
 def test_run_post_merge_verify_invokes_pytest_with_argv_list(
     tmp_path: Path, monkeypatch
 ) -> None:
+    monkeypatch.setattr("wave_post_merge.is_plugin_self_repository", lambda _root: True)
     paths = [
         "scripts/unit_tests/path with space/test_x.py",
         "scripts/unit_tests/second path/test_y.py",
@@ -85,3 +88,47 @@ def test_run_post_merge_verify_invokes_pytest_with_argv_list(
     assert paths[0] in argv
     assert paths[1] in argv
     assert f"{paths[0]} {paths[1]}" not in argv
+
+
+def test_consumer_post_merge_uses_configured_verify_without_pytest_registry(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr("wave_post_merge.is_plugin_self_repository", lambda _root: False)
+    config = tmp_path / ".shipwright" / "workflow.config.json"
+    config.parent.mkdir()
+    config.write_text(
+        json.dumps({"verify": {"test": f"{sys.executable} -c 'print(\"consumer verified\")'"}}),
+        encoding="utf-8",
+    )
+
+    outcome = run_post_merge_verify(tmp_path, tmp_path, flaky_retries=0)
+
+    assert outcome["verdict"] == "pass"
+    assert len(outcome["results"]) == 1
+    assert "consumer verified" in outcome["results"][0]["stdoutTail"]
+    assert "pytestArgs" not in outcome
+
+
+def test_consumer_scope_does_not_read_shipwright_suite_registry(
+    tmp_path: Path, monkeypatch
+) -> None:
+    from wave_failure import post_merge_verify_scope
+
+    monkeypatch.setattr("repository_context.is_plugin_self_repository", lambda _root: False)
+    monkeypatch.setattr(
+        "test_scope.resolve_changed_paths",
+        lambda *_args: (_ for _ in ()).throw(AssertionError("unexpected suite registry")),
+    )
+
+    assert post_merge_verify_scope(tmp_path) == "phase"
+
+
+def test_consumer_post_merge_fails_when_verify_is_unconfigured(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setattr("wave_post_merge.is_plugin_self_repository", lambda _root: False)
+
+    outcome = run_post_merge_verify(tmp_path, tmp_path, flaky_retries=0)
+
+    assert outcome["verdict"] == "fail"
+    assert outcome["note"] == "no verify commands configured"
