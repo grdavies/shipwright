@@ -11,12 +11,13 @@ from _sw.cli import run_module_main
 def main(argv: list[str] | None = None) -> int:
     import argparse, json, os, shutil, subprocess
     from pathlib import Path
-    root = SCRIPT_DIR.parent
     parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--root")
     parser.add_argument("--verdict"); parser.add_argument("--cause"); parser.add_argument("--phase")
     parser.add_argument("--out"); parser.add_argument("--head"); parser.add_argument("--pr")
     parser.add_argument("--gate-json")
     ns, _ = parser.parse_known_args(list(sys.argv[1:] if argv is None else argv))
+    root = Path(ns.root or os.environ.get("SW_REPO_ROOT") or SCRIPT_DIR.parent).resolve()
     verdict, cause, phase, out, head, pr, gate_json = ns.verdict, ns.cause, ns.phase, ns.out, ns.head, ns.pr, ns.gate_json
     if verdict not in ("merge-ready-green","blocked"):
         print(json.dumps({"verdict":"fail","error":"--verdict merge-ready-green|blocked required"}), file=sys.stderr); return 2
