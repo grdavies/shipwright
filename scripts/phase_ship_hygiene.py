@@ -143,7 +143,7 @@ def discover_authoritative_gap_evaluation(
     if evaluated_at.tzinfo is None:
         return None
     commit = subprocess.run(
-        ["git", "-C", str(root), "show", "-s", "--format=%cI", head],
+        ["git", "-C", str(run_dir), "show", "-s", "--format=%cI", head],
         capture_output=True, text=True,
     )
     if commit.returncode != 0 or not commit.stdout.strip():
