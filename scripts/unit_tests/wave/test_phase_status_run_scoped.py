@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import importlib.util
 from pathlib import Path
 
 import pytest
@@ -203,6 +204,48 @@ def test_reintroduced_glob_does_not_affect_discovery(repo: Path) -> None:
     path, doc = discover_phase_status(repo, slug, "gap-check.status.json", state=state)
     assert path == canonical
     assert doc and doc.get("verdict") == "pass"
+
+
+def test_gap_check_write_path_is_discoverable_for_active_run(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    slug = "run-scoped-gap"
+    worktree = repo / "phase-worktree"
+    worktree.mkdir()
+    state = _phase_state(mint_run_id(repo), "3", slug, worktree=worktree)
+    script = Path(__file__).resolve().parents[2] / "gap-check-gate.py"
+    spec = importlib.util.spec_from_file_location("gap_check_gate_run_scope", script)
+    assert spec and spec.loader
+    gate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gate)
+    monkeypatch.setattr(gate, "_load_deliver_state", lambda _root: state)
+
+    path = gate.preferred_write_path(repo, slug)
+    assert path in collect_status_candidate_paths(repo, slug, gate.STATUS_NAME, worktree=worktree, state=state)
+    assert path.is_relative_to(worktree)
+    assert path != worktree / ".cursor" / "sw-deliver-runs" / slug / gate.STATUS_NAME
+    gate.write_status(path, "pass", head="f" * 40, evaluation_provenance={
+        "source": "gate-evidence", "evaluationHead": "f" * 40,
+        "evaluatedAt": "2026-09-24T00:00:00Z",
+    })
+    found_path, found = gate.discover_gap_check_status(repo, slug)
+    assert found_path == path
+    assert found and found["verdict"] == "pass"
+
+
+def test_gap_check_active_run_requires_fresh_evaluation(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    slug = "missing-gap-evaluation"
+    state = _phase_state(mint_run_id(repo), "3", slug)
+    script = Path(__file__).resolve().parents[2] / "gap-check-gate.py"
+    spec = importlib.util.spec_from_file_location("gap_check_gate_freshness", script)
+    assert spec and spec.loader
+    gate = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(gate)
+    monkeypatch.setattr(gate, "_load_deliver_state", lambda _root: state)
+    monkeypatch.setattr(gate, "resolve_phase_write_head", lambda _root, _slug: "f" * 40)
+    import phase_ship_hygiene
+    monkeypatch.setattr(phase_ship_hygiene, "discover_authoritative_gap_evaluation", lambda *_args: None)
+
+    assert gate.main(["write", str(repo), "--phase-slug", slug, "--verdict", "pass"]) == 2
+    assert not gate.preferred_write_path(repo, slug).exists()
 
 
 def test_first_existing_prefers_canonical_run_scoped_path(repo: Path) -> None:

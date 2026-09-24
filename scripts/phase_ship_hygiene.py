@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -134,10 +135,29 @@ def discover_authoritative_gap_evaluation(
         return None
     if chain.index(last) < chain.index("gap-check"):
         return None
+    updated_at = str(doc.get("updatedAt") or "")
+    try:
+        evaluated_at = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if evaluated_at.tzinfo is None:
+        return None
+    commit = subprocess.run(
+        ["git", "-C", str(root), "show", "-s", "--format=%cI", head],
+        capture_output=True, text=True,
+    )
+    if commit.returncode != 0 or not commit.stdout.strip():
+        return None
+    try:
+        committed_at = datetime.fromisoformat(commit.stdout.strip())
+    except ValueError:
+        return None
+    if evaluated_at < committed_at:
+        return None
     return {
         "source": "ship-steps",
         "evaluationHead": head,
-        "evaluatedAt": str(doc.get("updatedAt") or utc_now()),
+        "evaluatedAt": updated_at,
         "lastCompletedStep": last,
     }
 
