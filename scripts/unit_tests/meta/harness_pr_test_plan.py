@@ -157,7 +157,7 @@ export SW_HOST_FIXTURE=advisory-fail
 export SW_GATE_NOW=1577838000
 export GITHUB_TOKEN=gh_fixture_token_for_tests
 set +e
-OUT=$(bash "$GATE" 42 2>/dev/null)
+OUT=$(python3 "$GATE" 42 2>/dev/null)
 EC=$?
 set -e
 VERDICT=$(echo "$OUT" | jq -r .verdict 2>/dev/null || echo "")

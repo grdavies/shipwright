@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Post-merge verify helpers — argv-list pytest invocation (PRD 348 R1/R1a).
+"""Post-merge verify helpers for Shipwright self-repos and consumers.
 
-``postMergeVerify`` must never space-join pytest paths into a shell string.
-Args are always passed as separate argv elements via ``subprocess`` list form.
-Shell-string construction (including ``shlex.join``) is intentionally rejected (D1).
+Shipwright self-repo pytest paths stay separate argv elements (PRD 348 R1/R1a).
+Consumers run their configured verification command without a Shipwright suite registry.
 """
 from __future__ import annotations
 
@@ -13,6 +12,8 @@ import sys
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
+
+from repository_context import is_plugin_self_repository
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 RUN_PYTEST = SCRIPT_DIR / "test" / "run_pytest.py"
@@ -87,7 +88,17 @@ def run_post_merge_verify(
     harness: Any | None = None,
     run: RunFn | None = None,
 ) -> dict[str, Any]:
-    """Run post-merge verify using argv-list pytest (never bash -c path joins)."""
+    """Use configured consumer verification or Shipwright's argv-list pytest."""
+    if not is_plugin_self_repository(root):
+        from wave_failure import run_verify_suite
+
+        outcome = run_verify_suite(
+            root, cwd, flaky_retries=flaky_retries, scope=scope, harness=harness
+        )
+        if not outcome.get("results"):
+            return {**outcome, "verdict": "fail", "note": "no verify commands configured"}
+        return outcome
+
     from wave_failure import (
         apply_harness_test_switches,
         enrich_verify_result,

@@ -44,6 +44,7 @@ SW_REFERENCE_CLOSED_EMIT = (
     "capability-manifest.schema.json",
     "signal-context.schema.json",
     "kernel-classification.json",
+    "gate-manifest.json",
     "kernel-classification.md",
     "guidelines.schema.json",
     "guidelines.json",

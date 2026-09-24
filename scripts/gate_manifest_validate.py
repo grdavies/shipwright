@@ -190,12 +190,16 @@ def validate_kernel_floor_present(manifest: dict[str, Any]) -> list[str]:
     return reasons
 
 
-def validate_manifest(manifest: dict[str, Any], *, root: Path | None = None) -> dict[str, Any]:
+def validate_manifest(
+    manifest: dict[str, Any], *, root: Path | None = None,
+    classification: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     root = (root or Path.cwd()).resolve()
     reasons: list[str] = []
     reasons.extend(validate_manifest_shape(manifest))
     try:
-        classification = load_classification(root)
+        if classification is None:
+            classification = load_classification(root)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         return {"verdict": "fail", "error": f"cannot load kernel classification: {exc}"}
     reasons.extend(validate_r9_only_boundary(manifest))
