@@ -247,7 +247,10 @@ def commit_frozen_artifact(root: Path, artifact: str, revision: str) -> dict[str
             if existing_ref.returncode != 0:
                 _git_run(["update-ref", branch_ref, parent, "0" * 40], top)
             return {"verdict": "pass", "commit": parent, "branch": branch, "note": "docs already match branch HEAD"}
-        head = git("commit-tree", tree, "-p", parent, "-m", f"docs: freeze artifact for {slug}")
+        head = git(
+            "-c", "user.name=Shipwright", "-c", "user.email=shipwright@localhost",
+            "commit-tree", tree, "-p", parent, "-m", f"docs: freeze artifact for {slug}",
+        )
 
     verified = verify_commit_contains_revision(top, artifact, revision, commit_sha=head)
     if verified.get("verdict") != "pass":
