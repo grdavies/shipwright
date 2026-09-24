@@ -176,6 +176,16 @@ def test_direct_stamp_freeze_still_works(repo: Path) -> None:
     assert len(revision) == 64
 
 
+def test_stamp_replaces_draft_frozen_flag(repo: Path) -> None:
+    prd = _write_prd(repo)
+    path = repo / prd
+    text = path.read_text(encoding="utf-8")
+    path.write_text(text.replace("---\n", "---\nfrozen: false\n", 1), encoding="utf-8")
+    stamp_frozen(path)
+    assert artifact_is_frozen(path)
+    assert path.read_text(encoding="utf-8").count("frozen:") == 1
+
+
 def test_no_freeze_leaves_tasks_draft(repo: Path) -> None:
     tasks = _write_tasks(repo)
     path = repo / tasks
@@ -202,7 +212,7 @@ def test_freeze_commit_no_recursive_subprocess(repo: Path) -> None:
     rel = f"docs/prds/{unit_id}/081-prd-freeze-recursion.md"
     path = repo / rel
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("---\ntype: prd\ntopic: freeze-recursion\n---\n# PRD\n", encoding="utf-8")
+    path.write_text("---\ntype: feat\ntopic: freeze-recursion\n---\n# PRD\n", encoding="utf-8")
     stamp_frozen(path)
     subprocess.run([*_git(repo), "add", rel], cwd=repo, check=True, capture_output=True)
     subprocess.run([*_git(repo), "commit", "-m", "track prd"], cwd=repo, check=True, capture_output=True)
@@ -230,6 +240,43 @@ def test_freeze_commit_no_recursive_subprocess(repo: Path) -> None:
 
     assert proc.returncode == 0, proc.stdout + proc.stderr
     assert nested_freeze_calls == 0
+
+
+def test_freeze_commit_preserves_checkout_and_other_staged_files(repo: Path) -> None:
+    _init_git_repo(repo)
+    rel = "docs/prds/081-prd-freeze-recursion/081-prd-freeze-recursion.md"
+    path = repo / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("---\ntype: feat\ntopic: freeze-recursion\nfrozen: false\n---\n", encoding="utf-8")
+    revision = stamp_frozen(path)
+    (repo / "README.md").write_text("staged change\n", encoding="utf-8")
+    subprocess.run([*_git(repo), "add", "README.md"], cwd=repo, check=True, capture_output=True)
+    before = subprocess.run(["git", "status", "--porcelain"], cwd=repo, check=True, capture_output=True, text=True).stdout
+
+    result = check_frozen_lib.commit_frozen_artifact(repo, rel, revision)
+
+    assert result["verdict"] == "pass"
+    assert subprocess.run(["git", "branch", "--show-current"], cwd=repo, check=True, capture_output=True, text=True).stdout.strip() == "main"
+    assert subprocess.run(["git", "status", "--porcelain"], cwd=repo, check=True, capture_output=True, text=True).stdout == before
+    assert check_frozen_lib.verify_commit_contains_revision(repo, rel, revision, commit_sha=result["commit"])["verdict"] == "pass"
+
+
+def test_freeze_commit_refuses_checked_out_target(repo: Path) -> None:
+    _init_git_repo(repo)
+    rel = "docs/prds/081-prd-freeze-recursion/081-prd-freeze-recursion.md"
+    path = repo / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("---\ntype: feat\ntopic: freeze-recursion\nfrozen: false\n---\n", encoding="utf-8")
+    revision = stamp_frozen(path)
+    subprocess.run(["git", "branch", "feat/freeze-recursion"], cwd=repo, check=True, capture_output=True)
+    worktree = repo / "other-worktree"
+    subprocess.run(["git", "worktree", "add", str(worktree), "feat/freeze-recursion"], cwd=repo, check=True, capture_output=True)
+    worktree_path = worktree / rel
+    worktree_path.parent.mkdir(parents=True, exist_ok=True)
+    worktree_path.write_bytes(path.read_bytes())
+    result = check_frozen_lib.commit_frozen_artifact(worktree, rel, revision)
+    assert result["verdict"] == "fail"
+    assert result["error"] == "target-branch-checked-out"
 
 
 def test_freeze_owner_conflict(repo: Path) -> None:

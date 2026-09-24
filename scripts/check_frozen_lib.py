@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
@@ -111,11 +112,14 @@ def stamp_frozen(path: Path) -> str:
         if end != -1:
             block = text[4:end]
             lines = block.splitlines()
-            if not any(line.strip().startswith("frozen:") for line in lines):
+            frozen_lines = [i for i, line in enumerate(lines) if line.strip().startswith("frozen:")]
+            if frozen_lines:
+                lines[frozen_lines[0]] = "frozen: true"
+            else:
                 lines.append("frozen: true")
             if not any(line.strip().startswith("frozen_at:") for line in lines):
                 lines.append(f"frozen_at: {date.today().isoformat()}")
-            text = "---" + "\n".join(lines) + "\n---" + text[end + 4 :]
+            text = "---\n" + "\n".join(lines) + "\n---" + text[end + 4 :]
         else:
             text = f"---\nfrozen: true\nfrozen_at: {date.today().isoformat()}\n---\n" + text
     else:
@@ -193,8 +197,8 @@ def _git_run(args: list[str], cwd: Path, *, check: bool = True) -> subprocess.Co
 
 
 def commit_frozen_artifact(root: Path, artifact: str, revision: str) -> dict[str, Any]:
-    """Low-level git commit for a frozen artifact onto <type>/<slug> (no re-entrant freeze_artifact)."""
-    from primary_checkout_guard import enforce_guard
+    """Commit only the frozen artifact to an unoccupied target ref without switching worktrees."""
+    from primary_checkout_guard import enforce_guard, worktree_path_for_branch
     from wave_spec_seed import git_toplevel, load_trunk_base, resolve_target_from_artifact
 
     top = git_toplevel(root)
@@ -219,33 +223,31 @@ def commit_frozen_artifact(root: Path, artifact: str, revision: str) -> dict[str
             "note": "already committed with matching revision",
         }
 
-    current = _git_run(["branch", "--show-current"], top, check=False).stdout.strip()
-    prev = current or default
-    base_ref = default
-    if _git_run(["show-ref", "--verify", f"refs/heads/{branch}"], top, check=False).returncode == 0:
-        base_ref = branch
+    occupied = worktree_path_for_branch(top, branch)
+    if occupied is not None:
+        return {"verdict": "fail", "error": "target-branch-checked-out", "branch": branch, "worktree": str(occupied)}
 
-    _git_run(["checkout", "-B", branch, base_ref], top)
-    _git_run(["add", "--", artifact], top)
-    diff_cached = _git_run(["diff", "--cached", "--quiet"], top, check=False)
-    if diff_cached.returncode == 0:
-        head = _git_run(["rev-parse", "HEAD"], top).stdout.strip()
-        if prev and prev != branch:
-            _git_run(["checkout", prev], top, check=False)
-        verified = verify_commit_contains_revision(top, artifact, revision, commit_sha=head)
-        if verified.get("verdict") != "pass":
-            return {
-                "verdict": "fail",
-                "error": "commit-revision-mismatch",
-                "commit": head,
-                "detail": verified,
-            }
-        return {"verdict": "pass", "commit": head, "branch": branch, "note": "docs already match branch HEAD"}
+    branch_ref = f"refs/heads/{branch}"
+    existing_ref = _git_run(["rev-parse", "--verify", branch_ref], top, check=False)
+    parent = existing_ref.stdout.strip() if existing_ref.returncode == 0 else _git_run(["rev-parse", default], top).stdout.strip()
+    with tempfile.TemporaryDirectory(prefix="sw-freeze-index-") as tmp:
+        env = {**os.environ, "GIT_INDEX_FILE": str(Path(tmp) / "index")}
 
-    _git_run(["commit", "-m", f"docs: freeze artifact for {slug}"], top)
-    head = _git_run(["rev-parse", "HEAD"], top).stdout.strip()
-    if prev and prev != branch:
-        _git_run(["checkout", prev], top, check=False)
+        def git(*args: str) -> str:
+            return subprocess.run(["git", *args], cwd=str(top), env=env, capture_output=True, text=True, check=True).stdout.strip()
+
+        git("read-tree", parent)
+        blob = git("hash-object", "-w", "--", artifact)
+        git("update-index", "--add", "--cacheinfo", f"100644,{blob},{artifact}")
+        tree = git("write-tree")
+        if tree == git("rev-parse", f"{parent}^{{tree}}"):
+            verified = verify_commit_contains_revision(top, artifact, revision, commit_sha=parent)
+            if verified.get("verdict") != "pass":
+                return {"verdict": "fail", "error": "commit-revision-mismatch", "branch": branch}
+            if existing_ref.returncode != 0:
+                _git_run(["update-ref", branch_ref, parent, "0" * 40], top)
+            return {"verdict": "pass", "commit": parent, "branch": branch, "note": "docs already match branch HEAD"}
+        head = git("commit-tree", tree, "-p", parent, "-m", f"docs: freeze artifact for {slug}")
 
     verified = verify_commit_contains_revision(top, artifact, revision, commit_sha=head)
     if verified.get("verdict") != "pass":
@@ -255,6 +257,8 @@ def commit_frozen_artifact(root: Path, artifact: str, revision: str) -> dict[str
             "commit": head,
             "detail": verified,
         }
+    old = parent if existing_ref.returncode == 0 else "0" * 40
+    _git_run(["update-ref", branch_ref, head, old], top)
     return {"verdict": "pass", "commit": head, "branch": branch}
 
 
