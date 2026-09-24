@@ -166,6 +166,23 @@ def test_require_merge_still_refuses_in_progress_floor(tmp_path: Path, monkeypat
     assert derived[0]["status"] == "not-started"
 
 
+def test_non_git_root_keeps_legacy_prds_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    legacy = tmp_path / "docs/prds/INDEX.md"
+    legacy.parent.mkdir(parents=True)
+    legacy.write_text(
+        "| # | Slug | PRD | Tasks | Status |\n"
+        "|---|---|---|---|---|\n"
+        "| 008 | model-tier | [prd](x) | [tasks](x) | complete |\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(rl, "_refuse_banned_living_doc_write", lambda *_a, **_k: None)
+
+    result = rl.set_index_status(tmp_path, "008", "in-progress")
+
+    assert result["status"] == "in-progress"
+    assert "| 008 | model-tier | [prd](x) | [tasks](x) | in-progress |" in legacy.read_text(encoding="utf-8")
+
+
 def test_legacy_repo_keeps_prds_index_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     init_repo(tmp_path)
     legacy = tmp_path / "docs/prds/INDEX.md"

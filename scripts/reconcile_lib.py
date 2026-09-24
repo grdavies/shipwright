@@ -47,7 +47,13 @@ def prd_index_path(root: Path) -> Path:
     import planning_paths as pp
     from shipwright_paths import load_workflow_config
 
-    worktree = pp.git_root(root)
+    try:
+        worktree = pp.git_root(root)
+    except pp.PathEscapeError:
+        worktree = root.resolve()
+        contained = False
+    else:
+        contained = True
     cfg = load_workflow_config(worktree)
     dirs = pp.load_planning_dirs(worktree)
     planning_dir = cfg.get("planningDir")
@@ -58,7 +64,15 @@ def prd_index_path(root: Path) -> Path:
         base = prds_dir.strip().replace("\\", "/").rstrip("/")
     else:
         base = dirs.prds
-    return pp.resolve_contained(worktree, pp.join_rel(base, "INDEX.md"))
+    relative = pp.join_rel(base, "INDEX.md")
+    if contained:
+        return pp.resolve_contained(worktree, relative)
+    candidate = (worktree / relative).resolve()
+    try:
+        candidate.relative_to(worktree)
+    except ValueError as exc:
+        raise pp.PathEscapeError(f"resolved path escapes worktree: {relative} -> {candidate}") from exc
+    return candidate
 
 
 def _status_column_for_prd_row(parts: list[str], prd: str) -> int | None:
