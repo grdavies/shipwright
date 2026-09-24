@@ -14,10 +14,13 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from phase_status_discovery import (
+    canonical_phase_artifact_path,
     discover_phase_status,
     halt_dominant_tiebreak,
     preferred_phase_artifact_path,
+    resolve_run_and_phase_id,
     resolve_phase_worktree,
+    worktree_mirror_path,
 )
 from status_integrity import (
     check_status_sha,
@@ -110,6 +113,11 @@ def preferred_write_path(root: Path, phase_slug: str) -> Path:
     state = _load_deliver_state(root)
     worktree = resolve_phase_worktree(root, phase_slug, state)
     if worktree is not None:
+        resolved = resolve_run_and_phase_id(state, phase_slug)
+        if resolved is not None:
+            run_id, phase_id = resolved
+            canonical = canonical_phase_artifact_path(root, run_id, phase_id, STATUS_NAME)
+            return worktree_mirror_path(root, worktree, canonical)
         return worktree / ("." + "cursor") / "sw-deliver-runs" / phase_slug / STATUS_NAME
     return preferred_phase_artifact_path(
         root, phase_slug, STATUS_NAME, worktree=worktree, state=state
@@ -234,6 +242,9 @@ def main(argv: list[str] | None = None) -> int:
                 return 2
             evaluation = discover_authoritative_gap_evaluation(root, args.phase_slug, head)
             if evaluation is None:
+                if resolve_run_and_phase_id(_load_deliver_state(root), args.phase_slug) is not None:
+                    print(json.dumps({"verdict": "fail", "error": "gap-check-evaluation-missing"}))
+                    return 2
                 evaluation = {
                     "source": "gap-check-write",
                     "evaluationHead": head,

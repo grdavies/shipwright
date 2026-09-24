@@ -8,43 +8,16 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 from _sw.cli import run_module_main
 
-
-def resolve_consumer_root() -> Path | None:
-    """Resolve consumer repository independently from the Shipwright runtime path."""
-    import os
-    import subprocess
-
-    candidates = [os.environ.get("SW_REPO_ROOT", "").strip(), str(Path.cwd())]
-    for raw in candidates:
-        if not raw:
-            continue
-        candidate = Path(raw).expanduser()
-        if not candidate.is_dir():
-            continue
-        proc = subprocess.run(
-            ["git", "-C", str(candidate), "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-        )
-        if proc.returncode == 0 and proc.stdout.strip():
-            return Path(proc.stdout.strip()).resolve()
-    return None
-
 def main(argv: list[str] | None = None) -> int:
     import argparse, json, os, shutil, subprocess
     from pathlib import Path
-    root = resolve_consumer_root()
-    if root is None:
-        print(
-            json.dumps({"verdict":"fail","error":"consumer-repo:not-found"}),
-            file=sys.stderr,
-        )
-        return 2
     parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--root")
     parser.add_argument("--verdict"); parser.add_argument("--cause"); parser.add_argument("--phase")
     parser.add_argument("--out"); parser.add_argument("--head"); parser.add_argument("--pr")
     parser.add_argument("--gate-json")
     ns, _ = parser.parse_known_args(list(sys.argv[1:] if argv is None else argv))
+    root = Path(ns.root or os.environ.get("SW_REPO_ROOT") or SCRIPT_DIR.parent).resolve()
     verdict, cause, phase, out, head, pr, gate_json = ns.verdict, ns.cause, ns.phase, ns.out, ns.head, ns.pr, ns.gate_json
     if verdict not in ("merge-ready-green","blocked"):
         print(json.dumps({"verdict":"fail","error":"--verdict merge-ready-green|blocked required"}), file=sys.stderr); return 2

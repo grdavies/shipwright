@@ -83,6 +83,22 @@ def test_gap_check_missing_auto_repair_from_ship_steps(tmp_git_repo: Path, repo_
     assert doc.get("evaluationProvenance", {}).get("evaluationHead") == head
 
 
+def test_old_ship_steps_do_not_authorize_new_head(tmp_git_repo: Path) -> None:
+    slug = "stale-gap-evaluation"
+    head = subprocess.run(
+        ["git", "-C", str(tmp_git_repo), "rev-parse", "HEAD"],
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    run_dir = tmp_git_repo / ".cursor" / "sw-deliver-runs" / slug
+    run_dir.mkdir(parents=True)
+    (run_dir / "ship-steps.json").write_text(json.dumps({
+        "chain": ["sw-execute", "gap-check", "sw-pr"],
+        "lastCompletedStep": "sw-pr",
+        "updatedAt": "2000-01-01T00:00:00Z",
+    }), encoding="utf-8")
+    assert psh.discover_authoritative_gap_evaluation(tmp_git_repo, slug, head) is None
+
+
 def test_gap_check_missing_without_evaluation_stays_blocked(tmp_git_repo: Path) -> None:
     """R1 — no evaluation evidence → typed cause + resumeCommand, no forged pass."""
     phase_slug = "hygiene-gap-blocked"

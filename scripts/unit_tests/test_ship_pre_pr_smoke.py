@@ -14,16 +14,16 @@ def test_consumer_runs_own_command_and_propagates_failure(tmp_path, monkeypatch)
     script = tmp_path / "verify.py"
     script.write_text("from pathlib import Path; Path('consumer-ran').write_text(str(Path.cwd())); raise SystemExit(7)")
     configure(tmp_path, f'"{sys.executable}" verify.py')
-    assert smoke.run_pre_pr_smoke(tmp_path) == (7, "pre-pr-smoke:verify-exit-7")
+    assert smoke.run_pre_pr_smoke(tmp_path) == (7, "pre-pr-smoke:consumer-exit-7")
     assert (tmp_path / "consumer-ran").read_text() == str(tmp_path)
     script.write_text("raise SystemExit(0)")
     assert smoke.run_pre_pr_smoke(tmp_path) == (0, None)
 
 
 def test_consumer_missing_configuration_fails_closed(tmp_path):
-    assert smoke.run_pre_pr_smoke(tmp_path) == (20, "pre-pr-smoke:verify-unconfigured")
+    assert smoke.run_pre_pr_smoke(tmp_path) == (2, "pre-pr-smoke:consumer-verification-unconfigured")
     configure(tmp_path, "   ")
-    assert smoke.run_pre_pr_smoke(tmp_path) == (20, "pre-pr-smoke:verify-unconfigured")
+    assert smoke.run_pre_pr_smoke(tmp_path) == (2, "pre-pr-smoke:consumer-verification-unconfigured")
 
 
 def test_internal_smoke_retains_scoped_pytest_and_restores_environment(tmp_path, monkeypatch):
@@ -58,8 +58,8 @@ def test_internal_smoke_retains_scoped_pytest_and_restores_environment(tmp_path,
     assert "SW_CHANGED_PATHS" not in os.environ
 
 
-def test_consumer_with_python_unit_directory_still_uses_own_verification(tmp_path, monkeypatch):
+def test_native_unit_directory_keeps_scoped_pytest(tmp_path, monkeypatch):
     (tmp_path / "scripts/unit_tests").mkdir(parents=True)
     configure(tmp_path, f'"{sys.executable}" -c "raise SystemExit(9)"')
-    monkeypatch.setattr("_runner.run_pytest_scope", lambda *a, **k: (_ for _ in ()).throw(AssertionError("plugin suite invoked")))
-    assert smoke.run_pre_pr_smoke(tmp_path) == (9, "pre-pr-smoke:verify-exit-9")
+    monkeypatch.setattr("_runner.run_pytest_scope", lambda *_a, **_k: 0)
+    assert smoke.run_pre_pr_smoke(tmp_path) == (0, None)

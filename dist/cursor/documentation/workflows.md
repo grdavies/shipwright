@@ -1570,13 +1570,12 @@ Deliver driver resilience clusters finalize, orch cwd adopt, and exclusive run l
 
 ### Pre-PR smoke in consumer repositories
 
-Pre-PR smoke runs the consumer's configured `verify.test` in the consumer worktree using the runtime
-verification command runner, with no flaky retries. Missing or blank configuration fails with
-`pre-pr-smoke:verify-unconfigured`; command failures preserve the exit code in
-`pre-pr-smoke:verify-exit-N`. The gate never falls back to the installed plugin's Python tests.
-Shipwright's sentinel-identified development repository retains scoped pytest smoke; consumer Python
-unit directories never select the plugin runner. Phase environment
-bindings are scrubbed for the check and restored afterwards.
+Pre-PR smoke runs scoped pytest when `scripts/unit_tests` exists, and otherwise runs the consumer's
+configured `verify.test` in that worktree. Missing or blank configuration fails with
+`pre-pr-smoke:consumer-verification-unconfigured`; command failures preserve the exit code in
+`pre-pr-smoke:consumer-exit-N`. A repository without `scripts/unit_tests` never falls back to the
+installed plugin's Python tests. Phase environment bindings are scrubbed for the check and restored
+afterwards.
 
 ### Gate bundle authority in consumer repositories
 

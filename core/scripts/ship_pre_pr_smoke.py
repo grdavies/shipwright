@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed pre-PR consumer verification or internal scoped pytest smoke (PRD 063 R4)."""
+"""Fail-closed pre-PR smoke for Shipwright and configured consumer repos."""
 from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -65,34 +66,26 @@ def _seed_changed_paths_from_integration(root: Path) -> None:
 
 def run_pre_pr_smoke(root: Path, *, scope: str = "phase") -> tuple[int, str | None]:
     from _runner import run_pytest_scope
+    from shipwright_paths import load_workflow_config
 
-    from repository_context import is_plugin_self_repository
-
-    internal = is_plugin_self_repository(root)
+    native_tests = (root / "scripts" / "unit_tests").is_dir()
     phase_keys = _phase_env_keys()
     saved = {k: os.environ.get(k) for k in (*phase_keys, "SW_TEST_SCOPE", "SW_CHANGED_PATHS")}
-    if internal:
+    if native_tests:
         _seed_changed_paths_from_integration(root)
+    else:
+        verify = load_workflow_config(root).get("verify")
+        command = verify.get("test") if isinstance(verify, dict) else None
+        if not isinstance(command, str) or not command.strip():
+            return 2, "pre-pr-smoke:consumer-verification-unconfigured"
     try:
         for key in phase_keys:
             os.environ.pop(key, None)
         os.environ["SW_TEST_SCOPE"] = scope
-        if internal:
-            if not (root / "scripts" / "unit_tests").is_dir():
-                return 20, "pre-pr-smoke:internal-tests-missing"
+        if native_tests:
             ec = run_pytest_scope(root, scope=scope)
         else:
-            from wave_failure import run_verify_suite, verify_command
-
-            command = verify_command(root, scope)
-            if not isinstance(command, str) or not command.strip():
-                return 20, "pre-pr-smoke:verify-unconfigured"
-            result = run_verify_suite(root, root, flaky_retries=0, scope=scope)
-            if result.get("verdict") == "pass" and result.get("results"):
-                return 0, None
-            failures = [row.get("exitCode") for row in result.get("results", []) if row.get("exitCode")]
-            ec = int(failures[0]) if failures else 20
-            return ec, f"pre-pr-smoke:verify-exit-{ec}"
+            ec = subprocess.run(command, cwd=root, shell=True, check=False).returncode
     finally:
         for key, value in saved.items():
             if value is not None:
@@ -101,7 +94,8 @@ def run_pre_pr_smoke(root: Path, *, scope: str = "phase") -> tuple[int, str | No
                 os.environ.pop(key, None)
     if ec == 0:
         return 0, None
-    return ec, f"pre-pr-smoke:pytest-exit-{ec}"
+    failure_kind = "pytest-exit" if native_tests else "consumer-exit"
+    return ec, f"pre-pr-smoke:{failure_kind}-{ec}"
 
 
 def main(argv: list[str] | None = None) -> int:
