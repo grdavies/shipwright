@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed pre-PR scoped pytest smoke (PRD 063 R4)."""
+"""Fail-closed pre-PR smoke for Shipwright and configured consumer repos."""
 from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -65,14 +66,25 @@ def _seed_changed_paths_from_integration(root: Path) -> None:
 
 def run_pre_pr_smoke(root: Path, *, scope: str = "phase") -> tuple[int, str | None]:
     from _runner import run_pytest_scope
+    from shipwright_paths import load_workflow_config
 
-    _seed_changed_paths_from_integration(root)
+    native_tests = (root / "scripts" / "unit_tests").is_dir()
+    if native_tests:
+        _seed_changed_paths_from_integration(root)
+    else:
+        verify = load_workflow_config(root).get("verify")
+        command = verify.get("test") if isinstance(verify, dict) else None
+        if not isinstance(command, str) or not command.strip():
+            return 2, "pre-pr-smoke:consumer-verification-unconfigured"
     saved = {k: os.environ.get(k) for k in _phase_env_keys()}
     try:
         for key in saved:
             os.environ.pop(key, None)
         os.environ["SW_TEST_SCOPE"] = scope
-        ec = run_pytest_scope(root, scope=scope)
+        if native_tests:
+            ec = run_pytest_scope(root, scope=scope)
+        else:
+            ec = subprocess.run(command, cwd=root, shell=True, check=False).returncode
     finally:
         for key, value in saved.items():
             if value is not None:
@@ -81,7 +93,8 @@ def run_pre_pr_smoke(root: Path, *, scope: str = "phase") -> tuple[int, str | No
                 os.environ.pop(key, None)
     if ec == 0:
         return 0, None
-    return ec, f"pre-pr-smoke:pytest-exit-{ec}"
+    failure_kind = "pytest-exit" if native_tests else "consumer-exit"
+    return ec, f"pre-pr-smoke:{failure_kind}-{ec}"
 
 
 def main(argv: list[str] | None = None) -> int:
