@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.23.1](https://github.com/grdavies/shipwright/compare/v2.23.0...v2.23.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* **deliver:** recover consumer post-merge verification ([a6918b1](https://github.com/grdavies/shipwright/commit/a6918b1050e8167241935873db7ff4933be938c9))
+* **freeze:** commit without switching occupied worktrees ([#1301](https://github.com/grdavies/shipwright/issues/1301)) ([d487b19](https://github.com/grdavies/shipwright/commit/d487b19b63684f742ad8fb68512fe4cb25fc1b53))
+* **gap-check:** bind active-run status to discoverable path ([#1303](https://github.com/grdavies/shipwright/issues/1303)) ([e32d9c8](https://github.com/grdavies/shipwright/commit/e32d9c88a2514e28ae81a5c39aa351e8ee9db6ea))
+* **gates:** fail closed when consumer checks lack complete evidence ([#1302](https://github.com/grdavies/shipwright/issues/1302)) ([e4a01ee](https://github.com/grdavies/shipwright/commit/e4a01eeb9cc898f88b500c75497f2a6dba9a93d0))
+* **secret-scan:** recognize exact package patch metadata ([#1298](https://github.com/grdavies/shipwright/issues/1298)) ([cc96366](https://github.com/grdavies/shipwright/commit/cc96366e2f99c6cd548ff38aff38c3a1df13d0dc))
+* **ship:** bind consumer smoke and status to target repo ([#1304](https://github.com/grdavies/shipwright/issues/1304)) ([cab9568](https://github.com/grdavies/shipwright/commit/cab9568eb85089ee8fb6eb0a4033c7948ac33dcc))
+
 ## [2.23.0](https://github.com/grdavies/shipwright/compare/v2.22.0...v2.23.0) (2026-09-21)
 
 
