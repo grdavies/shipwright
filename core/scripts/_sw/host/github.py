@@ -213,35 +213,46 @@ def _review_threads(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[d
     if not owner or not repo:
         return common.fail_json("review-threads", PROVIDER, "missing-repo"), 30
     unresolved = actionable = 0
-    cursor = ""
-    pages = 0
+    cursor = None
+    seen_cursors: set[str] = set()
     query = (
         "query($o:String!,$r:String!,$p:Int!,$c:String){repository(owner:$o,name:$r)"
         "{pullRequest(number:$p){reviewThreads(first:100,after:$c)"
-        "{pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated}}}}}}"
+        "{pageInfo{hasNextPage endCursor} nodes{isResolved isOutdated}}}}}"
     )
-    while pages < 20:
+    for _ in range(20):
         gql = json.dumps({"query": query, "variables": {"o": owner, "r": repo, "p": int(number), "c": cursor}})
-        url = f"{ctx['apiBase']}/graphql"
         transport = common.http_request(
-            root=root, provider=PROVIDER, method="POST", url=url, token_env=ctx["tokenEnv"], body=gql.encode()
+            root=root, provider=PROVIDER, method="POST", url=f"{ctx['apiBase']}/graphql",
+            token_env=ctx["tokenEnv"], body=gql.encode()
         )
         denied = common.classified_transport_guard(verb="review-threads", provider=PROVIDER, transport=transport)
         if denied is not None:
             return denied
-        page_data = json.loads(common.parse_transport_body(transport))
-        rt = (
-            ((page_data.get("data") or {}).get("repository") or {}).get("pullRequest") or {}
-        ).get("reviewThreads") or {}
-        nodes = rt.get("nodes") or []
-        pi = rt.get("pageInfo") or {}
-        unresolved += len([n for n in nodes if not n.get("isResolved")])
-        actionable += len([n for n in nodes if not n.get("isResolved") and not n.get("isOutdated")])
-        if not pi.get("hasNextPage") or not pi.get("endCursor"):
-            break
-        cursor = str(pi.get("endCursor") or "")
-        pages += 1
-    return common.emit_verb_ok("review-threads", PROVIDER, {"unresolved": unresolved, "actionable": actionable}), 0
+        # GraphQL can return HTTP 200 for errors, including partial data.
+        try:
+            page_data = json.loads(common.parse_transport_body(transport))
+            if not isinstance(page_data, dict) or page_data.get("errors") not in (None, []):
+                raise ValueError("invalid GraphQL response")
+            rt = page_data["data"]["repository"]["pullRequest"]["reviewThreads"]
+            nodes, pi = rt["nodes"], rt["pageInfo"]
+            if not isinstance(nodes, list) or not isinstance(pi, dict) or type(pi.get("hasNextPage")) is not bool:
+                raise ValueError("invalid connection")
+            if any(not isinstance(n, dict) or type(n.get("isResolved")) is not bool
+                   or type(n.get("isOutdated")) is not bool for n in nodes):
+                raise ValueError("invalid thread")
+        except (ValueError, KeyError, TypeError):
+            return common.fail_json("review-threads", PROVIDER, "invalid-review-threads-response"), 30
+        unresolved += sum(not n["isResolved"] for n in nodes)
+        actionable += sum(not n["isResolved"] and not n["isOutdated"] for n in nodes)
+        if not pi["hasNextPage"]:
+            return common.emit_verb_ok("review-threads", PROVIDER, {"unresolved": unresolved, "actionable": actionable}), 0
+        cursor = pi.get("endCursor")
+        if not isinstance(cursor, str) or not cursor.strip() or cursor in seen_cursors:
+            return common.fail_json("review-threads", PROVIDER, "invalid-review-threads-pagination"), 30
+        seen_cursors.add(cursor)
+    return common.fail_json("review-threads", PROVIDER, "incomplete-review-threads-pagination"), 30
+
 
 
 def _pr_close(root: Path, ctx: dict[str, Any], args: list[str]) -> tuple[dict[str, Any], int]:

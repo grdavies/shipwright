@@ -1869,9 +1869,22 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     blocking = [c["name"] for c in classified if c["class"] == "block"]
     required_failing, advisory_failing = split_failing(failing, advisory_jobs)
 
-    threads = host_data(root, "review-threads", "--number", pr) or {}
-    unresolved = int(threads.get("unresolved", 0) or 0) if isinstance(threads, dict) else 0
-    actionable = int(threads.get("actionable", 0) or 0) if isinstance(threads, dict) else 0
+    threads_envelope = host_verb(root, "review-threads", "--number", pr)
+    threads = threads_envelope.get("data") if isinstance(threads_envelope, dict) else None
+    if (
+        not isinstance(threads_envelope, dict) or threads_envelope.get("verdict") != "ok"
+        or not isinstance(threads, dict)
+        or type(threads.get("unresolved")) is not int
+        or type(threads.get("actionable")) is not int
+        or not 0 <= threads["actionable"] <= threads["unresolved"]
+    ):
+        payload = {
+            "verdict": "blocked", "reasonCode": "review-threads-invalid",
+            "reason": "complete review-thread evidence unavailable", "pr": int(pr), "head": head_sha,
+        }
+        jsonio.emit(payload)
+        return 30, payload
+    unresolved, actionable = threads["unresolved"], threads["actionable"]
 
     with tempfile.NamedTemporaryFile(prefix="sw-gate-checks.", delete=False) as checks_f:
         checks_path = Path(checks_f.name)

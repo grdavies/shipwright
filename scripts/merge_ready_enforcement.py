@@ -11,7 +11,13 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from gate_evidence import evidence_record_path, resolve_authoritative_record, resolve_head_sha, repo_root
+from gate_evidence import (
+    compute_tree_hash,
+    evidence_record_path,
+    resolve_authoritative_record,
+    resolve_head_sha,
+    repo_root,
+)
 from gate_manifest import iter_gates_ordered, load_manifest, resolve_gate_class
 
 
@@ -82,9 +88,17 @@ def evaluate_mandatory_gate_evidence(
 ) -> dict[str, Any]:
     root = repo_root(root)
     head = head_sha or resolve_head_sha(root)
+    gate_ids = mandatory_gate_ids(root)
+    tree = compute_tree_hash(root) if gate_ids else None
     failures: list[dict[str, str]] = []
-    for gate_id in mandatory_gate_ids(root):
-        record, cause = resolve_authoritative_record(root, phase_slug, gate_id, head_sha=head)
+    for gate_id in gate_ids:
+        record, cause = resolve_authoritative_record(
+            root,
+            phase_slug,
+            gate_id,
+            head_sha=head,
+            tree_hash=tree,
+        )
         if record is None:
             failures.append({"gateId": gate_id, "cause": cause or "gate-evidence:missing"})
             continue
@@ -104,7 +118,7 @@ def evaluate_mandatory_gate_evidence(
             "gateId": failures[0]["gateId"],
             "failures": failures,
         }
-    return {"verdict": "pass", "checked": mandatory_gate_ids(root)}
+    return {"verdict": "pass", "checked": gate_ids}
 
 
 def main(argv: list[str] | None = None) -> int:

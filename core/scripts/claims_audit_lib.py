@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import hashlib
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -126,13 +127,59 @@ def _exists_or_dir_prefix(root: Path, declared: str) -> bool:
     return parent.is_dir() and any(parent.iterdir()) if parent.is_dir() else False
 
 
-def mechanical_claim_results(claims: list[dict[str, Any]], touched: set[str], root: Path) -> list[dict[str, Any]]:
+def _shared_cause_evidence_valid(
+    claim: dict[str, Any], missing: list[str], touched: set[str], root: Path,
+    agent_claims: list[dict[str, Any]], snapshot_ref: str | None = None,
+) -> bool:
+    """Validate the independent auditor's bound proof, never a blanket scope waiver."""
+    rows = [row for row in agent_claims if row.get("ref") == claim.get("ref")]
+    if len(rows) != 1 or rows[0].get("verdict") != "pass":
+        return False
+    proof = rows[0].get("sharedCauseEvidence")
+    if not isinstance(proof, dict) or not isinstance(proof.get("reason"), str) or not proof["reason"].strip():
+        return False
+    expected = str(claim.get("expected") or "")
+    if not expected or proof.get("expectedSha256") != hashlib.sha256(expected.encode()).hexdigest():
+        return False
+    unchanged = proof.get("unchangedFiles")
+    if not isinstance(unchanged, dict) or set(unchanged) != set(missing):
+        return False
+    for field in ("unchangedFiles", "changedFiles", "verificationFiles"):
+        files = proof.get(field)
+        if not isinstance(files, dict) or not files:
+            return False
+        for name, digest in files.items():
+            if not isinstance(name, str) or Path(name).is_absolute() or ".." in Path(name).parts:
+                return False
+            path = root / name
+            if not path.resolve().is_relative_to(root.resolve()) or not path.is_file():
+                return False
+            if field != "unchangedFiles" and name not in touched:
+                return False
+            if hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                return False
+            if snapshot_ref is not None:
+                blob = subprocess.run(["git", "-C", str(root), "show", f"{snapshot_ref}:{name}"], capture_output=True)
+                if blob.returncode != 0 or hashlib.sha256(blob.stdout).hexdigest() != digest:
+                    return False
+    if set(proof["changedFiles"]) & set(proof["verificationFiles"]):
+        return False
+    return True
+
+
+def mechanical_claim_results(
+    claims: list[dict[str, Any]], touched: set[str], root: Path, *,
+    agent_claims: list[dict[str, Any]] | None = None, snapshot_ref: str | None = None,
+) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for claim in claims:
         ref = str(claim.get("ref") or "")
         files = list(claim.get("files") or [])
         missing_files = [f for f in files if not path_touched(f, touched)]
-        if missing_files:
+        shared_cause = bool(missing_files) and _shared_cause_evidence_valid(
+            claim, missing_files, touched, root, agent_claims or [], snapshot_ref,
+        )
+        if missing_files and not shared_cause:
             results.append({
                 "ref": ref,
                 "verdict": "fail",
@@ -153,7 +200,8 @@ def mechanical_claim_results(claims: list[dict[str, Any]], touched: set[str], ro
             "ref": ref,
             "verdict": "pass",
             "dimension": "mechanical",
-            "reason": "declared file scope touched in diff",
+            "reason": ("unchanged scope verified by bound shared-cause evidence" if shared_cause
+                       else "declared file scope touched in diff"),
         })
     return results
 
@@ -173,6 +221,8 @@ def normalize_agent_claims(raw: Any) -> list[dict[str, Any]]:
                 "verdict": verdict,
                 "dimension": "agent",
                 "reason": str(item.get("reason") or item.get("detail") or ""),
+                **({"sharedCauseEvidence": item["sharedCauseEvidence"]}
+                   if isinstance(item.get("sharedCauseEvidence"), dict) else {}),
             })
     return out
 
@@ -410,9 +460,14 @@ def audit_phase_claims(
         }
     base = diff_base or resolve_diff_base(root)
     touched = git_diff_paths(root, base, head=head)
-    mechanical = mechanical_claim_results(claims, touched, root)
     agent = agent_claims or []
+    mechanical = mechanical_claim_results(claims, touched, root, agent_claims=agent, snapshot_ref=head or "HEAD")
     result = merge_claim_results(mechanical, agent, claims=claims)
+    # Preserve the original auditor proof for collect-time structural revalidation.
+    for claim in claims:
+        rows = [row for row in agent if row.get("ref") == claim.get("ref")]
+        if len(rows) == 1 and rows[0].get("verdict") == "pass" and isinstance(rows[0].get("sharedCauseEvidence"), dict):
+            claim["sharedCauseEvidence"] = rows[0]["sharedCauseEvidence"]
     result["completionClaims"] = claims
     result["diffBase"] = base
     if head:
@@ -463,7 +518,12 @@ def collect_audit_from_status(
         diff_base=integration,
         head=head or None,
         claim_refs=refs,
-        agent_claims=_agent_pass_for_refs(refs),
+        agent_claims=[{
+            **row,
+            **({"sharedCauseEvidence": claim["sharedCauseEvidence"]}
+               if isinstance(claim.get("sharedCauseEvidence"), dict) else {}),
+        } for row in _agent_pass_for_refs(refs)
+          for claim in claims if claim.get("ref") == row.get("ref")],
     )
 
 

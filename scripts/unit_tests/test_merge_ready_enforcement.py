@@ -12,7 +12,10 @@ from gate_evidence import (
     evidence_record_path,
     write_evidence_atomic,
 )
-from merge_ready_enforcement import evaluate_mandatory_gate_evidence
+from merge_ready_enforcement import (
+    evaluate_mandatory_gate_evidence,
+    seed_mandatory_pass_records,
+)
 from ship_loop import (
     BYPASS_FLAG_TO_GATE,
     active_bypass_flags,
@@ -118,6 +121,38 @@ def test_merge_ready_refusal_matrix(
     result = evaluate_mandatory_gate_evidence(repo_root, phase, head_sha=head)
     assert result["verdict"] == "fail"
     assert result.get("failures")
+
+
+def test_merge_ready_computes_tree_hash_once(repo_root: Path) -> None:
+    phase = "merge-ready-tree-hash-cache"
+    seed_mandatory_pass_records(repo_root, phase)
+
+    from gate_evidence import compute_tree_hash
+
+    with patch(
+        "merge_ready_enforcement.compute_tree_hash",
+        wraps=compute_tree_hash,
+    ) as tree_hash:
+        result = evaluate_mandatory_gate_evidence(repo_root, phase)
+
+    assert result["verdict"] == "pass"
+    tree_hash.assert_called_once_with(repo_root)
+
+
+def test_merge_ready_cached_tree_hash_still_fails_closed(repo_root: Path) -> None:
+    phase = "merge-ready-tree-hash-cache-fail-closed"
+    seed_mandatory_pass_records(repo_root, phase)
+
+    with patch(
+        "merge_ready_enforcement.compute_tree_hash",
+        return_value="0" * 40,
+    ) as tree_hash:
+        result = evaluate_mandatory_gate_evidence(repo_root, phase)
+
+    assert result["verdict"] == "fail"
+    assert {failure["gateId"] for failure in result["failures"]} == {"build-chain"}
+    assert result["cause"] == "gate-evidence:tree-mismatch"
+    tree_hash.assert_called_once_with(repo_root)
 
 
 def test_bypass_flag_optional_only(repo_root: Path) -> None:

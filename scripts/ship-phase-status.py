@@ -40,9 +40,8 @@ def main(argv: list[str] | None = None) -> int:
     if not head:
         from status_integrity import resolve_write_head
         head = resolve_write_head(root)
-    # Harness fixtures call this script against SCRIPT_DIR.parent (live plugin tree) while cwd is a
-    # disposable repo. Skip live orch↔primary skew sync + canonical status mirror so suite runs do
-    # not fail closed on unrelated deliver-state skew (post-merge verify pollution).
+    # Harness fixtures call this script from disposable consumer repos. Skip live orch↔primary
+    # skew sync + canonical status mirror so suite runs do not touch operator state.
     from harness_skew_lib import skip_live_canonical_sync
 
     harness = skip_live_canonical_sync()
@@ -111,25 +110,15 @@ def main(argv: list[str] | None = None) -> int:
     try: status_integrity.main()
     finally: sys.argv = old_argv
     if not harness:
-        canonical = os.environ.get("SW_REPO_ROOT","")
-        if not canonical or not Path(canonical).is_dir():
-            p = subprocess.run(["git","-C",str(root),"rev-parse","--git-common-dir"], capture_output=True, text=True)
-            common = p.stdout.strip() if p.returncode==0 else ""
-            if common and common != ".git":
-                common_p = Path(common)
-                if not common_p.is_absolute(): common_p = (root/common_p).resolve()
-                canonical = str(common_p.parent)
-            else: canonical = str(root)
-        if canonical and Path(canonical).is_dir():
-            from phase_status_discovery import preferred_phase_artifact_path
-            from wave_state import load_deliver_state
+        from phase_status_discovery import preferred_phase_artifact_path
+        from wave_state import load_deliver_state
 
-            orch = Path(canonical)
-            state = load_deliver_state(orch)
-            cout = preferred_phase_artifact_path(orch, phase, "status.json", state=state)
-            cout.parent.mkdir(parents=True, exist_ok=True)
+        state = load_deliver_state(root)
+        cout = preferred_phase_artifact_path(root, phase, "status.json", state=state)
+        cout.parent.mkdir(parents=True, exist_ok=True)
+        if Path(out).resolve() != cout.resolve():
             shutil.copy2(out, cout)
-            os.chmod(cout, 0o600)
+        os.chmod(cout, 0o600)
     if verdict == "blocked":
         subprocess.run(
             [

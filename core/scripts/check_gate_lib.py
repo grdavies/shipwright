@@ -109,6 +109,32 @@ def validate_path_literal_guard(root: Path) -> str | None:
     return f"path-literal-guard:{reason}"
 
 
+def validate_golden_manifest_staleness(root: Path) -> str | None:
+    """Fail-closed when cursor golden manifest drifts from ``dist/cursor`` (PRD 343 R3).
+
+    Skipped when:
+    - ``SW_GATE_FIXTURE`` is set (synthetic gate contract runs), or
+    - ``dist/cursor`` is absent (sparse fixture / temp repos — not a packaging checkout).
+    """
+    if os.environ.get("SW_GATE_FIXTURE"):
+        return None
+    if not (root / "dist" / "cursor").is_dir():
+        return None
+    try:
+        import golden_manifest as gm
+    except ImportError:
+        return None
+    try:
+        result = gm.check_staleness(root)
+    except (OSError, ValueError) as exc:
+        return f"golden-manifest-error:{exc}"
+    if result.get("verdict") == "pass" and not result.get("stale"):
+        return None
+    if result.get("error") == "manifest-missing":
+        return "golden-manifest:missing"
+    return "golden-manifest:stale"
+
+
 def validate_effective_config_drift(root: Path) -> str | None:
     """Fail-closed when generated effective-config/doc projection drifts (PRD 279 R15)."""
     gen = root / "scripts" / "effective_config_gen.py"
@@ -184,6 +210,139 @@ def load_workflow_config(root: Path) -> dict[str, Any]:
     from shipwright_paths import load_workflow_config as _load_workflow_config
 
     return _load_workflow_config(root)
+
+
+# Known keys under models.routing — tier maps plus PRD 351 advisoryRouting (TR6).
+KNOWN_MODELS_ROUTING_KEYS = frozenset({"commands", "agents", "skills", "advisoryRouting"})
+KNOWN_ADVISORY_ROUTING_KEYS = frozenset(
+    {
+        "enabled",
+        "autoApply",
+        "minSampleCount",
+        "maxFreshnessAgeDays",
+        "lookupTimeoutMs",
+        "includeLegacyRecords",
+    }
+)
+DEFAULT_ADVISORY_MIN_SAMPLE_COUNT = 10
+
+
+def validate_models_routing(config: dict[str, Any]) -> list[str]:
+    """Validate ``models.routing``; return error strings (empty => ok) (TR6 / R25 / R27)."""
+    errors: list[str] = []
+    models = config.get("models")
+    if not isinstance(models, dict):
+        return errors
+    routing = models.get("routing")
+    if routing is None:
+        return errors
+    if not isinstance(routing, dict):
+        return ["models.routing must be an object"]
+
+    unknown = sorted(str(key) for key in routing if str(key) not in KNOWN_MODELS_ROUTING_KEYS)
+    for key in unknown:
+        errors.append(f"models.routing unknown key: {key}")
+
+    advisory = routing.get("advisoryRouting")
+    if advisory is None:
+        return errors
+    if not isinstance(advisory, dict):
+        errors.append("models.routing.advisoryRouting must be an object")
+        return errors
+
+    for key in sorted(str(k) for k in advisory if str(k) not in KNOWN_ADVISORY_ROUTING_KEYS):
+        errors.append(f"models.routing.advisoryRouting unknown key: {key}")
+
+    auto_apply = bool(advisory.get("autoApply", False))
+    enabled = bool(advisory.get("enabled", True))
+    if auto_apply and not enabled:
+        errors.append(
+            "models.routing.advisoryRouting.autoApply requires advisoryRouting.enabled: true"
+        )
+    return errors
+
+
+def validate_models_routing_warnings(config: dict[str, Any]) -> list[str]:
+    """Non-fatal warnings for advisoryRouting (R27)."""
+    warnings: list[str] = []
+    models = config.get("models")
+    if not isinstance(models, dict):
+        return warnings
+    routing = models.get("routing")
+    if not isinstance(routing, dict):
+        return warnings
+    advisory = routing.get("advisoryRouting")
+    if not isinstance(advisory, dict):
+        return warnings
+    auto_apply = bool(advisory.get("autoApply", False))
+    if auto_apply and "minSampleCount" not in advisory:
+        warnings.append(
+            "models.routing.advisoryRouting.autoApply is true but minSampleCount is unset "
+            f"(default {DEFAULT_ADVISORY_MIN_SAMPLE_COUNT})"
+        )
+    elif auto_apply and int(advisory.get("minSampleCount", DEFAULT_ADVISORY_MIN_SAMPLE_COUNT)) == DEFAULT_ADVISORY_MIN_SAMPLE_COUNT:
+        # Explicit default still warns per R27 / TS10.
+        if advisory.get("minSampleCount") == DEFAULT_ADVISORY_MIN_SAMPLE_COUNT:
+            warnings.append(
+                "models.routing.advisoryRouting.autoApply is true with minSampleCount at default"
+            )
+    return warnings
+
+
+
+# Fixture prompt substrings that must never appear in attribution records (SC-M8).
+SC_M8_RAW_PROMPT_FIXTURES = (
+    "SYSTEM PROMPT:",
+    "sk-test",
+    "you are a helpful assistant with secret key",
+)
+
+
+def scan_attribution_raw_prompts(root: Path, *, run_dirs: list[Path] | None = None) -> list[str]:
+    """SC-M8 — fail if attribution JSON contains fixture/raw prompt substrings."""
+    errors: list[str] = []
+    candidates: list[Path] = []
+    if run_dirs:
+        candidates.extend(Path(p) / "attribution" for p in run_dirs)
+    else:
+        for base in (
+            root / ".cursor" / "sw-deliver-runs",
+            root / ".shipwright" / "runs",
+            root / "attribution",
+        ):
+            if not base.exists():
+                continue
+            if base.is_dir() and base.name == "attribution":
+                candidates.append(base)
+            elif base.is_dir():
+                candidates.extend(sorted(base.glob("*/attribution")))
+    seen: set[Path] = set()
+    for attr_dir in candidates:
+        try:
+            attr_dir = attr_dir.resolve()
+        except OSError:
+            continue
+        if attr_dir in seen or not attr_dir.is_dir():
+            continue
+        seen.add(attr_dir)
+        for path in sorted(attr_dir.glob("*.json")):
+            try:
+                blob = path.read_text(encoding="utf-8")
+            except OSError as exc:
+                errors.append(f"SC-M8: cannot read {path}: {exc}")
+                continue
+            for fixture in SC_M8_RAW_PROMPT_FIXTURES:
+                if fixture in blob:
+                    rel = path
+                    try:
+                        rel = path.relative_to(root)
+                    except ValueError:
+                        pass
+                    errors.append(f"SC-M8 raw-prompt match in {rel}: {fixture!r}")
+                    break
+    return errors
+
+
 def cfg_bool(cfg: dict[str, Any], key: str, default: bool) -> bool:
     checks = cfg.get("checks")
     if not isinstance(checks, dict):
@@ -881,6 +1040,27 @@ def run_deferred_placeholder_lint_gate(root: Path, payload: dict[str, Any]) -> t
     return 0, payload
 
 
+def run_golden_manifest_staleness_gate(
+    root: Path, payload: dict[str, Any]
+) -> tuple[int, dict[str, Any]]:
+    """Annotate + fail-closed when cursor golden manifest is stale (PRD 343 R3)."""
+    err = validate_golden_manifest_staleness(root)
+    payload = dict(payload)
+    payload["goldenManifestStaleness"] = {
+        "verdict": "pass" if err is None else "fail",
+        "error": err,
+    }
+    if err is None:
+        return 0, payload
+    blocked: dict[str, Any] = {
+        "verdict": "blocked",
+        "reason": f"goldenManifest:{err}",
+        "goldenManifestStaleness": payload["goldenManifestStaleness"],
+    }
+    jsonio.emit(blocked)
+    return 30, blocked
+
+
 def run_architecture_assessment_gate(root: Path, cfg: dict[str, Any], payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
     """Evaluate opt-in architecture doctrine assessment (PRD 326 R15)."""
     mode = str(cfg_value(cfg, "architecture", "assessment", "mode", default="off") or "off").strip().lower()
@@ -928,6 +1108,9 @@ def finalize_gate_payload(
     ec, payload = run_deferred_placeholder_lint_gate(root, payload)
     if ec != 0:
         return ec, payload
+    ec, payload = run_golden_manifest_staleness_gate(root, payload)
+    if ec != 0:
+        return ec, payload
     ec, payload = run_architecture_assessment_gate(root, cfg, payload)
     if ec != 0:
         return ec, payload
@@ -962,6 +1145,43 @@ def finalize_gate_payload(
     except Exception:
         payload = dict(payload)
         payload["packagedInstallGa"] = {"present": False, "error": "wiring-helper-unavailable"}
+    # PRD 350 R9 — verification capture after gate evaluation.
+    try:
+        import wave_journal as capture
+
+        run_id = (os.environ.get("SW_CAPTURE_RUN_ID") or os.environ.get("SW_RUN_ID") or "").strip()
+        if not run_id:
+            run_dir = (os.environ.get("SW_RUN_DIR") or "").strip()
+            if run_dir:
+                run_id = Path(run_dir).name
+        if run_id and capture.capture_enabled(root):
+            phase_id = (os.environ.get("SW_PHASE_SLUG") or "gate").strip() or "gate"
+            v = str(payload.get("verdict") or verdict or "").lower()
+            failing = list(payload.get("requiredFailingChecks") or required_failing or [])
+            failing_ids = [str(x) for x in failing if str(x).strip()]
+            if v in {"pass", "green", "ok"} and not failing_ids:
+                outcome = "pass"
+            elif failing_ids:
+                outcome = "partial"
+            elif v in {"red", "fail", "blocked"}:
+                outcome = "fail"
+            else:
+                outcome = "pass"
+            evidence = ",".join(failing_ids)[:500]
+            digest = hashlib.sha256(
+                repr(sorted(failing_ids or [v])).encode()
+            ).hexdigest()[:16]
+            capture.emit_verification(
+                root=root,
+                run_id=run_id,
+                phase_id=phase_id,
+                outcome=outcome,
+                evidence=evidence,
+                provenance_ref=f"check-gate:{digest}",
+                summary=f"check-gate verdict={v or outcome}",
+            )
+    except Exception:
+        pass
     jsonio.emit(payload)
     return VERDICT_EXIT.get(verdict, 1), payload
 
@@ -1222,7 +1442,123 @@ def scripts_touch_advisory(root: Path, pr_view: dict[str, Any], head_sha: str, r
     return reason
 
 
+def platform_portability_suite_steps(root: Path) -> list[tuple[str, list[str]]]:
+    """Ordered PRD 349 phase-5 verification steps (TS10 / SC-K12)."""
+    py = sys.executable
+    return [
+        (
+            "validate_bundle_self_test",
+            [py, "-m", "core.handoff.validate_bundle", "--self-test"],
+        ),
+        (
+            "phase1_native_conformance",
+            [py, "-m", "pytest", "-q", "platforms/claude-code/tests/test_golden_harness.py"],
+        ),
+        (
+            "phase3_portability_traps",
+            [
+                py,
+                "-m",
+                "pytest",
+                "-q",
+                "platforms/codex/tests/test_portability_traps.py",
+                "platforms/opencode/tests/test_portability_traps.py",
+            ],
+        ),
+        (
+            "phase4_continuation_smoke",
+            [py, "-m", "pytest", "-q", "tests/test_cross_host_continuation.py"],
+        ),
+        (
+            "phase4_concurrent_resume_guard",
+            [
+                py,
+                "-m",
+                "pytest",
+                "-q",
+                "tests/test_cross_host_continuation.py::test_concurrent_import_lock",
+            ],
+        ),
+        (
+            "phase4_mcp_integration",
+            [py, "-m", "pytest", "-q", "tests/test_mcp_operations.py"],
+        ),
+        (
+            "support_matrix_generator",
+            [
+                py,
+                str(SCRIPT_DIR / "matrix_generator.py"),
+                "--records",
+                str(root / "core" / "schemas" / "capabilities" / "conformance"),
+                "--format",
+                "markdown",
+            ],
+        ),
+    ]
+
+
+def _platform_portability_suite_enabled(root: Path) -> bool:
+    """Whether the PRD 349 portability suite should run for this gate invocation.
+
+    Skipped when:
+    - ``SW_GATE_FIXTURE`` is set (synthetic gate-contract harnesses), or
+    - ``SW_SKIP_PLATFORM_PORTABILITY_SUITE`` is set, or
+    - ``root`` is not a full plugin checkout (missing conformance records / platforms).
+      Ephemeral deliver fixture repos call check-gate for live-evidence reconcile and
+      must not pay the full portability matrix tax.
+    """
+    if os.environ.get("SW_GATE_FIXTURE"):
+        return False
+    if os.environ.get("SW_SKIP_PLATFORM_PORTABILITY_SUITE"):
+        return False
+    records = root / "core" / "schemas" / "capabilities" / "conformance"
+    platforms = root / "platforms"
+    return records.is_dir() and platforms.is_dir()
+
+
+def run_platform_portability_suite(root: Path) -> tuple[str | None, list[dict[str, Any]]]:
+    """Run phase-5 suite fail-closed. Returns (error_reason|None, step results)."""
+    if not _platform_portability_suite_enabled(root):
+        return None, []
+    plugin_root = SCRIPT_DIR.parent
+    # ``python -m core.handoff...`` and pytest collection need the plugin root on PYTHONPATH.
+    path_parts = [str(plugin_root), str(SCRIPT_DIR)]
+    existing = os.environ.get("PYTHONPATH", "").strip()
+    if existing:
+        path_parts.append(existing)
+    child_env = proc.HookVerifyEnv(pythonpath=os.pathsep.join(path_parts))
+    results: list[dict[str, Any]] = []
+    for name, argv in platform_portability_suite_steps(root):
+        completed = proc.run(argv, cwd=str(root), child_env=child_env)
+        entry = {
+            "step": name,
+            "argv": argv,
+            "returncode": int(completed.returncode),
+            "ok": completed.returncode == 0,
+        }
+        if completed.returncode != 0:
+            stderr = (completed.stderr or "").strip()
+            stdout = (completed.stdout or "").strip()
+            detail = stderr or stdout or f"exit {completed.returncode}"
+            entry["detail"] = detail[:2000]
+            results.append(entry)
+            return f"platformPortability:{name}:{detail[:400]}", results
+        results.append(entry)
+    return None, results
+
+
 def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    portability_err, portability_results = run_platform_portability_suite(root)
+    if portability_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": portability_err,
+            "source": "local-evidence",
+            "platformPortability": portability_results,
+        }
+        jsonio.emit(payload)
+        return 30, payload
+
     head_proc = proc.run(["git", "-C", str(root), "rev-parse", "HEAD"], cwd=str(root))
     head_sha = head_proc.stdout.strip() if head_proc.returncode == 0 else ""
     branch_proc = proc.run(
@@ -1265,6 +1601,16 @@ def run_local_evidence_gate(root: Path, cfg: dict[str, Any]) -> tuple[int, dict[
         payload = {
             "verdict": "blocked",
             "reason": f"pathLiteral:{path_literal_err}",
+            "source": "local-evidence",
+        }
+        jsonio.emit(payload)
+        return 30, payload
+
+    golden_err = validate_golden_manifest_staleness(root)
+    if golden_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": f"goldenManifest:{golden_err}",
             "source": "local-evidence",
         }
         jsonio.emit(payload)
@@ -1402,6 +1748,16 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     if str(SCRIPT_DIR) not in sys.path:
         sys.path.insert(0, str(SCRIPT_DIR))
 
+    portability_err, portability_results = run_platform_portability_suite(root)
+    if portability_err:
+        payload = {
+            "verdict": "blocked",
+            "reason": portability_err,
+            "platformPortability": portability_results,
+        }
+        jsonio.emit(payload)
+        return 30, payload
+
     from host_lib import resolve_provider
 
     cfg = load_workflow_config(root)
@@ -1426,6 +1782,12 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     path_literal_err = validate_path_literal_guard(root)
     if path_literal_err:
         payload = {"verdict": "blocked", "reason": f"pathLiteral:{path_literal_err}"}
+        jsonio.emit(payload)
+        return 30, payload
+
+    golden_err = validate_golden_manifest_staleness(root)
+    if golden_err:
+        payload = {"verdict": "blocked", "reason": f"goldenManifest:{golden_err}"}
         jsonio.emit(payload)
         return 30, payload
 
@@ -1507,9 +1869,22 @@ def run_gate(root: Path, pr_arg: str | None = None) -> tuple[int, dict[str, Any]
     blocking = [c["name"] for c in classified if c["class"] == "block"]
     required_failing, advisory_failing = split_failing(failing, advisory_jobs)
 
-    threads = host_data(root, "review-threads", "--number", pr) or {}
-    unresolved = int(threads.get("unresolved", 0) or 0) if isinstance(threads, dict) else 0
-    actionable = int(threads.get("actionable", 0) or 0) if isinstance(threads, dict) else 0
+    threads_envelope = host_verb(root, "review-threads", "--number", pr)
+    threads = threads_envelope.get("data") if isinstance(threads_envelope, dict) else None
+    if (
+        not isinstance(threads_envelope, dict) or threads_envelope.get("verdict") != "ok"
+        or not isinstance(threads, dict)
+        or type(threads.get("unresolved")) is not int
+        or type(threads.get("actionable")) is not int
+        or not 0 <= threads["actionable"] <= threads["unresolved"]
+    ):
+        payload = {
+            "verdict": "blocked", "reasonCode": "review-threads-invalid",
+            "reason": "complete review-thread evidence unavailable", "pr": int(pr), "head": head_sha,
+        }
+        jsonio.emit(payload)
+        return 30, payload
+    unresolved, actionable = threads["unresolved"], threads["actionable"]
 
     with tempfile.NamedTemporaryFile(prefix="sw-gate-checks.", delete=False) as checks_f:
         checks_path = Path(checks_f.name)

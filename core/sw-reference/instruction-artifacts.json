@@ -12,7 +12,7 @@
       "sourcePath": "core/agents/sw-adversarial-reviewer.md"
     },
     {
-      "bodyDigest": "55eddeaa493b21e2ea09081eeb3650b55e5e976fa5f0480965a1102547a315fe",
+      "bodyDigest": "703f96dc0143aa6c519705fdcbef5c972820fd5b4892a2d0e8766dc7c892ccbc",
       "capabilities": [
         "persona.sw-claims-auditor"
       ],

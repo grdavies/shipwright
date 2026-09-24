@@ -69,6 +69,8 @@ def run_pre_pr_smoke(root: Path, *, scope: str = "phase") -> tuple[int, str | No
     from shipwright_paths import load_workflow_config
 
     native_tests = (root / "scripts" / "unit_tests").is_dir()
+    phase_keys = _phase_env_keys()
+    saved = {k: os.environ.get(k) for k in (*phase_keys, "SW_TEST_SCOPE", "SW_CHANGED_PATHS")}
     if native_tests:
         _seed_changed_paths_from_integration(root)
     else:
@@ -76,9 +78,8 @@ def run_pre_pr_smoke(root: Path, *, scope: str = "phase") -> tuple[int, str | No
         command = verify.get("test") if isinstance(verify, dict) else None
         if not isinstance(command, str) or not command.strip():
             return 2, "pre-pr-smoke:consumer-verification-unconfigured"
-    saved = {k: os.environ.get(k) for k in _phase_env_keys()}
     try:
-        for key in saved:
+        for key in phase_keys:
             os.environ.pop(key, None)
         os.environ["SW_TEST_SCOPE"] = scope
         if native_tests:
