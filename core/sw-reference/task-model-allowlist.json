@@ -11,7 +11,10 @@
     "cursor-grok-4.5-medium",
     "gemini-3-flash",
     "gemini-3.1-pro",
+    "gpt-5.6-luna",
+    "gpt-5.6-sol",
     "gpt-5.6-sol-medium",
+    "gpt-5.6-terra",
     "gpt-5.6-terra-medium",
     "gpt-6-astra"
   ],

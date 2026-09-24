@@ -37,6 +37,39 @@ def git_root(start: Path | None = None) -> Path:
     return Path(proc.stdout.strip()) if proc.returncode == 0 and proc.stdout.strip() else start
 
 
+def prd_index_path(root: Path) -> Path:
+    """Resolve the writable PRD index without allowing a configured path escape.
+
+    Repositories that declare ``planningDir`` use the canonical dual-region
+    planning index.  Legacy repositories without that explicit setting keep
+    the historical ``prdsDir/INDEX.md`` location.
+    """
+    import planning_paths as pp
+    from shipwright_paths import load_workflow_config
+
+    worktree = pp.git_root(root)
+    cfg = load_workflow_config(worktree)
+    dirs = pp.load_planning_dirs(worktree)
+    planning_dir = cfg.get("planningDir")
+    prds_dir = cfg.get("prdsDir")
+    if isinstance(planning_dir, str) and planning_dir.strip():
+        base = planning_dir.strip().replace("\\", "/").rstrip("/")
+    elif isinstance(prds_dir, str) and prds_dir.strip():
+        base = prds_dir.strip().replace("\\", "/").rstrip("/")
+    else:
+        base = dirs.prds
+    return pp.resolve_contained(worktree, pp.join_rel(base, "INDEX.md"))
+
+
+def _status_column_for_prd_row(parts: list[str], prd: str) -> int | None:
+    """Return status column for legacy PRD rows or canonical planning rows."""
+    if len(parts) >= 4 and re.fullmatch(r"\d{1,3}", parts[0]) and parts[0].zfill(3) == prd:
+        return 4 if len(parts) >= 5 else 3
+    if len(parts) >= 4 and parts[1] == "prd" and re.match(rf"^{re.escape(prd)}(?:-|$)", parts[0]):
+        return 3
+    return None
+
+
 def parse_prd_index(index_path: Path) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
     if not index_path.is_file():
@@ -45,16 +78,33 @@ def parse_prd_index(index_path: Path) -> list[dict[str, str]]:
         if not line.startswith("|") or line.startswith("| #") or line.startswith("|---"):
             continue
         parts = [p.strip() for p in line.strip("|").split("|")]
-        if len(parts) < 4 or not re.match(r"^\d{3}$", parts[0]):
+        if len(parts) < 4:
             continue
-        index_status = parts[4] if len(parts) >= 5 else parts[3]
+        canonical_id = re.match(r"^(\d{3})-(.+)$", parts[0])
+        if canonical_id and parts[1] == "prd":
+            prd = canonical_id.group(1)
+            slug = canonical_id.group(2)
+            prd_link = ""
+            tasks_link = ""
+            index_status = parts[3]
+            index_format = "canonical"
+        elif re.fullmatch(r"\d{3}", parts[0]):
+            prd = parts[0]
+            slug = parts[1]
+            prd_link = parts[2]
+            tasks_link = parts[3] if len(parts) >= 5 else ""
+            index_status = parts[4] if len(parts) >= 5 else parts[3]
+            index_format = "legacy"
+        else:
+            continue
         rows.append(
             {
-                "prd": parts[0],
-                "slug": parts[1],
-                "prdLink": parts[2],
-                "tasksLink": parts[3] if len(parts) >= 5 else "",
+                "prd": prd,
+                "slug": slug,
+                "prdLink": prd_link,
+                "tasksLink": tasks_link,
                 "indexStatus": index_status,
+                "indexFormat": index_format,
             }
         )
     return rows
@@ -121,7 +171,14 @@ def merged_prs_for_slug(root: Path, slug: str) -> tuple[list[int], bool]:
 
 def status_for_row(root: Path, row: dict[str, str], tasks_dir: Path) -> dict[str, Any]:
     slug = row["slug"]
-    task_candidates = list(tasks_dir.rglob(f"*{slug}*tasks*.md")) + list(tasks_dir.rglob(f"tasks*{slug}*.md"))
+    prd = row["prd"]
+    task_candidates = sorted(
+        {
+            *tasks_dir.rglob(f"*{slug}*tasks*.md"),
+            *tasks_dir.rglob(f"tasks*{slug}*.md"),
+            *tasks_dir.rglob(f"tasks-{prd}-*.md"),
+        }
+    )
     task_file = task_candidates[0] if task_candidates else None
     tasks = task_checkbox_state(task_file) if task_file else {"total": 0, "done": 0, "ratio": 0.0}
     merged, feature_complete = merged_prs_for_slug(root, slug)
@@ -144,6 +201,8 @@ def status_for_row(root: Path, row: dict[str, str], tasks_dir: Path) -> dict[str
         status = "complete"
     elif tasks["done"] > 0 or (open_branches and not feature_complete) or merged:
         status = "in-progress"
+    elif row.get("indexFormat") == "canonical" and row.get("indexStatus") == "in-progress":
+        status = "in-progress"
     else:
         status = "not-started"
     return {
@@ -162,7 +221,7 @@ def derive_prd_status(root: Path) -> dict[str, Any]:
     cfg = read_config(root)
     prds_dir = root / cfg.get("prdsDir", "docs/prds")
     tasks_dir = root / cfg.get("tasksDir", "docs/prds")
-    index_path = prds_dir / "INDEX.md"
+    index_path = prd_index_path(root)
     rows = parse_prd_index(index_path)
     result = [status_for_row(root, row, tasks_dir) for row in rows]
     from wave_state import enumerate_scoped_runs, utc_now
@@ -225,10 +284,12 @@ def apply_prd_index_status(index_path: Path, status_map: dict[str, str]) -> str:
     for line in text.splitlines():
         if line.startswith("|") and not line.startswith("| #") and not line.startswith("|---"):
             parts = [p.strip() for p in line.strip("|").split("|")]
-            if len(parts) >= 4 and parts[0] in status_map:
-                status_idx = 4 if len(parts) >= 5 else 3
-                parts[status_idx] = status_map[parts[0]]
-                line = "| " + " | ".join(parts) + " |"
+            for prd, status in status_map.items():
+                status_idx = _status_column_for_prd_row(parts, prd.zfill(3))
+                if status_idx is not None:
+                    parts[status_idx] = status
+                    line = "| " + " | ".join(parts) + " |"
+                    break
         lines.append(line)
     return "\n".join(lines) + ("\n" if lines else "")
 
@@ -259,7 +320,7 @@ def reconcile_prd_index(root: Path, *, dry_run: bool = False, require_merge: boo
         }
     derived = derive_prd_status(root)
     status_map = {r["prd"]: r["status"] for r in derived.get("prds", [])}
-    index_path = root / "docs/prds/INDEX.md"
+    index_path = prd_index_path(root)
     new_text = apply_prd_index_status(index_path, status_map)
     if dry_run:
         return {"verdict": "dry-run", "text": new_text, "updated": list(status_map.keys())}
@@ -294,15 +355,15 @@ def set_index_status(root: Path, prd: str, status: str) -> dict[str, Any]:
             "branch": branch_name,
             "remediation": "use set-index-status on a non-default branch worktree",
         }
-    index_path = root / "docs/prds/INDEX.md"
+    index_path = prd_index_path(root)
     text = index_path.read_text(encoding="utf-8")
     lines: list[str] = []
     updated = False
     for line in text.splitlines():
         if line.startswith("|") and not line.startswith("| #") and not line.startswith("|---"):
             parts = [p.strip() for p in line.strip("|").split("|")]
-            if len(parts) >= 4 and parts[0].zfill(3) == prd:
-                status_idx = 4 if len(parts) >= 5 else 3
+            status_idx = _status_column_for_prd_row(parts, prd)
+            if status_idx is not None:
                 parts[status_idx] = status
                 line = "| " + " | ".join(parts) + " |"
                 updated = True

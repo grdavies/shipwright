@@ -111,3 +111,88 @@ def test_build_agent_brief_includes_reachability_verdict(tmp_path: Path):
     brief = lib.build_agent_brief(claims, diff_paths=touched, root=tmp_path)
     assert brief.get("reachabilityVerdict") == "fail"
     assert brief.get("reachabilityFindings")
+
+
+def test_shared_cause_evidence_is_bound_and_fail_closed(tmp_path):
+    import hashlib
+    import copy
+    for name in ("consumer.ts", "shared.ts", "regression.ts"):
+        (tmp_path / name).write_text(name)
+    claim = {"ref": "1.2", "files": ["consumer.ts"], "expected": "repair common inference"}
+    digest = lambda name: hashlib.sha256((tmp_path / name).read_bytes()).hexdigest()
+    proof = {
+        "expectedSha256": hashlib.sha256(claim["expected"].encode()).hexdigest(),
+        "unchangedFiles": {"consumer.ts": digest("consumer.ts")},
+        "changedFiles": {"shared.ts": digest("shared.ts")},
+        "verificationFiles": {"regression.ts": digest("regression.ts")},
+        "reason": "Shared inference repair satisfies the unchanged consumer contract; regression verifies it.",
+    }
+    reviewer = {"ref": "1.2", "verdict": "pass", "sharedCauseEvidence": proof}
+    touched = {"shared.ts", "regression.ts"}
+    check = lambda row: lib.mechanical_claim_results([claim], touched, tmp_path, agent_claims=[row])[0]["verdict"]
+    assert check(reviewer) == "pass"
+    assert lib.mechanical_claim_results([claim], touched, tmp_path, agent_claims=[reviewer, reviewer])[0]["verdict"] == "fail"
+    for invalid in (None, [], "reviewed", 7):
+        assert check({"ref": "1.2", "verdict": "pass", "sharedCauseEvidence": invalid}) == "fail"
+    assert check({"ref": "1.2", "verdict": "pass"}) == "fail"
+    for field in proof:
+        broken = copy.deepcopy(reviewer)
+        del broken["sharedCauseEvidence"][field]
+        assert check(broken) == "fail"
+    for field in ("unchangedFiles", "changedFiles", "verificationFiles"):
+        broken = copy.deepcopy(reviewer)
+        key = next(iter(proof[field]))
+        broken["sharedCauseEvidence"][field][key] = "0" * 64
+        assert check(broken) == "fail"
+    broken = copy.deepcopy(reviewer)
+    broken["verdict"] = "fail"
+    assert check(broken) == "fail"
+    broken = copy.deepcopy(reviewer)
+    broken["sharedCauseEvidence"]["changedFiles"] = {"consumer.ts": digest("consumer.ts")}
+    assert check(broken) == "fail"
+    (tmp_path / "consumer.ts").unlink()
+    assert check(reviewer) == "fail"
+
+
+def test_normalize_retains_shared_cause_evidence():
+    proof = {"reason": "reviewed"}
+    row = lib.normalize_agent_claims([{"ref": "1.2", "verdict": "pass", "sharedCauseEvidence": proof}])[0]
+    assert row["sharedCauseEvidence"] == proof
+
+
+def test_audit_collect_revalidates_original_shared_cause_proof(tmp_path, monkeypatch):
+    import hashlib
+    expected = "repair common inference"
+    task = tmp_path / "tasks.md"
+    task.write_text(f"### 1. Repair\n\n- [x] 1.2 Repair\n  - **File:** `consumer.ts`\n  - **Expected:** {expected}\n")
+    files = {name: name.encode() for name in ("consumer.ts", "shared.ts", "regression.ts")}
+    for name, data in files.items():
+        (tmp_path / name).write_bytes(data)
+    proof = {"expectedSha256": hashlib.sha256(expected.encode()).hexdigest(), "reason": "Independent shared cause and regression review"}
+    for field, name in zip(("unchangedFiles", "changedFiles", "verificationFiles"), files):
+        proof[field] = {name: hashlib.sha256(files[name]).hexdigest()}
+    import subprocess
+    def git(*args):
+        return subprocess.check_output(["git", "-C", str(tmp_path), *args], text=True).strip()
+    git("init", "-q")
+    git("config", "user.email", "test@example.com")
+    git("config", "user.name", "Test")
+    git("add", "consumer.ts")
+    git("commit", "-qm", "base")
+    base = git("rev-parse", "HEAD")
+    git("add", "shared.ts", "regression.ts")
+    tree = git("write-tree")
+    status = lib.audit_phase_claims(tmp_path, tasks_path=task, phase_id="1", diff_base=base, head=tree, agent_claims=[{"ref": "1.2", "verdict": "pass", "dimension": "agent", "sharedCauseEvidence": proof}])
+    assert status["verdict"] == "pass"
+    assert status["completionClaims"][0]["sharedCauseEvidence"] == proof
+    collect = lambda: lib.collect_audit_from_status(tmp_path, status, tasks_path=task, phase_id="1", phase_branch=base)
+    assert collect()["verdict"] == "pass"
+    (tmp_path / "shared.ts").write_text("changed after review")
+    assert collect()["verdict"] == "fail"
+    # Rehashing dirty bytes cannot substitute for the audited staged tree.
+    proof["changedFiles"]["shared.ts"] = hashlib.sha256((tmp_path / "shared.ts").read_bytes()).hexdigest()
+    assert collect()["verdict"] == "fail"
+    proof["changedFiles"]["shared.ts"] = hashlib.sha256(files["shared.ts"]).hexdigest()
+    (tmp_path / "shared.ts").write_bytes(files["shared.ts"])
+    task.write_text(task.read_text().replace(expected, "different expected contract"))
+    assert collect()["verdict"] == "fail"

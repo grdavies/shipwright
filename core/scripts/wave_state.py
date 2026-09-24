@@ -323,7 +323,7 @@ def _is_migration_breadcrumb(data: dict[str, Any]) -> bool:
 def _run_scoped_path_from_breadcrumb(root: Path, data: dict[str, Any]) -> Path | None:
     rel = data.get("runScopedPath")
     if isinstance(rel, str):
-        path = root / rel
+        path = _path_normalize_anchor(root) / rel
         if path.is_file():
             return path
     run_id = data.get("runId")
@@ -338,7 +338,7 @@ def _run_scoped_path_from_breadcrumb(root: Path, data: dict[str, Any]) -> Path |
 def _scoped_path_from_breadcrumb(root: Path, data: dict[str, Any]) -> Path | None:
     rel = data.get("scopedPath")
     if isinstance(rel, str):
-        path = root / rel
+        path = _path_normalize_anchor(root) / rel
         if path.is_file():
             return path
     target = data.get("target")
@@ -713,14 +713,15 @@ def _deliver_write_roots(
     """Return canonical primary repo root and optional orchestrator mirror root."""
     repo_root = _path_normalize_anchor(root)
     mirror: Path | None = root.resolve() if root.resolve() != repo_root.resolve() else None
-    # When saving from the primary checkout, still mirror into the orchestrator
-    # worktree recorded on state (adopt writes orchestratorWorktree with root=primary).
-    if mirror is None and isinstance(state, dict):
+    # The recorded orchestrator remains the mirror even when a phase worktree
+    # originates the write. A caller-local phase snapshot is never that mirror.
+    if isinstance(state, dict):
         orch_raw = (state.get("orchestratorWorktree") or {}).get("path")
         if isinstance(orch_raw, str) and orch_raw.strip():
-            orch_path = Path(orch_raw).expanduser().resolve()
-            if orch_path != repo_root.resolve():
-                mirror = orch_path
+            orch_path = Path(normalize_worktree_path(
+                orch_raw, anchor=repo_root, field="orchestratorWorktree.path",
+            ))
+            mirror = orch_path if orch_path != repo_root.resolve() else None
     return repo_root, mirror
 
 

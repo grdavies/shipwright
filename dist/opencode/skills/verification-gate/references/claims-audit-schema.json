@@ -2,21 +2,51 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "claims-audit status",
   "type": "object",
-  "required": ["verdict", "checkedAt", "claims"],
+  "required": [
+    "verdict",
+    "checkedAt",
+    "claims"
+  ],
   "properties": {
-    "verdict": {"type": "string", "enum": ["pass", "fail"]},
-    "checkedAt": {"type": "string"},
-    "failureCount": {"type": "integer"},
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "checkedAt": {
+      "type": "string"
+    },
+    "failureCount": {
+      "type": "integer"
+    },
     "completionClaims": {
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["ref"],
+        "required": [
+          "ref"
+        ],
         "properties": {
-          "ref": {"type": "string"},
-          "title": {"type": "string"},
-          "files": {"type": "array", "items": {"type": "string"}},
-          "expected": {"type": "string"}
+          "ref": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expected": {
+            "type": "string"
+          },
+          "sharedCauseEvidence": {
+            "$ref": "#/definitions/sharedCauseEvidence"
+          }
         }
       }
     },
@@ -24,12 +54,81 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["ref", "verdict", "dimension"],
+        "required": [
+          "ref",
+          "verdict",
+          "dimension"
+        ],
         "properties": {
-          "ref": {"type": "string"},
-          "verdict": {"type": "string", "enum": ["pass", "fail"]},
-          "dimension": {"type": "string", "enum": ["mechanical", "agent"]},
-          "reason": {"type": "string"}
+          "ref": {
+            "type": "string"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail"
+            ]
+          },
+          "dimension": {
+            "type": "string",
+            "enum": [
+              "mechanical",
+              "agent"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "sharedCauseEvidence": {
+            "$ref": "#/definitions/sharedCauseEvidence"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "sharedCauseEvidence": {
+      "type": "object",
+      "required": [
+        "expectedSha256",
+        "unchangedFiles",
+        "changedFiles",
+        "verificationFiles",
+        "reason"
+      ],
+      "properties": {
+        "expectedSha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "unchangedFiles": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "changedFiles": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "verificationFiles": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
         }
       }
     }

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -18,10 +17,14 @@ def repo_root(start: Path | None = None) -> Path:
 
 
 def manifest_path(root: Path | None = None) -> Path:
-    return repo_root(root) / MANIFEST_REL
+    from sw_scripts_resolve import resolve_scripts_dir, ScriptsResolveError
+
+    runtime = resolve_scripts_dir(repo_root(root), executor=Path(__file__))
+    if runtime.error or runtime.path is None:
+        raise ScriptsResolveError(runtime.error or "no trusted gate-manifest runtime found")
+    return runtime.path.resolve().parent / MANIFEST_REL
 
 
-@lru_cache(maxsize=8)
 def _load_raw_manifest(path_str: str) -> dict[str, Any]:
     path = Path(path_str)
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -38,7 +41,14 @@ def load_manifest(root: Path | None = None, *, validate: bool = True) -> dict[st
     if validate:
         from gate_manifest_validate import validate_manifest
 
-        result = validate_manifest(data, root=repo_root(root))
+        # Bundle lineage belongs to the selected runtime, never consumer files or
+        # another installation selected by a missing-reference fallback. Read on
+        # every validation so a long-lived process cannot reuse a changed bundle.
+        classification_path = path.with_name("kernel-classification.json")
+        classification = json.loads(classification_path.read_text(encoding="utf-8"))
+        if not isinstance(classification, dict):
+            raise ValueError(f"kernel classification must be an object: {classification_path}")
+        result = validate_manifest(data, root=path.parents[2], classification=classification)
         if result.get("verdict") != "pass":
             reasons = result.get("reasons") or [result.get("error", "validation failed")]
             raise ValueError(f"gate manifest validation failed: {'; '.join(str(r) for r in reasons)}")
@@ -81,10 +91,9 @@ def gates_by_id(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def _workflow_config_path(root: Path) -> Path | None:
-    for candidate in (root / ".cursor/workflow.config.json", root / "workflow.config.json"):
-        if candidate.is_file():
-            return candidate
-    return None
+    from shipwright_paths import workflow_config_path
+
+    return workflow_config_path(root)
 
 
 def load_gate_class_overrides(root: Path | None = None) -> dict[str, str]:

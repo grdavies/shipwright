@@ -715,6 +715,9 @@ may gain `prd:` forward links. `/sw-freeze` verifies resolvable linkage before f
 
 **Secret safety:** `scripts/secret-scan.py` runs at every workflow push chokepoint (`git-push.py`);
 range-scoped redaction is required (`scripts/redaction-guard.py` refuses bare-branch history rewrite).
+The scanner recognizes complete single-backtick `patches/<package>@<major.minor.patch>.patch`
+references by their exact matched span. This exception never applies to another email on the same
+line; malformed paths remain subject to EMAIL detection. Memory redaction remains conservative.
 
 
 ### Terminal ship-run chain (`ship run`)
@@ -1564,3 +1567,31 @@ Deliver driver resilience clusters finalize, orch cwd adopt, and exclusive run l
 
 <!-- currency: refreshed 2026-09-14T20:02:00Z — terminal docs-currency (doc_loop + publication sequencing) -->
 
+
+### Pre-PR smoke in consumer repositories
+
+Pre-PR smoke runs the consumer's configured `verify.test` in the consumer worktree using the runtime
+verification command runner, with no flaky retries. Missing or blank configuration fails with
+`pre-pr-smoke:verify-unconfigured`; command failures preserve the exit code in
+`pre-pr-smoke:verify-exit-N`. The gate never falls back to the installed plugin's Python tests.
+Shipwright's sentinel-identified development repository retains scoped pytest smoke; consumer Python
+unit directories never select the plugin runner. Phase environment
+bindings are scrubbed for the check and restored afterwards.
+
+### Gate bundle authority in consumer repositories
+
+Gate manifests resolve through the trusted scripts-root resolver. The selected runtime owns both
+`gate-manifest.json` and its sibling `kernel-classification.json`; missing or invalid required files
+block instead of falling back to another bundle or consumer copies. Both are read anew for validation.
+The consumer still owns `gates.classOverrides` and gate evidence. Overrides cannot demote kernel-floor
+gates. No vendor reference files need copying into a consumer repository.
+
+### Phase-originated deliver progress writes
+
+Relative `scopedPath` and `runScopedPath` breadcrumb references are anchored to the primary repository,
+including when a task-status or PR writer runs from a phase worktree. The primary state owns conductor
+counters and verdicts. Progress writes mirror to the recorded orchestrator worktree, leaving any
+phase-local snapshot non-authoritative. This prevents stale phase snapshots from rolling back newer
+conductor metadata; it does not introduce a concurrent-writer transaction protocol.
+
+Review-thread evidence must be complete before the check gate can pass. GitHub GraphQL may return HTTP 200 with errors or partial data; reject errors, malformed connections, repeated/missing pagination cursors, and exhausted page limits. The gate must require an OK thread envelope with valid integer counts; a failed fetch never means zero unresolved threads.
