@@ -79,6 +79,25 @@ def main(argv: list[str] | None = None) -> int:
 
         if harness:
             seed_mandatory_pass_records(root, phase, head_sha=head)
+        else:
+            from ship_gate_handlers import EXTERNAL_GATE_IDS, run_gate_handler
+
+            missing = evaluate_mandatory_gate_evidence(root, phase, head_sha=head)
+            failures = missing.get("failures") or []
+            # Recovery from older ship chains must execute each missing external
+            # chokepoint; a status re-emit cannot stand in for its gate receipt.
+            if all(failure.get("gateId") in EXTERNAL_GATE_IDS for failure in failures):
+                run_dir = Path(_run) if _run else root / ".cursor" / "sw-deliver-runs" / phase
+                for failure in failures:
+                    result = run_gate_handler(
+                        root, phase, failure["gateId"], run_dir, pr=str(pr or "")
+                    )
+                    if result.get("verdict") != "pass":
+                        print(json.dumps({
+                            "verdict": "fail", "halt": "merge-ready:external-gate-failed",
+                            "gateId": failure["gateId"], "exitCode": result.get("exitCode"),
+                        }), file=sys.stderr)
+                        return 2
         evidence = evaluate_mandatory_gate_evidence(root, phase, head_sha=head)
         if evidence.get("verdict") != "pass":
             print(
