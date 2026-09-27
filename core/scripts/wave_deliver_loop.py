@@ -3908,11 +3908,10 @@ def apply_merge_enqueue_result(state: dict[str, Any], data: dict[str, Any]) -> N
 
 
 def persist_cursor(root: Path, state: dict[str, Any], action: str, **extra: Any) -> None:
-    prior = str(state.get("nextAction") or "")
     if action in ACTION_PRECEDENCE_CLASS:
         assert_action_classified(action)
-        if prior in ACTION_PRECEDENCE_CLASS:
-            assert_monotonic_sequence([prior, action])
+    # The persisted cursor spans driver turns. Precedence applies to steps taken
+    # within one turn, which record_action_precedence checks separately.
     state["nextAction"] = action
     state["driverHeartbeatAt"] = utc_now()
     for key, val in extra.items():

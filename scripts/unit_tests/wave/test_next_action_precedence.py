@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
 from wave_action_precedence import (
@@ -15,7 +17,7 @@ from wave_action_precedence import (
     assert_monotonic_sequence,
     precedence_class,
 )
-from wave_deliver_loop import MECHANICAL_ACTIONS
+from wave_deliver_loop import MECHANICAL_ACTIONS, persist_cursor
 
 
 def test_every_mechanical_action_is_classified() -> None:
@@ -63,3 +65,13 @@ def test_emit_sequence_helper_rejects_unclassified_addition() -> None:
     sequence = ["plan", "lock-acquire"]
     with pytest.raises(UnclassifiedActionError):
         assert_monotonic_sequence([*sequence, "mystery-action"])
+
+
+def test_persisted_cursor_can_return_to_read_only_on_next_turn(tmp_path) -> None:
+    state = {"nextAction": "dispatch-ship"}
+
+    with patch("wave_deliver_loop.save_state") as save, patch("wave_deliver_loop.append_log"):
+        persist_cursor(tmp_path, state, "canonical-reemit")
+
+    assert state["nextAction"] == "canonical-reemit"
+    save.assert_called_once_with(tmp_path, state)
