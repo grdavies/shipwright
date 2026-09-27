@@ -33,6 +33,7 @@ R9_GATE_IDS = frozenset(
         "verification-gate",
     }
 )
+EXTERNAL_GATE_IDS = frozenset({"check-gate", "secret-scan", "gap-check-gate"})
 
 
 
@@ -41,16 +42,30 @@ def is_gate_handler_step(step: str) -> bool:
 
 
 def _artifact_path(template: str, run_dir: Path) -> Path:
-    return Path(template.format(runDir=str(run_dir)))
+    return Path(template.format(runDir=str(run_dir), phaseRunDir=str(run_dir)))
 
 
-def build_gate_argv(root: Path, gate_id: str, run_dir: Path) -> list[str]:
+def build_gate_argv(
+    root: Path, gate_id: str, run_dir: Path, *, phase_slug: str = "", pr: str = ""
+) -> list[str]:
     py = sys.executable
     scripts = SCRIPT_DIR
     gate = gates_by_id(load_manifest(root))[gate_id]
     evidence = gate.get("evidence") or {}
     status_artifact = str(evidence.get("statusArtifact") or f"{{runDir}}/{gate_id}.status.json")
     out_path = _artifact_path(status_artifact, run_dir)
+
+    if gate_id == "check-gate":
+        return [py, str(scripts / "check-gate.py"), *([pr] if pr.isdecimal() else [])]
+    if gate_id == "secret-scan":
+        return [py, str(scripts / "secret-scan.py")]
+    if gate_id == "gap-check-gate":
+        if not phase_slug:
+            raise ValueError("phase slug required for gap-check-gate")
+        return [
+            py, str(scripts / "gap-check-gate.py"), "check", str(root),
+            "--phase-slug", phase_slug, "--deliver-merge",
+        ]
 
     if gate_id == "behavioral-anomaly":
         return [
@@ -131,14 +146,15 @@ def run_gate_handler(
     run_dir: Path,
     *,
     env: dict[str, str] | None = None,
+    pr: str = "",
 ) -> dict[str, Any]:
     root = repo_root(root)
     gate_id = normalize_step(gate_id)
-    if gate_id not in R9_GATE_IDS:
-          return {"verdict": "fail", "cause": "gate-handler:not-r9-gate", "gateId": gate_id}
+    if gate_id not in R9_GATE_IDS | EXTERNAL_GATE_IDS:
+        return {"verdict": "fail", "cause": "gate-handler:unsupported-gate", "gateId": gate_id}
     gate = gates_by_id(load_manifest(root))[gate_id]
     evidence = gate.get("evidence") or {}
-    argv = build_gate_argv(root, gate_id, run_dir)
+    argv = build_gate_argv(root, gate_id, run_dir, phase_slug=phase_slug, pr=pr)
     exit_code, execution = capture_execution(argv, cwd=root, env=env)
     verdict = gate_pass_verdict(gate_id, exit_code)
     status_artifact = str(evidence.get("statusArtifact") or f"{{runDir}}/{gate_id}.status.json")
@@ -206,4 +222,3 @@ if __name__ == "__main__":
     from _sw.cli import run_module_main
 
     run_module_main(main)
-

@@ -7,7 +7,13 @@ from unittest.mock import patch
 import pytest
 
 from gate_evidence import evidence_record_path, read_record_file
-from ship_gate_handlers import R9_GATE_IDS, build_gate_argv, is_gate_handler_step, run_gate_handler
+from ship_gate_handlers import (
+    EXTERNAL_GATE_IDS,
+    R9_GATE_IDS,
+    build_gate_argv,
+    is_gate_handler_step,
+    run_gate_handler,
+)
 from ship_loop import execute_mechanical_step, step_dispatch
 
 
@@ -100,6 +106,42 @@ def test_step_dispatch_flags_r9_gate_handler(repo_root: Path, tmp_path: Path) ->
     assert payload["awaitAgent"] is False
     assert payload["isGateHandler"] is True
     assert payload["executeMechanical"] == "gate-handler"
+
+
+@pytest.mark.parametrize("gate_id", sorted(EXTERNAL_GATE_IDS))
+def test_external_gate_executes_before_evidence_pass(
+    repo_root: Path, tmp_path: Path, gate_id: str
+) -> None:
+    phase = "external-gate-recovery-test"
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    with patch("ship_gate_handlers.capture_execution", side_effect=lambda argv, **kw: _mock_execution(argv)):
+        result = run_gate_handler(repo_root, phase, gate_id, run_dir, pr="361")
+
+    assert result["verdict"] == "pass"
+    argv = result["execution"]["argv"]
+    if gate_id == "check-gate":
+        assert argv[-1] == "361"
+    if gate_id == "gap-check-gate":
+        assert "--deliver-merge" in argv
+    record, cause = read_record_file(evidence_record_path(repo_root, phase, gate_id))
+    assert cause is None
+    assert record is not None and record["verdict"] == "pass"
+
+
+def test_failed_external_gate_cannot_record_pass(repo_root: Path, tmp_path: Path) -> None:
+    phase = "external-gate-recovery-failure-test"
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    failed_execution = _mock_execution(["check-gate.py"])[1]
+    failed_execution["exitCode"] = 1
+    with patch("ship_gate_handlers.capture_execution", return_value=(1, failed_execution)):
+        result = run_gate_handler(repo_root, phase, "check-gate", run_dir, pr="361")
+
+    assert result["verdict"] == "fail"
+    record, cause = read_record_file(evidence_record_path(repo_root, phase, "check-gate"))
+    assert cause is None
+    assert record is not None and record["verdict"] == "fail"
 
 
 def test_execute_mechanical_step_advances_on_pass(repo_root: Path, tmp_path: Path) -> None:
