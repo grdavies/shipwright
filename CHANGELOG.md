@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.23.2](https://github.com/grdavies/shipwright/compare/v2.23.1...v2.23.2) (2026-09-27)
+
+
+### Bug Fixes
+
+* **deliver:** allow cross-turn read-only cursor recovery ([#1305](https://github.com/grdavies/shipwright/issues/1305)) ([feafbae](https://github.com/grdavies/shipwright/commit/feafbae40216f46e08811fadc541102a4f9cfacd))
+* **deliver:** execute missing external gates before merge-ready ([#1307](https://github.com/grdavies/shipwright/issues/1307)) ([ef169ac](https://github.com/grdavies/shipwright/commit/ef169acd2e075bc326ff0c0a74959fc5275115dc))
+
 ## [2.23.1](https://github.com/grdavies/shipwright/compare/v2.23.0...v2.23.1) (2026-09-24)
 
 
