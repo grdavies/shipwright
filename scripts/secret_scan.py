@@ -9,6 +9,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
+from secret_scan_exact import AcquisitionError, acquisition_active, acquisition_scope, git_text
+
 from secret_patterns import DENY_PATTERNS, email_match_is_schema_version_token
 
 EXIT_PASS = 0
@@ -33,6 +35,14 @@ class Finding:
 
 
 def repo_root() -> Path:
+    if acquisition_active():
+        try:
+            return Path(git_text(["rev-parse", "--show-toplevel"]).strip())
+        except AcquisitionError:
+            raise
+        except RuntimeError as exc:
+            raise RuntimeError("secret-scan: not in a git repository") from exc
+    # Plaintext consumers retain their original cross-platform discovery path.
     try:
         out = subprocess.check_output(
             ["git", "rev-parse", "--show-toplevel"],
@@ -104,10 +114,7 @@ def scan_text(
 
 
 def git_out(*args: str, cwd: Path) -> str:
-    try:
-        return subprocess.check_output(["git", *args], cwd=cwd, stderr=subprocess.STDOUT, text=True)
-    except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f"secret-scan: git {' '.join(args)} failed: {exc.output.strip()}") from exc
+    return git_text(list(args), cwd=cwd)
 
 
 @dataclass(frozen=True)
@@ -133,6 +140,11 @@ def _resolve_commit(root: Path, revision: str) -> str:
 
 
 def _collect_pre_push_selection(root: Path) -> _PrePushSelection:
+    with acquisition_scope():
+        return _select_pre_push(root)
+
+
+def _select_pre_push(root: Path) -> _PrePushSelection:
     """Select once, then acquire using object IDs instead of moving refs.
 
     Unavailable selection probes retain the legacy fallback order. Once selected,
@@ -141,6 +153,8 @@ def _collect_pre_push_selection(root: Path) -> _PrePushSelection:
     """
     try:
         head = _resolve_commit(root, "HEAD")
+    except AcquisitionError:
+        raise
     except RuntimeError:
         head = None
 
@@ -161,6 +175,8 @@ def _collect_pre_push_selection(root: Path) -> _PrePushSelection:
         try:
             upstream = resolve("@{upstream}")
             base = git_out("merge-base", upstream, head, cwd=root).strip()
+        except AcquisitionError:
+            raise
         except RuntimeError:
             pass
         else:
@@ -170,12 +186,8 @@ def _collect_pre_push_selection(root: Path) -> _PrePushSelection:
     if resolver.is_file():
         resolved = None
         try:
-            proc = subprocess.run(
-                [sys.executable, str(resolver), "diff-base"],
-                cwd=root,
-                capture_output=True,
-                text=True,
-            )
+            with acquisition_scope() as acq:
+                proc = acq.run([sys.executable, str(resolver), "diff-base"], cwd=root)
             if proc.returncode == 0:
                 data = json.loads(proc.stdout)
                 range_spec = data.get("range", "") if isinstance(data, dict) else ""
@@ -188,7 +200,9 @@ def _collect_pre_push_selection(root: Path) -> _PrePushSelection:
                         base_ref, target_ref = range_spec.split("..", 1)
                         base, target = resolve(base_ref), resolve(target_ref)
                     resolved = (base, target)
-        except (RuntimeError, json.JSONDecodeError, subprocess.SubprocessError):
+        except AcquisitionError:
+            raise
+        except (RuntimeError, ValueError, UnicodeError):
             pass
         if resolved is not None:
             return between("resolver", *resolved)
@@ -199,6 +213,8 @@ def _collect_pre_push_selection(root: Path) -> _PrePushSelection:
             unpushed = git_out("rev-list", head, "--not", "--remotes", cwd=root).split()
             if unpushed:
                 parent = resolve(f"{unpushed[-1]}^")
+        except AcquisitionError:
+            raise
         except RuntimeError:
             pass
         if parent is not None:
@@ -208,6 +224,8 @@ def _collect_pre_push_selection(root: Path) -> _PrePushSelection:
             try:
                 base = resolve(candidate)
                 base = git_out("merge-base", base, head, cwd=root).strip()
+            except AcquisitionError:
+                raise
             except RuntimeError:
                 continue
             selected = between("triple-dot", base, head)
@@ -343,6 +361,15 @@ def cmd_patterns_check() -> int:
 
 
 def main() -> int:
+    # Start before repository discovery and HEAD probes; nested calls reuse it.
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "pre-push"
+    if cmd == "pre-push":
+        with acquisition_scope():
+            return _main()
+    return _main()
+
+
+def _main() -> int:
     try:
         root = repo_root()
         allowlist = load_allowlist(root)
