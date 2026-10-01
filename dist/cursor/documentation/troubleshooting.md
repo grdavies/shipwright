@@ -55,6 +55,45 @@ a Shipwright source checkout.
 | Present-and-fail | Corrupt active-host evidence stays fail-closed; sibling green does not override — fix or reinstall the active host bundle. |
 | Stale install | Run `shipwright self check` / upgrade; see [self-upgrade](self-upgrade.md#packaged-provider-conformance). |
 
+## Incomplete issue-store freeze
+
+A PRD marked `sw:frozen` and `sw:freeze-incomplete` has not completed its required
+freeze work. Preserve its body, closed review witness, receipt history and failure
+output. Retry the same `planning_store.py freeze --unit-id <unit> --body-path <path>`
+command under the ordinary defaults after fixing the reported dependency failure.
+Do not manually clear the label, repin the hash, reopen the review or unlock/relock
+the issue. Complete frozen units still return `already-frozen`.
+
+Recovery requires a fresh full provider read proving the native issue lock is
+strictly `true`; a frozen label or the legacy effective `locked` value cannot prove
+that. Missing, false or unsupported native-lock evidence refuses recovery. Only an
+incomplete PRD with one original freeze receipt, matching identity and destination,
+and an unchanged canonical snapshot after projecting away the incomplete label can
+resume. Raw body and witness bytes are preserved; retained closed review pins and
+completion evidence are checked without replaying the already applied review.
+V1 review evidence may bind only the unit: an omitted optional `bodyPath` does not
+imply a historical default filename. Canonical facade resolution still applies,
+and any explicitly retained witness or completion path must match the request.
+
+Recovery repeats required distillation and absorb-linkage checks. It requires exactly
+one linked canonical brainstorm; missing, retargeted or ambiguous search evidence
+keeps the incomplete gate. An exact memory pointer is reused, and brainstorm closure
+uses a fresh ETag after pointer publication.
+A closed brainstorm needs that matching pointer. Cache notices remain literal: HTTP
+404 with local-cache fallback does not establish remote durability. Configured remote
+planning authority failures keep recovery incomplete.
+
+Only after these steps pass does a fresh guarded write remove the incomplete label;
+the original matching receipt remains unchanged. Fresh reads immediately before and
+after this write recheck native lock and body/witness evidence. These are point-in-time
+observations, since provider ETags do not bind native lock. A detected post-write loss
+attempts one identity/body-checked OCC restoration of the incomplete label. If that
+restoration conflicts or cannot safely preserve the current body, the command reports
+`freeze-recovery-partial-apply` with `partialApply: true`; preserve the actual evidence
+and resolve the conflict before another supported attempt. A crash before removal
+leaves the incomplete gate; a crash after removal does not itself prove final checks
+succeeded. No force, relock or retry loop repairs concurrent edits.
+
 ## Issue-store projection timeout and rate limits
 
 Post-merge living-doc projection (`wave living-docs reconcile`, including the path used by

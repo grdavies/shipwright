@@ -237,6 +237,7 @@ def _record_from_issue(
         comments=list(comments or []),
         native_links=resolved_links,
         locked=locked,
+        native_locked=payload.get("locked") if type(payload.get("locked")) is bool else None,
         updated_at=updated,
         project_key=project_key,
         artifact_type=artifact_type,
