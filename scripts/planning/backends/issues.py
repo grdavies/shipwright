@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 import os
+import json
 import re
+from copy import deepcopy
 from collections.abc import Callable
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -12,6 +14,7 @@ from typing import Any, Iterator
 from planning_canonical import DOC_REVIEW_MARKER, MARKER_UNIT_ID
 from ._common import content_hash, finalize_materialize_from_get, log_operation
 from .issues_bundle_assets import IssueStoreBundleAssetsMixin
+from .issues_freeze_recovery import IssueFreezeRecoveryMixin
 from .issues_helpers import (
     clear_put_incomplete_label,
     guard_unit_id_marker_reuse,
@@ -161,7 +164,7 @@ def assert_doc_review_authorship(
     return None
 
 
-class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
+class IssueStoreBackend(IssueStoreBundleAssetsMixin, IssueFreezeRecoveryMixin, PlanningStoreBackend):
     backend_id = "issue-store"
 
     def __init__(self, root: Path, cfg: dict[str, Any]) -> None:
@@ -369,44 +372,6 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
         for chunk in texts:
             if chunk:
                 _ps().secret_scan_text(chunk, path_hint=path_hint)
-
-    def _find_linked_brainstorm(self, prd_unit_id: str) -> Any | None:
-        matches = self._client.issue_search(project_key=self.project_key, artifact_type="brainstorm")
-        for record in matches:
-            full_body = _ps().reassemble_body(record.body, record.comments)
-            edges = _ps().parse_edges_block(full_body)
-            if not edges:
-                continue
-            for edge in edges.get("edges") or []:
-                if isinstance(edge, dict) and edge.get("target") == prd_unit_id:
-                    return record
-        return None
-
-    def _distill_brainstorm_rationale(self, brainstorm: Any, prd_unit_id: str) -> dict[str, Any]:
-        if os.environ.get("SW_FREEZE_DISTILL_FAIL", "").strip() in {"1", "true", "yes"}:
-            raise RuntimeError("distillation-forced-fail")
-        content = self._extract_content(brainstorm)
-        if _ps().contains_raw_transcript(content):
-            raise RuntimeError("raw-transcript-in-brainstorm")
-        excerpt = content[:4000]
-        redacted = _ps().redact_content(excerpt)
-        mem = ReplicatedPlanningCacheBackend(self.root, self.cfg)
-        mem_result = mem.put(
-            f"brainstorm-{brainstorm.unit_id}",
-            f"docs/brainstorms/{brainstorm.unit_id}.md",
-            redacted,
-            content_class="research",
-        )
-        pointer = (
-            f"<!-- sw-memory-pointer -->\n"
-            f"memoryUnit: {mem_result.unit_id}\n"
-            f"prdUnit: {prd_unit_id}\n"
-            f"brainstormUnit: {brainstorm.unit_id}\n"
-        )
-        self._guard_write_secrets(pointer, path_hint="freeze-memory-pointer")
-        self._adapter_issue_comment(brainstorm.id, pointer, markers=["sw-memory-pointer"])
-        closed = self._client.issue_update(brainstorm.id, state="closed", if_match=brainstorm.etag)
-        return {"memoryUnitId": mem_result.unit_id, "brainstormUnitId": brainstorm.unit_id, "etag": closed.etag}
 
     def _maybe_backfill_labels(self, record: Any, unit_id: str) -> Any:
         """R11 dual-read backfill: an issue resolved via the pre-R11 body-
@@ -758,6 +723,8 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
         resolved = self._resolve_canonical_body_for_op(unit_id, body_path, record)
         self._guard_write_visibility(unit_id, body_path, str(resolved["body"]))
         if _ps().FROZEN_LABEL in record.labels:
+            if _ps().FREEZE_INCOMPLETE_LABEL in record.labels:
+                return self._resume_incomplete_freeze(unit_id, body_path, record, distill=distill)
             _ps().fail("already-frozen", code="already-frozen", unitId=unit_id)
         try:
             record = self._client.issue_lock(record.id, if_match=record.etag)
@@ -783,7 +750,7 @@ class IssueStoreBackend(IssueStoreBundleAssetsMixin, PlanningStoreBackend):
             if brainstorm is not None:
                 try:
                     distillation = self._distill_brainstorm_rationale(brainstorm, unit_id)
-                except Exception as exc:  # noqa: BLE001 — fail-closed R48
+                except (Exception, SystemExit) as exc:  # noqa: BLE001 — fail-closed R48
                     labels = sorted(set(record.labels) | {_ps().FREEZE_INCOMPLETE_LABEL})
                     try:
                         record = self._client.issue_label(record.id, labels, if_match=record.etag)

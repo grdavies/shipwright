@@ -143,6 +143,8 @@ class IssueRecord:
     unit_id: str = ""
     tombstoned: bool = False
     transferred: bool = False
+    # Fresh provider evidence only; deliberately absent from persisted snapshots.
+    native_locked: bool | None = None
 
     def touch(self) -> None:
         self.updated_at = str(int(time.time()))
