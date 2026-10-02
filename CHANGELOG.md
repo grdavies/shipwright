@@ -1478,6 +1478,7 @@
 ### Bug Fixes
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
 * merge phase preserve-baseline-selection-and-bound-acquisition into fix/secret-scan-exact-occurrences (774eece) <!-- sw-deliver:preserve-baseline-selection-and-bound-acquisition -->
+* merge phase match-exact-occurrences-against-a-strict-empty-catalog into fix/secret-scan-exact-occurrences (d26760c) <!-- sw-deliver:match-exact-occurrences-against-a-strict-empty-catalog -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
