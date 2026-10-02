@@ -1,8 +1,8 @@
 """Bounded committed source acquisition and pure exact-occurrence matching.
 
 Blobs and parsed catalogs describe identities, never approval. No worktree/index
-source reads or enrollment are performed here. Read-valid trust pins are
-separate from release integrity and never authorize exceptions by themselves.
+source substitutes are accepted. Read-valid trust pins are separate from
+release integrity; enrollment is a separate explicitly authorized operation.
 """
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ import selectors
 import signal
 import subprocess
 import time
+import zlib
 
 PATCH_LIMIT = 16 * 1024 * 1024
 PATH_LIMIT = 512
@@ -1093,6 +1094,443 @@ def read_pending_release_trust(root: Path) -> _PendingReleaseTrust | None:
         # Optional trust never changes completed baseline findings. No raw JSON,
         # path, origin, source bytes or subprocess stderr enter new diagnostics.
         return None
+    finally:
+        if paths is not None:
+            paths.close()
+
+# Release validation is deliberately separate from read-valid operator pins.
+ARCHIVE_LIMIT = 128 * 1024 * 1024
+ARCHIVE_MEMBER_LIMIT = 2048
+ARCHIVE_DIRECTORY_LIMIT = 4 * 1024 * 1024
+MODULE_LIMIT = 1024 * 1024
+_CATALOG_MEMBER = 'secret_scan_data/reviewed-occurrences.v1.json'
+_SOURCE_MEMBERS = ('secret_scan.py', 'secret_scan_exact.py', 'secret_patterns.py')
+
+
+@dataclass(frozen=True)
+class _VerifiedRelease:
+    pins: _PendingReleaseTrust
+    catalog: _Catalog
+
+
+def _bounded_fd(fd: int, limit: int, acq: Acquisition) -> bytes:
+    result = bytearray()
+    while True:
+        if time.monotonic() >= acq.deadline:
+            _trust_invalid()
+        data = os.read(fd, min(65536, limit + 1 - len(result)))
+        if not data:
+            return bytes(result)
+        result.extend(data)
+        if len(result) > limit:
+            _trust_invalid()
+
+
+class _ReleaseArchive:
+    """Pinned archive descriptor with bounded metadata and member decompression."""
+    def __init__(self, paths: _CheckedTrustPaths, path: Path, digest: str) -> None:
+        import stat
+
+        self.paths = paths
+        parent = paths.directory(path.parent)
+        paths._deadline()
+        self.fd = os.open(path.name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
+        paths.handles.append(self.fd)
+        info = os.fstat(self.fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid not in (0, paths.uid)
+                or stat.S_IMODE(info.st_mode) & 0o022 or info.st_nlink != 1
+                or info.st_size > ARCHIVE_LIMIT or info.st_size < 22):
+            _trust_invalid()
+        self.size = info.st_size
+        expected = _stat_identity(info, file=True)
+        paths.bindings.append((parent, path.name, self.fd, expected, True, paths.acl.identity(self.fd)))
+        paths.validate()
+        self.digest = digest
+        self.check_hash()
+
+    def check_hash(self) -> None:
+        self.paths.validate()
+        os.lseek(self.fd, 0, os.SEEK_SET)
+        digest = hashlib.sha256()
+        remaining = self.size
+        while remaining:
+            self.paths._deadline()
+            data = os.read(self.fd, min(65536, remaining))
+            if not data:
+                _trust_invalid()
+            digest.update(data)
+            remaining -= len(data)
+        if os.read(self.fd, 1) or digest.hexdigest() != self.digest:
+            _trust_invalid()
+        self.paths.validate()
+
+    def read_at(self, offset: int, length: int) -> bytes:
+        self.paths._deadline()
+        if offset < 0 or length < 0 or offset + length > self.size:
+            _trust_invalid()
+        os.lseek(self.fd, offset, os.SEEK_SET)
+        output = bytearray()
+        while len(output) < length:
+            self.paths._deadline()
+            data = os.read(self.fd, min(65536, length - len(output)))
+            if not data:
+                _trust_invalid()
+            output.extend(data)
+        return bytes(output)
+
+    def preflight(self) -> dict[str, tuple[int, int, int, int, int]]:
+        import stat
+        import struct
+
+        tail = self.read_at(max(0, self.size - 65557), min(self.size, 65557))
+        index = tail.rfind(b'PK\x05\x06')
+        if index < 0 or index + 22 > len(tail):
+            _trust_invalid()
+        _, disk, start_disk, disk_count, count, size, offset, comment = struct.unpack(
+            '<4s4H2IH', tail[index:index + 22])
+        end = self.size - len(tail) + index
+        if (disk or start_disk or disk_count != count or not 0 < count <= ARCHIVE_MEMBER_LIMIT
+                or size > ARCHIVE_DIRECTORY_LIMIT or index + 22 + comment != len(tail)
+                or size > end or offset > end - size):
+            _trust_invalid()
+        # ZIP64 and split archives have no role in these bounded releases.
+        if end >= 20 and self.read_at(end - 20, 4) == b'PK\x06\x07':
+            _trust_invalid()
+        start = end - size
+        prefix = start - offset  # zipapp's optional interpreter prefix
+        directory = self.read_at(start, size)
+        cursor = 0
+        names = set()
+        ranges = []
+        members = {}
+        for _ in range(count):
+            self.paths._deadline()
+            if cursor + 46 > size or directory[cursor:cursor + 4] != b'PK\x01\x02':
+                _trust_invalid()
+            values = struct.unpack('<4s6H3I5H2I', directory[cursor:cursor + 46])
+            (_, made, needed, flags, method, _, _, crc, compressed, raw,
+             name_len, extra_len, comment_len, disk_no, _, attrs, local) = values
+            next_cursor = cursor + 46 + name_len + extra_len + comment_len
+            if (next_cursor > size or not name_len or disk_no or needed >= 45
+                    or compressed == 0xffffffff or raw == 0xffffffff or local == 0xffffffff
+                    or flags & ~0x808 or method not in (0, 8)):
+                _trust_invalid()
+            name_bytes = directory[cursor + 46:cursor + 46 + name_len]
+            name = name_bytes.decode('utf-8' if flags & 0x800 else 'cp437')
+            normalized = name[:-1] if name.endswith('/') else name
+            if (not normalized or normalized in names or '\\' in name or name.startswith('/')
+                    or any(ord(c) < 32 or ord(c) == 127 for c in name)
+                    or any(p in ('', '.', '..') for p in normalized.split('/'))
+                    or ':' in name or stat.S_IFMT(attrs >> 16) not in (0, stat.S_IFREG, stat.S_IFDIR)
+                    or (stat.S_ISDIR(attrs >> 16) and not name.endswith('/'))):
+                _trust_invalid()
+            names.add(normalized)
+            if name in (*_SOURCE_MEMBERS, _CATALOG_MEMBER) and raw > MODULE_LIMIT:
+                _trust_invalid()
+            position = prefix + local
+            header = self.read_at(position, 30)
+            if header[:4] != b'PK\x03\x04':
+                _trust_invalid()
+            h = struct.unpack('<4s5H3I2H', header)
+            if (h[1] != needed or h[2] != flags or h[3] != method or h[9] != name_len
+                    or self.read_at(position + 30, name_len) != name_bytes):
+                _trust_invalid()
+            if not flags & 8 and (h[6], h[7], h[8]) != (crc, compressed, raw):
+                _trust_invalid()
+            data_start = position + 30 + name_len + h[10]
+            data_end = data_start + compressed
+            if position < prefix or data_end > start:
+                _trust_invalid()
+            if flags & 8:
+                descriptor = self.read_at(data_end, 4)
+                signed = descriptor == b'PK\x07\x08'
+                descriptor = self.read_at(data_end + (4 if signed else 0), 12)
+                if struct.unpack('<3I', descriptor) != (crc, compressed, raw):
+                    _trust_invalid()
+                data_end += 16 if signed else 12
+                if data_end > start:
+                    _trust_invalid()
+            members[name] = (data_start, compressed, raw, crc, method)
+            ranges.append((position, data_end))
+            cursor = next_cursor
+        if cursor != size or not set((*_SOURCE_MEMBERS, _CATALOG_MEMBER)) <= names:
+            _trust_invalid()
+        ordered = sorted(ranges)
+        if any(right[0] < left[1] for left, right in zip(ordered, ordered[1:])):
+            _trust_invalid()
+        self.paths.validate()
+        return members
+
+    def members(self) -> dict[str, bytes]:
+        metadata = self.preflight()
+        output = {}
+        # Parse no archive-controlled metadata twice. Bounded central-directory
+        # entries feed a streaming inflater, so a concurrent metadata rewrite
+        # cannot make a library allocate an unbounded replacement directory.
+        for name in (*_SOURCE_MEMBERS, _CATALOG_MEMBER):
+            offset, compressed, raw, crc, method = metadata[name]
+            if raw > MODULE_LIMIT or (method == 0 and compressed != raw):
+                _trust_invalid()
+            inflater = zlib.decompressobj(-15) if method == 8 else None
+            data = bytearray()
+            consumed = 0
+            while consumed < compressed:
+                self.paths._deadline()
+                chunk = self.read_at(offset + consumed, min(65536, compressed - consumed))
+                consumed += len(chunk)
+                while chunk:
+                    self.paths._deadline()
+                    if inflater is None:
+                        expanded, chunk = chunk, b''
+                    else:
+                        expanded = inflater.decompress(chunk, MODULE_LIMIT + 1 - len(data))
+                        chunk = inflater.unconsumed_tail
+                    data.extend(expanded)
+                    if len(data) > MODULE_LIMIT:
+                        _trust_invalid()
+                    if inflater is not None and inflater.unused_data:
+                        _trust_invalid()
+            if (len(data) != raw or zlib.crc32(data) != crc
+                    or (inflater is not None and not inflater.eof)):
+                _trust_invalid()
+            output[name] = bytes(data)
+        self.check_hash()
+        return output
+
+
+def _current_source_matches(members: dict[str, bytes], archive_path: Path,
+                            paths: _CheckedTrustPaths) -> None:
+    import stat
+    import sys
+
+    parent = Path(os.path.abspath(__file__)).parent
+    # Reject mixed module origins in both source and archive dispatch modes.
+    for key in ('secret_scan', 'secret_scan_exact', 'secret_patterns', '__main__'):
+        module = sys.modules.get(key)
+        filename = getattr(module, '__file__', None)
+        if (filename and Path(filename).name in _SOURCE_MEMBERS
+                and Path(os.path.abspath(filename)).parent != parent):
+            _trust_invalid()
+    if parent == archive_path:
+        # Direct zipapp and emitted shim retain package dispatch's own gate.
+        return
+    if parent.parent == archive_path.parent and parent.is_symlink():
+        # The standard install launches a relative stable alias while trust
+        # pins the regular versioned archive. Bind that single alias itself,
+        # never follow a symlink pin or normalize an arbitrary target chain.
+        if not getattr(os, 'O_SYMLINK', 0) or os.readlink not in os.supports_dir_fd:
+            _trust_invalid()
+        directory = paths.directory(parent.parent)
+        paths._deadline()
+        # Darwin O_SYMLINK opens the link object; O_NOFOLLOW in combination
+        # instead rejects it. Descriptor type and name identity are mandatory.
+        fd = os.open(parent.name, os.O_RDONLY | os.O_SYMLINK | os.O_NONBLOCK,
+                     dir_fd=directory)
+        paths.handles.append(fd)
+        info = os.fstat(fd)
+        if (not stat.S_ISLNK(info.st_mode) or info.st_uid not in (0, paths.uid)
+                or info.st_nlink != 1):
+            _trust_invalid()
+        paths.bindings.append((directory, parent.name, fd, _stat_identity(info, file=True),
+                               True, paths.acl.identity(fd)))
+        paths.validate()
+        if os.readlink(parent.name, dir_fd=directory) != archive_path.name:
+            _trust_invalid()
+        paths.validate()
+        return
+    for name in _SOURCE_MEMBERS:
+        source = parent / name
+        fd = os.open(source, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode) or info.st_size > MODULE_LIMIT:
+                _trust_invalid()
+            before = _stat_identity(info, file=True)
+            if (_bounded_fd(fd, MODULE_LIMIT, paths.acq) != members[name]
+                    or _stat_identity(os.fstat(fd), file=True) != before
+                    or _stat_identity(os.stat(source, follow_symlinks=False), file=True) != before):
+                _trust_invalid()
+        finally:
+            os.close(fd)
+
+
+def _validated_release(paths: _CheckedTrustPaths, archive_path: Path,
+                       archive_digest: str, catalog_digest: str) -> _Catalog:
+    archive = _ReleaseArchive(paths, archive_path, archive_digest)
+    members = archive.members()
+    if hashlib.sha256(members[_CATALOG_MEMBER]).hexdigest() != catalog_digest:
+        _trust_invalid()
+    _current_source_matches(members, archive_path, paths)
+    catalog = parse_catalog(members[_CATALOG_MEMBER])
+    paths.validate()
+    return catalog
+
+
+def read_verified_release(root: Path) -> _VerifiedRelease | None:
+    """Read-only library API for pre-push; absent integrity retains all findings."""
+    paths = None
+    try:
+        with acquisition_scope() as acq:
+            pins = read_pending_release_trust(root)
+            if pins is None:
+                return None
+            import pwd
+
+            home = _absolute_trust_path(pwd.getpwuid(os.getuid()).pw_dir)
+            paths = _CheckedTrustPaths(os.getuid(), acq)
+            trust_fd = paths.directory(home / '.config/shipwright/secret-scan', private_from=home / '.config')
+            paths.read_json(trust_fd, 'trust-v1.json')
+            common_fd = paths.directory(pins.common_dir)
+            paths.read_json(common_fd, _INSTANCE_MARKER)
+            # Re-read the strict binding while the new descriptors are held.
+            if read_pending_release_trust(root) != pins:
+                _trust_invalid()
+            catalog = _validated_release(paths, pins.archive_path, pins.archive_sha256, pins.catalog_sha256)
+            if _repository_trust_identity(acq, root) != (pins.common_dir, pins.repo_id):
+                _trust_invalid()
+            paths.validate()
+            return _VerifiedRelease(pins, catalog)
+    except (OSError, ValueError, TypeError, UnicodeError, RuntimeError, KeyError,
+            ImportError, NotImplementedError, RecursionError, OverflowError, EOFError, zlib.error):
+        return None
+    finally:
+        if paths is not None:
+            paths.close()
+
+
+def _publication_primitives() -> bool:
+    return (_trust_primitives() and os.mkdir in os.supports_dir_fd
+            and os.unlink in os.supports_dir_fd and os.link in os.supports_dir_fd
+            and os.link in os.supports_follow_symlinks
+            and os.rename in os.supports_dir_fd and callable(getattr(os, 'fsync', None)))
+
+
+def _atomic_trust_write(paths: _CheckedTrustPaths, parent: int, name: str,
+                        document: dict, *, create_only: bool = False) -> None:
+    import secrets
+
+    data = _canonical_json(document) + b'\n'
+    if len(data) > TRUST_JSON_LIMIT:
+        _trust_invalid()
+    paths.validate()
+    temporary = '.shipwright-secret-scan-' + secrets.token_hex(32) + '.tmp'
+    fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_NONBLOCK,
+                 0o600, dir_fd=parent)
+    try:
+        # Do not chmod even a temporary file: restrictive umasks must fail safe.
+        info = os.fstat(fd)
+        if (info.st_uid != paths.uid or info.st_mode & 0o7777 != 0o600 or info.st_nlink != 1):
+            _trust_invalid()
+        acl = paths.acl.identity(fd)
+        offset = 0
+        while offset < len(data):
+            paths._deadline()
+            written = os.write(fd, data[offset:])
+            if written <= 0:
+                _trust_invalid()
+            offset += written
+        os.fsync(fd)
+        paths.validate()
+        if (_stat_identity(os.stat(temporary, dir_fd=parent, follow_symlinks=False), file=True)
+                != _stat_identity(os.fstat(fd), file=True) or paths.acl.identity(fd) != acl):
+            _trust_invalid()
+        if create_only:
+            os.link(temporary, name, src_dir_fd=parent, dst_dir_fd=parent, follow_symlinks=False)
+        else:
+            os.replace(temporary, name, src_dir_fd=parent, dst_dir_fd=parent)
+        # Existing file descriptors refer to the intentionally replaced inode.
+        paths.bindings[:] = [b for b in paths.bindings if not (b[0] == parent and b[1] == name)]
+    finally:
+        os.close(fd)
+        try:
+            os.unlink(temporary, dir_fd=parent)
+        except FileNotFoundError:
+            pass
+    os.fsync(parent)
+    paths.read_json(parent, name)
+
+
+def enroll_exact(root: Path, *, archive_path: Path, release_id: str,
+                 expected_archive_sha256: str, expected_catalog_sha256: str,
+                 expected_common_dir: Path, expected_origin: str,
+                 authorize_marker_write: bool = False, replace_marker: bool = False) -> bool:
+    """Explicit scanner-only enrollment; callers supply human-approved actual pins.
+
+    This API never discovers approval from installed bytes. Account home and
+    marker/trust names are fixed. False is a private, payload-free refusal.
+    """
+    paths = None
+    try:
+        if (authorize_marker_write is not True or type(replace_marker) is not bool
+                or not _publication_primitives() or not _token(release_id)
+                or not _digest(expected_archive_sha256) or not _digest(expected_catalog_sha256)
+                or not _repo_id(expected_origin)):
+            return False
+        import pwd
+        import secrets
+
+        archive_path = _absolute_trust_path(str(archive_path))
+        expected_common_dir = _absolute_trust_path(str(expected_common_dir))
+        home = _absolute_trust_path(pwd.getpwuid(os.getuid()).pw_dir)
+        with acquisition_scope() as acq:
+            directory, origin = _repository_trust_identity(acq, root)
+            if (directory, origin) != (expected_common_dir, expected_origin):
+                _trust_invalid()
+            paths = _CheckedTrustPaths(os.getuid(), acq)
+            common_fd = paths.directory(directory)
+            home_fd = paths.directory(home)
+            _validated_release(paths, archive_path, expected_archive_sha256, expected_catalog_sha256)
+            try:
+                marker = _trust_document(paths.read_json(common_fd, _INSTANCE_MARKER),
+                                         {'schemaVersion', 'instanceNonce'})
+                if not _digest(marker['instanceNonce']):
+                    _trust_invalid()
+                nonce = marker['instanceNonce']
+                existing = True
+            except FileNotFoundError:
+                nonce = None
+                existing = False
+            # Inspect every existing directory and trust file before any write.
+            parent = home_fd
+            missing = []
+            for name in ('.config', 'shipwright', 'secret-scan'):
+                if missing:
+                    missing.append(name)
+                    continue
+                try:
+                    parent = paths._open(name, parent, directory=True, private=True)
+                except FileNotFoundError:
+                    missing.append(name)
+            if not missing:
+                try:
+                    paths.read_json(parent, 'trust-v1.json')
+                except FileNotFoundError:
+                    pass
+            if _repository_trust_identity(acq, root) != (directory, origin):
+                _trust_invalid()
+            paths.validate()
+            # All expected pins, identity and existing state are validated now.
+            for name in missing:
+                paths.validate()
+                os.mkdir(name, 0o700, dir_fd=parent)
+                os.fsync(parent)
+                parent = paths._open(name, parent, directory=True, private=True)
+            if nonce is None or replace_marker:
+                nonce = secrets.token_hex(32)
+                _atomic_trust_write(paths, common_fd, _INSTANCE_MARKER,
+                                    {'schemaVersion': 1, 'instanceNonce': nonce}, create_only=not existing)
+            trust = {'schemaVersion': 1, 'archivePath': str(archive_path), 'releaseId': release_id,
+                     'archiveSha256': expected_archive_sha256, 'catalogSha256': expected_catalog_sha256,
+                     'repository': {'commonDir': str(directory), 'origin': origin, 'instanceNonce': nonce}}
+            paths.validate()
+            if _repository_trust_identity(acq, root) != (directory, origin):
+                _trust_invalid()
+            _atomic_trust_write(paths, parent, 'trust-v1.json', trust)
+            paths.validate()
+            return True
+    except (OSError, ValueError, TypeError, UnicodeError, RuntimeError, KeyError,
+            ImportError, NotImplementedError, RecursionError, OverflowError, EOFError, zlib.error):
+        return False
     finally:
         if paths is not None:
             paths.close()
