@@ -756,3 +756,234 @@ def test_scanner_stable_alias_unsafe_parent_denied(scanner_install, entry):
     assert result.returncode == 2
     assert result.stderr == 'secret-scan: enrollment refused\n'
     assert fixture.snapshot() == before
+
+
+# DOCS / PACKAGE / RELEASE: source documentation drives actual installed entries.
+import re
+import shlex
+
+
+def _scanner_documented_commands(root):
+    """Check source prose and every local Markdown link; return literal shell argv."""
+    directory = root / 'core/documentation'
+    docs = {name: (directory / (name + '.md')).read_text()
+            for name in ('troubleshooting', 'trust-anchors')}
+    headings = {'troubleshooting': '## Pre-push secret scan denial',
+                'trust-anchors': '### Scanner exact occurrence enrollment'}
+    for name, text in docs.items():
+        assert text.count(headings[name]) == 1, (name, 'missing integrated scanner section')
+        section = text.split(headings[name], 1)[1].split('\n## ', 1)[0]
+        assert not re.search(r'\b(?:PRD\s*\d+|R\d+)\b', section)
+        for href in re.findall(r'\]\(([^)]+)\)', text):
+            if '://' in href or href.startswith('mailto:'):
+                continue
+            filename, _, anchor = href.partition('#')
+            target = directory / filename if filename else directory / (name + '.md')
+            assert target.is_file(), (name, href)
+            if anchor:
+                slugs = {re.sub(r'[^\w -]', '', line.lstrip('# ').lower()).replace(' ', '-')
+                         for line in target.read_text().splitlines() if line.startswith('#')}
+                assert anchor in slugs, (name, href)
+    troubleshooting = docs['troubleshooting'].lower()
+    trust = docs['trust-anchors'].lower()
+    for phrase in ('rotate', 'synthetic', 'stock', 'changed', 'approval', 'denial', 'marker'):
+        assert phrase in troubleshooting, phrase
+    for phrase in ('does not approve', 'empty catalog', 'independent security review',
+                   'never enrolls', 'new release', 'darwin', 'unsupported',
+                   'deliberate copy', 'reenrollment', 'never create, replace or repair'):
+        assert phrase in trust, phrase
+    assert 'trust-anchors.md#scanner-exact-occurrence-enrollment' in troubleshooting
+    assert 'troubleshooting.md#pre-push-secret-scan-denial' in trust
+    blocks = re.findall(r'```sh\n(.*?)```', docs['trust-anchors'], re.S)
+    commands = [shlex.split(line) for block in blocks
+                for line in block.replace('\\\n', ' ').splitlines()
+                if line.strip().startswith('python3 ')]
+    prefixes = [('python3', '$SOURCE/scripts/secret_scan.py'),
+                ('python3', '$ARCHIVE', 'secret_scan.py'),
+                ('python3', '$INSTALL/scripts/sw-run.py', 'secret_scan.py')]
+    enroll = ['enroll-exact', '--archive-path', '$ARCHIVE', '--release-id', '$RELEASE_ID',
+              '--expected-archive-sha256', '$ARCHIVE_SHA256',
+              '--expected-catalog-sha256', '$CATALOG_SHA256',
+              '--expected-common-dir', '$COMMON_DIR', '--expected-origin', '$ORIGIN',
+              '--authorize-marker-write']
+    expected = [list(prefix) + [command] for prefix in prefixes for command in ('pre-push',)]
+    expected += [list(prefix) + enroll for prefix in prefixes]
+    assert commands == expected, 'documented scan/enrollment argv differ from supported forms'
+    return commands
+
+
+def test_scanner_documentation_source_commands_and_links(repo_root):
+    assert len(_scanner_documented_commands(repo_root)) == 6
+
+
+@pytest.fixture(scope='module')
+def scanner_documented_release(tmp_path_factory):
+    """Use retained standard outputs when supplied; otherwise emit in a private checkout."""
+    retained = os.environ.get('SHIPWRIGHT_TEST_SCANNER_STANDARD_BUILD')
+    if retained:
+        root = Path(retained)
+        proof = json.loads((root / 'proof.json').read_bytes())
+        commands = json.loads((root / 'commands.json').read_bytes())
+        inventory = json.loads((root / 'causal-output-inventory.json').read_bytes())
+        docs = json.loads((root / 'causal-docs-proof.json').read_bytes())
+        assert proof['verdict'] == 'pass' and proof['omissions'] == []
+        assert commands == proof['commands'] and len(commands) == 2
+        assert all(command['exitCode'] == 0 for command in commands)
+        assert commands[0]['command'][1:5] == ['scripts/build_zipapp.py', '--root', '.', 'build']
+        assert commands[1]['command'][1:5] == ['-m', 'sw', 'generate', '--all']
+        assert proof['operatorMcpEditsPreserved'] and proof['indexEmptyBeforeAfter']
+        assert json.loads((root / 'primary-before.json').read_bytes()) == json.loads(
+            (root / 'primary-after.json').read_bytes())
+        assert len(inventory) == proof['outputCount']
+        actual = {str(path.relative_to(root)) for directory in ('runtime', 'dist')
+                  for path in (root / directory).rglob('*') if path.is_file() or path.is_symlink()}
+        assert actual == set(inventory)
+        for relative, pin in inventory.items():
+            path = root / relative
+            assert ({'symlink': os.readlink(path)} if path.is_symlink() else
+                    {'sha256': _scanner_hash(path.read_bytes())}) == pin
+        for relative, pin in proof['phaseSourceInputs'].items():
+            assert _scanner_hash((SCRIPT_DIR.parent / relative).read_bytes()) == pin['sha256']
+        assert docs == proof['causalDocumentation']
+        assert set(docs) == {f'dist/{host}/documentation/{name}.md'
+                             for host in ('cursor', 'claude-code')
+                             for name in ('troubleshooting', 'trust-anchors')}
+        for relative, pin in docs.items():
+            assert (root / relative).read_bytes() == (SCRIPT_DIR.parent / pin['source']).read_bytes()
+            assert pin['sourceSha256'] == pin['emittedSha256'] == _scanner_hash((root / relative).read_bytes())
+    else:
+        root = tmp_path_factory.mktemp('scanner-documentation-release')
+        from unit_tests.test_zipapp_manifest_completeness import _load_build_zipapp
+        assert _load_build_zipapp().build_archive(SCRIPT_DIR.parent, root / 'runtime')['verdict'] == 'pass'
+        for host in ('cursor', 'claude-code'):
+            _generate_platform_dist(SCRIPT_DIR.parent, root / 'dist', host)
+    for destination in ('runtime', 'dist/cursor', 'dist/claude-code'):
+        plugin = root / destination
+        archive = (plugin / 'shipwright.pyz').resolve()
+        assert archive.name.startswith('shipwright-') and not archive.is_symlink()
+        manifest = json.loads((plugin / 'shipwright.manifest.json').read_bytes())
+        with zipfile.ZipFile(archive) as built:
+            assert sorted(built.namelist()) == sorted([*manifest['modules'], '__main__.py'])
+            for name in (*_SCANNER_MODULES, _SCANNER_CATALOG):
+                assert built.namelist().count(name) == manifest['modules'].count(name) == 1
+                assert built.read(name) == (SCRIPT_DIR / name).read_bytes()
+            assert json.loads(built.read(_SCANNER_CATALOG)) == {'schemaVersion': 1, 'records': []}
+        if destination.startswith('dist/'):
+            for name in ('troubleshooting', 'trust-anchors'):
+                assert (plugin / f'documentation/{name}.md').read_bytes() == (
+                    SCRIPT_DIR.parent / f'core/documentation/{name}.md').read_bytes()
+            assert _scripts_tree_is_shim_only(plugin / 'scripts', destination.split('/')[1])
+    return root
+
+
+def _scanner_use_standard_release(fixture, release, host):
+    """Copy actual emitted launcher/shim assets into the existing secure fixture."""
+    shutil.rmtree(fixture.plugin)
+    shutil.copytree(release / 'dist' / host, fixture.plugin, symlinks=True)
+    fixture.archive = (fixture.plugin / 'shipwright.pyz').resolve()
+    fixture.shim = fixture.plugin / 'scripts/sw-run.py'
+    fixture.catalog = (SCRIPT_DIR / _SCANNER_CATALOG).read_bytes()
+    with zipfile.ZipFile(fixture.archive) as built:
+        assert built.read('_zipapp_launcher.py') == fixture.launcher.encode()
+        assert b'_zipapp_launcher.main()' in built.read('__main__.py')
+    if host == 'claude-code':
+        fixture.env.pop('CURSOR_PLUGIN_ROOT', None)
+        fixture.env['CLAUDE_PLUGIN_ROOT'] = str(fixture.plugin)
+
+
+def _scanner_run_documented(fixture, entry, command):
+    values = {'SOURCE': str(fixture.source.parent), 'INSTALL': str(fixture.plugin),
+              'ARCHIVE': str(fixture.archive), 'RELEASE_ID': 'fixture-v1',
+              'ARCHIVE_SHA256': _scanner_hash(fixture.archive.read_bytes()),
+              'CATALOG_SHA256': _scanner_hash(fixture.catalog),
+              'COMMON_DIR': str(fixture.repo / '.git'),
+              'ORIGIN': fixture.git('remote', 'get-url', 'origin').strip().removeprefix('https://').removesuffix('.git')}
+    # The source fixture stores modules directly. Bind SOURCE/scripts to those
+    # exact bytes without rewriting the documented command or creating a dispatcher.
+    source_root = fixture.root / 'documented-source'
+    source_root.mkdir(exist_ok=True)
+    if not (source_root / 'scripts').exists():
+        (source_root / 'scripts').symlink_to(fixture.source, target_is_directory=True)
+    values['SOURCE'] = str(source_root)
+    argv = [re.sub(r'\$([A-Z_0-9]+)', lambda match: values[match[1]], token) for token in command]
+    prefix = {'source': 2, 'archive': 3, 'shim': 3}[entry]
+    assert argv[0] == 'python3'
+    assert Path(argv[1]).resolve() == {'source': fixture.source / 'secret_scan.py',
+                                     'archive': fixture.archive, 'shim': fixture.shim}[entry].resolve()
+    # invoke supplies the existing isolated account harness, then the real entry.
+    return fixture.invoke(entry, argv[prefix:])
+
+
+@_SCANNER_NATIVE
+@pytest.mark.parametrize('host', ('cursor', 'claude-code'))
+@pytest.mark.parametrize('entry', _SCANNER_ENTRIES)
+def test_scanner_documented_empty_release_entries(scanner_install, scanner_documented_release, host, entry):
+    fixture = scanner_install
+    _scanner_use_standard_release(fixture, scanner_documented_release, host)
+    commands = _scanner_documented_commands(SCRIPT_DIR.parent)
+    index = _SCANNER_ENTRIES.index(entry)
+    # First bind the documented source path, outside the read-only scan snapshot.
+    source_root = fixture.root / 'documented-source'
+    source_root.mkdir()
+    (source_root / 'scripts').symlink_to(fixture.source, target_is_directory=True)
+    before = fixture.snapshot()
+    result = _scanner_run_documented(fixture, entry, commands[index])
+    assert result.returncode == 1 and result.stderr.count('[SENTRY_PII_KV]') == 1
+    assert fixture.snapshot() == before
+    assert not fixture.marker.exists() and not fixture.trust.exists()
+    assert _scanner_run_documented(fixture, entry, commands[index + 3]).returncode == 0
+    trust = json.loads(fixture.trust.read_bytes())
+    assert trust['archiveSha256'] == _scanner_hash(fixture.archive.read_bytes())
+    assert trust['catalogSha256'] == _scanner_hash(fixture.catalog)
+    assert stat.S_IMODE(fixture.marker.stat().st_mode) == 0o600
+    fixture.scan_readonly(entry, 1)  # Explicit empty enrollment approves nothing.
+    before = fixture.snapshot()
+    assert fixture.invoke(entry, []).returncode == 1  # Documented default pre-push.
+    assert fixture.snapshot() == before
+    fixture.marker.unlink()
+    fixture.scan_readonly(entry, 1)
+    assert not fixture.marker.exists()  # No implicit enrollment repair.
+
+
+@_SCANNER_NATIVE
+@pytest.mark.parametrize('entry', _SCANNER_ENTRIES)
+def test_scanner_empty_release_retains_original_private_six(scanner_install, scanner_documented_release, entry):
+    private = os.environ.get('SHIPWRIGHT_TEST_TIERFORGE_REPO')
+    if not private:
+        pytest.skip('private release acceptance requires original pinned Git authority')
+    from unit_tests.w4.test_secret_scan import _APPROVED_EXACT_METADATA
+    import dataclasses
+    import secret_scan
+    import secret_scan_exact
+
+    fixture = scanner_install
+    _scanner_use_standard_release(fixture, scanner_documented_release, 'cursor')
+    base = '6e811cd5c56726a5b0f4a8474b8b154b85ca852c'
+    target = '574d6097e3f3a9cec08e1c9ab81052307c71b965'
+    # Only read immutable objects from the real repository. All refs, checkout,
+    # trust and marker writes below are confined to this private temporary repo.
+    fixture.git('-c', 'protocol.file.allow=always', 'fetch', '--no-tags', private, base, target)
+    fixture.git('reset', '--hard', target)
+    fixture.git('update-ref', 'refs/remotes/origin/main', base)
+    fixture.git('remote', 'set-url', 'origin', 'https://github.com/grdavies/tierforge.git')
+    patch = fixture.git('diff', '--no-ext-diff', '--no-textconv', base, target)
+    assert len(secret_scan.scan_diff(patch, allowlist={})) == 6
+    blobs = {}
+    for row in _APPROVED_EXACT_METADATA:
+        oid = fixture.git('rev-parse', target + ':' + row['path']).strip()
+        assert oid == row['blobOid']
+        data = fixture.git('cat-file', 'blob', oid).encode()
+        assert len(data) == row['sourceByteLength']
+        assert _scanner_hash(data) == row['sourceSha256']
+        blobs[row['path']] = secret_scan_exact.CommittedBlob(
+            row['path'], row['objectFormat'], oid, row['sourceSha256'], data)
+    occurrences = secret_scan_exact.map_added_occurrences(patch.encode(), blobs=blobs, repo_id='github.com/grdavies/tierforge')
+    assert sorted((dataclasses.asdict(o.identity) for o in occurrences), key=lambda row: (row['path'], row['sourceLine1Based'])) == sorted(
+        _APPROVED_EXACT_METADATA, key=lambda row: (row['path'], row['sourceLine1Based']))
+    result = fixture.scan_readonly(entry, 1)
+    assert result.stderr.count('[SENTRY_PII_KV]') == 5 and result.stderr.count('[DB_URL]') == 1
+    args = fixture.args()
+    args[args.index('--expected-origin') + 1] = 'github.com/grdavies/tierforge'
+    assert fixture.invoke(entry, args).returncode == 0
+    result = fixture.scan_readonly(entry, 1)
+    assert result.stderr.count('[SENTRY_PII_KV]') == 5 and result.stderr.count('[DB_URL]') == 1
