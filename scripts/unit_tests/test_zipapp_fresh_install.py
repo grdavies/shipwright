@@ -244,8 +244,30 @@ class _ScannerInstall:
         # production trust lookup. The shim's child inherits this fixed fixture.
         bootstrap = ('import os, pwd, types\n'
                      f'pwd.getpwuid = lambda uid: types.SimpleNamespace(pw_dir={str(self.home)!r})\n')
-        if fault in ('O_NOFOLLOW', 'O_DIRECTORY', 'O_NONBLOCK'):
+        if fault in ('O_NOFOLLOW', 'O_DIRECTORY', 'O_NONBLOCK', 'O_SYMLINK'):
             bootstrap += f'os.{fault} = 0\n'
+        elif fault in ('alias-swap', 'target-change', 'mixed-origin'):
+            bootstrap += f'''import sys
+from pathlib import Path
+fault = {fault!r}
+alias = Path({str(self.archive)!r})
+def change_origin(frame, event, arg):
+    if frame.f_code.co_name != '_current_source_matches':
+        return
+    if fault == 'mixed-origin' and event == 'call':
+        sys.modules['secret_patterns'].__file__ = {str(self.source / 'secret_patterns.py')!r}
+        sys.setprofile(None)
+    elif event == 'return' and fault != 'mixed-origin':
+        sys.setprofile(None)
+        if fault == 'alias-swap':
+            target = alias.readlink()
+            alias.unlink()
+            alias.symlink_to(target)
+        else:
+            with alias.open('ab') as output:
+                output.write(b'changed target')
+sys.setprofile(change_origin)
+'''
         elif fault:
             # Trace the actual helper without replacing its decisions. os._exit
             # models an abrupt process loss on either side of publication.
@@ -618,3 +640,119 @@ def test_scanner_tampered_catalog_member_is_rejected(scanner_install, entry, dam
     assert result.stderr == 'secret-scan: enrollment refused\n'
     assert fixture.snapshot() == before
     fixture.scan_readonly(entry, 1)
+
+
+@_SCANNER_NATIVE
+@pytest.mark.parametrize('entry', _SCANNER_ENTRIES)
+def test_scanner_stable_alias_enrollment_and_scan(scanner_install, entry):
+    fixture = scanner_install
+    target = fixture.archive.with_name('shipwright-fixture-v1.pyz')
+    fixture.archive.rename(target)
+    fixture.archive.symlink_to(target.name)
+    args = fixture.args()
+    args[args.index('--archive-path') + 1] = str(target)
+    result = fixture.invoke(entry, args)
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    assert result.stdout == 'secret-scan: enrollment complete\n'
+    assert result.stderr == ''
+    for scan_entry in _SCANNER_ENTRIES:
+        fixture.scan_readonly(scan_entry, 0)
+    # The launch alias never becomes a permissible trust pin.
+    before = fixture.snapshot()
+    denied = fixture.invoke(entry, fixture.args())
+    assert denied.returncode == 2
+    assert denied.stderr == 'secret-scan: enrollment refused\n'
+    assert fixture.snapshot() == before
+
+
+@_SCANNER_NATIVE
+@pytest.mark.parametrize('entry', ('archive', 'shim'))
+def test_scanner_stable_alias_wrong_target_denied(scanner_install, entry):
+    fixture = scanner_install
+    target = fixture.archive.with_name('shipwright-fixture-v1.pyz')
+    fixture.archive.rename(target)
+    fixture.archive.symlink_to(target.name)
+    args = fixture.args()
+    args[args.index('--archive-path') + 1] = str(target)
+    assert fixture.invoke('source', args).returncode == 0
+    wrong = target.with_name('shipwright-other.pyz')
+    wrong.write_bytes(target.read_bytes())
+    wrong.chmod(0o600)
+    fixture.archive.unlink()
+    fixture.archive.symlink_to(wrong.name)
+    # Even byte-identical archives are not the pinned installed object.
+    fixture.scan_readonly(entry, 1)
+    before = fixture.snapshot()
+    result = fixture.invoke(entry, args)
+    assert result.returncode == 2
+    assert result.stderr == 'secret-scan: enrollment refused\n'
+    assert fixture.snapshot() == before
+
+
+@_SCANNER_NATIVE
+@pytest.mark.parametrize('entry', _SCANNER_ENTRIES)
+def test_scanner_enrolled_overlap_retains_individual_findings(scanner_install, entry):
+    fixture = scanner_install
+    data = b'user_' + b'id=sk_' + b'test_abcdefghijklmnop user_' + b'id=two\n'
+    fixture.commit(data)
+    import secret_patterns
+    pattern = next(p.pattern for p in secret_patterns.DENY_PATTERNS if p.name == 'SENTRY_PII_KV')
+    matches = list(pattern.finditer(data.decode().rstrip('\n')))
+    assert len(matches) == 2
+    record = json.loads(fixture.catalog)['records'][0]
+    record.pop('id')
+    record.update(blobOid=fixture.git('rev-parse', 'HEAD:sample.txt').strip(),
+                  sourceSha256=_scanner_hash(data), sourceByteLength=len(data),
+                  matchStartByte=matches[0].start(), matchEndByteExclusive=matches[0].end(),
+                  matchSha256=_scanner_hash(matches[0].group().encode()))
+    record['id'] = _scanner_hash(_scanner_json(record))
+    fixture.catalog = _scanner_json(dict(schemaVersion=1, records=[record]))
+    fixture.package()
+    baseline = fixture.scan_readonly(entry, 1)
+    assert baseline.stderr.count('[SENTRY_PII_KV]') == 2
+    assert baseline.stderr.count('[API_SECRET]') == 1
+    fixture.enroll(entry)
+    result = fixture.scan_readonly(entry, 1)
+    assert result.stderr.count('[SENTRY_PII_KV]') == 1
+    assert result.stderr.count('[API_SECRET]') == 1
+
+
+@_SCANNER_NATIVE
+@pytest.mark.parametrize('entry', ('archive', 'shim'))
+@pytest.mark.parametrize('fault', ('alias-swap', 'target-change', 'mixed-origin', 'O_SYMLINK'))
+@pytest.mark.parametrize('command', ('pre-push', 'enroll-exact'))
+def test_scanner_stable_alias_changed_origin_denied(scanner_install, entry, fault, command):
+    fixture = scanner_install
+    target = fixture.archive.with_name('shipwright-fixture-v1.pyz')
+    fixture.archive.rename(target)
+    fixture.archive.symlink_to(target.name)
+    args = fixture.args()
+    args[args.index('--archive-path') + 1] = str(target)
+    assert fixture.invoke('source', args).returncode == 0
+    state = (fixture.marker.read_bytes(), fixture.trust.read_bytes())
+    result = fixture.invoke(entry, ['pre-push'] if command == 'pre-push' else args, fault=fault)
+    assert result.returncode == (1 if command == 'pre-push' else 2)
+    if command == 'pre-push':
+        assert '[SENTRY_PII_KV]' in result.stderr
+    else:
+        assert result.stderr == 'secret-scan: enrollment refused\n'
+    assert (fixture.marker.read_bytes(), fixture.trust.read_bytes()) == state
+
+
+@_SCANNER_NATIVE
+@pytest.mark.parametrize('entry', ('archive', 'shim'))
+def test_scanner_stable_alias_unsafe_parent_denied(scanner_install, entry):
+    fixture = scanner_install
+    target = fixture.archive.with_name('shipwright-fixture-v1.pyz')
+    fixture.archive.rename(target)
+    fixture.archive.symlink_to(target.name)
+    args = fixture.args()
+    args[args.index('--archive-path') + 1] = str(target)
+    assert fixture.invoke('source', args).returncode == 0
+    fixture.plugin.chmod(0o770)
+    fixture.scan_readonly(entry, 1)
+    before = fixture.snapshot()
+    result = fixture.invoke(entry, args)
+    assert result.returncode == 2
+    assert result.stderr == 'secret-scan: enrollment refused\n'
+    assert fixture.snapshot() == before

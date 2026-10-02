@@ -1314,6 +1314,30 @@ def _current_source_matches(members: dict[str, bytes], archive_path: Path,
     if parent == archive_path:
         # Direct zipapp and emitted shim retain package dispatch's own gate.
         return
+    if parent.parent == archive_path.parent and parent.is_symlink():
+        # The standard install launches a relative stable alias while trust
+        # pins the regular versioned archive. Bind that single alias itself,
+        # never follow a symlink pin or normalize an arbitrary target chain.
+        if not getattr(os, 'O_SYMLINK', 0) or os.readlink not in os.supports_dir_fd:
+            _trust_invalid()
+        directory = paths.directory(parent.parent)
+        paths._deadline()
+        # Darwin O_SYMLINK opens the link object; O_NOFOLLOW in combination
+        # instead rejects it. Descriptor type and name identity are mandatory.
+        fd = os.open(parent.name, os.O_RDONLY | os.O_SYMLINK | os.O_NONBLOCK,
+                     dir_fd=directory)
+        paths.handles.append(fd)
+        info = os.fstat(fd)
+        if (not stat.S_ISLNK(info.st_mode) or info.st_uid not in (0, paths.uid)
+                or info.st_nlink != 1):
+            _trust_invalid()
+        paths.bindings.append((directory, parent.name, fd, _stat_identity(info, file=True),
+                               True, paths.acl.identity(fd)))
+        paths.validate()
+        if os.readlink(parent.name, dir_fd=directory) != archive_path.name:
+            _trust_invalid()
+        paths.validate()
+        return
     for name in _SOURCE_MEMBERS:
         source = parent / name
         fd = os.open(source, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
