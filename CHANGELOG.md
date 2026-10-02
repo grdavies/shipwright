@@ -1480,6 +1480,7 @@
 * merge phase preserve-baseline-selection-and-bound-acquisition into fix/secret-scan-exact-occurrences (774eece) <!-- sw-deliver:preserve-baseline-selection-and-bound-acquisition -->
 * merge phase match-exact-occurrences-against-a-strict-empty-catalog into fix/secret-scan-exact-occurrences (d26760c) <!-- sw-deliver:match-exact-occurrences-against-a-strict-empty-catalog -->
 * merge phase validate-operator-trust-and-repository-lifecycle-without-scan-writes into fix/secret-scan-exact-occurrences (2b7f09c) <!-- sw-deliver:validate-operator-trust-and-repository-lifecycle-without-scan-writes -->
+* merge phase enforce-release-integrity-and-explicit-enrollment-through-actual-entries into fix/secret-scan-exact-occurrences (d521486) <!-- sw-deliver:enforce-release-integrity-and-explicit-enrollment-through-actual-entries -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 

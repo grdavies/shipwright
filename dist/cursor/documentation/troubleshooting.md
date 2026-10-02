@@ -3,6 +3,54 @@
 Operator diagnostics for common Shipwright failure modes. Prefer these recipes over
 ad-hoc retries when a command already emitted a typed halt and `resumeCommand`.
 
+## Pre-push secret scan denial
+
+`secret-scan: deny pattern match — push blocked` means the scan retained a
+finding (exit `1`). An acquisition error or incomplete baseline exits `2`; fix
+that error and rerun the complete scan. Exit `0` means no findings were retained,
+not approval of an arbitrary future push or export.
+
+Choose the response from the actual committed source:
+
+1. **Real credential:** rotate or revoke it, then remove it from the affected
+   source and outgoing history. Keep any history redaction scoped to the approved
+   range; do not bypass the pre-push gate.
+2. **Public or synthetic example:** request human review of the exact occurrence
+   in its complete committed file, repository and path. Pattern shape, localhost,
+   a test filename or an apparent forwarding/null expression cannot approve it.
+   The existing stock local database URL approval covers only its exact reviewed
+   tuple. Keeping that approved example and a separately authorized
+   document correction are distinct choices; a correction changes the source identity and
+   must be reviewed again if it still matches. There is no general URL exemption.
+3. **Previously reviewed source changed:** a source edit, moved occurrence, copied
+   path/repository, new literal or new match ordinal needs fresh exact review.
+   A changed file digest invalidates the old occurrence identity even when the
+   matching text looks unchanged. Any qualifying replacement catalog/release also
+   needs independent security review and separately authorized enrollment of its
+   actual digests. A package update never carries enrollment forward to a new digest.
+4. **Expected approval but still denied:** check the installed release and scanner
+   enrollment using [scanner exact occurrence enrollment](trust-anchors.md#scanner-exact-occurrence-enrollment).
+   Package dispatch trust permits the runtime to run; it does not approve source
+   occurrences. Recover a tampered or mismatched install from a trusted release,
+   and ensure source modules match that release before considering new digest
+   approval. Missing, corrupt or mismatched trust, catalog, archive or module bytes
+   grant no exceptions. A missing marker after clear/reclone requires explicit
+   operator reenrollment, including authorization for its fixed common-directory
+   marker write; scans never create or repair it. Partial marker/trust state also
+   grants no exceptions. Unsafe owners, modes or ancestors and unsupported secure
+   filesystem/ACL checks fail closed; do not loosen permissions or alter a shared
+   volume to bypass them. Establishing a secure operator-controlled location is a
+   separate prerequisite, not a scan repair.
+5. **Exact approval is unavailable:** keep the denial. The first implementation
+   release has an empty catalog, so all six candidate occurrences remain denied.
+   Packaging evidence alone neither completes the empty-release gate nor approves
+   a populated release or real operator enrollment.
+
+Rerun the supported `secret_scan.py pre-push` entry after resolving the cause;
+see the linked enrollment section for source, direct-archive and emitted
+`sw-run.py` command forms and the separately authorized `enroll-exact` inputs.
+Ordinary file/stdin scans and uncommitted fallbacks receive no new exceptions.
+
 ## Consumer delivery initialization and crash recovery
 
 A newly provisioned orchestrator may exist before its first plan or run identity.
