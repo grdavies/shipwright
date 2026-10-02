@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.23.3](https://github.com/grdavies/shipwright/compare/v2.23.2...v2.23.3) (2026-10-01)
+
+
+### Bug Fixes
+
+* **planning:** recover incomplete freezes with retained evidence ([08cad93](https://github.com/grdavies/shipwright/commit/08cad936703395c396521f03430d792b43883b27))
+
 ## [2.23.2](https://github.com/grdavies/shipwright/compare/v2.23.1...v2.23.2) (2026-09-27)
 
 
