@@ -956,3 +956,493 @@ class AcquisitionTests(unittest.TestCase):
                 calls = [json.loads(line) for line in calls_path.read_text().splitlines()]
                 self.assertTrue(any('HEAD^{commit}' in args for args in calls))
                 self.assertFalse(any('diff' in args or 'log' in args or 'rev-list' in args for args in calls))
+
+
+# PRD 367 task 2.3: SIX, CHANGED and OVERLAP. Records below are test metadata,
+# never a production catalog or enrollment. Private source is read only when
+# SHIPWRIGHT_TEST_TIERFORGE_REPO is explicitly supplied to the integration test.
+from secret_patterns import DENY_PATTERNS
+
+_EXACT_REPO = 'github.com/fixture/repo'
+_PII_KEY = 'user_' + 'id='
+
+
+def _exact_json(value):
+    """Independent implementation of the documented record-ID wire format."""
+    return json.dumps(value, sort_keys=True, separators=(',', ':'),
+                      ensure_ascii=False, allow_nan=False).encode('utf-8')
+
+
+def _exact_record(identity, **changes):
+    record = dataclasses.asdict(identity) if dataclasses.is_dataclass(identity) else dict(identity)
+    record.update(changes)
+    record.setdefault('reviewEvidence', {
+        'id': 'fixture-review-1', 'sha256': 'a' * 64,
+        'reviewer': 'fixture-security-review', 'attestationSha256': 'b' * 64,
+    })
+    record.pop('id', None)
+    record['id'] = hashlib.sha256(_exact_json(record)).hexdigest()
+    return record
+
+
+def _exact_catalog(records):
+    return exact.parse_catalog(_exact_json({'schemaVersion': 1, 'records': records}))
+
+
+class ExactMatchingTests(unittest.TestCase):
+    """Real temporary Git objects; no inherited tests or semantic test doubles."""
+
+    def setUp(self):
+        temporary = tempfile.TemporaryDirectory(prefix='exact-matching-')
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.env = dict(os.environ, HOME=str(self.root), GIT_CONFIG_GLOBAL=os.devnull,
+                        GIT_CONFIG_NOSYSTEM='1', GIT_AUTHOR_NAME='Fixture',
+                        GIT_COMMITTER_NAME='Fixture', GIT_AUTHOR_EMAIL='t' + '@' + 't.com',
+                        GIT_COMMITTER_EMAIL='t' + '@' + 't.com')
+        self.git('init', '-q', '-b', 'fixture')
+        self.git('commit', '--allow-empty', '-qm', 'base')
+        self.base = self.git('rev-parse', 'HEAD').strip().decode()
+
+    def git(self, *args, root=None):
+        return subprocess.check_output(
+            ['git', '--no-replace-objects', '-c', 'core.hooksPath=/dev/null', *args],
+            cwd=root or self.root, env=self.env, stderr=subprocess.PIPE, timeout=10)
+
+    def fixture(self, data, path='fixture.txt'):
+        destination = self.root / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(data)
+        self.git('add', '--', path)
+        self.git('commit', '--allow-empty', '-qm', 'fixture')
+        target = self.git('rev-parse', 'HEAD').strip().decode()
+        oid = self.git('rev-parse', target + ':' + path).strip().decode()
+        committed = self.git('cat-file', 'blob', oid)
+        self.assertEqual(committed, data)
+        fmt = self.git('rev-parse', '--show-object-format').strip().decode()
+        blob = exact.CommittedBlob(path, fmt, oid, hashlib.sha256(committed).hexdigest(), committed)
+        patch_bytes = self.git('diff', '--no-ext-diff', '--no-textconv', self.base, target)
+        return patch_bytes, {path: blob}
+
+    def mapped(self, patch_bytes, blobs, repo=_EXACT_REPO):
+        return exact.map_added_occurrences(patch_bytes, repo_id=repo, blobs=blobs)
+
+    def assert_invalid(self, raw):
+        with self.assertRaisesRegex(exact.CatalogError, '^secret-scan: catalog invalid$') as caught:
+            exact.parse_catalog(raw)
+        self.assertIsNone(caught.exception.__cause__)
+
+    def test_six_singletons_all_and_empty(self):
+        data = ('header\n' + ''.join(_PII_KEY + str(n) + '\n' for n in range(6)) + 'tail\n').encode()
+        patch_bytes, blobs = self.fixture(data)
+        occurrences = self.mapped(patch_bytes, blobs)
+        self.assertEqual(len(occurrences), 6)
+        self.assertEqual([o.identity.sourceLine1Based for o in occurrences], list(range(2, 8)))
+        self.assertEqual(len(scan.scan_diff(patch_bytes.decode(), allowlist=ALLOW)), 6)
+        for occurrence in occurrences:
+            with self.subTest(line=occurrence.identity.sourceLine1Based):
+                approved = exact.approved_occurrences(_exact_catalog([_exact_record(occurrence.identity)]), occurrences)
+                self.assertEqual(approved, (occurrence,))
+                retained = tuple(o for o in occurrences if o not in approved)
+                self.assertEqual(retained, tuple(o for o in occurrences if o != occurrence))
+                self.assertEqual(len(retained), 5)
+        self.assertEqual(exact.approved_occurrences(
+            _exact_catalog([_exact_record(o.identity) for o in occurrences]), occurrences), occurrences)
+        self.assertEqual(exact.approved_occurrences(_exact_catalog([]), occurrences), ())
+        self.assertEqual(len(occurrences), 6)
+        production = exact.parse_catalog((ROOT / 'scripts/secret_scan_data/reviewed-occurrences.v1.json').read_bytes())
+        self.assertEqual(production.records, ())
+        self.assertEqual(exact.approved_occurrences(production, occurrences), ())
+
+    def test_changed_complete_committed_blobs_never_reuse_approval(self):
+        original = ('header\n' + _PII_KEY + 'one\ntail\n').encode()
+        patch_bytes, blobs = self.fixture(original)
+        occurrences = self.mapped(patch_bytes, blobs)
+        self.assertEqual(len(occurrences), 1)
+        catalog = _exact_catalog([_exact_record(occurrences[0].identity)])
+        self.assertEqual(exact.approved_occurrences(catalog, occurrences), occurrences)
+        variants = {
+            'unmatched-byte-before': original.replace(b'header', b'Header'),
+            'unmatched-byte-after': original.replace(b'tail', b'Tail'),
+            'moved-line': b'\n' + original,
+            'moved-byte-offset': original.replace(b'header', b'header-longer'),
+            'new-literal': original.replace(b'one', b'two'),
+            'new-ordinal': original.replace(_PII_KEY.encode(), (_PII_KEY + 'first ' + _PII_KEY).encode()),
+            'comment-copy': ('# ' + _PII_KEY + 'one\n').encode(),
+            'template-copy': ('const example = `' + _PII_KEY + 'one`;\n').encode(),
+            'greedy-tail': original.replace(b'one', b'one,tail'),
+        }
+        for name, data in variants.items():
+            with self.subTest(change=name):
+                changed_patch, changed_blobs = self.fixture(data)
+                mapped = self.mapped(changed_patch, changed_blobs)
+                self.assertTrue(mapped)
+                self.assertNotEqual(mapped[0].identity.sourceSha256, occurrences[0].identity.sourceSha256)
+                self.assertEqual(exact.approved_occurrences(catalog, mapped), ())
+        # A copied path with exactly the same blob is still a different identity.
+        copied_patch, copied_blobs = self.fixture(original, 'copy.txt')
+        copied = self.mapped(copied_patch, copied_blobs)
+        self.assertEqual(len(copied), 1)
+        self.assertEqual(copied[0].identity.blobOid, occurrences[0].identity.blobOid)
+        self.assertEqual(exact.approved_occurrences(catalog, copied), ())
+        other_repo = self.mapped(patch_bytes, blobs, 'github.com/fixture/other')
+        self.assertEqual(len(other_repo), 1)
+        self.assertEqual(exact.approved_occurrences(catalog, other_repo), ())
+
+    def test_every_identity_field_participates_in_matching(self):
+        patch_bytes, blobs = self.fixture((_PII_KEY + 'one\nother\n').encode())
+        occurrences = self.mapped(patch_bytes, blobs)
+        self.assertEqual(len(occurrences), 1)
+        identity = occurrences[0].identity
+        mutations = {
+            'repoId': 'github.com/fixture/other', 'path': 'copy.txt',
+            'objectFormat': 'sha256', 'blobOid': 'e' * 40, 'sourceSha256': 'e' * 64,
+            'sourceByteLength': identity.sourceByteLength + 1, 'sourceLine1Based': 2,
+            'matchStartByte': 1, 'matchEndByteExclusive': identity.matchEndByteExclusive - 1,
+            'ordinalWithinFamilyOnSourceLine1Based': 2, 'matchSha256': 'e' * 64,
+            'detectorFingerprintSha256': 'e' * 64,
+        }
+        for field, value in mutations.items():
+            with self.subTest(field=field):
+                record = _exact_record(identity, **{field: value})
+                if field == 'objectFormat':
+                    record = _exact_record(record, blobOid='e' * 64)
+                self.assertEqual(exact.approved_occurrences(_exact_catalog([record]), occurrences), ())
+        self.assert_invalid(_exact_json({'schemaVersion': 1, 'records': [_exact_record(identity, family='DB_URL')]}))
+
+    def test_overlap_duplicates_and_other_families_are_retained(self):
+        value = 'sk_' + 'test_' + 'abcdefghijklmnop'
+        data = (_PII_KEY + value + ' ' + _PII_KEY + 'two\n' + SECRET_TEXT).encode()
+        patch_bytes, blobs = self.fixture(data)
+        occurrences = self.mapped(patch_bytes, blobs)
+        pii = tuple(o for o in occurrences if o.identity.family == 'SENTRY_PII_KV')
+        self.assertEqual(len(pii), 2)
+        self.assertEqual([o.identity.ordinalWithinFamilyOnSourceLine1Based for o in pii], [1, 2])
+        api = next(o for o in occurrences if o.identity.family == 'API_SECRET')
+        self.assertLess(pii[0].identity.matchStartByte, api.identity.matchStartByte)
+        self.assertEqual(pii[0].identity.matchEndByteExclusive, api.identity.matchEndByteExclusive)
+        approved = exact.approved_occurrences(_exact_catalog([_exact_record(pii[0].identity)]), occurrences)
+        self.assertEqual(approved, (pii[0],))
+        retained = tuple(o for o in occurrences if o not in approved)
+        self.assertEqual(retained, tuple(o for o in occurrences if o != pii[0]))
+        self.assertIn(pii[1], retained)
+        self.assertIn(api, retained)
+        self.assertEqual({o.identity.family for o in retained},
+                         {'SENTRY_PII_KV', 'API_SECRET', 'GITHUB_PAT', 'HIGH_ENTROPY_SECRET'})
+        # Pure approval matching must not change legacy plaintext/diff consumers.
+        before = scan.scan_diff(patch_bytes.decode(), allowlist=ALLOW)
+        self.assertEqual(len(before), 5)
+        self.assertEqual(scan.scan_diff(patch_bytes.decode(), allowlist=ALLOW), before)
+        self.assertEqual(len(scan.scan_text(data.decode(), allowlist=ALLOW)), 5)
+
+    def test_bom_crlf_multibyte_round_trip_and_raw_patch_capture(self):
+        data = ('\ufeffé ' + _PII_KEY + 'α ' + _PII_KEY + 'β\r\nother\r\n').encode()
+        patch_bytes, blobs = self.fixture(data)
+        occurrences = self.mapped(patch_bytes, blobs)
+        self.assertEqual(len(occurrences), 2)
+        starts = [len('\ufeffé '.encode()), len(('\ufeffé ' + _PII_KEY + 'α ').encode())]
+        for occurrence, start, value in zip(occurrences, starts, ('α', 'β')):
+            identity = occurrence.identity
+            matched = (_PII_KEY + value).encode()
+            self.assertEqual(identity.sourceLine1Based, 1)
+            self.assertEqual(identity.matchStartByte, start)
+            self.assertEqual(identity.matchEndByteExclusive, start + len(matched))
+            self.assertEqual(data[start:identity.matchEndByteExclusive], matched)
+            self.assertEqual(identity.matchSha256, hashlib.sha256(matched).hexdigest())
+        self.assertEqual(exact.approved_occurrences(
+            _exact_catalog([_exact_record(o.identity) for o in occurrences]), occurrences), occurrences)
+        self.assertEqual(self.mapped(patch_bytes.replace(b'\r\n', b'\n'), blobs), ())
+        with exact.acquisition_scope():
+            normalized = exact.git_text(['diff', self.base, 'HEAD'], cwd=self.root)
+            self.assertNotIn('\r', normalized)
+            self.assertEqual(exact.raw_selected_patch(), patch_bytes)
+        self.assertIsNone(exact.raw_selected_patch())
+
+    def test_git_quoted_paths_spaces_and_final_no_newline(self):
+        for path in ('quoted-é.txt', 'with space.txt', 'quote"name.txt'):
+            with self.subTest(path=path):
+                patch_bytes, blobs = self.fixture((_PII_KEY + 'α').encode(), path)
+                occurrences = self.mapped(patch_bytes, blobs)
+                self.assertEqual(len(occurrences), 1)
+                self.assertEqual(occurrences[0].identity.path, path)
+                self.assertEqual(occurrences[0].identity.matchEndByteExclusive, len((_PII_KEY + 'α').encode()))
+                self.assertEqual(exact.approved_occurrences(
+                    _exact_catalog([_exact_record(occurrences[0].identity)]), occurrences), occurrences)
+                self.assertEqual(self.mapped(patch_bytes.replace(b'\\ No newline at end of file\n', b''), blobs), ())
+        patch_bytes, blobs = self.fixture((_PII_KEY + 'one\n').encode(), 'abc')
+        noncanonical = patch_bytes.replace(b'a/abc', b'"a/\\141bc"').replace(b'b/abc', b'"b/\\141bc"')
+        self.assertEqual(self.mapped(noncanonical, blobs), ())
+
+    def test_hunk_counters_context_and_added_bytes_must_match(self):
+        original = b'head\n' + b'blank\n' * 20 + b'tail\n'
+        self.fixture(original)
+        self.base = self.git('rev-parse', 'HEAD').strip().decode()
+        patch_bytes, blobs = self.fixture(original.replace(b'head', (_PII_KEY + 'one').encode()).replace(b'tail', (_PII_KEY + 'two').encode()))
+        occurrences = self.mapped(patch_bytes, blobs)
+        self.assertEqual([o.identity.sourceLine1Based for o in occurrences], [1, 22])
+        self.assertEqual([o.added_line for o in occurrences], [1, 2])
+        changes = [
+            (b'@@ -1,4 +1,4 @@', b'@@ -1,5 +1,4 @@'),
+            (b'@@ -1,4 +1,4 @@', b'@@ -1,4 +1,5 @@'),
+            (b'@@ -1,4 +1,4 @@', b'@@ -2,4 +1,4 @@'),
+            (b'@@ -19,4 +19,4 @@', b'@@ -18,4 +19,4 @@'),
+            (b'@@ -1,4 +1,4 @@', b'@@ invalid @@'),
+            (b' blank', b' wrong'),
+            ((_PII_KEY + 'one').encode(), (_PII_KEY + 'changed').encode()),
+        ]
+        for old, new in changes:
+            with self.subTest(change=new):
+                self.assertIn(old, patch_bytes)
+                self.assertEqual(self.mapped(patch_bytes.replace(old, new, 1), blobs), ())
+        self.assertEqual(self.mapped(patch_bytes + patch_bytes, blobs), ())
+        self.assertEqual(self.mapped(patch_bytes[:-1], blobs), ())
+
+    def test_sha1_and_sha256_complete_git_blobs(self):
+        for fmt in ('sha1', 'sha256'):
+            with self.subTest(fmt=fmt):
+                self.root = self.root / fmt
+                self.root.mkdir()
+                self.git('init', '-q', '-b', 'fixture', '--object-format=' + fmt)
+                self.git('commit', '--allow-empty', '-qm', 'base')
+                self.base = self.git('rev-parse', 'HEAD').strip().decode()
+                patch_bytes, blobs = self.fixture((_PII_KEY + 'one\n').encode())
+                occurrences = self.mapped(patch_bytes, blobs)
+                self.assertEqual(len(occurrences), 1)
+                self.assertEqual(occurrences[0].identity.objectFormat, fmt)
+                self.assertEqual(len(occurrences[0].identity.blobOid), 40 if fmt == 'sha1' else 64)
+                self.assertEqual(exact.approved_occurrences(_exact_catalog([_exact_record(occurrences[0].identity)]), occurrences), occurrences)
+                blob = blobs['fixture.txt']
+                for changed in (dataclasses.replace(blob, data=blob.data + b'x'),
+                                dataclasses.replace(blob, oid='0' * len(blob.oid)),
+                                dataclasses.replace(blob, sha256='0' * 64)):
+                    self.assertEqual(self.mapped(patch_bytes, {'fixture.txt': changed}), ())
+
+    def test_ambiguous_line_separators_decline_mapping(self):
+        for separator in ('\v', '\f', '\x85', '\u2028', '\u2029', '\x1c', '\r'):
+            with self.subTest(separator=repr(separator)):
+                patch_bytes, blobs = self.fixture((_PII_KEY + 'one' + separator + _PII_KEY + 'two\n').encode())
+                self.assertEqual(self.mapped(patch_bytes, blobs), ())
+
+    def test_strict_catalog_document_schema(self):
+        for raw in (b'{"schemaVersion":1,"schemaVersion":1,"records":[]}',
+                    b'{"schemaVersion":true,"records":[]}', b'{"schemaVersion":1.0,"records":[]}',
+                    b'{"schemaVersion":2,"records":[]}', b'{"schemaVersion":1,"records":[],"extra":1}',
+                    b'{"schemaVersion":1,"records":{}}',
+                    b'{"schemaVersion":1,"records":null}', b'{"schemaVersion":1,"records":NaN}',
+                    b'{"schemaVersion":1,"records":Infinity}', b'{"schemaVersion":1}',
+                    b'[]', b'null', b'[' * 2000, b'\xef\xbb\xbf{}', b'\xff', b'{} trailing'):
+            with self.subTest(raw=raw[:80]):
+                self.assert_invalid(raw)
+
+    def test_catalog_numeric_digest_path_and_unknown_fields(self):
+        patch_bytes, blobs = self.fixture((_PII_KEY + 'one\n').encode())
+        identity = self.mapped(patch_bytes, blobs)[0].identity
+        invalid = []
+        numeric = ('sourceByteLength', 'sourceLine1Based', 'matchStartByte',
+                   'matchEndByteExclusive', 'ordinalWithinFamilyOnSourceLine1Based')
+        for field in numeric:
+            invalid.extend((field, value) for value in (True, False, 1.0, '1', -1, exact.BLOB_LIMIT + 1))
+            if field != 'matchStartByte':
+                invalid.append((field, 0))
+        for field in ('sourceSha256', 'matchSha256', 'detectorFingerprintSha256'):
+            invalid.extend((field, value) for value in ('A' * 64, 'g' * 64, 'a' * 63, 1, None))
+        invalid.extend((field, value) for field, value in (
+            ('blobOid', 'a' * 64), ('blobOid', 'A' * 40), ('objectFormat', 'sha512'),
+            ('repoId', 'https://github.com/fixture/repo'), ('family', 'EMAIL'), ('approved', True),
+            ('matchStartByte', identity.matchEndByteExclusive),
+            ('matchEndByteExclusive', identity.sourceByteLength + 1)))
+        invalid.extend(('path', value) for value in ('../x', '/x', 'C:/x', 'a//b', 'a/./b',
+                                                    'a/../b', 'a\\b', 'a\0b', 'a\nb', '', 'x' * 4097))
+        for field, value in invalid:
+            with self.subTest(field=field, value=value):
+                self.assert_invalid(_exact_json({'schemaVersion': 1, 'records': [_exact_record(identity, **{field: value})]}))
+        for field in dataclasses.asdict(identity):
+            record = _exact_record(identity)
+            del record[field]
+            self.assert_invalid(_exact_json({'schemaVersion': 1, 'records': [record]}))
+
+    def test_catalog_canonical_ids_review_evidence_duplicates_and_conflicts(self):
+        patch_bytes, blobs = self.fixture((_PII_KEY + 'one ' + _PII_KEY + 'two\n').encode())
+        occurrences = self.mapped(patch_bytes, blobs)
+        one, two = [_exact_record(o.identity) for o in occurrences]
+        self.assertEqual(len(_exact_catalog([one, two]).records), 2)
+        # Whitespace/key order of the document is irrelevant; ID hashes canonical content.
+        reordered = json.dumps({'records': [dict(reversed(list(one.items())))], 'schemaVersion': 1}, indent=2).encode()
+        self.assertEqual(exact.parse_catalog(reordered).records[0].id, one['id'])
+        for value in ('0' * 64, 'A' * 64, True):
+            self.assert_invalid(_exact_json({'schemaVersion': 1, 'records': [dict(one, id=value)]}))
+        noncanonical_id = hashlib.sha256(json.dumps({k: v for k, v in one.items() if k != 'id'}, indent=2).encode()).hexdigest()
+        self.assertNotEqual(noncanonical_id, one['id'])
+        self.assert_invalid(_exact_json({'schemaVersion': 1, 'records': [dict(one, id=noncanonical_id)]}))
+        for field, value in (('reviewer', 'has spaces'), ('id', '../?'), ('sha256', 'A' * 64),
+                             ('attestationSha256', False), ('unknown', 'value')):
+            evidence = dict(one['reviewEvidence'], **{field: value})
+            self.assert_invalid(_exact_json({'schemaVersion': 1, 'records': [_exact_record(one, reviewEvidence=evidence)]}))
+        for field in one['reviewEvidence']:
+            evidence = dict(one['reviewEvidence']); del evidence[field]
+            self.assert_invalid(_exact_json({'schemaVersion': 1, 'records': [_exact_record(one, reviewEvidence=evidence)]}))
+        duplicates = [one, _exact_record(one, reviewEvidence=dict(one['reviewEvidence'], id='another-review')),
+                      _exact_record(one, matchSha256='c' * 64),
+                      _exact_record(one, sourceLine1Based=2, ordinalWithinFamilyOnSourceLine1Based=2),
+                      _exact_record(two, sourceSha256='c' * 64),
+                      _exact_record(two, reviewEvidence=dict(two['reviewEvidence'], sha256='c' * 64))]
+        for conflicting in duplicates:
+            self.assert_invalid(_exact_json({'schemaVersion': 1, 'records': [one, conflicting]}))
+        raw = _exact_json({'schemaVersion': 1, 'records': [one]})
+        for key in ('path', 'reviewer'):
+            duplicated = raw.replace(('"' + key + '":').encode(), ('"' + key + '":"duplicate","' + key + '":').encode())
+            self.assert_invalid(duplicated)
+
+    def test_actual_catalog_byte_and_record_limits(self):
+        self.assertEqual(exact.CATALOG_JSON_LIMIT, 1048576)
+        self.assertEqual(exact.CATALOG_RECORD_LIMIT, 1024)
+        empty = _exact_json({'schemaVersion': 1, 'records': []})
+        boundary = empty + b' ' * (1048576 - len(empty))
+        self.assertEqual(len(boundary), 1048576)
+        self.assertEqual(exact.parse_catalog(boundary).records, ())
+        self.assert_invalid(boundary + b' ')
+        patch_bytes, blobs = self.fixture(((_PII_KEY + 'one\n') * 1025).encode())
+        occurrences = self.mapped(patch_bytes, blobs)
+        self.assertEqual(len(occurrences), 1025)
+        records = [_exact_record(o.identity) for o in occurrences]
+        self.assertEqual(len({r['id'] for r in records}), 1025)
+        raw = _exact_json({'schemaVersion': 1, 'records': records})
+        self.assertLess(len(raw), 1048576)
+        self.assertEqual(len(_exact_catalog(records[:1024]).records), 1024)
+        self.assert_invalid(raw)
+
+    def test_only_frozen_eo01_db_tuple_is_schema_eligible(self):
+        identity = _APPROVED_EXACT_METADATA[0]
+        self.assertEqual(len(_exact_catalog([_exact_record(identity)]).records), 1)
+        detector = next(d.pattern for d in DENY_PATTERNS if d.name == 'DB_URL')
+        self.assertEqual(hashlib.sha256(_exact_json({'regex': detector.pattern, 'flags': detector.flags})).hexdigest(),
+                         identity['detectorFingerprintSha256'])
+        for field, value in (('repoId', _EXACT_REPO), ('path', 'copy.md'), ('blobOid', 'a' * 40),
+                             ('sourceSha256', 'c' * 64), ('sourceLine1Based', 150),
+                             ('matchStartByte', 32070), ('matchEndByteExclusive', 32125),
+                             ('ordinalWithinFamilyOnSourceLine1Based', 2), ('matchSha256', 'c' * 64),
+                             ('detectorFingerprintSha256', 'c' * 64), ('sourceByteLength', 35042)):
+            self.assert_invalid(_exact_json({'schemaVersion': 1, 'records': [_exact_record(identity, **{field: value})]}))
+        data = ('postgres' + '://example:example@localhost/example\n').encode()
+        patch_bytes, blobs = self.fixture(data)
+        database = [o for o in self.mapped(patch_bytes, blobs) if o.identity.family == 'DB_URL']
+        self.assertEqual(len(database), 1)
+        self.assert_invalid(_exact_json({'schemaVersion': 1, 'records': [_exact_record(database[0].identity)]}))
+
+    def test_actual_six_pinned_private_git_objects(self):
+        fixture_root = os.environ.get('SHIPWRIGHT_TEST_TIERFORGE_REPO')
+        if not fixture_root:
+            self.skipTest('private pinned Git objects absent; set SHIPWRIGHT_TEST_TIERFORGE_REPO for real-six verification')
+        root = Path(fixture_root)
+        self.assertTrue(root.is_dir(), 'explicit private fixture repository must exist')
+        base = '6e811cd5c56726a5b0f4a8474b8b154b85ca852c'
+        target = '574d6097e3f3a9cec08e1c9ab81052307c71b965'
+        patch_bytes = self.git('diff', '--no-ext-diff', '--no-textconv', base, target, root=root)
+        blobs = {}
+        for row in _APPROVED_EXACT_METADATA:
+            oid = self.git('rev-parse', target + ':' + row['path'], root=root).strip().decode()
+            self.assertEqual(oid, row['blobOid'])
+            data = self.git('cat-file', 'blob', oid, root=root)
+            self.assertEqual(len(data), row['sourceByteLength'])
+            self.assertEqual(hashlib.sha256(data).hexdigest(), row['sourceSha256'])
+            blobs[row['path']] = exact.CommittedBlob(row['path'], row['objectFormat'], oid, row['sourceSha256'], data)
+        self.assertEqual(len(blobs), 3)
+        occurrences = self.mapped(patch_bytes, blobs, 'github.com/grdavies/tierforge')
+        self.assertEqual(len(occurrences), 6)
+        self.assertEqual(len(scan.scan_diff(patch_bytes.decode(), allowlist=ALLOW)), 6)
+        identities = [dataclasses.asdict(o.identity) for o in occurrences]
+        self.assertCountEqual(identities, _APPROVED_EXACT_METADATA)
+        for row, added_line in zip(_APPROVED_EXACT_METADATA, (8, 11, 6, 21, 33, 41)):
+            approved = exact.approved_occurrences(_exact_catalog([_exact_record(row)]), occurrences)
+            self.assertEqual(len(approved), 1)
+            self.assertEqual(dataclasses.asdict(approved[0].identity), row)
+            self.assertEqual(approved[0].added_line, added_line)
+            self.assertEqual(len([o for o in occurrences if o not in approved]), 5)
+        self.assertEqual(exact.approved_occurrences(_exact_catalog([_exact_record(row) for row in _APPROVED_EXACT_METADATA]), occurrences), occurrences)
+        self.assertEqual(exact.approved_occurrences(_exact_catalog([]), occurrences), ())
+        production_path = _APPROVED_EXACT_METADATA[1]['path']
+        production_line = blobs[production_path].data.splitlines()[12].decode()
+        self.assertTrue(any(d.pattern.search(production_line) for d in DENY_PATTERNS if d.name == 'SENTRY_PII_KV'))
+        self.assertFalse(any(o.identity.path == production_path and o.identity.sourceLine1Based == 13 for o in occurrences))
+        self.assertFalse(any(r['path'] == production_path and r['sourceLine1Based'] == 13 for r in _APPROVED_EXACT_METADATA))
+
+
+# Frozen PRD 367 approval-table metadata only; no private source or match bytes.
+_APPROVED_EXACT_METADATA = [{'repoId': 'github.com/grdavies/tierforge',
+  'path': 'docs/ops/integration-test-profiles.md',
+  'objectFormat': 'sha1',
+  'blobOid': '267a3f86199209cc5ab1bd008a951e68a7a70a38',
+  'sourceSha256': 'd8213ee9a990e777c56d050a06f2d7fc22be9c513799eb6683574ed85bf4523c',
+  'sourceByteLength': 35041,
+  'family': 'DB_URL',
+  'sourceLine1Based': 149,
+  'matchStartByte': 32071,
+  'matchEndByteExclusive': 32126,
+  'ordinalWithinFamilyOnSourceLine1Based': 1,
+  'matchSha256': 'fddbf46293be99a7ac345f976d31117177068752ff59233de6fba99fb90c0750',
+  'detectorFingerprintSha256': 'caaea4acfe1bc72b585333e1578e5834064af906d3b42b5d82b4a2bea86bf0ed'},
+ {'repoId': 'github.com/grdavies/tierforge',
+  'path': 'server/utils/billing-providers/resolve-stale-attach-lag-drift.ts',
+  'objectFormat': 'sha1',
+  'blobOid': 'cc3149774fff6ad161c87b5ebee197664316c2ff',
+  'sourceSha256': 'e2a3d427f833db7c09af429defe7c4efed50f7a330418e936db73e7ce2d939f9',
+  'sourceByteLength': 2953,
+  'family': 'SENTRY_PII_KV',
+  'sourceLine1Based': 44,
+  'matchStartByte': 1749,
+  'matchEndByteExclusive': 1777,
+  'ordinalWithinFamilyOnSourceLine1Based': 1,
+  'matchSha256': 'c1df4aca947c1c665c362bd23749a4030d6ed537196b6abd909da77c50e00338',
+  'detectorFingerprintSha256': 'd1aacb5ca408253872ff8d6179a3a18d3b3d3a991ed735fe85245cb32cd58be7'},
+ {'repoId': 'github.com/grdavies/tierforge',
+  'path': 'tests/unit/billing-providers/resolve-stale-attach-lag-drift.spec.ts',
+  'objectFormat': 'sha1',
+  'blobOid': '98a2806683cf362e08e9379ab806245ea71768a0',
+  'sourceSha256': '6cdd1bb8a8eb05db218277b46e4a9ee38fd79bfd59fcf69a10b0a00387ebf5eb',
+  'sourceByteLength': 3820,
+  'family': 'SENTRY_PII_KV',
+  'sourceLine1Based': 15,
+  'matchStartByte': 359,
+  'matchEndByteExclusive': 376,
+  'ordinalWithinFamilyOnSourceLine1Based': 1,
+  'matchSha256': '7ca1e8e2b891040ccacc56f7bdb040085b9ab4e1cfb3d7aa22f5dbd890e59181',
+  'detectorFingerprintSha256': 'd1aacb5ca408253872ff8d6179a3a18d3b3d3a991ed735fe85245cb32cd58be7'},
+ {'repoId': 'github.com/grdavies/tierforge',
+  'path': 'tests/unit/billing-providers/resolve-stale-attach-lag-drift.spec.ts',
+  'objectFormat': 'sha1',
+  'blobOid': '98a2806683cf362e08e9379ab806245ea71768a0',
+  'sourceSha256': '6cdd1bb8a8eb05db218277b46e4a9ee38fd79bfd59fcf69a10b0a00387ebf5eb',
+  'sourceByteLength': 3820,
+  'family': 'SENTRY_PII_KV',
+  'sourceLine1Based': 34,
+  'matchStartByte': 1109,
+  'matchEndByteExclusive': 1127,
+  'ordinalWithinFamilyOnSourceLine1Based': 1,
+  'matchSha256': 'dfe934a487678ce8664f96d0b1b0eaf4f793cc4c9e5c0c93f643d047171e273f',
+  'detectorFingerprintSha256': 'd1aacb5ca408253872ff8d6179a3a18d3b3d3a991ed735fe85245cb32cd58be7'},
+ {'repoId': 'github.com/grdavies/tierforge',
+  'path': 'tests/unit/billing-providers/resolve-stale-attach-lag-drift.spec.ts',
+  'objectFormat': 'sha1',
+  'blobOid': '98a2806683cf362e08e9379ab806245ea71768a0',
+  'sourceSha256': '6cdd1bb8a8eb05db218277b46e4a9ee38fd79bfd59fcf69a10b0a00387ebf5eb',
+  'sourceByteLength': 3820,
+  'family': 'SENTRY_PII_KV',
+  'sourceLine1Based': 48,
+  'matchStartByte': 1577,
+  'matchEndByteExclusive': 1590,
+  'ordinalWithinFamilyOnSourceLine1Based': 1,
+  'matchSha256': '075b21a51221ced24b0af633cbfc98657e2e42907e8dacddee1e13c02c641ee3',
+  'detectorFingerprintSha256': 'd1aacb5ca408253872ff8d6179a3a18d3b3d3a991ed735fe85245cb32cd58be7'},
+ {'repoId': 'github.com/grdavies/tierforge',
+  'path': 'tests/unit/billing-providers/resolve-stale-attach-lag-drift.spec.ts',
+  'objectFormat': 'sha1',
+  'blobOid': '98a2806683cf362e08e9379ab806245ea71768a0',
+  'sourceSha256': '6cdd1bb8a8eb05db218277b46e4a9ee38fd79bfd59fcf69a10b0a00387ebf5eb',
+  'sourceByteLength': 3820,
+  'family': 'SENTRY_PII_KV',
+  'sourceLine1Based': 57,
+  'matchStartByte': 1855,
+  'matchEndByteExclusive': 1869,
+  'ordinalWithinFamilyOnSourceLine1Based': 1,
+  'matchSha256': '9e9bc63b765992ec0760a9b779936216c5b9993b5d256f33eb4f13daebff6a2b',
+  'detectorFingerprintSha256': 'd1aacb5ca408253872ff8d6179a3a18d3b3d3a991ed735fe85245cb32cd58be7'}]

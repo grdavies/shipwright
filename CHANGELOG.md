@@ -1476,9 +1476,8 @@
 * merge phase full-fixture-on-the-wheel-installed-runtime into feat/linear-markdown-equiv-222 (db9490c) <!-- sw-deliver:full-fixture-on-the-wheel-installed-runtime -->
 * merge phase live-facade-write-read-materialize-and-update into feat/linear-markdown-equiv-222 (ce06bfe) <!-- sw-deliver:live-facade-write-read-materialize-and-update -->
 ### Bug Fixes
-
 * merge phase debug-fix-fix-macos-keychain-ctypes-reader into fix/macos-keychain-reader (d64aa4a) <!-- sw-deliver:debug-fix-fix-macos-keychain-ctypes-reader -->
-
+* merge phase preserve-baseline-selection-and-bound-acquisition into fix/secret-scan-exact-occurrences (774eece) <!-- sw-deliver:preserve-baseline-selection-and-bound-acquisition -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
