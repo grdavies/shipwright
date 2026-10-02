@@ -777,6 +777,7 @@
     "secret-scan.py",
     "secret_patterns.py",
     "secret_scan.py",
+    "secret_scan_exact.py",
     "seed-model-config.py",
     "ship-build-chain-check.py",
     "ship-phase-status.py",
@@ -898,6 +899,6 @@
     "zero-shell-guard.py",
     "zombies_gate.py"
   ],
-  "moduleCount": 895,
+  "moduleCount": 896,
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases"
 }

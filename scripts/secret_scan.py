@@ -9,6 +9,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
+from secret_scan_exact import AcquisitionError, acquisition_active, acquisition_scope, git_text
+
 from secret_patterns import DENY_PATTERNS, email_match_is_schema_version_token
 
 EXIT_PASS = 0
@@ -33,6 +35,14 @@ class Finding:
 
 
 def repo_root() -> Path:
+    if acquisition_active():
+        try:
+            return Path(git_text(["rev-parse", "--show-toplevel"]).strip())
+        except AcquisitionError:
+            raise
+        except RuntimeError as exc:
+            raise RuntimeError("secret-scan: not in a git repository") from exc
+    # Plaintext consumers retain their original cross-platform discovery path.
     try:
         out = subprocess.check_output(
             ["git", "rev-parse", "--show-toplevel"],
@@ -104,70 +114,162 @@ def scan_text(
 
 
 def git_out(*args: str, cwd: Path) -> str:
-    try:
-        return subprocess.check_output(["git", *args], cwd=cwd, stderr=subprocess.STDOUT, text=True)
-    except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f"secret-scan: git {' '.join(args)} failed: {exc.output.strip()}") from exc
+    return git_text(list(args), cwd=cwd)
 
 
-def collect_pre_push_diff(root: Path) -> str:
-    upstream = None
-    try:
-        upstream = git_out("rev-parse", "@{upstream}", cwd=root).strip()
-    except RuntimeError:
-        upstream = None
+@dataclass(frozen=True)
+class _PrePushSelection:
+    """Baseline patch and its pinned endpoints; never evidence of source approval.
 
-    if upstream:
+    Root and merge-log selections have no single base; kind distinguishes them.
+    A merge log is not first-parent patch provenance. Uncommitted fallback has
+    neither endpoint and cannot supply committed source context.
+    """
+
+    diff: str
+    kind: str
+    base_oid: str | None
+    target_oid: str | None
+
+
+def _resolve_commit(root: Path, revision: str) -> str:
+    oid = git_out("rev-parse", "--verify", "--end-of-options", f"{revision}^{{commit}}", cwd=root).strip()
+    if len(oid) not in (40, 64) or any(c not in "0123456789abcdef" for c in oid):
+        raise RuntimeError("secret-scan: invalid resolved commit identity")
+    return oid
+
+
+
+def _head_is_unborn(root: Path) -> bool:
+    """Permit the legacy worktree fallback only for a missing symbolic branch."""
+    with acquisition_scope() as acquisition:
+        symbolic = acquisition.run(
+            ['git', '--no-replace-objects', 'symbolic-ref', '--quiet', 'HEAD'], cwd=root,
+        )
+        if symbolic.returncode != 0 or not symbolic.stdout.endswith(b"\n"):
+            return False
         try:
-            merge_base = git_out("merge-base", upstream, "HEAD", cwd=root).strip()
-            return git_out("diff", f"{merge_base}..HEAD", cwd=root)
+            branch = symbolic.stdout[:-1].decode('utf-8')
+        except UnicodeError:
+            return False
+        if not branch.startswith('refs/heads/') or '\0' in branch or '\n' in branch:
+            return False
+        exists = acquisition.run(
+            ['git', '--no-replace-objects', 'show-ref', '--verify', '--quiet', '--', branch],
+            cwd=root,
+        )
+        return exists.returncode == 1
+
+
+def _collect_pre_push_selection(root: Path) -> _PrePushSelection:
+    with acquisition_scope():
+        return _select_pre_push(root)
+
+
+def _select_pre_push(root: Path) -> _PrePushSelection:
+    """Select once, then acquire using object IDs instead of moving refs.
+
+    Unavailable selection probes retain the legacy fallback order. Once selected,
+    patch acquisition errors propagate: a smaller range cannot stand in for a
+    failed baseline scan. Resolver output proposes a range, never source trust.
+    """
+    try:
+        head = _resolve_commit(root, "HEAD")
+    except AcquisitionError:
+        raise
+    except RuntimeError as exc:
+        if not _head_is_unborn(root):
+            raise AcquisitionError("secret-scan: baseline acquisition failed") from exc
+        head = None
+
+    def resolve(revision: str) -> str:
+        revision = revision or "HEAD"
+        for alias in ("HEAD", "@"):
+            if head and revision == alias:
+                return head
+            if head and revision.startswith((alias + "~", alias + "^")):
+                revision = head + revision[len(alias):]
+                break
+        return _resolve_commit(root, revision)
+
+    def between(kind: str, base: str, target: str) -> _PrePushSelection:
+        return _PrePushSelection(git_out("diff", f"{base}..{target}", cwd=root), kind, base, target)
+
+    if head:
+        try:
+            upstream = resolve("@{upstream}")
+            base = git_out("merge-base", upstream, head, cwd=root).strip()
+        except AcquisitionError:
+            raise
         except RuntimeError:
             pass
+        else:
+            return between("upstream", base, head)
 
     resolver = root / "scripts" / "resolve_base_branch.py"
     if resolver.is_file():
+        resolved = None
         try:
-            proc = subprocess.run(
-                [sys.executable, str(resolver), "diff-base"],
-                cwd=root,
-                capture_output=True,
-                text=True,
-            )
+            with acquisition_scope() as acq:
+                proc = acq.run([sys.executable, str(resolver), "diff-base"], cwd=root)
             if proc.returncode == 0:
                 data = json.loads(proc.stdout)
-                range_spec = data.get("range", "")
-                if ".." in range_spec:
-                    base_sha, head_sha = range_spec.split("..", 1)
-                    return git_out("diff", f"{base_sha}..{head_sha}", cwd=root)
-        except (RuntimeError, json.JSONDecodeError, subprocess.SubprocessError):
+                range_spec = data.get("range", "") if isinstance(data, dict) else ""
+                if isinstance(range_spec, str) and ".." in range_spec:
+                    if "..." in range_spec:
+                        base_ref, target_ref = range_spec.split("...", 1)
+                        base, target = resolve(base_ref), resolve(target_ref)
+                        base = git_out("merge-base", base, target, cwd=root).strip()
+                    else:
+                        base_ref, target_ref = range_spec.split("..", 1)
+                        base, target = resolve(base_ref), resolve(target_ref)
+                    resolved = (base, target)
+        except AcquisitionError:
+            raise
+        except (RuntimeError, ValueError, UnicodeError):
             pass
+        if resolved is not None:
+            return between("resolver", *resolved)
 
-    try:
-        unpushed = git_out("rev-list", "HEAD", "--not", "--remotes", cwd=root).strip()
-        if unpushed:
-            shas = [s for s in unpushed.split() if s]
-            if shas:
-                parent = git_out("rev-parse", f"{shas[-1]}^", cwd=root).strip()
-                return git_out("diff", f"{parent}..HEAD", cwd=root)
-    except RuntimeError:
-        pass
-
-    for base in ("origin/main", "main", "origin/master", "master"):
+    if head:
+        parent = None
         try:
-            git_out("rev-parse", "--verify", base, cwd=root)
-            diff = git_out("diff", f"{base}...HEAD", cwd=root)
-            if diff.strip():
-                return diff
+            unpushed = git_out("rev-list", head, "--not", "--remotes", cwd=root).split()
+            if unpushed:
+                parent = resolve(f"{unpushed[-1]}^")
+        except AcquisitionError:
+            raise
         except RuntimeError:
-            continue
+            pass
+        if parent is not None:
+            return between("unpushed", parent, head)
 
-    try:
-        if git_out("rev-parse", "--verify", "HEAD~0", cwd=root):
-            return git_out("log", "--format=", "-p", "-1", "HEAD", cwd=root)
-    except RuntimeError:
-        pass
+        for candidate in ("origin/main", "main", "origin/master", "master"):
+            try:
+                base = resolve(candidate)
+                base = git_out("merge-base", base, head, cwd=root).strip()
+            except AcquisitionError:
+                raise
+            except RuntimeError:
+                continue
+            selected = between("triple-dot", base, head)
+            if selected.diff.strip():
+                return selected
 
-    return git_out("diff", "--cached", cwd=root) + git_out("diff", cwd=root)
+        parents = git_out("rev-list", "--parents", "-n", "1", head, cwd=root).split()[1:]
+        # Keep log's legacy merge/root patch semantics rather than substituting
+        # a first-parent diff, which can change the selected additions.
+        diff = git_out("log", "--format=", "-p", "-1", head, cwd=root)
+        if len(parents) > 1:
+            return _PrePushSelection(diff, "merge-commit", None, head)
+        return _PrePushSelection(diff, "last-commit" if parents else "root", parents[0] if parents else None, head)
+
+    diff = git_out("diff", "--cached", cwd=root) + git_out("diff", cwd=root)
+    return _PrePushSelection(diff, "uncommitted", None, None)
+
+
+def collect_pre_push_diff(root: Path) -> str:
+    return _collect_pre_push_selection(root).diff
 
 
 def iter_diff_file_chunks(diff: str) -> Iterator[tuple[str, str]]:
@@ -241,8 +343,8 @@ def report_findings(findings: list[Finding]) -> None:
 
 
 def cmd_pre_push(root: Path, allowlist: dict[str, list[str]]) -> int:
-    diff = collect_pre_push_diff(root)
-    findings = scan_diff(diff, allowlist=allowlist)
+    selection = _collect_pre_push_selection(root)
+    findings = scan_diff(selection.diff, allowlist=allowlist)
     if findings:
         report_findings(findings)
         return EXIT_DENY
@@ -283,6 +385,15 @@ def cmd_patterns_check() -> int:
 
 
 def main() -> int:
+    # Start before repository discovery and HEAD probes; nested calls reuse it.
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "pre-push"
+    if cmd == "pre-push":
+        with acquisition_scope():
+            return _main()
+    return _main()
+
+
+def _main() -> int:
     try:
         root = repo_root()
         allowlist = load_allowlist(root)
