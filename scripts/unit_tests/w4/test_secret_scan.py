@@ -1446,3 +1446,539 @@ _APPROVED_EXACT_METADATA = [{'repoId': 'github.com/grdavies/tierforge',
   'ordinalWithinFamilyOnSourceLine1Based': 1,
   'matchSha256': '9e9bc63b765992ec0760a9b779936216c5b9993b5d256f33eb4f13daebff6a2b',
   'detectorFingerprintSha256': 'd1aacb5ca408253872ff8d6179a3a18d3b3d3a991ed735fe85245cb32cd58be7'}]
+
+
+# PRD 367 task 3.2: pending operator pins are not release/exception approval.
+# Native ACL cases deliberately require Darwin. No simulated ACL result is used
+# to establish a valid trust fixture; fault injection only exercises rejection.
+import ctypes
+import errno
+import stat
+import struct
+import types
+
+
+class _OperatorTrustFixture:
+    def __init__(self, base, monkeypatch):
+        import pwd
+
+        self.base = base.resolve()
+        self.home = self.base / 'home'
+        self.home.mkdir(mode=0o700)
+        self.repo = self.base / 'repo'
+        self.repo.mkdir()
+        for key in list(os.environ):
+            if key.startswith('GIT_'):
+                monkeypatch.delenv(key)
+        monkeypatch.setenv('HOME', str(self.home))
+        monkeypatch.setenv('GIT_CONFIG_NOSYSTEM', '1')
+        monkeypatch.setenv('GIT_CONFIG_GLOBAL', os.devnull)
+        monkeypatch.setattr(pwd, 'getpwuid', lambda uid: types.SimpleNamespace(pw_dir=str(self.home)))
+        self.git('init', '-q', '-b', 'main')
+        self.git('remote', 'add', 'origin', 'https://github.com/fixture/project.git')
+        self.commit('initial')
+        self.common = self.repo / '.git'
+        self.trust = self.home / '.config/shipwright/secret-scan/trust-v1.json'
+        for path in (self.home / '.config', self.home / '.config/shipwright', self.trust.parent):
+            path.mkdir(mode=0o700)
+        self.marker = self.common / 'shipwright-secret-scan-instance-v1.json'
+        self.document = {
+            'schemaVersion': 1,
+            'archivePath': str(self.base / 'not-yet-verified.pyz'),
+            'releaseId': 'fixture-1',
+            'archiveSha256': 'a' * 64,
+            'catalogSha256': 'b' * 64,
+            'repository': {
+                'commonDir': str(self.common),
+                'origin': 'github.com/fixture/project',
+                'instanceNonce': 'c' * 64,
+            },
+        }
+        self.marker_document = {'schemaVersion': 1, 'instanceNonce': 'c' * 64}
+        self.write(self.trust, self.document)
+        self.write(self.marker, self.marker_document)
+
+    def git(self, *args, cwd=None):
+        return subprocess.check_output(
+            ['git', '-c', 'core.hooksPath=/dev/null', *args],
+            cwd=cwd or self.repo, stderr=subprocess.PIPE, timeout=10,
+        ).decode().strip()
+
+    def commit(self, message):
+        self.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture' + '@' + 'example.invalid',
+                 'commit', '--allow-empty', '-qm', message)
+
+    @staticmethod
+    def write(path, document):
+        path.write_text(json.dumps(document))
+        path.chmod(0o600)
+
+    def read(self, repo=None):
+        return exact.read_pending_release_trust(repo or self.repo)
+
+    def snapshot(self):
+        """All fixture entries, bytes, identity and metadata; exclude read atime."""
+        entries = {}
+        for path in (self.base, *sorted(self.base.rglob('*'))):
+            info = path.lstat()
+            content = (os.readlink(path) if path.is_symlink() else
+                       hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None)
+            entries[str(path.relative_to(self.base))] = (
+                info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid,
+                info.st_nlink, info.st_size, info.st_mtime_ns, info.st_ctime_ns, content,
+            )
+        return entries
+
+    @contextlib.contextmanager
+    def acl(self, path, rule):
+        # All callers pass owned disposable fixture paths, never operator paths.
+        assert path.is_relative_to(self.base)
+        subprocess.run(['chmod', '+a', rule, str(path)], check=True, timeout=5)
+        try:
+            listing = subprocess.check_output(['ls', '-lde', str(path)], text=True, timeout=5)
+            assert rule.split(' ', 1)[1] in listing
+            yield
+        finally:
+            subprocess.run(['chmod', '-N', str(path)], check=True, timeout=5)
+
+
+@pytest.fixture
+def operator_trust(tmp_path, monkeypatch):
+    if os.name != 'posix':
+        pytest.skip('account-database fixture requires POSIX')
+    return _OperatorTrustFixture(tmp_path, monkeypatch)
+
+
+@pytest.fixture
+def native_trust(operator_trust):
+    if sys.platform != 'darwin':
+        pytest.skip('native Darwin ACL contract; optional trust declines on this platform')
+    # Negative cases must start with demonstrably valid native filesystem trust.
+    assert operator_trust.read() is not None
+    return operator_trust
+
+
+def test_trust_pending_pins_are_read_only_and_not_archive_approval(native_trust):
+    fixture = native_trust
+    before = fixture.snapshot()
+    pins = fixture.read()
+    assert dataclasses.asdict(pins) == {
+        'archive_path': Path(fixture.document['archivePath']),
+        'release_id': 'fixture-1', 'archive_sha256': 'a' * 64,
+        'catalog_sha256': 'b' * 64, 'common_dir': fixture.common,
+        'repo_id': 'github.com/fixture/project', 'instance_nonce': 'c' * 64,
+    }
+    assert not pins.archive_path.exists()
+    assert not hasattr(pins, 'approved')
+    assert before == fixture.snapshot()
+
+
+@pytest.mark.parametrize('missing', ['trust', 'marker', 'private-directory'])
+def test_trust_missing_state_is_never_created(native_trust, missing):
+    fixture = native_trust
+    if missing == 'private-directory':
+        shutil.rmtree(fixture.trust.parent)
+    else:
+        getattr(fixture, missing).unlink()
+    before = fixture.snapshot()
+    assert fixture.read() is None
+    assert fixture.read() is None
+    assert before == fixture.snapshot()
+
+
+@pytest.mark.parametrize('target', ['trust', 'marker'])
+@pytest.mark.parametrize('invalid', [
+    'malformed', 'array', 'null', 'unknown', 'duplicate', 'missing-key',
+    'boolean-version', 'future-version', 'invalid-utf8', 'nan',
+])
+def test_trust_strict_json_declines_without_repair(native_trust, target, invalid):
+    fixture = native_trust
+    path = getattr(fixture, target)
+    document = dict(fixture.document if target == 'trust' else fixture.marker_document)
+    if invalid == 'unknown':
+        document['unknown'] = True
+    elif invalid == 'missing-key':
+        del document['schemaVersion']
+    elif invalid == 'boolean-version':
+        document['schemaVersion'] = True
+    elif invalid == 'future-version':
+        document['schemaVersion'] = 2
+    raw = json.dumps(document).encode()
+    raw = {
+        'malformed': b'{', 'array': b'[]', 'null': b'null', 'invalid-utf8': b'\xff',
+        'nan': b'{"schemaVersion":NaN}',
+        'duplicate': raw.replace(b'"schemaVersion": 1', b'"schemaVersion": 1,"schemaVersion": 1'),
+    }.get(invalid, raw)
+    path.write_bytes(raw)
+    before = fixture.snapshot()
+    assert fixture.read() is None
+    assert before == fixture.snapshot()
+
+
+@pytest.mark.parametrize('target', ['trust', 'marker'])
+def test_trust_exact_json_bound_and_one_byte_over(native_trust, target):
+    path = getattr(native_trust, target)
+    raw = path.read_bytes()
+    path.write_bytes(raw + b' ' * (1024 * 1024 - len(raw)))
+    assert native_trust.read() is not None
+    with path.open('ab') as handle:
+        handle.write(b' ')
+    assert native_trust.read() is None
+
+
+@pytest.mark.parametrize('field,value', [
+    ('archivePath', 'relative.pyz'), ('archivePath', '/a/../b'),
+    ('archivePath', '//a/b'), ('archivePath', '/a/'), ('archivePath', True),
+    ('releaseId', ''), ('releaseId', True), ('archiveSha256', 'A' * 64),
+    ('catalogSha256', 3), ('repository', []),
+])
+def test_trust_invalid_release_pin_types(native_trust, field, value):
+    native_trust.write(native_trust.trust, dict(native_trust.document, **{field: value}))
+    assert native_trust.read() is None
+
+
+@pytest.mark.parametrize('field,value', [
+    ('commonDir', '/different/repo/.git'), ('commonDir', False),
+    ('origin', 'github.com/fixture/other'), ('origin', 'https://github.com/fixture/project'),
+    ('instanceNonce', 'd' * 64), ('instanceNonce', True), ('instanceNonce', 'c' * 63),
+    ('unknown', 'ignored'),
+])
+def test_trust_repository_pins_require_exact_identity(native_trust, field, value):
+    document = dict(native_trust.document, repository=dict(native_trust.document['repository'], **{field: value}))
+    native_trust.write(native_trust.trust, document)
+    assert native_trust.read() is None
+
+
+def test_trust_nested_duplicate_rejected(native_trust):
+    raw = native_trust.trust.read_text().replace('"origin":', '"origin":"github.com/fixture/project","origin":')
+    native_trust.trust.write_text(raw)
+    assert native_trust.read() is None
+
+
+@pytest.mark.parametrize('nonce', ['f' * 64, 'c' * 63, 'C' * 64, True, None, 42])
+def test_trust_marker_nonce_requires_exact_256_bit_pin(native_trust, nonce):
+    native_trust.write(native_trust.marker, dict(native_trust.marker_document, instanceNonce=nonce))
+    assert native_trust.read() is None
+
+
+@pytest.mark.parametrize('target,mode', [
+    ('trust', 0o644), ('marker', 0o640), ('private', 0o755),
+    ('config', 0o755), ('shipwright', 0o755), ('common', 0o775),
+    ('home', 0o777), ('base', 0o777),
+])
+def test_trust_unsafe_modes(native_trust, target, mode):
+    fixture = native_trust
+    path = {'private': fixture.trust.parent, 'config': fixture.home / '.config',
+            'shipwright': fixture.home / '.config/shipwright'}.get(target)
+    path = path if path is not None else getattr(fixture, target)
+    original = stat.S_IMODE(path.stat().st_mode)
+    try:
+        path.chmod(mode)
+        assert fixture.read() is None
+    finally:
+        path.chmod(original)
+
+
+@pytest.mark.parametrize('target', ['trust', 'marker', 'common', 'home'])
+def test_trust_wrong_owner_declined_before_payload_read(native_trust, target):
+    fixture = native_trust
+    inode = getattr(fixture, target).stat().st_ino
+    real_stat, real_read = os.fstat, os.read
+    visited, read_target = [], []
+
+    def changed_owner(fd):
+        info = real_stat(fd)
+        if info.st_ino == inode:
+            visited.append(fd)
+            fields = list(info)
+            fields[4] = info.st_uid + 100
+            return os.stat_result(fields)
+        return info
+
+    def observe_read(fd, size):
+        if real_stat(fd).st_ino == inode:
+            read_target.append(fd)
+        return real_read(fd, size)
+
+    with patch.object(os, 'fstat', side_effect=changed_owner), patch.object(os, 'read', side_effect=observe_read):
+        assert fixture.read() is None
+    assert visited
+    assert not read_target
+
+
+@pytest.mark.parametrize('target', ['trust', 'marker', 'private', 'common', 'home'])
+def test_trust_symlink_rejected(native_trust, target):
+    path = native_trust.trust.parent if target == 'private' else getattr(native_trust, target)
+    retained = path.with_name(path.name + '-retained')
+    path.rename(retained)
+    path.symlink_to(retained, target_is_directory=retained.is_dir())
+    assert native_trust.read() is None
+
+
+@pytest.mark.parametrize('target', ['trust', 'marker'])
+@pytest.mark.parametrize('kind', ['hardlink', 'fifo', 'directory'])
+def test_trust_nonregular_or_multilink_file_rejected(native_trust, target, kind):
+    path = getattr(native_trust, target)
+    if kind == 'hardlink':
+        os.link(path, path.with_suffix('.link'))
+    else:
+        path.unlink()
+        if kind == 'fifo':
+            os.mkfifo(path, mode=0o600)
+        else:
+            path.mkdir(mode=0o600)
+    started = time.monotonic()
+    assert native_trust.read() is None
+    assert time.monotonic() - started < 2
+
+
+@pytest.mark.parametrize('url', [
+    'git' + '@' + 'github.com:Fixture/Project.git', 'ssh://git' + '@' + 'github.com/fixture/project.git',
+    'https://github.com/fixture/project', 'https://GITHUB.COM/Fixture/Project.git',
+])
+def test_trust_equivalent_credential_free_origins(native_trust, url):
+    native_trust.git('remote', 'set-url', 'origin', url)
+    assert native_trust.read().repo_id == 'github.com/fixture/project'
+
+
+@pytest.mark.parametrize('url', [
+    'https://user:password' + '@' + 'github.com/fixture/project',
+    'https://github.com/fixture/project?x=y', 'https://github.com/fixture/project#x',
+    'https://github.com/fixture//project', 'http://github.com/fixture/project',
+    'ssh://user' + '@' + 'github.com/fixture/project', 'ssh://git' + '@' + 'github.com:22/fixture/project',
+    'https://github.com/fixture/%70roject', 'git' + '@' + 'github.com:fixture/project/',
+    'https://evil.example/fixture/project', '/local/repository',
+])
+def test_trust_ambiguous_or_credentialed_origins_decline(native_trust, url):
+    native_trust.git('remote', 'set-url', 'origin', url)
+    assert native_trust.read() is None
+
+
+def test_trust_missing_and_multiple_origin_decline(native_trust):
+    native_trust.git('config', '--add', 'remote.origin.url', 'https://github.com/fixture/project')
+    assert native_trust.read() is None
+    native_trust.git('remote', 'remove', 'origin')
+    assert native_trust.read() is None
+
+
+@pytest.mark.parametrize('key', ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR',
+                                'GIT_CONFIG', 'GIT_CONFIG_COUNT', 'GIT_CONFIG_PARAMETERS'])
+def test_trust_consumer_git_overrides_decline(native_trust, monkeypatch, key):
+    monkeypatch.setenv(key, '1')
+    assert native_trust.read() is None
+
+
+def test_trust_home_config_and_marker_overrides_cannot_self_enroll(native_trust, monkeypatch):
+    fixture = native_trust
+    alternate = fixture.base / 'alternate'
+    alternate.mkdir()
+    fixture.write(alternate / 'trust-v1.json', fixture.document)
+    fixture.write(alternate / 'marker.json', fixture.marker_document)
+    for key in ('HOME', 'XDG_CONFIG_HOME', 'SHIPWRIGHT_SECRET_SCAN_TRUST',
+                'SHIPWRIGHT_SECRET_SCAN_MARKER', 'SHIPWRIGHT_SECRET_SCAN_CATALOG'):
+        monkeypatch.setenv(key, str(alternate))
+    fixture.git('config', 'shipwright.secretScanTrust', str(alternate / 'trust-v1.json'))
+    assert fixture.read() is not None  # Account database still selects fixed home.
+    fixture.trust.unlink()
+    assert fixture.read() is None
+    fixture.write(fixture.trust, fixture.document)
+    fixture.marker.unlink()
+    assert fixture.read() is None
+
+
+@pytest.mark.parametrize('primitive', ['O_NOFOLLOW', 'O_DIRECTORY', 'O_NONBLOCK',
+                                      'supports_dir_fd', 'supports_follow_symlinks'])
+def test_trust_unsupported_filesystem_primitives_decline(native_trust, monkeypatch, primitive):
+    monkeypatch.setattr(os, primitive, set() if primitive.startswith('supports_') else 0)
+    assert native_trust.read() is None
+
+
+@pytest.mark.parametrize('swap', ['trust', 'marker', 'private-directory', 'origin', 'nonce-in-place'])
+def test_trust_identity_changes_during_acquisition_decline(native_trust, swap):
+    fixture = native_trust
+    real_read = os.read
+    marker_inode = fixture.marker.stat().st_ino
+    changed = []
+
+    def racing_read(fd, size):
+        data = real_read(fd, size)
+        if not changed and os.fstat(fd).st_ino == marker_inode:
+            changed.append(True)
+            if swap == 'origin':
+                fixture.git('remote', 'set-url', 'origin', 'https://github.com/fixture/other')
+            elif swap == 'nonce-in-place':
+                fixture.write(fixture.marker, dict(fixture.marker_document, instanceNonce='f' * 64))
+            elif swap == 'private-directory':
+                fixture.trust.parent.rename(fixture.trust.parent.with_name('old'))
+                fixture.trust.parent.mkdir(mode=0o700)
+                fixture.write(fixture.trust, fixture.document)
+            else:
+                path = getattr(fixture, swap)
+                path.rename(path.with_suffix('.old'))
+                fixture.write(path, fixture.document if swap == 'trust' else fixture.marker_document)
+        return data
+
+    with patch.object(os, 'read', side_effect=racing_read):
+        assert fixture.read() is None
+    assert changed
+
+
+def test_trust_expired_acquisition_declines(native_trust):
+    with exact.acquisition_scope() as acquisition:
+        acquisition.deadline = 0
+        assert native_trust.read() is None
+
+
+def test_trust_shared_worktree_and_routine_git_changes_preserve_marker(native_trust):
+    fixture = native_trust
+    linked = fixture.base / 'linked'
+    fixture.git('worktree', 'add', '-qb', 'linked', str(linked))
+    before = fixture.marker.read_bytes()
+    assert fixture.read(linked).common_dir == fixture.common
+    fixture.git('config', 'fixture.changed', 'true')
+    fixture.commit('ordinary commit')
+    fixture.git('update-ref', 'refs/heads/ordinary', 'HEAD')
+    assert fixture.read() is not None
+    assert fixture.read(linked) is not None
+    assert fixture.marker.read_bytes() == before
+
+
+def test_trust_fresh_clone_cannot_inherit_identity(native_trust):
+    fixture = native_trust
+    clone = fixture.base / 'clone'
+    fixture.git('clone', '-q', str(fixture.repo), str(clone))
+    fixture.git('remote', 'set-url', 'origin', 'https://github.com/fixture/project', cwd=clone)
+    assert fixture.read(clone) is None
+    assert not (clone / '.git' / fixture.marker.name).exists()
+
+
+@pytest.mark.parametrize('retain_directory', [False, True])
+def test_trust_clear_and_reclone_requires_marker_even_when_directory_survives(native_trust, retain_directory):
+    fixture = native_trust
+    source = fixture.base / 'source'
+    fixture.git('clone', '-q', '--bare', str(fixture.repo), str(source))
+    old_inode = fixture.common.stat().st_ino
+    if retain_directory:
+        for path in fixture.common.iterdir():
+            shutil.rmtree(path) if path.is_dir() else path.unlink()
+        # A bare clone into the emptied common-dir retains its directory inode.
+        fixture.git('clone', '-q', '--bare', str(source), str(fixture.common))
+        fixture.git('config', 'core.bare', 'false', cwd=fixture.common)
+        assert fixture.common.stat().st_ino == old_inode
+    else:
+        fixture.repo.rename(fixture.base / 'old-repo')
+        fixture.git('clone', '-q', str(source), str(fixture.repo), cwd=fixture.base)
+        assert fixture.common.stat().st_ino != old_inode
+    fixture.git('remote', 'set-url', 'origin', 'https://github.com/fixture/project')
+    before = fixture.snapshot()
+    assert fixture.read() is None
+    assert before == fixture.snapshot()
+    assert not fixture.marker.exists()
+
+
+@pytest.mark.parametrize('target,rule', [
+    ('trust', 'everyone allow read,write'), ('private', 'everyone allow add_file'),
+    ('common', 'everyone allow add_file,delete_child'),
+    ('home', 'everyone allow add_subdirectory,delete_child'),
+    ('base', 'everyone allow add_subdirectory'), ('marker', 'everyone allow write'),
+])
+def test_trust_native_granting_acl_declines_despite_safe_mode(native_trust, target, rule):
+    path = native_trust.trust.parent if target == 'private' else getattr(native_trust, target)
+    mode = stat.S_IMODE(path.stat().st_mode)
+    with native_trust.acl(path, rule):
+        assert stat.S_IMODE(path.stat().st_mode) == mode
+        assert native_trust.read() is None
+    assert native_trust.read() is not None
+
+
+def test_trust_native_deny_only_acls_are_compatible(native_trust):
+    fixture = native_trust
+    with contextlib.ExitStack() as stack:
+        for path in (fixture.home, fixture.trust.parent, fixture.common, fixture.trust, fixture.marker):
+            stack.enter_context(fixture.acl(path, 'everyone deny delete'))
+        assert fixture.read() is not None
+
+
+@pytest.mark.parametrize('rule', ['everyone allow add_file', 'everyone deny delete'])
+def test_trust_acl_changes_during_acquisition_decline(native_trust, rule):
+    fixture = native_trust
+    real_read = os.read
+    marker_inode = fixture.marker.stat().st_ino
+    changed = []
+    with contextlib.ExitStack() as stack:
+        def racing_read(fd, size):
+            data = real_read(fd, size)
+            if not changed and os.fstat(fd).st_ino == marker_inode:
+                changed.append(True)
+                stack.enter_context(fixture.acl(fixture.home, rule))
+            return data
+        with patch.object(os, 'read', side_effect=racing_read):
+            assert fixture.read() is None
+    assert changed
+
+
+def test_trust_acl_library_unavailable_declines(native_trust):
+    with patch.object(ctypes, 'CDLL', side_effect=OSError('unavailable')):
+        assert native_trust.read() is None
+
+
+@pytest.mark.parametrize('raw', [
+    b'unknown',
+    struct.pack('>I32sII', 0x012cc16d, b'\0' * 32, 0, 0x80000000),
+    struct.pack('>I32sII16sII', 0x012cc16d, b'\0' * 32, 1, 0, b'\0' * 16, 3, 16),
+    struct.pack('>I32sII16sII', 0x012cc16d, b'\0' * 32, 1, 0, b'\0' * 16, 2, 1 << 31),
+])
+def test_trust_unknown_acl_serialization_declines(native_trust, raw):
+    # Fault injection covers unknown kernel formats; native chmod cases above
+    # independently prove actual granting and deny-only filesystem ACL behavior.
+    with patch.object(exact._DarwinAclInspector, '_read', return_value=raw):
+        assert native_trust.read() is None
+
+
+def test_trust_uninspectable_acl_declines(native_trust):
+    with patch.object(exact._DarwinAclInspector, '_read', side_effect=OSError(errno.EACCES, 'denied')):
+        assert native_trust.read() is None
+
+
+@pytest.mark.parametrize('trust_state', ['valid', 'missing', 'corrupt'])
+def test_trust_actual_pre_push_never_enrolls_repairs_or_caches(native_trust, monkeypatch, trust_state):
+    fixture = native_trust
+    (fixture.repo / 'fixture.txt').write_text(SECRET_TEXT)
+    fixture.git('add', 'fixture.txt')
+    fixture.commit('synthetic finding')
+    if trust_state == 'missing':
+        fixture.marker.unlink()
+        fixture.trust.unlink()
+    elif trust_state == 'corrupt':
+        fixture.trust.write_text('{invalid')
+        fixture.marker.write_text('{invalid')
+    monkeypatch.chdir(fixture.repo)
+    monkeypatch.setattr(sys, 'argv', ['secret_scan.py', 'pre-push'])
+    before = fixture.snapshot()
+    for _ in range(2):
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            assert scan.main() == 1
+        pins = fixture.read()
+        assert (pins is not None) == (trust_state == 'valid')
+    assert fixture.snapshot() == before
+
+
+@pytest.mark.parametrize('platform', ['linux', 'unverified-platform'])
+def test_trust_unsupported_platform_preserves_baseline(operator_trust, monkeypatch, platform):
+    monkeypatch.setattr(sys, 'platform', platform)
+    before = operator_trust.snapshot()
+    assert operator_trust.read() is None
+    assert scan.scan_text(SECRET_TEXT, allowlist=ALLOW)
+    assert operator_trust.snapshot() == before
+
+
+def test_trust_actual_non_darwin_platform_declines(operator_trust):
+    if sys.platform == 'darwin':
+        pytest.skip('native non-Darwin execution required; simulated decline covered separately')
+    assert operator_trust.read() is None
+    assert scan.scan_text(SECRET_TEXT, allowlist=ALLOW)
+
+
+def test_trust_new_fixture_source_is_baseline_clean():
+    source = Path(__file__).read_text().split('# PRD 367 task 3.2:', 1)[1]
+    assert scan.scan_text(source, allowlist=ALLOW) == []
