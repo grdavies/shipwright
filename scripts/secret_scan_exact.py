@@ -1,7 +1,8 @@
 """Bounded committed source acquisition and pure exact-occurrence matching.
 
 Blobs and parsed catalogs describe identities, never approval. No worktree/index
-source reads, trust loading or enrollment are performed here.
+source reads or enrollment are performed here. Read-valid trust pins are
+separate from release integrity and never authorize exceptions by themselves.
 """
 from __future__ import annotations
 
@@ -764,3 +765,334 @@ def approved_occurrences(catalog: _Catalog, occurrences: tuple[_Occurrence, ...]
     """
     identities = {record.identity for record in catalog.records}
     return tuple(occurrence for occurrence in occurrences if occurrence.identity in identities)
+
+# These pins are only inputs to the future archive integrity check. Nothing in
+# this section calls approved_occurrences or changes scanner decisions.
+TRUST_JSON_LIMIT = 1024 * 1024
+_INSTANCE_MARKER = 'shipwright-secret-scan-instance-v1.json'
+
+
+@dataclass(frozen=True)
+class _PendingReleaseTrust:
+    """Read-valid operator pins, NOT verified release or exception authority."""
+    archive_path: Path
+    release_id: str
+    archive_sha256: str
+    catalog_sha256: str
+    common_dir: Path
+    repo_id: str
+    instance_nonce: str
+
+
+class _TrustInvalid(ValueError):
+    pass
+
+
+def _trust_invalid() -> None:
+    raise _TrustInvalid('secret-scan: optional trust unavailable')
+
+
+def _trust_object(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            _trust_invalid()
+        value[key] = item
+    return value
+
+
+def _trust_document(data: bytes, keys: set[str]) -> dict:
+    if len(data) > TRUST_JSON_LIMIT:
+        _trust_invalid()
+    value = json.loads(data.decode('utf-8'), object_pairs_hook=_trust_object,
+                       parse_constant=lambda _: _trust_invalid())
+    if (type(value) is not dict or set(value) != keys
+            or type(value['schemaVersion']) is not int or value['schemaVersion'] != 1):
+        _trust_invalid()
+    return value
+
+
+def _absolute_trust_path(value: object) -> Path:
+    # Do not silently normalize traversal, separators, or a relative pin.
+    if (type(value) is not str or len(value.encode('utf-8')) > 4096
+            or not value.startswith('/') or value.startswith('//')
+            or any(ord(c) < 32 or ord(c) == 127 for c in value)
+            or '\\' in value or any(p in ('', '.', '..') for p in value[1:].split('/'))):
+        _trust_invalid()
+    return Path(value)
+
+
+def _normalized_origin(value: str) -> str:
+    """A deliberately narrow credential-free GitHub HTTPS/SSH grammar.
+
+    The literal SSH transport user `git` is not an embedded credential. Ports,
+    escapes, alternate users, query/fragment, local paths and URL rewrites are
+    never normalized into an approved identity.
+    """
+    match = re.fullmatch(
+        r'(?:https://github\.com/|ssh://git@github\.com/|git@github\.com:)'
+        r'([A-Za-z0-9_-][A-Za-z0-9._-]*)/([A-Za-z0-9_-][A-Za-z0-9._-]*)',
+        value, re.IGNORECASE | re.ASCII)
+    if match is None:
+        _trust_invalid()
+    owner, repo = match.groups()
+    if repo.lower().endswith('.git'):
+        repo = repo[:-4]
+    if not repo or repo in ('.', '..') or owner in ('.', '..'):
+        _trust_invalid()
+    return 'github.com/' + owner.lower() + '/' + repo.lower()
+
+
+def _repository_trust_identity(acq: Acquisition, root: Path) -> tuple[Path, str]:
+    # These change which repository/config Git reads. Do not let a consumer
+    # redirect the fixed marker through process configuration. --local below
+    # excludes home/system origins, and --get-all rejects multiple URLs.
+    if any(key in os.environ for key in (
+            'GIT_DIR', 'GIT_WORK_TREE', 'GIT_COMMON_DIR', 'GIT_CONFIG',
+            'GIT_CONFIG_COUNT', 'GIT_CONFIG_PARAMETERS')):
+        _trust_invalid()
+    common = acq.git(['rev-parse', '--path-format=absolute', '--git-common-dir'],
+                     cwd=root, stdout_limit=4097)
+    if not common.endswith(b'\n') or b'\n' in common[:-1] or b'\r' in common:
+        _trust_invalid()
+    directory = _absolute_trust_path(common[:-1].decode('utf-8'))
+    # A symlink in the common-dir spelling is ineligible, not a way to bypass
+    # the checked no-follow path traversal that follows.
+    if directory.resolve(strict=True) != directory:
+        _trust_invalid()
+    origins = acq.git(['config', '--local', '--null', '--get-all', 'remote.origin.url'],
+                      cwd=root, stdout_limit=4096)
+    if not origins.endswith(b'\0') or b'\0' in origins[:-1]:
+        _trust_invalid()
+    return directory, _normalized_origin(origins[:-1].decode('utf-8'))
+
+
+def _trust_primitives() -> bool:
+    return (os.name == 'posix' and hasattr(os, 'getuid') and hasattr(os, 'geteuid')
+            and os.getuid() == os.geteuid()
+            and all(getattr(os, key, 0) for key in ('O_NOFOLLOW', 'O_DIRECTORY', 'O_NONBLOCK'))
+            and os.open in os.supports_dir_fd and os.stat in os.supports_dir_fd
+            and os.stat in os.supports_follow_symlinks)
+
+
+def _stat_identity(info, *, file: bool = False) -> tuple:
+    identity = (info.st_dev, info.st_ino, info.st_uid, info.st_gid, info.st_mode)
+    # Directory timestamps change in normal Git use and are not lifecycle
+    # authority. File mutation during a read, however, invalidates that read.
+    return identity + ((info.st_size, info.st_mtime_ns, info.st_ctime_ns, info.st_nlink)
+                       if file else ())
+
+
+class _DarwinAclInspector:
+    """Descriptor ACL snapshots via Darwin's system library, never shell tools.
+
+    acl_copy_ext exports the documented big-endian kauth_filesec layout:
+    44-byte header and 24-byte entries (sys/acl.h, sys/kauth.h). A closed
+    grammar admits only known deny entries. No principal/name lookup is needed.
+    Other ACL platforms are intentionally unsupported, not assumed mode-only.
+    """
+    def __init__(self) -> None:
+        import ctypes
+        import sys
+
+        if sys.platform != 'darwin':
+            _trust_invalid()
+        try:
+            # Fixed system library, not a consumer path or library search result.
+            self.lib = ctypes.CDLL('/usr/lib/libSystem.B.dylib', use_errno=True)
+            signatures = (
+                ('acl_get_fd_np', [ctypes.c_int, ctypes.c_int], ctypes.c_void_p),
+                ('acl_size', [ctypes.c_void_p], ctypes.c_ssize_t),
+                ('acl_copy_ext', [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_ssize_t], ctypes.c_ssize_t),
+                ('acl_free', [ctypes.c_void_p], ctypes.c_int),
+            )
+            for name, args, result in signatures:
+                function = getattr(self.lib, name)
+                function.argtypes = args
+                function.restype = result
+        except (OSError, AttributeError):
+            _trust_invalid()
+
+    def _read(self, fd: int) -> bytes:
+        import ctypes
+        import errno
+
+        ctypes.set_errno(0)
+        acl = self.lib.acl_get_fd_np(fd, 0x100)  # ACL_TYPE_EXTENDED
+        if not acl:
+            # Darwin filesec_get_property reports ENOENT for an absent ACL on
+            # an open descriptor. All other failures, including ENOTSUP, deny.
+            if ctypes.get_errno() == errno.ENOENT:
+                return b''
+            _trust_invalid()
+        try:
+            size = self.lib.acl_size(acl)
+            if not 44 <= size <= 44 + 128 * 24:
+                _trust_invalid()
+            buffer = ctypes.create_string_buffer(size)
+            if self.lib.acl_copy_ext(buffer, acl, size) != size:
+                _trust_invalid()
+            return buffer.raw
+        finally:
+            if self.lib.acl_free(acl) != 0:
+                _trust_invalid()
+
+    def identity(self, fd: int) -> bytes:
+        import struct
+
+        data = self._read(fd)
+        if data == b'':
+            return data  # Known absent ACL, distinct from an explicit empty ACL.
+        if not 44 <= len(data) <= 44 + 128 * 24:
+            _trust_invalid()
+        magic, unused_ids, count, flags = struct.unpack('>I32sII', data[:44])
+        if (magic != 0x012cc16d or unused_ids != b'\0' * 32 or count > 128
+                or len(data) != 44 + count * 24 or flags & ~0x20000):
+            # Only NO_INHERIT is understood; deferred inheritance, private or
+            # future ACL-wide flags cannot silently acquire new semantics.
+            _trust_invalid()
+        for offset in range(44, len(data), 24):
+            entry_flags, rights = struct.unpack('>II', data[offset + 16:offset + 24])
+            if (entry_flags & 0xf != 2 or entry_flags & ~0x1f2
+                    or rights & ~0x103ffe):
+                # DENY plus the five known inheritance bits; known file rights
+                # only. Even an owner-only or inherit-only ALLOW is declined.
+                _trust_invalid()
+        return data
+
+
+class _CheckedTrustPaths:
+    """Keep each no-follow directory/file descriptor and its name binding live."""
+    def __init__(self, uid: int, acq: Acquisition) -> None:
+        self.uid = uid
+        self.acq = acq
+        self.handles: list[int] = []
+        self.bindings: list[tuple[int | None, str, int, tuple, bool, bytes]] = []
+        self.acl = _DarwinAclInspector()
+
+    def close(self) -> None:
+        for fd in reversed(self.handles):
+            os.close(fd)
+        self.handles.clear()
+
+    def _deadline(self) -> None:
+        if time.monotonic() >= self.acq.deadline:
+            _trust_invalid()
+
+    def _open(self, name: str, parent: int | None, *, directory: bool,
+              private: bool = False, owner: bool = False) -> int:
+        import stat
+
+        self._deadline()
+        flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
+        if directory:
+            flags |= os.O_DIRECTORY
+        fd = os.open(name, flags, dir_fd=parent)
+        self.handles.append(fd)
+        info = os.fstat(fd)
+        mode = stat.S_IMODE(info.st_mode)
+        if directory:
+            if (not stat.S_ISDIR(info.st_mode) or info.st_uid not in (0, self.uid)
+                    or mode & 0o022 or (owner and info.st_uid != self.uid)
+                    or (private and (info.st_uid != self.uid or mode != 0o700))):
+                _trust_invalid()
+        elif (not stat.S_ISREG(info.st_mode) or info.st_uid != self.uid
+              or mode != 0o600 or info.st_nlink != 1 or info.st_size > TRUST_JSON_LIMIT):
+            _trust_invalid()
+        identity = _stat_identity(info, file=not directory)
+        named = os.stat(name, dir_fd=parent, follow_symlinks=False)
+        if _stat_identity(named, file=not directory) != identity:
+            _trust_invalid()
+        acl_identity = self.acl.identity(fd)
+        self.bindings.append((parent, name, fd, identity, not directory, acl_identity))
+        return fd
+
+    def directory(self, path: Path, *, private_from: Path | None = None) -> int:
+        # Always walk from /; resolving first would erase symlink evidence.
+        _absolute_trust_path(str(path))
+        fd = self._open('/', None, directory=True)
+        prefix = Path('/')
+        for part in path.parts[1:]:
+            prefix /= part
+            private = private_from is not None and (prefix == private_from or private_from in prefix.parents)
+            fd = self._open(part, fd, directory=True, private=private, owner=prefix == path)
+        return fd
+
+    def read_json(self, parent: int, name: str) -> bytes:
+        fd = self._open(name, parent, directory=False)
+        result = bytearray()
+        while True:
+            self._deadline()
+            chunk = os.read(fd, min(65536, TRUST_JSON_LIMIT + 1 - len(result)))
+            if not chunk:
+                break
+            result.extend(chunk)
+            if len(result) > TRUST_JSON_LIMIT:
+                _trust_invalid()
+        self.validate()
+        return bytes(result)
+
+    def validate(self) -> None:
+        self._deadline()
+        for parent, name, fd, expected, file, acl_identity in self.bindings:
+            if (_stat_identity(os.fstat(fd), file=file) != expected
+                    or _stat_identity(os.stat(name, dir_fd=parent, follow_symlinks=False), file=file) != expected
+                    or self.acl.identity(fd) != acl_identity):
+                _trust_invalid()
+
+
+def read_pending_release_trust(root: Path) -> _PendingReleaseTrust | None:
+    """Read fixed operator/instance pins; NEVER approve exceptions from them.
+
+    The account database, not HOME or XDG_CONFIG_HOME, selects the home. Tests
+    may substitute pwd.getpwuid in-process; there is deliberately no production
+    path override. Platforms without the checked primitives decline all pins.
+
+    Descriptors and path identities remain checked through both JSON reads and
+    a second Git identity acquisition. There are no writes/caches. Phase 4 must
+    independently verify the entire pinned archive, catalog and source modules
+    before these pins can contribute to a filtering decision.
+    """
+    paths = None
+    try:
+        if not _trust_primitives():
+            return None
+        import pwd
+
+        uid = os.getuid()
+        home = _absolute_trust_path(pwd.getpwuid(uid).pw_dir)
+        with acquisition_scope() as acq:
+            paths = _CheckedTrustPaths(uid, acq)
+            directory, origin = _repository_trust_identity(acq, root)
+            trust_dir = paths.directory(home / '.config/shipwright/secret-scan',
+                                        private_from=home / '.config')
+            data = paths.read_json(trust_dir, 'trust-v1.json')
+            trust = _trust_document(data, {'schemaVersion', 'archivePath', 'releaseId',
+                                         'archiveSha256', 'catalogSha256', 'repository'})
+            archive = _absolute_trust_path(trust['archivePath'])
+            if (not _token(trust['releaseId']) or not _digest(trust['archiveSha256'])
+                    or not _digest(trust['catalogSha256'])):
+                _trust_invalid()
+            repo = trust['repository']
+            if (type(repo) is not dict or set(repo) != {'commonDir', 'origin', 'instanceNonce'}
+                    or repo['commonDir'] != str(directory) or repo['origin'] != origin
+                    or not _digest(repo['instanceNonce'])):
+                _trust_invalid()
+            common_fd = paths.directory(directory)
+            marker = _trust_document(paths.read_json(common_fd, _INSTANCE_MARKER),
+                                     {'schemaVersion', 'instanceNonce'})
+            if not _digest(marker['instanceNonce']) or marker['instanceNonce'] != repo['instanceNonce']:
+                _trust_invalid()
+            if _repository_trust_identity(acq, root) != (directory, origin):
+                _trust_invalid()
+            paths.validate()
+            return _PendingReleaseTrust(archive, trust['releaseId'], trust['archiveSha256'],
+                                        trust['catalogSha256'], directory, origin, repo['instanceNonce'])
+    except (OSError, ValueError, TypeError, UnicodeError, RuntimeError, KeyError,
+            ImportError, NotImplementedError, RecursionError, OverflowError):
+        # Optional trust never changes completed baseline findings. No raw JSON,
+        # path, origin, source bytes or subprocess stderr enter new diagnostics.
+        return None
+    finally:
+        if paths is not None:
+            paths.close()
