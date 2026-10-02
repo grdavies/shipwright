@@ -187,11 +187,11 @@ def acquisition_scope():
         yield current
         return
     current = Acquisition()
-    token = _ACTIVE.set(current)
+    context_handle = _ACTIVE.set(current)
     try:
         yield current
     finally:
-        _ACTIVE.reset(token)
+        _ACTIVE.reset(context_handle)
 
 
 def nul_paths(data: bytes) -> list[bytes]:

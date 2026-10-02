@@ -917,3 +917,42 @@ class AcquisitionTests(unittest.TestCase):
                 self.assertEqual('--name-only' in patches[-1], fail_stage == 'metadata')
                 self.assertTrue(any(call['args'][:1] == ['merge-base'] for call in calls))
                 self.assertFalse(any(call['args'][:1] in (['rev-list'], ['log']) for call in calls))
+
+    def test_failed_existing_head_peel_never_falls_back_to_uncommitted(self):
+        self.init()
+        self.commit(b'ordinary\n')
+        real_git = shutil.which('git')
+        self.assertIsNotNone(real_git)
+        bindir = self.root / 'head-bin'
+        bindir.mkdir()
+        wrapper = bindir / 'git'
+        calls_path = self.root / 'head-git-calls.jsonl'
+        wrapper.write_text(
+            '#!' + sys.executable + '\n'
+            'import json, os, sys\n'
+            'args = sys.argv[1:]\n'
+            f'with open({str(calls_path)!r}, "a") as log:\n'
+            '    log.write(json.dumps(args) + "\\n")\n'
+            'if "HEAD^{commit}" in args: sys.exit(128)\n'
+            f'os.execv({real_git!r}, [{real_git!r}] + args)\n'
+        )
+        wrapper.chmod(0o700)
+        for mode in ('symbolic', 'unicode-trailing-space', 'detached'):
+            with self.subTest(mode=mode):
+                if mode == 'unicode-trailing-space':
+                    self.git('branch', '-m', 'topic\u00a0')
+                if mode == 'detached':
+                    self.git('checkout', '--detach', '-q')
+                calls_path.write_text('')
+                result = subprocess.run(
+                    [sys.executable, str(ROOT / 'scripts/secret_scan.py'), 'pre-push'],
+                    cwd=self.root,
+                    env=dict(os.environ, PATH=str(bindir) + os.pathsep + os.environ['PATH']),
+                    capture_output=True, text=True, timeout=35,
+                )
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(result.stderr.strip(), 'secret-scan: baseline acquisition failed')
+                self.assertEqual(result.stdout, '')
+                calls = [json.loads(line) for line in calls_path.read_text().splitlines()]
+                self.assertTrue(any('HEAD^{commit}' in args for args in calls))
+                self.assertFalse(any('diff' in args or 'log' in args or 'rev-list' in args for args in calls))

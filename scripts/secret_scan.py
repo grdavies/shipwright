@@ -139,6 +139,28 @@ def _resolve_commit(root: Path, revision: str) -> str:
     return oid
 
 
+
+def _head_is_unborn(root: Path) -> bool:
+    """Permit the legacy worktree fallback only for a missing symbolic branch."""
+    with acquisition_scope() as acquisition:
+        symbolic = acquisition.run(
+            ['git', '--no-replace-objects', 'symbolic-ref', '--quiet', 'HEAD'], cwd=root,
+        )
+        if symbolic.returncode != 0 or not symbolic.stdout.endswith(b"\n"):
+            return False
+        try:
+            branch = symbolic.stdout[:-1].decode('utf-8')
+        except UnicodeError:
+            return False
+        if not branch.startswith('refs/heads/') or '\0' in branch or '\n' in branch:
+            return False
+        exists = acquisition.run(
+            ['git', '--no-replace-objects', 'show-ref', '--verify', '--quiet', '--', branch],
+            cwd=root,
+        )
+        return exists.returncode == 1
+
+
 def _collect_pre_push_selection(root: Path) -> _PrePushSelection:
     with acquisition_scope():
         return _select_pre_push(root)
@@ -155,7 +177,9 @@ def _select_pre_push(root: Path) -> _PrePushSelection:
         head = _resolve_commit(root, "HEAD")
     except AcquisitionError:
         raise
-    except RuntimeError:
+    except RuntimeError as exc:
+        if not _head_is_unborn(root):
+            raise AcquisitionError("secret-scan: baseline acquisition failed") from exc
         head = None
 
     def resolve(revision: str) -> str:
