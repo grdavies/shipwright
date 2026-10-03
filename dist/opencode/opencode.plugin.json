@@ -1,6 +1,6 @@
 {
   "name": "shipwright-opencode",
-  "version": "2.23.3",
+  "version": "2.23.4",
   "package_mechanism": "opencode-plugin",
   "main": "lifecycle_plugin.ts",
   "shipwright": {
