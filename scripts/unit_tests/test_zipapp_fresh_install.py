@@ -816,74 +816,295 @@ def test_scanner_documentation_source_commands_and_links(repo_root):
     assert len(_scanner_documented_commands(repo_root)) == 6
 
 
-@pytest.fixture(scope='module')
-def scanner_documented_release(tmp_path_factory):
-    """Use retained standard outputs when supplied; otherwise emit in a private checkout."""
-    retained = os.environ.get('SHIPWRIGHT_TEST_SCANNER_STANDARD_BUILD')
-    if retained:
-        root = Path(retained)
-        proof = json.loads((root / 'proof.json').read_bytes())
-        commands = json.loads((root / 'commands.json').read_bytes())
-        inventory = json.loads((root / 'causal-output-inventory.json').read_bytes())
-        docs = json.loads((root / 'causal-docs-proof.json').read_bytes())
-        assert proof['verdict'] == 'pass' and proof['omissions'] == []
-        assert commands == proof['commands'] and len(commands) == 2
-        assert all(command['exitCode'] == 0 for command in commands)
-        assert commands[0]['command'][1:5] == ['scripts/build_zipapp.py', '--root', '.', 'build']
-        assert commands[1]['command'][1:5] == ['-m', 'sw', 'generate', '--all']
-        assert proof['operatorMcpEditsPreserved'] and proof['indexEmptyBeforeAfter']
-        assert json.loads((root / 'primary-before.json').read_bytes()) == json.loads(
-            (root / 'primary-after.json').read_bytes())
-        assert len(inventory) == proof['outputCount']
-        actual = {str(path.relative_to(root)) for directory in ('runtime', 'dist')
-                  for path in (root / directory).rglob('*') if path.is_file() or path.is_symlink()}
-        assert actual == set(inventory)
-        for relative, pin in inventory.items():
-            path = root / relative
-            assert ({'symlink': os.readlink(path)} if path.is_symlink() else
-                    {'sha256': _scanner_hash(path.read_bytes())}) == pin
-        for relative, pin in proof['phaseSourceInputs'].items():
-            assert _scanner_hash((SCRIPT_DIR.parent / relative).read_bytes()) == pin['sha256']
-        assert docs == proof['causalDocumentation']
-        assert set(docs) == {f'dist/{host}/documentation/{name}.md'
-                             for host in ('cursor', 'claude-code')
-                             for name in ('troubleshooting', 'trust-anchors')}
-        for relative, pin in docs.items():
-            assert (root / relative).read_bytes() == (SCRIPT_DIR.parent / pin['source']).read_bytes()
-            assert pin['sourceSha256'] == pin['emittedSha256'] == _scanner_hash((root / relative).read_bytes())
+_SCANNER_RELEASE_MODE = 'release-acceptance-v1'
+_SCANNER_EMPTY_CATALOG = b'{\n  "schemaVersion": 1,\n  "records": []\n}\n'
+_SCANNER_CURRENT_ARCHIVE_SHA256 = '8ba432c467d1a307eb24038519fa006327856e5d5164feca0fd602af8420f9e8'
+_SCANNER_CURRENT_CATALOG_SHA256 = 'a9c8d44180dcf5f6686bbd4dee2cfecc63c552418d312723eb47d94aa66be60e'
+_SCANNER_RELEASE_IDENTITIES = {}
+_SCANNER_IMPLEMENTATION_INVENTORY = None
+
+
+def _scanner_release_tree(root):
+    result = {}
+    for directory in (root / 'runtime', root / 'dist'):
+        for path in sorted(directory.rglob('*')):
+            if not (path.is_file() or path.is_symlink()):
+                continue
+            info = path.lstat()
+            relative = str(path.relative_to(root))
+            result[relative] = ({'type': 'symlink', 'mode': stat.S_IMODE(info.st_mode),
+                                 'target': os.readlink(path)} if path.is_symlink() else
+                                {'type': 'file', 'mode': stat.S_IMODE(info.st_mode),
+                                 'bytes': info.st_size,
+                                 'sha256': _scanner_hash(path.read_bytes())})
+    return result
+
+
+def _scanner_load_acceptance_pins():
+    path_value = os.environ.get('SHIPWRIGHT_TEST_SCANNER_ACCEPTANCE_PINS')
+    digest = os.environ.get('SHIPWRIGHT_TEST_SCANNER_ACCEPTANCE_PINS_SHA256')
+    assert path_value and digest, 'strict release acceptance requires sealed pins'
+    path = Path(path_value)
+    raw = path.read_bytes()
+    assert _scanner_hash(raw) == digest, 'sealed acceptance pins digest mismatch'
+    pins = json.loads(raw)
+    assert pins['historical']['role'] == 'historical-first-empty-v1'
+    assert pins['current']['role'] == 'current-populated-v1'
+    return pins
+
+
+def _scanner_register_release(root, role, archive_sha256, catalog_sha256):
+    resolved = root.resolve()
+    _SCANNER_RELEASE_IDENTITIES[str(resolved)] = {
+        'role': role,
+        'archiveSha256': archive_sha256,
+        'catalogSha256': catalog_sha256,
+    }
+    return resolved
+
+
+def _scanner_validate_sealed_release(root, expected, *, historical):
+    root = Path(root)
+    assert root.is_dir() and not root.is_symlink(), 'sealed release root unavailable'
+    assert _scanner_release_tree(root) == expected['tree'], 'sealed release tree identity mismatch'
+    for name, digest in expected['companionSha256'].items():
+        assert _scanner_hash((root / name).read_bytes()) == digest, 'sealed companion identity mismatch'
+    proof = json.loads((root / 'proof.json').read_bytes())
+    commands = json.loads((root / 'commands.json').read_bytes())
+    inventory = json.loads((root / 'causal-output-inventory.json').read_bytes())
+    docs = json.loads((root / 'causal-docs-proof.json').read_bytes())
+    assert proof['verdict'] == 'pass' and proof['omissions'] == []
+    assert commands == proof['commands'] and len(commands) == 2
+    assert [row['exitCode'] for row in commands] == expected['receipt']['commandExitCodes']
+    assert json.loads((root / 'primary-before.json').read_bytes()) == json.loads(
+        (root / 'primary-after.json').read_bytes())
+    assert len(inventory) == expected['receipt']['outputCount'] == 866
+    assert set(inventory) == set(expected['tree'])
+    assert docs == proof['causalDocumentation'] and len(docs) == 4
+    for relative, row in docs.items():
+        emitted = (root / relative).read_bytes()
+        source = (SCRIPT_DIR.parent / row['source']).read_bytes()
+        assert emitted == source
+        assert row['sourceSha256'] == row['emittedSha256'] == _scanner_hash(emitted)
+    for surface in expected['surfaces']:
+        archive = root / surface['archive']
+        manifest_path = root / surface['manifest']
+        manifest = json.loads(manifest_path.read_bytes())
+        assert _scanner_hash(archive.read_bytes()) == expected['archiveSha256'] == surface['archiveSha256']
+        assert _scanner_hash(manifest_path.read_bytes()) == surface['manifestSha256']
+        assert len(manifest['modules']) == surface['moduleCount'] == 897
+        with zipfile.ZipFile(archive) as built:
+            names = built.namelist()
+            assert len(names) == len(set(names)) == surface['memberCount'] == 898
+            assert sorted(names) == sorted([*manifest['modules'], '__main__.py'])
+            for info in built.infolist():
+                with built.open(info) as member:
+                    while member.read(1024 * 1024):
+                        pass
+            for name, digest in surface['requiredMemberSha256'].items():
+                assert _scanner_hash(built.read(name)) == digest
+            assert _scanner_hash(built.read(_SCANNER_CATALOG)) == expected['catalogSha256']
+    for relative, pin in expected['receipt']['phaseSourceInputs'].items():
+        observed = (expected['catalogSha256'] if historical and relative == 'scripts/' + _SCANNER_CATALOG
+                    else _scanner_hash((SCRIPT_DIR.parent / relative).read_bytes()))
+        assert observed == pin['sha256'], 'sealed release source input mismatch'
+    return _scanner_register_release(root, 'historical' if historical else 'current',
+                                     expected['archiveSha256'], expected['catalogSha256'])
+
+
+def _scanner_tracked_inventory(root):
+    result = {}
+    raw = subprocess.check_output(['git', 'ls-files', '--stage', '-z'], cwd=root)
+    for record in raw.split(b'\0'):
+        if not record:
+            continue
+        metadata, encoded = record.split(b'\t', 1)
+        git_mode, _object_id, stage = metadata.split()
+        assert stage == b'0', 'scanner source snapshot contains an unmerged tracked path'
+        relative = os.fsdecode(encoded)
+        path = root / relative
+        info = path.lstat()
+        if git_mode == b'120000':
+            assert path.is_symlink()
+            result[relative] = {'type': 'symlink', 'mode': stat.S_IMODE(info.st_mode),
+                                'target': os.readlink(path)}
+        else:
+            assert path.is_file() and not path.is_symlink()
+            result[relative] = {'type': 'file', 'mode': stat.S_IMODE(info.st_mode),
+                                'bytes': info.st_size, 'sha256': _scanner_hash(path.read_bytes())}
+    return result
+
+
+def _scanner_make_own_git_source(destination):
+    global _SCANNER_IMPLEMENTATION_INVENTORY
+    origin = SCRIPT_DIR.parent
+    expected = _scanner_tracked_inventory(origin)
+    subprocess.check_call(
+        ['git', 'clone', '--local', '--no-hardlinks', '--quiet', str(origin), str(destination)])
+    assert (destination / '.git').is_dir()
+    assert not (destination / '.git/objects/info/alternates').exists()
+    common = subprocess.check_output(['git', 'rev-parse', '--git-common-dir'], cwd=destination)
+    common_path = Path(os.fsdecode(common).strip())
+    common_path = common_path if common_path.is_absolute() else destination / common_path
+    assert common_path.resolve() == (destination / '.git').resolve()
+    assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=destination) == (
+        subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=origin))
+    raw = subprocess.check_output(['git', 'ls-files', '-z'], cwd=origin)
+    for encoded in raw.split(b'\0'):
+        if not encoded:
+            continue
+        relative = Path(os.fsdecode(encoded))
+        source = origin / relative
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.exists() or target.is_symlink():
+            target.unlink()
+        if source.is_symlink():
+            target.symlink_to(os.readlink(source))
+        else:
+            shutil.copy2(source, target)
+    observed = _scanner_tracked_inventory(destination)
+    assert observed == expected, 'disposable own-Git source inventory mismatch'
+    if _SCANNER_IMPLEMENTATION_INVENTORY is None:
+        _SCANNER_IMPLEMENTATION_INVENTORY = expected
     else:
-        root = tmp_path_factory.mktemp('scanner-documentation-release')
-        from unit_tests.test_zipapp_manifest_completeness import _load_build_zipapp
-        assert _load_build_zipapp().build_archive(SCRIPT_DIR.parent, root / 'runtime')['verdict'] == 'pass'
-        for host in ('cursor', 'claude-code'):
-            _generate_platform_dist(SCRIPT_DIR.parent, root / 'dist', host)
+        assert expected == _SCANNER_IMPLEMENTATION_INVENTORY, 'scanner fixture implementation snapshot drifted'
+    return expected
+
+
+def _scanner_build_release(source, root):
+    from unit_tests.test_zipapp_manifest_completeness import _load_build_zipapp
+    assert _load_build_zipapp().build_archive(source, root / 'runtime')['verdict'] == 'pass'
+    for host in ('cursor', 'claude-code'):
+        _generate_platform_dist(source, root / 'dist', host)
+
+
+def _scanner_validate_local_release(root, source, *, role, expected_catalog, expected_archive=None):
+    archive_digests = set()
     for destination in ('runtime', 'dist/cursor', 'dist/claude-code'):
         plugin = root / destination
         archive = (plugin / 'shipwright.pyz').resolve()
-        assert archive.name.startswith('shipwright-') and not archive.is_symlink()
         manifest = json.loads((plugin / 'shipwright.manifest.json').read_bytes())
+        archive_digests.add(_scanner_hash(archive.read_bytes()))
+        assert sorted(zipfile.ZipFile(archive).namelist()) == sorted([*manifest['modules'], '__main__.py'])
         with zipfile.ZipFile(archive) as built:
-            assert sorted(built.namelist()) == sorted([*manifest['modules'], '__main__.py'])
             for name in (*_SCANNER_MODULES, _SCANNER_CATALOG):
                 assert built.namelist().count(name) == manifest['modules'].count(name) == 1
-                assert built.read(name) == (SCRIPT_DIR / name).read_bytes()
-            assert json.loads(built.read(_SCANNER_CATALOG)) == {'schemaVersion': 1, 'records': []}
+                assert built.read(name) == (source / 'scripts' / name).read_bytes()
+            assert _scanner_hash(built.read(_SCANNER_CATALOG)) == expected_catalog
         if destination.startswith('dist/'):
+            host = destination.split('/')[1]
             for name in ('troubleshooting', 'trust-anchors'):
                 assert (plugin / f'documentation/{name}.md').read_bytes() == (
-                    SCRIPT_DIR.parent / f'core/documentation/{name}.md').read_bytes()
-            assert _scripts_tree_is_shim_only(plugin / 'scripts', destination.split('/')[1])
-    return root
+                    source / f'core/documentation/{name}.md').read_bytes()
+            assert _scripts_tree_is_shim_only(plugin / 'scripts', host)
+    assert len(archive_digests) == 1
+    archive_sha256 = archive_digests.pop()
+    if expected_archive is not None:
+        assert archive_sha256 == expected_archive
+    return _scanner_register_release(root, role, archive_sha256, expected_catalog)
+
+
+def _scanner_validate_supplied_current(root):
+    root = Path(root)
+    assert root.is_dir() and not root.is_symlink(), 'supplied current release root unavailable'
+    proof = json.loads((root / 'proof.json').read_bytes())
+    commands = json.loads((root / 'commands.json').read_bytes())
+    inventory = json.loads((root / 'causal-output-inventory.json').read_bytes())
+    docs = json.loads((root / 'causal-docs-proof.json').read_bytes())
+    assert proof['verdict'] == 'pass' and proof['omissions'] == []
+    assert commands == proof['commands'] and len(commands) == 2
+    assert all(command['exitCode'] == 0 for command in commands)
+    assert commands[0]['command'][1:5] == ['scripts/build_zipapp.py', '--root', '.', 'build']
+    assert commands[1]['command'][1:5] == ['-m', 'sw', 'generate', '--all']
+    assert proof['operatorMcpEditsPreserved'] and proof['indexEmptyBeforeAfter']
+    assert json.loads((root / 'primary-before.json').read_bytes()) == json.loads(
+        (root / 'primary-after.json').read_bytes())
+    actual = {str(path.relative_to(root)) for directory in ('runtime', 'dist')
+              for path in (root / directory).rglob('*') if path.is_file() or path.is_symlink()}
+    assert actual == set(inventory) and len(inventory) == proof['outputCount'] == 866
+    for relative, pin in inventory.items():
+        path = root / relative
+        assert ({'symlink': os.readlink(path)} if path.is_symlink() else
+                {'sha256': _scanner_hash(path.read_bytes())}) == pin
+    assert docs == proof['causalDocumentation'] and len(docs) == 4
+    for relative, pin in docs.items():
+        emitted = (root / relative).read_bytes()
+        source = (SCRIPT_DIR.parent / pin['source']).read_bytes()
+        assert emitted == source
+        assert pin['sourceSha256'] == pin['emittedSha256'] == _scanner_hash(emitted)
+    for relative, pin in proof['phaseSourceInputs'].items():
+        assert _scanner_hash((SCRIPT_DIR.parent / relative).read_bytes()) == pin['sha256']
+    return _scanner_validate_local_release(
+        root, SCRIPT_DIR.parent, role='current',
+        expected_catalog=_SCANNER_CURRENT_CATALOG_SHA256,
+        expected_archive=_SCANNER_CURRENT_ARCHIVE_SHA256)
+
+
+@pytest.fixture(scope='module')
+def scanner_documented_release(tmp_path_factory):
+    """Return independent synthetic S normally, or sealed historical E in strict mode."""
+    mode = os.environ.get('SHIPWRIGHT_TEST_SCANNER_RELEASE_MODE')
+    assert mode in (None, '', 'regression', _SCANNER_RELEASE_MODE), 'unsupported scanner release fixture mode'
+    if mode == _SCANNER_RELEASE_MODE:
+        pins = _scanner_load_acceptance_pins()
+        current = os.environ.get('SHIPWRIGHT_TEST_SCANNER_STANDARD_BUILD')
+        historical = os.environ.get('SHIPWRIGHT_TEST_SCANNER_FIRST_EMPTY_BUILD')
+        assert current and historical, 'strict release acceptance requires C and E bundles'
+        _scanner_validate_sealed_release(Path(current), pins['current'], historical=False)
+        return _scanner_validate_sealed_release(Path(historical), pins['historical'], historical=True)
+    else:
+        root = tmp_path_factory.mktemp('scanner-documentation-release')
+        source = root / 'tracked-source'
+        current_inventory = _scanner_make_own_git_source(source)
+        catalog_relative = 'scripts/' + _SCANNER_CATALOG
+        assert current_inventory[catalog_relative]['sha256'] == _SCANNER_CURRENT_CATALOG_SHA256
+        (source / 'scripts' / _SCANNER_CATALOG).write_bytes(_SCANNER_EMPTY_CATALOG)
+        synthetic_inventory = _scanner_tracked_inventory(source)
+        assert set(synthetic_inventory) == set(current_inventory)
+        assert {relative for relative in current_inventory
+                if current_inventory[relative] != synthetic_inventory[relative]} == {catalog_relative}
+        assert synthetic_inventory[catalog_relative]['sha256'] == _scanner_hash(_SCANNER_EMPTY_CATALOG)
+        _scanner_build_release(source, root)
+        return _scanner_validate_local_release(
+            root, source, role='synthetic', expected_catalog=_scanner_hash(_SCANNER_EMPTY_CATALOG))
+
+
+@pytest.fixture(scope='module')
+def scanner_current_release(tmp_path_factory):
+    """Prove current populated C without any historical or private input."""
+    mode = os.environ.get('SHIPWRIGHT_TEST_SCANNER_RELEASE_MODE')
+    if mode == _SCANNER_RELEASE_MODE:
+        pins = _scanner_load_acceptance_pins()
+        current = os.environ.get('SHIPWRIGHT_TEST_SCANNER_STANDARD_BUILD')
+        assert current, 'strict release acceptance requires C bundle'
+        return _scanner_validate_sealed_release(Path(current), pins['current'], historical=False)
+    assert mode in (None, '', 'regression'), 'unsupported scanner release fixture mode'
+    supplied = os.environ.get('SHIPWRIGHT_TEST_SCANNER_STANDARD_BUILD')
+    if supplied:
+        return _scanner_validate_supplied_current(supplied)
+    root = tmp_path_factory.mktemp('scanner-current-release')
+    source = root / 'tracked-source'
+    _scanner_make_own_git_source(source)
+    _scanner_build_release(source, root)
+    return _scanner_validate_local_release(
+        root, source, role='current',
+        expected_catalog=_SCANNER_CURRENT_CATALOG_SHA256,
+        expected_archive=_SCANNER_CURRENT_ARCHIVE_SHA256)
 
 
 def _scanner_use_standard_release(fixture, release, host):
     """Copy actual emitted launcher/shim assets into the existing secure fixture."""
+    identity = _SCANNER_RELEASE_IDENTITIES.get(str(Path(release).resolve()))
+    assert identity is not None, 'release must pass role-specific validation before installation'
     shutil.rmtree(fixture.plugin)
     shutil.copytree(release / 'dist' / host, fixture.plugin, symlinks=True)
     fixture.archive = (fixture.plugin / 'shipwright.pyz').resolve()
     fixture.shim = fixture.plugin / 'scripts/sw-run.py'
-    fixture.catalog = (SCRIPT_DIR / _SCANNER_CATALOG).read_bytes()
     with zipfile.ZipFile(fixture.archive) as built:
+        fixture.catalog = built.read(_SCANNER_CATALOG)
+        assert _scanner_hash(fixture.archive.read_bytes()) == identity['archiveSha256']
+        assert _scanner_hash(fixture.catalog) == identity['catalogSha256']
         assert built.read('_zipapp_launcher.py') == fixture.launcher.encode()
         assert b'_zipapp_launcher.main()' in built.read('__main__.py')
     if host == 'claude-code':
@@ -912,6 +1133,88 @@ def _scanner_run_documented(fixture, entry, command):
                                      'archive': fixture.archive, 'shim': fixture.shim}[entry].resolve()
     # invoke supplies the existing isolated account harness, then the real entry.
     return fixture.invoke(entry, argv[prefix:])
+
+
+def test_scanner_current_standard_release_identity(scanner_current_release):
+    identity = _SCANNER_RELEASE_IDENTITIES[str(scanner_current_release.resolve())]
+    assert identity == {
+        'role': 'current',
+        'archiveSha256': _SCANNER_CURRENT_ARCHIVE_SHA256,
+        'catalogSha256': _SCANNER_CURRENT_CATALOG_SHA256,
+    }
+    for host in ('cursor', 'claude-code'):
+        plugin = scanner_current_release / 'dist' / host
+        with zipfile.ZipFile((plugin / 'shipwright.pyz').resolve()) as built:
+            assert _scanner_hash(built.read(_SCANNER_CATALOG)) == _SCANNER_CURRENT_CATALOG_SHA256
+            assert len(json.loads(built.read(_SCANNER_CATALOG))['records']) == 6
+
+
+@_SCANNER_NATIVE
+@pytest.mark.parametrize('host', ('cursor', 'claude-code'))
+@pytest.mark.parametrize('entry', _SCANNER_ENTRIES)
+def test_scanner_populated_release_entries(scanner_install, scanner_current_release, host, entry):
+    private = os.environ.get('SHIPWRIGHT_TEST_TIERFORGE_REPO')
+    if not private:
+        pytest.skip('private release acceptance requires original pinned Git authority')
+    fixture = scanner_install
+    _scanner_use_standard_release(fixture, scanner_current_release, host)
+    base = '6e811cd5c56726a5b0f4a8474b8b154b85ca852c'
+    target = '574d6097e3f3a9cec08e1c9ab81052307c71b965'
+    fixture.git('-c', 'protocol.file.allow=always', 'fetch', '--no-tags', private, base, target)
+    fixture.git('reset', '--hard', target)
+    fixture.git('update-ref', 'refs/remotes/origin/main', base)
+    fixture.git('remote', 'set-url', 'origin', 'https://github.com/grdavies/tierforge.git')
+    before = fixture.scan_readonly(entry, 1)
+    assert before.stderr.count('[SENTRY_PII_KV]') == 5
+    assert before.stderr.count('[DB_URL]') == 1
+    commands = _scanner_documented_commands(SCRIPT_DIR.parent)
+    result = _scanner_run_documented(fixture, entry, commands[_SCANNER_ENTRIES.index(entry) + 3])
+    assert result.returncode == 0
+    after = fixture.scan_readonly(entry, 0)
+    assert '[SENTRY_PII_KV]' not in after.stderr and '[DB_URL]' not in after.stderr
+
+
+@pytest.mark.parametrize('case', (
+    'swap-empty-current',
+    'swap-current-empty',
+    'wrong-empty-archive-pin',
+    'wrong-empty-catalog-pin',
+    'wrong-empty-evidence-pin',
+    'current-source-catalog-mismatch',
+    'missing-empty-bundle',
+    'missing-current-bundle',
+))
+def test_scanner_acceptance_release_binding_negative(case, tmp_path, tmp_path_factory, monkeypatch):
+    if os.environ.get('SHIPWRIGHT_TEST_SCANNER_RELEASE_MODE') != _SCANNER_RELEASE_MODE:
+        pytest.skip('strict sealed release inputs required')
+    pins_path = Path(os.environ['SHIPWRIGHT_TEST_SCANNER_ACCEPTANCE_PINS'])
+    pins = json.loads(pins_path.read_bytes())
+    current = os.environ['SHIPWRIGHT_TEST_SCANNER_STANDARD_BUILD']
+    historical = os.environ['SHIPWRIGHT_TEST_SCANNER_FIRST_EMPTY_BUILD']
+    if case == 'swap-empty-current':
+        monkeypatch.setenv('SHIPWRIGHT_TEST_SCANNER_FIRST_EMPTY_BUILD', current)
+    elif case == 'swap-current-empty':
+        monkeypatch.setenv('SHIPWRIGHT_TEST_SCANNER_STANDARD_BUILD', historical)
+    elif case == 'missing-empty-bundle':
+        monkeypatch.setenv('SHIPWRIGHT_TEST_SCANNER_FIRST_EMPTY_BUILD', str(tmp_path / 'missing-empty'))
+    elif case == 'missing-current-bundle':
+        monkeypatch.setenv('SHIPWRIGHT_TEST_SCANNER_STANDARD_BUILD', str(tmp_path / 'missing-current'))
+    else:
+        if case == 'wrong-empty-archive-pin':
+            pins['historical']['archiveSha256'] = '0' * 64
+        elif case == 'wrong-empty-catalog-pin':
+            pins['historical']['catalogSha256'] = '0' * 64
+        elif case == 'wrong-empty-evidence-pin':
+            pins['historical']['companionSha256']['proof.json'] = '0' * 64
+        elif case == 'current-source-catalog-mismatch':
+            pins['current']['catalogSha256'] = '0' * 64
+        variant = tmp_path / ('acceptance-pins-' + case + '.json')
+        variant.write_text(json.dumps(pins, sort_keys=True, separators=(',', ':')))
+        monkeypatch.setenv('SHIPWRIGHT_TEST_SCANNER_ACCEPTANCE_PINS', str(variant))
+        monkeypatch.setenv('SHIPWRIGHT_TEST_SCANNER_ACCEPTANCE_PINS_SHA256',
+                           _scanner_hash(variant.read_bytes()))
+    with pytest.raises(AssertionError):
+        scanner_documented_release.__wrapped__(tmp_path_factory)
 
 
 @_SCANNER_NATIVE

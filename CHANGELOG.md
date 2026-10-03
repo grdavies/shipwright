@@ -1481,6 +1481,7 @@
 * merge phase match-exact-occurrences-against-a-strict-empty-catalog into fix/secret-scan-exact-occurrences (d26760c) <!-- sw-deliver:match-exact-occurrences-against-a-strict-empty-catalog -->
 * merge phase validate-operator-trust-and-repository-lifecycle-without-scan-writes into fix/secret-scan-exact-occurrences (2b7f09c) <!-- sw-deliver:validate-operator-trust-and-repository-lifecycle-without-scan-writes -->
 * merge phase enforce-release-integrity-and-explicit-enrollment-through-actual-entries into fix/secret-scan-exact-occurrences (d521486) <!-- sw-deliver:enforce-release-integrity-and-explicit-enrollment-through-actual-entries -->
+* merge phase verify-packaging-document-adoption-and-complete-the-empty-release-gate into fix/secret-scan-exact-occurrences (b0a3d44) <!-- sw-deliver:verify-packaging-document-adoption-and-complete-the-empty-release-gate -->
 ## [1.5.0](https://github.com/grdavies/shipwright/compare/v1.4.0...v1.5.0) (2026-06-25)
 
 
