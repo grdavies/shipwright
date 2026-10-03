@@ -1050,7 +1050,8 @@ class ExactMatchingTests(unittest.TestCase):
             _exact_catalog([_exact_record(o.identity) for o in occurrences]), occurrences), occurrences)
         self.assertEqual(exact.approved_occurrences(_exact_catalog([]), occurrences), ())
         self.assertEqual(len(occurrences), 6)
-        production = exact.parse_catalog((ROOT / 'scripts/secret_scan_data/reviewed-occurrences.v1.json').read_bytes())
+        # Keep this public synthetic regression independent of the populated release catalog.
+        production = _exact_catalog([])
         self.assertEqual(production.records, ())
         self.assertEqual(exact.approved_occurrences(production, occurrences), ())
 
@@ -1982,3 +1983,56 @@ def test_trust_actual_non_darwin_platform_declines(operator_trust):
 def test_trust_new_fixture_source_is_baseline_clean():
     source = Path(__file__).read_text().split('# PRD 367 task 3.2:', 1)[1]
     assert scan.scan_text(source, allowlist=ALLOW) == []
+
+
+def test_actual_populated_catalog_matches_frozen_identity():
+    raw = (ROOT / 'scripts/secret_scan_data/reviewed-occurrences.v1.json').read_bytes()
+    assert hashlib.sha256(raw).hexdigest() == 'a9c8d44180dcf5f6686bbd4dee2cfecc63c552418d312723eb47d94aa66be60e'
+    catalog = exact.parse_catalog(raw)
+    identities = [dataclasses.asdict(record.identity) for record in catalog.records]
+    assert identities == _APPROVED_EXACT_METADATA
+    assert [record.reviewEvidence.id for record in catalog.records] == [
+        f'prd:367-prd-secret-scan-exact-occurrences/EO-{index:02d}' for index in range(1, 7)
+    ]
+    assert [identity['family'] for identity in identities].count('DB_URL') == 1
+    assert [identity['family'] for identity in identities].count('SENTRY_PII_KV') == 5
+
+
+def test_actual_populated_catalog_selected_private_six():
+    fixture_root = os.environ.get('SHIPWRIGHT_TEST_TIERFORGE_REPO')
+    if not fixture_root:
+        pytest.skip('private pinned Git objects absent; set SHIPWRIGHT_TEST_TIERFORGE_REPO for real-six verification')
+    root = Path(fixture_root)
+    base = '6e811cd5c56726a5b0f4a8474b8b154b85ca852c'
+    target = '574d6097e3f3a9cec08e1c9ab81052307c71b965'
+    env = dict(os.environ, GIT_NO_REPLACE_OBJECTS='1', GIT_TERMINAL_PROMPT='0')
+
+    def git(*args):
+        return subprocess.check_output(['git', '--no-replace-objects', *args], cwd=root,
+                                       env=env, stderr=subprocess.PIPE, timeout=10)
+
+    patch_bytes = git('diff', '--no-ext-diff', '--no-textconv', base, target)
+    blobs = {}
+    for row in _APPROVED_EXACT_METADATA:
+        oid = git('rev-parse', target + ':' + row['path']).strip().decode()
+        data = git('cat-file', 'blob', oid)
+        assert oid == row['blobOid']
+        assert len(data) == row['sourceByteLength']
+        assert hashlib.sha256(data).hexdigest() == row['sourceSha256']
+        blobs[row['path']] = exact.CommittedBlob(
+            row['path'], row['objectFormat'], oid, row['sourceSha256'], data)
+    occurrences = exact.map_added_occurrences(
+        patch_bytes, repo_id='github.com/grdavies/tierforge', blobs=blobs)
+    assert [dataclasses.asdict(occurrence.identity) for occurrence in occurrences] == _APPROVED_EXACT_METADATA
+    assert [occurrence.added_line for occurrence in occurrences] == [8, 11, 6, 21, 33, 41]
+    catalog = exact.parse_catalog((ROOT / 'scripts/secret_scan_data/reviewed-occurrences.v1.json').read_bytes())
+    for occurrence in occurrences:
+        assert exact.approved_occurrences(catalog, (occurrence,)) == (occurrence,)
+    assert exact.approved_occurrences(catalog, occurrences) == occurrences
+    assert exact.approved_occurrences(_exact_catalog([]), occurrences) == ()
+    production_path = _APPROVED_EXACT_METADATA[1]['path']
+    line_13 = blobs[production_path].data.splitlines()[12].decode()
+    assert any(detector.pattern.search(line_13) for detector in DENY_PATTERNS
+               if detector.name == 'SENTRY_PII_KV')
+    assert not any(occurrence.identity.path == production_path
+                   and occurrence.identity.sourceLine1Based == 13 for occurrence in occurrences)
