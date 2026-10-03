@@ -16,7 +16,7 @@ def guard(repo_root):
 
 @pytest.fixture
 def issue(guard, monkeypatch):
-    import planning_store as store
+    import planning_store as ps
     from planning.model import StoreResult
     uid = "367-prd-secret-scan-exact-occurrences"
     state = {"handle": "issue:1081", "status": "planned", "body": "---\nfrozen: false\n---\n# Canonical parent\n", "verdict": "ok"}
@@ -30,7 +30,7 @@ def issue(guard, monkeypatch):
             if state.get("raise"):
                 raise RuntimeError("provider unavailable")
             return StoreResult(state["verdict"], state.get("result_unit", unit_id), state.get("result_path", body_path), state.get("result_backend", "issue-store"), content=state["body"])
-    monkeypatch.setattr(store, "get_backend", lambda root: Backend())
+    monkeypatch.setattr(ps, "get_backend", lambda root: Backend())
     monkeypatch.setattr(guard.pig, "discover_units", lambda root: [SimpleNamespace(id=state.get("unit", uid), body_path=state["handle"])])
     monkeypatch.setattr(guard, "reconcile_generation_token", lambda root, unit: {"consumerStatus": state["status"], "token": "witness"})
     monkeypatch.setattr(guard, "propose_complete_change_route", lambda root, unit: {"kind": "new-unit"})
@@ -196,7 +196,7 @@ def test_non_issue_backend_refuses_before_get(guard, issue, tmp_path, backend):
 
 @pytest.mark.parametrize("handle", ["issue:1081", "issue-cache:367-prd-secret-scan-exact-occurrences"])
 def test_real_file_backend_cannot_credit_handle_named_shadow(guard, issue, monkeypatch, tmp_path, handle):
-    import planning_store as store
+    import planning_store as ps
     from planning.backends.in_repo import InRepoPublicBackend
     uid, state, calls = issue
     state["handle"] = handle
@@ -209,7 +209,7 @@ def test_real_file_backend_cannot_credit_handle_named_shadow(guard, issue, monke
         file_reads.append((unit, path))
         return original_get(unit, path)
     monkeypatch.setattr(backend, "get", spy_get)
-    monkeypatch.setattr(store, "get_backend", lambda root: backend)
+    monkeypatch.setattr(ps, "get_backend", lambda root: backend)
     with pytest.raises(SystemExit) as exit:
         guard.amend_status_guard(tmp_path, uid, None)
     assert exit.value.code == 20
