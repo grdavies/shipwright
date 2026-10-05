@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.23.4](https://github.com/grdavies/shipwright/compare/v2.23.3...v2.23.4) (2026-10-03)
+
+
+### Bug Fixes
+
+* **planning:** resolve canonical issue-store amendment parents ([#1315](https://github.com/grdavies/shipwright/issues/1315)) ([c34e46c](https://github.com/grdavies/shipwright/commit/c34e46c632b09b512a7905b7ed3000dd7b576243))
+
+## [2.23.3](https://github.com/grdavies/shipwright/compare/v2.23.2...v2.23.3) (2026-10-01)
+
+
+### Bug Fixes
+
+* **planning:** recover incomplete freezes with retained evidence ([08cad93](https://github.com/grdavies/shipwright/commit/08cad936703395c396521f03430d792b43883b27))
+
 ## [2.23.2](https://github.com/grdavies/shipwright/compare/v2.23.1...v2.23.2) (2026-09-27)
 
 

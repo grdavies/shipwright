@@ -346,9 +346,6 @@ def amend_status_guard(root: Path, unit_id: str, artifact: str | None) -> None:
     info = reconcile_generation_token(root, unit_id)
     status = info["consumerStatus"]
     token = info["token"]
-    body = unit_body_path(root, unit_id)
-    frozen_open = is_frozen_open_parent(root, unit_id)
-
     if status == "complete":
         route = propose_complete_change_route(root, unit_id)
         emit(
@@ -374,6 +371,45 @@ def amend_status_guard(root: Path, unit_id: str, artifact: str | None) -> None:
             generationToken=token,
         )
 
+    units = {unit.id: unit for unit in pig.discover_units(root)}
+    unit = units.get(unit_id)
+    if unit and unit.body_path.startswith(("issue:", "issue-cache:")):
+        from planning.identity import is_namespaced_native_unit_id
+
+        if not (re.fullmatch(r"[A-Za-z0-9._-]+", unit_id) or is_namespaced_native_unit_id(unit_id)) or not (
+            re.fullmatch(r"issue:[A-Za-z0-9][A-Za-z0-9._:-]*", unit.body_path)
+            or unit.body_path == f"issue-cache:{unit_id}"
+        ):
+            fail("invalid issue parent handle", cause="invalid-parent-handle", unitId=unit_id)
+        # Issue body text/temporary projections never establish official freeze.
+        if status not in AMEND_ALLOWED_STATUSES:
+            fail(
+                f"/sw-amend refused: issue unit status is {status!r}",
+                cause="status-not-allowed",
+                unitId=unit_id,
+                consumerStatus=status,
+                generationToken=token,
+            )
+        from planning_store import get_backend
+
+        backend = get_backend(root)
+        if backend.backend_id != "issue-store":
+            fail("issue discovery/store backend mismatch", cause="backend-discovery-mismatch", unitId=unit_id)
+        result = backend.get(unit_id, unit.body_path)
+        if result.backend != "issue-store" or result.unit_id != unit_id or result.body_path != unit.body_path:
+            fail("issue parent result provenance mismatch", cause="backend-result-mismatch", unitId=unit_id)
+        if result.verdict != "ok" or not isinstance(result.content, str) or not result.content.strip():
+            fail(
+                f"/sw-amend refused: canonical parent body unavailable for {unit_id!r}",
+                cause="missing-parent",
+                unitId=unit_id,
+                consumerStatus=status,
+                generationToken=token,
+            )
+        return
+
+    body = unit_body_path(root, unit_id)
+    frozen_open = is_frozen_open_parent(root, unit_id)
     if body is None or not body.is_file():
         fail(
             f"/sw-amend refused: parent body not found for unit {unit_id!r}",

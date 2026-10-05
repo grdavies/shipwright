@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "releaseVersion": "2.23.2",
+  "releaseVersion": "2.23.4",
   "distributionOrigin": "https://github.com/grdavies/shipwright/releases",
   "integrity": {
     "algorithm": "sha256",
     "mechanism": "sha256-digest",
-    "sha256": "8ba432c467d1a307eb24038519fa006327856e5d5164feca0fd602af8420f9e8"
+    "sha256": "df44369dfb7ee95dd5627d0f041cc4e0529f15f4cd2f25a2753580957449ae74"
   }
 }
