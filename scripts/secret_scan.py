@@ -2,12 +2,18 @@
 """Pre-push secret scan — deny patterns single-sourced with memory_redact (R41/R50/R51)."""
 from __future__ import annotations
 
+import argparse
 import json
+import re
+import time
 import subprocess
 import sys
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+
+import secret_scan_exact as exact
+from secret_scan_exact import AcquisitionError, acquisition_active, acquisition_scope, git_text
 
 from secret_patterns import DENY_PATTERNS, email_match_is_schema_version_token
 
@@ -33,6 +39,14 @@ class Finding:
 
 
 def repo_root() -> Path:
+    if acquisition_active():
+        try:
+            return Path(git_text(["rev-parse", "--show-toplevel"]).strip())
+        except AcquisitionError:
+            raise
+        except RuntimeError as exc:
+            raise RuntimeError("secret-scan: not in a git repository") from exc
+    # Plaintext consumers retain their original cross-platform discovery path.
     try:
         out = subprocess.check_output(
             ["git", "rev-parse", "--show-toplevel"],
@@ -78,6 +92,17 @@ def scan_text(
     allowlist: dict[str, list[str]],
     path: str | None = None,
 ) -> list[Finding]:
+    return _scan_text(text, allowlist=allowlist, path=path, approved=set())
+
+
+def _scan_text(
+    text: str,
+    *,
+    allowlist: dict[str, list[str]],
+    path: str | None,
+    approved: set[tuple[str, int, int, int]],
+) -> list[Finding]:
+    """Project retained regex occurrences through the original Finding format."""
     findings: list[Finding] = []
     for line_no, line in enumerate(text.splitlines(), start=1):
         for deny in DENY_PATTERNS:
@@ -96,6 +121,8 @@ def scan_text(
                     continue
                 if is_allowed(matched=matched, line=line, path=path, allowlist=allowlist):
                     continue
+                if (deny.name, line_no, match.start(), match.end()) in approved:
+                    continue
                 excerpt = line.strip()
                 if len(excerpt) > 120:
                     excerpt = excerpt[:117] + "..."
@@ -104,70 +131,162 @@ def scan_text(
 
 
 def git_out(*args: str, cwd: Path) -> str:
-    try:
-        return subprocess.check_output(["git", *args], cwd=cwd, stderr=subprocess.STDOUT, text=True)
-    except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f"secret-scan: git {' '.join(args)} failed: {exc.output.strip()}") from exc
+    return git_text(list(args), cwd=cwd)
 
 
-def collect_pre_push_diff(root: Path) -> str:
-    upstream = None
-    try:
-        upstream = git_out("rev-parse", "@{upstream}", cwd=root).strip()
-    except RuntimeError:
-        upstream = None
+@dataclass(frozen=True)
+class _PrePushSelection:
+    """Baseline patch and its pinned endpoints; never evidence of source approval.
 
-    if upstream:
+    Root and merge-log selections have no single base; kind distinguishes them.
+    A merge log is not first-parent patch provenance. Uncommitted fallback has
+    neither endpoint and cannot supply committed source context.
+    """
+
+    diff: str
+    kind: str
+    base_oid: str | None
+    target_oid: str | None
+
+
+def _resolve_commit(root: Path, revision: str) -> str:
+    oid = git_out("rev-parse", "--verify", "--end-of-options", f"{revision}^{{commit}}", cwd=root).strip()
+    if len(oid) not in (40, 64) or any(c not in "0123456789abcdef" for c in oid):
+        raise RuntimeError("secret-scan: invalid resolved commit identity")
+    return oid
+
+
+
+def _head_is_unborn(root: Path) -> bool:
+    """Permit the legacy worktree fallback only for a missing symbolic branch."""
+    with acquisition_scope() as acquisition:
+        symbolic = acquisition.run(
+            ['git', '--no-replace-objects', 'symbolic-ref', '--quiet', 'HEAD'], cwd=root,
+        )
+        if symbolic.returncode != 0 or not symbolic.stdout.endswith(b"\n"):
+            return False
         try:
-            merge_base = git_out("merge-base", upstream, "HEAD", cwd=root).strip()
-            return git_out("diff", f"{merge_base}..HEAD", cwd=root)
+            branch = symbolic.stdout[:-1].decode('utf-8')
+        except UnicodeError:
+            return False
+        if not branch.startswith('refs/heads/') or '\0' in branch or '\n' in branch:
+            return False
+        exists = acquisition.run(
+            ['git', '--no-replace-objects', 'show-ref', '--verify', '--quiet', '--', branch],
+            cwd=root,
+        )
+        return exists.returncode == 1
+
+
+def _collect_pre_push_selection(root: Path) -> _PrePushSelection:
+    with acquisition_scope():
+        return _select_pre_push(root)
+
+
+def _select_pre_push(root: Path) -> _PrePushSelection:
+    """Select once, then acquire using object IDs instead of moving refs.
+
+    Unavailable selection probes retain the legacy fallback order. Once selected,
+    patch acquisition errors propagate: a smaller range cannot stand in for a
+    failed baseline scan. Resolver output proposes a range, never source trust.
+    """
+    try:
+        head = _resolve_commit(root, "HEAD")
+    except AcquisitionError:
+        raise
+    except RuntimeError as exc:
+        if not _head_is_unborn(root):
+            raise AcquisitionError("secret-scan: baseline acquisition failed") from exc
+        head = None
+
+    def resolve(revision: str) -> str:
+        revision = revision or "HEAD"
+        for alias in ("HEAD", "@"):
+            if head and revision == alias:
+                return head
+            if head and revision.startswith((alias + "~", alias + "^")):
+                revision = head + revision[len(alias):]
+                break
+        return _resolve_commit(root, revision)
+
+    def between(kind: str, base: str, target: str) -> _PrePushSelection:
+        return _PrePushSelection(git_out("diff", f"{base}..{target}", cwd=root), kind, base, target)
+
+    if head:
+        try:
+            upstream = resolve("@{upstream}")
+            base = git_out("merge-base", upstream, head, cwd=root).strip()
+        except AcquisitionError:
+            raise
         except RuntimeError:
             pass
+        else:
+            return between("upstream", base, head)
 
     resolver = root / "scripts" / "resolve_base_branch.py"
     if resolver.is_file():
+        resolved = None
         try:
-            proc = subprocess.run(
-                [sys.executable, str(resolver), "diff-base"],
-                cwd=root,
-                capture_output=True,
-                text=True,
-            )
+            with acquisition_scope() as acq:
+                proc = acq.run([sys.executable, str(resolver), "diff-base"], cwd=root)
             if proc.returncode == 0:
                 data = json.loads(proc.stdout)
-                range_spec = data.get("range", "")
-                if ".." in range_spec:
-                    base_sha, head_sha = range_spec.split("..", 1)
-                    return git_out("diff", f"{base_sha}..{head_sha}", cwd=root)
-        except (RuntimeError, json.JSONDecodeError, subprocess.SubprocessError):
+                range_spec = data.get("range", "") if isinstance(data, dict) else ""
+                if isinstance(range_spec, str) and ".." in range_spec:
+                    if "..." in range_spec:
+                        base_ref, target_ref = range_spec.split("...", 1)
+                        base, target = resolve(base_ref), resolve(target_ref)
+                        base = git_out("merge-base", base, target, cwd=root).strip()
+                    else:
+                        base_ref, target_ref = range_spec.split("..", 1)
+                        base, target = resolve(base_ref), resolve(target_ref)
+                    resolved = (base, target)
+        except AcquisitionError:
+            raise
+        except (RuntimeError, ValueError, UnicodeError):
             pass
+        if resolved is not None:
+            return between("resolver", *resolved)
 
-    try:
-        unpushed = git_out("rev-list", "HEAD", "--not", "--remotes", cwd=root).strip()
-        if unpushed:
-            shas = [s for s in unpushed.split() if s]
-            if shas:
-                parent = git_out("rev-parse", f"{shas[-1]}^", cwd=root).strip()
-                return git_out("diff", f"{parent}..HEAD", cwd=root)
-    except RuntimeError:
-        pass
-
-    for base in ("origin/main", "main", "origin/master", "master"):
+    if head:
+        parent = None
         try:
-            git_out("rev-parse", "--verify", base, cwd=root)
-            diff = git_out("diff", f"{base}...HEAD", cwd=root)
-            if diff.strip():
-                return diff
+            unpushed = git_out("rev-list", head, "--not", "--remotes", cwd=root).split()
+            if unpushed:
+                parent = resolve(f"{unpushed[-1]}^")
+        except AcquisitionError:
+            raise
         except RuntimeError:
-            continue
+            pass
+        if parent is not None:
+            return between("unpushed", parent, head)
 
-    try:
-        if git_out("rev-parse", "--verify", "HEAD~0", cwd=root):
-            return git_out("log", "--format=", "-p", "-1", "HEAD", cwd=root)
-    except RuntimeError:
-        pass
+        for candidate in ("origin/main", "main", "origin/master", "master"):
+            try:
+                base = resolve(candidate)
+                base = git_out("merge-base", base, head, cwd=root).strip()
+            except AcquisitionError:
+                raise
+            except RuntimeError:
+                continue
+            selected = between("triple-dot", base, head)
+            if selected.diff.strip():
+                return selected
 
-    return git_out("diff", "--cached", cwd=root) + git_out("diff", cwd=root)
+        parents = git_out("rev-list", "--parents", "-n", "1", head, cwd=root).split()[1:]
+        # Keep log's legacy merge/root patch semantics rather than substituting
+        # a first-parent diff, which can change the selected additions.
+        diff = git_out("log", "--format=", "-p", "-1", head, cwd=root)
+        if len(parents) > 1:
+            return _PrePushSelection(diff, "merge-commit", None, head)
+        return _PrePushSelection(diff, "last-commit" if parents else "root", parents[0] if parents else None, head)
+
+    diff = git_out("diff", "--cached", cwd=root) + git_out("diff", cwd=root)
+    return _PrePushSelection(diff, "uncommitted", None, None)
+
+
+def collect_pre_push_diff(root: Path) -> str:
+    return _collect_pre_push_selection(root).diff
 
 
 def iter_diff_file_chunks(diff: str) -> Iterator[tuple[str, str]]:
@@ -240,13 +359,82 @@ def report_findings(findings: list[Finding]) -> None:
     )
 
 
+def _approved_pre_push_occurrences(root: Path, selection: _PrePushSelection):
+    """Optional context only: failure never replaces the selected baseline."""
+    if selection.kind in ("uncommitted", "merge-commit") or not selection.target_oid:
+        return ()
+    raw = exact.raw_selected_patch()
+    if raw is None:
+        return ()
+    # Mapping uses raw LF coordinates; legacy Git text uses universal newlines.
+    # Decline exotic separators rather than guessing between coordinate systems.
+    normalized = raw.decode("utf-8").replace("\r\n", "\n").replace("\r", "\n")
+    if (normalized != selection.diff or not normalized.endswith("\n")
+            or normalized.count("\n") != raw.count(b"\n")
+            or normalized.splitlines() != normalized.split("\n")[:-1]):
+        return ()
+    release = exact.read_verified_release(root)
+    if release is None or not release.catalog.records:
+        return ()
+    paths = list(dict.fromkeys(record.identity.path for record in release.catalog.records
+                               if record.identity.repoId == release.pins.repo_id))
+    blobs = exact.acquire_blobs(root, selection, paths)
+    occurrences = exact.map_added_occurrences(raw, repo_id=release.pins.repo_id, blobs=blobs)
+    return exact.approved_occurrences(release.catalog, occurrences)
+
+
+def _scan_pre_push_diff(diff: str, *, allowlist: dict[str, list[str]], approved) -> list[Finding]:
+    # Raw patch positions prevent a legacy path-parser alias or repeated chunk
+    # from lending one file's approval to another file's diagnostic coordinate.
+    by_patch_line: dict[int, set[tuple[str, int, int]]] = {}
+    for occurrence in approved:
+        by_patch_line.setdefault(occurrence.patch_line, set()).add(
+            (occurrence.identity.family, occurrence.start_char, occurrence.end_char))
+    findings: list[Finding] = []
+    cursor = 0
+    patch_line = 1
+    for path, chunk in iter_diff_file_chunks(diff):
+        start = diff.index(chunk, cursor)
+        patch_line += diff[cursor:start].count("\n")
+        allowed: set[tuple[str, int, int, int]] = set()
+        added_line = 0
+        for offset, line in enumerate(chunk.splitlines()):
+            if line.startswith(("+++", "---", "@@", "diff ")):
+                continue
+            if line.startswith("+"):
+                added_line += 1
+                for family, first, last in by_patch_line.get(patch_line + offset, ()):
+                    allowed.add((family, added_line, first, last))
+        if "Binary files " not in chunk:
+            added = diff_added_lines_only(chunk)
+            if added.strip():
+                findings.extend(_scan_text(added, allowlist=allowlist, path=path, approved=allowed))
+        patch_line += chunk.count("\n")
+        cursor = start + len(chunk)
+    return findings
+
+
 def cmd_pre_push(root: Path, allowlist: dict[str, list[str]]) -> int:
-    diff = collect_pre_push_diff(root)
-    findings = scan_diff(diff, allowlist=allowlist)
-    if findings:
-        report_findings(findings)
-        return EXIT_DENY
-    return EXIT_PASS
+    # Direct callers and main both keep one acquisition deadline through filter.
+    with acquisition_scope() as acquisition:
+        selection = _collect_pre_push_selection(root)
+        findings = scan_diff(selection.diff, allowlist=allowlist)
+        if findings:
+            try:
+                approved = _approved_pre_push_occurrences(root, selection)
+                if approved and time.monotonic() < acquisition.deadline:
+                    retained = _scan_pre_push_diff(selection.diff, allowlist=allowlist, approved=approved)
+                    if time.monotonic() < acquisition.deadline:
+                        findings = retained
+            except (OSError, ValueError, TypeError, RuntimeError, UnicodeError,
+                    KeyError, ImportError, NotImplementedError, RecursionError, OverflowError):
+                # Baseline acquisition/scan is outside this optional boundary.
+                # No exception details or source-bearing context are emitted.
+                pass
+        if findings:
+            report_findings(findings)
+            return EXIT_DENY
+        return EXIT_PASS
 
 
 def cmd_file(path: Path, allowlist: dict[str, list[str]]) -> int:
@@ -282,11 +470,79 @@ def cmd_patterns_check() -> int:
     return EXIT_PASS
 
 
-def main() -> int:
+class _EnrollmentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:
+        # argparse's default diagnostic echoes arbitrary operator arguments.
+        raise RuntimeError("secret-scan: enrollment arguments invalid")
+
+
+def _enrollment_arguments(argv: list[str]) -> argparse.Namespace:
+    parser = _EnrollmentParser(prog="secret_scan.py enroll-exact", allow_abbrev=False)
+    for name in ("archive-path", "release-id", "expected-archive-sha256",
+                 "expected-catalog-sha256", "expected-common-dir", "expected-origin"):
+        parser.add_argument("--" + name, required=True)
+    parser.add_argument("--authorize-marker-write", action="store_true", required=True)
+    parser.add_argument("--replace-marker", action="store_true")
+    args = parser.parse_args(argv)
+    # Validate raw path spellings before Path can silently normalize them.
+    for value in (args.archive_path, args.expected_common_dir):
+        try:
+            encoded_length = len(value.encode("utf-8"))
+        except UnicodeError:
+            parser.error("")
+        if (not value.startswith("/") or value.startswith("//")
+                or encoded_length > 4096 or "\\" in value
+                or any(ord(c) < 32 or ord(c) == 127 for c in value)
+                or any(p in ("", ".", "..") for p in value[1:].split("/"))):
+            parser.error("")
+    if (any(re.fullmatch(r"[0-9a-f]{64}", value) is None for value in
+            (args.expected_archive_sha256, args.expected_catalog_sha256))
+            or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/#-]{0,255}", args.release_id) is None
+            or re.fullmatch(r"github\.com/[a-z0-9_-][a-z0-9._-]*/[a-z0-9_-][a-z0-9._-]*",
+                            args.expected_origin) is None
+            or args.expected_origin.endswith(".git")):
+        parser.error("")
+    return args
+
+
+def cmd_enroll_exact(argv: list[str]) -> int:
+    # This dispatch is separate from allowlist loading and every scanning path.
+    args = _enrollment_arguments(argv)
     try:
+        success = exact.enroll_exact(
+            repo_root(), archive_path=Path(args.archive_path), release_id=args.release_id,
+            expected_archive_sha256=args.expected_archive_sha256,
+            expected_catalog_sha256=args.expected_catalog_sha256,
+            expected_common_dir=Path(args.expected_common_dir), expected_origin=args.expected_origin,
+            authorize_marker_write=args.authorize_marker_write, replace_marker=args.replace_marker)
+    except (OSError, ValueError, TypeError, RuntimeError, UnicodeError, KeyError,
+            ImportError, NotImplementedError, RecursionError, OverflowError):
+        success = False
+    if not success:
+        print("secret-scan: enrollment refused", file=sys.stderr)
+        return EXIT_ERROR
+    print("secret-scan: enrollment complete")
+    return EXIT_PASS
+
+
+def main() -> int:
+    # Start before repository discovery and HEAD probes; nested calls reuse it.
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "pre-push"
+    if cmd in ("pre-push", "enroll-exact"):
+        with acquisition_scope():
+            return _main()
+    return _main()
+
+
+def _main() -> int:
+    try:
+        cmd = sys.argv[1] if len(sys.argv) > 1 else "pre-push"
+        if cmd == "enroll-exact":
+            return cmd_enroll_exact(sys.argv[2:])
+        if cmd not in ("pre-push", "file", "stdin", "patterns-check"):
+            raise RuntimeError("secret-scan: unknown command")
         root = repo_root()
         allowlist = load_allowlist(root)
-        cmd = sys.argv[1] if len(sys.argv) > 1 else "pre-push"
         if cmd == "pre-push":
             return cmd_pre_push(root, allowlist)
         if cmd == "file":
@@ -297,7 +553,7 @@ def main() -> int:
             return cmd_stdin(allowlist)
         if cmd == "patterns-check":
             return cmd_patterns_check()
-        raise RuntimeError(f"secret-scan: unknown command {cmd!r}")
+        raise RuntimeError("secret-scan: unknown command")
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         return EXIT_ERROR
