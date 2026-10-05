@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.23.5](https://github.com/grdavies/shipwright/compare/v2.23.4...v2.23.5) (2026-10-05)
+
+
+### Bug Fixes
+
+* **secret-scan:** adopt reviewed exact occurrence filtering ([#1318](https://github.com/grdavies/shipwright/issues/1318)) ([3838729](https://github.com/grdavies/shipwright/commit/3838729ee41fe6320474bb94f571a2f518716b0f))
+
 ## [2.23.4](https://github.com/grdavies/shipwright/compare/v2.23.3...v2.23.4) (2026-10-03)
 
 
