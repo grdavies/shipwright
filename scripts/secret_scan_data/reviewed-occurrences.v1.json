@@ -1,4 +1,137 @@
 {
   "schemaVersion": 1,
-  "records": []
+  "records": [
+    {
+      "id": "601a6a9e3446f9e2d1c514fb1473d809a0d66add7e4f536b5166a21c604933cf",
+      "repoId": "github.com/grdavies/tierforge",
+      "path": "docs/ops/integration-test-profiles.md",
+      "objectFormat": "sha1",
+      "blobOid": "267a3f86199209cc5ab1bd008a951e68a7a70a38",
+      "sourceSha256": "d8213ee9a990e777c56d050a06f2d7fc22be9c513799eb6683574ed85bf4523c",
+      "sourceByteLength": 35041,
+      "family": "DB_URL",
+      "sourceLine1Based": 149,
+      "matchStartByte": 32071,
+      "matchEndByteExclusive": 32126,
+      "ordinalWithinFamilyOnSourceLine1Based": 1,
+      "matchSha256": "fddbf46293be99a7ac345f976d31117177068752ff59233de6fba99fb90c0750",
+      "detectorFingerprintSha256": "caaea4acfe1bc72b585333e1578e5834064af906d3b42b5d82b4a2bea86bf0ed",
+      "reviewEvidence": {
+        "id": "prd:367-prd-secret-scan-exact-occurrences/EO-01",
+        "sha256": "ec4776c3ebbd7506ab27f2b2410f4596296a42a1a6489d42db1b3b6e56675acf",
+        "reviewer": "human:prd367-durable-approval",
+        "attestationSha256": "cf6b47044f4a7d2d7a9ed28b9a1fd0e0fc91d72c27cc43f54083a057a253e2cb"
+      }
+    },
+    {
+      "id": "ac6970b424bd4ff12a90c020c0f05c4292856fefb9ba5733084b0e60705949cd",
+      "repoId": "github.com/grdavies/tierforge",
+      "path": "server/utils/billing-providers/resolve-stale-attach-lag-drift.ts",
+      "objectFormat": "sha1",
+      "blobOid": "cc3149774fff6ad161c87b5ebee197664316c2ff",
+      "sourceSha256": "e2a3d427f833db7c09af429defe7c4efed50f7a330418e936db73e7ce2d939f9",
+      "sourceByteLength": 2953,
+      "family": "SENTRY_PII_KV",
+      "sourceLine1Based": 44,
+      "matchStartByte": 1749,
+      "matchEndByteExclusive": 1777,
+      "ordinalWithinFamilyOnSourceLine1Based": 1,
+      "matchSha256": "c1df4aca947c1c665c362bd23749a4030d6ed537196b6abd909da77c50e00338",
+      "detectorFingerprintSha256": "d1aacb5ca408253872ff8d6179a3a18d3b3d3a991ed735fe85245cb32cd58be7",
+      "reviewEvidence": {
+        "id": "prd:367-prd-secret-scan-exact-occurrences/EO-02",
+        "sha256": "ec4776c3ebbd7506ab27f2b2410f4596296a42a1a6489d42db1b3b6e56675acf",
+        "reviewer": "human:prd367-durable-approval",
+        "attestationSha256": "4d7f2defdb82f6f1551b3bf80cfdde63cb71a69d93d3e4ee3ff9adb34ab8b104"
+      }
+    },
+    {
+      "id": "66daf811de360fdac927ee9c5ca495f11b6ed3377023fc81bd8779fe1efae34e",
+      "repoId": "github.com/grdavies/tierforge",
+      "path": "tests/unit/billing-providers/resolve-stale-attach-lag-drift.spec.ts",
+      "objectFormat": "sha1",
+      "blobOid": "98a2806683cf362e08e9379ab806245ea71768a0",
+      "sourceSha256": "6cdd1bb8a8eb05db218277b46e4a9ee38fd79bfd59fcf69a10b0a00387ebf5eb",
+      "sourceByteLength": 3820,
+      "family": "SENTRY_PII_KV",
+      "sourceLine1Based": 15,
+      "matchStartByte": 359,
+      "matchEndByteExclusive": 376,
+      "ordinalWithinFamilyOnSourceLine1Based": 1,
+      "matchSha256": "7ca1e8e2b891040ccacc56f7bdb040085b9ab4e1cfb3d7aa22f5dbd890e59181",
+      "detectorFingerprintSha256": "d1aacb5ca408253872ff8d6179a3a18d3b3d3a991ed735fe85245cb32cd58be7",
+      "reviewEvidence": {
+        "id": "prd:367-prd-secret-scan-exact-occurrences/EO-03",
+        "sha256": "ec4776c3ebbd7506ab27f2b2410f4596296a42a1a6489d42db1b3b6e56675acf",
+        "reviewer": "human:prd367-durable-approval",
+        "attestationSha256": "0e8f4d08bd49aba5d6f548891e3c094dd994f7bc66b277edb8c0a8ee89933774"
+      }
+    },
+    {
+      "id": "ba2fbf5a3f58a1ce49947e9b69eb865ce08021a1b4ca77f90d38f3776c17ed5d",
+      "repoId": "github.com/grdavies/tierforge",
+      "path": "tests/unit/billing-providers/resolve-stale-attach-lag-drift.spec.ts",
+      "objectFormat": "sha1",
+      "blobOid": "98a2806683cf362e08e9379ab806245ea71768a0",
+      "sourceSha256": "6cdd1bb8a8eb05db218277b46e4a9ee38fd79bfd59fcf69a10b0a00387ebf5eb",
+      "sourceByteLength": 3820,
+      "family": "SENTRY_PII_KV",
+      "sourceLine1Based": 34,
+      "matchStartByte": 1109,
+      "matchEndByteExclusive": 1127,
+      "ordinalWithinFamilyOnSourceLine1Based": 1,
+      "matchSha256": "dfe934a487678ce8664f96d0b1b0eaf4f793cc4c9e5c0c93f643d047171e273f",
+      "detectorFingerprintSha256": "d1aacb5ca408253872ff8d6179a3a18d3b3d3a991ed735fe85245cb32cd58be7",
+      "reviewEvidence": {
+        "id": "prd:367-prd-secret-scan-exact-occurrences/EO-04",
+        "sha256": "ec4776c3ebbd7506ab27f2b2410f4596296a42a1a6489d42db1b3b6e56675acf",
+        "reviewer": "human:prd367-durable-approval",
+        "attestationSha256": "9c594b41b76e8c66e1eb4614022926f82d3107c6ee32426e4345e6a81e68ea55"
+      }
+    },
+    {
+      "id": "10590496dfe93c55cdfc4f6dbdb1b25467e4fb9ecbf55ec56e04917aa8ab3d3f",
+      "repoId": "github.com/grdavies/tierforge",
+      "path": "tests/unit/billing-providers/resolve-stale-attach-lag-drift.spec.ts",
+      "objectFormat": "sha1",
+      "blobOid": "98a2806683cf362e08e9379ab806245ea71768a0",
+      "sourceSha256": "6cdd1bb8a8eb05db218277b46e4a9ee38fd79bfd59fcf69a10b0a00387ebf5eb",
+      "sourceByteLength": 3820,
+      "family": "SENTRY_PII_KV",
+      "sourceLine1Based": 48,
+      "matchStartByte": 1577,
+      "matchEndByteExclusive": 1590,
+      "ordinalWithinFamilyOnSourceLine1Based": 1,
+      "matchSha256": "075b21a51221ced24b0af633cbfc98657e2e42907e8dacddee1e13c02c641ee3",
+      "detectorFingerprintSha256": "d1aacb5ca408253872ff8d6179a3a18d3b3d3a991ed735fe85245cb32cd58be7",
+      "reviewEvidence": {
+        "id": "prd:367-prd-secret-scan-exact-occurrences/EO-05",
+        "sha256": "ec4776c3ebbd7506ab27f2b2410f4596296a42a1a6489d42db1b3b6e56675acf",
+        "reviewer": "human:prd367-durable-approval",
+        "attestationSha256": "d51a9de2109664b24024815f046deb52f0fb6b1016094a0a459030005e4ffe87"
+      }
+    },
+    {
+      "id": "b2f4ef42bf754ebbf0330d191e90f17d107c8a33d581242c86fa957c0b76cc98",
+      "repoId": "github.com/grdavies/tierforge",
+      "path": "tests/unit/billing-providers/resolve-stale-attach-lag-drift.spec.ts",
+      "objectFormat": "sha1",
+      "blobOid": "98a2806683cf362e08e9379ab806245ea71768a0",
+      "sourceSha256": "6cdd1bb8a8eb05db218277b46e4a9ee38fd79bfd59fcf69a10b0a00387ebf5eb",
+      "sourceByteLength": 3820,
+      "family": "SENTRY_PII_KV",
+      "sourceLine1Based": 57,
+      "matchStartByte": 1855,
+      "matchEndByteExclusive": 1869,
+      "ordinalWithinFamilyOnSourceLine1Based": 1,
+      "matchSha256": "9e9bc63b765992ec0760a9b779936216c5b9993b5d256f33eb4f13daebff6a2b",
+      "detectorFingerprintSha256": "d1aacb5ca408253872ff8d6179a3a18d3b3d3a991ed735fe85245cb32cd58be7",
+      "reviewEvidence": {
+        "id": "prd:367-prd-secret-scan-exact-occurrences/EO-06",
+        "sha256": "ec4776c3ebbd7506ab27f2b2410f4596296a42a1a6489d42db1b3b6e56675acf",
+        "reviewer": "human:prd367-durable-approval",
+        "attestationSha256": "9bf18e1e9a368ec43a2536d1855f9631b2b67af0793cb3133820bb69cfe14a89"
+      }
+    }
+  ]
 }
