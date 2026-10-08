@@ -472,7 +472,7 @@
       "sourcePath": "core/commands/sw-setup.md"
     },
     {
-      "bodyDigest": "ac35ab64096dbd23ead020f78f27bb34c3052d2d9b6d1673fc30e28131b772b7",
+      "bodyDigest": "b20207e05b16850b478c46593dcb78989c445b7cd4ce25c98c1b6134969cce0c",
       "capabilities": [],
       "description": "Gated orchestrator over the phase loop \u2014 advances on green, halts at human merge gate. Never merges.",
       "id": "sw-ship",
@@ -600,7 +600,7 @@
       "sourcePath": "core/skills/compound/SKILL.md"
     },
     {
-      "bodyDigest": "9582e1d9297c2b81fe12928f3e0883a6c0ce59ec4c5c3afe64716573145ecfe0",
+      "bodyDigest": "be149cdbad8bfbea71490cd2ff502f006a0a2ab752275950d20e9b7575c718c0",
       "capabilities": [
         "skill.conductor"
       ],
