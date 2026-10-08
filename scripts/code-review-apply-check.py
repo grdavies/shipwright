@@ -77,7 +77,11 @@ def main(argv: list[str] | None = None) -> int:
         reject("apply policy disables auto-apply", apply_policy=apply_policy)
 
     if phase_mode and sev == "P1":
-        reject("phase-mode P1 blocked", severity=sev)
+        reject(
+            "phase-mode P1 blocked", severity=sev, autoApply=False,
+            nextAction="surface-for-scoped-remediation", requiresAuthorization=True,
+            requiresVerification=True, requiresFreshReview=True, mergeReady=False,
+        )
 
     if sev == "P0":
         reject("P0 never auto-applied", severity=sev)
