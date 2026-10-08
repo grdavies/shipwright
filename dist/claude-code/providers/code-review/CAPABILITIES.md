@@ -125,7 +125,10 @@ Apply policy (`review.local.apply`, default `auto`):
 - **`off`** / **`surface`** — never auto-apply (review + surface only, R68)
 - **P0** — never auto-applied (surface only)
 - **P1** — validated P1 auto-applied only after independent validation (`--validated`); unvalidated P1
-  surfaced only; **phase-mode** blocks even validated P1 (R67)
+  surfaced only; **phase-mode** blocks automatic application even for validated P1 (R67).
+  A human-authorized scoped repair uses execute discipline and fresh gates, preserving the original
+  severity, blocked evidence, and budgets (`commands/sw-ship.md`). Apply-check remediation metadata is
+  advisory; it never grants authorization or merge readiness
 - **P2/P3** — auto-applied when concrete `suggested_fix`, rails pass, `requires_verification: false`
 
 ## Config

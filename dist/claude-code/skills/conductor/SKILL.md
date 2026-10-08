@@ -210,6 +210,11 @@ phase-scoped inline executor per worktree). Details: `core/skills/deliver/SKILL.
 | `retrospective` | `/sw-retrospective --pre-merge` on the orchestrator worktree after all phases merge (R9; single-sourced chain) |
 | `terminal-ship` | After `retrospective` when pre-merge done: terminal PR prepare/gate, CI watch + `/sw-ready`; may arm self-wake (below) |
 
+A phase-mode P1 auto-apply refusal remains blocked until repaired-source evidence passes native gates.
+Explicit human approval for that finding/scope permits a substantive scoped repair under
+`commands/sw-ship.md` → **Authorized repair after a local-review halt**. It does not permit automatic
+suggested-patch application, severity downgrading, counter reset, runtime extension, or merge-gate bypass.
+
 **Terminal autonomy (PRD 013 A1):** when `deliver.terminal.autonomy: auto`, the conductor runs
 `terminal retro run` then `terminal ship run` hands-off (bounded gate watch + `/sw-stabilize` via
 `deliver.remediation.maxAttempts`). Merge to `main` stays human-gated. Optional `cleanup.autonomy: auto`
