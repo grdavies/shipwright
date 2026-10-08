@@ -179,6 +179,22 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
 **Feedback closure (optional):** when `--signal-id <id>` is set and human has confirmed closure, run
 `/sw-feedback-close` after live green — requires verify status (and gate JSON when PR exists).
 
+## Authorized repair after a local-review halt
+
+A native P1 refusal keeps the phase blocked and preserves the original finding and severity. When the
+human explicitly authorizes repairing that finding, record the authorization with the finding, phase,
+current HEAD, and bounded file/requirement scope. Existing authorization for that same repair persists;
+do not ask again merely because phase mode is active.
+
+Perform a scoped implementation through execute discipline (reproduce, repair, verify, fresh independent
+reviews), not through the automatic suggested-patch loop. The apply-check still returns exit 20 and
+`eligible: false`; its remediation metadata is guidance, never evidence of approval or merge readiness.
+Security-sensitive and behavior-changing fixes require their normal substantive review and verification.
+Do not downgrade severity, erase the halt, reuse pre-fix review/verification as current evidence, bypass
+mandatory gates, reset counters, or exceed runtime/remediation budgets. Replace blocked outcomes only
+when native gates validate fresh repaired-source evidence. If another independent bound is exhausted,
+report that bound and use its authorized recovery path; repair approval does not waive it.
+
 ## Stop conditions
 
 - Step failure or stabilize hard stop.
@@ -189,7 +205,8 @@ Persist terminal green only on live `GATE_EC == 0`. Then `/sw-ready` and stop.
   `/tmp/sw-local-review-gate-result.json` reports `verdict: halt`, stop for human triage (surface-only
   default logs and continues). Never overrides `check-gate.py`.
 - **Native apply rails (phase-mode, R67)** — validated P1 MUST NOT auto-apply; surface as `blocked` with
-  cause. Circuit-breaker trip → `blocked` (not interactive escalate). `--skip-local` refused or recorded in
+  cause. This is an auto-apply refusal, not a prohibition on an explicitly authorized scoped repair.
+  Follow **Authorized repair after a local-review halt** before resuming. Circuit-breaker trip → `blocked` (not interactive escalate). `--skip-local` refused or recorded in
   durable per-phase status.
 - User ambiguity (branch/scope/config).
 - CI budget exhausted while `yellow`.

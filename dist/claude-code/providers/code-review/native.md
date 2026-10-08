@@ -491,7 +491,11 @@ prompt-declaring `*.md` files.
 8. **P1 validation wave** (interactive only, R22/R49/R62): for each P1 candidate, spawn fresh-context validator
    at deep tier with diff + neutral location only; on confirm, pass `--validated` to apply-check; on
    non-confirm or degraded → surface only. **Phase-mode** (`--phase-mode` / `SW_PHASE_MODE`): skip apply for
-   all P1 — emit `blocked` cause instead (R67).
+   all P1 — emit `blocked` cause instead (R67). This refuses automatic patch application. After explicit
+   human authorization for the same finding/scope, route a substantive scoped repair through execute
+   discipline and fresh verification/review per `commands/sw-ship.md`; keep the original P1 and blocked
+   evidence until native gates validate the repaired source. Remediation hints never grant authorization
+   or merge readiness and never reset budgets.
 9. **Apply loop** (R19–R25, R44, R59, R64, R68):
    - Resolve `review.local.apply` (`auto` | `surface` | `off`). `surface` / `off` → review + surface only.
    - **Dirty tree:** if `git status --porcelain` is non-empty before apply, refuse apply OR snapshot
