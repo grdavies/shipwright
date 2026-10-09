@@ -1,7 +1,7 @@
 {
   "version": 1,
   "schema": "scripts-call-site-inventory/v1",
-  "generatedAt": "2026-10-08T03:55:00Z",
+  "generatedAt": "2026-10-09T09:32:01Z",
   "generatedBy": "sw_scripts_inventory.py",
   "trees": [
     "core/commands",
@@ -1891,174 +1891,165 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-freeze.md:55:planning_visibility.py",
+      "id": "core/commands/sw-freeze.md:56:planning_visibility.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 55,
+      "line": 56,
       "column": 12,
       "script": "planning_visibility.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:58:spec-rigor-check.py",
+      "id": "core/commands/sw-freeze.md:59:spec-rigor-check.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 58,
+      "line": 59,
       "column": 48,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:63:doc-link-check.py",
+      "id": "core/commands/sw-freeze.md:64:doc-link-check.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 63,
+      "line": 64,
       "column": 14,
       "script": "doc-link-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:65:spec-rigor-check.py",
+      "id": "core/commands/sw-freeze.md:66:spec-rigor-check.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 65,
+      "line": 66,
       "column": 56,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:69:memory-decision-snapshot.py",
+      "id": "core/commands/sw-freeze.md:70:memory-decision-snapshot.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 69,
+      "line": 70,
       "column": 14,
       "script": "memory-decision-snapshot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:73:spec-rigor-check.py",
+      "id": "core/commands/sw-freeze.md:74:spec-rigor-check.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 73,
+      "line": 74,
       "column": 29,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:74:traceability-check.py",
+      "id": "core/commands/sw-freeze.md:75:traceability-check.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 74,
+      "line": 75,
       "column": 14,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:77:doc_link.py",
+      "id": "core/commands/sw-freeze.md:78:doc_link.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 77,
+      "line": 78,
       "column": 17,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:79:phase_sizing.py",
+      "id": "core/commands/sw-freeze.md:80:phase_sizing.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 79,
+      "line": 80,
       "column": 119,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:86:gap-backlog.py",
+      "id": "core/commands/sw-freeze.md:87:gap-backlog.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 86,
+      "line": 87,
       "column": 12,
       "script": "gap-backlog.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:87:doc-format-normalize.py",
+      "id": "core/commands/sw-freeze.md:88:doc-format-normalize.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 87,
+      "line": 88,
       "column": 43,
       "script": "doc-format-normalize.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:96:check-frozen.py",
+      "id": "core/commands/sw-freeze.md:97:check-frozen.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 96,
+      "line": 97,
       "column": 11,
       "script": "check-frozen.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:112:planning_store.py",
+      "id": "core/commands/sw-freeze.md:113:planning_store.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 112,
+      "line": 113,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:119:planning_store.py",
+      "id": "core/commands/sw-freeze.md:120:planning_store.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 119,
+      "line": 120,
       "column": 33,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:160:install-hooks.py",
+      "id": "core/commands/sw-freeze.md:161:install-hooks.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 160,
+      "line": 161,
       "column": 31,
       "script": "install-hooks.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:164:sw_bootstrap.py",
+      "id": "core/commands/sw-freeze.md:165:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 164,
+      "line": 165,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-freeze.md:200:agent_instruction_compiler.py",
+      "id": "core/commands/sw-freeze.md:201:agent_instruction_compiler.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 200,
+      "line": 201,
       "column": 12,
       "script": "agent_instruction_compiler.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-freeze.md:202:golden_manifest.py",
+      "id": "core/commands/sw-freeze.md:203:golden_manifest.py",
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
-      "line": 202,
+      "line": 203,
       "column": 12,
       "script": "golden_manifest.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "core/commands/sw-freeze.md:205:docs-currency-gate.py",
-      "tree": "core/commands",
-      "file": "core/commands/sw-freeze.md",
-      "line": 205,
-      "column": 9,
-      "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
     },
     {
@@ -2066,6 +2057,15 @@
       "tree": "core/commands",
       "file": "core/commands/sw-freeze.md",
       "line": 206,
+      "column": 9,
+      "script": "docs-currency-gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-freeze.md:207:docs-currency-gate.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-freeze.md",
+      "line": 207,
       "column": 49,
       "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
@@ -3934,93 +3934,84 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:48:authoring-guard.py",
+      "id": "core/commands/sw-tasks.md:49:authoring-guard.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 48,
+      "line": 49,
       "column": 123,
       "script": "authoring-guard.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:54:planning-related.py",
+      "id": "core/commands/sw-tasks.md:55:planning-related.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 54,
+      "line": 55,
       "column": 14,
       "script": "planning-related.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:65:tasks_generate.py",
+      "id": "core/commands/sw-tasks.md:66:tasks_generate.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 65,
+      "line": 66,
       "column": 18,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:65:tasks_generate.py",
+      "id": "core/commands/sw-tasks.md:66:tasks_generate.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 65,
+      "line": 66,
       "column": 115,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:68:planning_visibility.py",
+      "id": "core/commands/sw-tasks.md:69:planning_visibility.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 68,
+      "line": 69,
       "column": 12,
       "script": "planning_visibility.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:82:sw_bootstrap.py",
+      "id": "core/commands/sw-tasks.md:83:sw_bootstrap.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 82,
+      "line": 83,
       "column": 44,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "core/commands/sw-tasks.md:95:phase_sizing.py",
+      "id": "core/commands/sw-tasks.md:96:phase_sizing.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 95,
+      "line": 96,
       "column": 79,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:117:agent_instruction_compiler.py",
+      "id": "core/commands/sw-tasks.md:118:agent_instruction_compiler.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 117,
+      "line": 118,
       "column": 12,
       "script": "agent_instruction_compiler.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/commands/sw-tasks.md:119:golden_manifest.py",
+      "id": "core/commands/sw-tasks.md:120:golden_manifest.py",
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
-      "line": 119,
+      "line": 120,
       "column": 12,
       "script": "golden_manifest.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "core/commands/sw-tasks.md:122:docs-currency-gate.py",
-      "tree": "core/commands",
-      "file": "core/commands/sw-tasks.md",
-      "line": 122,
-      "column": 9,
-      "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
     },
     {
@@ -4028,6 +4019,15 @@
       "tree": "core/commands",
       "file": "core/commands/sw-tasks.md",
       "line": 123,
+      "column": 9,
+      "script": "docs-currency-gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "core/commands/sw-tasks.md:124:docs-currency-gate.py",
+      "tree": "core/commands",
+      "file": "core/commands/sw-tasks.md",
+      "line": 124,
       "column": 49,
       "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
@@ -5356,46 +5356,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:291:wave.py",
+      "id": "core/skills/conductor/SKILL.md:294:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 291,
+      "line": 294,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:358:wave.py",
+      "id": "core/skills/conductor/SKILL.md:361:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 358,
+      "line": 361,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:362:wave.py",
+      "id": "core/skills/conductor/SKILL.md:365:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 362,
+      "line": 365,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:379:wave.py",
+      "id": "core/skills/conductor/SKILL.md:382:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 379,
+      "line": 382,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/conductor/SKILL.md:380:wave.py",
+      "id": "core/skills/conductor/SKILL.md:383:wave.py",
       "tree": "core/skills",
       "file": "core/skills/conductor/SKILL.md",
-      "line": 380,
+      "line": 383,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -7174,10 +7174,10 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/skills/ship/SKILL.md:56:build-chain-sync.py",
+      "id": "core/skills/ship/SKILL.md:77:build-chain-sync.py",
       "tree": "core/skills",
       "file": "core/skills/ship/SKILL.md",
-      "line": 56,
+      "line": 77,
       "column": 36,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
@@ -7705,163 +7705,163 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:965:build-chain-sync.py",
+      "id": "core/sw-reference/layout.md:992:build-chain-sync.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 965,
+      "line": 992,
       "column": 8,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:992:build-chain-sync.py",
+      "id": "core/sw-reference/layout.md:1019:build-chain-sync.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 992,
+      "line": 1019,
       "column": 11,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:992:build-chain-sync.py",
+      "id": "core/sw-reference/layout.md:1019:build-chain-sync.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 992,
+      "line": 1019,
       "column": 102,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:997:planning_store.py",
+      "id": "core/sw-reference/layout.md:1024:planning_store.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 997,
+      "line": 1024,
       "column": 20,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1078:wave.py",
+      "id": "core/sw-reference/layout.md:1105:wave.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1078,
+      "line": 1105,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1079:dispatch-check.py",
+      "id": "core/sw-reference/layout.md:1106:dispatch-check.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1079,
+      "line": 1106,
       "column": 8,
       "script": "dispatch-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1100:wave.py",
+      "id": "core/sw-reference/layout.md:1127:wave.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1100,
+      "line": 1127,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1125:wave.py",
+      "id": "core/sw-reference/layout.md:1152:wave.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1125,
+      "line": 1152,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1181:wave.py",
+      "id": "core/sw-reference/layout.md:1208:wave.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1181,
+      "line": 1208,
       "column": 28,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1301:orchestrator_signal_context.py",
+      "id": "core/sw-reference/layout.md:1328:orchestrator_signal_context.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1301,
+      "line": 1328,
       "column": 8,
       "script": "orchestrator_signal_context.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1302:orchestrator_run.py",
+      "id": "core/sw-reference/layout.md:1329:orchestrator_run.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1302,
+      "line": 1329,
       "column": 8,
       "script": "orchestrator_run.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1303:orchestrator_run.py",
+      "id": "core/sw-reference/layout.md:1330:orchestrator_run.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1303,
+      "line": 1330,
       "column": 8,
       "script": "orchestrator_run.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1337:refactor-gate.py",
+      "id": "core/sw-reference/layout.md:1364:refactor-gate.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1337,
+      "line": 1364,
       "column": 15,
       "script": "refactor-gate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1342:phase_sizing.py",
+      "id": "core/sw-reference/layout.md:1369:phase_sizing.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1342,
+      "line": 1369,
       "column": 47,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1344:phase_sizing.py",
+      "id": "core/sw-reference/layout.md:1371:phase_sizing.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1344,
+      "line": 1371,
       "column": 79,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1355:<name>.py",
+      "id": "core/sw-reference/layout.md:1382:<name>.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1355,
+      "line": 1382,
       "column": 67,
       "script": "<name>.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1356:copy-to-core.py",
+      "id": "core/sw-reference/layout.md:1383:copy-to-core.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1356,
+      "line": 1383,
       "column": 28,
       "script": "copy-to-core.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "core/sw-reference/layout.md:1364:sw_bootstrap.py",
+      "id": "core/sw-reference/layout.md:1391:sw_bootstrap.py",
       "tree": "core/sw-reference",
       "file": "core/sw-reference/layout.md",
-      "line": 1364,
+      "line": 1391,
       "column": 79,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
@@ -9316,174 +9316,165 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:55:planning_visibility.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:56:planning_visibility.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 55,
+      "line": 56,
       "column": 12,
       "script": "planning_visibility.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:58:spec-rigor-check.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:59:spec-rigor-check.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 58,
+      "line": 59,
       "column": 48,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:63:doc-link-check.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:64:doc-link-check.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 63,
+      "line": 64,
       "column": 14,
       "script": "doc-link-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:65:spec-rigor-check.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:66:spec-rigor-check.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 65,
+      "line": 66,
       "column": 56,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:69:memory-decision-snapshot.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:70:memory-decision-snapshot.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 69,
+      "line": 70,
       "column": 14,
       "script": "memory-decision-snapshot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:73:spec-rigor-check.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:74:spec-rigor-check.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 73,
+      "line": 74,
       "column": 29,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:74:traceability-check.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:75:traceability-check.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 74,
+      "line": 75,
       "column": 14,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:77:doc_link.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:78:doc_link.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 77,
+      "line": 78,
       "column": 17,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:79:phase_sizing.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:80:phase_sizing.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 79,
+      "line": 80,
       "column": 119,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:86:gap-backlog.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:87:gap-backlog.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 86,
+      "line": 87,
       "column": 12,
       "script": "gap-backlog.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:87:doc-format-normalize.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:88:doc-format-normalize.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 87,
+      "line": 88,
       "column": 43,
       "script": "doc-format-normalize.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:96:check-frozen.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:97:check-frozen.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 96,
+      "line": 97,
       "column": 11,
       "script": "check-frozen.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:112:planning_store.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:113:planning_store.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 112,
+      "line": 113,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:119:planning_store.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:120:planning_store.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 119,
+      "line": 120,
       "column": 33,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:160:install-hooks.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:161:install-hooks.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 160,
+      "line": 161,
       "column": 31,
       "script": "install-hooks.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:164:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:165:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 164,
+      "line": 165,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:200:agent_instruction_compiler.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:201:agent_instruction_compiler.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 200,
+      "line": 201,
       "column": 12,
       "script": "agent_instruction_compiler.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-freeze.md:202:golden_manifest.py",
+      "id": "dist/claude-code/commands/sw-freeze.md:203:golden_manifest.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 202,
+      "line": 203,
       "column": 12,
       "script": "golden_manifest.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/commands/sw-freeze.md:205:docs-currency-gate.py",
-      "tree": "dist/claude-code/commands",
-      "file": "dist/claude-code/commands/sw-freeze.md",
-      "line": 205,
-      "column": 9,
-      "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
     },
     {
@@ -9491,6 +9482,15 @@
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-freeze.md",
       "line": 206,
+      "column": 9,
+      "script": "docs-currency-gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-freeze.md:207:docs-currency-gate.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-freeze.md",
+      "line": 207,
       "column": 49,
       "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
@@ -11359,93 +11359,84 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:48:authoring-guard.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:49:authoring-guard.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 48,
+      "line": 49,
       "column": 123,
       "script": "authoring-guard.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:54:planning-related.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:55:planning-related.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 54,
+      "line": 55,
       "column": 14,
       "script": "planning-related.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:65:tasks_generate.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:66:tasks_generate.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 65,
+      "line": 66,
       "column": 18,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:65:tasks_generate.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:66:tasks_generate.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 65,
+      "line": 66,
       "column": 115,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:68:planning_visibility.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:69:planning_visibility.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 68,
+      "line": 69,
       "column": 12,
       "script": "planning_visibility.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:82:sw_bootstrap.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:83:sw_bootstrap.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 82,
+      "line": 83,
       "column": 44,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:95:phase_sizing.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:96:phase_sizing.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 95,
+      "line": 96,
       "column": 79,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:117:agent_instruction_compiler.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:118:agent_instruction_compiler.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 117,
+      "line": 118,
       "column": 12,
       "script": "agent_instruction_compiler.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/commands/sw-tasks.md:119:golden_manifest.py",
+      "id": "dist/claude-code/commands/sw-tasks.md:120:golden_manifest.py",
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 119,
+      "line": 120,
       "column": 12,
       "script": "golden_manifest.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/claude-code/commands/sw-tasks.md:122:docs-currency-gate.py",
-      "tree": "dist/claude-code/commands",
-      "file": "dist/claude-code/commands/sw-tasks.md",
-      "line": 122,
-      "column": 9,
-      "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
     },
     {
@@ -11453,6 +11444,15 @@
       "tree": "dist/claude-code/commands",
       "file": "dist/claude-code/commands/sw-tasks.md",
       "line": 123,
+      "column": 9,
+      "script": "docs-currency-gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/claude-code/commands/sw-tasks.md:124:docs-currency-gate.py",
+      "tree": "dist/claude-code/commands",
+      "file": "dist/claude-code/commands/sw-tasks.md",
+      "line": 124,
       "column": 49,
       "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
@@ -11854,46 +11854,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:293:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:296:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 293,
+      "line": 296,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:360:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:363:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 360,
+      "line": 363,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:364:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:367:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 364,
+      "line": 367,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:381:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:384:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 381,
+      "line": 384,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/conductor/SKILL.md:382:wave.py",
+      "id": "dist/claude-code/skills/conductor/SKILL.md:385:wave.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/conductor/SKILL.md",
-      "line": 382,
+      "line": 385,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -13672,10 +13672,10 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/claude-code/skills/ship/SKILL.md:56:build-chain-sync.py",
+      "id": "dist/claude-code/skills/ship/SKILL.md:77:build-chain-sync.py",
       "tree": "dist/claude-code/skills",
       "file": "dist/claude-code/skills/ship/SKILL.md",
-      "line": 56,
+      "line": 77,
       "column": 36,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
@@ -15490,174 +15490,165 @@
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:55:planning_visibility.py",
+      "id": "dist/cursor/commands/sw-freeze.md:56:planning_visibility.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 55,
+      "line": 56,
       "column": 12,
       "script": "planning_visibility.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:58:spec-rigor-check.py",
+      "id": "dist/cursor/commands/sw-freeze.md:59:spec-rigor-check.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 58,
+      "line": 59,
       "column": 48,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:63:doc-link-check.py",
+      "id": "dist/cursor/commands/sw-freeze.md:64:doc-link-check.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 63,
+      "line": 64,
       "column": 14,
       "script": "doc-link-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:65:spec-rigor-check.py",
+      "id": "dist/cursor/commands/sw-freeze.md:66:spec-rigor-check.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 65,
+      "line": 66,
       "column": 56,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:69:memory-decision-snapshot.py",
+      "id": "dist/cursor/commands/sw-freeze.md:70:memory-decision-snapshot.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 69,
+      "line": 70,
       "column": 14,
       "script": "memory-decision-snapshot.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:73:spec-rigor-check.py",
+      "id": "dist/cursor/commands/sw-freeze.md:74:spec-rigor-check.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 73,
+      "line": 74,
       "column": 29,
       "script": "spec-rigor-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:74:traceability-check.py",
+      "id": "dist/cursor/commands/sw-freeze.md:75:traceability-check.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 74,
+      "line": 75,
       "column": 14,
       "script": "traceability-check.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:77:doc_link.py",
+      "id": "dist/cursor/commands/sw-freeze.md:78:doc_link.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 77,
+      "line": 78,
       "column": 17,
       "script": "doc_link.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:79:phase_sizing.py",
+      "id": "dist/cursor/commands/sw-freeze.md:80:phase_sizing.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 79,
+      "line": 80,
       "column": 119,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:86:gap-backlog.py",
+      "id": "dist/cursor/commands/sw-freeze.md:87:gap-backlog.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 86,
+      "line": 87,
       "column": 12,
       "script": "gap-backlog.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:87:doc-format-normalize.py",
+      "id": "dist/cursor/commands/sw-freeze.md:88:doc-format-normalize.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 87,
+      "line": 88,
       "column": 43,
       "script": "doc-format-normalize.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:96:check-frozen.py",
+      "id": "dist/cursor/commands/sw-freeze.md:97:check-frozen.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 96,
+      "line": 97,
       "column": 11,
       "script": "check-frozen.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:112:planning_store.py",
+      "id": "dist/cursor/commands/sw-freeze.md:113:planning_store.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 112,
+      "line": 113,
       "column": 8,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:119:planning_store.py",
+      "id": "dist/cursor/commands/sw-freeze.md:120:planning_store.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 119,
+      "line": 120,
       "column": 33,
       "script": "planning_store.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:160:install-hooks.py",
+      "id": "dist/cursor/commands/sw-freeze.md:161:install-hooks.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 160,
+      "line": 161,
       "column": 31,
       "script": "install-hooks.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:164:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-freeze.md:165:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 164,
+      "line": 165,
       "column": 45,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:200:agent_instruction_compiler.py",
+      "id": "dist/cursor/commands/sw-freeze.md:201:agent_instruction_compiler.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 200,
+      "line": 201,
       "column": 12,
       "script": "agent_instruction_compiler.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-freeze.md:202:golden_manifest.py",
+      "id": "dist/cursor/commands/sw-freeze.md:203:golden_manifest.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 202,
+      "line": 203,
       "column": 12,
       "script": "golden_manifest.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/cursor/commands/sw-freeze.md:205:docs-currency-gate.py",
-      "tree": "dist/cursor/commands",
-      "file": "dist/cursor/commands/sw-freeze.md",
-      "line": 205,
-      "column": 9,
-      "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
     },
     {
@@ -15665,6 +15656,15 @@
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-freeze.md",
       "line": 206,
+      "column": 9,
+      "script": "docs-currency-gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-freeze.md:207:docs-currency-gate.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-freeze.md",
+      "line": 207,
       "column": 49,
       "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
@@ -17533,93 +17533,84 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:48:authoring-guard.py",
+      "id": "dist/cursor/commands/sw-tasks.md:49:authoring-guard.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 48,
+      "line": 49,
       "column": 123,
       "script": "authoring-guard.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:54:planning-related.py",
+      "id": "dist/cursor/commands/sw-tasks.md:55:planning-related.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 54,
+      "line": 55,
       "column": 14,
       "script": "planning-related.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:65:tasks_generate.py",
+      "id": "dist/cursor/commands/sw-tasks.md:66:tasks_generate.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 65,
+      "line": 66,
       "column": 18,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:65:tasks_generate.py",
+      "id": "dist/cursor/commands/sw-tasks.md:66:tasks_generate.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 65,
+      "line": 66,
       "column": 115,
       "script": "tasks_generate.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:68:planning_visibility.py",
+      "id": "dist/cursor/commands/sw-tasks.md:69:planning_visibility.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 68,
+      "line": 69,
       "column": 12,
       "script": "planning_visibility.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:82:sw_bootstrap.py",
+      "id": "dist/cursor/commands/sw-tasks.md:83:sw_bootstrap.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 82,
+      "line": 83,
       "column": 44,
       "script": "sw_bootstrap.py",
       "classification": "consumer-capable"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:95:phase_sizing.py",
+      "id": "dist/cursor/commands/sw-tasks.md:96:phase_sizing.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 95,
+      "line": 96,
       "column": 79,
       "script": "phase_sizing.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:117:agent_instruction_compiler.py",
+      "id": "dist/cursor/commands/sw-tasks.md:118:agent_instruction_compiler.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 117,
+      "line": 118,
       "column": 12,
       "script": "agent_instruction_compiler.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/commands/sw-tasks.md:119:golden_manifest.py",
+      "id": "dist/cursor/commands/sw-tasks.md:120:golden_manifest.py",
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 119,
+      "line": 120,
       "column": 12,
       "script": "golden_manifest.py",
-      "classification": "self-repo-only"
-    },
-    {
-      "id": "dist/cursor/commands/sw-tasks.md:122:docs-currency-gate.py",
-      "tree": "dist/cursor/commands",
-      "file": "dist/cursor/commands/sw-tasks.md",
-      "line": 122,
-      "column": 9,
-      "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
     },
     {
@@ -17627,6 +17618,15 @@
       "tree": "dist/cursor/commands",
       "file": "dist/cursor/commands/sw-tasks.md",
       "line": 123,
+      "column": 9,
+      "script": "docs-currency-gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "dist/cursor/commands/sw-tasks.md:124:docs-currency-gate.py",
+      "tree": "dist/cursor/commands",
+      "file": "dist/cursor/commands/sw-tasks.md",
+      "line": 124,
       "column": 49,
       "script": "docs-currency-gate.py",
       "classification": "self-repo-only"
@@ -18028,46 +18028,46 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:291:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:294:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 291,
+      "line": 294,
       "column": 29,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:358:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:361:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 358,
+      "line": 361,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:362:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:365:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 362,
+      "line": 365,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:379:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:382:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 379,
+      "line": 382,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/conductor/SKILL.md:380:wave.py",
+      "id": "dist/cursor/skills/conductor/SKILL.md:383:wave.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/conductor/SKILL.md",
-      "line": 380,
+      "line": 383,
       "column": 8,
       "script": "wave.py",
       "classification": "self-repo-only"
@@ -19846,10 +19846,10 @@
       "classification": "self-repo-only"
     },
     {
-      "id": "dist/cursor/skills/ship/SKILL.md:56:build-chain-sync.py",
+      "id": "dist/cursor/skills/ship/SKILL.md:77:build-chain-sync.py",
       "tree": "dist/cursor/skills",
       "file": "dist/cursor/skills/ship/SKILL.md",
-      "line": 56,
+      "line": 77,
       "column": 36,
       "script": "build-chain-sync.py",
       "classification": "self-repo-only"
@@ -20338,6 +20338,15 @@
       "line": 109,
       "column": 32,
       "script": "check-gate.py",
+      "classification": "self-repo-only"
+    },
+    {
+      "id": "docs/guides/runtime-expansion-currency.md:12:wave_state.py",
+      "tree": "docs/guides",
+      "file": "docs/guides/runtime-expansion-currency.md",
+      "line": 12,
+      "column": 8,
+      "script": "wave_state.py",
       "classification": "self-repo-only"
     }
   ]
