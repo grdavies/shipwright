@@ -1,6 +1,7 @@
 ---
 description: Stamp frozen: true on an artifact, register in INDEX, and enforce immutability. Does not unfreeze or edit frozen parents.
 alwaysApply: false
+doc_currency_at: 2026-10-09
 ---
 
 # `/sw-freeze`

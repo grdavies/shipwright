@@ -53,6 +53,27 @@ When the phase diff touches `core/sw-reference/build-chain-paths.json` prefixes,
 python3 scripts/ship-build-chain-check.py
 ```
 
+The native `build-chain` handler always executes the helper with `--root <consumer-root>`,
+`--phase-slug <phase>` and `--out <phase-run-dir>/build-chain.status.json`. This mode reads
+`parentBranch`, `currentBranch` and `phaseSlug` from the consumer's per-worktree
+`shipwright.json` in its Git directory. The recorded parent must resolve to one exact branch
+and one merge base with HEAD; there is no fallback to ambient `main` or HEAD. Canonical
+parent refs (including symbolic aliases) cannot be the current phase ref. Distinct parent
+branches at the same commit remain valid for a newly started phase.
+
+Applicability includes committed changes from that merge base, staged changes, unstaged changes
+and untracked non-ignored files. Renames retain both paths; index/worktree cancellation cannot
+hide a touched path. The installed runtime's `core/sw-reference/build-chain-paths.json` is the
+prefix authority, and consumer-mode environment overrides are ignored. Missing or invalid
+manifest/state, wrong phase identity, ambiguous Git scope, conflicts or changed acquisition
+fail closed. Only a fully acquired scope outside all prefixes yields `not-applicable`.
+
+The JSON status records actual paths, base/head, manifest digest and applicability. Matching paths
+run the consumer repository's `scripts/build-chain-sync.py --check`; a missing script or real
+parity failure blocks. The evidence writer retains actual child argv, exit code and output digests
+and references that status artifact. A no-argument standalone Shipwright invocation retains its
+unconditional local parity check.
+
 On failure, remediate with `python3 scripts/build-chain-sync.py` (not `copy-to-core --force`).
 
 ## Operator-local deliver closeout (PRD 274)

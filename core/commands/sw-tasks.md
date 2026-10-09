@@ -1,6 +1,7 @@
 ---
 description: Generate a frozen task list from a frozen PRD in a single pass. Does not start implementation.
 alwaysApply: false
+doc_currency_at: 2026-10-09
 ---
 
 # `/sw-tasks`

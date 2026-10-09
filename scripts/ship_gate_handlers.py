@@ -94,7 +94,8 @@ def build_gate_argv(
             argv.extend(["--behavioral-status", str(behavioral)])
         return argv
     if gate_id == "build-chain":
-        return [py, str(scripts / "ship-build-chain-check.py")]
+        return [py, str(scripts / "ship-build-chain-check.py"),
+                "--root", str(root), "--phase-slug", phase_slug, "--out", str(out_path)]
     if gate_id == "pre-pr-smoke":
         return [py, str(scripts / "ship_pre_pr_smoke.py"), str(root)]
     if gate_id == "decision-log":

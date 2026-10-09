@@ -341,6 +341,33 @@ baseline→doctrine requires explicit operator `--confirm` promote and a leakage
 `done` state used by `planning_store.py materialize --resync`. Legacy slug-scoped
 `.cursor/sw-deliver-state.<slug>.json` mirrors remain readable during adoption only.
 
+For synthetic runtime children absent from the frozen task body, a completed entry may also carry
+`runtimeCompletion`. After successful native integration, the phase executor explicitly calls
+`wave_state.py ROOT ledger record --task CHILD --phase SLUG --done true --execute-run-dir RUN_DIR`
+before run-directory teardown, and recaptures after each successful retry. `RUN_DIR` supplies the exact
+native `execute-step-plan.json` and latest matching `integrate-journal.json` entry.
+
+| `runtimeCompletion` field | Durable meaning |
+| --- | --- |
+| `version`, `runId`, `taskList`, `bodyHash` | Receipt schema version 1, owning delivery run, source task-list identity, and frozen-body hash |
+| `phaseId`, `phaseSlug` | Owning phase, checked against current delivery metadata and ledger entry |
+| `ref` | Bounded native child fields: `id`, direct frozen `parentRef`, explicit `synthetic: true`, integrated `status`, `branch`, and `mergeCommit` |
+| `integration` | Latest matching native journal fields: `taskRef`, `sourceRef`, pass `verdict`, matching `mergeCommit`, empty `conflicts`, and `at` |
+| `planSha256`, `journalSha256` | SHA-256 witnesses of the original native receipt files |
+
+Capture rejects invalid evidence before persistence. It requires a direct parent in the owning
+phase's frozen body, matching plan/journal branch and merge commit, and Git ancestry against the
+phase's recorded merge commit or current phase branch in `ROOT`'s repository. Frozen currency checks
+revalidate the durable receipt against current state, body, and Git without requiring the removed
+run directory. Unknown or unproven completed children still block; this proof does not complete the
+parent. Ordinary body-ref records and nonfrozen currency retain their existing semantics.
+
+The receipt is a captured snapshot, not a live journal monitor. An ordinary record replaces the entry
+and drops its proof; reopening or withdrawing a child must record it incomplete. Legacy recovery may
+capture only the latest genuine retained native receipts and must not manufacture missing markers or
+reuse an older pass over a failed retry. See the
+[runtime-expansion currency guide](https://github.com/grdavies/shipwright/blob/main/docs/guides/runtime-expansion-currency.md) for capture and recovery.
+
 ### Slim gate manifest + request budget (PRD 062 R8, R12, R19)
 
 | Concern | Location | Semantics |

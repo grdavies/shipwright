@@ -2009,11 +2009,26 @@ def cmd_ledger_record(root: Path, args: list[str]) -> None:
     if not isinstance(tasks, dict):
         tasks = {}
         ledger["tasks"] = tasks
+    runtime_proof = None
+    execute_run_dir = parse_kv(args, "--execute-run-dir")
+    if execute_run_dir:
+        from frozen_spec_ledger import capture_runtime_completion
+
+        if not done:
+            fail("runtime completion cannot attest an incomplete task")
+        try:
+            runtime_proof = capture_runtime_completion(
+                root, state, task_ref, phase_slug, root / execute_run_dir,
+            )
+        except (ValueError, OSError, subprocess.TimeoutExpired) as exc:
+            fail(f"runtime completion rejected: {exc}")
     tasks[task_ref] = {
         "done": done,
         "phase": phase_slug,
         "updatedAt": utc_now(),
     }
+    if runtime_proof is not None:
+        tasks[task_ref]["runtimeCompletion"] = runtime_proof
     if phase_slug:
         phases = ledger["phases"]
         if isinstance(phases, dict):
@@ -2108,6 +2123,17 @@ def cmd_ledger_check(root: Path, args: list[str]) -> None:
             if not isinstance(entry, dict) or not entry.get("done"):
                 continue
             if not checkboxes.get(ref, False):
+                if frozen and ref not in checkboxes:
+                    from frozen_spec_ledger import runtime_completion_valid
+
+                    source = state.get("source_task_list")
+                    source_matches = isinstance(source, str) and (root / source).resolve() == path.resolve()
+                    try:
+                        proven = source_matches and runtime_completion_valid(root, state, tasks_text, ref, entry)
+                    except (OSError, subprocess.TimeoutExpired):
+                        proven = False
+                    if proven:
+                        continue
                 if not any(d.get("ref") == ref for d in divergences):
                     divergences.append(
                         {"ref": ref, "kind": "stale", "reason": "ledger-done-checkbox-open"}
