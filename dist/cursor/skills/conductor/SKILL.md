@@ -270,7 +270,10 @@ Phase executor (not conductor) owns execute-tier lifecycle:
 | Execute plan validate | Phase executor | `wave.py plan validate --tier execute` |
 | Per-ref Task dispatch | Phase executor | `intra_phase_dispatch.py` with `conductorMode: execute_fan_out` |
 | Sub-branch integrate | Phase executor | `wave.py execute integrate` → `execute_integrate.py` |
+| Frozen synthetic receipt capture | Phase executor | After integration, `wave_state.py ROOT ledger record --task REF --phase SLUG --done true --execute-run-dir RUN_DIR` |
 | Terminal gate | Phase executor | `execute_ship.py gate-check` before `sw-verify` |
+
+Capture synthetic completion after each successful integration (including retries), before phase run-directory teardown. This validates the latest native plan/journal pair and preserves it in the durable ledger; a generic done record alone is insufficient for frozen refs absent from the task body. See `docs/guides/runtime-expansion-currency.md` for retained-receipt recovery.
 
 Conductor merge queue (`wave_merge.py`) handles phase→target only. Execute integrate is **never** enqueued
 on the conductor merge queue. Background-phase nested Task carve-out: see

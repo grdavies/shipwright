@@ -2,7 +2,7 @@
 name: sw-deliver
 description: Plan and run dependency-ordered deliver waves in phase-mode or multi-feature mode. Does not bypass /sw-ship, auto-merge to main, or re-author frozen task lists.
 alwaysApply: false
-doc_currency_at: 2026-09-21
+doc_currency_at: 2026-10-09
 ---
 
 # `/sw-deliver`

@@ -300,6 +300,8 @@ def build_execute_refs(feature_slug_value: str, phase_slug: str, subtasks: list[
         entry = {"id": task["id"], "branch": sub_branch_name(feature_slug_value, phase_slug, task["id"]), "files": sorted(set(task.get("files") or [])), "status": "pending"}
         if task.get("parentRef"):
             entry["parentRef"] = task["parentRef"]
+        if task.get("synthetic") is True:
+            entry["synthetic"] = True
         refs.append(entry)
     return refs
 

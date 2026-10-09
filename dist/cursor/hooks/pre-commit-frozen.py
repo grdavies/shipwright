@@ -14,11 +14,12 @@ def _git(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
 
 
 def _is_frozen_at_head(repo: Path, path: str) -> bool:
-    proc = subprocess.run(["git", "show", f"HEAD:{path}"], cwd=repo, capture_output=True, text=True, check=False)
+    proc = subprocess.run(["git", "show", f"HEAD:{path}"], cwd=repo, capture_output=True, check=False)
     if proc.returncode != 0:
         return False
     in_fm = False
-    for line in proc.stdout.splitlines():
+    # Git blobs can be binary; retain invalid bytes without hiding ASCII frontmatter.
+    for line in proc.stdout.decode("utf-8", errors="surrogateescape").splitlines():
         if line.strip() == "---":
             if in_fm:
                 break

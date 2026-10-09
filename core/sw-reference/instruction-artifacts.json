@@ -600,7 +600,7 @@
       "sourcePath": "core/skills/compound/SKILL.md"
     },
     {
-      "bodyDigest": "be149cdbad8bfbea71490cd2ff502f006a0a2ab752275950d20e9b7575c718c0",
+      "bodyDigest": "611875f8ac733d96533c7897dd944a48c9fa935a77ddc84dca4a9c9bec86705e",
       "capabilities": [
         "skill.conductor"
       ],
@@ -752,7 +752,7 @@
       "sourcePath": "core/skills/retro/SKILL.md"
     },
     {
-      "bodyDigest": "10935e52b83fd050eb8b3909b1f08a0a5ce8e7aa71c99d2e2af9a50b86ab2a09",
+      "bodyDigest": "701142834a91170cd3442afba72cac7f3d80b6ed94b6754600bb36c0f7acd39f",
       "capabilities": [],
       "description": "Phase ship loop gates for /sw-ship \u2014 dist freshness, build-chain parity, operator-local closeout hygiene. Use when executing or resuming the ship chain. Does not merge.",
       "id": "ship",
