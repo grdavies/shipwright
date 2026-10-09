@@ -35,7 +35,7 @@ class FrozenBinaryHookTests(unittest.TestCase):
         self.env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull)
         self.git("init", "--template=")
         self.git("config", "user.name", "Freeze guard fixture")
-        self.git("config", "user.email", "freeze-fixture@example.invalid")
+        self.git("config", "user.email", "freeze-fixture@localhost")
         self.git("config", "core.hooksPath", str(self.repo / ".git/hooks"))
         scripts = self.repo / "scripts"
         scripts.mkdir()

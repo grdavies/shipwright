@@ -42,7 +42,7 @@ def write(path: Path, value: dict) -> None:
 @pytest.fixture
 def native(tmp_path: Path) -> dict:
     git(tmp_path, "init", "-q")
-    git(tmp_path, "config", "user.email", "fixture@example.com")
+    git(tmp_path, "config", "user.email", "fixture@localhost")
     git(tmp_path, "config", "user.name", "Fixture")
     git(tmp_path, "checkout", "-q", "-b", "phase-alpha")
     task_file = tmp_path / "tasks.md"
