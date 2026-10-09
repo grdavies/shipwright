@@ -1,0 +1,18 @@
+{
+  "version": "2.23.6",
+  "previousVersion": "2.23.6",
+  "generatedAt": "2026-10-09T17:47:08Z",
+  "generator": "scripts/effective_config_gen.py",
+  "newSettings": [],
+  "removedSettings": [],
+  "changedDefaults": [],
+  "deprecated": [],
+  "schemaMigrations": [],
+  "newDurableStateShapes": [],
+  "packageCompatibility": {
+    "shipwright": "2.23.6"
+  },
+  "kernelGraphVersionChanges": [],
+  "requiredManualActions": [],
+  "rollbackConcerns": []
+}

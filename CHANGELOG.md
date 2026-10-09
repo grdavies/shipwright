@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.23.6](https://github.com/grdavies/shipwright/compare/v2.23.5...v2.23.6) (2026-10-09)
+
+
+### Bug Fixes
+
+* **deliver:** preserve runtime task currency and consumer build scope ([#1323](https://github.com/grdavies/shipwright/issues/1323)) ([191c442](https://github.com/grdavies/shipwright/commit/191c442d4a582dd38d1bbcb4b74f660edecab37a))
+* **review:** permit authorized scoped repair after P1 refusal ([#1321](https://github.com/grdavies/shipwright/issues/1321)) ([187e373](https://github.com/grdavies/shipwright/commit/187e3734f2468adc59a075e800aa487b0657d747))
+
 ## [2.23.5](https://github.com/grdavies/shipwright/compare/v2.23.4...v2.23.5) (2026-10-05)
 
 
