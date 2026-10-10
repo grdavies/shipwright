@@ -1277,9 +1277,13 @@ def clean_consolidated_halt(
 
 
 def parse_ts(ts: str) -> datetime | None:
+    """Parse an aware durable ISO-8601 timestamp without discarding its offset."""
     try:
-        return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-    except ValueError:
+        parsed = datetime.fromisoformat(ts.removesuffix("Z") + "+00:00" if ts.endswith("Z") else ts)
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            return None
+        return parsed.astimezone(timezone.utc)
+    except (ValueError, OverflowError):
         return None
 
 

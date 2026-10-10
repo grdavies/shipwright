@@ -872,6 +872,12 @@ the compile target omits limits. Operator surfaces stay on existing commands (`/
 | `deliver.autonomy.maxRunMinutes` | unset | Run-level wall-clock ceiling → consolidated halt |
 | `deliver.autonomy.maxIterations` | `500` | In-turn `deliver-loop` hard stop |
 
+The run ceiling measures elapsed time from the original durable `runStartedAt`; extensions change the
+ceiling, not that timestamp or the iteration counters. Deliver clocks accept timezone-aware ISO-8601
+values with fractional seconds and `Z` or numeric offsets, normalized to UTC for age calculations.
+The same parser serves driver heartbeat and phase watchdog clocks, including recent phase liveness.
+Malformed or timezone-naive values have no computable age; they do not acquire a guessed local timezone.
+
 ### Deliver loop drain (`deliver.loop`) — /
 
 | Key | Default | Meaning |
