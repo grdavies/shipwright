@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.23.8](https://github.com/grdavies/shipwright/compare/v2.23.7...v2.23.8) (2026-10-14)
+
+
+### Bug Fixes
+
+* **codex:** repair packaged hook runtime and native event handling ([#1326](https://github.com/grdavies/shipwright/issues/1326)) ([42156b3](https://github.com/grdavies/shipwright/commit/42156b3a1394440b8686078b0449b0590eb65e7f))
+
 ## [2.23.7](https://github.com/grdavies/shipwright/compare/v2.23.6...v2.23.7) (2026-10-10)
 
 
