@@ -76,6 +76,13 @@ successful acknowledgment as evidence that those additional lifecycle features r
 Unexpected pre-tool evaluation errors emit a native denial and a sanitized error
 type; do not convert broken policy evaluation into an allow decision.
 
+Once Codex ships a zipapp, credential parity includes that host. Its commands
+remain projected as `skills/<command>/SKILL.md`, including the native name field;
+compare against the canonical command through the same projection used by the
+emitter. Shared provider contracts ship under `providers/`. Missing or changed
+native skill/provider files must still fail parity; do not exclude Codex merely
+because its resource layout differs from the legacy hosts.
+
 Validate generated packages in fresh subprocesses from unrelated workspaces with
 no source import paths, including an installation path containing spaces. Cover
 all registered events, real shell/edit denials, mutation-record consumption and

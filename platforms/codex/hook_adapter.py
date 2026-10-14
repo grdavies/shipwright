@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 
-def _with_skill_name(text: str, name: str) -> str:
+def command_skill_text(text: str, name: str) -> str:
     """Ensure Codex SKILL.md frontmatter includes ``name:`` matching the directory."""
     if not text.startswith("---"):
         return f"---\nname: {name}\ndescription: Shipwright {name}\n---\n\n{text}"
@@ -36,7 +36,7 @@ def copy_command_skills(core_root: Path, dest: Path) -> list[str]:
         name = cmd.stem
         out_dir = skills_dest / name
         out_dir.mkdir(parents=True, exist_ok=True)
-        body = _with_skill_name(cmd.read_text(encoding="utf-8"), name)
+        body = command_skill_text(cmd.read_text(encoding="utf-8"), name)
         (out_dir / "SKILL.md").write_text(body, encoding="utf-8")
         written.append(f"skills/{name}/SKILL.md")
     return written

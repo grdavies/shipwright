@@ -98,3 +98,20 @@ def test_e_sw_generate_all_fails_on_residual_drift(
         assert gen.credential_dist_drift(repo_root)
     finally:
         dist_path.write_bytes(original)
+
+
+@pytest.mark.parametrize("rel", ["skills/sw-init/SKILL.md", "providers/recallium.md"])
+def test_codex_native_credential_surfaces_keep_drift_detection(repo_root: Path, rel: str) -> None:
+    gen = _load_generate_all(repo_root)
+    assert gen.generate_all(repo_root) == 0
+    assert "codex" in gen._credential_platforms(repo_root)
+    assert gen.credential_dist_drift(repo_root) == []
+    path = repo_root / "dist" / "codex" / rel
+    original = path.read_bytes()
+    try:
+        path.write_bytes(original + b"\n# lost-guard control\n")
+        assert f"dist/codex/{rel}" in gen.credential_dist_drift(repo_root)
+        assert gen.generate_all(repo_root) == 0
+        assert gen.credential_dist_drift(repo_root) == []
+    finally:
+        path.write_bytes(original)
