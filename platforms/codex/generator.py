@@ -132,6 +132,20 @@ def generate(
     if command_ids and not written_commands:
         raise RuntimeError("expected command skills to be projected for Codex package")
 
+    # Ship the credential-facing provider contracts referenced by native skills.
+    # Other provider adapters are outside this Codex hook/runtime surface.
+    for rel in ("host", "planning-store", "recallium.md"):
+        source = core / "providers" / rel
+        target = out / "providers" / rel
+        if source.is_dir():
+            shutil.copytree(
+                source, target,
+                ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "tests", "test"),
+            )
+        elif source.is_file():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, target)
+
     hooks_dir = out / "hooks"
     hooks_dir.mkdir(parents=True, exist_ok=True)
     (hooks_dir / "hooks.json").write_text(
@@ -164,6 +178,14 @@ def generate(
             core_hooks_dest,
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "tests", "test"),
         )
+    # Hooks import script modules at startup. Ship the same closed runtime as the
+    # other adapters; the source checkout must not be needed by an installed hook.
+    scripts_root = str(repo / "scripts")
+    if scripts_root not in sys.path:
+        sys.path.insert(0, scripts_root)
+    from build_zipapp import build_archive
+
+    build_archive(repo, out)
     (hooks_dir / "codex-hook.py").write_text(
         "#!/usr/bin/env python3\n"
         '"""Codex hook entry — processes stdin via lifecycle (PRD 352 R5)."""\n'

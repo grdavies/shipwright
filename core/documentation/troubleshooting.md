@@ -51,6 +51,52 @@ see the linked enrollment section for source, direct-archive and emitted
 `sw-run.py` command forms and the separately authorized `enroll-exact` inputs.
 Ordinary file/stdin scans and uncommitted fallbacks receive no new exceptions.
 
+## Codex plugin hooks exit with code 1
+
+If multiple event types fail together, reproduce the installed launcher with a
+non-mutating `PreToolUse` payload (`tool_name: Read`) before changing credentials.
+An import error such as `No module named sw_scripts_resolve` means the plugin
+runtime is incomplete; authentication cannot repair it.
+
+The Codex generator must ship the versioned `shipwright.pyz`, its manifest and
+integrity metadata alongside `core/hooks`. The adapter initializes those bundled
+script imports before importing the pre-tool policy. Do not depend on a source
+checkout, inherited `PYTHONPATH`, or copied scripts in the consumer repository.
+
+Codex `PreToolUse` uses `hookSpecificOutput.permissionDecision` and
+`permissionDecisionReason`, rather than Cursor's `permission` output. Its
+`updatedInput` replaces the argument object, so model bindings must retain all
+original arguments and metadata. Codex reports shell calls as `Bash` and patches
+as `apply_patch`; normalize those names before evaluating shared policy.
+
+The other currently registered Codex events consume and acknowledge their payloads
+with `{}`. They do not run pre-tool policy, consume pre-work/dispatch records, or
+activate session-context loading and memory-sync scheduling. Do not interpret a
+successful acknowledgment as evidence that those additional lifecycle features ran.
+Unexpected pre-tool evaluation errors emit a native denial and a sanitized error
+type; do not convert broken policy evaluation into an allow decision.
+
+Once Codex ships a zipapp, credential parity includes that host. Its commands
+remain projected as `skills/<command>/SKILL.md`, including the native name field;
+compare against the canonical command through the same projection used by the
+emitter. Shared provider contracts ship under `providers/`. Missing or changed
+native skill/provider files must still fail parity; do not exclude Codex merely
+because its resource layout differs from the legacy hosts.
+
+Validate generated packages in fresh subprocesses from unrelated workspaces with
+no source import paths, including an installation path containing spaces. Cover
+all registered events, real shell/edit denials, mutation-record consumption and
+replacement-input preservation. The focused regression command is:
+
+```sh
+python3 -B -m pytest -q -p no:cacheprovider platforms/codex/tests
+```
+
+After installing a corrected hook definition, review and trust it in Codex's hook
+UI. Changed definitions require renewed host trust; never forge trusted hashes in
+`config.toml`. Keep credential configuration and in-flight delivery state intact
+when refreshing hook code and runtime artifacts.
+
 ## Consumer delivery initialization and crash recovery
 
 A newly provisioned orchestrator may exist before its first plan or run identity.

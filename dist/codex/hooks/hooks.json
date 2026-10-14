@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/codex-hook.py\"",
             "statusMessage": "Shipwright SessionStart"
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/codex-hook.py\"",
             "statusMessage": "Shipwright UserPromptSubmit"
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/codex-hook.py\"",
             "statusMessage": "Shipwright PreToolUse"
           }
         ]
@@ -38,7 +38,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/codex-hook.py\"",
             "statusMessage": "Shipwright PostToolUse"
           }
         ]
@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/codex-hook.py\"",
             "statusMessage": "Shipwright Stop"
           }
         ]
@@ -60,7 +60,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/codex-hook.py\"",
             "statusMessage": "Shipwright SubagentStart"
           }
         ]
@@ -71,7 +71,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+            "command": "python3 \"${PLUGIN_ROOT}/hooks/codex-hook.py\"",
             "statusMessage": "Shipwright SubagentStop"
           }
         ]

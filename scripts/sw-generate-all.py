@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import subprocess
 import sys
 import zipfile
@@ -48,8 +49,8 @@ def _discover_platforms(root: Path) -> tuple[str, ...]:
 def _credential_platforms(root: Path) -> tuple[str, ...]:
     """Platforms that package credential surfaces into dist (zipapp hosts).
 
-    Codex/OpenCode emitters (PRD 349) are discovered for ``sw generate --all`` but
-    do not ship ``shipwright*.pyz`` credential trees — exclude them from drift.
+    Include every discovered host shipping a zipapp, including Codex. Hosts
+    without that runtime (currently OpenCode) stay outside this parity check.
     """
     discovered = _discover_platforms(root)
     with_pyz = tuple(p for p in discovered if _resolve_zipapp(root, p) is not None)
@@ -142,6 +143,24 @@ def _dist_surface_path(base: Path, platform: str, canonical: Path) -> Path:
     return base / "dist" / platform / core_rel
 
 
+def _codex_command_projection(base: Path, canonical: Path) -> tuple[Path, bytes] | None:
+    """Resolve a canonical command to its native Codex skill representation."""
+    try:
+        rel = canonical.relative_to(base / "core")
+    except ValueError:
+        rel = canonical.relative_to(base)
+    if rel.parts[0] != "commands" or rel.suffix != ".md":
+        return None
+    adapter = base / "platforms" / "codex" / "hook_adapter.py"
+    spec = importlib.util.spec_from_file_location("codex_credential_projection", adapter)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load Codex command projection: {adapter}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    expected = module.command_skill_text(canonical.read_text(encoding="utf-8"), rel.stem)
+    return base / "dist" / "codex" / "skills" / rel.stem / "SKILL.md", expected.encode("utf-8")
+
+
 def credential_dist_drift(root: Path | None = None) -> list[str]:
     """Return repo-relative dist paths that differ from core source for credential surfaces."""
     base = root or REPO_ROOT
@@ -163,11 +182,17 @@ def credential_dist_drift(root: Path | None = None) -> list[str]:
                 if entry_hash is None or entry_hash != digest:
                     drift.append(label)
                 continue
-            dist_path = _dist_surface_path(base, platform, canonical)
+            projection = _codex_command_projection(base, canonical) if platform == "codex" else None
+            if projection is not None:
+                dist_path, expected = projection
+                expected_digest = hashlib.sha256(expected).hexdigest()
+            else:
+                dist_path = _dist_surface_path(base, platform, canonical)
+                expected_digest = digest
             if not dist_path.is_file():
                 drift.append(dist_path.relative_to(base).as_posix())
                 continue
-            if _file_hash(dist_path) != digest:
+            if _file_hash(dist_path) != expected_digest:
                 drift.append(dist_path.relative_to(base).as_posix())
     return drift
 
