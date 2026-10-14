@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import sys
@@ -85,11 +86,65 @@ def _core_hooks_dir() -> Path:
     return candidates[0]
 
 
-def before_task_dispatch_stdio() -> int:
-    """Invoke core before_task_dispatch over stdin/stdout (lifecycle shim)."""
-    hooks = _core_hooks_dir()
-    if str(hooks) not in sys.path:
-        sys.path.insert(0, str(hooks))
-    import before_task_dispatch  # noqa: E402
+def before_task_dispatch_stdio(payload: dict | None = None) -> int:
+    """Evaluate PreToolUse with Codex's native input and output contract.
 
-    return int(before_task_dispatch.run_stdio())
+    Codex updatedInput replaces the complete argument object. Keep the original
+    arguments when adding model binding, and never emit Cursor permission fields.
+    """
+    try:
+        # Keep the previous no-argument shim callable during an atomic file refresh.
+        if payload is None:
+            payload = json.load(sys.stdin)
+            if not isinstance(payload, dict):
+                raise ValueError("hook input must be an object")
+            event = str(payload.get("hook_event_name") or payload.get("event") or "")
+            if "".join(c for c in event.lower() if c.isalnum()) != "pretooluse":
+                print(json.dumps({}))
+                return 0
+        hooks = _core_hooks_dir()
+        if str(hooks) not in sys.path:
+            sys.path.insert(0, str(hooks))
+        from sw_hook_util import ensure_plugin_scripts_importable, workspace_root
+
+        plugin_root = hooks.parent.parent
+        ensure_plugin_scripts_importable(plugin_root)
+        import before_task_dispatch
+
+        normalized = dict(payload)
+        normalized["tool_name"] = {
+            "Bash": "Shell",
+            "apply_patch": "ApplyPatch",
+        }.get(payload.get("tool_name"), payload.get("tool_name"))
+        result = before_task_dispatch.evaluate_pre_tool_use(
+            normalized, workspace_root(payload)
+        )
+        output: dict = {}
+        if result.verdict == "fail":
+            output = _deny_output(result.remediation or result.cause or "policy denied")
+        elif result.verdict == "pass" and result.model_id:
+            tool_input = dict(payload.get("tool_input") or {})
+            metadata = dict(tool_input.get("metadata") or {})
+            metadata.update(dispatchId=result.dispatch_id, intensity=result.intensity)
+            tool_input.update(model=result.model_id, metadata=metadata)
+            output = {"hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "allow",
+                "updatedInput": tool_input,
+            }}
+        print(json.dumps(output, ensure_ascii=False))
+    except Exception as exc:
+        # Report a real policy denial, not a misleading successful fail-open hook.
+        # Exception messages and payloads can contain credentials; log only type.
+        reason = f"Shipwright Codex pre-tool evaluation failed ({type(exc).__name__})"
+        print(reason, file=sys.stderr)
+        print(json.dumps(_deny_output(reason + "; repair the installed hook runtime")))
+    return 0
+
+
+def _deny_output(reason: str) -> dict:
+    return {"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason": reason,
+    }}

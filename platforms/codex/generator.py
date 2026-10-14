@@ -164,6 +164,14 @@ def generate(
             core_hooks_dest,
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "tests", "test"),
         )
+    # Hooks import script modules at startup. Ship the same closed runtime as the
+    # other adapters; the source checkout must not be needed by an installed hook.
+    scripts_root = str(repo / "scripts")
+    if scripts_root not in sys.path:
+        sys.path.insert(0, scripts_root)
+    from build_zipapp import build_archive
+
+    build_archive(repo, out)
     (hooks_dir / "codex-hook.py").write_text(
         "#!/usr/bin/env python3\n"
         '"""Codex hook entry — processes stdin via lifecycle (PRD 352 R5)."""\n'

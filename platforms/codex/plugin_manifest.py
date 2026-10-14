@@ -80,7 +80,7 @@ def build_native_hooks_document(handlers: list[dict[str, str]]) -> dict[str, Any
                 "hooks": [
                     {
                         "type": "command",
-                        "command": "python3 ${PLUGIN_ROOT}/hooks/codex-hook.py",
+                        "command": 'python3 "${PLUGIN_ROOT}/hooks/codex-hook.py"',
                         "statusMessage": f"Shipwright {canonical}",
                     }
                 ]
