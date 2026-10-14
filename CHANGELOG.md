@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.23.7](https://github.com/grdavies/shipwright/compare/v2.23.6...v2.23.7) (2026-10-10)
+
+
+### Bug Fixes
+
+* **deliver:** enforce aware timestamp budget boundaries ([#1324](https://github.com/grdavies/shipwright/issues/1324)) ([d89e54d](https://github.com/grdavies/shipwright/commit/d89e54d151ce85fa7e4465e54f05ff1110f69b0e))
+
 ## [2.23.6](https://github.com/grdavies/shipwright/compare/v2.23.5...v2.23.6) (2026-10-09)
 
 
