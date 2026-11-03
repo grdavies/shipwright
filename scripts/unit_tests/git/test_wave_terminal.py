@@ -1,7 +1,7 @@
 """Regression fixtures for terminal PR branch validation (PRD 059 R13-R15)."""
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import subprocess
 import sys
 from pathlib import Path
@@ -12,31 +12,30 @@ import pytest
 pytestmark = [pytest.mark.git]
 
 
+def _load_source_module(repo_root: Path, name: str):
+    # Preserve the module object already used by collected test functions so
+    # later fault injection patches their actual globals.
+    module = importlib.import_module(name)
+    assert Path(module.__file__).resolve() == (repo_root / "scripts" / f"{name}.py").resolve()
+    return module
+
+
 def _load_wave_terminal(repo_root: Path):
-    path = repo_root / "scripts" / "wave_terminal.py"
-    spec = importlib.util.spec_from_file_location("wave_terminal", path)
-    assert spec and spec.loader
-    mod = importlib.util.module_from_spec(spec)
-    # Register before exec so @dataclass can resolve cls.__module__ (PEP 487 / 3.10+).
-    sys.modules[spec.name] = mod
-    sys.path.insert(0, str(repo_root / "scripts"))
-    try:
-        spec.loader.exec_module(mod)
-    finally:
-        # Leave registered for subsequent patches in the same test; cleanup optional.
-        pass
-    return mod
+    return _load_source_module(repo_root, "wave_terminal")
 
 
 def _load_wave_failure(repo_root: Path):
-    path = repo_root / "scripts" / "wave_failure.py"
-    spec = importlib.util.spec_from_file_location("wave_failure", path)
-    assert spec and spec.loader
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    sys.path.insert(0, str(repo_root / "scripts"))
-    spec.loader.exec_module(mod)
-    return mod
+    return _load_source_module(repo_root, "wave_failure")
+
+
+@pytest.mark.parametrize("name", ["wave_terminal", "wave_failure"])
+def test_wave_loaders_preserve_canonical_import_identity(repo_root: Path, name: str) -> None:
+    canonical = importlib.import_module(name)
+    paths_before = list(sys.path)
+    loader = _load_wave_terminal if name == "wave_terminal" else _load_wave_failure
+    assert loader(repo_root) is canonical
+    assert sys.modules[name] is canonical
+    assert sys.path == paths_before
 
 
 def test_terminal_branch_missing_halts_without_pr(tmp_git_repo: Path, repo_root: Path) -> None:

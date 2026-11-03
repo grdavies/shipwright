@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -17,13 +18,16 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
 
 from _sw.vendor_paths import repo_root
 from unit_tests._harness_runtime import patch_source as _patch_source
+from unit_tests._harness_runtime import (
+    harness_subprocess_env, isolated_source_fixture, isolated_git_environment,
+)
 
 
-def _host_argv_token_leak(root: Path) -> bool:
+def _host_argv_token_leak(root: Path, base_env: dict[str, str]) -> bool:
     import re as _re
     token_re = _re.compile(r"ghp_|glpat-")
     name_re = _re.compile(r"host_token|host_transport")
-    env = os.environ.copy()
+    env = base_env.copy()
     env.pop("GITHUB_TOKEN", None)
     env.pop("GH_TOKEN", None)
     subprocess.run([sys.executable, str(root / "scripts/host_token.py"), "--root", str(root)], env=env, capture_output=True, check=False)
@@ -44,21 +48,29 @@ def _host_argv_token_leak(root: Path) -> bool:
 
 
 def main() -> int:
-    root = repo_root(__file__)
-    env = os.environ.copy()
-    env["ROOT"] = str(root)
-    env["SW_HOST_ARGV_LEAK_OK"] = "0" if _host_argv_token_leak(root) else "1"
-    env["PYTHONPATH"] = os.pathsep.join(
-        p for p in (str(root / "scripts" / "test"), str(root / "scripts"), env.get("PYTHONPATH", "")) if p
-    )
-    src = _patch_source(_SOURCE, root)
-    completed = subprocess.run(
-        ["bash", "-c", src],
-        cwd=str(root),
-        env=env,
-        shell=False,
-    )
-    return completed.returncode
+    source = repo_root(__file__)
+    from shipwright_paths import load_workflow_config
+
+    source_host = load_workflow_config(source).get("host", {})
+    with isolated_source_fixture(source, extra_inputs=(
+        "sw", "platforms", "dist/cursor", "dist/claude-code",
+    )) as root:
+        config_path = root / ".cursor/workflow.config.json"
+        config = json.loads(config_path.read_text())
+        config["host"] = {
+            "provider": "github", "remote": "origin", "tokenEnv": "GITHUB_TOKEN",
+            "rateLimit": source_host.get("rateLimit", {}),
+        }
+        config_path.write_text(json.dumps(config))
+        env = isolated_git_environment(harness_subprocess_env(root))
+        subprocess.run([
+            "git", "-C", str(root), "remote", "add", "origin",
+            "https://github.com/fixture/shipwright.git",
+        ], check=True, env=env)
+        env["SW_HOST_ARGV_LEAK_OK"] = "0" if _host_argv_token_leak(root, env) else "1"
+        src = _patch_source(_SOURCE, root)
+        completed = subprocess.run(["bash", "-c", src], cwd=str(root), env=env, shell=False)
+        return completed.returncode
 
 
 _SOURCE = r"""

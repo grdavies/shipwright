@@ -387,6 +387,15 @@
             },
             "lastPrompt": {
               "type": "string"
+            },
+            "phase": {
+              "type": "string"
+            },
+            "mapId": {
+              "type": "string"
+            },
+            "expectedRevision": {
+              "type": "integer"
             }
           }
         },
@@ -403,6 +412,62 @@
         },
         "forwardHandoffReady": {
           "type": "boolean"
+        },
+        "mapRevision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "brief": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "sourceRevision",
+            "readyForDocHandoff",
+            "invalidation"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sourceRevision": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "readyForDocHandoff": {
+              "type": "boolean"
+            },
+            "invalidation": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "state"
+              ],
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "valid",
+                    "stale",
+                    "superseded"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "invalidatedAt": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "supersededByRevision": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          }
         }
       }
     },

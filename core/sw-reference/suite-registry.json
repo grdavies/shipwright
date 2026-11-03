@@ -2440,6 +2440,23 @@
         "scripts/wave_journal.py"
       ],
       "verifyOrder": 5
+    },
+    {
+      "id": "contributor-init-clean-environment",
+      "script": "scripts/test/run_pytest.py",
+      "lanes": [
+        "ci-yml"
+      ],
+      "classification": "required",
+      "pytestPath": "scripts/unit_tests/test_contributor_init.py",
+      "pathTriggers": [
+        "scripts/contributor_init.py",
+        "scripts/install.py",
+        "pyproject.toml",
+        "README.md",
+        "core/documentation/getting-started.md",
+        "scripts/unit_tests/test_contributor_init.py"
+      ]
     }
   ],
   "plans": {

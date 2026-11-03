@@ -18,19 +18,25 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
 from _sw.vendor_paths import repo_root
 from unit_tests._harness_runtime import harness_subprocess_env as _harness_env
 from unit_tests._harness_runtime import patch_source as _patch_source
+from unit_tests._harness_runtime import isolated_source_fixture, isolated_git_environment
 
 
 def main() -> int:
-    root = repo_root(__file__)
-    env = _harness_env(root)
-    src = _patch_source(_SOURCE, root)
-    completed = subprocess.run(
-        ["bash", "-c", src],
-        cwd=str(root),
-        env=env,
-        shell=False,
-    )
-    return completed.returncode
+    source = repo_root(__file__)
+    # Use an owned temporary repository under the real trusted home, even when
+    # the source checkout is on an external volume. Never change HOME.
+    parent = (source / ".cursor").resolve()
+    if not parent.is_relative_to(Path.home().resolve()):
+        parent = Path.home()
+    with isolated_source_fixture(source, temporary_parent=parent) as root:
+        env = isolated_git_environment(_harness_env(root))
+        subprocess.run([
+            "git", "-C", str(root), "remote", "add", "origin",
+            "https://github.com/fixture/planning-store.git",
+        ], check=True, env=env)
+        src = _patch_source(_SOURCE, root)
+        completed = subprocess.run(["bash", "-c", src], cwd=str(root), env=env, shell=False)
+        return completed.returncode
 
 
 _SOURCE = r"""
@@ -43,7 +49,7 @@ PY="$ROOT/scripts/planning_store.py"
 FAIL=0
 ok() { echo "OK  $1"; }
 bad() { echo "FAIL $1"; FAIL=1; }
-TMP="$(mktemp -d)"
+TMP="$(mktemp -d /tmp/sw-planning-store.XXXXXX)"
 CFG_BACKUP=""
 if [[ -f "$ROOT/.cursor/workflow.config.json" ]]; then
   CFG_BACKUP="$TMP/workflow.config.json.bak"
@@ -100,7 +106,7 @@ rm -f "$ROOT/$BODY_REL" 2>/dev/null || true
 rm -rf "$ROOT/docs/prds/_fixture-store" 2>/dev/null || true
 
 # --- store-backend-interface-parity ---
-SYNC_DIR="$TMP/local-synced"
+SYNC_DIR="$ROOT/.cursor/backend-local-synced"
 mkdir -m 0700 "$SYNC_DIR"
 CFG="$TMP/workflow.config.json"
 python3 - <<PY
@@ -179,51 +185,67 @@ else
 fi
 
 # --- local-synced-path-validation ---
-GOOD="$HOME/.planning-store-fixture-good"
-rm -rf "$GOOD"
+GOOD="$ROOT/.cursor/local-synced-good"
 mkdir -m 0700 "$GOOD"
 if OUT=$(python3 "$PY" --root "$ROOT" validate-local-synced --path "$GOOD") &&    echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='ok'"; then
   ok "local-synced-path-validation:good-path"
 else
   bad "local-synced-path-validation:good-path"
 fi
-LOOSE="$TMP/loose-sync"
+LOOSE="$ROOT/.cursor/loose-sync"
 mkdir -m 0755 "$LOOSE"
 if OUT=$(python3 "$PY" --root "$ROOT" validate-local-synced --path "$LOOSE" 2>/dev/null || true); then
-  if echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='fail'"; then
+  if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='fail' and 'loose-directory-mode' in d['warnings']"; then
     ok "local-synced-path-validation:loose-mode"
   else
     bad "local-synced-path-validation:loose-mode"
   fi
 fi
-LINK="$TMP/link-target"
+LINK="$ROOT/.cursor/link-target"
 mkdir -m 0700 "$LINK"
-SYMLINK="$TMP/link"
+SYMLINK="$ROOT/.cursor/link"
 ln -s "$LINK" "$SYMLINK"
 if OUT=$(python3 "$PY" --root "$ROOT" validate-local-synced --path "$SYMLINK" 2>/dev/null || true); then
-  if echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='fail'"; then
+  if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='fail' and 'symlink-rejected' in d['warnings']"; then
     ok "local-synced-path-validation:symlink"
   else
     bad "local-synced-path-validation:symlink"
   fi
 fi
-DOTDOT="$TMP/dotdot"
+DOTDOT="$ROOT/.cursor/dotdot"
 mkdir -m 0700 "$DOTDOT"
-if OUT=$(python3 "$PY" --root "$ROOT" validate-local-synced --path "$DOTDOT/../$DOTDOT" 2>/dev/null || true); then
-  if echo "$OUT" | python3 -c "import json,sys; assert json.load(sys.stdin)['verdict']=='fail'"; then
+if OUT=$(python3 "$PY" --root "$ROOT" validate-local-synced --path "$DOTDOT/../dotdot" 2>/dev/null || true); then
+  if echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='fail' and 'dotdot-rejected' in d['warnings']"; then
     ok "local-synced-path-validation:dotdot"
   else
     bad "local-synced-path-validation:dotdot"
   fi
 fi
-HOME_CLOUD="$HOME/Dropbox/planning-fixture"
-mkdir -p "$HOME_CLOUD" 2>/dev/null || true
-if OUT=$(python3 "$PY" --root "$ROOT" validate-local-synced --path "$HOME_CLOUD" 2>/dev/null || true); then
-  if echo "$OUT" | python3 -c "import json,sys; w=json.load(sys.stdin).get('warnings',[]); assert any('cloud-sync-root' in x for x in w)"; then
-    ok "local-synced-path-validation:cloud-warn"
-  else
-    ok "local-synced-path-validation:cloud-warn-skipped"
-  fi
+OUTSIDE="$TMP/outside-sync"
+mkdir -m 0700 "$OUTSIDE"
+if OUT=$(python3 "$PY" --root "$ROOT" validate-local-synced --path "$OUTSIDE" 2>/dev/null || true) && \
+   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['verdict']=='fail' and 'path-outside-allowlist' in d['warnings']"; then
+  ok "local-synced-path-validation:outside-home"
+else
+  bad "local-synced-path-validation:outside-home"
+fi
+if python3 - "$ROOT" <<'PY'
+import sys
+from pathlib import Path
+from unittest.mock import patch
+import planning_store_facade as store
+fixture_home = Path(sys.argv[1])
+cloud = fixture_home / 'Dropbox/planning-fixture'
+cloud.mkdir(parents=True, mode=0o700)
+with patch.object(store.Path, 'home', return_value=fixture_home):
+    result = store.validate_local_synced_path(cloud)
+assert result['verdict'] == 'ok', result
+assert 'cloud-sync-root:Dropbox' in result['warnings'], result
+PY
+then
+  ok "local-synced-path-validation:cloud-warn"
+else
+  bad "local-synced-path-validation:cloud-warn"
 fi
 
 # --- memory-chokepoint-read-write ---
@@ -264,6 +286,12 @@ Path("$ISSUE_CFG").write_text(json.dumps({
 }, indent=2) + "\n")
 PY
 cp "$ISSUE_CFG" "$ROOT/.cursor/workflow.config.json"
+if OUT=$(python3 "$PY" --root "$ROOT" resolve-backend) && \
+   echo "$OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d['configured']=='issue-store' and d['authorityState']=='online' and not d['fallback']"; then
+  ok "issue-store-artifact-crud:authority-online"
+else
+  bad "issue-store-artifact-crud:authority-online"
+fi
 python3 "$PY" --root "$ROOT" clear-issue-fixture >/dev/null
 rm -rf "$ROOT/docs/prds/099-fixture" 2>/dev/null || true
 PRD_BODY='# fixture prd'

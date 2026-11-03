@@ -18,19 +18,17 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
 from _sw.vendor_paths import repo_root
 from unit_tests._harness_runtime import harness_subprocess_env as _harness_env
 from unit_tests._harness_runtime import patch_source as _patch_source
+from unit_tests._harness_runtime import isolated_source_fixture, isolated_git_environment
 
 
 def main() -> int:
-    root = repo_root(__file__)
-    env = _harness_env(root)
-    src = _patch_source(_SOURCE, root)
-    completed = subprocess.run(
-        ["bash", "-c", src],
-        cwd=str(root),
-        env=env,
-        shell=False,
-    )
-    return completed.returncode
+    with isolated_source_fixture(repo_root(__file__)) as root:
+        env = isolated_git_environment(_harness_env(root))
+        src = _patch_source(_SOURCE, root)
+        completed = subprocess.run(
+            ["bash", "-c", src], cwd=str(root), env=env, shell=False,
+        )
+        return completed.returncode
 
 
 _SOURCE = r"""
@@ -326,7 +324,7 @@ mkdir -p "$CUR_FIX/.cursor"
 echo '{"prd_number":"047","phases":{"1":{"status":"green-merged"}},"completion":{"status":"completed-pending-merge"},"target":{"branch":"feat/jira-issue-store-adapter"}}' > "$CUR_FIX/.cursor/sw-deliver-state.json"
 echo '{"prd_number":"047"}' > "$CUR_FIX/.cursor/sw-deliver-plan.json"
 if python3 -c "
-import json, subprocess, sys
+import importlib, json, os, subprocess, sys
 from pathlib import Path
 root = Path('''$ROOT''')
 cur = Path('''$CUR_FIX''')
@@ -340,6 +338,28 @@ if proc.returncode != 0 or not proc.stdout.strip():
     raise SystemExit(1)
 d = json.loads(proc.stdout)
 assert d.get('verdict') == 'pass', d
+assert d.get('profile') == 'plugin-self', d
+assert d.get('profileResolution', {}).get('runArtifactCurrency') is True, d
+assert not d.get('skipped'), d
+
+# A newer code commit must still fail the currency gate in this fixture history.
+code = root / 'scripts/wave_deliver.py'
+code.write_bytes(code.read_bytes() + b'\n# fixture: newer implementation commit\n')
+epoch = int(subprocess.check_output(['git', '-C', str(root), 'log', '-1', '--format=%ct'], text=True)) + 2
+env = dict(os.environ, GIT_AUTHOR_DATE=f'@{epoch} +0000', GIT_COMMITTER_DATE=f'@{epoch} +0000')
+subprocess.run(['git', '-C', str(root), 'add', 'scripts/wave_deliver.py'], check=True, env=env)
+subprocess.run(['git', '-C', str(root), '-c', 'user.name=Fixture', '-c', 'user.email=t@t.com',
+                'commit', '-q', '-m', 'fixture: newer code'], check=True, env=env)
+stale = subprocess.run(proc.args, capture_output=True, text=True)
+assert stale.returncode == 1, stale.stdout + stale.stderr
+finding = json.loads(stale.stdout)
+assert any(row.get('kind') == 'guide-stale' and row.get('newestSource') == 'scripts/wave_deliver.py'
+           and row.get('docMtime') < row.get('sourceMtime')
+           for row in finding.get('drift', [])), finding
+sys.path.insert(0, str(root / 'scripts'))
+commands = importlib.import_module('docs-currency-gate').check_command_documentation_currency(root)
+assert any(row.get('kind') == 'command-doc-stale' and row.get('artifact') == 'sw-deliver'
+           for row in commands), commands
 "; then
   ok terminal-docs-currency-gate-invocation-valid
 else

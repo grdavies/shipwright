@@ -99,7 +99,7 @@ def test_generated_shim_cli_parity(tmp_path: Path) -> None:
     assert cli_run.stderr == shim_run.stderr
 
 
-def test_monkeypatched_function_visible_through_shim(tmp_path: Path) -> None:
+def test_monkeypatched_function_visible_through_shim(tmp_path: Path, monkeypatch) -> None:
     _write_minimal_facade_and_cli(tmp_path)
     inventory = build_inventory(tmp_path)
     content = render_shim(repo_depth=2, symbol_names=["greet"])
@@ -107,24 +107,28 @@ def test_monkeypatched_function_visible_through_shim(tmp_path: Path) -> None:
     shim_path.parent.mkdir(parents=True, exist_ok=True)
     shim_path.write_text(content, encoding="utf-8")
 
-    shim = _load_module(shim_path, "planning_store_shim_under_test")
-
-    def patched(name: str) -> str:
-        return f"patched:{name}"
-
-    shim.greet = patched
-    assert shim.greet("x") == "patched:x"
-
-    canonical = shim._load_canonical()
-    assert canonical.greet("x") == "hello:x"
-
-    # Isolated shim loads a stub facade into sys.modules; drop it so later shard tests
-    # import the real scripts/planning_store_facade (not the tmp_path minimal stub).
-    sys.modules.pop("planning_store_facade", None)
-    sys.modules.pop("planning_store_shim_under_test", None)
+    facade_before = sys.modules.get("planning_store_facade")
+    shim_before = sys.modules.get("planning_store_shim_under_test")
     planning_store = sys.modules.get("planning_store")
-    if planning_store is not None and hasattr(planning_store, "_cached"):
-        planning_store._cached = None
+    cache_before = getattr(planning_store, "_cached", None)
+    # Internal loader assignments are restored even when an assertion raises.
+    with monkeypatch.context() as scoped:
+        scoped.setitem(sys.modules, "planning_store_facade", facade_before)
+        scoped.setitem(sys.modules, "planning_store_shim_under_test", shim_before)
+        shim = _load_module(shim_path, "planning_store_shim_under_test")
+
+        def patched(name: str) -> str:
+            return f"patched:{name}"
+
+        shim.greet = patched
+        assert shim.greet("x") == "patched:x"
+        canonical = shim._load_canonical()
+        assert canonical.greet("x") == "hello:x"
+
+    assert sys.modules.get("planning_store_facade") is facade_before
+    assert sys.modules.get("planning_store_shim_under_test") is shim_before
+    if planning_store is not None:
+        assert planning_store._cached is cache_before
 
 
 def test_inventory_records_cli_surface() -> None:

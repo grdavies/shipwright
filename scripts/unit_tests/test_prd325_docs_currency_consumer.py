@@ -252,9 +252,9 @@ def test_rollout_blocks_when_r28_readiness_absent(tmp_path: Path) -> None:
     assert exc.value.code == 2
 
 
-def test_resolve_docs_currency_profile_selects_consumer(repo_root: Path) -> None:
+def test_resolve_docs_currency_profile_selects_consumer(tmp_path: Path) -> None:
     dcg = _load_docs_currency_gate()
-    spoof = repo_root.parent / "consumer-spoof"
+    spoof = tmp_path / "consumer-spoof"
     spoof.mkdir(exist_ok=True)
     resolution = dcg.resolve_docs_currency_profile(spoof)
     assert resolution["profile"] == "consumer"

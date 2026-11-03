@@ -1612,6 +1612,13 @@ class GraphScheduler:
                     continue
 
                 if admitted == 0 and not inflight:
+                    # A cancellation can arrive while completion events are drained.
+                    # Apply it at the owning loop's cancellation boundary before
+                    # interpreting the lack of admissions as a stalled graph.
+                    if self._cancel_requested in (
+                        CancelMode.LET_SETTLE, CancelMode.CANCEL_AND_DRAIN,
+                    ):
+                        continue
                     if parked_ids:
                         raise SchedulerNoProgress(
                             list(parked_ids), reason="pool-parked-no-progress"

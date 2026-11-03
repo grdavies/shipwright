@@ -9,6 +9,8 @@ from pathlib import Path
 
 import pytest
 
+from unit_tests._harness_runtime import isolated_git_environment
+
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
@@ -818,7 +820,7 @@ def test_scanner_documentation_source_commands_and_links(repo_root):
 
 _SCANNER_RELEASE_MODE = 'release-acceptance-v1'
 _SCANNER_EMPTY_CATALOG = b'{\n  "schemaVersion": 1,\n  "records": []\n}\n'
-_SCANNER_CURRENT_ARCHIVE_SHA256 = 'df44369dfb7ee95dd5627d0f041cc4e0529f15f4cd2f25a2753580957449ae74'
+_SCANNER_CURRENT_ARCHIVE_SHA256 = '6a0316c87f6ef6514389663433ffc10e547793efc9ebf7d9a667dacb4dc16f0a'
 _SCANNER_CURRENT_CATALOG_SHA256 = 'a9c8d44180dcf5f6686bbd4dee2cfecc63c552418d312723eb47d94aa66be60e'
 _SCANNER_RELEASE_IDENTITIES = {}
 _SCANNER_IMPLEMENTATION_INVENTORY = None
@@ -914,7 +916,8 @@ def _scanner_validate_sealed_release(root, expected, *, historical):
 
 def _scanner_tracked_inventory(root):
     result = {}
-    raw = subprocess.check_output(['git', 'ls-files', '--stage', '-z'], cwd=root)
+    raw = subprocess.check_output(['git', 'ls-files', '--stage', '-z'], cwd=root,
+                                  env=isolated_git_environment(dict(os.environ)))
     for record in raw.split(b'\0'):
         if not record:
             continue
@@ -938,18 +941,19 @@ def _scanner_tracked_inventory(root):
 def _scanner_make_own_git_source(destination):
     global _SCANNER_IMPLEMENTATION_INVENTORY
     origin = SCRIPT_DIR.parent
+    env = isolated_git_environment(dict(os.environ))
     expected = _scanner_tracked_inventory(origin)
     subprocess.check_call(
-        ['git', 'clone', '--local', '--no-hardlinks', '--quiet', str(origin), str(destination)])
+        ['git', 'clone', '--local', '--no-hardlinks', '--quiet', str(origin), str(destination)], env=env)
     assert (destination / '.git').is_dir()
     assert not (destination / '.git/objects/info/alternates').exists()
-    common = subprocess.check_output(['git', 'rev-parse', '--git-common-dir'], cwd=destination)
+    common = subprocess.check_output(['git', 'rev-parse', '--git-common-dir'], cwd=destination, env=env)
     common_path = Path(os.fsdecode(common).strip())
     common_path = common_path if common_path.is_absolute() else destination / common_path
     assert common_path.resolve() == (destination / '.git').resolve()
-    assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=destination) == (
-        subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=origin))
-    raw = subprocess.check_output(['git', 'ls-files', '-z'], cwd=origin)
+    assert subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=destination, env=env) == (
+        subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=origin, env=env))
+    raw = subprocess.check_output(['git', 'ls-files', '-z'], cwd=origin, env=env)
     for encoded in raw.split(b'\0'):
         if not encoded:
             continue
@@ -963,6 +967,9 @@ def _scanner_make_own_git_source(destination):
             target.symlink_to(os.readlink(source))
         else:
             shutil.copy2(source, target)
+    # A clone starts from HEAD's index. Track copied additions as well so the
+    # inventory assertion covers every current source input without committing it.
+    subprocess.check_call(['git', '-C', str(destination), 'add', '--all'], env=env)
     observed = _scanner_tracked_inventory(destination)
     assert observed == expected, 'disposable own-Git source inventory mismatch'
     if _SCANNER_IMPLEMENTATION_INVENTORY is None:
@@ -970,6 +977,38 @@ def _scanner_make_own_git_source(destination):
     else:
         assert expected == _SCANNER_IMPLEMENTATION_INVENTORY, 'scanner fixture implementation snapshot drifted'
     return expected
+
+
+
+def test_scanner_clone_preserves_caller_git_state(tmp_path, monkeypatch):
+    env = isolated_git_environment(dict(os.environ))
+    source, caller = tmp_path / 'source', tmp_path / 'caller'
+    for root in (source, caller):
+        root.mkdir()
+        subprocess.check_call(['git', 'init', '-q', str(root)], env=env)
+        (root / 'tracked.txt').write_text(root.name + '\n')
+        subprocess.check_call(['git', '-C', str(root), 'add', '--all'], env=env)
+        subprocess.check_call(['git', '-C', str(root), '-c', 'user.name=Fixture',
+                               '-c', 'user.email=t@t.com', '-c', 'commit.gpgsign=false',
+                               '-c', 'core.hooksPath=' + str(tmp_path / 'empty-hooks'),
+                               'commit', '-q', '-m', 'fixture'], env=env)
+    (source / 'scripts').mkdir()
+    (source / 'scripts/new.py').write_text('# staged addition\n')
+    subprocess.check_call(['git', '-C', str(source), 'add', '--all'], env=env)
+    source_before = _scanner_tracked_inventory(source)
+    index = caller / '.git/index'
+    before = index.read_bytes(), index.stat().st_mode, index.stat().st_mtime_ns
+    monkeypatch.setenv('GIT_DIR', str(caller / '.git'))
+    monkeypatch.setenv('GIT_WORK_TREE', str(caller))
+    monkeypatch.setenv('GIT_INDEX_FILE', str(index))
+    monkeypatch.setattr(sys.modules[__name__], 'SCRIPT_DIR', source / 'scripts')
+    monkeypatch.setattr(sys.modules[__name__], '_SCANNER_IMPLEMENTATION_INVENTORY', None)
+    destination = tmp_path / 'clone'
+    copied = _scanner_make_own_git_source(destination)
+    assert copied == source_before == _scanner_tracked_inventory(destination)
+    assert 'scripts/new.py' in copied
+    assert (index.read_bytes(), index.stat().st_mode, index.stat().st_mtime_ns) == before
+    assert _scanner_tracked_inventory(source) == source_before
 
 
 def _scanner_build_release(source, root):

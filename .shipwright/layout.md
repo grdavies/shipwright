@@ -1132,7 +1132,7 @@ Artifacts:
 | Path | Role |
 | --- | --- |
 | `.cursor/hooks/state/memory-prework-search.json` | Redacted per-surface search record (or `memory:offline` / `memory:none`) |
-| `.cursor/sw-deliver-runs/run.<slug>.log` | Per-deliver-run append-only audit breadcrumb (PRD 050 R4) |
+| `.shipwright/deliver-runs/run.legacy.log` (legacy `.cursor/sw-deliver-runs/run.legacy.log`) | Unscoped, active-checkout pre-work audit; mandatory append, never deliver-state authority |
 | `.cursor/doc-review-runs/<dispatch-id>.json` | Per-dispatch token-estimate telemetry for `/sw-doc-review` persona panels (PRD 058 R28). **Cache-only / non-authoritative** (PRD 341) — cannot authorize open/complete; live body witnesses use stripped-hash exclusion from freeze inputs. |
 
 The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies the first file-mutating tool call

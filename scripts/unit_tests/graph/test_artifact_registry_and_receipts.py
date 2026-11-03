@@ -13,6 +13,7 @@ if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
 from graph.artifact_registry import (  # noqa: E402
+    DEFAULT_RECEIPT_MAC_KEY,
     ArtifactIntegrityError,
     ArtifactRegistry,
     ArtifactSchemaVersion,
@@ -134,7 +135,8 @@ def test_producer_newer_than_consumer_is_fail_closed() -> None:
 
 def test_cache_hit_misses_across_major_bump(tmp_path: Path) -> None:
     registry = ArtifactRegistry(tmp_path / "artifacts")
-    journal = ExecutionReceiptJournal(tmp_path / "receipts")
+    # This legacy cache consumer validates its fixed key; keep the signer paired.
+    journal = ExecutionReceiptJournal(tmp_path / "receipts", mac_key=DEFAULT_RECEIPT_MAC_KEY)
     cache = ContentAddressedLineageCache(
         tmp_path / "lineage",
         registry=registry,

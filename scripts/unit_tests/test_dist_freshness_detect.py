@@ -1,11 +1,32 @@
 """PRD 274 R8/R9/R15 — dist freshness detect (side-effect-free, regen in errors)."""
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from unit_tests._harness_runtime import isolated_source_fixture, isolated_git_environment
+
+
+@pytest.fixture(autouse=True)
+def _isolate_git_environment(monkeypatch):
+    # Imported helpers also spawn Git, so isolate the whole test process.
+    for key in list(os.environ):
+        if key.startswith("GIT_"):
+            monkeypatch.delenv(key)
+    for key, value in isolated_git_environment({}).items():
+        monkeypatch.setenv(key, value)
+
+
+@pytest.fixture(scope="session")
+def repo_root():
+    """Own all source, generation, and index mutations used by distribution tests."""
+    source = Path(__file__).resolve().parents[2]
+    with isolated_source_fixture(source, extra_inputs=("sw", "platforms", "dist")) as root:
+        yield root
 
 _SCRIPTS = Path(__file__).resolve().parents[1]
 if str(_SCRIPTS) not in sys.path:
@@ -45,7 +66,7 @@ def test_error_includes_canonical_regen_command(repo_root: Path) -> None:
     target.write_text(original + "\n# regen-command probe\n", encoding="utf-8")
     try:
         proc = subprocess.run(
-            [sys.executable, str(_SCRIPTS / "dist_freshness.py"), "detect"],
+            [sys.executable, str(repo_root / "scripts/dist_freshness.py"), "detect"],
             cwd=str(repo_root),
             capture_output=True,
             text=True,

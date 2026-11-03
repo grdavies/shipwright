@@ -98,8 +98,9 @@ else
 fi
 
 # --- dispatch-preflight-parent-floor ---
+CHEAP_PARENT=$(bash "$RESOLVE" --tier cheap --config "$CONFIG" | python3 -c "import json,sys; print(json.load(sys.stdin)['modelId'])")
 set +e
-PF_OUT=$(bash "$PREFLIGHT" --agent sw-coherence-reviewer --parent-model composer-2.5 --config "$CONFIG" 2>/dev/null)
+PF_OUT=$(bash "$PREFLIGHT" --agent sw-coherence-reviewer --parent-model "$CHEAP_PARENT" --parent-tier cheap --config "$CONFIG" 2>/dev/null)
 PF_EC=$?
 set -e
 if [[ "$PF_EC" -eq 20 ]] && echo "$PF_OUT" | python3 -c "import json,sys; d=json.load(sys.stdin); assert d.get('cause')=='binding:no-model'"; then

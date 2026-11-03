@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import os
 import subprocess
 import sys
 import zipfile
@@ -12,11 +13,31 @@ from pathlib import Path
 
 import pytest
 
+from unit_tests._harness_runtime import isolated_source_fixture, isolated_git_environment
+
+
+@pytest.fixture(autouse=True)
+def _isolate_git_environment(monkeypatch):
+    # Imported helpers also spawn Git, so isolate the whole test process.
+    for key in list(os.environ):
+        if key.startswith("GIT_"):
+            monkeypatch.delenv(key)
+    for key, value in isolated_git_environment({}).items():
+        monkeypatch.setenv(key, value)
+
+
+@pytest.fixture(scope="session")
+def repo_root():
+    """Own all source, generation, and index mutations used by distribution tests."""
+    source = Path(__file__).resolve().parents[2]
+    with isolated_source_fixture(source, extra_inputs=("sw", "platforms", "dist")) as root:
+        yield root
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT / "scripts") not in sys.path:
     sys.path.insert(0, str(REPO_ROOT / "scripts"))
 
-from runtime_requirements import bundle_targets, sync_runtime_bundle  # noqa: E402
+from runtime_requirements import HANDOFF_RUNTIME_MODULES, bundle_targets, sync_runtime_bundle  # noqa: E402
 
 
 def _pyproject_text() -> str:
@@ -24,11 +45,11 @@ def _pyproject_text() -> str:
 
 
 def test_pyproject_uses_non_colliding_package_name() -> None:
-    """R1 — PyPI distribution name avoids generic shipwright namespace collision."""
+    """The release contract reverted the distribution name to shipwright (#1144)."""
     text = _pyproject_text()
     match = re.search(r'^name\s*=\s*"([^"]+)"', text, flags=re.MULTILINE)
     assert match is not None
-    assert match.group(1) == "shipwright-workflow"
+    assert match.group(1) == "shipwright"
 
 
 def test_console_entry_keeps_shipwright_command() -> None:
@@ -48,8 +69,16 @@ def test_sync_runtime_bundle_mirrors_scripts_and_dist(tmp_path: Path) -> None:
     (root / "dist" / "cursor" / "version.txt").write_text("9.9.9\n", encoding="utf-8")
     (root / "version.txt").write_text("9.9.9\n", encoding="utf-8")
 
+    for rel in HANDOFF_RUNTIME_MODULES:
+        dependency = root / rel
+        dependency.parent.mkdir(parents=True, exist_ok=True)
+        dependency.write_text(f"# synthetic runtime dependency: {rel}\\n", encoding="utf-8")
+
     result = sync_runtime_bundle(root)
-    assert result["verdict"] == "pass"
+    assert result["verdict"] == "pass", result
+    assert result["handoff"]["verdict"] == "pass"
+    for rel in HANDOFF_RUNTIME_MODULES:
+        assert (root / "sw" / rel).read_bytes() == (root / rel).read_bytes()
     targets = bundle_targets(root)
     assert (targets["scripts"] / "version.py").is_file()
     assert (targets["scripts"] / "install.py").is_file()
@@ -121,10 +150,10 @@ def test_wheel_bundles_version_without_manual_presync(repo_root: Path, tmp_path:
 
 
 def test_getting_started_documents_shipwright_workflow_package() -> None:
-    """R4 — adopter docs reference the non-colliding PyPI package name."""
+    """Adopter docs use the current isolated release installation commands."""
     docs = (REPO_ROOT / "core/documentation/getting-started.md").read_text(encoding="utf-8")
-    assert "pip install shipwright-workflow" in docs
-    assert "pip install shipwright\n" not in docs
+    assert "uv tool install shipwright --from git+https://github.com/grdavies/shipwright.git@vX.Y.Z" in docs
+    assert "pipx install git+https://github.com/grdavies/shipwright.git@vX.Y.Z" in docs
 
 
 def test_release_workflow_has_clean_wheel_install(repo_root: Path) -> None:

@@ -14,6 +14,7 @@ if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
 from graph.artifact_registry import (  # noqa: E402
+    DEFAULT_RECEIPT_MAC_KEY,
     ArtifactIntegrityError,
     ArtifactRegistry,
     PurityViolationError,
@@ -178,7 +179,7 @@ def test_read_only_registry_write_fails_closed(tmp_path: Path) -> None:
 def test_receipt_satisfies_cache_hit_rejects_failed_retry_and_mutated(
     tmp_path: Path,
 ) -> None:
-    journal = ExecutionReceiptJournal(tmp_path / "receipts")
+    journal = ExecutionReceiptJournal(tmp_path / "receipts", mac_key=DEFAULT_RECEIPT_MAC_KEY)
     complete = _complete_receipt(journal, "verify", "stable-key")
     assert receipt_satisfies_cache_hit(complete) is True
     assert receipt_is_cache_reusable(complete) is True
@@ -200,7 +201,7 @@ def test_content_addressed_cache_hit_restores_artifacts_and_writes_receipt(
     tmp_path: Path,
 ) -> None:
     registry = ArtifactRegistry(tmp_path / "artifacts")
-    journal = ExecutionReceiptJournal(tmp_path / "receipts")
+    journal = ExecutionReceiptJournal(tmp_path / "receipts", mac_key=DEFAULT_RECEIPT_MAC_KEY)
     cache = ContentAddressedLineageCache(
         tmp_path / "lineage",
         registry=registry,
@@ -238,7 +239,7 @@ def test_content_addressed_cache_hit_restores_artifacts_and_writes_receipt(
 
 
 def test_failed_source_receipt_is_never_reused(tmp_path: Path) -> None:
-    journal = ExecutionReceiptJournal(tmp_path / "receipts")
+    journal = ExecutionReceiptJournal(tmp_path / "receipts", mac_key=DEFAULT_RECEIPT_MAC_KEY)
     cache = ContentAddressedLineageCache(
         tmp_path / "lineage",
         registry=ArtifactRegistry(tmp_path / "artifacts"),
@@ -246,9 +247,18 @@ def test_failed_source_receipt_is_never_reused(tmp_path: Path) -> None:
     )
     material = _material()
     failed = _complete_receipt(journal, "verify", "failed-key")
+    assert receipt_is_cache_reusable(failed)
     failed["verdict"] = "fail"
     with pytest.raises(LineageError, match="not cache-reusable"):
         cache.store_success(material=material, source_receipt=failed, artifacts=[])
+
+
+def test_legacy_cache_refuses_a_receipt_signed_with_another_key(tmp_path: Path) -> None:
+    journal = ExecutionReceiptJournal(tmp_path / "receipts", mac_key=b"fixture-other-key")
+    receipt = _complete_receipt(journal, "verify", "other-key")
+    assert receipt_satisfies_cache_hit(receipt, mac_key=b"fixture-other-key")
+    assert not receipt_satisfies_cache_hit(receipt)
+    assert not receipt_is_cache_reusable(receipt)
 
 
 def test_artifact_registry_uses_keyed_mac_not_sha256_alone(tmp_path: Path) -> None:

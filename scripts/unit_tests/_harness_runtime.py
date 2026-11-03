@@ -3,7 +3,67 @@ from __future__ import annotations
 
 import os
 import re
+import json
+import shutil
+import subprocess
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
+
+
+def isolated_git_environment(base: dict[str, str]) -> dict[str, str]:
+    """Do not let caller Git selectors or global hooks escape into a fixture."""
+    env = {key: value for key, value in base.items() if not key.startswith("GIT_")}
+    env["GIT_CONFIG_NOSYSTEM"] = "1"
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    return env
+
+
+@contextmanager
+def isolated_source_fixture(
+    source: Path, *, extra_inputs: tuple[str, ...] = (), temporary_parent: Path | None = None,
+):
+    """Own fixture planning/Git state while preserving source and execution profiles."""
+    with tempfile.TemporaryDirectory(prefix="sw-source-fixture-", dir=temporary_parent) as temporary:
+        root = Path(temporary).resolve()
+        env = isolated_git_environment(dict(os.environ))
+        inputs = ("scripts", "core", "commands", "skills", "rules", "agents", "providers", "docs",
+                  ".github", ".gitignore", "version.txt", "pyproject.toml", "pytest.ini", "README.md",
+                  "AGENTS.md", "CONTRIBUTING.md", "PROVENANCE.md", ".shipwright-dev", ".shipwright/layout.md",
+                  ".sw/layout.md", ".sw/config.schema.json") + extra_inputs
+        tracked = subprocess.run(["git", "-C", str(source), "ls-files", "-z", "--", *inputs],
+                                 check=True, capture_output=True, text=True, env=env)
+        for name in filter(None, tracked.stdout.split("\0")):
+            original = source / name
+            if original.is_file() or original.is_symlink():
+                target = root / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(original, target, follow_symlinks=False)
+        config = root / ".cursor/workflow.config.json"
+        config.parent.mkdir(parents=True)
+        from shipwright_paths import load_workflow_config
+
+        original_config = load_workflow_config(source)
+        fixture_config = {
+            "projectId": "source-fixture", "defaultBaseBranch": "main",
+            "planning": {"store": {"backend": "in-repo-public"}},
+        }
+        for key in ("models", "review", "communication", "dispatch"):
+            if key in original_config:
+                fixture_config[key] = original_config[key]
+        config.write_text(json.dumps(fixture_config), encoding="utf-8")
+        projection = root / "scripts/test/fixtures/docs-prds-projection"
+        if projection.is_dir():
+            shutil.copytree(projection, root / "docs/prds", dirs_exist_ok=True)
+        subprocess.run(["git", "init", "-q", "-b", "main", str(root)], check=True, env=env)
+        hooks = root / ".git/fixture-hooks"
+        hooks.mkdir()
+        subprocess.run(["git", "-C", str(root), "config", "core.hooksPath", str(hooks)], check=True, env=env)
+        subprocess.run(["git", "-C", str(root), "add", "--all"], check=True, env=env)
+        subprocess.run(["git", "-C", str(root), "-c", "user.name=Fixture",
+                        "-c", "user.email=t@t.com", "-c", "commit.gpgsign=false",
+                        "commit", "-q", "--allow-empty", "-m", "fixture"], check=True, env=env)
+        yield root
 
 
 def harness_subprocess_env(root: Path, base: dict[str, str] | None = None) -> dict[str, str]:
@@ -398,13 +458,17 @@ class FixtureContext:
     ):
         import sys
         from _sw import proc
+        from credentials.child_env import BLOCKED_INHERITANCE_KEYS
 
         path = self.script_path(rel)
         cmd = [sys.executable, str(path), *args]
         merged = self.env.copy()
         if env:
             merged.update(env)
-        declared = tuple(key for key in merged if key.startswith("SW_"))
+        declared = tuple(
+            key for key in merged
+            if key.startswith("SW_") and key not in BLOCKED_INHERITANCE_KEYS
+        )
         return proc.run(
             cmd,
             cwd=str(cwd or self.root),

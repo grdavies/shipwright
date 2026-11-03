@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -17,6 +18,15 @@ import release_assets
 import sw_self
 
 
+
+def _seed_core_runtime(root: Path) -> None:
+    # Release builds now require the real packaged handoff/schema/MCP runtime.
+    for rel in (*build_zipapp.CORE_RUNTIME_SUBTREES, *build_zipapp.CORE_RUNTIME_EXTRA_PATHS):
+        shutil.copytree(REPO_ROOT / "core" / rel, root / "core" / rel,
+                        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    shutil.copy2(REPO_ROOT / "core/__init__.py", root / "core/__init__.py")
+
+
 def test_asset_names_follow_version_convention() -> None:
     """R5 — required asset filenames are version-scoped and stable."""
     names = release_assets.asset_names("2.10.0")
@@ -28,6 +38,7 @@ def test_asset_names_follow_version_convention() -> None:
 def test_verify_fails_when_assets_missing(tmp_path: Path) -> None:
     """Z — verification fails closed when no release assets exist."""
     root = tmp_path / "repo"
+    _seed_core_runtime(root)
     dest = root / "dist" / "cursor"
     dest.mkdir(parents=True)
     (root / "version.txt").write_text("1.2.3\n", encoding="utf-8")
@@ -46,6 +57,7 @@ def test_build_and_verify_round_trip(tmp_path: Path) -> None:
     (scripts / "version.py").write_text('__version__ = "1.2.3"\n', encoding="utf-8")
     (scripts / "noop.py").write_text("def main() -> int:\n    return 0\n", encoding="utf-8")
     (root / "version.txt").write_text("1.2.3\n", encoding="utf-8")
+    _seed_core_runtime(root)
     dest = root / "dist" / "cursor"
 
     built = release_assets.build_release_assets(root, dest_dir=dest)
@@ -69,6 +81,7 @@ def test_verify_detects_stamp_version_mismatch(tmp_path: Path) -> None:
     (scripts / "version.py").write_text('__version__ = "1.2.3"\n', encoding="utf-8")
     (scripts / "noop.py").write_text("def main() -> int:\n    return 0\n", encoding="utf-8")
     (root / "version.txt").write_text("1.2.3\n", encoding="utf-8")
+    _seed_core_runtime(root)
     dest = root / "dist" / "cursor"
     built = release_assets.build_release_assets(root, dest_dir=dest)
     assert built["verdict"] == "pass"
@@ -91,6 +104,7 @@ def test_verify_detects_integrity_mismatch(tmp_path: Path) -> None:
     (scripts / "version.py").write_text('__version__ = "1.2.3"\n', encoding="utf-8")
     (scripts / "noop.py").write_text("def main() -> int:\n    return 0\n", encoding="utf-8")
     (root / "version.txt").write_text("1.2.3\n", encoding="utf-8")
+    _seed_core_runtime(root)
     dest = root / "dist" / "cursor"
     release_assets.build_release_assets(root, dest_dir=dest)
 
@@ -111,6 +125,7 @@ def test_publication_manifest_lists_upload_assets(tmp_path: Path) -> None:
     (scripts / "version.py").write_text('__version__ = "1.2.3"\n', encoding="utf-8")
     (scripts / "noop.py").write_text("def main() -> int:\n    return 0\n", encoding="utf-8")
     (root / "version.txt").write_text("1.2.3\n", encoding="utf-8")
+    _seed_core_runtime(root)
     dest = root / "dist" / "cursor"
     release_assets.build_release_assets(root, dest_dir=dest)
 

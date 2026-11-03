@@ -258,6 +258,13 @@ def promotion_coverage_gate(
     return True, ""
 
 
+def _capability_id_for_node(node: Mapping[str, Any]) -> str:
+    cap_id = str((node.get("metadata") or {}).get("requiredCapabilityId") or "")
+    if not cap_id and "auth" in str((node.get("target") or {}).get("step") or ""):
+        cap_id = CAPABILITY_AUTH
+    return cap_id
+
+
 def coverage_requirements_from_graph(
     graph: Mapping[str, Any],
 ) -> tuple[CoverageRequirement, ...]:
@@ -267,11 +274,7 @@ def coverage_requirements_from_graph(
     for node in graph["spec"]["nodes"]:
         if not isinstance(node, Mapping):
             continue
-        cap_id = str((node.get("metadata") or {}).get("requiredCapabilityId") or "")
-        if not cap_id:
-            step = str((node.get("target") or {}).get("step") or "")
-            if "auth" in step:
-                cap_id = CAPABILITY_AUTH
+        cap_id = _capability_id_for_node(node)
         if not cap_id:
             continue
         strategy = str(
@@ -320,11 +323,7 @@ def coverage_evidence_from_graph(
     for node in graph["spec"]["nodes"]:
         if not isinstance(node, Mapping):
             continue
-        cap_id = str((node.get("metadata") or {}).get("requiredCapabilityId") or "")
-        if not cap_id:
-            step = str((node.get("target") or {}).get("step") or "")
-            if "auth" in step:
-                cap_id = CAPABILITY_AUTH
+        cap_id = _capability_id_for_node(node)
         if not cap_id:
             continue
         strategy = str((node.get("verification") or {}).get("strategy") or "")
@@ -906,7 +905,7 @@ def compute_verification_coverage(
         return VerificationCoverage(aggregate=0.0, by_verifier_class={})
     by_class: dict[str, float] = {}
     for node in graph["spec"]["nodes"]:
-        cap_id = str((node.get("metadata") or {}).get("requiredCapabilityId") or "")
+        cap_id = _capability_id_for_node(node)
         if not cap_id or cap_id not in capability_coverage.by_capability_id:
             continue
         strategy = str((node.get("verification") or {}).get("strategy") or "")
@@ -916,10 +915,9 @@ def compute_verification_coverage(
         )
         score = capability_coverage.by_capability_id[cap_id]
         by_class[verifier_class] = min(by_class.get(verifier_class, 1.0), score)
-    aggregate = (
-        sum(by_class.values()) / len(by_class) if by_class else capability_coverage.aggregate
+    return VerificationCoverage(
+        aggregate=capability_coverage.aggregate, by_verifier_class=by_class,
     )
-    return VerificationCoverage(aggregate=aggregate, by_verifier_class=by_class)
 
 
 def compute_shadow_kernel_metrics(

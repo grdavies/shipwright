@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import io
+import importlib.util
+import json
 import os
 from pathlib import Path
 import shutil
@@ -9,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 import zipfile
 
 
@@ -133,6 +136,91 @@ class FrozenBinaryHookTests(unittest.TestCase):
     def test_empty_index_is_allowed(self) -> None:
         result = self.git("commit", "--allow-empty", "-m", "fixture: no staged paths", check=False)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_embedded_frozen_examples_allow_edits_and_deletion(self) -> None:
+        examples = [
+            b'#!/usr/bin/env python3\n_SOURCE = r"""\n' + FROZEN + b'"""\n',
+            b"#!/bin/sh\ncat <<'DOC'\n" + FROZEN + b"DOC\n",
+            b"# Example\n\n```yaml\n" + FROZEN + b"```\n",
+            b"Meaningful prose before the example\n" + FROZEN,
+            b"\xffprint('source')\n" + FROZEN,
+        ]
+        for index, original in enumerate(examples):
+            with self.subTest(index=index):
+                name = f"example-{index}.py"
+                self.seed({name: original})
+                edited = self.commit_change(name, original + b"# revised\n")
+                self.assertEqual(edited.returncode, 0, edited.stderr)
+                deleted = self.commit_change(name, None)
+                self.assertEqual(deleted.returncode, 0, deleted.stderr)
+
+    def test_frozen_baseline_cannot_be_unfrozen_by_new_preamble(self) -> None:
+        for index, prefix in enumerate((b"# new preamble\n", b"#!/bin/sh\n", b"\xffsource\n")):
+            with self.subTest(prefix=prefix):
+                name = f"protected-{index}.py"
+                self.seed({name: FROZEN})
+                self.assert_blocked(self.commit_change(name, prefix + FROZEN), name)
+                self.git("restore", "--staged", "--worktree", name)
+
+    def test_bom_blank_crlf_frontmatter_remains_frozen(self) -> None:
+        original = b"\xef\xbb\xbf\r\n \t\r\n" + FROZEN.replace(b"\n", b"\r\n")
+        self.seed({"protected.bin": original})
+        self.assert_blocked(self.commit_change("protected.bin", original.replace(b"frozen: true", b"frozen: false")), "protected.bin")
+
+    def test_first_unfrozen_block_does_not_freeze_later_example(self) -> None:
+        original = b"---\nfrozen: false\n---\n# Example\n" + FROZEN
+        self.seed({"draft.md": original})
+        result = self.commit_change("draft.md", original + b"Revised\n")
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_hook_and_ci_frontmatter_boundaries_match(self) -> None:
+        import check_frozen_scan as scanner
+
+        spec = importlib.util.spec_from_file_location("readiness_frozen_hook", HOOK)
+        hook = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(hook)
+        cases = [
+            (FROZEN, True),
+            (b"\xff\n" + FROZEN, True),
+            (FROZEN.replace(b"frozen:", b"title: \xff\nfrozen:"), True),
+            (FROZEN + b"\xff\n", True),
+            (b"\xef\xbb\xbf" + FROZEN, True),
+            (b"\n\t\n" + FROZEN, True),
+            (b"#!/bin/sh\n" + FROZEN, False),
+            (b'payload = """\n' + FROZEN + b'"""\n', False),
+            (b"\xffsource\n" + FROZEN, False),
+            (b"# Example\n" + FROZEN, False),
+            (b"\x00\n" + FROZEN, False),
+            (b"\xef\xbf\xbd\n" + FROZEN, False),
+            (b"---\nfrozen: false\n---\n" + FROZEN, False),
+        ]
+        self.seed({f"boundary-{index}.py": data for index, (data, _) in enumerate(cases)})
+        with patch.object(scanner, "git_root", return_value=self.repo), patch.dict(os.environ, self.env, clear=True):
+            for index, (_, expected) in enumerate(cases):
+                name = f"boundary-{index}.py"
+                with self.subTest(index=index):
+                    self.assertEqual(hook._is_frozen_at_head(self.repo, name), expected)
+                    self.assertEqual(scanner.is_frozen_at_ref(name, "HEAD"), expected)
+
+    def test_ci_binary_cannot_mask_corrupt_frozen_document(self) -> None:
+        original = b"\xff\n" + FROZEN
+        self.seed({"runtime.pyz": zipapp_bytes(1), "tasks.md": original})
+        base = self.git("rev-parse", "HEAD").stdout.strip()
+        (self.repo / "runtime.pyz").write_bytes(zipapp_bytes(2))
+        (self.repo / "tasks.md").write_bytes(b"New preamble\n" + original)
+        self.git("add", "runtime.pyz", "tasks.md")
+        tree = self.git("write-tree").stdout.strip()
+        # Model an untrusted incoming commit through plumbing in this owned repo;
+        # CI must reject it even when client hooks were never involved.
+        commit = self.git("commit-tree", tree, "-p", base, "-m", "fixture: incoming frozen edit").stdout.strip()
+        self.git("update-ref", "HEAD", commit, base)
+        result = subprocess.run([sys.executable, str(ROOT / "scripts/check_frozen_scan.py"), base],
+                                cwd=self.repo, env=self.env, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["reason"], "frozen artifact modified")
+        self.assertEqual(payload["files"], ["tasks.md"])
 
 
 if __name__ == "__main__":

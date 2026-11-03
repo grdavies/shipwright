@@ -16,6 +16,7 @@ if str(SCRIPT_DIR) not in sys.path:
 
 import wave_living_docs as wld  # noqa: E402
 from halt_resume import validate_halt_resume  # noqa: E402
+from wave_run_paths import global_plan_path  # noqa: E402
 from issues_lib import FixtureIssuesStore, IssueRateLimited  # noqa: E402
 from planning_canonical import compose_issue_body, type_label  # noqa: E402
 
@@ -183,7 +184,7 @@ def test_gap_closeout_retry_exhaustion(tmp_path: Path, monkeypatch: pytest.Monke
     (root / ("." + "cursor") / "workflow.config.json").write_text(json.dumps(cfg), encoding="utf-8")
     state_path = root / ("." + "cursor") / "sw-deliver-state.json"
     state_path.write_text(json.dumps(_deliver_state()), encoding="utf-8")
-    (root / ("." + "cursor") / "sw-deliver-plan.json").write_text("{}", encoding="utf-8")
+    global_plan_path(root).write_text("{}", encoding="utf-8")
 
     def _always_rate_limited(worktree: Path, prd: str, *, pr: str = "") -> dict[str, object]:
         return {

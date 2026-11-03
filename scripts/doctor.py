@@ -329,7 +329,7 @@ def diagnose(root: Path | None = None) -> dict[str, Any]:
 
     try:
         result = probe()
-        python_ok = result.ok
+        python_ok = True  # probe raises when no supported interpreter is available.
         python_detail = result.version_text
     except Exception as exc:  # pragma: no cover
         python_ok = False

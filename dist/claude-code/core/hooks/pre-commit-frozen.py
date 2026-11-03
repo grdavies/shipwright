@@ -19,12 +19,24 @@ def _is_frozen_at_head(repo: Path, path: str) -> bool:
         return False
     in_fm = False
     # Git blobs can be binary; retain invalid bytes without hiding ASCII frontmatter.
-    for line in proc.stdout.decode("utf-8", errors="surrogateescape").splitlines():
-        if line.strip() == "---":
-            if in_fm:
-                break
+    # Frontmatter belongs to the document preamble, never embedded examples.
+    # Keep undecodable-byte prefixes conservative without skipping real source.
+    for line_number, line in enumerate(proc.stdout.decode("utf-8", errors="surrogateescape").splitlines()):
+        if not in_fm:
+            if line_number == 0:
+                line = line.removeprefix("\ufeff")
+            first = 0
+            while first < len(line) and (line[first].isspace() or "\udc80" <= line[first] <= "\udcff"):
+                first += 1
+            line = line[first:]
+            if not line:
+                continue
+            if line.rstrip() != "---":
+                return False
             in_fm = True
             continue
+        if line.strip() == "---":
+            break
         if in_fm and line.startswith("frozen:") and "true" in line.split(":", 1)[-1].lower():
             return True
     return False

@@ -13,7 +13,7 @@ if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
 from graph.cutover import CutoverStage, DogfoodEvidence  # noqa: E402
-from graph.detectors.registry import CAPABILITY_AUTH  # noqa: E402
+from graph.detectors.registry import CAPABILITY_AUTH, CAPABILITY_MIGRATION  # noqa: E402
 from graph.dynamic_proposal import (  # noqa: E402
     ProposalBudget,
     assert_coverage_regression_gate,
@@ -175,3 +175,14 @@ def test_evaluate_dynamic_proposal_uses_required_capability_coverage_gate() -> N
     )
     assert decision.used_fallback is True
     assert "coverage regression" in decision.reason
+
+
+def test_verifier_class_buckets_do_not_hide_an_unmet_required_capability() -> None:
+    graph = _auth_coverage_graph(strategy=VerifierKind.MECHANICAL.value)
+    graph["metadata"]["requiredCapabilityIds"] = [CAPABILITY_AUTH, CAPABILITY_MIGRATION]
+    capabilities = compute_graph_capability_coverage(graph)
+    coverage = compute_verification_coverage(graph)
+    assert capabilities.by_capability_id[CAPABILITY_AUTH] == 1.0
+    assert capabilities.by_capability_id[CAPABILITY_MIGRATION] == 0.0
+    assert coverage.by_verifier_class["mechanical"] == 1.0
+    assert coverage.aggregate == capabilities.aggregate == 0.5

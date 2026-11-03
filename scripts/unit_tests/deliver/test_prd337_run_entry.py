@@ -14,6 +14,8 @@ SCRIPT_DIR = Path(__file__).resolve().parents[2]
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from wave_run_paths import global_plan_path  # noqa: E402
+
 from wave_deliver import (  # noqa: E402
     ensure_run_entry_orchestrator,
     resolve_run_entry_target,
@@ -108,7 +110,7 @@ def test_inferred_branch_type_from_task_list(tmp_path: Path) -> None:
         "target": {"type": "fix", "slug": "typed-demo", "branch": "fix/typed-demo"},
         "items": [],
     }
-    (repo / ("." + "cursor") / "sw-deliver-plan.json").write_text(
+    global_plan_path(repo).write_text(
         json.dumps(plan), encoding="utf-8"
     )
     target = resolve_run_entry_target(repo, rel)

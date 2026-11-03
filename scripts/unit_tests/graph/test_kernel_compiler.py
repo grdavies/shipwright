@@ -107,6 +107,14 @@ def _shadow_graph() -> dict[str, object]:
     }
 
 
+def _capability_bound_shadow_graph() -> dict[str, object]:
+    graph = _shadow_graph()
+    for node in graph["spec"]["nodes"]:
+        if node["kind"] == "verifier":
+            node["target"]["step"] = f"sw-verify-auth-{node['verification']['strategy']}"
+    return graph
+
+
 def test_valid_closed_catalog_graph_is_accepted() -> None:
     result = compile_workflow_graph(valid_graph())
 
@@ -236,7 +244,7 @@ def test_mutating_analysis_node_refuses_write_lease_and_credentials() -> None:
 
 
 def test_shadow_predicted_versus_realized_deltas_persist(tmp_path: Path) -> None:
-    graph = _shadow_graph()
+    graph = _capability_bound_shadow_graph()
     compiled = compile_workflow_graph(graph)
     receipts = {
         "prepare": {"tokens": 10, "durationMs": 100},
@@ -269,7 +277,8 @@ def test_shadow_predicted_versus_realized_deltas_persist(tmp_path: Path) -> None
 
 
 def test_shadow_verification_coverage_by_verifier_class_and_aggregate() -> None:
-    graph = _shadow_graph()
+    graph = _capability_bound_shadow_graph()
+    assert all("metadata" not in node for node in graph["spec"]["nodes"])
     compiled = compile_workflow_graph(graph)
     metrics = compute_shadow_kernel_metrics(compiled)
     coverage = metrics.verification_coverage

@@ -870,16 +870,20 @@ def export_exploration_bundle(
     validation = validate_bundle(bundle, root=root)
     if validation.get("verdict") != "pass":
         return validation
-    redacted = redact_bundle_text(root, canonical_json(bundle))
+    redacted = redact_bundle_text(root, canonical_json({"bundle": bundle, "brief": live_brief}))
     try:
-        bundle = json.loads(redacted)
+        clean = json.loads(redacted)
     except json.JSONDecodeError:
         return {"verdict": "fail", "error": "handoff:redaction-invalid-json"}
-    bundle = _attach_exploration_context(bundle, exploration)
+    # Keep every redacted copy; reattaching the original context would restore secrets.
+    bundle = clean["bundle"]
+    clean_brief = clean["brief"]
+    bundle["workflowDigest"] = build_workflow_digest(bundle)
+    bundle["bundleDigest"] = digest_payload(bundle)
     validation = validate_bundle(bundle, root=root)
     if validation.get("verdict") != "pass":
         return validation
-    return {"verdict": "pass", "bundle": bundle, "brief": live_brief, "readOnly": True}
+    return {"verdict": "pass", "bundle": bundle, "brief": clean_brief, "readOnly": True}
 
 
 def import_exploration_resume(

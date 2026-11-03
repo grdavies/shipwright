@@ -115,6 +115,7 @@ def test_missing_plugin_fails_closed_without_writes(tmp_path: Path, monkeypatch:
     monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
     monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", tmp_path / "missing-local")
     monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "missing-cache")
+    monkeypatch.setattr("sw_scripts_resolve.executor_scripts_dir", lambda _executor: None)
 
     with pytest.raises(ScriptsResolveError, match="plugin not installed"):
         resolve_helper(consumer, "wave_deliver.py")
