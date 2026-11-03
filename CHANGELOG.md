@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.23.9](https://github.com/grdavies/shipwright/compare/v2.23.8...v2.23.9) (2026-11-03)
+
+
+### Bug Fixes
+
+* isolate development fixtures and repair readiness blockers ([#1328](https://github.com/grdavies/shipwright/issues/1328)) ([311ee77](https://github.com/grdavies/shipwright/commit/311ee77c9753e6ab5f654483fef0093833075897))
+
 ## [2.23.8](https://github.com/grdavies/shipwright/compare/v2.23.7...v2.23.8) (2026-10-14)
 
 
