@@ -1,7 +1,7 @@
 """Regression fixtures for planning-store rematerialize-with-resync (PRD 059 R9-R11)."""
 from __future__ import annotations
 
-import importlib.util
+import importlib
 import sys
 from pathlib import Path
 
@@ -10,26 +10,31 @@ import pytest
 pytestmark = [pytest.mark.git]
 
 
+def _load_source_module(repo_root: Path, name: str):
+    # Reuse the canonical module identity: replacing it splits later fault
+    # injection from backends that import the module dynamically.
+    module = importlib.import_module(name)
+    assert Path(module.__file__).resolve() == (repo_root / "scripts" / f"{name}.py").resolve()
+    return module
+
+
 def _load_planning_store(repo_root: Path):
-    path = repo_root / "scripts" / "planning_store.py"
-    spec = importlib.util.spec_from_file_location("planning_store", path)
-    assert spec and spec.loader
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    sys.path.insert(0, str(repo_root / "scripts"))
-    spec.loader.exec_module(mod)
-    return mod
+    return _load_source_module(repo_root, "planning_store")
 
 
 def _load_wave_deliver(repo_root: Path):
-    path = repo_root / "scripts" / "wave_deliver.py"
-    spec = importlib.util.spec_from_file_location("wave_deliver", path)
-    assert spec and spec.loader
-    mod = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = mod
-    sys.path.insert(0, str(repo_root / "scripts"))
-    spec.loader.exec_module(mod)
-    return mod
+    return _load_source_module(repo_root, "wave_deliver")
+
+
+def test_module_loaders_preserve_canonical_import_identity(repo_root: Path) -> None:
+    planning = importlib.import_module("planning_store")
+    deliver = importlib.import_module("wave_deliver")
+    paths_before = list(sys.path)
+    assert _load_planning_store(repo_root) is planning
+    assert _load_wave_deliver(repo_root) is deliver
+    assert sys.modules["planning_store"] is planning
+    assert sys.modules["wave_deliver"] is deliver
+    assert sys.path == paths_before
 
 
 def _write_tasks(path: Path, *, checked: set[str] | None = None) -> None:

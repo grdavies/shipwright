@@ -37,6 +37,12 @@ D5_CONFIG_CANDIDATE_RELS: tuple[str, ...] = (
 )
 
 
+@pytest.fixture(autouse=True)
+def _keep_console_install_outside_plugin_scope(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Temporary plugin scope fixtures must not install into the host Python runtime."""
+    monkeypatch.setenv("SW_SKIP_CONSOLE_INSTALL", "1")
+
+
 def _snapshot_files(root: Path) -> set[str]:
     if not root.exists():
         return set()

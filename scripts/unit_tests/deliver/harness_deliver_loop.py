@@ -18,19 +18,17 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
 from _sw.vendor_paths import repo_root
 from unit_tests._harness_runtime import harness_subprocess_env as _harness_env
 from unit_tests._harness_runtime import patch_source as _patch_source
+from unit_tests._harness_runtime import isolated_source_fixture, isolated_git_environment
 
 
 def main() -> int:
-    root = repo_root(__file__)
-    env = _harness_env(root)
-    src = _patch_source(_SOURCE, root)
-    completed = subprocess.run(
-        ["bash", "-c", src],
-        cwd=str(root),
-        env=env,
-        shell=False,
-    )
-    return completed.returncode
+    with isolated_source_fixture(repo_root(__file__)) as root:
+        env = isolated_git_environment(_harness_env(root))
+        src = _patch_source(_SOURCE, root)
+        completed = subprocess.run(
+            ["bash", "-c", src], cwd=str(root), env=env, shell=False,
+        )
+        return completed.returncode
 
 
 _SOURCE = r"""
@@ -186,7 +184,7 @@ mkdir -p "$STATUS_DIR"
 PHASE_HEAD=$(git -C "$FIX" rev-parse HEAD 2>/dev/null || echo abc)
 git -C "$FIX" branch feat/demo-phase-alpha "$PHASE_HEAD" 2>/dev/null || true
 seed_complete_ship_steps alpha "$STATUS_DIR"
-SW_RUN_DIR="$STATUS_DIR" SW_PHASE_SLUG=alpha "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase alpha --head "$PHASE_HEAD" --out "$STATUS_DIR/status.json" >/dev/null
+SW_RUN_DIR="$STATUS_DIR" SW_PHASE_SLUG=alpha "$ROOT/scripts/ship-phase-status.sh" --root "$PWD" --verdict merge-ready-green --phase alpha --head "$PHASE_HEAD" --out "$STATUS_DIR/status.json" >/dev/null
 python3 -c "
 import json
 from pathlib import Path
@@ -636,8 +634,8 @@ JSON
 JSON
   seed_complete_ship_steps a .cursor/sw-deliver-runs/a
   seed_complete_ship_steps b .cursor/sw-deliver-runs/b
-  SW_RUN_DIR=.cursor/sw-deliver-runs/a SW_PHASE_SLUG=a "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase a --head "$HEAD" --out .cursor/sw-deliver-runs/a/status.json >/dev/null
-  SW_RUN_DIR=.cursor/sw-deliver-runs/b SW_PHASE_SLUG=b "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase b --head "$HEAD" --out .cursor/sw-deliver-runs/b/status.json >/dev/null
+  SW_RUN_DIR=.cursor/sw-deliver-runs/a SW_PHASE_SLUG=a "$ROOT/scripts/ship-phase-status.sh" --root "$PWD" --verdict merge-ready-green --phase a --head "$HEAD" --out .cursor/sw-deliver-runs/a/status.json >/dev/null
+  SW_RUN_DIR=.cursor/sw-deliver-runs/b SW_PHASE_SLUG=b "$ROOT/scripts/ship-phase-status.sh" --root "$PWD" --verdict merge-ready-green --phase b --head "$HEAD" --out .cursor/sw-deliver-runs/b/status.json >/dev/null
   if OUT=$(python3 "$LOOP_PY" "$COLLECT_FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
@@ -875,7 +873,7 @@ JSON
 {"verdict":"running","target":{"branch":"feat/demo"},"currentWave":1,"nextAction":"dispatch-ship","driverHeartbeatAt":"$NOW_TS","orchestratorWorktree":{"path":"/tmp/orch"},"specSeed":{"skipped":true},"baseCapture":{"skipped":true},"phases":{"1":{"id":"1","slug":"alpha","status":"in-flight","branch":"feat/demo-phase-alpha"}},"phaseWorktrees":{"1":{"path":"$RECON_FIX","name":"alpha-wt"}}}
 JSON
   seed_complete_ship_steps alpha .cursor/sw-deliver-runs/alpha
-  SW_RUN_DIR=.cursor/sw-deliver-runs/alpha SW_PHASE_SLUG=alpha "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase alpha --head "$HEAD" --out .cursor/sw-deliver-runs/alpha/status.json >/dev/null
+  SW_RUN_DIR=.cursor/sw-deliver-runs/alpha SW_PHASE_SLUG=alpha "$ROOT/scripts/ship-phase-status.sh" --root "$PWD" --verdict merge-ready-green --phase alpha --head "$HEAD" --out .cursor/sw-deliver-runs/alpha/status.json >/dev/null
   python3 "$MERGE_PY" "$RECON_FIX" status collect --phase-slug alpha >/dev/null
   if python3 -c "import json; s=json.load(open('.cursor/sw-deliver-state.json')); assert s.get('nextAction')!='dispatch-ship', s.get('nextAction')"; then
     :

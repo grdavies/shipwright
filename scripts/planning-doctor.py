@@ -500,9 +500,9 @@ def chunk_cardinality_finding(root: Path) -> dict | None:
     synthetic `chunk-N` placeholder (or any other id no longer on the issue)
     cannot be reassembled exactly — this is exactly the durable state a
     crash between posting overflow comments and rewriting the manifest with
-    real ids (R26) leaves behind. Fail-open (returns ``None``) if the store
-    cannot be read, so this never breaks the doctor sweep for a
-    non-issue-store backend or an unreachable provider.
+    real ids (R26) leaves behind. Initial store/search failures return ``None``;
+    individual full-issue read failures produce an inconclusive warning rather
+    than a claim of missing comments.
     """
     try:
         import planning_store as ps
@@ -522,7 +522,25 @@ def chunk_cardinality_finding(root: Path) -> dict | None:
     except Exception:  # noqa: BLE001 -- doctor check is advisory / fail-open
         return None
     mismatched: list[dict[str, Any]] = []
+    unreadable: list[str] = []
     for record in records:
+        match = MARKER_CHUNK_MANIFEST.search(record.body or "")
+        if not match:
+            continue
+        try:
+            manifest = json.loads(match.group(1))
+        except json.JSONDecodeError:
+            continue
+        chunks = manifest.get("chunks") if isinstance(manifest, dict) else None
+        if not isinstance(chunks, list) or not chunks:
+            continue
+        # Search results can omit comments. Only a full issue read establishes
+        # whether the manifest references comments that are actually missing.
+        try:
+            record = client.issue_get(record.id)
+        except Exception:  # noqa: BLE001 -- an unreadable issue is not proven drift
+            unreadable.append(str(record.id))
+            continue
         match = MARKER_CHUNK_MANIFEST.search(record.body or "")
         if not match:
             continue
@@ -544,11 +562,19 @@ def chunk_cardinality_finding(root: Path) -> dict | None:
                 "missingCommentIds": missing,
             })
     if not mismatched:
+        if unreadable:
+            return {
+                "check": "chunk-cardinality-inconclusive",
+                "status": "warn",
+                "issueIds": sorted(unreadable),
+                "remediation": "restore issue read access and rerun planning-doctor.py",
+            }
         return None
     return {
         "check": "chunk-cardinality-mismatch",
         "status": "drift",
         "units": sorted(mismatched, key=lambda u: str(u.get("unitId") or "")),
+        "unreadableIssueIds": sorted(unreadable),
         "remediation": (
             "retry `planning_store.py put` for the listed unit id(s) to rewrite the chunk "
             "manifest against the currently posted overflow comments"
@@ -786,7 +812,7 @@ def doctor(root: Path, *, sweep: bool) -> dict:
     cardinality_finding = chunk_cardinality_finding(root)
     if cardinality_finding is not None:
         checks.append(cardinality_finding)
-        warnings.append("chunk-cardinality-mismatch")
+        warnings.append(cardinality_finding["check"])
         if verdict == "ok":
             verdict = "degraded"
 

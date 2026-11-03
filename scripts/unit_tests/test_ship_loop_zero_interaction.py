@@ -4,9 +4,31 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import os
 from pathlib import Path
 
 import pytest
+
+from unit_tests._harness_runtime import isolated_source_fixture, isolated_git_environment
+
+
+@pytest.fixture(autouse=True)
+def _isolate_git_environment(monkeypatch):
+    # Imported helpers also spawn Git, so isolate the whole test process.
+    for key in list(os.environ):
+        if key.startswith("GIT_"):
+            monkeypatch.delenv(key)
+    for key, value in isolated_git_environment({}).items():
+        monkeypatch.setenv(key, value)
+
+
+@pytest.fixture(scope="session")
+def repo_root():
+    """Own all source, generation, and index mutations used by gate evidence tests."""
+    source = Path(__file__).resolve().parents[2]
+    with isolated_source_fixture(source) as root:
+        yield root
+
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 _SCRIPTS = SCRIPT_DIR.parents[1]

@@ -18,19 +18,17 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
 from _sw.vendor_paths import repo_root
 from unit_tests._harness_runtime import harness_subprocess_env as _harness_env
 from unit_tests._harness_runtime import patch_source as _patch_source
+from unit_tests._harness_runtime import isolated_source_fixture, isolated_git_environment
 
 
 def main() -> int:
-    root = repo_root(__file__)
-    env = _harness_env(root)
-    src = _patch_source(_SOURCE, root)
-    completed = subprocess.run(
-        ["bash", "-c", src],
-        cwd=str(root),
-        env=env,
-        shell=False,
-    )
-    return completed.returncode
+    with isolated_source_fixture(repo_root(__file__)) as root:
+        env = isolated_git_environment(_harness_env(root))
+        src = _patch_source(_SOURCE, root)
+        completed = subprocess.run(
+            ["bash", "-c", src], cwd=str(root), env=env, shell=False,
+        )
+        return completed.returncode
 
 
 _SOURCE = r"""
@@ -136,7 +134,7 @@ path.write_text(json.dumps(doc))
 
 # ship-phase-status embeds shipSteps when present
 SHIP_STATUS="$ROOT/scripts/ship-phase-status.sh"
-if OUT=$("$SHIP_STATUS" --verdict merge-ready-green --phase alpha --out "$SW_RUN_DIR/status.json" 2>/dev/null) && \
+if OUT=$("$SHIP_STATUS" --root "$PWD" --verdict merge-ready-green --phase alpha --out "$SW_RUN_DIR/status.json" 2>/dev/null) && \
    echo "$OUT" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)

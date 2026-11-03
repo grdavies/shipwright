@@ -169,9 +169,15 @@ def assert_hook_root_aligned(root: Path) -> None:
         primaryCheckout=str(primary),
     )
 
+def prework_audit_log_path(root: Path) -> Path:
+    """Resolve the unscoped prework audit in the active checkout, not deliver authority."""
+    from shipwright_paths import deliver_runs_dir
+
+    return deliver_runs_dir(root) / "run.legacy.log"
+
+
 def append_run_log(root: Path, entry: dict[str, Any]) -> None:
-    from wave_state import deliver_run_log_path
-    log_path = deliver_run_log_path(root)
+    log_path = prework_audit_log_path(root)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     with log_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(entry, ensure_ascii=False) + "\n")

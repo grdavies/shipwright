@@ -99,11 +99,26 @@ def test_probe_fails_missing_plugin(
     monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
     monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", tmp_path / "missing-local")
     monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "missing-cache")
+    monkeypatch.setattr("sw_scripts_resolve.executor_scripts_dir", lambda _executor: None)
 
     payload = probe_deliver_entrypoints(consumer)
     assert payload["verdict"] == "fail"
     assert payload["resolveErrors"]
     assert any("plugin not installed" in err for err in payload["resolveErrors"])
+
+
+def test_probe_accepts_trusted_executor_without_an_installed_plugin(tmp_path: Path, monkeypatch) -> None:
+    consumer = tmp_path / "consumer"
+    _seed_consumer(consumer)
+    monkeypatch.delenv("SHIPWRIGHT_SCRIPTS", raising=False)
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_LOCAL_SCRIPTS", tmp_path / "missing-local")
+    monkeypatch.setattr("sw_scripts_resolve.PLUGIN_CACHE_ROOT", tmp_path / "missing-cache")
+    payload = probe_deliver_entrypoints(consumer)
+    assert payload["verdict"] == "pass"
+    assert payload["scriptsRootSource"] == "executor"
+    assert payload["resolveErrors"] == []
+    assert set(payload["resolvedSources"]) == set(DELIVER_ENTRYPOINTS)
+    assert not (consumer / "scripts").exists()
 
 
 def test_probe_fails_hand_forwarder_pollution(tmp_path: Path) -> None:

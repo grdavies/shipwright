@@ -1,11 +1,8 @@
 """Planning issue provider adapters (PRD 082 phase 13 / R27)."""
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
-
-from host_lib import token_present
 
 from . import github, gitlab, jira, linear, notion
 from ._boundary import provider_import_violations
@@ -119,15 +116,18 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
             "provider": provider,
         }
     token_env = ps.resolve_issues_token_env(cfg, provider)
-    if not token_env:
-        return {"verdict": "fail", "error": "missing-token-env", "provider": provider}
-    if not token_present(token_env):
+    from credentials.model import ResolutionState
+
+    credential = ps.resolve_issues_credential(root, issues_provider=provider, cfg=cfg)
+    public = {"credentialRef": credential.ref.value, "credentialState": credential.state.value}
+    if credential.state != ResolutionState.RESOLVED or credential.token is None:
         return {
             "verdict": "fail",
-            "error": "missing-token",
+            "error": "missing-token" if token_env else "credential-unresolved",
             "provider": provider,
             "tokenEnv": token_env,
-            "message": f"Set {token_env} for issue-store API access (value never logged).",
+            **public,
+            "message": "Resolve the configured planning credential for issue-store API access (value never logged).",
         }
     if provider not in PROVIDER_MODULES:
         return {
@@ -136,13 +136,14 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
             "provider": provider,
             "requiredScopes": MIN_ISSUES_SCOPES.get(provider, []),
         }
-    token = os.environ.get(token_env, "")
-    probe = scope_probe(provider, token, cfg, root)
+    credential_value = credential.token.token.value
+    probe = scope_probe(provider, credential_value, cfg, root)
     out: dict[str, Any] = {
         "verdict": probe.get("verdict", "fail"),
         "provider": provider,
         "tokenEnv": token_env,
         "tokenPresent": True,
+        **public,
         "requiredScopes": MIN_ISSUES_SCOPES.get(provider, []),
     }
     for key in (
@@ -159,5 +160,5 @@ def probe_issues_token(root: Path, cfg: dict[str, Any]) -> dict[str, Any]:
     ):
         if key in probe:
             out[key] = probe[key]
-    attach_native_links_capable(provider, out, token, cfg, root)
+    attach_native_links_capable(provider, out, credential_value, cfg, root)
     return out

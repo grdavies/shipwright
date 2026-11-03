@@ -14,7 +14,7 @@ def test_configuration_greenfield_onramp_section(repo_root: Path) -> None:
         "optional, never primary",
         "ci-stub plan",
         "ci-stub apply --confirm",
-        "sw_bootstrap.py init_profile_report.py",
+        'scripts/sw-run.py" init_profile_report.py -- classify --markdown',
         "core/sw-reference/workflow.config.example.json",
     ):
         assert token in text
@@ -28,5 +28,6 @@ def test_layout_prd324_absorb_acceptance_map(repo_root: Path) -> None:
         assert "gap-340-seed-consent-gated-pr-ci-stub-from-sw-init-when-" in text
         assert "gap-341-improve-sw-init-coverage-defaults-and-config-dis" in text
         assert "R1–R4" in text
+        assert "D1–D3" in text
         assert "R5–R8" in text
         assert "R9–R12" in text

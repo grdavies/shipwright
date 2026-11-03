@@ -211,7 +211,11 @@ class CrashReplayHarness:
                     if crash_point is CrashPoint.MID_LOOP and not fired:
                         fired = True
                         raise InjectedCrash(f"fixture crash during loop {node_id}")
-                    return []
+                    # Re-observe the durable finding without repeating its effect.
+                    # An empty legacy discovery is a dry-error, not clean evidence.
+                    if self.effects.counts().get(f"{namespace}:finding") != 1:
+                        raise AssertionError("missing durable finding side effect")
+                    return [Finding({"fixture": node_id}, tokens=0)]
                 self.effects.apply_once(f"{namespace}:finding")
                 return [Finding({"fixture": node_id}, tokens=1)]
 

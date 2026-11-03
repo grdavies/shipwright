@@ -18,19 +18,35 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
 from _sw.vendor_paths import repo_root
 from unit_tests._harness_runtime import harness_subprocess_env as _harness_env
 from unit_tests._harness_runtime import patch_source as _patch_source
+from unit_tests._harness_runtime import isolated_source_fixture, isolated_git_environment
 
 
 def main() -> int:
-    root = repo_root(__file__)
-    env = _harness_env(root)
-    src = _patch_source(_SOURCE, root)
-    completed = subprocess.run(
-        ["bash", "-c", src],
-        cwd=str(root),
-        env=env,
-        shell=False,
-    )
-    return completed.returncode
+    from unit_tests.meta.harness_emitter import main as source_emitter_check
+
+    # Validate the source distribution before normalizing checkout-specific fixture
+    # metadata; stale source artifacts must still fail the aggregate gate.
+    source_result = source_emitter_check()
+    if source_result != 0:
+        return source_result
+    with isolated_source_fixture(
+        repo_root(__file__), extra_inputs=("sw", "platforms", "dist", ".sw/models-tiering.md"),
+    ) as root:
+        env = isolated_git_environment(_harness_env(root))
+        # Establish this fixture's generated checkout metadata before the retained
+        # emitter-freshness scenario checks for drift caused by its own generation.
+        subprocess.run([sys.executable, "-m", "sw", "generate", "--all"],
+                       cwd=root, env=env, check=True, capture_output=True)
+        subprocess.run(["git", "-C", str(root), "add", "--", "dist/"], env=env, check=True)
+        subprocess.run(["git", "-C", str(root), "-c", "user.name=Fixture",
+                        "-c", "user.email=t@t.com", "-c", "commit.gpgsign=false",
+                        "commit", "--allow-empty", "-q", "-m", "generated fixture baseline"],
+                       env=env, check=True)
+        src = _patch_source(_SOURCE, root)
+        completed = subprocess.run(
+            ["bash", "-c", src], cwd=str(root), env=env, shell=False,
+        )
+        return completed.returncode
 
 
 _SOURCE = r"""
@@ -435,7 +451,7 @@ chain = canonical_ship_chain(repo)
 (run / 'ship-steps.json').write_text(json.dumps({'phase': slug, 'chain': chain, 'lastCompletedStep': chain[-1], 'currentStep': None}))
 " "$ROOT" "$slug" "$run" >/dev/null
     SW_RUN_DIR="$run" SW_PHASE_SLUG="$slug" \
-      "$ROOT/scripts/ship-phase-status.sh" --verdict merge-ready-green --phase "$slug" --head "$HEAD" \
+      "$ROOT/scripts/ship-phase-status.sh" --root "$PWD" --verdict merge-ready-green --phase "$slug" --head "$HEAD" \
       --out "$run/status.json" >/dev/null
   done
   if OUT=$(python3 "$LOOP_PY" "$COLLECT_FIX" compute-next 2>/dev/null) && echo "$OUT" | python3 -c "

@@ -2,11 +2,32 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
+
+from unit_tests._harness_runtime import isolated_source_fixture, isolated_git_environment
+
+
+@pytest.fixture(autouse=True)
+def _isolate_git_environment(monkeypatch):
+    # Imported helpers also spawn Git, so isolate the whole test process.
+    for key in list(os.environ):
+        if key.startswith("GIT_"):
+            monkeypatch.delenv(key)
+    for key, value in isolated_git_environment({}).items():
+        monkeypatch.setenv(key, value)
+
+
+@pytest.fixture(scope="session")
+def repo_root():
+    """Own all source, generation, and index mutations used by distribution tests."""
+    source = Path(__file__).resolve().parents[2]
+    with isolated_source_fixture(source, extra_inputs=("sw", "platforms", "dist")) as root:
+        yield root
 
 _SCRIPTS = Path(__file__).resolve().parents[1]
 if str(_SCRIPTS) not in sys.path:
@@ -35,6 +56,12 @@ def _touch_script(repo_root: Path) -> tuple[Path, str]:
         capture_output=True,
         check=False,
     )
+    # Generation embeds this disposable checkout identity; commit that fixture baseline
+    # before testing changes caused by the probe itself.
+    subprocess.run(["git", "-C", str(repo_root), "add", "--", "dist/"], check=True)
+    subprocess.run(["git", "-C", str(repo_root), "-c", "user.name=Fixture",
+                    "-c", "user.email=t@t.com", "-c", "commit.gpgsign=false",
+                    "commit", "--allow-empty", "-q", "-m", "generated fixture baseline"], check=True)
     target = repo_root / "scripts/planning_refusal_ledger.py"
     original = target.read_text(encoding="utf-8")
     target.write_text(original + "\n# ship-regen probe\n", encoding="utf-8")
@@ -47,7 +74,7 @@ def test_ship_auto_regen_and_stage_or_fail_closed(repo_root: Path) -> None:
     try:
         assert detect_drift(repo_root)
         result = ship_auto_regen(repo_root)
-        assert result["verdict"] == "pass"
+        assert result["verdict"] == "pass", result
         assert result.get("action") == "regen"
         assert detect_drift(repo_root) == []
         staged = result.get("staged") or []
@@ -82,7 +109,7 @@ def test_scripts_only_edit_stale_dist_gate(repo_root: Path) -> None:
     target, original = _touch_script(repo_root)
     try:
         detect_proc = subprocess.run(
-            [sys.executable, str(_SCRIPTS / "dist_freshness.py"), "detect"],
+            [sys.executable, str(repo_root / "scripts/dist_freshness.py"), "detect"],
             cwd=str(repo_root),
             capture_output=True,
             text=True,
@@ -91,7 +118,7 @@ def test_scripts_only_edit_stale_dist_gate(repo_root: Path) -> None:
         assert CANONICAL_REGEN_COMMAND in detect_proc.stderr
 
         ship_proc = subprocess.run(
-            [sys.executable, str(_SCRIPTS / "dist_freshness_ship.py"), "regen"],
+            [sys.executable, str(repo_root / "scripts/dist_freshness_ship.py"), "regen"],
             cwd=str(repo_root),
             capture_output=True,
             text=True,

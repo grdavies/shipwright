@@ -12,7 +12,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT = SCRIPT_DIR.parent
 
 def git_root() -> Path:
-    p = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, check=False)
+    p = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True, encoding="utf-8", errors="surrogateescape", check=False)
     if p.returncode == 0 and p.stdout.strip():
         return Path(p.stdout.strip())
     return Path.cwd()
@@ -32,18 +32,30 @@ def is_frozen_at_ref(path: str, ref: str) -> bool:
     proc = subprocess.run(
         ["git", "-C", str(root), "show", f"{ref}:{path}"],
         capture_output=True,
-        text=True,
+        text=True, encoding="utf-8", errors="surrogateescape",
         check=False,
     )
     if proc.returncode != 0:
         return False
     in_fm = False
-    for line in proc.stdout.splitlines():
-        if line.strip() == "---":
-            if in_fm:
-                break
+    # Frontmatter belongs to the document preamble, never embedded examples.
+    # Keep undecodable-byte prefixes conservative without skipping real source.
+    for line_number, line in enumerate(proc.stdout.splitlines()):
+        if not in_fm:
+            if line_number == 0:
+                line = line.removeprefix("\ufeff")
+            first = 0
+            while first < len(line) and (line[first].isspace() or "\udc80" <= line[first] <= "\udcff"):
+                first += 1
+            line = line[first:]
+            if not line:
+                continue
+            if line.rstrip() != "---":
+                return False
             in_fm = True
             continue
+        if line.strip() == "---":
+            break
         if in_fm and line.strip().startswith("frozen:"):
             return line.split(":", 1)[1].strip().lower() == "true"
     return False
@@ -54,12 +66,12 @@ def is_checkbox_only_ref_change(path: str, base_ref: str) -> bool:
     with tempfile.TemporaryDirectory() as tmpdir:
         old = pathlib.Path(tmpdir) / "old"
         new = pathlib.Path(tmpdir) / "new"
-        o = subprocess.run(["git", "-C", str(root), "show", f"{base_ref}:{path}"], capture_output=True, text=True, check=False)
-        n = subprocess.run(["git", "-C", str(root), "show", f"HEAD:{path}"], capture_output=True, text=True, check=False)
+        o = subprocess.run(["git", "-C", str(root), "show", f"{base_ref}:{path}"], capture_output=True, text=True, encoding="utf-8", errors="surrogateescape", check=False)
+        n = subprocess.run(["git", "-C", str(root), "show", f"HEAD:{path}"], capture_output=True, text=True, encoding="utf-8", errors="surrogateescape", check=False)
         if o.returncode != 0 or n.returncode != 0:
             return False
-        old.write_text(o.stdout, encoding="utf-8")
-        new.write_text(n.stdout, encoding="utf-8")
+        old.write_text(o.stdout, encoding="utf-8", errors="surrogateescape")
+        new.write_text(n.stdout, encoding="utf-8", errors="surrogateescape")
         chk = subprocess.run([sys.executable, str(SCRIPT_DIR / "checkbox_diff.py"), "is-checkbox-only", str(old), str(new)], capture_output=True, check=False)
         return chk.returncode == 0
 
@@ -69,16 +81,16 @@ def is_format_normalization_only(path: str, base_ref: str) -> bool:
     with tempfile.TemporaryDirectory() as tmpdir:
         base = pathlib.Path(tmpdir)
         old, new, old_norm = base / "old", base / "new", base / "old_norm"
-        o = subprocess.run(["git", "-C", str(root), "show", f"{base_ref}:{path}"], capture_output=True, text=True, check=False)
-        n = subprocess.run(["git", "-C", str(root), "show", f"HEAD:{path}"], capture_output=True, text=True, check=False)
+        o = subprocess.run(["git", "-C", str(root), "show", f"{base_ref}:{path}"], capture_output=True, text=True, encoding="utf-8", errors="surrogateescape", check=False)
+        n = subprocess.run(["git", "-C", str(root), "show", f"HEAD:{path}"], capture_output=True, text=True, encoding="utf-8", errors="surrogateescape", check=False)
         if o.returncode != 0 or n.returncode != 0:
             return False
-        old.write_text(o.stdout, encoding="utf-8")
-        new.write_text(n.stdout, encoding="utf-8")
-        norm = subprocess.run([sys.executable, str(SCRIPT_DIR / "doc_format.py"), "write", str(old)], capture_output=True, text=True, check=False)
+        old.write_text(o.stdout, encoding="utf-8", errors="surrogateescape")
+        new.write_text(n.stdout, encoding="utf-8", errors="surrogateescape")
+        norm = subprocess.run([sys.executable, str(SCRIPT_DIR / "doc_format.py"), "write", str(old)], capture_output=True, text=True, encoding="utf-8", errors="surrogateescape", check=False)
         if norm.returncode != 0:
             return False
-        old_norm.write_text(norm.stdout, encoding="utf-8")
+        old_norm.write_text(norm.stdout, encoding="utf-8", errors="surrogateescape")
         return old_norm.read_bytes() == new.read_bytes()
 
 
@@ -158,7 +170,7 @@ def main(argv=None):
             continue
         if not is_frozen_at_ref(path, "HEAD"):
             continue
-        show = subprocess.run(["git", "-C", str(root), "show", f"HEAD:{path}"], capture_output=True, text=True, check=False)
+        show = subprocess.run(["git", "-C", str(root), "show", f"HEAD:{path}"], capture_output=True, text=True, encoding="utf-8", errors="surrogateescape", check=False)
         if show.returncode != 0:
             continue
         if has_advisory_block(show.stdout):

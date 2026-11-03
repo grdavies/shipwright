@@ -18,19 +18,18 @@ for _entry in (str(_TEST_DIR), str(_SCRIPTS_ROOT)):
 from _sw.vendor_paths import repo_root
 from unit_tests._harness_runtime import harness_subprocess_env as _harness_env
 from unit_tests._harness_runtime import patch_source as _patch_source
+from unit_tests._harness_runtime import isolated_source_fixture
+from unit_tests._harness_runtime import isolated_git_environment
 
 
 def main() -> int:
-    root = repo_root(__file__)
-    env = _harness_env(root)
-    src = _patch_source(_SOURCE, root)
-    completed = subprocess.run(
-        ["bash", "-c", src],
-        cwd=str(root),
-        env=env,
-        shell=False,
-    )
-    return completed.returncode
+    with isolated_source_fixture(repo_root(__file__)) as root:
+        env = isolated_git_environment(_harness_env(root))
+        src = _patch_source(_SOURCE, root)
+        completed = subprocess.run(
+            ["bash", "-c", src], cwd=str(root), env=env, shell=False,
+        )
+        return completed.returncode
 
 
 _SOURCE = r"""
@@ -47,13 +46,9 @@ MULTI_FIX="$ROOT/scripts/test/fixtures/deliver-multi-feature"
 TASK_FROZEN="$ROOT/scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md"
 FAIL=0
 
-# PRD 057 R5: this harness runs `wave preflight`/`wave plan` directly against the real repo
-# root (not an isolated fixture clone), so dependency-gate/eligibility checks now go through
-# the committed-config cutover derivation. This repo's own committed backend is issue-store,
-# and the fixture's synthetic unit id ("004-wave-phase-orchestrator") collides with a real,
-# already-completed historical PRD 004 in that live issue store — pin "file" discovery so
-# this fixture keeps exercising local wave/deliver plan routing, not live issue-store
-# eligibility for an unrelated real unit.
+# Local planning assertions run in an independent source fixture with its own
+# file-store configuration. Operator issue-store credentials and historical units
+# must not influence this synthetic PRD's eligibility.
 export SW_DISCOVER_SOURCE=file
 
 mkdir -p "$FIX"
@@ -183,10 +178,13 @@ DRYDIR=$(mktemp -d)
 trap 'rm -rf "$DRYDIR"' EXIT
 (
   cd "$DRYDIR"
-  git init -q && git commit --allow-empty -m init -q
-  mkdir -p docs/prds/004-wave-phase-orchestrator
-  cp "$TASK_FROZEN" docs/prds/004-wave-phase-orchestrator/
-  "$WAVE" plan --task-list scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator/tasks-004-wave-phase-orchestrator.md --dry-run >/dev/null
+  git init -q -b main || exit 1
+  git -c user.name=Fixture -c user.email=t@t.com commit --allow-empty -m init -q || exit 1
+  DRY_TASKS="scripts/test/fixtures/planning-post-migration/004-wave-phase-orchestrator"
+  mkdir -p "$DRY_TASKS" .github/workflows || exit 1
+  cp "$ROOT/.github/workflows/ci.yml" .github/workflows/ci.yml || exit 1
+  cp "$TASK_FROZEN" "$DRY_TASKS/" || exit 1
+  "$WAVE" plan --task-list "$DRYDIR/$DRY_TASKS/$(basename "$TASK_FROZEN")" --dry-run >/dev/null || exit 1
   test ! -f .cursor/sw-deliver-plan.json
 ) && echo "OK  deliver-phase-dry-run" || { echo "FAIL deliver-phase-dry-run"; FAIL=1; }
 

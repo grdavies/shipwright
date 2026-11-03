@@ -9,6 +9,12 @@ from pathlib import Path
 
 import pytest
 
+
+@pytest.fixture(autouse=True)
+def _isolate_plugin_install_from_host_python(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Plugin mirror tests must not install an editable console into the host runtime."""
+    monkeypatch.setenv("SW_SKIP_CONSOLE_INSTALL", "1")
+
 SCRIPT_DIR = Path(__file__).resolve().parents[2]
 REPO_ROOT = SCRIPT_DIR.parent
 for entry in (str(REPO_ROOT), str(SCRIPT_DIR)):

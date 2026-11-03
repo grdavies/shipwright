@@ -280,9 +280,14 @@ fi
 # --- 7.5 deliver-resume-command-is-sw (R47) ---
 if python3 -c "
 import sys
+import tempfile
+import subprocess
+from pathlib import Path
 sys.path.insert(0,'$ROOT/scripts')
 from wave_failure import resume_deliver_command
-cmd = resume_deliver_command({'source_task_list':'docs/prds/x/tasks.md'})
+with tempfile.TemporaryDirectory(prefix='sw-035-resume-') as tmp:
+    subprocess.run(['git', 'init', '-q', tmp], check=True)
+    cmd = resume_deliver_command(Path(tmp), {'source_task_list':'docs/prds/x/tasks.md'})
 assert cmd.startswith('/sw-deliver run '), cmd
 assert 'docs/prds/x/tasks.md' in cmd or '--unit-id' in cmd or '--issue' in cmd, cmd
 "; then ok "deliver-resume-command-is-sw"; else bad "deliver-resume-command-is-sw"; fi
@@ -331,16 +336,20 @@ else
 fi
 python3 - <<'PYE' "$ROOT"
 import sys
+import subprocess
+import tempfile
 from pathlib import Path
 sys.path.insert(0, str(Path(sys.argv[1]) / 'scripts'))
 from wave_deliver_loop import check_deliver_hang_desync
-root = Path(sys.argv[1])
-state = {"orchestratorWorktree": {"path": str(root)}, "phases": {}}
-assert check_deliver_hang_desync(root, state) is None
-fake_orch = root / ".sw-worktrees" / "fake-orchestrator"
-fake_orch.mkdir(parents=True, exist_ok=True)
-cause = check_deliver_hang_desync(root, {"orchestratorWorktree": {"path": str(fake_orch)}, "phases": {}})
-assert cause == "deliver:orchestrator-cwd-skew", cause
+with tempfile.TemporaryDirectory(prefix='sw-035-desync-') as tmp:
+    root = Path(tmp)
+    subprocess.run(['git', 'init', '-q', str(root)], check=True)
+    state = {"orchestratorWorktree": {"path": str(root)}, "phases": {}}
+    assert check_deliver_hang_desync(root, state) is None
+    fake_orch = root / ".sw-worktrees" / "fake-orchestrator"
+    fake_orch.mkdir(parents=True, exist_ok=True)
+    cause = check_deliver_hang_desync(root, {"orchestratorWorktree": {"path": str(fake_orch)}, "phases": {}})
+    assert cause == "deliver:orchestrator-cwd-skew", cause
 print("ok")
 PYE
 if [[ $? -eq 0 ]]; then ok "r15-e-hang-desync-halt"; else bad "r15-e-hang-desync-halt"; fi

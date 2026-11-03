@@ -41,7 +41,8 @@ def test_readme_documents_adopter_and_contributor_paths() -> None:
     """R11 — README distinguishes adopter and contributor installation."""
     readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
     assert "Adopter vs contributor" in readme
-    assert "pip install shipwright-workflow" in readme
+    assert "uv tool install shipwright --from git+https://github.com/grdavies/shipwright.git@vX.Y.Z" in readme
+    assert "pipx install git+https://github.com/grdavies/shipwright.git@vX.Y.Z" in readme
     assert "python3 scripts/install.py" in readme
     assert "/sw-init" in readme
 

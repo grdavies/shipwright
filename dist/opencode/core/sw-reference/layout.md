@@ -744,7 +744,7 @@ conflict. Normative block shape and hash rules: `core/sw-reference/canonical-ser
 (`sw-edges` section). Gap-capture absorb linkage (`planning_gap_capture.record_absorb_linkage`) uses the
 same merge path — PRD-side absorbs put must not drop native links.
 
-### PRD 324 greenfield init surfaces (R1–R14, D1–host-bundle)
+### PRD 324 greenfield init surfaces (R1–R14, D1–D3)
 
 Greenfield credential UX, consent-gated CI stub, curated profile, and configuration discoverability.
 Runtime modules mirrored under `core/scripts/` (`core-scripts-parity` when touched):
@@ -770,7 +770,7 @@ Operator on-ramp: `docs/guides/configuration.md` **Greenfield on-ramp**;
 | Gap | R-IDs | Acceptance |
 | --- | --- | --- |
 | `gap-339-redesign-greenfield-credential-setup-ux-investig` | R1–R4 | Single ordered checklist; named `tokenEnv` under multi-account risk; no forced `.env`; broker-only resolution |
-| `gap-340-seed-consent-gated-pr-ci-stub-from-sw-init-when-` | R5–closeout | `ci-stub plan` read-only; `apply --confirm` consent gate; decline recorded; unrestricted `pull_request` stub |
+| `gap-340-seed-consent-gated-pr-ci-stub-from-sw-init-when-` | R5–R8 | `ci-stub plan` read-only; `apply --confirm` consent gate; decline recorded; unrestricted `pull_request` stub |
 | `gap-341-improve-sw-init-coverage-defaults-and-config-dis` | R9–R12 | Curated profile single-sourced; present/defaulted/unset classification; example-config link; consent-gated refresh |
 
 PRD `sw-edges` `absorbs` targets above must each resolve to exactly one open gap unit at delivery close
@@ -1132,7 +1132,7 @@ Artifacts:
 | Path | Role |
 | --- | --- |
 | `.cursor/hooks/state/memory-prework-search.json` | Redacted per-surface search record (or `memory:offline` / `memory:none`) |
-| `.cursor/sw-deliver-runs/run.<slug>.log` | Per-deliver-run append-only audit breadcrumb (PRD 050 R4) |
+| `.shipwright/deliver-runs/run.legacy.log` (legacy `.cursor/sw-deliver-runs/run.legacy.log`) | Unscoped, active-checkout pre-work audit; mandatory append, never deliver-state authority |
 | `.cursor/doc-review-runs/<dispatch-id>.json` | Per-dispatch token-estimate telemetry for `/sw-doc-review` persona panels (PRD 058 R28). **Cache-only / non-authoritative** (PRD 341) — cannot authorize open/complete; live body witnesses use stripped-hash exclusion from freeze inputs. |
 
 The `preToolUse` hook (`core/hooks/before_task_dispatch.py`) denies the first file-mutating tool call

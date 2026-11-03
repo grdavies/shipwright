@@ -182,6 +182,75 @@ def test_cross_session_resume_refuses_stale_revision(tmp_path: Path) -> None:
     assert result["error"] == "handoff:stale-revision"
 
 
+def test_export_preserves_supported_exploration_interaction_state(tmp_path: Path) -> None:
+    repo = _repo_with_schema(tmp_path)
+    interaction = {
+        "mode": "conversation", "activeNodeId": "dec-auth", "lastPrompt": "Resume",
+        "phase": "confirm", "mapId": "explore-handoff", "expectedRevision": 1,
+    }
+    result = export_exploration_bundle(repo, _sample_map(), interaction_state=interaction)
+    assert result["verdict"] == "pass", result
+    exploration = result["bundle"]["extensions"]["exploration"]
+    assert exploration["interactionState"] == interaction
+    assert exploration["mapRevision"] == exploration["revision"] == 1
+    assert exploration["brief"]["sourceRevision"] == 1
+
+
+def test_export_keeps_redacted_context_in_every_returned_copy(tmp_path: Path) -> None:
+    repo = _repo_with_schema(tmp_path)
+    synthetic_token = "ghp_" + "A" * 36
+    document = _sample_map()
+    document["provenance"]["notebook"]["detail"] = synthetic_token
+    brief = emit_brief(document)
+    brief["invalidation"]["reason"] = synthetic_token
+    result = export_exploration_bundle(
+        repo, document, brief=brief,
+        interaction_state={"lastPrompt": synthetic_token},
+    )
+    assert result["verdict"] == "pass", result
+    assert synthetic_token not in json.dumps(result)
+    bundle = result["bundle"]
+    copies = [bundle["currentState"]["exploration"],
+              bundle["extensions"]["exploration"],
+              bundle["extensions"]["cursor"]["exploration"]]
+    assert copies[0] == copies[1] == copies[2]
+    assert "REDACTED" in copies[0]["interactionState"]["lastPrompt"]
+    assert "REDACTED" in copies[0]["notebookProvenance"]["detail"]
+    assert "REDACTED" in copies[0]["brief"]["invalidation"]["reason"]
+    assert "REDACTED" in result["brief"]["invalidation"]["reason"]
+    assert validate_bundle(bundle, root=repo)["verdict"] == "pass"
+    assert import_exploration_resume(repo, bundle, expected_revision=1)["verdict"] == "pass"
+
+
+@pytest.mark.parametrize("path,value", [
+    (("unexpected",), True),
+    (("mapRevision",), "1"),
+    (("brief", "unexpected"), True),
+    (("brief", "sourceRevision"), "1"),
+    (("brief", "readyForDocHandoff"), "yes"),
+    (("brief", "invalidation", "state"), "unknown"),
+    (("brief", "invalidation", "unexpected"), True),
+    (("interactionState", "unexpected"), True),
+    (("interactionState", "expectedRevision"), "1"),
+])
+def test_exploration_extension_retains_strict_schema(
+    tmp_path: Path, path: tuple[str, ...], value: object,
+) -> None:
+    repo = _repo_with_schema(tmp_path)
+    exported = export_exploration_bundle(repo, _sample_map())
+    assert exported["verdict"] == "pass", exported
+    bundle = exported["bundle"]
+    target = bundle["extensions"]["exploration"]
+    for key in path[:-1]:
+        target = target[key]
+    target[path[-1]] = value
+    bundle["workflowDigest"] = build_workflow_digest(bundle)
+    bundle["bundleDigest"] = digest_payload(bundle)
+    result = validate_bundle(bundle, root=repo)
+    assert result["verdict"] == "schema_failure", result
+    assert "extensions.exploration." + ".".join(path) in result["fields"]
+
+
 def test_invalidated_brief_in_bundle_is_rejected(tmp_path: Path) -> None:
     repo = _repo_with_schema(tmp_path)
     map_doc = _sample_map()

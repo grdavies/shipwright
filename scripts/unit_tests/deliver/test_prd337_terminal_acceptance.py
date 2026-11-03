@@ -82,8 +82,9 @@ def test_acceptance_schema_rejects_missing_ledger_fields() -> None:
     assert any("missing-gatesRunRollup" in e for e in errors)
 
 
-def test_terminal_acceptance_record_complete(repo_root: Path) -> None:
+def test_terminal_acceptance_record_complete(tmp_git_repo: Path) -> None:
     """I/S — green terminal gate emits validated acceptance with gates-run ledger."""
+    repo_root = tmp_git_repo
     _seed_phase_gates(repo_root)
     state = _deliver_state()
     gate = {"verdict": "green", "head": "c" * 40}
@@ -101,7 +102,8 @@ def test_terminal_acceptance_record_complete(repo_root: Path) -> None:
     assert record["gatesRunRollup"]["phases"]["phase-one"]["verdict"] == "pass"
 
 
-def test_terminal_pr_gate_green_persists_acceptance(repo_root: Path) -> None:
+def test_terminal_pr_gate_green_persists_acceptance(tmp_git_repo: Path) -> None:
+    repo_root = tmp_git_repo
     _seed_phase_gates(repo_root)
     state = _deliver_state()
     gate = {"verdict": "green", "head": "d" * 40}
@@ -121,12 +123,14 @@ def test_terminal_pr_gate_green_persists_acceptance(repo_root: Path) -> None:
     assert payload["terminalAcceptance"]["validation"]["verdict"] == "pass"
     path = Path(payload["terminalAcceptancePath"])
     assert path.is_file()
+    assert path.is_relative_to(tmp_git_repo)
     persisted = json.loads(path.read_text(encoding="utf-8"))
     ok, errors = wt.validate_acceptance_schema(persisted)
     assert ok, errors
 
 
-def test_ack_check_halt_emits_stable_resume_command(repo_root: Path) -> None:
+def test_ack_check_halt_emits_stable_resume_command(tmp_git_repo: Path) -> None:
+    repo_root = tmp_git_repo
     state = _deliver_state()
     state["ackPending"] = True
     with ExitStack() as stack:
@@ -139,7 +143,8 @@ def test_ack_check_halt_emits_stable_resume_command(repo_root: Path) -> None:
     _assert_halt_resume(excinfo.value.outcome.payload, "need-ack", state)
 
 
-def test_terminal_checkpoint_halt_emits_stable_resume_command(repo_root: Path) -> None:
+def test_terminal_checkpoint_halt_emits_stable_resume_command(tmp_git_repo: Path) -> None:
+    repo_root = tmp_git_repo
     state = _deliver_state()
     with ExitStack() as stack:
         stack.enter_context(patch.object(wt, "load_state", return_value=state))
@@ -164,7 +169,8 @@ def _assert_halt_resume(payload: dict, expected_cause: str, state: dict) -> None
     assert halt["runId"] == state["runId"]
 
 
-def test_fail_paths_include_halt_resume(repo_root: Path) -> None:
+def test_fail_paths_include_halt_resume(tmp_git_repo: Path) -> None:
+    repo_root = tmp_git_repo
     state = _deliver_state()
     with (
         patch.object(wt, "load_state", return_value=state),

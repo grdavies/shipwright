@@ -30,12 +30,12 @@ def run_id() -> str:
     return "deliver-receipt-test"
 
 
-def test_transition_persists_complete_receipt(repo_root: Path, run_id: str) -> None:
+def test_transition_persists_complete_receipt(tmp_git_repo: Path, run_id: str) -> None:
     state = {"runId": run_id, "verdict": "running", "nextAction": "state-init"}
     plan = {"mode": "phase", "target": {"branch": "feat/demo"}}
-    input_revisions = build_input_revisions(repo_root, state, plan)
+    input_revisions = build_input_revisions(tmp_git_repo, state, plan)
     pending = begin_transition(
-        repo_root,
+        tmp_git_repo,
         run_id,
         "state-init",
         input_revisions=input_revisions,
@@ -43,13 +43,13 @@ def test_transition_persists_complete_receipt(repo_root: Path, run_id: str) -> N
     )
     key = str(pending["idempotencyKey"])
     completed = complete_transition(
-        repo_root,
+        tmp_git_repo,
         run_id,
         key,
         output_revision=build_output_revision({**state, "specSeed": {"at": "now"}}),
         actor="tester",
     )
-    stored = read_receipt(repo_root, run_id, key)
+    stored = read_receipt(tmp_git_repo, run_id, key)
     assert stored is not None
     assert stored["status"] == "complete"
     assert stored["transitionName"] == "state-init"
@@ -61,28 +61,28 @@ def test_transition_persists_complete_receipt(repo_root: Path, run_id: str) -> N
     assert completed["completedAt"]
 
 
-def test_incomplete_receipt_detected_on_resume(repo_root: Path, run_id: str) -> None:
+def test_incomplete_receipt_detected_on_resume(tmp_git_repo: Path, run_id: str) -> None:
     state = {"runId": run_id, "verdict": "running"}
-    input_revisions = build_input_revisions(repo_root, state, None)
+    input_revisions = build_input_revisions(tmp_git_repo, state, None)
     pending = begin_transition(
-        repo_root,
+        tmp_git_repo,
         run_id,
         "base-capture",
         input_revisions=input_revisions,
     )
     key = str(pending["idempotencyKey"])
-    assert receipt_path(repo_root, run_id, key).with_name(
-        receipt_path(repo_root, run_id, key).name + ".pending"
+    assert receipt_path(tmp_git_repo, run_id, key).with_name(
+        receipt_path(tmp_git_repo, run_id, key).name + ".pending"
     ).is_file()
 
-    incomplete = find_incomplete_receipt(repo_root, run_id)
+    incomplete = find_incomplete_receipt(tmp_git_repo, run_id)
     assert incomplete is not None
     assert incomplete["transitionName"] == "base-capture"
     assert incomplete["status"] == "pending"
 
     with pytest.raises(IncompleteReceiptError):
         begin_transition(
-            repo_root,
+            tmp_git_repo,
             run_id,
             "base-capture",
             input_revisions=input_revisions,
@@ -91,12 +91,12 @@ def test_incomplete_receipt_detected_on_resume(repo_root: Path, run_id: str) -> 
 
 
 def test_external_mutation_receipt_requires_exit_and_remote_state(
-    repo_root: Path, run_id: str
+    tmp_git_repo: Path, run_id: str
 ) -> None:
     input_revisions = {"push": {"label": "push", "hash": "abc"}}
     with pytest.raises(ExternalMutationIncompleteError):
         persist_external_mutation_receipt(
-            repo_root,
+            tmp_git_repo,
             run_id,
             "git-push",
             idempotency_key="push-1",
@@ -107,7 +107,7 @@ def test_external_mutation_receipt_requires_exit_and_remote_state(
         )
     with pytest.raises(ExternalMutationIncompleteError):
         persist_external_mutation_receipt(
-            repo_root,
+            tmp_git_repo,
             run_id,
             "git-push",
             idempotency_key="push-1",
@@ -118,11 +118,11 @@ def test_external_mutation_receipt_requires_exit_and_remote_state(
         )
 
 
-def test_failed_push_surfaces_with_persisted_receipt(repo_root: Path, run_id: str) -> None:
+def test_failed_push_surfaces_with_persisted_receipt(tmp_git_repo: Path, run_id: str) -> None:
     input_revisions = {"branch": {"label": "branch", "hash": "deadbeef"}}
     output_revision = {"remote": {"label": "remote", "hash": "cafebabe"}}
     receipt = persist_external_mutation_receipt(
-        repo_root,
+        tmp_git_repo,
         run_id,
         "git-push",
         idempotency_key="push-failed",
@@ -132,7 +132,7 @@ def test_failed_push_surfaces_with_persisted_receipt(repo_root: Path, run_id: st
         remote_state={"ref": "feat/demo", "remoteHead": None},
         actor="tester",
     )
-    stored = read_receipt(repo_root, run_id, "push-failed")
+    stored = read_receipt(tmp_git_repo, run_id, "push-failed")
     assert stored is not None
     assert stored["status"] == "failed"
     assert stored["externalMutation"]["exitStatus"] == 128

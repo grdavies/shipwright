@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import queue
 import sys
 from pathlib import Path
 
@@ -209,6 +210,39 @@ def test_r16_let_settle_finishes_inflight_batch(tmp_path: Path) -> None:
     assert by_id["b"].verdict == "pass"
     assert by_id["c"].verdict == "cancelled"
     assert pools.snapshot()["code-writers"]["inUse"] == 0
+
+
+@pytest.mark.parametrize("mode", [CancelMode.CANCEL_AND_DRAIN, CancelMode.LET_SETTLE])
+def test_cancel_requested_while_draining_completion_queue(tmp_path: Path, mode: CancelMode) -> None:
+    graph = _graph([_node("a"), _node("b")], [{"from": "a", "to": "b", "required": True}])
+    journal = ExecutionReceiptJournal(tmp_path / "receipts")
+    pools = ResourcePoolRegistry()
+    executed = []
+
+    def execute(node):
+        executed.append(node["id"])
+        return NodeExecutionResult(verdict="pass", output=node["id"])
+
+    scheduler = GraphScheduler(execute, receipts=journal, pools=pools)
+
+    class CancelAfterCompletion(queue.Queue):
+        delivered = False
+
+        def get(self, block=True, timeout=None):
+            if not block and self.delivered:
+                scheduler.request_cancel(mode)
+                raise queue.Empty
+            result = super().get(block, timeout)
+            self.delivered = True
+            return result
+
+    scheduler._event_queue = CancelAfterCompletion()
+    result = scheduler.run(graph, run_id="late-cancel", internal_only=True)
+    assert result.verdict == "fail"
+    assert result.cancel_mode == mode.value
+    assert executed == ["a"]
+    assert {node.node_id: node.verdict for node in result.nodes} == {"a": "pass", "b": "cancelled"}
+    assert all(snapshot["inUse"] == 0 for snapshot in pools.snapshot().values())
 
 
 def test_r16_timeout_seconds_and_max_duration(tmp_path: Path) -> None:

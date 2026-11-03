@@ -70,16 +70,17 @@ else
   bad "memory-prework-degrade-open"
 fi
 
+AUDIT_LOG=$(python3 -c 'from pathlib import Path; from shipwright_paths import deliver_runs_dir; print(deliver_runs_dir(Path.cwd()) / "run.legacy.log")')
 if [[ -f .cursor/hooks/state/memory-prework-search.json ]] && \
    grep -q 'memory:offline' .cursor/hooks/state/memory-prework-search.json && \
-   [[ -f .cursor/sw-deliver-runs/run.legacy.log ]]; then
+   [[ -s "$AUDIT_LOG" ]]; then
   ok "memory-prework-breadcrumb-audited"
 else
   bad "memory-prework-breadcrumb-audited"
 fi
 
 # memory:none path (reachable in-repo provider)
-rm -f .cursor/hooks/state/memory-prework-search.json .cursor/sw-deliver-runs/run.legacy.log
+rm -f .cursor/hooks/state/memory-prework-search.json "$AUDIT_LOG"
 mkdir -p .cursor/sw-memory/memories
 echo in-repo > .cursor/sw-memory.provider
 python3 - <<'PY'

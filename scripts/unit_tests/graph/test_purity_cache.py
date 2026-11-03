@@ -18,10 +18,23 @@ from graph.artifact_registry import (  # noqa: E402
     PurityViolationError,
 )
 from graph.execution_receipts import ExecutionReceiptJournal  # noqa: E402
+from graph.cache_store import CacheScope, CacheStoreError, CanonicalCacheStore  # noqa: E402
 from graph.ir import normalize_node_execution, validate_node_spec  # noqa: E402
 from graph.lineage import CacheKeyMaterial, compute_cache_key, keyed_mac  # noqa: E402
 from graph.resource_pools import ResourcePoolRegistry  # noqa: E402
 from graph.scheduler import GraphScheduler, NodeExecutionResult  # noqa: E402
+
+_FIXTURE_MAC = b"purity-cache-fixture-key"
+
+
+def _cache_material() -> CacheKeyMaterial:
+    return CacheKeyMaterial(
+        node_definition={"id": "review"}, input_hashes={}, prompt_version="p1",
+        model_version="fixture", tool_configuration={}, policy_version="pol1",
+        credential_capability_set=(), resolved_scope_identity="scope",
+        repository_identity="fixture", trust_domain="in-repo",
+        tool_binary_identity="fixture", repo_state_identity="rev1",
+    )
 
 
 def _node(
@@ -131,7 +144,11 @@ def test_cache_hit_writes_run_scoped_receipt(tmp_path: Path) -> None:
         "tool_binary_identity": "bin1",
         "repo_state_identity": "rev1",
     }
-    journal = ExecutionReceiptJournal(tmp_path / "receipts")
+    journal = ExecutionReceiptJournal(tmp_path / "receipts", mac_key=_FIXTURE_MAC, repo_root=tmp_path)
+    store = CanonicalCacheStore(
+        tmp_path / "cache", scope=CacheScope.REPOSITORY,
+        mac_key=_FIXTURE_MAC, repo_root=tmp_path,
+    )
     pools = ResourcePoolRegistry.from_config(limits={"read-only-reviewers": 2})
     calls: list[str] = []
 
@@ -159,6 +176,8 @@ def test_cache_hit_writes_run_scoped_receipt(tmp_path: Path) -> None:
         receipts=journal,
         pools=pools,
         cache_identity=identity,
+        cache_store=store,
+        cache_scope=CacheScope.REPOSITORY,
     )
     first = scheduler.run(graph, run_id="run-a", internal_only=True)
     second = scheduler.run(graph, run_id="run-b", internal_only=True)
@@ -172,8 +191,10 @@ def test_cache_hit_writes_run_scoped_receipt(tmp_path: Path) -> None:
 
 
 def test_failed_receipt_not_reused(tmp_path: Path) -> None:
-    journal = ExecutionReceiptJournal(tmp_path / "receipts")
-    key = "a" * 64
+    journal = ExecutionReceiptJournal(tmp_path / "receipts", mac_key=_FIXTURE_MAC, repo_root=tmp_path)
+    store = CanonicalCacheStore(tmp_path / "cache", mac_key=_FIXTURE_MAC, repo_root=tmp_path)
+    material = _cache_material()
+    key = compute_cache_key(material)
     payload = {
         "model": "m",
         "attempts": 1,
@@ -184,13 +205,17 @@ def test_failed_receipt_not_reused(tmp_path: Path) -> None:
         "verdict": "fail",
         "coverage": {},
     }
-    journal.record("review", "run-1:hash:review", payload, cache_key=key)
-    assert journal.lookup_reusable_by_cache_key(key) is None
+    receipt = journal.record("review", "run-1:hash:review", payload, cache_key=key)
+    with pytest.raises(CacheStoreError, match="not cache-reusable"):
+        store.put(material=material, source_receipt=receipt, artifacts=(), run_id="run-1")
+    assert store.lookup(key, run_id="run-1") is None
 
 
 def test_mutated_receipt_mac_rejects_cache_reuse(tmp_path: Path) -> None:
-    journal = ExecutionReceiptJournal(tmp_path / "receipts")
-    key = "c" * 64
+    journal = ExecutionReceiptJournal(tmp_path / "receipts", mac_key=_FIXTURE_MAC, repo_root=tmp_path)
+    store = CanonicalCacheStore(tmp_path / "cache", mac_key=_FIXTURE_MAC, repo_root=tmp_path)
+    material = _cache_material()
+    key = compute_cache_key(material)
     payload = {
         "model": "m",
         "attempts": 1,
@@ -202,11 +227,14 @@ def test_mutated_receipt_mac_rejects_cache_reuse(tmp_path: Path) -> None:
         "coverage": {},
     }
     receipt = journal.record("review", "run-1:hash:review", payload, cache_key=key)
+    assert journal.get("review", "run-1:hash:review") == receipt
     path = journal.complete_path("review", "run-1:hash:review")
     tampered = dict(receipt)
     tampered["outputHashes"] = ["e" * 64]
     path.write_text(json.dumps(tampered) + "\n", encoding="utf-8")
-    assert journal.lookup_reusable_by_cache_key(key) is None
+    with pytest.raises(CacheStoreError, match="not cache-reusable"):
+        store.put(material=material, source_receipt=tampered, artifacts=(), run_id="run-1")
+    assert store.lookup(key, run_id="run-1") is None
 
 
 def test_keyed_mac_differs_from_unkeyed_sha() -> None:

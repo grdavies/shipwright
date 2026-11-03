@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
@@ -83,6 +84,22 @@ def test_record_declined_requires_consequence() -> None:
     ok = record_priority_zero_surface("verify", "declined")
     assert ok["state"] == "declined"
     assert ok["consequence"].strip()
+
+
+def test_interview_cli_reports_without_changing_config(repo_root: Path, sw_configure, capsys) -> None:
+    from shipwright_paths import workflow_config_path
+
+    config_path = workflow_config_path(repo_root)
+    assert config_path is not None
+    before = config_path.read_bytes()
+    assert sw_configure.main([
+        "interview", "--root", str(repo_root), "--accept-defaults", "--plan-confirm",
+    ]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["coverage"]["recorded"] == payload["coverage"]["expected"] == 5
+    assert payload["infrastructure"]["planConsent"]["consented"] is True
+    assert payload["infrastructure"]["applyConsent"]["consented"] is False
+    assert config_path.read_bytes() == before
 
 
 def test_new_schema_key_defaults_to_priority_two(repo_root: Path) -> None:

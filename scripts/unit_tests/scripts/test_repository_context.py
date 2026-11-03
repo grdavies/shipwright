@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import os
-import shutil
+import tempfile
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -103,32 +103,33 @@ class TestCredentialRefIsolation:
         cfg["memory"]["credentialRef"] = "memory-work-a"
         cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
 
-        selector_home = Path.home() / ".sw-test-credential-selector" / tmp_path.name
-        selector_home.mkdir(parents=True, exist_ok=True)
-        selector_dir = selector_home / "shipwright"
-        selector_dir.mkdir(parents=True, exist_ok=True)
-        selector_path = selector_dir / "credential-selector.json"
-        selector_path.write_text(
-            json.dumps(
-                {
-                    "entries": {
-                        "github-work-a": {"backend": "environment"},
-                        "memory-work-a": {"backend": "environment"},
-                        "github-work-b": {"backend": "environment"},
-                        "memory-work-b": {"backend": "environment"},
+        parent = (Path(__file__).resolve().parents[3] / ".cursor").resolve()
+        if not parent.is_relative_to(Path.home().resolve()):
+            parent = Path.home()
+        with tempfile.TemporaryDirectory(prefix="sw-selector-", dir=parent) as temporary:
+            selector_home = Path(temporary)
+            selector_dir = selector_home / "shipwright"
+            selector_dir.mkdir(parents=True, exist_ok=True)
+            selector_path = selector_dir / "credential-selector.json"
+            selector_path.write_text(
+                json.dumps(
+                    {
+                        "entries": {
+                            "github-work-a": {"backend": "environment"},
+                            "memory-work-a": {"backend": "environment"},
+                            "github-work-b": {"backend": "environment"},
+                            "memory-work-b": {"backend": "environment"},
+                        }
                     }
-                }
-            ),
-            encoding="utf-8",
-        )
-        monkeypatch.setenv("XDG_CONFIG_HOME", str(selector_home))
+                ),
+                encoding="utf-8",
+            )
+            monkeypatch.setenv("XDG_CONFIG_HOME", str(selector_home))
 
-        context = from_root(tmp_git_repo)
-        assert context.credential_refs == ("github-work-a", "memory-work-a")
-        assert "github-work-b" not in context.credential_refs
-        assert "memory-work-b" not in context.credential_refs
-
-        shutil.rmtree(selector_home, ignore_errors=True)
+            context = from_root(tmp_git_repo)
+            assert context.credential_refs == ("github-work-a", "memory-work-a")
+            assert "github-work-b" not in context.credential_refs
+            assert "memory-work-b" not in context.credential_refs
 
 
 class TestManyConcurrentContexts:
